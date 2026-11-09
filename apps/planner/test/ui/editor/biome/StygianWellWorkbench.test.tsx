@@ -181,6 +181,7 @@ describe('Stygian Well workbench', () => {
     const line = screen.getByRole('listitem', { name: 'Travel Deal' });
     // The line sits under the purchase of slot 2, named on its icon badge.
     expect(line.previousElementSibling).toBe(slotRow(2));
+    expect(within(line).getByText('Restock')).toBeTruthy();
     const refillLabel = within(line).getByRole('button', {
       name: 'Stygian Well Travel Deal Item',
     }).textContent;
@@ -212,7 +213,7 @@ describe('Stygian Well workbench', () => {
 
   it.each([
     ['initial:secondLeft', 'Buy Fateful Twist'],
-    ['travelDealRefill', 'Restock Fateful Twist · Travel Deal Offer'],
+    ['travelDealRefill', 'Buy Fateful Twist · Travel Deal Offer'],
   ] as const)(
     'shows and retains the %s Twist result on its Timeline action',
     async (generationKey, label) => {

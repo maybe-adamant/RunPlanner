@@ -30,7 +30,7 @@ export function TravelDealLine({
       label={
         <>
           <ArtworkIcon className="artwork-label-icon" source={traitIcon('RestockBoon')} />
-          <strong>Travel Deal</strong>
+          <strong>Restock</strong>
         </>
       }
     />

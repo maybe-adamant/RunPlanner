@@ -860,6 +860,7 @@ describe('Hermes Shrine workbench', () => {
     const travelDealLine = () => screen.getByRole('listitem', { name: 'Travel Deal' });
     const line = travelDealLine();
     expect(line.previousElementSibling).toBe(sourceRow());
+    expect(within(line).getByText('Restock')).toBeTruthy();
     expect(
       within(line).getByRole('button', { name: 'Hermes Shrine Travel Deal Item' }),
     ).toBeTruthy();
@@ -869,7 +870,7 @@ describe('Hermes Shrine workbench', () => {
     ).toHaveProperty('disabled', false);
     expect(within(line).queryByRole('checkbox')).toBeNull();
 
-    await pickRoomObjectAction(view.user, 'Hermes Shrine', /^Restock .*Travel Deal Offer$/);
+    await pickRoomObjectAction(view.user, 'Hermes Shrine', /^Buy .*Travel Deal Offer$/);
     expect(shrine().roomActions.order).toContainEqual(
       expect.objectContaining({ generationKey: 'travelDealRefill' }),
     );

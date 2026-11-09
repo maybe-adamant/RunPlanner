@@ -340,7 +340,7 @@ describe('timeline action labels', () => {
         return [parts.shownLabel ?? parts.label, parts.travelDeal ?? false];
       }),
     ).toEqual([
-      ['Restock Demeter', true],
+      ['Buy Demeter', true],
       ['Collect Demeter · Gold Gold Gold duplicate of Offer 1', false],
     ]);
     // Echo's last-reward replay is not named by the Shop's Gold duplicate offer.
@@ -393,7 +393,7 @@ describe('timeline action labels', () => {
     ['initial:healing', 'Buy Splintered Shield', { slot: 1 }],
     ['initial:secondLeft', 'Buy Fateful Twist', { slot: 2 }],
     ['initial:secondRight', 'Buy Yarn of Ariadne', { slot: 3 }],
-    ['travelDealRefill', 'Restock Splintered Shield', { travelDeal: true }],
+    ['travelDealRefill', 'Buy Splintered Shield', { travelDeal: true }],
   ] as const)('names the item and slot for Well generation %s', (generationKey, shown, mark) => {
     const parts = occurrenceActionLabelParts(
       catalog,

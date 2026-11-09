@@ -437,8 +437,8 @@ Money and delete keep one right edge on every row, and each encounter phase's
 rows read as one group. Every banner (encounter start and end, other lifecycle
 boundaries and checkpoints) shares one band style.
 
-A label is the action's verb (Buy for paid World Shop, Shrine and Well items,
-Restock for their Travel Deal refills, Rush for rushed Shrine purchases, Collect for pickups including
+A label is the action's verb (Buy for paid World Shop, Shrine and Well items
+and refills, Rush for rushed Shrine purchases, Collect for pickups including
 Contract items and Echo-generated pickups, Sell for Pool sales, Reroll for
 rerolls) followed by what it takes. A reward is shown by its icon, with its
 name as the icon's accessible name and a mark for a Boosted variant; tags name
@@ -465,7 +465,7 @@ be held just before the purchase, with its spread; no banner repeats a running
 balance. Narrow timelines move a row's decisions to a second line.
 
 Purchase and collect rows carry no inner checkbox; their delete control
-removes the action. The purchase row that triggers Travel Deal renders the refill's inventory controls as its second line: for a
+removes the action. The purchase row that triggers Travel Deal renders the refill's inventory controls as its second line, a Restock line: for a
 Shrine, the engine's refill source (the first rushed initial purchase made
 with Travel Deal); for a Well, its first purchase; for a World Shop, the
 purchase the refill entry names as its source. The line has no placeholder. A
