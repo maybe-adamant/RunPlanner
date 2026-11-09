@@ -22,7 +22,6 @@ import {
 import type { OrdinaryBatchGenerationAssessment } from '../generation/model';
 import { biomeHistoryThrough, type BiomeHistoryPrefix, type HistoryEvent } from '../history';
 import { roomOverviewOperationCount } from '../lifecycle';
-import { roomLifecycleWindowOrdinal } from '../../authored-project/room-actions/lifecycle-structure';
 import type { RoomStopCoverage } from '../evaluation/evaluation-products';
 import {
   BiomeMaterializationContractError,
@@ -712,46 +711,12 @@ function blockingRowKeys(
 }
 
 /**
- * The deadline of an unplaced required action settling a blocking owner: the
- * Timeline boundary that closes its window, never later than the doors
- * opening, which waits on every required action. A Fields action's window
- * stays open until the doors open.
- */
-function requiredDeadlineIndex(
-  room: CanonicalAuthoredRoom,
-  address: SemanticAddress,
-): number | undefined {
-  const row = room.roomActionRoster.rows.find(
-    (candidate) =>
-      candidate.rank === null &&
-      !candidate.stale &&
-      candidate.participation === 'required' &&
-      roomActionOwns(candidate, address),
-  );
-  if (row === undefined) return undefined;
-  const { structure, entries } = room.roomLifecycleTimeline;
-  const ordinal = roomLifecycleWindowOrdinal(structure, row.window);
-  const pointIndex = (boundaryKey: string) =>
-    structure.points.findIndex((point) => point.key === boundaryKey);
-  const index = entries.findIndex(
-    (entry) =>
-      entry.kind === 'boundary' &&
-      (entry.boundary.kind === 'cleanup' ||
-        (row.window.kind !== 'fields' &&
-          entry.boundary.kind !== 'roomEntered' &&
-          // A boundary at point p closes every window ordinal up to 2p.
-          2 * pointIndex(entry.boundary.key) >= ordinal)),
-  );
-  return index < 0 ? undefined : index;
-}
-
-/**
- * Where the walk stopped inside the room a block lies in. An Overview block
- * stops past entry; exit work, after the room committed or when a restored
- * room departs again, past every entry. A Timeline block stops at the first row of
- * its blocking product, else at an unplaced required action's deadline, the
- * doors opening, the blocking contact's own entry, or the first boundary the
- * walk had not passed at the contact.
+ * Where the walk stopped inside the room a block lies in, never claiming an
+ * entry it did not pass. An Overview block stops past entry; exit work, after
+ * the room committed or when a restored room departs again, past every entry.
+ * A Timeline block stops at the first row of its blocking product, else at the
+ * blocking contact's own entry, at Doors open for a contact inside the doors
+ * opening, or just past the last boundary the walk passed before the contact.
  */
 function roomStop(
   catalog: Catalog,
@@ -783,9 +748,7 @@ function roomStop(
     throw new BiomeMaterializationContractError(
       `${room.gameName} has unknown lifecycle profile ${room.lifecycleProfileKey}`,
     );
-  const operation = (kind: string) =>
-    profile.operations.findIndex((candidate) => candidate.kind === kind);
-  // Events the walk passed before the contact; an event at it is passed only after it.
+  // The room's events the walk passed before the contact; an event at it is passed only after it.
   const passed = history.events.filter(
     (event): event is LifecycleEvent =>
       lifecycleEvent(event) &&
@@ -794,16 +757,6 @@ function roomStop(
       (event.sequence < position.sequence ||
         (event.sequence === position.sequence && position.boundary === 'after')),
   );
-  const reached = (index: number) =>
-    index >= 0 &&
-    history.events.some(
-      (event) =>
-        lifecycleEvent(event) &&
-        key(event.origin) === roomKey &&
-        event.sequence > (arrivalEvent?.sequence ?? Number.NEGATIVE_INFINITY) &&
-        event.sequence <= position.sequence &&
-        event.operationIndex >= index,
-    );
   if (
     arrivalEvent?.kind === 'roomRestored' ||
     passed.some((event) => event.kind === 'roomCommitted')
@@ -813,19 +766,32 @@ function roomStop(
     (entry) => entry.kind === 'action' && rowKeys?.includes(entry.action.key) === true,
   );
   if (firstRow >= 0) return stop('timeline', firstRow);
-  const deadline = requiredDeadlineIndex(room, located.finding.origin);
-  if (deadline !== undefined) return stop('timeline', deadline);
-  const generation = operation('generateOutgoingBatch');
-  const cleanup = entries.findIndex(
-    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
-  );
-  if (reached(generation)) return stop('timeline', cleanup);
   if (
     located.roomOccurrenceId === room.occurrenceId &&
     located.roomTimelineIndex !== undefined &&
     located.roomTimelineIndex >= 0
   )
     return stop('timeline', Math.min(located.roomTimelineIndex, entries.length));
+  const cleanup = entries.findIndex(
+    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+  );
+  if (cleanup < 0)
+    throw new BiomeMaterializationContractError(`${room.gameName} has no Doors open boundary`);
+  const generation = profile.operations.findIndex(
+    (operation) => operation.kind === 'generateOutgoingBatch',
+  );
+  const exitWork = profile.operations.findIndex(
+    (operation) => operation.kind === 'settleAcquisitionPoint' || operation.kind === 'commitRoom',
+  );
+  const generated = generation >= 0 && passed.some((event) => event.operationIndex >= generation);
+  // A door's generation or offer blocks inside the doors opening. A missing Timeline
+  // action blocks only after the doors opened (its window follows outgoing generation).
+  if (
+    generated &&
+    located.finding.origin.kind !== 'roomAction' &&
+    !passed.some((event) => event.operationIndex > generation)
+  )
+    return stop('timeline', cleanup);
   const phaseEvent = (kind: HistoryEvent['kind'], phaseKey: string) =>
     passed.some(
       (event) => event.kind === kind && 'phaseKey' in event && event.phaseKey === phaseKey,
@@ -855,14 +821,17 @@ function roomStop(
       }
       case 'cleanup':
         return generation >= 0
-          ? passed.some((event) => event.operationIndex >= generation)
-          : passed.some((event) => event.operationIndex >= operation('commitRoom'));
+          ? generated
+          : exitWork >= 0 && passed.some((event) => event.operationIndex >= exitWork);
     }
   };
   const unpassed = entries.findIndex(
     (entry, index) => entry.kind === 'boundary' && !boundaryPassed(index),
   );
-  return stop('timeline', unpassed < 0 ? entries.length : unpassed);
+  const lastPassed = entries.findLastIndex(
+    (entry, index) => entry.kind === 'boundary' && (unpassed < 0 || index < unpassed),
+  );
+  return stop('timeline', lastPassed + 1);
 }
 
 /**
