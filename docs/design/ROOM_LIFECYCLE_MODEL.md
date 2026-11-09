@@ -512,11 +512,19 @@ Refinements:
 - A room the run stops entering (another door picked upstream) keeps its rows
   untouched, as an unselected target keeps its room-local state; they return
   with its door. Only rooms the run enters are cleaned.
-- A loaded document keeps the stale rows it holds until an edit changes their
-  room, which then removes and announces them.
-- Feature state a removed row carried (a Shop's chosen refill item, a
-  delivery's payload) stays with its feature, so restoring the source restores
-  the choice; the row itself is placed afresh.
+- Source-gone rows are removed by the edit that takes their source away. A
+  Shop row (a Gold Gold Gold duplicate, a Travel Deal refill) whose source is
+  taken away while its room is off the route keeps the row with its finding
+  when the room returns; a delivery or trait drop goes with its removed source
+  wherever it is placed.
+- Older files, temporarily: a loaded document keeps the stale rows it holds
+  until an edit changes their room, which then removes and announces them,
+  and keeps a source-gone row whose source was already gone with its finding.
+  Both asymmetries end at the next major schema revision, whose upgrade
+  cleans older files once.
+- Feature state a removed row carried (a Shop's chosen refill item and the
+  refill's own choices, a delivery's payload) stays with its feature, so
+  restoring the source restores the choice; the row itself is placed afresh.
 - Never removed: a row whose source has not been reached or assessed yet (an
   unassessed matured pickup, a pickup the run import places before its source
   is known), and required obligations being placed.

@@ -110,11 +110,14 @@ export function assessReachedClockedPickupPlacement(
             ? 'valid'
             : 'invalid',
     sequence,
-    // A trait no longer held produces no drop anywhere; a held one matures elsewhere.
+    // A producer no longer held drops nothing anywhere; a held one matures elsewhere.
+    // A swap or replacement equips its trait under its own acquisition identity.
     branch !== undefined &&
       maturity === undefined &&
       !Object.values(branch.state.traitHistory.equippedTraits).some(
-        (trait) => trait.acquisitionIdentity === parsed.acquisitionIdentity,
+        (trait) =>
+          trait.acquisitionIdentity === parsed.acquisitionIdentity &&
+          trait.pickupProducerInterval !== undefined,
       )
       ? 'sourceInactive'
       : 'dueContactMismatch',

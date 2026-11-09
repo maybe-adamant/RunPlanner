@@ -122,3 +122,47 @@ it('matches clocked evidence to the reached maturity instead of temporally accum
   expect(assess(branch, { ...frontier, historySequence: 6 })).toBe('unassessed');
   expect(assess(seed, frontier)).toBe('invalid');
 });
+it('tells a clocked drop whose producer is gone from one whose held producer matures elsewhere', () => {
+  const clocked = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'roomExit',
+    entryKey: clockedTraitGeneratedPickupEntryKey('sourceIdentity', 'pom1'),
+    encounterPhaseKey: 'combat1',
+  };
+  const holding = (traits: RewardBranchState['state']['traitHistory']['equippedTraits']) => ({
+    ...seed,
+    state: {
+      ...seed.state,
+      traitHistory: { ...seed.state.traitHistory, equippedTraits: traits },
+    },
+  });
+  const producer = {
+    traitKey: 'SupplyDropBoon',
+    giverKey: 'Icarus',
+    providerKind: 'npc' as const,
+    sourceRole: 'selection',
+    acquisitionIdentity: 'sourceIdentity',
+    pickupProducerInterval: 7,
+  };
+  const reason = (branch: RewardBranchState) => {
+    const { assessment } = assessReachedClockedPickupPlacement(host, clocked, branch, undefined, 9);
+    return assessment.kind === 'invalid' ? assessment.reason : assessment.kind;
+  };
+  // Held but not maturing here: the drop belongs elsewhere.
+  expect(reason(holding({ SupplyDropBoon: producer }))).toBe('dueContactMismatch');
+  // Not held, or only a trait that took its place under its own identity.
+  expect(reason(holding({}))).toBe('sourceInactive');
+  expect(
+    reason(
+      holding({
+        Replacement: {
+          traitKey: 'Replacement',
+          giverKey: 'Icarus',
+          providerKind: 'npc' as const,
+          sourceRole: 'selection',
+          acquisitionIdentity: 'replacementIdentity',
+        },
+      }),
+    ),
+  ).toBe('sourceInactive');
+});

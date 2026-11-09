@@ -115,7 +115,8 @@ the final project and its exact assembly.
   save) go too. A Shop row whose source the edit took away goes the same way:
   a Gold Gold Gold duplicate or Travel Deal refill the walk reaches with no
   source producing it, where one did before the edit; one placed before its
-  source existed stays with its finding. A room the run stops entering keeps
+  source existed stays with its finding, and the row's own payload stays with
+  the Shop. A room the run stops entering keeps
   its rows untouched, so they return with its door; unchanged rooms, rooms the
   evaluation does not reach and an installed route keep theirs. Invalid rows
   stay with their findings.
@@ -129,8 +130,8 @@ the final project and its exact assembly.
   including the countdown deliveries and trait drops a command takes from
   other rooms with their source, except rows owned by the owner the edit
   addresses or an owner nested in it (an orphaned row keeps the owner it had
-  before the edit), which change silently with that owner, rows a rekey
-  replaced and a delivery placed again elsewhere.
+  before the edit), which change silently with that owner, rows a reset
+  removes, rows a rekey replaced and a delivery placed again elsewhere.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
   assembly with a settlement fault naming the owner. A fault signals an engine

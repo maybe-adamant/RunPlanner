@@ -2978,16 +2978,21 @@ describe('OccurrenceEncounterWorkbench', () => {
         name: /^Remove Buy .* from timeline$/,
       }),
     );
-    // Without its source purchase the refill purchase goes with it; the chosen item stays.
+    // Without its source purchase the refill purchase goes with it; its item and choices stay.
     expect(screen.queryByRole('listitem', { name: 'Restock' })).toBeNull();
     expect(() => purchase()).toThrow();
-    expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
+    expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
+      restoredChild,
+    );
     expect(room().state.kind === 'shop' ? room().state : undefined).toMatchObject({
       shop: { travelDealRefill: { optionKey: 'BlindBoxLoot' } },
     });
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
+    // Undo brings both purchases back as one edit.
+    expect(timelineRow('Buy Mystery Boon · Travel Deal Offer')).toBeTruthy();
+    expect(timelineRow('Buy Apollo')).toBeTruthy();
     expect(hintOf(within(line()).getByRole('button', { name: 'Travel Deal Item' }))).toContain(
       'Mystery Boon',
     );

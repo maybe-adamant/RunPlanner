@@ -254,12 +254,7 @@ function sourceGoneShopRows(
     if (occurrence.state.kind !== 'shop') continue;
     const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
     for (const reference of occurrence.roomActions.order) {
-      if (
-        reference.kind !== 'interactAcquisitionEntry' ||
-        reference.siteKey !== 'roomExit' ||
-        !SOURCED_SHOP_ENTRY_KEYS.has(reference.entryKey)
-      )
-        continue;
+      if (reference.kind !== 'interactAcquisitionEntry' || !sourcedShopRow(reference)) continue;
       const address = createAcquisitionEntryAddress(
         createAcquisitionSiteAddress(owner, reference.siteKey),
         reference.entryKey,
@@ -279,6 +274,66 @@ function sourceGoneShopRows(
     }
   }
   return removals;
+}
+
+/** Whether a Shop row exists only as a source's product. */
+function sourcedShopRow(reference: RoomActionReference): boolean {
+  return (
+    reference.kind === 'interactAcquisitionEntry' &&
+    reference.siteKey === 'roomExit' &&
+    SOURCED_SHOP_ENTRY_KEYS.has(reference.entryKey)
+  );
+}
+
+/**
+ * Puts back a pickup's own payload its removal pruned, so restoring the source
+ * restores the row's choices.
+ */
+function withPickupPayload(
+  project: ProjectDocument,
+  owner: OccurrenceAddress,
+  reference: Extract<RoomActionReference, { readonly kind: 'interactAcquisitionEntry' }>,
+  payload: NonNullable<
+    NonNullable<RoomOccurrence['acquisitionSites']>[string]['pickupEntries']
+  >[string],
+): ProjectDocument {
+  const occurrence = occurrenceAt(project, owner);
+  const site = occurrence?.acquisitionSites?.[reference.siteKey];
+  if (occurrence === undefined || site?.pickupEntries?.[reference.entryKey] !== undefined)
+    return project;
+  const restored: RoomOccurrence = Object.freeze({
+    ...occurrence,
+    acquisitionSites: Object.freeze({
+      ...occurrence.acquisitionSites,
+      [reference.siteKey]: Object.freeze({
+        ...site,
+        pickupEntries: Object.freeze({ ...site?.pickupEntries, [reference.entryKey]: payload }),
+      }),
+    }),
+  });
+  return Object.freeze({
+    ...project,
+    route: Object.freeze({
+      ...project.route,
+      biomes: Object.freeze(
+        project.route.biomes.map((plan) =>
+          plan.biomeKey !== owner.biomeKey || plan.topology == null
+            ? plan
+            : Object.freeze({
+                ...plan,
+                topology: Object.freeze({
+                  ...plan.topology,
+                  occurrences: Object.freeze(
+                    plan.topology.occurrences.map((candidate) =>
+                      candidate === occurrence ? restored : candidate,
+                    ),
+                  ),
+                }),
+              }),
+        ),
+      ),
+    }),
+  });
 }
 
 /**
@@ -462,7 +517,7 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
   const rekeyed = new Set<string>();
   const addressed = semanticAddressKey(projectCommandAddress(command) as SemanticAddress);
   const removedStale: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
-  // Sourced rows the command or a displaced placement took; one placed again elsewhere moved.
+  // Sourced rows the command or a displaced placement took; a delivery placed again elsewhere moved.
   const removedElsewhere: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   const settled = (
     assembly: ProjectEvaluationAssembly,
@@ -477,7 +532,19 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
       ...removedStale,
       ...removedElsewhere.filter(({ owner, reference }) => {
         const key = roomActionKey(reference);
-        if (placed.has(key) || addressed === semanticAddressKey(owner)) return false;
+        // Only a delivery is placed again elsewhere, as a move.
+        if (
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.siteKey === HERMES_SHRINE_DELIVERY_SITE_KEY &&
+          placed.has(key)
+        )
+          return false;
+        // A reset removes the rows it addresses.
+        if (
+          command.kind === 'ResetRoomActionsAfter' &&
+          semanticAddressKey(command.occurrence) === semanticAddressKey(owner)
+        )
+          return false;
         const action = createRoomActionAddress(
           createBiomeAddress(owner.routeKey, owner.biomeKey),
           owner.occurrenceId,
@@ -803,12 +870,21 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
         );
         const fault = consume(`stale:${semanticAddressKey(address)}`, address);
         if (fault !== undefined) return settled(assembly, fault);
+        const payload =
+          reference.kind === 'interactAcquisitionEntry' && sourcedShopRow(reference)
+            ? occurrenceAt(project, owner)?.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[
+                reference.entryKey
+              ]
+            : undefined;
         try {
           project = applyProjectCommand(
             project,
             catalog,
             roomActionRemovalCommand(owner, reference),
           );
+          // A source-gone Shop row leaves its payload with the Shop.
+          if (payload !== undefined && reference.kind === 'interactAcquisitionEntry')
+            project = withPickupPayload(project, owner, reference, payload);
         } catch (error) {
           // The roster and the removal command disagree: an engine defect.
           if (error instanceof ProjectCommandContractError)

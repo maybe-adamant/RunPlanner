@@ -372,6 +372,25 @@ describe('stale room actions in edit settlement', () => {
       ),
       selectedOptionKey: 'option2',
     };
+    /** Settles one edit in an authoring session, then restores the start as Undo does. */
+    const settleAndUndo = (project: ProjectDocument, command: ProjectCommand) => {
+      const start = evaluate(project);
+      const session = createAuthoringSession(catalog, start);
+      const outcome = session.apply(command);
+      if (outcome.kind !== 'applied') throw new Error(`expected ${command.kind} to apply`);
+      const edited = session.current().project;
+      session.restore(start);
+      return { outcome, edited, undone: session.current().project };
+    };
+    // The F Hermes boon that gave Travel Deal becomes another.
+    const swapTravelDealAway: ProjectCommand = {
+      kind: 'ReplaceTraitSelection',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 1)),
+        'self',
+      ),
+      selectedOptionKey: 'option2',
+    };
     const removedIn = (
       settled: ReturnType<typeof settle>,
       room: OccurrenceAddress,
@@ -462,19 +481,51 @@ describe('stale room actions in edit settlement', () => {
       };
       expect(order(project, shop)).toContain(roomActionKey(refill));
       expect(refillItem(project)).toBeDefined();
-      // The F Hermes boon that gave Travel Deal becomes another.
-      const settled = settle(project, {
-        kind: 'ReplaceTraitSelection',
-        trait: createTraitOfferAddress(
-          createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 1)),
-          'self',
-        ),
-        selectedOptionKey: 'option2',
-      });
+      const settled = settle(project, swapTravelDealAway);
       expect(settled.fault).toBeUndefined();
       expect(order(settled.assembly.project, shop)).not.toContain(roomActionKey(refill));
       expect(removedIn(settled, shop)).toEqual([roomActionKey(refill)]);
       expect(refillItem(settled.assembly.project)).toEqual(refillItem(project));
+      // The refill's own pickup state stays with the Shop.
+      const site = (document: ProjectDocument) =>
+        document.route.biomes
+          .find((plan) => plan.biomeKey === shop.biomeKey)
+          ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shop.occurrenceId)
+          ?.acquisitionSites?.roomExit;
+      expect(site(settled.assembly.project)).toEqual(site(project));
+      const { undone } = settleAndUndo(project, swapTravelDealAway);
+      expect(order(undone, shop)).toContain(roomActionKey(refill));
+    });
+
+    it('keeps a refill placed before Travel Deal was held', () => {
+      const shop = createOccurrenceAddress(
+        goldenFBiome,
+        createOccurrenceId('golden-f-preboss-shop'),
+      );
+      const refill = roomActionKey({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: 'travelDealRefill',
+      });
+      // Authored without settlement, as an import may place it before its source.
+      const project = applyProjectCommand(
+        underworldWorldShopTravelDealProject(),
+        catalog,
+        swapTravelDealAway,
+      );
+      const settled = settle(project, {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'Minor'),
+        purchased: true,
+      });
+      expect(order(settled.assembly.project, shop)).toContain(refill);
+      expect(removedIn(settled, shop)).toBeUndefined();
+      expect(settled.assembly.evaluation.findings).toContainEqual(
+        expect.objectContaining({
+          code: 'shopPurchaseUnavailable',
+          evidence: { kind: 'travelDealRefillUnavailable' },
+        }),
+      );
     });
 
     it('reports a countdown delivery its unbought purchase took, but not a rushed pickup', () => {
@@ -499,6 +550,17 @@ describe('stale room actions in edit settlement', () => {
         { occurrence: host, actions: [expect.anything()] },
       ]);
       expect(removedIn(unbought, host)).toEqual([delivery]);
+      expect(
+        order(
+          settleAndUndo(project, {
+            kind: 'SetHermesShrinePurchase',
+            occurrence: shrine,
+            generationKey: 'initial:secondLeft',
+            purchased: false,
+          }).undone,
+          host,
+        ),
+      ).toContain(delivery);
       // A rushed item is the purchase's own pickup in its room: it leaves silently.
       const rushed = settle(project, {
         kind: 'SetHermesShrinePurchase',
@@ -524,7 +586,7 @@ describe('stale room actions in edit settlement', () => {
       it('is removed and reported once its trait is no longer taken', () => {
         const project = loadSurfaceScheduledLifecycleCheckpoint();
         expect(drop(project)).toHaveLength(1);
-        const settled = settle(project, {
+        const command: ProjectCommand = {
           kind: 'ReplaceTraitSelection',
           trait: createTraitOfferAddress(
             createEncounterPhaseAddress(
@@ -535,9 +597,22 @@ describe('stale room actions in edit settlement', () => {
             'selection',
           ),
           selectedOptionKey: 'option2',
-        });
+        };
+        const settled = settle(project, command);
         expect(drop(settled.assembly.project)).toEqual([]);
         expect(removedIn(settled, p3)).toEqual(drop(project));
+        expect(drop(settleAndUndo(project, command).undone)).toEqual(drop(project));
+      });
+
+      it('leaves silently with a reset of its own room', () => {
+        const project = loadSurfaceScheduledLifecycleCheckpoint();
+        const settled = settle(project, {
+          kind: 'ResetRoomActionsAfter',
+          occurrence: p3,
+          afterActionKey: null,
+        });
+        expect(drop(settled.assembly.project)).toEqual([]);
+        expect(settled.removedStaleActions).toBeUndefined();
       });
 
       it('stays invalid when its trait is held but now matures elsewhere', () => {
