@@ -101,19 +101,24 @@ the final project and its exact assembly.
 - Required Hermes obligations are inserted at reached due contacts read from
   the Hermes delivery obligation product; optional clocked pickups are never
   accepted automatically.
-- A placement the edit proves displaced (valid before, invalid now) is
-  removed. Deliveries and clocked pickups are keyed by their source, so no
-  inherited choice is reset for being newly reached; one that is invalid where
-  it lands keeps its finding.
+- A delivery the edit proves displaced (valid before, invalid now) moves: it
+  is unplaced and placed again at its reached due contact. A displaced clocked
+  pickup is removed only when its trait is no longer held; one whose held trait
+  now matures elsewhere stays with its finding. Deliveries and clocked pickups
+  are keyed by their source, so no inherited choice is reset for being newly
+  reached; one that is invalid where it lands keeps its finding.
 - Settlement carries out the policy for
   [rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
   In each room the run enters, a room-action row the edit leaves stale, one
   the room no longer offers, is removed through its owning removal command;
   in a room the edit changes, stale rows retained from before it (an older
-  save) go too. A room the run stops entering keeps its rows untouched, so
-  they return with its door; unchanged rooms, rooms the evaluation does not
-  reach and an installed route keep theirs. Invalid rows stay with their
-  findings.
+  save) go too. A Shop row whose source the edit took away goes the same way:
+  a Gold Gold Gold duplicate or Travel Deal refill the walk reaches with no
+  source producing it, where one did before the edit; one placed before its
+  source existed stays with its finding. A room the run stops entering keeps
+  its rows untouched, so they return with its door; unchanged rooms, rooms the
+  evaluation does not reach and an installed route keep theirs. Invalid rows
+  stay with their findings.
 - A changed incoming reward keeps its pickups where they were: the stale
   pickup rows, in their former reward's declared role order, take the roles
   the edit newly placed, in the new reward's (each main pickup first), each
@@ -121,9 +126,11 @@ the final project and its exact assembly.
   role's default. Leftover stale pickups are removed and leftover roles keep
   their default places.
 - The settlement names each room's removed rows for the editor to announce,
-  except rows owned by the owner the edit addresses or an owner nested in it
-  (an orphaned row keeps the owner it had before the edit), which change
-  silently with that owner, and rows a rekey replaced.
+  including the countdown deliveries and trait drops a command takes from
+  other rooms with their source, except rows owned by the owner the edit
+  addresses or an owner nested in it (an orphaned row keeps the owner it had
+  before the edit), which change silently with that owner, rows a rekey
+  replaced and a delivery placed again elsewhere.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
   assembly with a settlement fault naming the owner. A fault signals an engine

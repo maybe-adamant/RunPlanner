@@ -2978,17 +2978,12 @@ describe('OccurrenceEncounterWorkbench', () => {
         name: /^Remove Buy .* from timeline$/,
       }),
     );
-    // Without its source purchase the retained refill purchase loses its line and keeps removal.
+    // Without its source purchase the refill purchase goes with it; the chosen item stays.
     expect(screen.queryByRole('listitem', { name: 'Restock' })).toBeNull();
-    expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
-      restoredChild,
-    );
-    await view.user.click(
-      within(purchase()).getByRole('button', { name: /^Remove .* from timeline$/ }),
-    );
+    expect(() => purchase()).toThrow();
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
-    act(() => {
-      view.application.store.dispatch(authoredProjectUndoRequested());
+    expect(room().state.kind === 'shop' ? room().state : undefined).toMatchObject({
+      shop: { travelDealRefill: { optionKey: 'BlindBoxLoot' } },
     });
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());

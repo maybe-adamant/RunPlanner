@@ -27,10 +27,11 @@ function placement(
   /** The reached state's status; none is reached when the state is absent. */
   status: 'valid' | 'invalid' | 'unassessed' | undefined,
   sequence: number,
+  invalidReason: 'sourceInactive' | 'dueContactMismatch' = 'dueContactMismatch',
 ): GeneratedPickupPlacement {
   const kind = status ?? 'unassessed';
   const assessment: GeneratedPickupPlacementAssessment =
-    kind === 'invalid' ? { kind, source, reason: 'dueContactMismatch' } : { kind, source };
+    kind === 'invalid' ? { kind, source, reason: invalidReason } : { kind, source };
   return Object.freeze({
     address: createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(owner, reference.siteKey),
@@ -109,5 +110,13 @@ export function assessReachedClockedPickupPlacement(
             ? 'valid'
             : 'invalid',
     sequence,
+    // A trait no longer held produces no drop anywhere; a held one matures elsewhere.
+    branch !== undefined &&
+      maturity === undefined &&
+      !Object.values(branch.state.traitHistory.equippedTraits).some(
+        (trait) => trait.acquisitionIdentity === parsed.acquisitionIdentity,
+      )
+      ? 'sourceInactive'
+      : 'dueContactMismatch',
   );
 }

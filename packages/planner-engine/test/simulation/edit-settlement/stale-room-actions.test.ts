@@ -2,12 +2,18 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createEncounterPhaseAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
+  createRewardWheelOfferAddress,
   createShopOfferAddress,
+  createTraitOfferAddress,
+  hermesShrineDeliveryEntryKey,
   roomActionKey,
   type OccurrenceAddress,
   type ProjectCommand,
@@ -20,11 +26,21 @@ import {
   createUnderworldFPoolCheckpoint,
   echoGoldIPrebossShopId,
   goldenFBiome,
+  goldenFOccurrenceId,
   goldenGBiome,
+  goldenHBiome,
   goldenIBiome,
+  underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import {
+  createSurfaceNOHermesShrineDeliveryCheckpoint,
+  loadSurfaceNOProject,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
 
 import { createAuthoringSession } from '../../../src/simulation/authoring/session';
 import { underworldGLockedDoorsProject } from '../../execution-plan/support/plan-end-switch-fixtures';
@@ -334,5 +350,262 @@ describe('stale room actions in edit settlement', () => {
     });
     expect(back.removedStaleActions).toBeUndefined();
     expect(order(back.assembly.project, shop)).toEqual(order(project, shop));
+  });
+
+  describe('rows whose source is gone', () => {
+    const echoShop = createOccurrenceAddress(goldenIBiome, echoGoldIPrebossShopId);
+    const echoDuplicate = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'roomExit',
+      entryKey: 'echoDoubleShopReward',
+    } as const;
+    // The H bridge Echo takes another option than the Gold Gold Gold the I Preboss Shop duplicates.
+    const swapEchoAway: ProjectCommand = {
+      kind: 'ReplaceTraitSelection',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenHBiome,
+          { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-bridge01') },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      selectedOptionKey: 'option2',
+    };
+    const removedIn = (
+      settled: ReturnType<typeof settle>,
+      room: OccurrenceAddress,
+    ): readonly string[] | undefined =>
+      settled.removedStaleActions
+        ?.find((entry) => entry.occurrence.occurrenceId === room.occurrenceId)
+        ?.actions.map(roomActionKey);
+
+    it('removes and reports a later Shop’s Gold Gold Gold duplicate once the Echo is gone', () => {
+      const start = evaluate(createEchoGoldIAnvilDuplicateProject());
+      expect(order(start.project, echoShop)).toContain(roomActionKey(echoDuplicate));
+      const session = createAuthoringSession(catalog, start);
+      const outcome = session.apply(swapEchoAway);
+      if (outcome.kind !== 'applied') throw new Error('expected the Echo swap to apply');
+      const after = session.current();
+      expect(order(after.project, echoShop)).not.toContain(roomActionKey(echoDuplicate));
+      expect(outcome.removedStaleActions).toContainEqual({
+        occurrence: echoShop,
+        actions: [echoDuplicate],
+      });
+      // The duplicate's payload stays with the Shop's pickup site.
+      const site = (project: ProjectDocument) =>
+        project.route.biomes
+          .find((plan) => plan.biomeKey === echoShop.biomeKey)
+          ?.topology?.occurrences.find(
+            (candidate) => candidate.occurrenceId === echoShop.occurrenceId,
+          )?.acquisitionSites?.roomExit?.pickupEntries?.echoDoubleShopReward;
+      expect(site(after.project)).toEqual(site(start.project));
+      expect(
+        after.evaluation.findings.filter((finding) => finding.code === 'shopPurchaseUnavailable'),
+      ).toEqual([]);
+      session.restore(start);
+      expect(order(session.current().project, echoShop)).toContain(roomActionKey(echoDuplicate));
+    });
+
+    it('keeps a duplicate placed before its Echo was held', () => {
+      // Authored without settlement, as an import may place it before its source.
+      const project = applyProjectCommand(
+        createEchoGoldIAnvilDuplicateProject(),
+        catalog,
+        swapEchoAway,
+      );
+      expect(order(project, echoShop)).toContain(roomActionKey(echoDuplicate));
+      // Buying a second item edits the Shop and reaches the duplicate.
+      const room = project.route.biomes
+        .find((plan) => plan.biomeKey === echoShop.biomeKey)!
+        .topology!.occurrences.find(
+          (candidate) => candidate.occurrenceId === echoShop.occurrenceId,
+        )!;
+      const purchased = new Set(order(project, echoShop));
+      const offerKey = Object.keys(
+        room.state.kind === 'shop' ? (room.state.shop?.offers ?? {}) : {},
+      )
+        .filter((key) => key !== 'travelDealRefill')
+        .find((key) => !purchased.has(roomActionKey({ kind: 'interactShopOffer', offerKey: key })));
+      if (offerKey === undefined) throw new Error('expected an unbought Shop item');
+      const settled = settle(project, {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(goldenIBiome, echoGoldIPrebossShopId, offerKey),
+        purchased: true,
+      });
+      expect(order(settled.assembly.project, echoShop)).toContain(roomActionKey(echoDuplicate));
+      expect(removedIn(settled, echoShop)).toBeUndefined();
+      expect(settled.assembly.evaluation.findings).toContainEqual(
+        expect.objectContaining({
+          code: 'shopPurchaseUnavailable',
+          evidence: { kind: 'echoShopDuplicateUnavailable' },
+        }),
+      );
+    });
+
+    it('removes and reports a Travel Deal refill once Travel Deal is gone, keeping its item', () => {
+      const shop = createOccurrenceAddress(
+        goldenFBiome,
+        createOccurrenceId('golden-f-preboss-shop'),
+      );
+      const refill = {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: 'travelDealRefill',
+      } as const;
+      const project = underworldWorldShopTravelDealProject();
+      const refillItem = (document: ProjectDocument) => {
+        const room = document.route.biomes
+          .find((plan) => plan.biomeKey === shop.biomeKey)
+          ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shop.occurrenceId);
+        return room?.state.kind === 'shop' ? room.state.shop?.travelDealRefill : undefined;
+      };
+      expect(order(project, shop)).toContain(roomActionKey(refill));
+      expect(refillItem(project)).toBeDefined();
+      // The F Hermes boon that gave Travel Deal becomes another.
+      const settled = settle(project, {
+        kind: 'ReplaceTraitSelection',
+        trait: createTraitOfferAddress(
+          createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 1)),
+          'self',
+        ),
+        selectedOptionKey: 'option2',
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(order(settled.assembly.project, shop)).not.toContain(roomActionKey(refill));
+      expect(removedIn(settled, shop)).toEqual([roomActionKey(refill)]);
+      expect(refillItem(settled.assembly.project)).toEqual(refillItem(project));
+    });
+
+    it('reports a countdown delivery its unbought purchase took, but not a rushed pickup', () => {
+      const shrine = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+      const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+      const project = createSurfaceNOHermesShrineDeliveryCheckpoint();
+      const delivery = roomActionKey({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey: hermesShrineDeliveryEntryKey(shrine, 'initial:secondLeft'),
+        encounterPhaseKey: 'Encounter',
+      });
+      expect(order(project, host)).toContain(delivery);
+      const unbought = settle(project, {
+        kind: 'SetHermesShrinePurchase',
+        occurrence: shrine,
+        generationKey: 'initial:secondLeft',
+        purchased: false,
+      });
+      expect(order(unbought.assembly.project, host)).not.toContain(delivery);
+      expect(unbought.removedStaleActions).toEqual([
+        { occurrence: host, actions: [expect.anything()] },
+      ]);
+      expect(removedIn(unbought, host)).toEqual([delivery]);
+      // A rushed item is the purchase's own pickup in its room: it leaves silently.
+      const rushed = settle(project, {
+        kind: 'SetHermesShrinePurchase',
+        occurrence: shrine,
+        generationKey: 'initial:first',
+        purchased: false,
+      });
+      expect(
+        order(rushed.assembly.project, shrine).some((key) => key.includes('hermesShrineDelivery')),
+      ).toBe(false);
+      expect(rushed.removedStaleActions).toBeUndefined();
+    });
+
+    describe('a Supply Chain drop', () => {
+      const p3 = createOccurrenceAddress(
+        createBiomeAddress('Surface', 'P'),
+        createOccurrenceId('surface-p-1-1-p_combat03'),
+      );
+      const o = createBiomeAddress('Surface', 'O');
+      const drop = (project: ProjectDocument) =>
+        order(project, p3).filter((key) => key.includes('clockedTraitGenerated:'));
+
+      it('is removed and reported once its trait is no longer taken', () => {
+        const project = loadSurfaceScheduledLifecycleCheckpoint();
+        expect(drop(project)).toHaveLength(1);
+        const settled = settle(project, {
+          kind: 'ReplaceTraitSelection',
+          trait: createTraitOfferAddress(
+            createEncounterPhaseAddress(
+              o,
+              { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-o-combat01') },
+              'Combat1',
+            ),
+            'selection',
+          ),
+          selectedOptionKey: 'option2',
+        });
+        expect(drop(settled.assembly.project)).toEqual([]);
+        expect(removedIn(settled, p3)).toEqual(drop(project));
+      });
+
+      it('stays invalid when its trait is held but now matures elsewhere', () => {
+        // O Combat 2 with a third encounter and its wheel authored, then back to two.
+        const combat02 = createOccurrenceAddress(o, createOccurrenceId('surface-o-combat02'));
+        const count = (project: ProjectDocument, encounterCount: 2 | 3) =>
+          applyProjectCommand(project, catalog, {
+            kind: 'ReplaceShipEncounterCount',
+            occurrence: combat02,
+            encounterCount,
+          });
+        const three = authorLegalPomResolutions(
+          applyProjectCommand(count(loadSurfaceScheduledLifecycleCheckpoint(), 3), catalog, {
+            kind: 'ReplaceRewardWheelOffer',
+            offer: createRewardWheelOfferAddress(o, combat02.occurrenceId, 'wheel2', 'offer1'),
+            value: { rewardType: 'StackUpgrade' },
+          }),
+        );
+        const project = count(three, 2);
+        expect(drop(project)).toHaveLength(1);
+        const placement = (assembly: ReturnType<typeof evaluate>) =>
+          assembly.evaluation.route.biomes
+            .flatMap((biome) =>
+              'rewards' in biome ? (biome.rewards.generatedPickupPlacements ?? []) : [],
+            )
+            .find(
+              (candidate) =>
+                candidate.address.site.owner.kind === 'occurrence' &&
+                candidate.address.site.owner.occurrenceId === p3.occurrenceId &&
+                candidate.assessment.source.kind === 'clockedTraitPickup',
+            )?.assessment;
+        expect(placement(evaluate(project))?.kind).toBe('valid');
+        // A third encounter matures the trait one encounter sooner.
+        const settled = settle(project, {
+          kind: 'ReplaceShipEncounterCount',
+          occurrence: combat02,
+          encounterCount: 3,
+        });
+        expect(drop(settled.assembly.project)).toEqual(drop(project));
+        expect(removedIn(settled, p3)).toBeUndefined();
+        expect(placement(settled.assembly)).toMatchObject({
+          kind: 'invalid',
+          reason: 'dueContactMismatch',
+        });
+        expect(settled.assembly.evaluation.findings).toContainEqual(
+          expect.objectContaining({
+            code: 'rewardSourceUnavailable',
+            evidence: { reason: 'staleClockedTraitPickup' },
+          }),
+        );
+      });
+
+      it('stays while its room is not reached', () => {
+        const project = loadSurfaceScheduledLifecycleCheckpoint();
+        const settled = settle(project, {
+          kind: 'ReplaceTraitSelection',
+          trait: createTraitOfferAddress(
+            createIncomingRewardAddress(
+              createBiomeAddress('Surface', 'N'),
+              createOccurrenceId('surface-n-combat11'),
+            ),
+            'source',
+          ),
+          selectedOptionKey: 'option2',
+        });
+        expect(drop(settled.assembly.project)).toEqual(drop(project));
+        expect(removedIn(settled, p3)).toBeUndefined();
+      });
+    });
   });
 });

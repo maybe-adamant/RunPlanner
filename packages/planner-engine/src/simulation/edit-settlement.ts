@@ -33,12 +33,19 @@ import {
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import {
   discardDisplacedHermesShrineDelivery,
+  HERMES_SHRINE_DELIVERY_SITE_KEY,
   hermesShrineDeliverySourceAddress,
   hermesShrinePurchaseAction,
+  isSameRoomDelivery,
   offerFor,
   parseHermesShrineDeliveryEntryKey,
   purchasedOfferFor,
 } from '../authored-project/hermes-shrine-delivery';
+import { parseClockedTraitGeneratedPickupEntryKey } from '../authored-project/acquisition/pickup-producers';
+import {
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
+} from '../authored-project/shop';
 import {
   candidateArtifactsForProjectEvaluationAssembly,
   attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
@@ -106,7 +113,7 @@ export interface SettlementFault {
   readonly owner: SemanticAddress;
 }
 
-/** The stale actions one room lost to an edit, in their former order. */
+/** The stale and source-gone actions one room lost to an edit, in their former order. */
 export interface RemovedStaleRoomActions {
   readonly occurrence: OccurrenceAddress;
   readonly actions: readonly RoomActionReference[];
@@ -115,7 +122,10 @@ export interface RemovedStaleRoomActions {
 export interface ProjectEditSettlement {
   readonly assembly: ProjectEvaluationAssembly;
   readonly fault?: SettlementFault;
-  /** Rows the edit left with no context, removed by the same edit; absent when none. */
+  /**
+   * Rows the edit left with no context or source, removed by the same edit,
+   * except the addressed owner's own; absent when none.
+   */
   readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
 }
 
@@ -204,6 +214,103 @@ function staleRowsToRemove(
     }
   }
   return removals;
+}
+
+type CandidateArtifacts = ReturnType<typeof candidateArtifactsForProjectEvaluationAssembly>;
+
+/** Shop rows that exist only as a source's product: Gold Gold Gold's duplicate and a Travel Deal refill. */
+const SOURCED_SHOP_ENTRY_KEYS: ReadonlySet<string> = new Set([
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
+]);
+/** The walk reached such a row and found nothing for it to take. */
+const SOURCED_SHOP_ENTRY_UNAVAILABLE: ReadonlySet<unknown> = new Set([
+  'echoShopDuplicateUnavailable',
+  'travelDealRefillUnavailable',
+]);
+
+/**
+ * Shop rows whose source the edit took away: the walk reaches the row, no
+ * source produces it any more, and one produced it before the edit. A row
+ * placed before its source existed, or one whose source still produces it with
+ * other terms, stays with its finding.
+ */
+function sourceGoneShopRows(
+  beforeArtifacts: CandidateArtifacts,
+  artifacts: CandidateArtifacts,
+  assembly: ProjectEvaluationAssembly,
+) {
+  const unavailable = new Set(
+    assembly.evaluation.findings.flatMap((finding) =>
+      finding.code === 'shopPurchaseUnavailable' &&
+      SOURCED_SHOP_ENTRY_UNAVAILABLE.has(finding.evidence.kind)
+        ? [semanticAddressKey(finding.origin)]
+        : [],
+    ),
+  );
+  const removals: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
+  if (unavailable.size === 0) return removals;
+  for (const { owner, occurrence } of occurrences(assembly.project)) {
+    if (occurrence.state.kind !== 'shop') continue;
+    const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
+    for (const reference of occurrence.roomActions.order) {
+      if (
+        reference.kind !== 'interactAcquisitionEntry' ||
+        reference.siteKey !== 'roomExit' ||
+        !SOURCED_SHOP_ENTRY_KEYS.has(reference.entryKey)
+      )
+        continue;
+      const address = createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(owner, reference.siteKey),
+        reference.entryKey,
+      );
+      const key = semanticAddressKey(address);
+      if (!unavailable.has(key)) continue;
+      // A refill's capability is filed under its inventory, so read the site's entries.
+      const derived = (candidates: CandidateArtifacts) =>
+        candidates
+          .biomeAt(biome)
+          ?.derivedAcquisitionEntries.entriesAt(address.site)
+          .find((entry) => semanticAddressKey(entry.address) === key)?.capability;
+      if (derived(artifacts) !== undefined) continue;
+      const prior = derived(beforeArtifacts);
+      if (prior?.kind !== 'echoDoubleShopReward' && prior?.kind !== 'travelDealRefill') continue;
+      removals.push({ owner, reference });
+    }
+  }
+  return removals;
+}
+
+/**
+ * Whether a row exists only as the product of a source in another room or
+ * acquisition: a countdown Hermes delivery or a matured trait drop.
+ */
+function sourcedElsewhere(owner: OccurrenceAddress, reference: RoomActionReference): boolean {
+  if (reference.kind !== 'interactAcquisitionEntry') return false;
+  if (reference.siteKey === HERMES_SHRINE_DELIVERY_SITE_KEY) {
+    const source = parseHermesShrineDeliveryEntryKey(reference.entryKey);
+    return (
+      source !== undefined && !isSameRoomDelivery(hermesShrineDeliverySourceAddress(source), owner)
+    );
+  }
+  return (
+    reference.siteKey === 'roomExit' &&
+    parseClockedTraitGeneratedPickupEntryKey(reference.entryKey) !== undefined
+  );
+}
+
+/** Such rows a structural command took out of the rooms that remain. */
+function sourcedRowsTaken(before: ProjectDocument, after: ProjectDocument) {
+  const taken: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
+  for (const { owner, occurrence } of occurrences(before)) {
+    const current = occurrenceAt(after, owner);
+    if (current === undefined || current === occurrence) continue;
+    const remaining = new Set(current.roomActions.order.map(roomActionKey));
+    for (const reference of occurrence.roomActions.order)
+      if (sourcedElsewhere(owner, reference) && !remaining.has(roomActionKey(reference)))
+        taken.push({ owner, reference });
+  }
+  return taken;
 }
 
 /** The room's action keys as its producers contribute them: a reward's roles in declared order. */
@@ -355,17 +462,55 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
   const rekeyed = new Set<string>();
   const addressed = semanticAddressKey(projectCommandAddress(command) as SemanticAddress);
   const removedStale: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
+  // Sourced rows the command or a displaced placement took; one placed again elsewhere moved.
+  const removedElsewhere: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   const settled = (
     assembly: ProjectEvaluationAssembly,
     fault?: SettlementFault,
   ): ProjectEditSettlement => {
+    const placed = new Set(
+      occurrences(assembly.project).flatMap(({ occurrence }) =>
+        occurrence.roomActions.order.map(roomActionKey),
+      ),
+    );
+    const announced = [
+      ...removedStale,
+      ...removedElsewhere.filter(({ owner, reference }) => {
+        const key = roomActionKey(reference);
+        if (placed.has(key) || addressed === semanticAddressKey(owner)) return false;
+        const action = createRoomActionAddress(
+          createBiomeAddress(owner.routeKey, owner.biomeKey),
+          owner.occurrenceId,
+          key,
+        );
+        if (addressed === semanticAddressKey(action)) return false;
+        const rowOwner = beforeRosters.get(semanticAddressKey(owner))?.rows.get(key)?.owner;
+        return !ownerLineage(rowOwner).has(addressed);
+      }),
+    ];
     const byRoom = new Map<string, RemovedStaleRoomActions>();
-    for (const { owner, reference } of removedStale) {
+    for (const { owner, reference } of announced) {
       const key = semanticAddressKey(owner);
       const room = byRoom.get(key);
+      if (room?.actions.some((action) => roomActionKey(action) === roomActionKey(reference)))
+        continue;
       byRoom.set(key, {
         occurrence: owner,
         actions: Object.freeze([...(room?.actions ?? []), reference]),
+      });
+    }
+    // Each room's rows in their order before the edit.
+    for (const [key, room] of byRoom) {
+      const former = (occurrenceAt(before.project, room.occurrence)?.roomActions.order ?? []).map(
+        roomActionKey,
+      );
+      const rank = (reference: RoomActionReference) => {
+        const index = former.indexOf(roomActionKey(reference));
+        return index < 0 ? former.length : index;
+      };
+      byRoom.set(key, {
+        occurrence: room.occurrence,
+        actions: Object.freeze([...room.actions].sort((left, right) => rank(left) - rank(right))),
       });
     }
     return Object.freeze({
@@ -445,6 +590,9 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
     return Object.freeze({ assembly: before });
   let project = applyProjectCommand(before.project, catalog, command);
   if (project === before.project) return Object.freeze({ assembly: before });
+  // An installed route keeps exactly the rows it was authored with.
+  if (command.kind !== 'ReplaceRoute')
+    removedElsewhere.push(...sourcedRowsTaken(before.project, project));
   let assembly = evaluate(project);
   // The reroll pool is a fixed budget at each spend's own point: a new spend
   // past it is refused. An earlier spend takes precedence, so an edit that
@@ -486,6 +634,9 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
     const displaced = placements(assembly).find(
       (placement) =>
         placement.assessment.kind === 'invalid' &&
+        // A held trait whose drop now matures elsewhere keeps its row, with its finding.
+        (placement.assessment.source.kind !== 'clockedTraitPickup' ||
+          placement.assessment.reason === 'sourceInactive') &&
         beforePlacements.get(semanticAddressKey(placement.address))?.assessment.kind === 'valid',
     );
     if (displaced !== undefined && displaced.address.site.owner.kind === 'occurrence') {
@@ -503,6 +654,7 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
           displaced.address,
         );
         if (fault !== undefined) return settled(assembly, fault);
+        removedElsewhere.push({ owner, reference });
         project = applyProjectCommand(project, catalog, {
           kind:
             displaced.address.site.pointKey === 'hermesShrineDelivery'
@@ -629,8 +781,11 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
         assembly = evaluate(project);
         continue;
       }
-      // A row with no context has nothing to repair: the edit that orphans it removes it.
-      const stale = staleRowsToRemove(before, beforeRosters, assembly);
+      // A row with no context or source has nothing to repair: the edit that orphans it removes it.
+      const stale = [
+        ...staleRowsToRemove(before, beforeRosters, assembly),
+        ...sourceGoneShopRows(beforeArtifacts, artifacts, assembly),
+      ];
       if (stale.length === 0) return settled(assembly);
       const rosters = enteredRosters(assembly);
       const pass: { owner: OccurrenceAddress; reference: RoomActionReference; index: number }[] =
