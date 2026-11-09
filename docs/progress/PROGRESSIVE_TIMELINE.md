@@ -36,6 +36,14 @@ commands, insert and move proposals and the purchase insertion query
 (owner 2026-11-09). Engine step on this branch, independently reviewed,
 before the planner work.
 
+A prefix is invalid when a required action's deadline falls inside it and
+the action is not in it: a placed required action of an earlier window after
+k has its deadline before k, so k is not reached ("<action> must come
+first"). This is the rule itself, not a stricter variant. Postboss: using the
+fountain opens the doors, and the Well, Pool and Shrine are usable only from
+then (owner); the walk must stop at an object interaction placed before the
+fountain rather than flag the fountain (to fix).
+
 ## Owner answers (2026-11-09 morning)
 
 - Doors, door picks, side-visit picks and the Leave row appear only once the
