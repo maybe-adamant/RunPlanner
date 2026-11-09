@@ -132,11 +132,26 @@ export interface RoomTimelineCoverage {
   readonly blockingRowKeys: readonly string[];
 }
 
+/**
+ * Where the walk stopped inside the room it blocks in. Entries of the room's
+ * lifecycle Timeline before `entryIndex` are reached; the entry at it and every
+ * later one are not. A Timeline stop's entry is its blocking product (the first
+ * blocking row, the doors opening or a required action's deadline); an Overview
+ * stop is past entry only, and an exit stop is past every entry.
+ */
+export interface RoomStopCoverage {
+  readonly room: OccurrenceAddress;
+  readonly kind: 'overview' | 'timeline' | 'exit';
+  /** Index in the room's `roomLifecycleTimeline.entries`, at most its length. */
+  readonly entryIndex: number;
+}
+
 export interface PrefixBiomeEvaluationCoverage {
   readonly kind: 'prefix';
   readonly through: BiomeEvaluationPoint;
   readonly blockedAt?: SemanticAddress;
   readonly roomTimeline?: RoomTimelineCoverage;
+  readonly roomStop?: RoomStopCoverage;
 }
 
 export interface CompleteBiomeEvaluationCoverage {

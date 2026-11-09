@@ -593,6 +593,17 @@ describe('Judgment fixed Boss lifecycle', () => {
     });
     if (evaluated.materializedPrefix.entryRoom === undefined)
       throw new Error('N terminal prefix must retain its fixed entry room');
+    // The Arcana is chosen as the Boss falls: the walk stops at that boundary.
+    const boss = evaluated.materializedPrefix.fixedRoomLinks?.[0]?.target;
+    expect(evaluated.coverage).toMatchObject({
+      roomStop: {
+        room: boss?.origin,
+        kind: 'timeline',
+        entryIndex: boss?.roomLifecycleTimeline.entries.findIndex(
+          (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'bossDefeated',
+        ),
+      },
+    });
     // The Boss is published up to its completion; the Postboss is never entered.
     const postboss = evaluated.materializedPrefix.fixedRoomLinks?.[1]?.target.origin;
     expect(

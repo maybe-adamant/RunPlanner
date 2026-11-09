@@ -43,6 +43,8 @@ export interface ProgressiveBiomeEvaluation {
   readonly blockedLocation?: import('./finding-location').OwnerLocation;
   /** A block inside an entered room's Timeline, doors opening or exit work. */
   readonly roomTimeline?: import('../evaluation/evaluation-products').RoomTimelineCoverage;
+  /** Where the walk stopped inside the room it blocks in, for every room block. */
+  readonly roomStop?: import('../evaluation/evaluation-products').RoomStopCoverage;
 }
 
 /** The progressive evaluation plus the candidate artifacts it publishes. */

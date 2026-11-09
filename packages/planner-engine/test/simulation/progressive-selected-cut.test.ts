@@ -10,6 +10,8 @@ import {
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
+  createLocalVisitOrderAddress,
+  decodeProjectDocument,
   type OccurrenceId,
   type ProjectDocument,
   roomActionKey,
@@ -46,6 +48,8 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
+import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 
 import * as fixture from './support/progressive-biome-fixtures';
 import { reachedFrontier } from '../support/reward-frontier';
@@ -244,6 +248,37 @@ function biomeEvaluation(project: ProjectDocument, biomeKey: string) {
   return Object.freeze({ ...evaluation, coverage: evaluation.coverage });
 }
 
+/** The entry the walk stopped at in its blocked room, named by kind or row key; `end` past every entry. */
+function stopAt(evaluation: ReturnType<typeof biomeEvaluation>) {
+  const stop = evaluation.coverage.roomStop;
+  if (stop === undefined) return undefined;
+  const prefix = evaluation.materializedPrefix;
+  const rooms = [
+    ...(prefix.entryRoom === undefined ? [] : [prefix.entryRoom]),
+    ...prefix.decisions.flatMap((decision) =>
+      decision.kind === 'batch'
+        ? [...decision.targets, ...decision.additional].map((target) => target.room)
+        : decision.visits.flatMap((visit) => [visit.target.room, ...visit.enteredLocalRooms]),
+    ),
+    ...(prefix.fixedRoomLinks ?? []).map((link) => link.target),
+  ];
+  const room = rooms.find((candidate) => candidate.occurrenceId === stop.room.occurrenceId);
+  if (room === undefined) throw new Error(`${stop.room.occurrenceId} is not materialized`);
+  const entry = room.roomLifecycleTimeline.entries[stop.entryIndex];
+  return {
+    room: stop.room.occurrenceId,
+    kind: stop.kind,
+    at:
+      entry === undefined
+        ? 'end'
+        : entry.kind === 'boundary'
+          ? entry.boundary.kind
+          : entry.kind === 'action'
+            ? entry.action.key
+            : entry.effect,
+  };
+}
+
 function runStateAvailability(
   evaluation: ReturnType<typeof biomeEvaluation>,
   owner: RoomRunStateCheckpointAddress,
@@ -408,6 +443,12 @@ describe('room Overview block', () => {
     const p = biomeEvaluation(project, 'P');
 
     expect(p.coverage.blockedAt).toEqual(boon);
+    // Room entered is reached, with its entry effects; nothing after it.
+    expect(p.coverage.roomStop).toEqual({
+      room: createOccurrenceAddress(pBiome, prebossShop),
+      kind: 'overview',
+      entryIndex: 1,
+    });
     expect(p.findings).toContainEqual(
       expect.objectContaining({ code: 'shopOfferUnavailable', origin: boon }),
     );
@@ -884,6 +925,7 @@ describe('room Timeline block', () => {
 
     expect(g.coverage.blockedAt).toMatchObject({ kind: 'incomingReward' });
     expect(g.coverage.roomTimeline).toEqual({ room: shop, blockingRowKeys: [] });
+    expect(stopAt(g)).toEqual({ room: shopId, kind: 'timeline', at: 'cleanup' });
     const events = roomEvents(g, shopId).map((event) => event.kind);
     expect(events).toEqual(expect.arrayContaining(['roomEntered', 'outgoingGenerationCheckpoint']));
     // The purchase after the doors opening, the commit and the exit are never assessed.
@@ -948,6 +990,7 @@ describe('room Timeline block', () => {
 
     // A (Premium) settles, B (the refill) blocks alone, C (Mixed Progress) is after the block.
     expect(q.coverage.roomTimeline).toEqual({ room: shop, blockingRowKeys: [rowKey(refillRow)] });
+    expect(stopAt(q)).toEqual({ room: shopId, kind: 'timeline', at: rowKey(refillRow) });
     expect(
       candidateArtifactsForProjectEvaluationAssembly(assembly)
         .biomeAt(qBiome)
@@ -971,6 +1014,11 @@ describe('fixed room blocks', () => {
     const boss = bossLink.target.origin;
 
     expect(n.coverage.roomTimeline?.room).toEqual(boss);
+    expect(stopAt(n)).toEqual({
+      room: boss.occurrenceId,
+      kind: 'timeline',
+      at: n.coverage.roomTimeline?.blockingRowKeys[0],
+    });
     // The Preboss settled through its exit; the Boss is entered and fought.
     expect(exited(n, preboss.occurrenceId)).toBe(true);
     expect(
@@ -1090,5 +1138,92 @@ describe('opening room blocks', () => {
       kind: 'exitDecision',
       origin: createExitDecisionAddress(pBiome, source(pIntro)),
     });
+  });
+});
+
+describe('room stop', () => {
+  /** A save that never placed the room's actions: its required actions stay owed. */
+  function withoutRoomActions(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
+    return decodeProjectDocument(
+      {
+        ...project,
+        route: {
+          ...project.route,
+          biomes: project.route.biomes.map((biome) =>
+            biome.biomeKey !== biomeKey || biome.topology === null
+              ? biome
+              : {
+                  ...biome,
+                  topology: {
+                    ...biome.topology,
+                    occurrences: biome.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId === occurrenceId
+                        ? { ...occurrence, roomActions: { order: [] } }
+                        : occurrence,
+                    ),
+                  },
+                },
+          ),
+        },
+      },
+      catalog,
+    );
+  }
+
+  it('publishes no stop for a settled route', () => {
+    const route = simulateProject(catalog, loadUnderworldFGCheckpoint()).route;
+    for (const biome of route?.biomes ?? [])
+      expect(biome.coverage.kind === 'prefix' ? biome.coverage.roomStop : undefined).toBe(
+        undefined,
+      );
+  });
+
+  it('stops an unplaced required pickup at its deadline, the doors opening', () => {
+    const f = biomeEvaluation(
+      withoutRoomActions(loadUnderworldFGCheckpoint(), 'F', 'golden-f-b1-e1'),
+      'F',
+    );
+
+    expect(f.requiredInputLocation?.roomTimelineIndex).toBe(-1);
+    expect(stopAt(f)).toEqual({ room: 'golden-f-b1-e1', kind: 'timeline', at: 'cleanup' });
+    // Only the blocked room stops; the settled opening room before it has none.
+    expect(f.coverage.roomStop?.room.occurrenceId).toBe('golden-f-b1-e1');
+  });
+
+  it("stops an invalid door offer at its source room's doors opening", () => {
+    const f = biomeEvaluation(
+      applyProjectCommand(loadUnderworldFGCheckpoint(), catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-b1-e1')),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+      }),
+      'F',
+    );
+
+    expect(f.coverage.roomTimeline?.blockingRowKeys).toEqual([]);
+    expect(stopAt(f)).toEqual({ room: 'golden-f-start', kind: 'timeline', at: 'cleanup' });
+  });
+
+  it('stops a repeated side visit past every entry of its main room', () => {
+    const project = loadSurfaceNOPQCheckpoint();
+    const main = createOccurrenceId('surface-n-combat05');
+    const decision = project.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
+      ?.topology?.decisions.find(
+        (candidate) => candidate.kind === 'localVisit' && candidate.sourceOccurrenceId === main,
+      );
+    if (decision?.kind !== 'localVisit') throw new Error('N lost its side visits');
+    const visits = decision.visitOrder;
+    const n = biomeEvaluation(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceLocalVisitOrder',
+        order: createLocalVisitOrderAddress(nBiome, main, 'sideRooms'),
+        occurrenceIds: [visits[1]!, ...visits.slice(1)],
+      }),
+      'N',
+    );
+
+    expect(n.coverage.blockedAt).toMatchObject({ kind: 'localVisitOrder' });
+    expect(stopAt(n)).toEqual({ room: main, kind: 'exit', at: 'end' });
   });
 });

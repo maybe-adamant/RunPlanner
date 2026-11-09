@@ -287,8 +287,11 @@ function generation(
 
 function roomTimelineCoverage(
   evaluation: ProgressiveBiomeEvaluation,
-): Pick<PrefixBiomeEvaluationCoverage, 'roomTimeline'> {
-  return evaluation.roomTimeline === undefined ? {} : { roomTimeline: evaluation.roomTimeline };
+): Pick<PrefixBiomeEvaluationCoverage, 'roomTimeline' | 'roomStop'> {
+  return {
+    ...(evaluation.roomTimeline === undefined ? {} : { roomTimeline: evaluation.roomTimeline }),
+    ...(evaluation.roomStop === undefined ? {} : { roomStop: evaluation.roomStop }),
+  };
 }
 
 export function materializedBiomePrefixCoveragePoint(

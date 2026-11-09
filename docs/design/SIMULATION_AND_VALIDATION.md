@@ -352,6 +352,22 @@ participation). Inside it, only rows at or before the failing contact have
 reached inner capabilities; later rows show their inner pickers read-only.
 Findings arise only at or before that contact, so no repair is locked.
 
+Every block in an entered room also publishes the room's stop on coverage:
+the room, whether it stopped in its Overview, Timeline or exit work, and the
+first entry of its lifecycle Timeline the walk did not get past. Entries
+before it are reached; it and every later entry are not.
+
+| Stop                                                                                                   | First unreached entry                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview                                                                                               | The entry after **Room entered**: entry and its entry effects are reached, nothing the Timeline settles is                                                     |
+| A Timeline row                                                                                         | The first row of the blocking product                                                                                                                          |
+| An unplaced or removed required action                                                                 | Its deadline: the boundary that closes its window, never later than **Doors open**, which waits on every required action; a Fields window closes at Doors open |
+| The doors opening                                                                                      | **Doors open**                                                                                                                                                 |
+| Another Timeline contact (a phase start, an encounter end's due outcomes or deliveries, a wheel offer) | The contact's own entry, else the first boundary the walk had not passed at the contact                                                                        |
+| Exit work, after the room committed or as a restored room departs again                                | Past every entry                                                                                                                                               |
+
+A Hub board or its Handoff and a block at the biome start have no room stop.
+
 Encounter support follows the same cut. Every phase of a room prepared through
 the cut keeps its identity, composition, generation and roster support, since
 those read only the room's preparation and entry state. A phase that started
