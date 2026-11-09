@@ -1202,13 +1202,20 @@
 }
 
 /*
- * A notice tells what the game did (spawned, unlocked, delivered, restocked): a thin dashed outline
- * in place of an action's stripe, at an action row's height and column alignment.
+ * A notice tells what the game did (spawned, unlocked, delivered, restocked): an action's stripe
+ * drawn dashed, and a dot where an action has its handle.
  */
 .timeline-row.timeline-row-notice {
-  padding: 2px 7px 2px calc(var(--timeline-row-start) + 2px);
-  border: 1px dashed var(--timeline-notice-line);
+  border-left-style: dashed;
+  border-left-color: var(--timeline-notice-line);
   background: transparent;
+}
+
+.timeline-notice-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted);
 }
 
 .timeline-row-notice [data-timeline-cell='label'] {
@@ -1625,7 +1632,7 @@
    * with its badges fills a row's height inside the row's padding.
    */
   --timeline-icon-size: 23px;
-  --timeline-notice-line: rgb(255 255 255 / 16%);
+  --timeline-notice-line: rgb(255 255 255 / 22%);
   --timeline-chip-size: calc(var(--timeline-icon-size) + 9px);
   --badge-size: calc(var(--timeline-icon-size) * 2 / 3);
   --badge-small: calc(var(--timeline-icon-size) * 13 / 21);
