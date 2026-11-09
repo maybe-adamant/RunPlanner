@@ -20,7 +20,8 @@ import {
   HERMES_SHRINE_DELIVERY_SITE_KEY,
   parseHermesShrineDeliveryEntryKey,
 } from '../../authored-project/hermes-shrine-delivery';
-import type { RoomActionReference } from '../../authored-project/model';
+import type { AuthoredRewardState, RoomActionReference } from '../../authored-project/model';
+import { createUnresolvedLevelResolutions } from '../../authored-project/traits/state';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
@@ -88,6 +89,11 @@ export interface SpawnedLootItem {
   readonly placement: SpawnedLootPlacement;
   /** The key of the unlock that frees it, for loot that spawns before it can be taken. */
   readonly lockedUntil?: string;
+  /**
+   * An unplaced pickup whose placement asks for a choice: the Pom level its
+   * reward resolves, such as a Supply Chain Pom Slice's target.
+   */
+  readonly needsChoice?: 'levelResolution';
 }
 
 export interface SpawnMoment {
@@ -189,6 +195,47 @@ function compareOrder(left: readonly number[], right: readonly number[]): number
   return 0;
 }
 
+type LevelResolutions = AuthoredRewardState['levelResolutionsByAcquisitionRole'];
+
+/** The reward resolves a Pom level for the role, or for any role when none is named. */
+function resolvesLevel(levels: LevelResolutions, role?: string): boolean {
+  return (
+    levels !== undefined &&
+    (role === undefined ? Object.keys(levels).length > 0 : levels[role] !== undefined)
+  );
+}
+
+/** Whether collecting the row's authored reward resolves a Pom level. */
+function rowResolvesLevel(room: CanonicalAuthoredRoom, reference: RoomActionReference): boolean {
+  switch (reference.kind) {
+    case 'interactIncomingReward':
+      return resolvesLevel(
+        room.incomingReward?.levelResolutionsByAcquisitionRole,
+        reference.acquisitionRole,
+      );
+    case 'interactLocalReward':
+      return resolvesLevel(
+        [...(room.localRewards ?? []), ...(room.fieldsOptionalRewards ?? [])].find(
+          (reward) =>
+            reward.groupKey === reference.groupKey && reward.slotKey === reference.slotKey,
+        )?.levelResolutionsByAcquisitionRole,
+      );
+    case 'interactWheelReward':
+      return resolvesLevel(
+        room.rewardWheels
+          ?.find((wheel) => wheel.wheelKey === reference.wheelKey)
+          ?.offers.find((offer) => offer.picked)?.levelResolutionsByAcquisitionRole,
+      );
+    case 'interactAcquisitionEntry':
+      return resolvesLevel(
+        room.acquisitionSites[reference.siteKey]?.entries[reference.entryKey]
+          ?.levelResolutionsByAcquisitionRole,
+      );
+    default:
+      return false;
+  }
+}
+
 /**
  * The collect action for an unranked active row: a required row's canonical
  * insertion, otherwise its latest legal one.
@@ -249,6 +296,7 @@ export function spawnedLootForProjectEvaluationAssembly(
   ): SpawnedLootItem => {
     const action = actionAddress(row.reference);
     const command = row.rank === null ? insertion(room, row, action) : undefined;
+    const needsChoice = row.rank === null && rowResolvesLevel(room, row.reference);
     return frozen({
       owner: row.owner,
       reference: row.reference,
@@ -262,7 +310,34 @@ export function spawnedLootForProjectEvaluationAssembly(
               ...(command === undefined ? {} : { command }),
             }),
       ...(lockedUntil === undefined ? {} : { lockedUntil }),
+      ...(needsChoice ? { needsChoice: 'levelResolution' as const } : {}),
     });
+  };
+  /** Placing a derived pickup authors its reward: a fixed one, else one of its single type. */
+  const derivedResolvesLevel = (
+    entry: AcquisitionEntryAddress,
+    capability: {
+      readonly rewardTypes?: readonly string[];
+      readonly fixedReward?: AuthoredRewardState;
+      readonly producerLifecycleKey?: string;
+    },
+  ): boolean => {
+    const authored = room.acquisitionSites[entry.site.pointKey]?.entries[entry.entryKey];
+    if (authored !== undefined && authored !== null)
+      return resolvesLevel(authored.levelResolutionsByAcquisitionRole);
+    if (capability.fixedReward !== undefined)
+      return resolvesLevel(capability.fixedReward.levelResolutionsByAcquisitionRole);
+    const rewardType = capability.rewardTypes?.length === 1 ? capability.rewardTypes[0] : undefined;
+    return (
+      rewardType !== undefined &&
+      capability.producerLifecycleKey !== undefined &&
+      createUnresolvedLevelResolutions(
+        catalog,
+        { rewardType },
+        { kind: 'producerLifecycle', key: capability.producerLifecycleKey },
+        occurrence.routeKey,
+      ) !== undefined
+    );
   };
   /** A derived pickup joins its ranked row only for placement. */
   const fromDerived = (
@@ -271,6 +346,7 @@ export function spawnedLootForProjectEvaluationAssembly(
     family: AcquisitionEntrySourceFamily,
     participation: RoomActionParticipation,
     command: ProjectCommand | undefined,
+    capability: Parameters<typeof derivedResolvesLevel>[1],
   ): SpawnedLootItem => {
     const placed = liveRows.find(
       (row) =>
@@ -295,6 +371,11 @@ export function spawnedLootForProjectEvaluationAssembly(
               kind: 'unplaced' as const,
               ...(command === undefined ? {} : { command }),
             }),
+      ...(placed?.rank === undefined || placed.rank === null
+        ? derivedResolvesLevel(entry, capability)
+          ? { needsChoice: 'levelResolution' as const }
+          : {}
+        : {}),
     });
   };
 
@@ -437,6 +518,7 @@ export function spawnedLootForProjectEvaluationAssembly(
           ? {}
           : { encounterPhaseKey: entry.encounterPhaseKey }),
       }),
+      entry,
     );
     if (entry.encounterPhaseKey === undefined) add('deliveryFlush', undefined, item);
     else add(endEffectsMoment(entry.encounterPhaseKey), entry.encounterPhaseKey, item);
@@ -467,6 +549,7 @@ export function spawnedLootForProjectEvaluationAssembly(
         entry.sourceFamily,
         entry.participation ?? 'optional',
         clockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, entry.address),
+        entry,
       ),
     );
   }
@@ -565,6 +648,7 @@ export function spawnedLootForProjectEvaluationAssembly(
           entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
           sourceOfferKey: entry.sourceOfferKey,
         }),
+        entry,
       ),
     );
   }

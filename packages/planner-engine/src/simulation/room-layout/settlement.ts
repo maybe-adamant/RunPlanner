@@ -7,6 +7,7 @@ import type { Catalog } from '../../catalog-schema';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { FindingEvidence, SemanticFinding } from '../model';
 import type { RoomLayoutDerivation } from './derivation';
+import { ROOM_ANCHOR_OBJECT_ORDER } from './object-anchor-positions';
 
 /** One entered room's layout as the walk settled it at its entry. */
 export interface RoomLayoutSettlement extends RoomLayoutDerivation {
@@ -66,19 +67,11 @@ export function roomLayoutFindings(
   return Object.freeze(findings);
 }
 
-/** Native spawn order of the objects that stand on `ChallengeSwitchBase` anchors. */
-const ANCHOR_OBJECTS: readonly RoomAnchorObjectKind[] = [
-  'stygianWell',
-  'purgingPool',
-  'hermesShrine',
-  'challengeSwitch',
-];
-
 /** Each present room object's authored anchor, in native spawn order. */
 export function roomObjectAnchors(
   room: Pick<CanonicalAuthoredRoom, RoomAnchorObjectKind>,
 ): readonly { readonly object: RoomAnchorObjectKind; readonly anchorId: number }[] {
-  return ANCHOR_OBJECTS.flatMap((object) => {
+  return ROOM_ANCHOR_OBJECT_ORDER.flatMap((object) => {
     const anchorId = room[object]?.anchorId;
     return anchorId === undefined ? [] : [{ object, anchorId }];
   });

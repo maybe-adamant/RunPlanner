@@ -94,15 +94,16 @@ information the runtime consumes:
 
 Every entered room publishes the layout the runtime steers: the flip and the
 entry (start and end point) where the room or its arrival door fixes them, or
-where the user authored them in a roll or among eligible entries. A value the
-game derives from the previous room's exit, an unset roll and an unset choice
-are absent and stay native. A Well, Pool, Shrine or challenge switch publishes
-its `anchorId` when authored.
+the authored or default value where the game rolls or picks among eligible
+entries ([position defaults](SIMULATION_AND_VALIDATION.md#position-defaults)).
+A value the game derives from the previous room's exit is absent and stays
+native. A Well, Pool, Shrine or challenge switch publishes its authored or
+default `anchorId`; the Well on its room's pin publishes none. A Chaos gate
+publishes its authored or default `spawnPointIndex`.
 
-Fields door targets carry cage rewards even when unpicked. Cage and
-optional-reward points are entered-room facts published only for selected
-Fields occurrences; each slot's point is optional, and a slot without one
-stays native.
+Fields door targets carry cage rewards even when unpicked. Cage,
+optional-reward and Nemesis points are entered-room facts published only for
+selected Fields occurrences, each slot's authored or default point.
 Reward wheels follow the same selection boundary: a selected Ship occurrence
 publishes one wheel per active combat phase, and an unselected Ship door
 target, which is never entered, publishes none.

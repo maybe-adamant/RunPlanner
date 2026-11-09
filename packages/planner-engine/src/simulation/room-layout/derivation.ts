@@ -6,6 +6,7 @@ import {
   type RoomMapExitDoor,
 } from '../../catalog-schema';
 import type { RoomLayout } from '../../authored-project/model';
+import { stableChoice } from '../../authored-project/stable-hash';
 
 /**
  * The door a room is entered through, relative to the room left before it: an
@@ -23,8 +24,7 @@ export type RoomEntryDoor =
 /** The room native `LeaveRoom` last left, as the next room's flip and entry read it. */
 export interface RoomDeparture {
   readonly gameName: string;
-  /** Absent while the left room's flip is an unset roll. */
-  readonly flipped?: boolean;
+  readonly flipped: boolean;
 }
 
 /** What the previous room's exit tells the entered room. */
@@ -50,8 +50,16 @@ export interface RoomEntryOption extends RoomEntryPoint {
 
 export type RoomLayoutFlip =
   | { readonly kind: 'fixed' | 'derived'; readonly value: boolean }
-  /** A roll: the authored value, else the one the authored entry needs; absent leaves it native. */
-  | { readonly kind: 'roll'; readonly chance: number; readonly value?: boolean };
+  /**
+   * A roll: the authored value, else the one the authored entry needs, else
+   * the room's stable default, marked `default`.
+   */
+  | {
+      readonly kind: 'roll';
+      readonly chance: number;
+      readonly value: boolean;
+      readonly default?: true;
+    };
 
 export type RoomLayoutEntry =
   | { readonly kind: 'fixed' | 'derived'; readonly point: RoomEntryPoint }
@@ -59,8 +67,12 @@ export type RoomLayoutEntry =
       readonly kind: 'choice';
       /** Every entry the game can pick, across both flips of a roll. */
       readonly eligible: readonly RoomEntryOption[];
-      /** The authored entry when it is eligible, even where it alone remains; absent leaves it native. */
-      readonly point?: RoomEntryPoint;
+      /**
+       * The authored entry when it is eligible, even where it alone remains;
+       * otherwise the stable default among those the flip allows, marked `default`.
+       */
+      readonly point: RoomEntryPoint;
+      readonly default?: true;
     }
   /** The room has no entry points on record. */
   | { readonly kind: 'unknown' };
@@ -136,8 +148,8 @@ function mapDoorThrough(
 /**
  * The previous room's exit as the next room reads it: the taken door's
  * canonical direction, mirrored when that room was flipped, and the entry
- * its door sets. Unknown at run start, where the left room ignores exit
- * direction or has no `HeroExit` for the door, or while its flip is unset.
+ * its door sets. Unknown at run start and where the left room ignores exit
+ * direction or has no `HeroExit` for the door.
  */
 export function roomArrivalThrough(
   catalog: Pick<Catalog, 'rooms' | 'exitTypes'>,
@@ -152,10 +164,7 @@ export function roomArrivalThrough(
   );
   const canonical =
     previous?.orientation?.ignoresExitDirection === true ? undefined : mapDoor?.exitDirection;
-  const exitDirection =
-    canonical === undefined || departure.flipped === undefined
-      ? undefined
-      : live(canonical, departure.flipped);
+  const exitDirection = canonical === undefined ? undefined : live(canonical, departure.flipped);
   return Object.freeze({
     kind: 'door',
     ...(exitDirection === undefined ? {} : { exitDirection }),
@@ -172,7 +181,11 @@ export function roomArrivalThrough(
 
 const DEFAULT_FLIP_CHANCE = 0.5;
 
-function nativeFlip(room: RoomDeclaration, arrival: RoomArrival): RoomLayoutFlip {
+type NativeFlip =
+  | Exclude<RoomLayoutFlip, { readonly kind: 'roll' }>
+  | { readonly kind: 'roll'; readonly chance: number };
+
+function nativeFlip(room: RoomDeclaration, arrival: RoomArrival): NativeFlip {
   // Run start loads the first room unflipped.
   if (arrival.kind === 'runStart') return Object.freeze({ kind: 'fixed', value: false });
   const entrance = room.orientation?.entranceDirection;
@@ -219,12 +232,16 @@ function compatible(option: RoomEntryOption, flipped: boolean | undefined): bool
 
 /**
  * The one derivation rule for a room's flip and entry as it is entered, from
- * the previous room's exit and the room's own authored layout.
+ * the previous room's exit and the room's own authored layout. An unauthored
+ * rolled flip, then an unauthored entry among those it allows, takes the
+ * occurrence's stable default.
  */
 export function deriveRoomLayout(
   room: RoomDeclaration,
   arrival: RoomArrival,
   authored: RoomLayout | undefined,
+  /** The entered room's semantic key, which seeds its defaults. */
+  ownerKey: string,
 ): RoomLayoutDerivation {
   const native = nativeFlip(room, arrival);
   const exitDirection = arrival.kind === 'door' ? arrival.exitDirection : undefined;
@@ -271,17 +288,32 @@ export function deriveRoomLayout(
               option.startPointId === authoredEntry &&
               compatible(option, native.kind === 'roll' ? authoredFlip : native.value),
           );
-  const flipValue =
+  // The authored flip, else the one the chosen entry needs; a default never narrows the choice.
+  const heldFlip =
     native.kind === 'roll'
       ? (authoredFlip ?? (chosen as RoomEntryOption | undefined)?.flipped)
       : native.value;
   const flip: RoomLayoutFlip =
-    native.kind === 'roll'
-      ? Object.freeze({ ...native, ...(flipValue === undefined ? {} : { value: flipValue }) })
-      : native;
-  const open = options.filter((option) => compatible(option, flipValue));
+    native.kind !== 'roll'
+      ? native
+      : heldFlip !== undefined
+        ? Object.freeze({ ...native, value: heldFlip })
+        : Object.freeze({
+            ...native,
+            value: stableChoice(`${ownerKey}|flip`, [false, true])!,
+            default: true as const,
+          });
+  const open = options.filter((option) => compatible(option, heldFlip));
   const point = (option: RoomEntryPoint): RoomEntryPoint =>
     Object.freeze({ startPointId: option.startPointId, endPointId: option.endPointId });
+  const defaultEntry = (): RoomEntryOption => {
+    const allowed = options.filter((option) => compatible(option, flip.value));
+    const startPointId = stableChoice(
+      `${ownerKey}|entry`,
+      allowed.map((option) => option.startPointId),
+    );
+    return allowed.find((option) => option.startPointId === startPointId)!;
+  };
   const entry: RoomLayoutEntry =
     forced !== undefined
       ? Object.freeze({ kind: 'fixed', point: point(forced) })
@@ -292,7 +324,9 @@ export function deriveRoomLayout(
           : Object.freeze({
               kind: 'choice',
               eligible: Object.freeze(options),
-              ...(chosen === undefined ? {} : { point: point(chosen) }),
+              ...(chosen === undefined
+                ? { point: point(defaultEntry()), default: true as const }
+                : { point: point(chosen) }),
             });
   const entryUnavailable =
     authoredEntry !== undefined && chosen === undefined
@@ -316,6 +350,5 @@ export function deriveRoomLayout(
 
 /** The flip a derived layout leaves the room with, as its departure records it. */
 export function departureFrom(gameName: string, layout: RoomLayoutDerivation): RoomDeparture {
-  const flipped = layout.flip.value;
-  return Object.freeze({ gameName, ...(flipped === undefined ? {} : { flipped }) });
+  return Object.freeze({ gameName, flipped: layout.flip.value });
 }

@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 102,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "execution-dream-q-f-n-h",
   "routeKey": "Dream",
   "startingLoadout": {
@@ -1666,7 +1666,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "OpeningEmpty", "kind": "nonCombat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": true }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -1925,7 +1926,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -2437,8 +2439,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "MiniBossTreant", "kind": "miniboss" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": false }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -2798,7 +2799,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 560632, "endPointId": 560633 } }
       },
       "timeline": {
         "transactions": [
@@ -3297,7 +3299,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 566303, "endPointId": 566306 } }
       },
       "timeline": {
         "transactions": [
@@ -7207,5 +7210,5 @@
       }
     }
   ],
-  "planFingerprint": "440013e5"
+  "planFingerprint": "b26e85a3"
 }

@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 102,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -826,7 +826,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1259,7 +1260,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 510330, "endPointId": 510331 } }
       },
       "timeline": {
         "transactions": [
@@ -1643,8 +1645,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "MiniBossTreant", "kind": "miniboss" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": false }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -1867,7 +1868,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 560632, "endPointId": 560633 } }
       },
       "timeline": {
         "transactions": [
@@ -2798,7 +2800,8 @@
           "traits": [],
           "rerolls": [
             { "rollKey": "r1", "traits": [{ "slotKey": "middle", "traitKey": "HeraCastBoon" }] }
-          ]
+          ],
+          "anchorId": 755023
         },
         "keepsakeRack": {},
         "fountain": {}
@@ -3045,5 +3048,5 @@
       }
     }
   ],
-  "planFingerprint": "8a95cf6b"
+  "planFingerprint": "1f3f0817"
 }

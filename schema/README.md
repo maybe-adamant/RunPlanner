@@ -31,6 +31,16 @@ npm run test:schema:migrate
 
 ## History
 
+Revision 102.1 gives every unset position a meaning: a rolled flip, an entry
+the game picks among ties, an anchor object's anchor, a Fields cage, optional
+reward or Nemesis point and a Chaos gate's spawn point each take a stable
+default the engine derives and never stores, where the game used to place
+them at random. The plan wire publishes those defaults beside the authored
+positions, so every room it steers is fully placed, and a default flip makes
+the next room's exit direction known, which can settle its flip and entry
+from the door. A revision changes no saved shape, so it has no transition;
+plans sent under 102.0 read as outdated.
+
 Schema 102 gives every room an optional `layout`: whether it is flipped
 horizontally and the `HeroStart` it is entered at, each optional. A Stygian
 Well, Pool of Purging, Shrine of Hermes or challenge switch may carry an

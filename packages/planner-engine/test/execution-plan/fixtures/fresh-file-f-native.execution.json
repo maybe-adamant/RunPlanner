@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 102,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "fresh-f",
   "routeKey": "FreshFile",
   "startingLoadout": {
@@ -847,7 +847,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 561448, "endPointId": 561445 } }
       },
       "timeline": {
         "transactions": [
@@ -1224,7 +1225,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 590864, "endPointId": 590866 } }
       },
       "timeline": {
         "transactions": [
@@ -1566,7 +1568,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1751,7 +1754,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 566301, "endPointId": 566304 } }
       },
       "timeline": {
         "transactions": [
@@ -2145,7 +2149,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 571072, "endPointId": 571073 } }
       },
       "timeline": {
         "transactions": [
@@ -2534,5 +2539,5 @@
       }
     }
   ],
-  "planFingerprint": "cd342283"
+  "planFingerprint": "7ab04b4f"
 }

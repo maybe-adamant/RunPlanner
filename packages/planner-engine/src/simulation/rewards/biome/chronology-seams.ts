@@ -159,7 +159,7 @@ function roomLayoutAtEntry(
     context.prepared.entryDoors.get(key) ?? Object.freeze({ kind: 'soleDoor' }),
   );
   const authored = source.kind === 'authored' ? source.layout : undefined;
-  const derived = deriveRoomLayout(declaration, arrival, authored);
+  const derived = deriveRoomLayout(declaration, arrival, authored, key);
   const departure = departureFrom(source.gameName, derived);
   if (source.kind !== 'authored') return { departure, findings: [] };
   const settlement: RoomLayoutSettlement = Object.freeze({

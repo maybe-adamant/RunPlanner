@@ -80,7 +80,7 @@ describe('room objects', () => {
     ]);
   });
 
-  it('stands a lone unplaced object on the one free anchor, then removes it', () => {
+  it('stands a lone unplaced object on its default anchor, then removes it', () => {
     const project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
       kind: 'AddStygianWell',
       occurrence: oneSpot,
@@ -88,14 +88,17 @@ describe('room objects', () => {
     const slots = spotsOf(project);
     const [anchor] = slots.anchors;
     const well = objectOf(slots, 'stygianWell');
-    expect(well.anchor).toEqual({ derivedAnchorId: anchor!.anchorId, choices: [] });
-    expect(anchor).toMatchObject({ occupant: { object: 'stygianWell' }, derived: true });
+    expect(well.anchor).toMatchObject({
+      defaultAnchorId: anchor!.anchorId,
+      choices: [{ anchorId: anchor!.anchorId }],
+    });
+    expect(anchor).toMatchObject({ occupant: { object: 'stygianWell' }, default: true });
     expect(slots.commandsOf(well.toggleKey!)).toEqual([
       { kind: 'RemoveStygianWell', occurrence: oneSpot },
     ]);
   });
 
-  it('does not offer an anchor another object holds, and returns its own to the game', () => {
+  it('does not offer an anchor another object holds, and returns its own to its default', () => {
     let project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
       kind: 'AddStygianWell',
       occurrence: oneSpot,
@@ -142,7 +145,10 @@ describe('room objects', () => {
     expect(well.anchor).toMatchObject({ choices: [] });
     expect(well.anchor?.pinned).toBeDefined();
     const free = slots.anchors.find((anchor) => anchor.anchorId !== well.anchor?.pinned);
-    expect(pool.anchor).toEqual({ derivedAnchorId: free!.anchorId, choices: [] });
-    expect(free).toMatchObject({ occupant: { object: 'purgingPool' }, derived: true });
+    expect(pool.anchor).toMatchObject({
+      defaultAnchorId: free!.anchorId,
+      choices: [{ anchorId: free!.anchorId }],
+    });
+    expect(free).toMatchObject({ occupant: { object: 'purgingPool' }, default: true });
   });
 });

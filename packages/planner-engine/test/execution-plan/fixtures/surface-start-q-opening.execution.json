@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 102,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "surface-4",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -4139,7 +4139,8 @@
               "deliverySourceKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22N%22%2C%22surface-n-combat11-sideDoor1%22%2C%22initial%3AsecondRight%22%5D",
               "purchase": { "rushed": false }
             }
-          ]
+          ],
+          "anchorId": 668794
         }
       },
       "timeline": {
@@ -4976,7 +4977,8 @@
               "slotIndex": 3,
               "roomDelay": 2
             }
-          ]
+          ],
+          "anchorId": 616862
         },
         "keepsakeRack": {},
         "fountain": {}
@@ -5395,7 +5397,8 @@
               "slotIndex": 3,
               "roomDelay": 4
             }
-          ]
+          ],
+          "anchorId": 691424
         }
       },
       "timeline": {
@@ -6628,7 +6631,8 @@
               "slotIndex": 3,
               "roomDelay": 2
             }
-          ]
+          ],
+          "anchorId": 723015
         },
         "keepsakeRack": {},
         "fountain": {}
@@ -8434,7 +8438,8 @@
               "deliverySourceKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22P%22%2C%22surface-p-preboss-shop%3Apostboss%22%2C%22initial%3AsecondRight%22%5D",
               "purchase": { "rushed": false }
             }
-          ]
+          ],
+          "anchorId": 487438
         },
         "keepsakeRack": {},
         "fountain": {}
@@ -10071,5 +10076,5 @@
       }
     }
   ],
-  "planFingerprint": "fb8db37b"
+  "planFingerprint": "29eb848b"
 }

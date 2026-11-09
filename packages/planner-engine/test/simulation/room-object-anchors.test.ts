@@ -389,11 +389,11 @@ describe('room object anchor slots', () => {
   });
 });
 
-describe('derived object anchors', () => {
+describe('default object anchors', () => {
   const anchorIdsOf = (gameName: string) =>
     catalog.rooms.byKey[gameName]!.mapPoints!.challengeSwitchAnchors.map((anchor) => anchor.id);
 
-  it('derives the Pool onto the anchor the Postboss Well pin leaves free', () => {
+  it('defaults the Pool onto the anchor the Postboss Well pin leaves free', () => {
     for (const [biomeKey, gameName] of [
       ['F', 'F_PostBoss01'],
       ['G', 'G_PostBoss01'],
@@ -403,25 +403,27 @@ describe('derived object anchors', () => {
       const slots = slotsOf(underworld(), biomeKey, occurrenceId);
       const pin = catalog.rooms.byKey[gameName]!.mapPoints!.wellAnchorId!;
       const free = anchorIdsOf(gameName).find((id) => id !== pin)!;
-      expect(object(slots, 'purgingPool')).toMatchObject({
-        derivedAnchorId: free,
-        anchorChoices: [],
-      });
+      expect(object(slots, 'purgingPool')).toMatchObject({ defaultAnchorId: free });
+      expect(object(slots, 'purgingPool').anchorChoices?.map((choice) => choice.anchorId)).toEqual([
+        null,
+        free,
+      ]);
       expect(object(slots, 'purgingPool').anchorId).toBeUndefined();
-      expect(object(slots, 'stygianWell').derivedAnchorId).toBeUndefined();
+      expect(object(slots, 'stygianWell').defaultAnchorId).toBeUndefined();
       expect(slots.anchors).toEqual(
         expect.arrayContaining([
           { anchorId: pin, pinned: true, occupant: 'stygianWell' },
-          { anchorId: free, pinned: false, occupant: 'purgingPool', derived: true },
+          { anchorId: free, pinned: false, occupant: 'purgingPool', default: true },
         ]),
       );
     }
   });
 
-  it('derives the one unplaced object once the others stand and one anchor is free', () => {
+  it('gives each unplaced object its own default, moved only when a choice takes it', () => {
     const project = underworld();
     const owner = address(project, 'F', 'golden-f-b5-e1');
-    const [first, second] = anchorIdsOf(occurrenceGameName(project, 'F', 'golden-f-b5-e1'));
+    const anchorIds = anchorIdsOf(occurrenceGameName(project, 'F', 'golden-f-b5-e1'));
+    expect(anchorIds).toHaveLength(2);
     const both = apply(project, [
       {
         kind: 'ReplaceChallengeSwitch',
@@ -430,31 +432,40 @@ describe('derived object anchors', () => {
       },
       { kind: 'AddStygianWell', occurrence: owner },
     ]);
-    // Two unplaced objects on two free anchors stay a roll.
-    const rolled = slotsOf(both, 'F', 'golden-f-b5-e1');
-    expect(rolled.objects.map((entry) => entry.derivedAnchorId)).toEqual([undefined, undefined]);
-    expect(rolled.anchors.every((anchor) => anchor.occupant === undefined)).toBe(true);
-    expect(object(rolled, 'challengeSwitch').anchorChoices?.length).toBe(3);
+    const defaulted = slotsOf(both, 'F', 'golden-f-b5-e1');
+    const wellDefault = object(defaulted, 'stygianWell').defaultAnchorId!;
+    const switchDefault = object(defaulted, 'challengeSwitch').defaultAnchorId!;
+    expect(new Set([wellDefault, switchDefault])).toEqual(new Set(anchorIds));
+    expect(defaulted.anchors.every((anchor) => anchor.default === true)).toBe(true);
+    expect(object(defaulted, 'challengeSwitch').anchorChoices?.length).toBe(3);
+    // Re-evaluation derives the same defaults.
+    expect(slotsOf(both, 'F', 'golden-f-b5-e1').objects).toEqual(defaulted.objects);
 
-    const placed = apply(both, [
-      {
-        kind: 'ReplaceRoomObjectAnchor',
-        occurrence: owner,
-        object: 'challengeSwitch',
-        anchorId: first!,
-      },
-    ]);
-    const derived = slotsOf(placed, 'F', 'golden-f-b5-e1');
-    expect(object(derived, 'challengeSwitch')).toMatchObject({ anchorId: first });
-    expect(object(derived, 'challengeSwitch').derivedAnchorId).toBeUndefined();
-    expect(object(derived, 'stygianWell')).toMatchObject({
-      derivedAnchorId: second,
-      anchorChoices: [],
-    });
-    expect(derived.anchors).toEqual(
+    const place = (anchorId: number) =>
+      slotsOf(
+        apply(both, [
+          {
+            kind: 'ReplaceRoomObjectAnchor',
+            occurrence: owner,
+            object: 'challengeSwitch',
+            anchorId,
+          },
+        ]),
+        'F',
+        'golden-f-b5-e1',
+      );
+    // Choosing the switch's own default leaves the Well's default alone.
+    const kept = place(switchDefault);
+    expect(object(kept, 'challengeSwitch')).toMatchObject({ anchorId: switchDefault });
+    expect(object(kept, 'challengeSwitch').defaultAnchorId).toBeUndefined();
+    expect(object(kept, 'stygianWell').defaultAnchorId).toBe(wellDefault);
+    // Choosing the Well's default moves the Well to the anchor left free.
+    const moved = place(wellDefault);
+    expect(object(moved, 'stygianWell').defaultAnchorId).toBe(switchDefault);
+    expect(moved.anchors).toEqual(
       expect.arrayContaining([
-        { anchorId: first, pinned: false, occupant: 'challengeSwitch' },
-        { anchorId: second, pinned: false, occupant: 'stygianWell', derived: true },
+        { anchorId: wellDefault, pinned: false, occupant: 'challengeSwitch' },
+        { anchorId: switchDefault, pinned: false, occupant: 'stygianWell', default: true },
       ]),
     );
   });
@@ -474,18 +485,20 @@ describe('derived object anchors', () => {
       );
       const pool = object(slots, 'purgingPool');
       expect(pool.anchorId).toBe(anchorId);
-      expect(pool.derivedAnchorId).toBeUndefined();
-      expect(slots.anchors.some((anchor) => anchor.derived === true)).toBe(false);
+      expect(pool.defaultAnchorId).toBeUndefined();
+      expect(slots.anchors.some((anchor) => anchor.default === true)).toBe(false);
     }
   });
 
-  it('leaves the Pool a roll in a pinned room whose Well is absent', () => {
+  it('keeps the Well pin out of the Pool default in a pinned room whose Well is absent', () => {
     const project = withRetainedFreshFilePostboss(createFreshFileFProject(), {
       well: false,
       poolSaleTraitKey: 'ApolloWeaponBoon',
     });
     const owner = address(project, project.route.biomes[0]!.biomeKey, freshFileFPostbossId);
     const room = catalog.rooms.byKey.F_PostBoss01!;
+    const pin = room.mapPoints!.wellAnchorId!;
+    const free = anchorIdsOf('F_PostBoss01').find((id) => id !== pin)!;
     // Host the Pool on this route while the Well stays unhosted and absent.
     const hosting = {
       ...catalog,
@@ -506,7 +519,7 @@ describe('derived object anchors', () => {
       ['purgingPool', true, true],
     ]);
     expect(object(slots, 'purgingPool').slotIndex).toBe(0);
-    expect(object(slots, 'purgingPool').derivedAnchorId).toBeUndefined();
-    expect(slots.anchors.every((anchor) => anchor.occupant === undefined)).toBe(true);
+    expect(object(slots, 'purgingPool').defaultAnchorId).toBe(free);
+    expect(slots.anchors.find((anchor) => anchor.anchorId === pin)?.occupant).toBeUndefined();
   });
 });

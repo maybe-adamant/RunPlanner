@@ -46,15 +46,12 @@ function fieldsPlace(
     : Object.freeze({ badge: local.badge, label: local.label });
 }
 
-/** The choice an item's pickup asks for, named in its hint. */
-function pickupChoice(row: WorkspaceRoomActionRow | undefined): string | undefined {
-  switch (row?.labelParts?.reward?.offer.rewardType) {
-    case 'StoreRewardRandomStack':
-    case 'StackUpgrade':
-    case 'StackUpgradeBig':
-    case 'StackUpgradeTriple':
+/** The choice an item's pickup asks for, as the engine publishes it, named in its hint. */
+function pickupChoice(item: SpawnedLootItem): string | undefined {
+  switch (item.needsChoice) {
+    case 'levelResolution':
       return 'Pom';
-    default:
+    case undefined:
       return undefined;
   }
 }
@@ -62,7 +59,6 @@ function pickupChoice(row: WorkspaceRoomActionRow | undefined): string | undefin
 function itemHint(
   item: SpawnedLootItem,
   name: string,
-  row: WorkspaceRoomActionRow | undefined,
   placement: WorkspaceSpawnedItem['placement'],
 ): string {
   switch (placement.kind) {
@@ -76,7 +72,7 @@ function itemHint(
           item.source.family.kind === 'hermesShrineDelivery'
           ? 'Collect the delivery'
           : `Collect ${name}`;
-      const choice = pickupChoice(row);
+      const choice = pickupChoice(item);
       return choice === undefined ? `Pick up ${name}` : `Pick up ${name} — choose its ${choice}`;
     }
   }
@@ -116,7 +112,7 @@ function projectItem(
     key: semanticAddressKey(item.owner),
     actionKey,
     label,
-    hint: itemHint(item, place === undefined ? label : `${label} · ${place.label}`, row, placement),
+    hint: itemHint(item, place === undefined ? label : `${label} · ${place.label}`, placement),
     participation: item.participation,
     ...(place === undefined ? {} : { place }),
     ...(item.lockedUntil === undefined || unlocked ? {} : { locked: true as const }),

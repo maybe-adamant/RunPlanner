@@ -27,7 +27,7 @@ import {
 } from '../room-map/roomMapHighlight';
 import { fieldsSlotBadge, fieldsSlotIcon } from './fieldsSlotFace';
 
-/** An unset position: the game places it. */
+/** An unset position: it stands on the engine's default. */
 const unset = '?';
 
 /** Marks an entry whose pair mirrors the room. */
@@ -362,8 +362,9 @@ function LayoutChip({
 }
 
 /**
- * A present object's anchor chip: picked among the free anchors, `?` leaving
- * it to the game. The Well's pin and a last free anchor are shown, not picked.
+ * A present object's anchor chip: its authored or default anchor, picked
+ * among the free anchors, `?` returning it to its default. The Well's pin is
+ * shown, not picked.
  */
 function ObjectAnchorChip({
   interactions,
@@ -387,18 +388,13 @@ function ObjectAnchorChip({
     const number = objectSlots.anchors.find((candidate) => candidate.anchorId === anchorId)?.number;
     return number === undefined ? unset : `A${number}`;
   };
-  const at = anchor.pinned ?? anchor.derivedAnchorId ?? anchor.anchorId;
+  const at = anchor.pinned ?? anchor.anchorId ?? anchor.defaultAnchorId;
   const label = heldObjectShortName(object.object);
   const id = semanticOwnerControlElementId(object.anchorAddress);
   const target = findingTarget(object.anchorAddress, id);
   const preview =
     at === undefined ? undefined : ({ kind: 'anchor', anchorId: at } satisfies RoomMapHighlight);
-  const shownHint =
-    anchor.pinned !== undefined
-      ? 'Always stands here'
-      : anchor.derivedAnchorId !== undefined
-        ? 'Last free spot'
-        : undefined;
+  const shownHint = anchor.pinned !== undefined ? 'Always stands here' : undefined;
   return (
     <LayoutChip preview={preview}>
       <PositionPicker<string>

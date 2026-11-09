@@ -150,6 +150,12 @@ describe('spawned loot', () => {
     expect(drop.placement.command).toEqual(
       clockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, drop.owner),
     );
+    // Its Pom Slice asks for its Pom once placed; nothing else in the moment does.
+    const items = spawned.moments[0]!.items;
+    expect(items.map((item) => item.needsChoice)).toEqual([
+      ...items.slice(0, -1).map(() => undefined),
+      'levelResolution',
+    ]);
     const placed = settleProjectEdit({
       catalog,
       before: assembly,
@@ -166,6 +172,7 @@ describe('spawned loot', () => {
       participation: 'optional',
       placement: { kind: 'placed', rank: 4 },
     });
+    expect(after.moments[0]!.items.at(-1)?.needsChoice).toBeUndefined();
   });
 
   it('spawns an O phase’s deliveries after its wheel reward, and an Intro’s at its end', () => {

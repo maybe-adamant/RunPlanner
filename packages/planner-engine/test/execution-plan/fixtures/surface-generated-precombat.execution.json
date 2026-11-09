@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 102,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "surface-3",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -4427,7 +4427,8 @@
               "slotIndex": 3,
               "roomDelay": 2
             }
-          ]
+          ],
+          "anchorId": 616862
         },
         "keepsakeRack": {},
         "fountain": {}
@@ -5767,7 +5768,8 @@
               "slotIndex": 3,
               "roomDelay": 2
             }
-          ]
+          ],
+          "anchorId": 723015
         },
         "keepsakeRack": {},
         "fountain": {}
@@ -7595,7 +7597,8 @@
               "slotIndex": 3,
               "roomDelay": 2
             }
-          ]
+          ],
+          "anchorId": 487438
         },
         "keepsakeRack": {},
         "fountain": {}
@@ -8005,5 +8008,5 @@
       }
     }
   ],
-  "planFingerprint": "7e521eae"
+  "planFingerprint": "ffa5d9cc"
 }

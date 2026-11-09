@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 102,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -712,7 +712,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1001,5 +1002,5 @@
       }
     }
   ],
-  "planFingerprint": "b714471a"
+  "planFingerprint": "915c0144"
 }

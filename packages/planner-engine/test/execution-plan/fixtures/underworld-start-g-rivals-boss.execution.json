@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 102,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -1058,7 +1058,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -1466,7 +1467,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 510330, "endPointId": 510331 } }
       },
       "timeline": {
         "transactions": [
@@ -1848,8 +1850,7 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "MiniBossTreant", "kind": "miniboss" }
         ],
-        "requiredObjects": [],
-        "layout": { "flipped": false }
+        "requiredObjects": []
       },
       "timeline": {
         "transactions": [
@@ -2071,7 +2072,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 560632, "endPointId": 560633 } }
       },
       "timeline": {
         "transactions": [
@@ -2959,7 +2961,7 @@
             }
           ]
         },
-        "purgingPool": { "traits": [] },
+        "purgingPool": { "traits": [], "anchorId": 755023 },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -3130,6 +3132,7 @@
         "additional": [
           {
             "kind": "chaos",
+            "spawnPointIndex": 1,
             "owner": "[\"additionalExit\",\"Underworld\",\"G\",\"golden-g-intro\",\"chaos\"]",
             "room": { "id": "golden-g-intro:chaos", "biomeKey": "G", "gameName": "Chaos_01" },
             "ixionOrigin": {
@@ -3290,7 +3293,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "Empty_Chaos", "kind": "nonCombat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -3465,7 +3469,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 568557, "endPointId": 568554 } }
       },
       "timeline": {
         "transactions": [
@@ -3667,7 +3672,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -3882,7 +3888,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -4095,7 +4102,8 @@
               "rewardType": "MaxManaDrop"
             }
           ]
-        }
+        },
+        "layout": { "flipped": true }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -4233,7 +4241,7 @@
           { "slotKey": "Encounter", "encounterKey": "MiniBossWaterUnit", "kind": "miniboss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": { "flipped": false, "entry": { "startPointId": 568922, "endPointId": 568921 } }
       },
       "timeline": {
         "transactions": [
@@ -4508,7 +4516,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": true }
       },
       "timeline": {
         "transactions": [
@@ -4864,7 +4873,7 @@
         ],
         "requiredObjects": [],
         "stygianWell": { "offers": [] },
-        "purgingPool": { "traits": [] },
+        "purgingPool": { "traits": [], "anchorId": 637448 },
         "layout": { "flipped": false },
         "keepsakeRack": {},
         "fountain": {}
@@ -4928,5 +4937,5 @@
       }
     }
   ],
-  "planFingerprint": "210a2612"
+  "planFingerprint": "ad6a7242"
 }

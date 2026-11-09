@@ -23,6 +23,9 @@ import {
 } from '../../authored-project/hermes-shrine-delivery';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
+import { chaosGateSpawnPoint } from '../../authored-project/chaos-gate-position';
+import { fieldsSpatialPositions } from '../../simulation/fields/spatial';
+import { roomObjectAnchorPositions } from '../../simulation/room-layout/object-anchor-positions';
 import { resolvedEncounterPhaseForDefinition } from '../../simulation/encounters/resolve';
 import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import {
@@ -268,14 +271,23 @@ export function travelDealRefill(
 }
 
 function executionAdditionalExits(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
   batch: CanonicalBatch | undefined,
 ): ExecutionOverview['additional'] | undefined {
   if (batch === undefined || batch.additional.length === 0) return undefined;
+  const declaration = catalog.rooms.byKey[room.gameName];
   return Object.freeze(
-    batch.additional.map((exit) =>
-      Object.freeze({
+    batch.additional.map((exit) => {
+      // A Chaos gate spawns at its stored point, else its default.
+      const spawnPointIndex =
+        exit.key !== 'chaos' || declaration === undefined
+          ? exit.spawnPointIndex
+          : chaosGateSpawnPoint(declaration, semanticAddressKey(exit.origin), exit.spawnPointIndex)
+              ?.spawnPointIndex;
+      return Object.freeze({
         kind: exit.key,
-        ...(exit.spawnPointIndex === undefined ? {} : { spawnPointIndex: exit.spawnPointIndex }),
+        ...(spawnPointIndex === undefined ? {} : { spawnPointIndex }),
         owner: semanticAddressKey(exit.origin),
         room: Object.freeze({
           id: exit.room.occurrenceId,
@@ -291,8 +303,8 @@ function executionAdditionalExits(
                 generationKey: exit.chaosOrigin.generationKey,
               }),
             }),
-      }),
-    ),
+      });
+    }),
   );
 }
 
@@ -663,27 +675,32 @@ function executionPurgingPool(
 }
 
 function executionFieldsLayout(
+  catalog: Catalog,
   room: CanonicalAuthoredRoom,
   recordedEncounterKeys: ReadonlyMap<string, string>,
 ): ExecutionFieldsLayout | undefined {
   if (!room.entered || room.encounterEnvelopeKey !== 'FieldsEncounter') return undefined;
-  const spatial = room.fieldsSpatial;
-  if (spatial === undefined)
+  if (room.fieldsSpatial === undefined)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Fields layout`);
-  // A slot without an authored point stays native.
+  // Each active slot stands on its stored point, else its default.
+  const positions = fieldsSpatialPositions(catalog, room);
+  const pointOf = (kind: 'cage' | 'optional' | 'nemesis', slotKey?: string) =>
+    positions.find(
+      (position) =>
+        position.target.kind === kind &&
+        (position.target.kind === 'nemesis' || position.target.slotKey === slotKey),
+    )?.pointId;
   const cagePoints = room.encounterPhases.flatMap((phase) => {
     const attachment = phase.rewardAttachment;
     if (attachment?.kind !== 'localReward' || attachment.groupKey !== 'cages') return [];
-    const pointId = spatial.cagePointIdBySlot[attachment.slotKey];
-    return pointId === null || pointId === undefined
-      ? []
-      : [Object.freeze({ slotKey: attachment.slotKey, pointId })];
+    const pointId = pointOf('cage', attachment.slotKey);
+    return pointId === undefined ? [] : [Object.freeze({ slotKey: attachment.slotKey, pointId })];
   });
   const optionalRewards = (room.fieldsOptionalRewards ?? []).map((optional) => {
-    const pointId = spatial.optionalPointIdBySlot[optional.slotKey];
+    const pointId = pointOf('optional', optional.slotKey);
     return Object.freeze({
       slotKey: optional.slotKey,
-      ...(pointId === null || pointId === undefined ? {} : { pointId }),
+      ...(pointId === undefined ? {} : { pointId }),
       reward: executionRewardFromOffer(
         optional.offer,
         optional.producerLifecycleKey,
@@ -692,19 +709,19 @@ function executionFieldsLayout(
     });
   });
   const nemesisPointId = [...recordedEncounterKeys.values()].includes('NemesisRandomEvent')
-    ? spatial.nemesisPointId
+    ? pointOf('nemesis')
     : undefined;
   return Object.freeze({
     cagePoints: Object.freeze(cagePoints),
     optionalRewards: Object.freeze(optionalRewards),
-    ...(nemesisPointId === null || nemesisPointId === undefined ? {} : { nemesisPointId }),
+    ...(nemesisPointId === undefined ? {} : { nemesisPointId }),
   });
 }
 
 /**
  * The entered room's flip and entry the runtime steers: fixed by the room or
- * its arrival door, or authored where the game rolls or chooses. A value
- * derived from the previous exit, an unset roll and an unset choice stay native.
+ * its arrival door, or authored or defaulted where the game rolls or chooses.
+ * A value derived from the previous exit stays native.
  */
 function executionRoomLayout(
   room: CanonicalAuthoredRoom,
@@ -733,14 +750,17 @@ function executionRoomLayout(
   });
 }
 
-/** An object's publication with the anchor it stands on, when authored. */
+/**
+ * An object's publication with the anchor it stands on, stored or defaulted;
+ * the Well on its room's pin stays native.
+ */
 function anchored<T extends object>(
   published: T | undefined,
-  leaf: { readonly anchorId?: number } | undefined,
+  position: { readonly anchorId: number; readonly source: string } | undefined,
 ): T | undefined {
-  return published === undefined || leaf?.anchorId === undefined
+  return published === undefined || position === undefined || position.source === 'pinned'
     ? published
-    : Object.freeze({ ...published, anchorId: leaf.anchorId });
+    : Object.freeze({ ...published, anchorId: position.anchorId });
 }
 
 type ResolvedEncounterCustomization = NonNullable<
@@ -1115,7 +1135,13 @@ export function assembleExecutionOverview(
   const rewardWheels = executionRewardWheels(room);
   const stygianWell = executionStygianWell(room);
   const purgingPool = executionPurgingPool(room);
-  const additional = executionAdditionalExits(batch);
+  const additional = executionAdditionalExits(catalog, room, batch);
+  const anchors = roomObjectAnchorPositions(
+    catalog,
+    room,
+    room.origin.routeKey,
+    semanticAddressKey(room.origin),
+  );
   const challengeSwitch = executionChallengeSwitch(catalog, room, biome);
   const lockedExits = executionLockedExits(room, biome);
   const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
@@ -1129,6 +1155,7 @@ export function assembleExecutionOverview(
   );
   const layout = executionRoomLayout(room, biome);
   const fields = executionFieldsLayout(
+    catalog,
     room,
     new Map([...recordedPhases].map(([slotKey, event]) => [slotKey, event.encounterKey])),
   );
@@ -1242,9 +1269,13 @@ export function assembleExecutionOverview(
     ...(phantomExit === undefined ? {} : { phantomExit }),
     ...(hermesShrine === undefined
       ? {}
-      : { hermesShrine: anchored(hermesShrine, room.hermesShrine)! }),
-    ...(stygianWell === undefined ? {} : { stygianWell: anchored(stygianWell, room.stygianWell)! }),
-    ...(purgingPool === undefined ? {} : { purgingPool: anchored(purgingPool, room.purgingPool)! }),
+      : { hermesShrine: anchored(hermesShrine, anchors.get('hermesShrine'))! }),
+    ...(stygianWell === undefined
+      ? {}
+      : { stygianWell: anchored(stygianWell, anchors.get('stygianWell'))! }),
+    ...(purgingPool === undefined
+      ? {}
+      : { purgingPool: anchored(purgingPool, anchors.get('purgingPool'))! }),
     ...(layout === undefined ? {} : { layout }),
     ...(fields === undefined ? {} : { fields }),
     ...(!room.hasKeepsakeRack
@@ -1256,7 +1287,7 @@ export function assembleExecutionOverview(
         }),
     ...(challengeSwitch === undefined
       ? {}
-      : { challengeSwitch: anchored(challengeSwitch, room.challengeSwitch)! }),
+      : { challengeSwitch: anchored(challengeSwitch, anchors.get('challengeSwitch'))! }),
     ...(lockedExits === undefined ? {} : { lockedExits }),
     ...(!room.hasRequiredFountain
       ? {}

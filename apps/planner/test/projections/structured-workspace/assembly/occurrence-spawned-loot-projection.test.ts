@@ -111,6 +111,8 @@ describe('spawn notices', () => {
     const drop = items(spawned.groups)[3]!;
     if (drop.placement.kind !== 'unplaced') throw new Error('the second drop is placed');
     expect(drop.placement.intent.command.kind).toBe('PlaceClockedTraitPickup');
+    // The engine says its Pom Slice asks for its Pom once placed.
+    expect(drop.hint).toBe('Pick up Pom Slice — choose its Pom');
   });
 
   it('places spawned optional loot from its spawn row, not the Optional actions', () => {

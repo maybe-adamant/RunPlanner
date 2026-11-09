@@ -1,7 +1,9 @@
 import {
   createFieldsSpatialAddress,
+  semanticAddressKey,
   type FieldsSpatialTarget,
 } from '../../authored-project/addresses';
+import { stableChoice } from '../../authored-project/stable-hash';
 import type { Catalog, FieldsSpatialDeclaration } from '../../catalog-schema';
 import { directEncounterDefinitionKeyForSlot } from '../../authored-project/room-state/encounter-envelope';
 import type { CanonicalAuthoredRoom } from '../materialization';
@@ -13,6 +15,8 @@ interface FieldsSpatialPointAssessment {
   readonly findings: readonly SemanticFinding[];
   readonly selectedPossible: boolean;
   readonly supportPointIds: readonly number[];
+  /** The active target's default point while it has no stored one. */
+  readonly defaultPointId?: number;
 }
 
 function activeSlots(
@@ -142,6 +146,63 @@ function activeFieldsSpatialTargets(
   ]);
 }
 
+/** Cages share one point family; optional rewards and Nemesis share the other. */
+function family(target: FieldsSpatialTarget): 'cage' | 'optional' {
+  return target.kind === 'cage' ? 'cage' : 'optional';
+}
+
+/**
+ * Where an active Fields slot stands: its stored point (the owner's choice,
+ * kept even where it is invalid) or its stable default.
+ */
+export interface FieldsSpatialPosition {
+  readonly target: FieldsSpatialTarget;
+  readonly pointId: number;
+  readonly source: 'chosen' | 'default';
+}
+
+/**
+ * Every active slot's point. Slots without a stored point claim in the
+ * game's spawn order (cages, optional rewards, then Nemesis), each taking its
+ * stable-default best of its family's points that no active stored point or
+ * earlier claim holds, Nemesis never on its excluded points; a slot left no
+ * free point has none.
+ */
+export function fieldsSpatialPositions(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+): readonly FieldsSpatialPosition[] {
+  const declaration = declarationFor(catalog, room);
+  if (declaration === undefined) return Object.freeze([]);
+  const targets = activeFieldsSpatialTargets(catalog, room);
+  const taken = { cage: new Set<number>(), optional: new Set<number>() };
+  for (const target of targets) {
+    const pointId = selectedPoint(room, target);
+    if (pointId !== null) taken[family(target)].add(pointId);
+  }
+  const excluded = new Set(declaration.nemesisExcludedOptionalPointIds);
+  const positions: FieldsSpatialPosition[] = [];
+  for (const target of targets) {
+    const chosen = selectedPoint(room, target);
+    if (chosen !== null) {
+      positions.push(Object.freeze({ target, pointId: chosen, source: 'chosen' }));
+      continue;
+    }
+    const free = taken[family(target)];
+    const pointId = stableChoice(
+      semanticAddressKey(createFieldsSpatialAddress(room.origin, target)),
+      pointDomain(declaration, target).filter(
+        (candidate) =>
+          !free.has(candidate) && !(target.kind === 'nemesis' && excluded.has(candidate)),
+      ),
+    );
+    if (pointId === undefined) continue;
+    free.add(pointId);
+    positions.push(Object.freeze({ target, pointId, source: 'default' }));
+  }
+  return Object.freeze(positions);
+}
+
 function occupiedSiblingPoints(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
@@ -195,7 +256,7 @@ export function assessFieldsSpatialPoint(
     domain.filter((candidate) => !excluded.has(candidate) && !occupied.has(candidate)),
   );
   const findings: SemanticFinding[] = [];
-  // An unset point leaves the game to place the slot.
+  // An unset point stands on its default, which raises nothing.
   if (pointId !== null && !domain.includes(pointId)) {
     findings.push(
       finding('fieldsSpatialPointUnavailable', room, target, {
@@ -218,8 +279,14 @@ export function assessFieldsSpatialPoint(
       }),
     );
   }
+  const position = active
+    ? fieldsSpatialPositions(catalog, room).find((candidate) =>
+        sameTarget(candidate.target, target),
+      )
+    : undefined;
   return Object.freeze({
     active,
+    ...(position?.source === 'default' ? { defaultPointId: position.pointId } : {}),
     assignable: pointId === null || (domain.includes(pointId) && !excluded.has(pointId)),
     findings: Object.freeze(findings),
     selectedPossible: !active || pointId === null || supportPointIds.includes(pointId),

@@ -30,18 +30,25 @@ const unreached = createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-b
 const marker = (address: Parameters<typeof semanticAddressKey>[0]) =>
   ({ focusKey: semanticAddressKey(address) }) as unknown as WorkspaceMarker;
 
-function layoutOf(project: ProjectDocument, address = rolled) {
+type Authoring = NonNullable<ReturnType<typeof roomLayoutAuthoringForProjectEvaluationAssembly>>;
+
+function layoutOf(
+  project: ProjectDocument,
+  address = rolled,
+  adapt: (authoring: Authoring) => Authoring = (authoring) => authoring,
+) {
   const occurrence = project.route.biomes
     .find((biome) => biome.biomeKey === address.biomeKey)!
     .topology!.occurrences.find((candidate) => candidate.occurrenceId === address.occurrenceId)!;
+  const authoring = roomLayoutAuthoringForProjectEvaluationAssembly(
+    simulateProjectAssembly(catalog, project),
+    address,
+  );
   const assembled = assembleRoomLayout({
     address,
     room: catalog.rooms.byKey[occurrence.gameName]!,
     occurrence,
-    authoring: roomLayoutAuthoringForProjectEvaluationAssembly(
-      simulateProjectAssembly(catalog, project),
-      address,
-    ),
+    authoring: authoring === undefined ? undefined : adapt(authoring),
     marker,
   });
   if (assembled === undefined) throw new Error('expected a room layout');
@@ -52,8 +59,27 @@ function layoutOf(project: ProjectDocument, address = rolled) {
   return { ...assembled.layout, commandOf };
 }
 
-// Its entries each allow either flip of the roll.
 const independent = createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-b4-e1'));
+/** Its settlement as after a door naming no exit direction: each entry allows either flip. */
+const unknownExit = (authoring: Authoring): Authoring => {
+  const { settlement } = authoring;
+  if (settlement.entry.kind !== 'choice') throw new Error('expected an entry choice');
+  const { exitDirection: _exit, ...rest } = settlement;
+  void _exit;
+  return {
+    ...authoring,
+    settlement: {
+      ...rest,
+      entry: {
+        ...settlement.entry,
+        eligible: settlement.entry.eligible.map((option) => ({
+          startPointId: option.startPointId,
+          endPointId: option.endPointId,
+        })),
+      },
+    },
+  };
+};
 
 function choicesOf(layout: ReturnType<typeof layoutOf>) {
   if (layout.state.kind !== 'choice') throw new Error('expected an entry choice');
@@ -71,10 +97,10 @@ describe('room entry', () => {
   it('offers each entry of a rolled flip once, with the flip it needs', () => {
     const layout = layoutOf(createGoldenFGHIProject());
     const pairs = choicesOf(layout).map((choice) => choice.pair);
-    expect(pairs.map((pair) => pair?.flipped)).toEqual([true, false]);
-    expect(layout.state).not.toHaveProperty('value');
-    // The game still picks between the two entries.
-    expect(layout.entryId).toBeUndefined();
+    // The default pair is shown; the other entry is offered with its flip.
+    expect(layout.state).toMatchObject({ value: { flipped: false } });
+    expect(pairs.map((pair) => pair?.flipped)).toEqual([true]);
+    expect(layout.entryId).toBe((layout.state as { value: { pointId: number } }).value.pointId);
     expect(layout.eligible).toHaveLength(2);
     const flipping = choicesOf(layout).find((choice) => choice.pair?.flipped === true)!;
     expect(layout.commandOf(flipping.key)).toEqual({
@@ -85,8 +111,13 @@ describe('room entry', () => {
   });
 
   it('offers both flips of an entry either flip allows', () => {
-    const layout = layoutOf(createGoldenFGHIProject(), independent);
-    const pairs = choicesOf(layout).map((choice) => choice.pair!);
+    const layout = layoutOf(createGoldenFGHIProject(), independent, unknownExit);
+    const pairs = [
+      ...choicesOf(layout).map((choice) => choice.pair!),
+      (layout.state as { value: { pointId: number; flipped: boolean } }).value,
+    ].sort(
+      (left, right) => left.pointId - right.pointId || Number(left.flipped) - Number(right.flipped),
+    );
     expect(pairs).toHaveLength(4);
     const [first] = layout.eligible;
     expect(pairs.filter((pair) => pair.pointId === first).map((pair) => pair.flipped)).toEqual([

@@ -1,13 +1,18 @@
 import {
   createBiomeAddress,
   createOccurrenceAddress,
+  semanticAddressKey,
   type OccurrenceAddress,
   type RoomAnchorObjectKind,
 } from '../../authored-project/addresses';
-import { challengeSwitchHost } from '../../authored-project/acquisition/challenge-switch';
 import type { ProjectCommand } from '../../authored-project/commands/types';
-import { routePurgingPool, routeRoomShop } from '../../authored-project/route-profile';
+import { routeRoomShop } from '../../authored-project/route-profile';
 import { roomObjectAnchorIds } from '../../authored-project/room-layout';
+import {
+  ROOM_ANCHOR_OBJECT_ORDER,
+  roomAnchorObjectHosted,
+  roomObjectAnchorPositions,
+} from '../room-layout/object-anchor-positions';
 import type { Catalog, ChallengeSwitchKind } from '../../catalog-schema';
 import {
   challengeSwitchKindVariant,
@@ -35,17 +40,7 @@ type CommandOf<Kind extends ProjectCommand['kind']> = Extract<
 >;
 
 export type { RoomAnchorObjectKind } from '../../authored-project/addresses';
-
-/**
- * Native spawn order: each eligible object in turn takes a random free anchor
- * (some Postboss rooms pin the Well's), so order decides capacity, not position.
- */
-export const ROOM_ANCHOR_OBJECT_ORDER = Object.freeze([
-  'stygianWell',
-  'purgingPool',
-  'hermesShrine',
-  'challengeSwitch',
-] as const satisfies readonly RoomAnchorObjectKind[]);
+export { ROOM_ANCHOR_OBJECT_ORDER };
 
 /** No anchor is left for the object once the present objects before it took theirs. */
 export interface RoomAnchorFullRefusal {
@@ -83,17 +78,17 @@ interface RoomAnchorObjectFacts<
   readonly remove?: Remove;
   /** The object's existing entry-frontier product; undefined while unreached. */
   readonly candidate?: Candidate;
-  /** The physical anchor it is authored on; absent leaves native placement. */
+  /** The physical anchor it is authored on, the owner's choice. */
   readonly anchorId?: number;
   /**
-   * The one anchor native can give this unauthored object: every other
-   * present object stands somewhere and a single anchor is left free.
+   * The anchor an unauthored hosted object stands on by its stable default:
+   * its best anchor left free by stored anchors, the pin and the defaults of
+   * the objects native places before it. Absent past the room's anchors.
    */
-  readonly derivedAnchorId?: number;
+  readonly defaultAnchorId?: number;
   /**
    * For a present object: each anchor it can be placed on (null returns it to
-   * native placement), with the command. A pinned Well and an object with a
-   * derived anchor have none.
+   * its default), with the command. A pinned Well has none.
    */
   readonly anchorChoices?: readonly {
     readonly anchorId: number | null;
@@ -171,15 +166,15 @@ export interface RoomAnchorSlots {
   readonly anchorCount: number;
   /**
    * The room's physical anchors by id, each with the present object authored
-   * on it, the Well on its pin or the object derived onto it; the Well pin
+   * on it, the Well on its pin or the object defaulted onto it; the Well pin
    * takes only the Well.
    */
   readonly anchors: readonly {
     readonly anchorId: number;
     readonly pinned: boolean;
     readonly occupant?: RoomAnchorObjectKind;
-    /** The occupant is the object's `derivedAnchorId`, not authored. */
-    readonly derived?: true;
+    /** The occupant stands here by its `defaultAnchorId`, not authored. */
+    readonly default?: true;
   }[];
   readonly objects: readonly RoomAnchorObject[];
   readonly slots: readonly RoomAnchorSlot[];
@@ -232,7 +227,9 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
   };
   const drafts: Draft[] = [];
 
-  const wellHosted = roomShop !== undefined && (roomShop.forced || roomShop.spawnChance > 0);
+  const hostedHere = (kind: RoomAnchorObjectKind) =>
+    roomAnchorObjectHosted(catalog, authored.gameName, origin.routeKey, kind);
+  const wellHosted = hostedHere('stygianWell');
   if (wellHosted || authored.stygianWell !== undefined) {
     const candidate = stygianWellCandidateForProjectEvaluationAssembly(assembly, origin);
     const present = authored.stygianWell !== undefined;
@@ -240,7 +237,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
       kind: 'stygianWell',
       hosted: wellHosted,
       present,
-      fixed: wellHosted && roomShop.forced,
+      fixed: wellHosted && roomShop?.forced === true,
       own:
         candidate === undefined
           ? {}
@@ -256,7 +253,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
       candidate,
     });
   }
-  const poolHosted = routePurgingPool(room, origin.routeKey) !== undefined;
+  const poolHosted = hostedHere('purgingPool');
   // No command removes a retained Pool; clearing its use settles its finding.
   if (poolHosted || authored.purgingPool !== undefined)
     drafts.push({
@@ -267,8 +264,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
       own: {},
       candidate: purgingPoolCandidateForProjectEvaluationAssembly(assembly, origin),
     });
-  const shrineHosted =
-    surfaceShop !== undefined && (surfaceShop.forced || surfaceShop.spawnChance > 0);
+  const shrineHosted = hostedHere('hermesShrine');
   if (shrineHosted || authored.hermesShrine !== undefined) {
     const candidate = hermesShrineCandidateForProjectEvaluationAssembly(assembly, origin);
     const present = authored.hermesShrine !== undefined;
@@ -282,7 +278,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
       kind: 'hermesShrine',
       hosted: shrineHosted,
       present,
-      fixed: shrineHosted && surfaceShop.forced,
+      fixed: shrineHosted && surfaceShop?.forced === true,
       own:
         candidate === undefined
           ? {}
@@ -296,8 +292,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
       candidate,
     });
   }
-  const switchHosted =
-    room !== undefined && challengeSwitchHost(catalog, room.gameName) !== undefined;
+  const switchHosted = hostedHere('challengeSwitch');
   type SwitchKindRow = Extract<
     RoomAnchorObject,
     { readonly kind: 'challengeSwitch' }
@@ -534,22 +529,16 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
   const occupantOf = (anchorId: number) =>
     ROOM_ANCHOR_OBJECT_ORDER.find((kind) => authoredAnchor(kind) === anchorId);
   const wellPinned = pin !== undefined && authored.stygianWell !== undefined;
-  // Native draws each object's anchor from those left, so the only unplaced
-  // object facing a single free anchor has no roll.
-  const unplaced = objects.filter(
-    (object) =>
-      object.hosted &&
-      object.present &&
-      authoredAnchor(object.kind) === undefined &&
-      !(object.kind === 'stygianWell' && wellPinned),
+  const positions = roomObjectAnchorPositions(
+    catalog,
+    authored,
+    origin.routeKey,
+    semanticAddressKey(origin),
   );
-  const freeAnchors = anchorIds.filter(
-    (id) => !(wellPinned && id === pin) && occupantOf(id) === undefined,
-  );
-  const derived =
-    unplaced.length === 1 && unplaced[0]!.slotIndex !== undefined && freeAnchors.length === 1
-      ? { kind: unplaced[0]!.kind, anchorId: freeAnchors[0]! }
-      : undefined;
+  const defaultOf = (kind: RoomAnchorObjectKind) => {
+    const position = positions.get(kind);
+    return position?.source === 'default' ? position.anchorId : undefined;
+  };
   const placed = objects.map((object) => {
     const anchorId = authoredAnchor(object.kind);
     if (!object.present) return object;
@@ -563,10 +552,10 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
           anchorId: target,
         }),
       });
-    const derivedAnchorId = derived?.kind === object.kind ? derived.anchorId : undefined;
+    const defaultAnchorId = defaultOf(object.kind);
     // A pinned Well always stands on its pin; no other object takes it.
     const anchorChoices =
-      (object.kind === 'stygianWell' && pin !== undefined) || derivedAnchorId !== undefined
+      object.kind === 'stygianWell' && pin !== undefined
         ? []
         : [
             choose(null),
@@ -577,7 +566,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
     return Object.freeze({
       ...object,
       ...(anchorId === undefined ? {} : { anchorId }),
-      ...(derivedAnchorId === undefined ? {} : { derivedAnchorId }),
+      ...(defaultAnchorId === undefined ? {} : { defaultAnchorId }),
       anchorChoices: Object.freeze(anchorChoices),
     }) as RoomAnchorObject;
   });
@@ -585,16 +574,16 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
     anchorCount,
     anchors: Object.freeze(
       anchorIds.map((anchorId) => {
-        const isDerived = derived?.anchorId === anchorId;
+        const defaulted = ROOM_ANCHOR_OBJECT_ORDER.find((kind) => defaultOf(kind) === anchorId);
         const occupant =
           occupantOf(anchorId) ??
           (anchorId === pin && wellPinned ? 'stygianWell' : undefined) ??
-          (isDerived ? derived.kind : undefined);
+          defaulted;
         return Object.freeze({
           anchorId,
           pinned: anchorId === pin,
           ...(occupant === undefined ? {} : { occupant }),
-          ...(isDerived ? { derived: true as const } : {}),
+          ...(occupant !== undefined && occupant === defaulted ? { default: true as const } : {}),
         });
       }),
     ),

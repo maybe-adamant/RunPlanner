@@ -9,10 +9,11 @@ import type {
 import type { RunModifiersRecord } from './run-modifiers';
 import type { RunStartPoint } from './practice-start';
 import type { PlanEnd } from './plan-end';
+import { stableHash } from './stable-hash';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 102 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 1;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -202,13 +203,7 @@ export function defaultHermesShrineDelay(
   occurrenceId: string,
   generationKey: HermesShrineGenerationKey,
 ): HermesShrineDelay {
-  const identity = `${occurrenceId}|${generationKey}`;
-  // FNV-1a: stable across runs and platforms.
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < identity.length; index += 1) {
-    hash ^= identity.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
+  const hash = stableHash(`${occurrenceId}|${generationKey}`);
   return HERMES_SHRINE_DELAYS[hash % HERMES_SHRINE_DELAYS.length]!;
 }
 

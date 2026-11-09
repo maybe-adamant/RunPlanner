@@ -437,10 +437,10 @@ that left room and its settled flip across rooms and biomes, and nothing else
 reads it. One derivation rule owns the chain:
 
 - The previous exit direction is the taken door's canonical direction,
-  mirrored when the left room was flipped. It is unknown at run start, while
-  the left room's flip is an unset roll, where the left room ignores exit
-  direction (Chaos, Dream Postboss), has no `HeroExit` for the door, or left
-  through a door spawned at runtime (a Chaos gate or the Contract door). An
+  mirrored when the left room was flipped. It is unknown at run start, where
+  the left room ignores exit direction (Chaos, Dream Postboss), has no
+  `HeroExit` for the door, or left through a door spawned at runtime (a Chaos
+  gate or the Contract door). An
   ordinary exit is its door in the game's door order, a Hub slot or side room
   its map door, and a fixed link or biome transition the left room's only
   door.
@@ -458,16 +458,37 @@ reads it. One derivation rule owns the chain:
 
 The mirror rule is a static read the in-game probe confirms or corrects
 inside this one rule. Each settlement publishes the arrival, the exit
-direction it read, the flip (fixed, derived or a roll with its authored or
-entry-implied value) and the entry (fixed, derived, a choice among the
-eligible ones with its authored value, or unknown for a room without entry
-points). Authored values the settlement cannot hold are Overview findings of
+direction it read, the flip (fixed, derived or a roll with its authored,
+entry-implied or default value) and the entry (fixed, derived, a choice among
+the eligible ones with its authored or default value, or unknown for a room
+without entry points). Authored values the settlement cannot hold are Overview findings of
 the room: a flip where the room does not roll one, and an entry outside the
 eligible set; both are kept, never rewritten. The same Overview reports
 object anchors the room cannot hold. The candidate session answers each
 entry with the whole-layout edit that picks it, and the layout query adds
 both rolled flips, so no offered edit reaches a combination the rule rules
 out.
+
+### Position defaults
+
+Every positioned item the game would place at random has a position: its
+stored one, the owner's choice, or a stable default derived on every
+evaluation and never stored. The items are a rolled flip and an entry the
+game picks among ties, each anchor object, each active Fields cage, optional
+reward and Nemesis slot, and a Chaos gate's spawn point; whatever the room or
+its arrival door decides stays derived. Each item scores every eligible point
+by a stable hash of its semantic identity and the point, and takes its best
+point that no stored position or earlier claim holds. Items of one room
+claim in the game's spawn order: anchor objects in native order (the Well's
+pin is its own, never a default), Fields cages, then optional rewards, then
+Nemesis off its excluded points. Choosing one item's position therefore moves
+only the defaults whose best point it took. A rolled flip defaults first and
+the entry among those the flip allows, without narrowing the entries offered.
+A stored position is kept when it becomes invalid and raises its finding; a
+default re-derives and raises none. An item left no free point has no
+position, which only an invalid or over-capacity room can reach. Authoring
+products mark each position chosen or default; execution publishes both
+alike, so the runtime steers every one.
 
 ### Persistent and multi-phase rooms
 

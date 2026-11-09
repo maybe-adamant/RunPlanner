@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  chaosGateSpawnPoint,
+  chaosGateSpawnPointIndices,
   createAdditionalExitAddress,
   createOccurrenceId,
+  semanticAddressKey,
 } from '../../src/authored-project';
 import { createCompleteFGProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import { simulateProjectAssembly } from '../../src/simulation';
@@ -20,7 +23,7 @@ import { currentSchemaWire } from './support/current-schema-wire';
 const positionedFixture = currentSchemaWire(positionedFixtureFile);
 
 describe('Chaos position publication', () => {
-  it('exports an unpicked gate, preserving Default omission and the normal selection', () => {
+  it('exports an unpicked gate at its stored point or its default, keeping the normal selection', () => {
     let project = createCompleteFGProject();
     const opening = project.route.biomes[0]!.topology!.occurrences.find(
       (room) => room.gameName === 'F_Opening01',
@@ -46,8 +49,11 @@ describe('Chaos position publication', () => {
       const gate = plan.occurrences.find((room) => room.id === opening.occurrenceId)!.overview
         .additional![0]!;
       expect(gate.kind).toBe('chaos');
-      if (spawnPointIndex === null) expect(gate).not.toHaveProperty('spawnPointIndex');
-      else expect(gate.spawnPointIndex).toBe(spawnPointIndex);
+      const room = catalog.rooms.byKey.F_Opening01!;
+      const fallback = chaosGateSpawnPoint(room, semanticAddressKey(additional), undefined);
+      expect(fallback?.source).toBe('default');
+      expect(chaosGateSpawnPointIndices(room)).toContain(fallback?.spawnPointIndex);
+      expect(gate.spawnPointIndex).toBe(spawnPointIndex ?? fallback?.spawnPointIndex);
       expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
     }
   });

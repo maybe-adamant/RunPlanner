@@ -1110,9 +1110,13 @@ describe('challenge switch encounter', () => {
       customization: [{ decisionKey: 'generatedComposition', kind: 'generated', waveCount: 1 }],
     });
     expect(published?.customization?.[0]?.waves).toHaveLength(1);
-    // An observed, uncustomized switch publishes its encounter, natively rolled.
+    // An observed, uncustomized switch publishes its encounter, natively rolled, on its default anchor.
     expect(overviewSwitch(observed)).toEqual([
-      { variantKey: 'TimeChallengeSwitch_Money', encounterKey: 'TimeChallengeF' },
+      {
+        variantKey: 'TimeChallengeSwitch_Money',
+        encounterKey: 'TimeChallengeF',
+        anchorId: expect.any(Number),
+      },
     ]);
   });
 
@@ -1184,6 +1188,7 @@ describe('challenge switch encounter', () => {
           },
           attributeKeys: ['Frenzy', 'Blink'],
         },
+        anchorId: expect.any(Number),
       },
     ]);
   });

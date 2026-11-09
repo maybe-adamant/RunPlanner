@@ -16,6 +16,8 @@ import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { assembleExecutionProduct, compileExecutionPlan } from '@run-planner/engine/execution-plan';
+import type { FieldsSpatialTarget } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -206,7 +208,7 @@ describe('Fields spatial candidates', () => {
     );
   });
 
-  it('leaves an unset point to the game and allows dormant values', () => {
+  it('gives an unset point its default, which raises nothing, and allows dormant values', () => {
     const unset = evaluate(loadNemesisFieldsCheckpoint(), { kind: 'cage', slotKey: 'cage1' }, null);
     expect(unset).toMatchObject({
       kind: 'fieldsSpatialPoint',
@@ -329,5 +331,67 @@ describe('Fields spatial candidates', () => {
     if (excluded.kind !== 'fieldsSpatialPoint') throw new Error('missing spatial candidate');
     expect(excluded.result.supportPointIds).toHaveLength(4);
     expect(excluded.result.supportPointIds).not.toContain(572886);
+  });
+
+  it('defaults every unset slot to its own free point, claimed cages then optionals then Nemesis', () => {
+    const targets = [
+      { kind: 'cage', slotKey: 'cage1' },
+      { kind: 'cage', slotKey: 'cage2' },
+      { kind: 'cage', slotKey: 'cage3' },
+      { kind: 'optional', slotKey: 'optional1' },
+      { kind: 'optional', slotKey: 'optional2' },
+      { kind: 'optional', slotKey: 'optional3' },
+      { kind: 'nemesis' },
+    ] as const satisfies readonly FieldsSpatialTarget[];
+    let project = loadNemesisFieldsCheckpoint();
+    for (const target of targets)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFieldsSpatialPoint',
+        spatial: createFieldsSpatialAddress(occurrence, target),
+        pointId: null,
+      });
+    const defaults = (current: typeof project) =>
+      targets.map((target) => {
+        const result = evaluate(current, target, null);
+        if (result.kind !== 'fieldsSpatialPoint') throw new Error('missing spatial candidate');
+        return result.result.defaultPointId;
+      });
+    const before = defaults(project);
+    expect(before.every((pointId) => pointId !== undefined)).toBe(true);
+    const declaration = catalog.rooms.byKey.H_Combat05!.fieldsSpatial!;
+    expect(declaration.cagePointIds).toEqual(expect.arrayContaining(before.slice(0, 3)));
+    expect(declaration.optionalPointIds).toEqual(expect.arrayContaining(before.slice(3)));
+    expect(new Set(before.slice(0, 3)).size).toBe(3);
+    expect(new Set(before.slice(3)).size).toBe(4);
+    // A default raises nothing; re-evaluation derives the same points.
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(
+      assembly.evaluation.findings.filter((finding) => finding.origin.kind === 'fieldsSpatial'),
+    ).toEqual([]);
+    expect(defaults(project)).toEqual(before);
+
+    // Choosing cage2 on cage1's default moves only cage1's default.
+    const chosen = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(occurrence, targets[1]),
+      pointId: before[0]!,
+    });
+    const after = defaults(chosen);
+    expect(after[1]).toBeUndefined();
+    expect(after[0]).not.toBe(before[0]);
+    expect(after.slice(3)).toEqual(before.slice(3));
+
+    // The plan publishes the defaults where the game would otherwise draw.
+    if (assembly.evaluation.status === 'valid') {
+      const plan = compileExecutionPlan({
+        product: assembleExecutionProduct({ catalog, assembly }),
+      });
+      const fields = plan.occurrences.find((room) => room.id === occurrenceId)?.overview.fields;
+      expect(fields?.cagePoints.map((cage) => cage.pointId)).toEqual(before.slice(0, 3));
+      expect(fields?.optionalRewards.map((optional) => optional.pointId)).toEqual(
+        before.slice(3, 6),
+      );
+      expect(fields?.nemesisPointId).toBe(before[6]);
+    } else throw new Error(`the Nemesis Fields checkpoint is ${assembly.evaluation.status}`);
   });
 });

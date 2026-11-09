@@ -34,6 +34,8 @@ export interface FieldsSpatialPointCandidateSupport {
   /** Declaration points still available after active sibling assignments. */
   readonly supportPointIds: readonly number[];
   readonly selectedPossible: boolean;
+  /** The point the target stands on by default while it has no stored point. */
+  readonly defaultPointId?: number;
   readonly findings: readonly SemanticFinding[];
 }
 
@@ -102,6 +104,9 @@ export function evaluateFieldsSpatialPointCandidate(
       assignable: assessment.assignable,
       supportPointIds: assessment.supportPointIds,
       selectedPossible: assessment.selectedPossible,
+      ...(assessment.defaultPointId === undefined
+        ? {}
+        : { defaultPointId: assessment.defaultPointId }),
       findings: assessment.findings,
     }),
   });

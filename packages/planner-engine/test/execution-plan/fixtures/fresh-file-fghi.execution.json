@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 102,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "fresh-route",
   "routeKey": "FreshFile",
   "startingLoadout": {
@@ -1164,7 +1164,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 561448, "endPointId": 561445 } }
       },
       "timeline": {
         "transactions": [
@@ -1575,7 +1576,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 590864, "endPointId": 590866 } }
       },
       "timeline": {
         "transactions": [
@@ -1934,7 +1936,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -2136,7 +2139,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 566301, "endPointId": 566304 } }
       },
       "timeline": {
         "transactions": [
@@ -2564,7 +2568,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 571072, "endPointId": 571073 } }
       },
       "timeline": {
         "transactions": [
@@ -3133,7 +3138,8 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "FishmanIntro", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -3317,7 +3323,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -3545,7 +3552,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": true, "entry": { "startPointId": 50065, "endPointId": 50059 } }
       },
       "timeline": {
         "transactions": [
@@ -3769,7 +3777,8 @@
             "excludedEnemies": [{ "choiceKey": "Turtle_Elite", "nativeId": "Turtle_Elite" }]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 560841, "endPointId": 560840 } }
       },
       "timeline": {
         "transactions": [
@@ -3968,7 +3977,8 @@
               "rewardType": "MaxManaDrop"
             }
           ]
-        }
+        },
+        "layout": { "flipped": true }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -4104,7 +4114,7 @@
           { "slotKey": "Encounter", "encounterKey": "MiniBossWaterUnit", "kind": "miniboss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": { "flipped": false, "entry": { "startPointId": 568531, "endPointId": 568533 } }
       },
       "timeline": {
         "transactions": [
@@ -4363,7 +4373,8 @@
             "excludedEnemies": [{ "choiceKey": "Turtle_Elite", "nativeId": "Turtle_Elite" }]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false }
       },
       "timeline": {
         "transactions": [
@@ -4811,7 +4822,7 @@
         "unmodeledEncounterKeys": ["Empty"],
         "encounterPhases": [],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": { "flipped": false, "entry": { "startPointId": 621442, "endPointId": 50059 } }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -6550,7 +6561,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "flipped": false, "entry": { "startPointId": 565454, "endPointId": 50059 } }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -6658,7 +6670,8 @@
             ]
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": { "entry": { "startPointId": 696402, "endPointId": 696401 } }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -6993,5 +7006,5 @@
       }
     }
   ],
-  "planFingerprint": "79ec2e4e"
+  "planFingerprint": "063be199"
 }

@@ -494,7 +494,7 @@ export {
   planManualArcanaReplacement,
   type LoadoutReplacement,
 } from './loadout-replacement';
-export { chaosGateSpawnPointIndices } from './chaos-gate-position';
+export { chaosGateSpawnPoint, chaosGateSpawnPointIndices } from './chaos-gate-position';
 
 export {
   RUN_MODIFIER_DECLARATIONS,
