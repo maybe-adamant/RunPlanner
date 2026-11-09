@@ -599,6 +599,43 @@ describe('Gold Gold Gold Shop pickups', () => {
     expect(frontier?.roleFrontiers).toBeUndefined();
   });
 
+  it('places the Echo Gold pickup at a chosen legal index, at the end by default', () => {
+    const project = createGoldenFGHIProject();
+    const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, shopOccurrenceId),
+      'roomExit',
+    );
+    const order = (document: typeof project) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'F')!
+        .topology!.occurrences.find((room) => room.occurrenceId === shopOccurrenceId)!.roomActions
+        .order;
+    const bought = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer: createShopOfferAddress(goldenFBiome, shopOccurrenceId, 'Boon'),
+      purchased: true,
+    });
+    const place = (index?: number) =>
+      applyProjectCommand(bought, catalog, {
+        kind: 'PlaceEchoGoldPickup',
+        site,
+        entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+        sourceOfferKey: 'Boon',
+        ...(index === undefined ? {} : { index }),
+      });
+    const purchase = { kind: 'interactShopOffer' as const, offerKey: 'Boon' };
+    const pickup = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit',
+      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+    };
+    expect(order(place())).toEqual([purchase, pickup]);
+    expect(order(place(1))).toEqual([purchase, pickup]);
+    expect(order(place(0))).toEqual([pickup, purchase]);
+    expect(() => place(2)).toThrow('index must be an integer from 0 through 1');
+  });
+
   it('places an unresolved Gold pickup before its ordinary outcome edits and preserves Undo', () => {
     const project = createGoldenFGHIProject();
     const shopOccurrenceId = createOccurrenceId('golden-f-preboss-shop');

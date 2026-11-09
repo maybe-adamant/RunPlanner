@@ -215,6 +215,40 @@ describe('Hermes Shrine delivery placement', () => {
     expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
   });
 
+  it('places a due delivery at any legal index of its host, canonically by default', () => {
+    let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondLeft', {
+      delay: 6,
+      rushed: false,
+    });
+    const placement = duePlacement(
+      simulateProjectAssembly(catalog, project),
+      source,
+      'initial:secondLeft',
+    )!;
+    const hostOrder = (document: typeof project) =>
+      document.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .find((occurrence) => occurrence.occurrenceId === 'surface-o-preboss:boss')!.roomActions
+        .order;
+    const collect = { kind: 'collectRequiredReward' as const };
+    expect(hostOrder(project)).toEqual([collect]);
+    const placed = applyProjectCommand(project, catalog, placement);
+    const delivery = hostOrder(placed)[1]!;
+    expect(hostOrder(placed)).toEqual([collect, delivery]);
+    expect(hostOrder(applyProjectCommand(project, catalog, { ...placement, index: 0 }))).toEqual([
+      delivery,
+      collect,
+    ]);
+    expect(() => applyProjectCommand(project, catalog, { ...placement, index: 2 })).toThrow(
+      'index must be an integer from 0 through 1',
+    );
+    expect(() => applyProjectCommand(placed, catalog, { ...placement, index: 0 })).toThrow(
+      'is already placed; move its action instead',
+    );
+  });
+
   it('matures a delayed P Postboss Shrine delivery at final Q Preboss entry', () => {
     const source = createOccurrenceAddress(
       pBiome,

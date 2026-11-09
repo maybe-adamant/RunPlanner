@@ -119,6 +119,57 @@ describe('Oceanus locked door authoring', () => {
     expect(() => pressAt(golden())).toThrow(/not active/);
   });
 
+  it('restores a missing room reward anywhere before a press, never after it', () => {
+    const pressed = pressAt(lock(golden()));
+    const order = occurrence(pressed).roomActions.order;
+    // The room reward's own acquisition, after its source pickup.
+    const reward = order.find(
+      (reference) =>
+        reference.kind === 'interactIncomingReward' && reference.acquisitionRole === 'self',
+    )!;
+    const without = order.filter((reference) => reference !== reward);
+    const missing = decodeProjectDocument(
+      {
+        ...pressed,
+        route: {
+          ...pressed.route,
+          biomes: pressed.route.biomes.map((plan) =>
+            plan.biomeKey !== 'G' || plan.topology === null
+              ? plan
+              : {
+                  ...plan,
+                  topology: {
+                    ...plan.topology,
+                    occurrences: plan.topology.occurrences.map((candidate) =>
+                      candidate.occurrenceId === HOST
+                        ? { ...candidate, roomActions: { order: without } }
+                        : candidate,
+                    ),
+                  },
+                },
+          ),
+        },
+      },
+      catalog,
+    );
+    const restore = (index: number) =>
+      apply(missing, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(
+          g(missing),
+          createOccurrenceId(HOST),
+          roomActionKey(reward),
+        ),
+        reference: reward,
+        index,
+      });
+    expect(occurrence(restore(order.indexOf(reward))).roomActions.order).toEqual(order);
+    expect(occurrence(restore(0)).roomActions.order).toEqual([reward, ...without]);
+    expect(() => restore(without.length)).toThrow(
+      /is not a legal position for .*unlockExit.* afterCheckpoint exitUsable/,
+    );
+  });
+
   it('round-trips locks and a customized press, and refuses a press without its lock', () => {
     const pressed = pressAt(lock(golden()));
     const assembly = simulateProjectAssembly(catalog, pressed);

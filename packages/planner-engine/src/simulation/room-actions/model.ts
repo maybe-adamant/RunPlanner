@@ -10,6 +10,7 @@ import type {
   RoomActionDependency,
   RoomActionParticipation,
 } from '../../authored-project/room-actions/domain';
+import type { RoomActionOrderIssue } from '../../authored-project/room-actions/order-assessment';
 import type { PlannerTimelineFacts } from '../timeline-facts';
 
 export type {
@@ -23,24 +24,7 @@ export type { RoomActionWindow } from '../../authored-project/room-actions/lifec
 export type RoomActionRosterContribution =
   RoomActionContribution | RoomActionCheckpointContribution;
 
-export type RoomActionRosterIssue =
-  | { readonly kind: 'stale'; readonly reference: RoomActionReference }
-  | { readonly kind: 'unrankedRequired'; readonly reference: RoomActionReference }
-  | {
-      readonly kind: 'dependency';
-      readonly reference: RoomActionReference;
-      readonly detail: string;
-      readonly dependency: RoomActionDependency;
-      readonly checkpointUnavailable?: true;
-    }
-  | {
-      readonly kind: 'window';
-      readonly reference: RoomActionReference;
-      readonly detail: string;
-      readonly window: RoomActionWindow;
-      readonly precedingAction: RoomActionReference;
-      readonly precedingWindow: RoomActionWindow;
-    };
+export type RoomActionRosterIssue = RoomActionOrderIssue;
 
 export interface RoomActionRow {
   readonly reference: RoomActionReference;
@@ -74,6 +58,11 @@ export interface RoomActionProposal {
   readonly anchorIndex?: number;
   readonly order: readonly RoomActionReference[];
   readonly structurallyAuthorable: boolean;
+  /**
+   * The insertion a required action takes when no position is chosen: before the
+   * first retained action with a later window, after its dependencies.
+   */
+  readonly canonical?: true;
   readonly blockers: readonly Extract<RoomActionRosterIssue, { kind: 'dependency' | 'window' }>[];
 }
 

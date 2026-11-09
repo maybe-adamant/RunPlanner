@@ -13,14 +13,19 @@ import {
   scopeRoomLifecycleStructure,
   type RoomLifecycleStructure,
 } from '../../authored-project/room-actions/lifecycle-structure';
+import {
+  assessRoomActionInsertion,
+  assessRoomActionOrder,
+  keepsTerminalActionLast,
+  roomActionOrderContext,
+  roomActionPlacementBlockers,
+} from '../../authored-project/room-actions/order-assessment';
 import type {
   RoomActionCheckpoint,
-  RoomActionCheckpointContribution,
   RoomActionContribution,
   RoomActionProposal,
   RoomActionRoster,
   RoomActionRosterContribution,
-  RoomActionRosterIssue,
   RoomActionRow,
 } from './model';
 import type { PlannerTimelineDependency, PlannerTimelineNode } from '../timeline-facts';
@@ -28,124 +33,6 @@ import { withRequiredScopes } from './required-scope';
 
 function frozen<T>(value: T): T {
   return Object.freeze(value);
-}
-
-function assessOrder(
-  order: readonly RoomActionReference[],
-  active: ReadonlyMap<string, RoomActionContribution>,
-  checkpoints: ReadonlyMap<string, RoomActionCheckpointContribution>,
-  lifecycleStructure: RoomLifecycleStructure,
-): readonly RoomActionRosterIssue[] {
-  const issues: RoomActionRosterIssue[] = [];
-  const indexes = new Map(order.map((reference, index) => [roomActionKey(reference), index]));
-  const checkpointAfterIndex = (checkpointKey: string): number => {
-    // The exit is usable once every required action is done.
-    if (checkpointKey === 'exitUsable')
-      return [...active.values()]
-        .filter((entry) => entry.participation === 'required')
-        .reduce(
-          (rank, entry) => Math.max(rank, indexes.get(roomActionKey(entry.reference)) ?? -1),
-          -1,
-        );
-    if (!checkpointKey.startsWith('nextPhaseUsable:')) return -1;
-    const checkpoint = checkpoints.get(checkpointKey);
-    if (checkpoint === undefined) return -1;
-    const required = [...active.values()].filter((entry) => entry.participation === 'required');
-    const wheelKey = checkpointKey.slice('nextPhaseUsable:'.length);
-    const matching = required.filter(
-      (entry) => entry.window.kind === 'shipPostCombat' && entry.window.wheelKey === wheelKey,
-    );
-    return matching.reduce(
-      (rank, entry) => Math.max(rank, indexes.get(roomActionKey(entry.reference)) ?? -1),
-      -1,
-    );
-  };
-  for (const reference of order) {
-    const entry = active.get(roomActionKey(reference));
-    if (entry === undefined) {
-      issues.push(frozen({ kind: 'stale', reference }));
-      continue;
-    }
-    for (const dependency of entry.dependencies) {
-      const ownIndex = indexes.get(roomActionKey(reference));
-      if (dependency.kind === 'afterAction') {
-        const dependencyIndex = indexes.get(roomActionKey(dependency.action));
-        if (dependencyIndex !== undefined && ownIndex !== undefined && ownIndex > dependencyIndex)
-          continue;
-        issues.push(
-          frozen({
-            kind: 'dependency',
-            reference,
-            detail: `must follow ${roomActionKey(dependency.action)}`,
-            dependency,
-          }),
-        );
-        continue;
-      }
-      const checkpoint = checkpoints.get(dependency.checkpointKey);
-      if (checkpoint === undefined || ownIndex === undefined) {
-        issues.push(
-          frozen({
-            kind: 'dependency',
-            reference,
-            detail: `has unknown checkpoint ${dependency.checkpointKey}`,
-            dependency,
-            checkpointUnavailable: true,
-          }),
-        );
-        continue;
-      }
-      const ownRank = roomLifecycleWindowOrdinal(lifecycleStructure, entry.window);
-      const checkpointWindowRank = roomLifecycleWindowOrdinal(
-        lifecycleStructure,
-        checkpoint.window,
-      );
-      const valid =
-        dependency.kind === 'afterCheckpoint'
-          ? ownRank >= checkpointWindowRank &&
-            indexes.get(roomActionKey(reference))! >= checkpointAfterIndex(dependency.checkpointKey)
-          : ownRank <= checkpointWindowRank;
-      if (!valid) {
-        issues.push(
-          frozen({
-            kind: 'dependency',
-            reference,
-            detail: `${dependency.kind} ${dependency.checkpointKey}`,
-            dependency,
-          }),
-        );
-      }
-    }
-  }
-  for (const entry of active.values()) {
-    if (entry.participation === 'required' && !indexes.has(roomActionKey(entry.reference))) {
-      issues.push(frozen({ kind: 'unrankedRequired', reference: entry.reference }));
-    }
-  }
-  const ranked = order.flatMap((reference) => {
-    const entry = active.get(roomActionKey(reference));
-    return entry === undefined || entry.windowFollowsOrder === true ? [] : [entry];
-  });
-  for (let index = 1; index < ranked.length; index += 1) {
-    const left = ranked[index - 1]!;
-    const right = ranked[index]!;
-    if (
-      roomLifecycleWindowOrdinal(lifecycleStructure, left.window) >
-      roomLifecycleWindowOrdinal(lifecycleStructure, right.window)
-    ) {
-      issues.push(
-        frozen({
-          kind: 'window',
-          reference: right.reference,
-          detail: 'crosses a fixed lifecycle window',
-          window: right.window,
-          precedingAction: left.reference,
-          precedingWindow: left.window,
-        }),
-      );
-    }
-  }
-  return frozen(issues);
 }
 
 export function assembleRoomActionRoster(options: {
@@ -165,18 +52,15 @@ export function assembleRoomActionRoster(options: {
   const actions = options.contributions.filter(
     (entry): entry is RoomActionContribution => entry.kind === 'action',
   );
-  const active = new Map(actions.map((entry) => [roomActionKey(entry.reference), entry]));
-  const checkpointContributions = new Map(
-    options.contributions
-      .filter((entry): entry is RoomActionCheckpointContribution => entry.kind === 'checkpoint')
-      .map((entry) => [entry.checkpointKey, entry]),
-  );
-  const issues = assessOrder(
-    options.order,
-    active,
-    checkpointContributions,
-    options.lifecycleStructure,
-  );
+  const context = roomActionOrderContext({
+    contributions: options.contributions,
+    lifecycleStructure: options.lifecycleStructure,
+    ...(options.terminalActionKey === undefined
+      ? {}
+      : { terminalActionKey: options.terminalActionKey }),
+  });
+  const active = context.active;
+  const issues = assessRoomActionOrder(options.order, context);
   const issueKeys = new Set(
     issues
       .filter(
@@ -280,43 +164,44 @@ export function assembleRoomActionRoster(options: {
       );
     }
     if (!authoredKeys.has(row.key) && !participationOwnedByFeature(row.reference)) {
-      const canonicalRequired =
+      // A required row may be inserted wherever its window and dependencies
+      // allow; its canonical insertion stays authorable as the default restore.
+      const canonicalIndex =
         row.participation === 'required'
           ? options.canonicalRequiredInsertions?.find(
               (candidate) => candidate.actionKey === row.key,
-            )
+            )?.toIndex
           : undefined;
-      if (canonicalRequired !== undefined) {
-        const order = [...options.order];
-        order.splice(canonicalRequired.toIndex, 0, row.reference);
-        proposals.push(
-          frozen({
-            kind: 'insert',
-            reference: row.reference,
-            toIndex: canonicalRequired.toIndex,
-            order: frozen(order),
-            structurallyAuthorable: true,
-            blockers: frozen([]),
-          }),
-        );
-        continue;
-      }
       for (let toIndex = 0; toIndex <= options.order.length; toIndex += 1) {
-        const order = [...options.order];
-        order.splice(toIndex, 0, row.reference);
-        const blockers = frozen(
-          assessOrder(order, active, checkpointContributions, options.lifecycleStructure).filter(
-            (issue) => issue.kind === 'dependency' || issue.kind === 'window',
-          ),
+        const assessment = assessRoomActionInsertion(
+          options.order,
+          row.reference,
+          toIndex,
+          context,
         );
+        if (assessment.followsTerminal) continue;
+        if (toIndex === canonicalIndex) {
+          proposals.push(
+            frozen({
+              kind: 'insert',
+              reference: row.reference,
+              toIndex,
+              order: assessment.order,
+              structurallyAuthorable: true,
+              canonical: true,
+              blockers: frozen([]),
+            }),
+          );
+          continue;
+        }
         proposals.push(
           frozen({
             kind: 'insert',
             reference: row.reference,
             toIndex,
-            order: frozen(order),
-            structurallyAuthorable: blockers.length === 0,
-            blockers,
+            order: assessment.order,
+            structurallyAuthorable: assessment.structurallyAuthorable,
+            blockers: assessment.blockers,
           }),
         );
       }
@@ -330,11 +215,8 @@ export function assembleRoomActionRoster(options: {
       const order = [...options.order];
       order.splice(fromIndex, 1);
       order.splice(toIndex, 0, reference);
-      const blockers = frozen(
-        assessOrder(order, active, checkpointContributions, options.lifecycleStructure).filter(
-          (issue) => issue.kind === 'dependency' || issue.kind === 'window',
-        ),
-      );
+      if (!keepsTerminalActionLast(options.order, order, options.terminalActionKey)) continue;
+      const blockers = roomActionPlacementBlockers(order, context);
       proposals.push(
         frozen({
           kind: 'move',
@@ -349,21 +231,6 @@ export function assembleRoomActionRoster(options: {
       );
     }
   }
-  // No insertion or move may put more actions after the terminal action than now follow it.
-  const following = (order: readonly RoomActionReference[]) => {
-    const index = order.findIndex(
-      (reference) => roomActionKey(reference) === options.terminalActionKey,
-    );
-    return index < 0 ? 0 : order.length - index - 1;
-  };
-  const offeredProposals =
-    options.terminalActionKey === undefined
-      ? proposals
-      : proposals.filter(
-          (proposal) =>
-            (proposal.kind !== 'insert' && proposal.kind !== 'move') ||
-            following(proposal.order) <= following(options.order),
-        );
   const lastRequiredRank = rows.reduce(
     (rank, row) =>
       row.rank !== null && row.participation === 'required' && row.window.kind !== 'postOutgoing'
@@ -442,7 +309,7 @@ export function assembleRoomActionRoster(options: {
     rows: withRequiredScopes(rows, options.lifecycleStructure),
     checkpoints: frozen(checkpoints),
     issues,
-    proposals: frozen(offeredProposals),
+    proposals: frozen(proposals),
     timelineFacts: frozen({
       nodes: frozen(timelineNodes),
       dependencies: frozen(timelineDependencies),

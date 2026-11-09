@@ -145,6 +145,78 @@ function withoutRequiredRewardAction(document = project()): ProjectDocument {
   );
 }
 
+const parallelTargetId = createOccurrenceId('room-actions-parallel-target');
+const parallelSourceId = createOccurrenceId('room-actions-parallel-source');
+
+/** An F_Combat06 Artemis target whose reward and Artemis interaction are both required on entry. */
+function parallelRequiredProject(): ProjectDocument {
+  const targetId = parallelTargetId;
+  const sourceId = parallelSourceId;
+  const openingSource = { kind: 'occurrence' as const, occurrenceId };
+  const openingDecision = createExitDecisionAddress(biome, openingSource);
+  let authored = applyProjectCommand(unresolvedProject(), catalog, {
+    kind: 'CreateBatch',
+    decision: openingDecision,
+  });
+  authored = applyProjectCommand(authored, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, openingSource),
+    storeKey: 'RunProgress',
+  });
+  authored = applyProjectCommand(authored, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, openingSource, 'exit1'),
+    occurrenceId: sourceId,
+    gameName: 'F_Combat02',
+  });
+  const source = { kind: 'occurrence' as const, occurrenceId: sourceId };
+  const decision = createExitDecisionAddress(biome, source);
+  authored = applyProjectCommand(authored, catalog, { kind: 'CreateBatch', decision });
+  authored = applyProjectCommand(authored, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, source),
+    storeKey: 'RunProgress',
+  });
+  authored = applyProjectCommand(authored, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, source, 'exit1'),
+    occurrenceId: targetId,
+    gameName: 'F_Combat06',
+  });
+  authored = applyProjectCommand(authored, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, source, 'exit2'),
+    occurrenceId: createOccurrenceId('room-actions-parallel-peer'),
+    gameName: 'F_Combat02',
+  });
+  authored = applyProjectCommand(authored, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(biome, targetId),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  authored = applyProjectCommand(authored, catalog, {
+    kind: 'SelectEncounter',
+    phase: createEncounterPhaseAddress(
+      biome,
+      { kind: 'occurrence', occurrenceId: targetId },
+      'Encounter',
+    ),
+    encounterKey: 'ArtemisCombatF',
+  });
+  return authored;
+}
+
+function parallelTarget(document: ProjectDocument) {
+  const value = document.route?.biomes[0]?.topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === parallelTargetId,
+  );
+  if (value === undefined) throw new Error('missing parallel target');
+  return value;
+}
+
 describe('room-action commands', () => {
   it('replaces every Fields cage permutation atomically while retaining mixed actions and cage leaves', () => {
     const fieldsId = createOccurrenceId('golden-h-combat02');
@@ -716,62 +788,9 @@ describe('room-action commands', () => {
   });
 
   it('uses contribution ordinal for parallel required actions activated by one selection', () => {
-    const targetId = createOccurrenceId('room-actions-parallel-target');
-    const sourceId = createOccurrenceId('room-actions-parallel-source');
-    const openingSource = { kind: 'occurrence' as const, occurrenceId };
-    const openingDecision = createExitDecisionAddress(biome, openingSource);
-    let authored = applyProjectCommand(unresolvedProject(), catalog, {
-      kind: 'CreateBatch',
-      decision: openingDecision,
-    });
-    authored = applyProjectCommand(authored, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(biome, openingSource),
-      storeKey: 'RunProgress',
-    });
-    authored = applyProjectCommand(authored, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(biome, openingSource, 'exit1'),
-      occurrenceId: sourceId,
-      gameName: 'F_Combat02',
-    });
-    const source = { kind: 'occurrence' as const, occurrenceId: sourceId };
-    const decision = createExitDecisionAddress(biome, source);
-    authored = applyProjectCommand(authored, catalog, { kind: 'CreateBatch', decision });
-    authored = applyProjectCommand(authored, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(biome, source),
-      storeKey: 'RunProgress',
-    });
-    authored = applyProjectCommand(authored, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(biome, source, 'exit1'),
-      occurrenceId: targetId,
-      gameName: 'F_Combat06',
-    });
-    authored = applyProjectCommand(authored, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(biome, source, 'exit2'),
-      occurrenceId: createOccurrenceId('room-actions-parallel-peer'),
-      gameName: 'F_Combat02',
-    });
-    authored = applyProjectCommand(authored, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(biome, targetId),
-      value: {
-        rewardType: 'Boon',
-        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-      },
-    });
-    authored = applyProjectCommand(authored, catalog, {
-      kind: 'SelectEncounter',
-      phase: createEncounterPhaseAddress(
-        biome,
-        { kind: 'occurrence', occurrenceId: targetId },
-        'Encounter',
-      ),
-      encounterKey: 'ArtemisCombatF',
-    });
+    const targetId = parallelTargetId;
+    const source = { kind: 'occurrence' as const, occurrenceId: parallelSourceId };
+    const authored = parallelRequiredProject();
     const targetOccurrence = (document: ProjectDocument) =>
       document.route?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === targetId,
@@ -791,6 +810,54 @@ describe('room-action commands', () => {
       },
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
     ]);
+  });
+
+  it('inserts a missing required action at any legal index, its canonical one by default', () => {
+    const selected = applyProjectCommand(parallelRequiredProject(), catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(biome, {
+        kind: 'occurrence',
+        occurrenceId: parallelSourceId,
+      }),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    const [incoming, artemis] = parallelTarget(selected).roomActions.order;
+    const missing = decodeProjectDocument(
+      {
+        ...selected,
+        route: {
+          ...selected.route,
+          biomes: selected.route.biomes.map((plan) =>
+            plan.topology === null
+              ? plan
+              : {
+                  ...plan,
+                  topology: {
+                    ...plan.topology,
+                    occurrences: plan.topology.occurrences.map((candidate) =>
+                      candidate.occurrenceId === parallelTargetId
+                        ? { ...candidate, roomActions: { order: [artemis] } }
+                        : candidate,
+                    ),
+                  },
+                },
+          ),
+        },
+      },
+      catalog,
+    );
+    const target = createRoomActionAddress(biome, parallelTargetId, roomActionKey(incoming!));
+    const insert = (index: number) =>
+      applyProjectCommand(missing, catalog, {
+        kind: 'InsertRoomAction',
+        action: target,
+        reference: incoming!,
+        index,
+      });
+    // Canonical before the Artemis interaction; after it is equally legal.
+    expect(parallelTarget(insert(0)).roomActions.order).toEqual([incoming, artemis]);
+    expect(parallelTarget(insert(1)).roomActions.order).toEqual([artemis, incoming]);
+    expect(() => insert(2)).toThrow('index must be an integer from 0 through 1');
   });
 
   it('records each effective order edit as one semantic history entry', () => {

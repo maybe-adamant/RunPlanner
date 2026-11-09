@@ -189,20 +189,25 @@ function compareOrder(left: readonly number[], right: readonly number[]): number
   return 0;
 }
 
-/** The collect action for an unranked active row: its canonical or latest legal insertion. */
+/**
+ * The collect action for an unranked active row: a required row's canonical
+ * insertion, an optional row's latest legal one.
+ */
 function insertion(
   room: CanonicalAuthoredRoom,
   row: RoomActionRow,
   action: RoomActionAddress,
 ): ProjectCommand | undefined {
-  const proposal = room.roomActionRoster.proposals
-    .filter(
-      (candidate) =>
-        candidate.kind === 'insert' &&
-        candidate.structurallyAuthorable &&
-        roomActionKey(candidate.reference) === row.key,
-    )
-    .at(-1);
+  const inserts = room.roomActionRoster.proposals.filter(
+    (candidate) =>
+      candidate.kind === 'insert' &&
+      candidate.structurallyAuthorable &&
+      roomActionKey(candidate.reference) === row.key,
+  );
+  const proposal =
+    row.participation === 'required'
+      ? inserts.find((candidate) => candidate.canonical === true)
+      : inserts.at(-1);
   return proposal?.toIndex === undefined
     ? undefined
     : frozen({

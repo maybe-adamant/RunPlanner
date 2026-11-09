@@ -868,7 +868,13 @@ generically removed.
 This guarantee is delta-only. A deliberately malformed document may already
 omit a required reference, and an unrelated edit does not normalize that
 omission. Evaluation retains the missing-required finding and publishes one
-engine-owned canonical restore intent. Dormant and stale rows likewise remain
+engine-owned canonical restore intent. `InsertRoomAction` restores it at that
+canonical index or at any other index the
+[roster](ROOM_LIFECYCLE_MODEL.md#roster) judges structurally authorable. The
+placement commands `PlaceHermesShrineDelivery`, `PlaceClockedTraitPickup` and
+`PlaceEchoGoldPickup` take the same optional index for a pickup they newly
+place; absent, it lands at the command's default, and an index for a pickup
+already placed is refused. Dormant and stale rows likewise remain
 authored until an explicit owning command removes them; reactivation of the
 same key reuses its retained position rather than adding a duplicate.
 

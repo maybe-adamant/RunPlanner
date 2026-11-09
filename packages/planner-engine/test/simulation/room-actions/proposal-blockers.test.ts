@@ -9,6 +9,7 @@ import type {
   RoomActionWindow,
   RoomLifecycleStructure,
 } from '../../../src/authored-project/room-actions/lifecycle-structure';
+import { roomActionKey } from '../../../src/authored-project/room-actions/state';
 import { assembleRoomActionRoster } from '../../../src/simulation/room-actions/assemble';
 
 const owner = {
@@ -179,5 +180,34 @@ describe('room action proposal blockers', () => {
     });
     expect(roster.proposals.filter((proposal) => proposal.kind === 'remove')).toEqual([]);
     expect(roster.proposals.some((proposal) => proposal.kind === 'move')).toBe(true);
+  });
+  it('lists every index of a missing required action, its canonical one marked and authorable', () => {
+    const required = (
+      reference: RoomActionReference,
+      window: RoomActionWindow,
+    ): RoomActionContribution => ({ ...action(reference, [], window), participation: 'required' });
+    const roster = assembleRoomActionRoster({
+      owner,
+      lifecycleStructure: structure,
+      // The retained afterCombat row has a later contribution ordinal than the missing one.
+      order: [first, other],
+      contributions: [required(first, before), required(second, after), action(other)],
+      canonicalRequiredInsertions: [{ actionKey: roomActionKey(second), toIndex: 1 }],
+    });
+    const inserts = roster.proposals.filter(
+      (proposal) => proposal.kind === 'insert' && proposal.reference === second,
+    );
+    expect(
+      inserts.map((proposal) => [
+        proposal.toIndex,
+        proposal.structurallyAuthorable,
+        proposal.canonical,
+      ]),
+    ).toEqual([
+      [0, false, undefined],
+      [1, true, true],
+      [2, true, undefined],
+    ]);
+    expect(inserts[0]?.blockers).toEqual([expect.objectContaining({ kind: 'window' })]);
   });
 });

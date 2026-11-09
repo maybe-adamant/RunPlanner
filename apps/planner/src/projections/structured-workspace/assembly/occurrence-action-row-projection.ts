@@ -258,8 +258,18 @@ function roomActionsForOccurrence(
         return `after ${wheelPhaseLabel(window.wheelKey)}`;
     }
   };
+  const requiredKeys = new Set(
+    roster.rows.flatMap((row) => (row.participation === 'required' ? [row.key] : [])),
+  );
   const proposalEntries = roster.proposals
     .filter((proposal) => presentedActionKeys.has(roomActionKey(proposal.reference)))
+    // A missing required action restores at its canonical position.
+    .filter(
+      (proposal) =>
+        proposal.kind !== 'insert' ||
+        proposal.canonical === true ||
+        !requiredKeys.has(roomActionKey(proposal.reference)),
+    )
     .map((proposal, index) => ({
       proposal,
       key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,

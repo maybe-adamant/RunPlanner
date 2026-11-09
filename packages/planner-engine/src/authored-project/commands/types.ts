@@ -775,6 +775,11 @@ export type AcquisitionSiteCommand =
       readonly entry: AcquisitionEntryAddress;
       /** Exact encounter end that made this delivery due; the fourth-biome Preboss flush is phase-less. */
       readonly encounterPhaseKey?: string;
+      /**
+       * Where a newly placed delivery enters the host's actions: any structurally
+       * legal index; absent, its canonical one.
+       */
+      readonly index?: number;
     }
   | {
       /** Accepts one simulator-attested optional pickup at its maturity checkpoint. */
@@ -783,6 +788,11 @@ export type AcquisitionSiteCommand =
       readonly encounterPhaseKey: string;
       readonly producerLifecycleKey: string;
       readonly rewardType: string;
+      /**
+       * Where a newly placed pickup enters the host's actions: any structurally
+       * legal index; absent, before the first action of a later window.
+       */
+      readonly index?: number;
     }
   | {
       /** Replaces payload detail for one declaration-fixed site pickup. */
@@ -796,6 +806,11 @@ export type AcquisitionSiteCommand =
       readonly site: AcquisitionSiteAddress;
       readonly entryKey: 'echoDoubleShopReward';
       readonly sourceOfferKey: string;
+      /**
+       * Where a newly placed pickup enters the room's actions: any structurally
+       * legal index; absent, the end.
+       */
+      readonly index?: number;
     };
 
 export type EncounterOccurrenceCommand =

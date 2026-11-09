@@ -730,9 +730,10 @@ Leaving through an Oceanus door still locked is exit work: the finding is on
 the exit selection, at the room's exit, and the room's Timeline stays
 evaluated.
 
-Toggling a participant changes membership without replaying chronological
-legality; only a move assesses position, so an unresolved earlier item cannot
-prevent adding the action that repairs the room.
+Toggling a participant at its default position changes membership without
+replaying chronological legality; a chosen insertion position or a move is
+judged only by the roster's structural order rule, so an unresolved earlier item
+cannot prevent adding the action that repairs the room.
 
 ## Run-State Snapshots
 

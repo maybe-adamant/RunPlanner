@@ -401,13 +401,31 @@ infers legality nor attributes an existing blocker to the proposed action.
 Authorable proposals, canonical required restores, and removals carry no
 blocker evidence.
 
-When a command newly activates required actions, the engine extends the order
-with their deterministic latest legal schedule: lifecycle windows and
-dependencies constrain placement, existing rows keep their relative order, and
-stable contribution order breaks otherwise equal ties. An unrelated
-retained-invalid row or a pre-existing missing prerequisite does not reject the
-edit or become silently repaired. Missing required authorship remains a
-supported incomplete state with one canonical late restore position.
+An unranked action, required or optional, has an insert proposal at every
+index. One structural rule judges each: the resulting order keeps every
+window, explicit dependency and checkpoint (a doors-open action after every
+required one), and puts nothing after a terminal action. A required action
+may therefore be inserted anywhere inside its window, exactly as a placed one
+may be moved; its canonical restore is marked and stays authorable even when
+an unrelated retained issue blocks every other index. Restoring a required
+action or placing a generated pickup at a chosen position accepts exactly the
+authorable indices and the command's own default, and refuses any other with a
+contract error; a generic optional insertion still accepts any index and
+reports a bad position as a finding. Legality never reads affordability or
+other simulated state, which stays a finding.
+
+Defaults are anchored differently. When a command newly activates required
+actions, or restores one without a chosen position, the engine extends the
+order with their deterministic canonical schedule, anchored to the front:
+each lands before the first retained action of a later window (or of the same
+window and later contribution order), after its dependencies; existing rows
+keep their relative order. That slot is a default, not a deadline, and may
+precede other legal indices. Purchases and other object interactions are
+anchored to the end: without a chosen position they append, their latest legal
+point. An unrelated retained-invalid row or a pre-existing missing
+prerequisite does not reject the default edit or become silently repaired.
+Missing required authorship remains a supported incomplete state with one
+canonical restore position among its legal ones.
 
 Active required roster rows also expose `requiredScope`: `phase` when their
 fixed window or dependency chain constrains them to encounter progression,

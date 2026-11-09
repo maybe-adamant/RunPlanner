@@ -66,6 +66,15 @@ export {
 } from './room-actions/lifecycle-structure';
 export { assembleRoomActionDomain, type RoomActionDomain } from './room-actions/domain';
 export {
+  assessRoomActionInsertion,
+  roomActionInsertionRefusal,
+  roomActionOrderContext,
+  type RoomActionInsertionAssessment,
+  type RoomActionOrderContext,
+  type RoomActionOrderIssue,
+  type RoomActionPlacementBlocker,
+} from './room-actions/order-assessment';
+export {
   roomActionDomainForOccurrence,
   scheduleRequiredRoomActions,
   structurallyActiveOccurrenceIds,

@@ -25,6 +25,10 @@ import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } fr
 import { updateOccurrence } from './occurrence/mutation';
 import type { RoomActionCommand } from './types';
 import { reconcileRemovedOrMovedReroll } from './rerolls';
+import {
+  roomActionInsertionRefusal,
+  roomActionOrderContextForOccurrence,
+} from '../room-actions/order-assessment';
 import { applyShopOccurrenceCommand } from './occurrence/shop';
 
 function requireIndex(
@@ -241,6 +245,7 @@ export function applyRoomActionCommand(
       if (existingIndex >= 0) failCommand(command, 'room action is already ordered');
       requireIndex(command, command.index, order.length, 'index');
       if (contribution.participation === 'required') {
+        // Any structurally legal index; the canonical default is always accepted.
         const canonical = scheduleRequiredRoomActions({
           catalog,
           domain,
@@ -251,7 +256,13 @@ export function applyRoomActionCommand(
           (reference) => roomActionKey(reference) === command.action.actionKey,
         );
         if (command.index !== canonicalIndex) {
-          failCommand(command, `required room action canonical index is ${canonicalIndex}`);
+          const refusal = roomActionInsertionRefusal(
+            order,
+            command.reference,
+            command.index,
+            roomActionOrderContextForOccurrence(domain, occurrence),
+          );
+          if (refusal !== undefined) failCommand(command, refusal);
         }
       }
       nextOrder = [...order];
