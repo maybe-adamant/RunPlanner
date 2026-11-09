@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createExitSelectionAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createShopOfferAddress,
@@ -21,6 +23,7 @@ import {
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 import { createAuthoringSession } from '../../../src/simulation/authoring/session';
 
@@ -155,8 +158,110 @@ describe('stale room actions in edit settlement', () => {
     });
     expect(settled.removedStaleActions).toBeUndefined();
     expect(order(settled.assembly.project, shop)).toEqual(
-      expect.arrayContaining(order(project, shop)),
+      expect.arrayContaining([...order(project, shop)]),
     );
     expect(unavailable(settled.assembly.evaluation.findings)).toEqual(before);
+  });
+
+  describe('a changed incoming reward', () => {
+    const pickup = (producerPoint: string, acquisitionRole: string) =>
+      roomActionKey({ kind: 'interactIncomingReward', producerPoint, acquisitionRole } as never);
+    const boonRoom = createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-b2-e1'));
+    const reward = (room: OccurrenceAddress) =>
+      createIncomingRewardAddress(goldenFBiome, room.occurrenceId);
+    const boon = {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+    } as const;
+    const devotion = {
+      rewardType: 'Devotion',
+      payload: {
+        kind: 'DevotionPair',
+        chosenSource: 'ApolloUpgrade',
+        spurnedSource: 'ZeusUpgrade',
+      },
+    } as const;
+
+    it('rekeys its pickup in place between one-role rewards, silently', () => {
+      const project = createGoldenFGHProject();
+      expect(order(project, boonRoom)).toEqual([pickup('roomRewardPickup', 'source')]);
+      const gold = settle(project, {
+        kind: 'ReplaceIncomingReward',
+        reward: reward(boonRoom),
+        value: { rewardType: 'RoomMoneyDrop' },
+      });
+      expect(gold.fault).toBeUndefined();
+      expect(gold.removedStaleActions).toBeUndefined();
+      expect(order(gold.assembly.project, boonRoom)).toEqual([pickup('roomRewardPickup', 'self')]);
+      const back = settle(gold.assembly.project, {
+        kind: 'ReplaceIncomingReward',
+        reward: reward(boonRoom),
+        value: boon,
+      });
+      expect(back.removedStaleActions).toBeUndefined();
+      expect(order(back.assembly.project, boonRoom)).toEqual([
+        pickup('roomRewardPickup', 'source'),
+      ]);
+    });
+
+    it('gives a Boon’s pickup to Devotion’s chosen god and places the spurned one', () => {
+      const settled = settle(createGoldenFGHProject(), {
+        kind: 'ReplaceIncomingReward',
+        reward: reward(boonRoom),
+        value: devotion,
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(settled.removedStaleActions).toBeUndefined();
+      expect(order(settled.assembly.project, boonRoom)).toEqual([
+        pickup('beforeCombat', 'chosenSource'),
+        pickup('afterCombat', 'spurnedSource'),
+      ]);
+    });
+
+    it('gives Devotion’s chosen pickup to a Boon in place and drops the spurned one silently', () => {
+      const project = settle(createGoldenFGHProject(), {
+        kind: 'ReplaceIncomingReward',
+        reward: reward(boonRoom),
+        value: devotion,
+      }).assembly.project;
+      const settled = settle(project, {
+        kind: 'ReplaceIncomingReward',
+        reward: reward(boonRoom),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(settled.removedStaleActions).toBeUndefined();
+      expect(order(settled.assembly.project, boonRoom)).toEqual([
+        pickup('roomRewardPickup', 'source'),
+      ]);
+    });
+  });
+
+  it('leaves the rows of a room the run stops entering, and they return with its door', () => {
+    const shop = createOccurrenceAddress(
+      goldenGBiome,
+      createOccurrenceId('zagreus-contract-preboss-shop'),
+    );
+    const selection = createExitSelectionAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('zagreus-contract-return'),
+    });
+    const project = loadUnderworldZagreusContractCheckpoint();
+    const collect = roomActionKey({ kind: 'interactInfernalContractPedestal' });
+    expect(order(project, shop)).toContain(collect);
+    const away = settle(project, {
+      kind: 'SetExitSelection',
+      selection,
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    expect(away.removedStaleActions).toBeUndefined();
+    expect(order(away.assembly.project, shop)).toEqual(order(project, shop));
+    const back = settle(away.assembly.project, {
+      kind: 'SetExitSelection',
+      selection,
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    expect(back.removedStaleActions).toBeUndefined();
+    expect(order(back.assembly.project, shop)).toEqual(order(project, shop));
   });
 });

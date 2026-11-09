@@ -25,6 +25,11 @@ import type {
   RoomOccurrence,
 } from '../authored-project/model';
 import { roomActionKey } from '../authored-project/room-actions/state';
+import { roomActionDomainForOccurrence } from '../authored-project/room-actions/defaults';
+import {
+  assessRoomActionMove,
+  roomActionOrderContextForOccurrence,
+} from '../authored-project/room-actions/order-assessment';
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import {
   discardDisplacedHermesShrineDelivery,
@@ -114,25 +119,34 @@ export interface ProjectEditSettlement {
   readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
 }
 
-/** Each evaluated room's roster rows by room, with whether each is stale. */
-function evaluatedRosters(assembly: ProjectEvaluationAssembly) {
+interface RosterRow {
+  readonly reference: RoomActionReference;
+  readonly stale: boolean;
+  readonly owner: SemanticAddress;
+}
+
+/**
+ * Each room the run enters, with its roster rows by key. A room no longer
+ * entered keeps its rows untouched: they return with its door.
+ */
+function enteredRosters(assembly: ProjectEvaluationAssembly) {
   const rosters = new Map<
     string,
-    { readonly owner: OccurrenceAddress; readonly stale: ReadonlyMap<string, boolean> }
+    { readonly owner: OccurrenceAddress; readonly rows: ReadonlyMap<string, RosterRow> }
   >();
   const routeKey = assembly.project.route.routeKey;
   for (const plan of assembly.project.route.biomes) {
     const biome = candidateBiome(assembly.evaluation, routeKey, plan.biomeKey);
     if (biome === undefined) continue;
     for (const room of candidateBiomeRooms(biome)) {
-      if (room.origin.kind !== 'occurrence') continue;
+      if (room.origin.kind !== 'occurrence' || !room.entered) continue;
       const key = semanticAddressKey(room.origin);
       if (rosters.has(key)) continue;
       rosters.set(
         key,
         Object.freeze({
           owner: room.origin,
-          stale: new Map(room.roomActionRoster.rows.map((row) => [row.key, row.stale])),
+          rows: new Map(room.roomActionRoster.rows.map((row) => [row.key, row])),
         }),
       );
     }
@@ -147,32 +161,140 @@ function roomEdited(before: ProjectDocument, after: ProjectDocument, owner: Occu
   return previous !== next && JSON.stringify(previous) !== JSON.stringify(next);
 }
 
+/** An address and the owners it nests, short of the room itself. */
+function ownerLineage(address: unknown, keys = new Set<string>()): Set<string> {
+  if (typeof address !== 'object' || address === null) return keys;
+  const { kind } = address as { readonly kind?: unknown };
+  if (typeof kind !== 'string' || kind === 'occurrence') return keys;
+  keys.add(semanticAddressKey(address as SemanticAddress));
+  for (const value of Object.values(address)) ownerLineage(value, keys);
+  return keys;
+}
+
 /**
- * The stale rows an edit removes: every row the edit left with no context, and
- * in each room the edit changed, every stale row retained from before it.
- * Rooms the evaluation does not reach keep their rows until it does.
+ * The stale rows an edit removes in the rooms the run enters: every row the
+ * edit left with no context, and in each room the edit changed, every stale
+ * row retained from before it. Rooms the evaluation does not reach keep their
+ * rows until it does.
  */
 function staleRowsToRemove(
   before: ProjectEvaluationAssembly,
-  beforeRosters: ReturnType<typeof evaluatedRosters>,
+  beforeRosters: ReturnType<typeof enteredRosters>,
   assembly: ProjectEvaluationAssembly,
 ) {
   const removals: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
-  for (const [roomKey, { owner, stale }] of evaluatedRosters(assembly)) {
+  for (const [roomKey, { owner, rows }] of enteredRosters(assembly)) {
     const current = occurrenceAt(assembly.project, owner);
     if (current === undefined) continue;
-    const prior = beforeRosters.get(roomKey)?.stale;
+    const prior = beforeRosters.get(roomKey)?.rows;
     let edited: boolean | undefined;
     for (const reference of current.roomActions.order) {
       const key = roomActionKey(reference);
-      if (stale.get(key) !== true || reference.kind === 'interactKeepsakeRack') continue;
-      const orphaned = prior?.get(key) === false;
+      if (rows.get(key)?.stale !== true || reference.kind === 'interactKeepsakeRack') continue;
+      const orphaned = prior?.get(key)?.stale === false;
       if (!orphaned && (edited ??= roomEdited(before.project, assembly.project, owner)) === false)
         continue;
       removals.push({ owner, reference });
     }
   }
   return removals;
+}
+
+/**
+ * Incoming-reward pickups an edit gives new roles: in each entered room, its
+ * stale pickup rows in order paired with the pickup roles the edit newly
+ * placed, in the roles' declared order. A paired row takes the new role's
+ * place, so a changed reward keeps its pickup where it was.
+ */
+function incomingRewardRekeys(
+  catalog: Catalog,
+  before: ProjectDocument,
+  assembly: ProjectEvaluationAssembly,
+  rekeyed: ReadonlySet<string>,
+) {
+  const rekeys: {
+    owner: OccurrenceAddress;
+    stale: RoomActionReference;
+    role: RoomActionReference;
+  }[] = [];
+  for (const { owner, rows } of enteredRosters(assembly).values()) {
+    const current = occurrenceAt(assembly.project, owner);
+    const previous = occurrenceAt(before, owner);
+    if (current === undefined || previous === undefined) continue;
+    const known = new Set(previous.roomActions.order.map(roomActionKey));
+    const stale = current.roomActions.order.filter(
+      (reference) =>
+        reference.kind === 'interactIncomingReward' &&
+        rows.get(roomActionKey(reference))?.stale === true,
+    );
+    if (stale.length === 0) continue;
+    const placed = current.roomActions.order.filter(
+      (reference) =>
+        reference.kind === 'interactIncomingReward' &&
+        rows.get(roomActionKey(reference))?.stale === false &&
+        !known.has(roomActionKey(reference)) &&
+        !rekeyed.has(`${semanticAddressKey(owner)}|${roomActionKey(reference)}`),
+    );
+    if (placed.length === 0) continue;
+    // The producer contributes its roles in the reward's declared order.
+    const declared = (
+      roomActionDomainForOccurrence(
+        assembly.project,
+        catalog,
+        createBiomeAddress(owner.routeKey, owner.biomeKey),
+        owner.occurrenceId,
+      )?.domain.contributions ?? []
+    ).flatMap((entry) => (entry.kind === 'action' ? [roomActionKey(entry.reference)] : []));
+    const roles = [...placed].sort(
+      (left, right) =>
+        declared.indexOf(roomActionKey(left)) - declared.indexOf(roomActionKey(right)),
+    );
+    for (let index = 0; index < Math.min(stale.length, roles.length); index += 1)
+      rekeys.push({ owner, stale: stale[index]!, role: roles[index]! });
+  }
+  return rekeys;
+}
+
+/**
+ * Takes a stale pickup out and moves its new role into its place, when the
+ * roster allows that position; otherwise the role keeps its default place.
+ */
+function rekeyIncomingRewardPickup(
+  catalog: Catalog,
+  project: ProjectDocument,
+  owner: OccurrenceAddress,
+  stale: RoomActionReference,
+  role: RoomActionReference,
+): ProjectDocument {
+  const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
+  const staleIndex = (occurrenceAt(project, owner)?.roomActions.order ?? []).findIndex(
+    (reference) => roomActionKey(reference) === roomActionKey(stale),
+  );
+  const removed = applyProjectCommand(project, catalog, {
+    kind: 'RemoveRoomAction',
+    action: createRoomActionAddress(biome, owner.occurrenceId, roomActionKey(stale)),
+  });
+  const located = roomActionDomainForOccurrence(removed, catalog, biome, owner.occurrenceId);
+  if (located === undefined) return removed;
+  const order = located.occurrence.roomActions.order;
+  const roleIndex = order.findIndex(
+    (reference) => roomActionKey(reference) === roomActionKey(role),
+  );
+  const toIndex = roleIndex < staleIndex ? staleIndex - 1 : staleIndex;
+  if (roleIndex < 0 || toIndex === roleIndex) return removed;
+  const assessment = assessRoomActionMove(
+    order,
+    roleIndex,
+    toIndex,
+    roomActionOrderContextForOccurrence(located.domain, located.occurrence),
+  );
+  return assessment.structurallyAuthorable
+    ? applyProjectCommand(removed, catalog, {
+        kind: 'MoveRoomAction',
+        action: createRoomActionAddress(biome, owner.occurrenceId, roomActionKey(role)),
+        toIndex,
+      })
+    : removed;
 }
 
 /** The fixed reroll pool refusing a new spend; known only once the edit is evaluated. */
@@ -201,7 +323,9 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
     return result;
   };
   const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
-  const beforeRosters = evaluatedRosters(before);
+  const beforeRosters = enteredRosters(before);
+  const rekeyed = new Set<string>();
+  const addressed = semanticAddressKey(projectCommandAddress(command) as SemanticAddress);
   const removedStale: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   const settled = (
     assembly: ProjectEvaluationAssembly,
@@ -448,11 +572,29 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
       });
     });
     if (due.length === 0) {
-      // A row with no context has nothing to repair: the edit that orphans it removes it.
       // An installed route keeps exactly the rows it was authored with.
-      const stale =
-        command.kind === 'ReplaceRoute' ? [] : staleRowsToRemove(before, beforeRosters, assembly);
+      if (command.kind === 'ReplaceRoute') return settled(assembly);
+      const rekeys = incomingRewardRekeys(catalog, before.project, assembly, rekeyed);
+      if (rekeys.length > 0) {
+        for (const { owner, stale, role } of rekeys) {
+          // Each new role takes one row's place, once.
+          rekeyed.add(`${semanticAddressKey(owner)}|${roomActionKey(role)}`);
+          const address = createRoomActionAddress(
+            createBiomeAddress(owner.routeKey, owner.biomeKey),
+            owner.occurrenceId,
+            roomActionKey(stale),
+          );
+          const fault = consume(`rekey:${semanticAddressKey(address)}`, address);
+          if (fault !== undefined) return settled(assembly, fault);
+          project = rekeyIncomingRewardPickup(catalog, project, owner, stale, role);
+        }
+        assembly = evaluate(project);
+        continue;
+      }
+      // A row with no context has nothing to repair: the edit that orphans it removes it.
+      const stale = staleRowsToRemove(before, beforeRosters, assembly);
       if (stale.length === 0) return settled(assembly);
+      const rosters = enteredRosters(assembly);
       const pass: { owner: OccurrenceAddress; reference: RoomActionReference; index: number }[] =
         [];
       // Last first, each through its owning removal, as a reset removes rows.
@@ -483,9 +625,17 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
         const remaining = new Set(
           (occurrenceAt(project, owner)?.roomActions.order ?? []).map(roomActionKey),
         );
+        const rows = rosters.get(semanticAddressKey(owner))?.rows;
         order.forEach((candidate, index) => {
-          if (!remaining.has(roomActionKey(candidate)))
-            pass.push({ owner, reference: candidate, index });
+          const candidateKey = roomActionKey(candidate);
+          if (remaining.has(candidateKey)) return;
+          // The addressed owner's own rows change silently with it.
+          // A stale row has no owner of its own; one the edit orphaned keeps its former one.
+          const rowOwner =
+            beforeRosters.get(semanticAddressKey(owner))?.rows.get(candidateKey)?.owner ??
+            rows?.get(candidateKey)?.owner;
+          if (ownerLineage(rowOwner).has(addressed)) return;
+          pass.push({ owner, reference: candidate, index });
         });
       }
       removedStale.push(...pass.sort((left, right) => left.index - right.index));

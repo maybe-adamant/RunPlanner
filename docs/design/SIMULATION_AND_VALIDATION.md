@@ -105,13 +105,22 @@ the final project and its exact assembly.
   removed. Deliveries and clocked pickups are keyed by their source, so no
   inherited choice is reset for being newly reached; one that is invalid where
   it lands keeps its finding.
-- A room-action row the edit leaves stale, one its evaluated room no longer
-  offers, is removed through its owning removal command; in a room the edit
-  changes, stale rows retained from before it (an older save) go too. The
-  settlement names each room's removed rows for the editor to announce.
-  Unchanged rooms and rooms the evaluation does not reach keep theirs, and an
-  installed route keeps its rows exactly. Invalid rows stay with their
+- In each room the run enters, a room-action row the edit leaves stale, one
+  the room no longer offers, is removed through its owning removal command;
+  in a room the edit changes, stale rows retained from before it (an older
+  save) go too. A room the run stops entering keeps its rows untouched, so
+  they return with its door; unchanged rooms, rooms the evaluation does not
+  reach and an installed route keep theirs. Invalid rows stay with their
   findings.
+- A changed incoming reward keeps its pickups where they were: the stale
+  pickup rows, in order, take the roles the edit newly placed, in the reward's
+  declared role order (its main pickup first), each at its old position when
+  the roster allows it there and otherwise at the role's default. Leftover
+  stale pickups are removed and leftover roles keep their default places.
+- The settlement names each room's removed rows for the editor to announce,
+  except rows owned by the owner the edit addresses or an owner nested in it
+  (an orphaned row keeps the owner it had before the edit), which change
+  silently with that owner, and rows a rekey replaced.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
   assembly with a settlement fault naming the owner. A fault signals an engine
