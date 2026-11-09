@@ -1619,13 +1619,21 @@
 /* Inline timeline controls share a baseline; expanded editors retain their own sizing. */
 .room-actions-workbench {
   --timeline-control-height: 26px;
-  /* One knob sizes the Timeline's item icons; their chips and corner badges follow it. */
-  --timeline-icon-size: 1.4rem;
+  /*
+   * One knob sizes the Timeline's item icons; their chips and corner badges follow it. A chip
+   * with its badges fills a row's height inside the row's padding.
+   */
+  --timeline-icon-size: 23px;
   --timeline-chip-size: calc(var(--timeline-icon-size) + 9px);
   --timeline-badge-size: calc(var(--timeline-icon-size) * 2 / 3);
   --timeline-badge-small: calc(var(--timeline-icon-size) * 13 / 21);
   --timeline-badge-offset: calc(var(--timeline-icon-size) * -5 / 21);
   --timeline-badge-font: calc(var(--timeline-icon-size) * 0.65 / 1.4);
+}
+
+/* A chip's badges overhang its icon, not its padding, so they stay inside the row. */
+.room-actions-workbench .timeline-chip {
+  --timeline-badge-offset: calc(var(--timeline-icon-size) * -5 / 21 + 4.5px);
 }
 
 .room-actions-workbench .artwork-label-icon {
