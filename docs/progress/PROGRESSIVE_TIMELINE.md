@@ -122,6 +122,21 @@ deferred items spawn only after the wheel reward is collected.
 - Until Part 2, required pickups placed automatically return at once; the
   reset fully restores the frontier only once automatic placement is off.
 
+## Stale and invalid rows (owner 2026-11-09)
+
+- A row whose context is gone (stale: nothing in the room offers it any more)
+  is removed by the edit that orphans it, in the same edit and Undo step, and
+  the planner announces it ("N actions no longer apply", with Undo). Nothing
+  is kept hidden and nothing revives on its own later: the Timeline shows
+  what is saved. Old saves' stale rows are removed the first time their room
+  is edited, with the same announcement.
+- A row that is merely invalid (a purchase the game refuses, e.g. a Shop boon
+  past the god cap, a Purging Pool sale of a trait that cannot be sold, a row
+  out of order) stays visible with a finding to repair or remove it. The
+  Purging Pool sale is reclassified from stale to invalid.
+- Reset from here is a clean slate: before the Postboss keepsake rack it also
+  returns the rack's keepsake choice to its default (keep the held keepsake).
+
 ## Row actions
 
 `+` and reset sit beside the trash can, in its quiet style, shown on the
