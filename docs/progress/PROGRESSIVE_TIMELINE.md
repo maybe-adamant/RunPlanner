@@ -23,6 +23,19 @@ follows it.
   they return to their phases. Rows that are invalid in themselves stay repair
   rows where they are.
 
+## Insertion is judged by its prefix
+
+Settlement works inside a room the way the engine walks rooms in a biome. A
+row inserted or moved to position k is legal when rows 1…k-1 with it at k are
+valid as the walk reaches k: its window is open, its dependencies are in the
+prefix, no later-window row precedes it. Rows after k take no part; a later row
+the edit invalidates gets its finding when the walk reaches it, or the room
+stops there and the row joins Not reached yet. Nothing is refused for a
+downstream problem and nothing is deleted. One shared engine rule serves
+commands, insert and move proposals and the purchase insertion query
+(owner 2026-11-09). Engine step on this branch, independently reviewed,
+before the planner work.
+
 ## Required pickups: window and deadline
 
 - A required pickup's window opens when it spawns and closes at its deadline,
@@ -58,6 +71,7 @@ hovered or focused row only; the trash can keeps its current visibility.
 
 ## Order
 
+0. Prefix-judged insertion and moves (engine).
 1. Progressive phases and Not reached yet (planner, over existing engine
    stop and reached-phase products; engine additions only if a reached-phase
    fact is missing).
