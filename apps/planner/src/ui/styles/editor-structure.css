@@ -323,13 +323,8 @@ select {
   height: 1.4rem;
 }
 
-/*
- * A trigger icon wearing its slot mark on its corner. The trigger's value clips to its line, so
- * the mark rests on the icon's bottom edge.
- */
+/* A trigger icon wearing its slot mark on its corner, hanging off it like every corner badge. */
 .contextual-picker-trigger-value > .contextual-picker-trigger-badged {
-  --badge-offset: 0px;
-
   position: relative;
   display: inline-flex;
   flex: 0 0 auto;

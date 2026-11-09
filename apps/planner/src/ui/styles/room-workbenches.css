@@ -2037,6 +2037,11 @@
   white-space: nowrap;
 }
 
+/* A badged icon's mark hangs off it, past the value's line. */
+.room-overview-workbench .contextual-picker-trigger > span:first-child:has(.corner-badge) {
+  overflow: visible;
+}
+
 .room-overview-workbench .dialog-launcher {
   width: var(--overview-secondary-width);
   flex: 0 0 auto;
