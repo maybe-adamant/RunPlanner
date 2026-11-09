@@ -1,6 +1,7 @@
 import type { AcquisitionEntrySourceFamily } from '@run-planner/engine/authored-project';
 import type { ChallengeSwitchKind } from '@run-planner/engine/catalog-schema';
 
+import { npcBoonArtwork } from './npc-boons/npcBoonArtwork';
 import { challengeSwitchIcon, roomObjectIcon, sourceFamilyIcon } from './roomArtwork';
 
 /**
@@ -15,6 +16,12 @@ export function pickupSourceBadgeIcon(
     case undefined:
     case 'shopTravelDealRefill':
       return undefined;
+    // Echo's loot is marked by the boon that made it: Reward Reward Reward or Gold Gold Gold.
+    case 'echo':
+      return (
+        npcBoonArtwork[family.effect === 'lastReward' ? 'EchoLastReward' : 'EchoDoubleShop'] ??
+        sourceFamilyIcon(family)
+      );
     case 'hermesShrineDelivery':
       return roomObjectIcon('hermesShrine');
     case 'challengeSwitch':
