@@ -10,6 +10,7 @@ import {
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createKeepsakeEquipResultAddress,
+  createLocalVisitOrderAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -350,23 +351,15 @@ describe('structured workspace biome presentation', () => {
   });
 
   it('keys a repeated side visit apart from its first visit', () => {
-    // Commands no longer enter a side room twice, but a project saved before that keeps its repeat.
-    const repeated = [
-      nLocalOccurrenceId('combat05', 'sideDoor2'),
-      nLocalOccurrenceId('combat05', 'sideDoor1'),
-      nLocalOccurrenceId('combat05', 'sideDoor1'),
-    ];
-    const withRepeat = (value: unknown): unknown => {
-      if (Array.isArray(value)) return value.map(withRepeat);
-      if (value === null || typeof value !== 'object') return value;
-      const record = value as Record<string, unknown>;
-      if (record['sourceOccurrenceId'] === nOccurrenceId('combat05') && 'visitOrder' in record)
-        return { ...record, visitOrder: repeated };
-      return Object.fromEntries(
-        Object.entries(record).map(([key, entry]) => [key, withRepeat(entry)]),
-      );
-    };
-    const project = withRepeat(loadSurfaceNProject()) as ProjectDocument;
+    // Changing the first visit to the room a later visit enters keeps both; the later one carries the finding.
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      occurrenceIds: [
+        nLocalOccurrenceId('combat05', 'sideDoor1'),
+        nLocalOccurrenceId('combat05', 'sideDoor1'),
+      ],
+    });
     const hub = hubRailEntry(present(project, 'Surface', 'N').presentation.biome.rail);
     const combat05 = hub.visits.find(
       (visit) => visit.node.room.occurrenceId === nOccurrenceId('combat05'),
@@ -374,8 +367,8 @@ describe('structured workspace biome presentation', () => {
     if (combat05 === undefined) throw new Error('N Combat 05 Hub visit is missing');
     const keys = combat05.sideVisits.map((side) => side.key);
 
-    expect(keys).toHaveLength(3);
-    expect(new Set(keys).size).toBe(3);
+    expect(keys).toHaveLength(2);
+    expect(new Set(keys).size).toBe(2);
   });
 
   it('uses the generated semantic rail policy for ordinary decisions and exact destinations', () => {
