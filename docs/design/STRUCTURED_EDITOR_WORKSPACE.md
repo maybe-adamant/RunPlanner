@@ -33,10 +33,10 @@ appear, not what they mean.
   destination and one containing inspector even when route indexes or
   summaries also reference it. UI destinations use occurrence IDs and semantic
   addresses, never rendered indexes, ancestry or encoded identifiers.
-- Overview owns occurrence contents and feature inventory, Timeline owns
-  participating actions and their chronology, the room's outgoing offers on its
-  Doors open row and the exit pick on its last row, and Layout owns Fields
-  spawn-point placement.
+- Overview owns occurrence contents, feature inventory and room positions
+  (entry, object anchors and Fields points in its Layout section), and Timeline
+  owns participating actions and their chronology, the room's outgoing offers
+  on its Doors open row and the exit pick on its last row.
 - Dormant, ungenerated, unvisited and unpurchased children publish no active
   Timeline control merely because their authored detail is retained.
 - Context-invalid authored values remain visible until explicitly replaced or

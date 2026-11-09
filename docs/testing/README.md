@@ -12,6 +12,7 @@ commits, not these checklists.
 - [Game settings](GAME_SETTINGS_LIVE_ACCEPTANCE.md)
 - [Plan end, challenge switches and reward stores](PLAN_END_SWITCHES_STORES_LIVE_ACCEPTANCE.md)
 - [Oceanus locked doors](OCEANUS_LOCKED_DOORS_LIVE_ACCEPTANCE.md)
+- [Room layout steering](ROOM_LAYOUT_STEERING_LIVE_ACCEPTANCE.md)
 
 Keep setup, actions and expected observations with each check. Confirm results
 from live testing or explicitly waive them; retire completed items and delete
