@@ -69,7 +69,10 @@ import {
   type RoomAnchorObjectKind,
 } from '@run-planner/engine/simulation';
 import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import {
+  createGoldenFGHIProject,
+  loadUnderworldFGProject,
+} from '@run-planner/test-fixtures/underworld';
 import { surfaceShrineDeliveriesProject } from '@run-planner/test-fixtures/surface';
 import { createReachableNaturalChaosProject } from '../structured-workspace/interaction-binding.test-support';
 import {
@@ -1319,6 +1322,49 @@ export const galleryCases: readonly GalleryCase[] = [
     label: 'Stygian Well purchases with a Fateful Twist',
     shows: ['Well purchase', 'Fateful Twist', 'fountain + Phial', 'Keepsake Rack'],
     project: loadUnderworldTwistScyllaCheckpoint,
+    target: room('F', 'golden-f-preboss-shop:postboss'),
+  },
+  {
+    id: 'well-twist-unset',
+    label: 'Stygian Well Fateful Twist bought, its result not set',
+    shows: ['stop at the purchase row', 'Twist result repair', 'Not reached yet'],
+    project: loadUnderworldFGProject,
+    commands: [
+      ...(
+        [
+          ['healing', 'ArmorBoostStore'],
+          ['secondLeft', 'RandomStoreItem'],
+          ['secondRight', 'TemporaryBoonRarityTrait'],
+        ] as const
+      ).map(([slotKey, itemKey]): GalleryStep => (project) => ({
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
+        slotKey,
+        itemKey,
+      })),
+      (project) => ({
+        kind: 'SetStygianWellPurchase',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
+        generationKey: 'initial:secondLeft',
+        purchased: true,
+      }),
+    ],
+    target: room('F', 'golden-f-preboss-shop:postboss'),
+  },
+  {
+    id: 'postboss-rack-result-unset',
+    label: 'Keepsake Rack takes the Jeweled Pom, its equip result not set',
+    shows: ['stop at the rack row', 'equip result repair', 'Not reached yet'],
+    project: loadUnderworldFGCheckpoint,
+    commands: [
+      (project) => ({
+        kind: 'ReplacePostbossKeepsake',
+        selection: createPostbossKeepsakeSelectionAddress(
+          occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
+        ),
+        keepsakeKey: 'HadesAndPersephoneKeepsake',
+      }),
+    ],
     target: room('F', 'golden-f-preboss-shop:postboss'),
   },
   {

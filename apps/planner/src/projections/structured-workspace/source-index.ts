@@ -94,10 +94,10 @@ export interface WorkspaceEvaluatedBatchOverlay {
 /** Where the walk stopped inside the room an assessment blocks in, as the engine publishes it. */
 export interface WorkspaceRoomStop {
   readonly kind: 'overview' | 'timeline' | 'exit';
-  /** The room's first lifecycle Timeline entry the walk did not get past. */
+  /** The room's lifecycle Timeline entry the walk stopped at; later entries are unreached. */
   readonly entryIndex: number;
-  /** The block is a required row or delivery not placed yet, rather than a banner's contact. */
-  readonly unplacedRow: boolean;
+  /** `entry`: the walk reached that entry and blocks on its own contact; `before`: it did not. */
+  readonly at: 'entry' | 'before';
 }
 
 export interface WorkspaceBiomeSource {
@@ -1071,13 +1071,7 @@ function createWorkspaceBiomeSource(
         evaluation?.coverage.kind === 'prefix' ? evaluation.coverage.roomStop : undefined;
       if (stop === undefined || semanticAddressKey(stop.room) !== semanticAddressKey(owner))
         return undefined;
-      const blockedAt =
-        evaluation?.coverage.kind === 'prefix' ? evaluation.coverage.blockedAt : undefined;
-      return Object.freeze({
-        kind: stop.kind,
-        entryIndex: stop.entryIndex,
-        unplacedRow: blockedAt?.kind === 'roomAction' || blockedAt?.kind === 'acquisitionEntry',
-      });
+      return Object.freeze({ kind: stop.kind, entryIndex: stop.entryIndex, at: stop.at });
     },
     isActiveTraitOffer,
     isActiveInventoryOffer,

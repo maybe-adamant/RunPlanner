@@ -121,8 +121,9 @@ function lifecycleEntryKey(
 
 /**
  * Splits a room's Timeline at the stop the engine publishes for it: the entries before its
- * first unreached lifecycle entry are reached. The blocking rows stay at the stop for repair;
- * the authored rows after it wait, without their banners, until the walk reaches them.
+ * stop are reached, and the stop's own entry too when the walk reached it. The blocking rows
+ * stay at the stop for repair; the authored rows after it wait, without their banners, until
+ * the walk reaches them.
  * Undefined while the walk passes through the room or stops only in its exit work.
  */
 export function splitAtRoomStop(
@@ -146,15 +147,9 @@ export function splitAtRoomStop(
     return key !== undefined && unreached.has(key);
   };
   const stop = entries.findIndex(isUnreached);
-  // A Timeline stop at a banner whose contact blocks (the doors opening, an encounter's start
-  // or its due outcome, a wheel's offers) keeps that banner as the stop, to repair it there.
-  const stopEntry = entries[stop];
-  const cut =
-    stop < 0
-      ? entries.length
-      : roomStop.kind === 'timeline' && !roomStop.unplacedRow && stopEntry?.kind === 'boundary'
-        ? stop + 1
-        : stop;
+  // A stop at its entry reached it (a banner whose contact blocks, a blocking row), so that
+  // entry, or the banner it folds into, stays as the stop to repair it there.
+  const cut = stop < 0 ? entries.length : roomStop.at === 'entry' ? stop + 1 : stop;
   // Past the stop no banner stands for a row, so each row is its own.
   const asRow = (
     entry: Extract<NotReachedEntry, { readonly kind: 'action' }>,

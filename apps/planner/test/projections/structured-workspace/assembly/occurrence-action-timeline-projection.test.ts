@@ -462,6 +462,18 @@ describe('a room whose walk stops in it', () => {
     expect(timeline.notReached).toBeDefined();
   });
 
+  it('ends at the encounter end that owes an unplaced Shrine delivery', () => {
+    const timeline = galleryTimeline('shrine-delivery-unplaced', 'surface-o-devotion');
+    expect(shape(timeline.entries).at(-1)).toBe('encounterEnd');
+    expect(shape(timeline.notReached ?? [])).toEqual(['action']);
+  });
+
+  it('keeps the doors opening as its stop when the door store is unavailable', () => {
+    const timeline = galleryTimeline('chaos-time-piece', 'fixture-chaos-room');
+    expect(shape(timeline.entries)).toEqual(['roomEntered', 'action', 'cleanup']);
+    expect(timeline.notReached).toEqual([]);
+  });
+
   it('shows every entry when it stops only in its exit work', () => {
     const timeline = galleryTimeline('side-visit-repeat', 'surface-n-combat05');
     expect(timeline.notReached).toBeUndefined();
