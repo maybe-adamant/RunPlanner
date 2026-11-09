@@ -267,12 +267,48 @@ function insertion(
 }
 
 /**
+ * How far the walk went through a room's Timeline: every entry of a room it
+ * walked through, none of a room its assessed history does not reach, and in
+ * the room it stopped in, the entries before its stop. An entry at the stop is
+ * reached but not settled: the walk blocks on its own contact there.
+ */
+interface RoomWalk {
+  /** The walk passed the entry. */
+  readonly settled: (entryIndex: number) => boolean;
+  /** The walk got to the entry, settled or blocking on it. */
+  readonly reached: (entryIndex: number) => boolean;
+}
+
+function roomWalk(assembly: ProjectEvaluationAssembly, occurrence: OccurrenceAddress): RoomWalk {
+  const all: RoomWalk = { settled: () => true, reached: () => true };
+  const biome = assembly.evaluation.route.biomes.find(
+    (candidate) => candidate.biomeKey === occurrence.biomeKey,
+  );
+  if (biome === undefined || biome.coverage.kind !== 'prefix') return all;
+  const key = semanticAddressKey(occurrence);
+  if (
+    'history' in biome &&
+    !biome.history.rooms.some((room) => semanticAddressKey(room.origin) === key)
+  )
+    return { settled: () => false, reached: () => false };
+  const stop = biome.coverage.roomStop;
+  if (stop === undefined || semanticAddressKey(stop.room) !== key) return all;
+  return {
+    settled: (entryIndex) => entryIndex < stop.entryIndex,
+    reached: (entryIndex) =>
+      entryIndex < stop.entryIndex || (entryIndex === stop.entryIndex && stop.at === 'entry'),
+  };
+}
+
+/**
  * The loot the game spawns in one entered room, grouped by the
  * moment it appears or the action whose settlement spawns it. Items are what
  * spawned, from the active action domain and the reached due contacts, placed
- * or not; undefined for a room the evaluated biome does not enter. Reached
- * contacts publish what falls due, so a room past the assessment stop lists only
- * its structural spawns.
+ * or not; undefined for a room the evaluated biome does not enter. Only what
+ * the walk produced is published: a moment once the walk reached its Timeline
+ * boundary (an item still missing a choice there marks it on its own row), an
+ * action's spawn once the walk settled that action, so nothing past the room's
+ * stop and nothing from a source action still unresolved at it.
  */
 export function spawnedLootForProjectEvaluationAssembly(
   catalog: Catalog,
@@ -401,11 +437,74 @@ export function spawnedLootForProjectEvaluationAssembly(
     (phaseKey) => phaseDefinition(phaseKey)?.createsIncomingRewardInCombat === true,
   );
 
+  const walk = roomWalk(assembly, occurrence);
+  const entries = room.roomLifecycleTimeline.entries;
+  /** A boundary the room lacks is reached with its last entry. */
+  const boundaryReached = (kind: string, phaseKey?: string): boolean => {
+    const index = entries.findIndex(
+      (entry) =>
+        entry.kind === 'boundary' &&
+        entry.boundary.kind === kind &&
+        (phaseKey === undefined ||
+          ('phaseKey' in entry.boundary && entry.boundary.phaseKey === phaseKey)),
+    );
+    return walk.reached(index >= 0 ? index : entries.length - 1);
+  };
+  /** An action the walk never ranks never runs, so it settles nothing. */
+  const actionSettled = (reference: RoomActionReference): boolean => {
+    const key = roomActionKey(reference);
+    const index = entries.findIndex((entry) => entry.kind === 'action' && entry.action.key === key);
+    return index >= 0 && walk.settled(index);
+  };
+  const encounterEndReached = (phaseKey: string): boolean =>
+    entries.some(
+      (entry) =>
+        entry.kind === 'boundary' &&
+        entry.boundary.kind === 'encounterEnd' &&
+        entry.boundary.phaseKey === phaseKey,
+    )
+      ? boundaryReached('encounterEnd', phaseKey)
+      : boundaryReached('bossDefeated', phaseKey);
+  const momentReached = (kind: SpawnMomentKind, phaseKey: string | undefined): boolean => {
+    switch (kind) {
+      case 'roomEntered':
+      case 'deliveryFlush':
+        return boundaryReached('roomEntered');
+      case 'encounterStart':
+      case 'duringEncounter':
+        return phaseKey === undefined
+          ? boundaryReached('roomEntered')
+          : boundaryReached('encounterStart', phaseKey);
+      case 'encounterEnd':
+        return phaseKey === undefined
+          ? walk.reached(entries.length - 1)
+          : encounterEndReached(phaseKey);
+      case 'afterEncounterReward': {
+        if (phaseKey === undefined) return walk.reached(entries.length - 1);
+        // A Ship wheel's end effects wait for its reward's pickup.
+        const wheelKey = structure.phases.find(
+          (phase) => phase.phaseKey === phaseKey,
+        )?.rewardWheelKey;
+        const reward =
+          wheelKey === undefined
+            ? undefined
+            : frozen({ kind: 'interactWheelReward' as const, wheelKey });
+        const rewardRanked =
+          reward !== undefined &&
+          entries.some(
+            (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(reward),
+          );
+        return encounterEndReached(phaseKey) && (!rewardRanked || actionSettled(reward));
+      }
+    }
+  };
+
   const moments = new Map<string, { kind: SpawnMomentKind; phaseKey?: string }>();
   const momentItems = new Map<string, SpawnedLootItem[]>();
   const momentKey = (kind: SpawnMomentKind, phaseKey?: string) =>
     phaseKey === undefined ? kind : `${kind}:${phaseKey}`;
   const add = (kind: SpawnMomentKind, phaseKey: string | undefined, item: SpawnedLootItem) => {
+    if (!momentReached(kind, phaseKey)) return;
     const key = momentKey(kind, phaseKey);
     if (!moments.has(key)) moments.set(key, phaseKey === undefined ? { kind } : { kind, phaseKey });
     const items = momentItems.get(key) ?? [];
@@ -557,6 +656,7 @@ export function spawnedLootForProjectEvaluationAssembly(
   // Generated pickups an encounter's end or a source action spawns.
   const actionSpawns = new Map<string, { source: RoomActionReference; items: SpawnedLootItem[] }>();
   const addActionSpawn = (source: RoomActionReference, item: SpawnedLootItem) => {
+    if (!actionSettled(source)) return;
     const key = roomActionKey(source);
     const spawn = actionSpawns.get(key) ?? { source, items: [] };
     spawn.items.push(item);
@@ -664,6 +764,7 @@ export function spawnedLootForProjectEvaluationAssembly(
   const unknown = [...moments.keys()].filter((key) => !chronology.includes(key));
   const spawnOrder = [...chronology, ...unknown].flatMap((key) => momentItems.get(key) ?? []);
   const unlocks = phaseKeys.flatMap((phaseKey) => {
+    if (!encounterEndReached(phaseKey)) return [];
     const key = unlockKey(phaseKey);
     const items = spawnOrder.filter((item) => item.lockedUntil === key);
     return items.length === 0

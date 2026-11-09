@@ -553,6 +553,14 @@ own room) is listed under that source action instead. Each item carries its rewa
 source, participation and placement: its ranked action, or the command that
 places it. Items come from the active action domain and the reached due
 contacts rather than the authored order, so an unplaced item still appears.
+Only loot the walk produced is listed. A moment or unlock appears once the walk
+reaches its Timeline boundary, even when an item there still lacks a choice
+that its own row marks. An action's loot appears once the walk settles that
+ranked action. A room's stop therefore hides every moment past it and the loot
+of a source action unresolved at it, such as an Artificer transform whose
+replacement is unchosen, and a room the assessed history does not reach lists
+nothing. A Supply Chain Pom Slice spawns once its boon is taken and its
+encounter ends; the Pom it levels is the slice's own choice.
 A Travel Deal refill is a purchase, not spawned loot.
 
 ## Canonical Lifecycle Profiles

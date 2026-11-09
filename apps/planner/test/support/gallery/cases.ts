@@ -74,6 +74,7 @@ import {
   loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
 import { surfaceShrineDeliveriesProject } from '@run-planner/test-fixtures/surface';
+import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
 import { createReachableNaturalChaosProject } from '../structured-workspace/interaction-binding.test-support';
 import {
   appendRoomAction,
@@ -343,7 +344,8 @@ export const galleryCases: readonly GalleryCase[] = [
     id: 'pom-sea-star-nemesis',
     label: 'Nemesis Pom trade with Sea Star Double Up',
     shows: ['Nemesis event row', 'Pom', 'Double Up'],
-    project: loadNemesisPomSeaStarCheckpoint,
+    // The traded Pom's level chosen, so the walk collects it and Sea Star copies it.
+    project: () => authorLegalPomResolutions(loadNemesisPomSeaStarCheckpoint()),
     target: room('F', 'golden-f-b5-e1'),
   },
   {
@@ -1122,6 +1124,18 @@ export const galleryCases: readonly GalleryCase[] = [
         occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
         slotKey: 'first',
         value: { rewardType: 'HealBigDrop' },
+      }),
+      (project) => ({
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
+        slotKey: 'secondLeft',
+        value: { rewardType: 'MaxHealthDrop' },
+      }),
+      (project) => ({
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
+        slotKey: 'secondRight',
+        value: { rewardType: 'BlindBoxLoot' },
       }),
       (project) => ({
         kind: 'PurchaseHermesShrineOffer',

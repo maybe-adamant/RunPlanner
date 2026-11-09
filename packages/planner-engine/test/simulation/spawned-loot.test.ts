@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionRoleAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createOccurrenceAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
   hermesShrineDeliveryEntryKey,
   type ProjectDocument,
@@ -45,6 +47,17 @@ import {
   surfaceShrineDeliverySources,
 } from '@run-planner/test-fixtures/surface';
 import {
+  createFConversionFrontierProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createFreshFileRouteProject,
+  newHFieldsRoomId,
+  withNewHFieldsRoom,
+} from '@run-planner/test-fixtures/fresh-file';
+import {
+  authorLegalPomResolutions,
   authorLegalTraitOffers,
   editTestRoomActionOrder,
   purchaseTestHermesShrineOffer,
@@ -138,6 +151,46 @@ describe('spawned loot', () => {
       hermesShrineDeliveryEntryKey(oPostboss, 'initial:secondLeft'),
     ]);
     expect(spawned.actionSpawns).toEqual([]);
+  });
+
+  // A Supply Chain Pom Slice spawns once its boon is taken and the encounter that matures it
+  // ends; the Pom it levels is the slice's own choice, which never holds the spawn back.
+  it('spawns a Supply Chain Pom Slice before and after its Pom is chosen', () => {
+    const project = loadSurfaceScheduledLifecycleCheckpoint();
+    const { assembly, spawned } = loot(project, 'P', pCombat03);
+    const drop = spawned.moments[0]!.items.at(-1)!;
+    if (drop.placement.kind !== 'unplaced') throw new Error('the second drop is placed');
+    const placed = settleProjectEdit({
+      catalog,
+      before: assembly,
+      command: drop.placement.command!,
+      evaluate,
+    }).assembly;
+    const room = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'P'),
+      createOccurrenceId(pCombat03),
+    );
+    const p = placed.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
+    // Placed, its Pom is unchosen and the walk stops at its pickup.
+    expect(p?.coverage.kind === 'prefix' ? p.coverage.roomStop?.room : undefined).toEqual(room);
+    const unchosen = spawnedLootForProjectEvaluationAssembly(catalog, placed, room)!;
+    const chosen = spawnedLootForProjectEvaluationAssembly(
+      catalog,
+      evaluate(authorLegalPomResolutions(placed.project)),
+      room,
+    )!;
+    for (const after of [unchosen, chosen])
+      expect(moments(after)).toEqual([
+        [
+          'encounterEnd:Combat',
+          [
+            'roomReward required #1',
+            'hermesShrineDelivery required #2',
+            'trait:SupplyDropBoon optional #3',
+            'trait:SupplyDropBoon optional #4',
+          ],
+        ],
+      ]);
   });
 
   it('places an unplaced optional Supply Chain drop with its attested command', () => {
@@ -290,6 +343,18 @@ describe('spawned loot', () => {
     ]);
   });
 
+  it('publishes no moment past the room’s stop: a Fields room stopped at its Overview', () => {
+    const project = withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'min');
+    const { assembly, spawned } = loot(project, 'H', newHFieldsRoomId);
+    const h = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'H');
+    const stop = h?.coverage.kind === 'prefix' ? h.coverage.roomStop : undefined;
+    expect(stop).toMatchObject({ kind: 'overview', at: 'before' });
+    // Its cages spawn on entry, locked; the fights that free them are past the stop.
+    expect(spawned.moments.map((moment) => moment.key)).toEqual(['roomEntered']);
+    expect(spawned.moments[0]!.items.some((item) => item.lockedUntil !== undefined)).toBe(true);
+    expect(spawned.unlocks).toEqual([]);
+  });
+
   it('drops Heracles’s bounty after the encounter end’s own spawns', () => {
     const combat05 = nOccurrenceId('combat05');
     const project = authorLegalTraitOffers(
@@ -340,8 +405,30 @@ describe('spawned loot', () => {
     ]);
   });
 
-  it('lists Sea Star’s copy under the pickup it copies', () => {
-    const { spawned } = loot(loadNemesisPomSeaStarCheckpoint(), 'F', 'golden-f-b5-e1');
+  it('spawns nothing from an Artificer transform whose replacement is not chosen', () => {
+    const source = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const project = applyProjectCommand(
+      createFConversionFrontierProject('MetaCurrencyDrop').project,
+      catalog,
+      {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: createAcquisitionRoleAddress(source, 'self'),
+        value: { kind: 'artificer' },
+      },
+    );
+    const { spawned } = loot(project, 'F', goldenFOccurrenceId(1, 1));
+    // The walk stops inside the transformed pickup: the reward it reached spawns, the replacement not.
+    expect(moments(spawned)).toEqual([['encounterEnd:Encounter', ['roomReward required #1']]]);
+    expect(spawned.actionSpawns).toEqual([]);
+  });
+
+  it('lists Sea Star’s copy under the pickup it copies once that pickup settles', () => {
+    // The Nemesis Pom's own level is unset: the walk stops at its pickup, which copies nothing yet.
+    const unresolved = loadNemesisPomSeaStarCheckpoint();
+    expect(actionSpawns(loot(unresolved, 'F', 'golden-f-b5-e1').spawned)).toEqual([
+      ['interactEncounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
+    ]);
+    const { spawned } = loot(authorLegalPomResolutions(unresolved), 'F', 'golden-f-b5-e1');
     expect(actionSpawns(spawned)).toEqual([
       ['interactEncounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
       ['interactAcquisitionEntry', [expect.stringMatching(/^seaStar required #\d+$/)]],

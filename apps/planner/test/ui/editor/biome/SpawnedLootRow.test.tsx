@@ -20,6 +20,7 @@ import {
   loadNemesisPomSeaStarCheckpoint,
   loadUnderworldFGHCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
 import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { renderOccurrenceWorkbench, workspaceBiome } from '@planner-test/support/biome-workbench';
 import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
@@ -104,7 +105,8 @@ describe('spawn notice items', () => {
 describe('converted and copied loot', () => {
   it('focuses a Sea Star copy’s collect from its chip on the copied pickup’s row', async () => {
     const view = renderOccurrenceWorkbench(
-      loadNemesisPomSeaStarCheckpoint(),
+      // Its Pom chosen, the walk collects it and Sea Star copies it.
+      authorLegalPomResolutions(loadNemesisPomSeaStarCheckpoint()),
       'Underworld',
       'F',
       occurrenceById('golden-f-b5-e1'),
@@ -200,7 +202,8 @@ describe('source badges', () => {
 
   it('marks a Sea Star copy’s collect with Sea Star, not the copy chip', () => {
     const view = renderOccurrenceWorkbench(
-      loadNemesisPomSeaStarCheckpoint(),
+      // Its Pom chosen, the walk collects it and Sea Star copies it.
+      authorLegalPomResolutions(loadNemesisPomSeaStarCheckpoint()),
       'Underworld',
       'F',
       occurrenceById('golden-f-b5-e1'),
