@@ -494,8 +494,9 @@ export type {
 /**
  * Every index an object command may place its new action at, ascending: the
  * order its actions leave behind, judged structurally as the command judges
- * a chosen index. Empty when the command places no new action. The command
- * must be applicable without an index (a blank Travel Deal item takes a value).
+ * a chosen index. Empty when the command places no new action or cannot
+ * apply without an index (an item already bought, a blank Travel Deal item
+ * given no value).
  */
 export function objectCommandInsertionIndexes(
   document: ProjectDocument,
@@ -504,7 +505,13 @@ export function objectCommandInsertionIndexes(
 ): readonly number[] {
   const { index: _index, ...withoutIndex } = command;
   void _index;
-  const placed = applyUnchecked(document, catalog, withoutIndex as PositionedObjectCommand);
+  let placed: ProjectDocument;
+  try {
+    placed = applyUnchecked(document, catalog, withoutIndex as PositionedObjectCommand);
+  } catch (error) {
+    if (error instanceof ProjectCommandContractError) return Object.freeze([]);
+    throw error;
+  }
   return placed === document
     ? Object.freeze([])
     : chosenIndexesFor(document, placed, catalog, command);
