@@ -250,16 +250,32 @@ function shopPurchaseRowKey(offerKey: string): string {
   );
 }
 
+/** Whether a Shop purchase stands before the row: the trigger a sourced row needs. */
+function purchaseBefore(occurrence: RoomOccurrence | undefined, rowKey: string): boolean {
+  const order = occurrence?.roomActions.order ?? [];
+  const index = order.findIndex((candidate) => roomActionKey(candidate) === rowKey);
+  return order
+    .slice(0, Math.max(index, 0))
+    .some(
+      (candidate) =>
+        candidate.kind === 'interactShopOffer' ||
+        roomActionKey(candidate) === shopPurchaseRowKey(TRAVEL_DEAL_REFILL_ENTRY_KEY),
+    );
+}
+
 /**
- * Shop rows whose source the edit took away: the walk reaches the row, no
- * source produces it any more, and one produced it before the edit. The
- * source's trigger is the purchase that produced the row before the edit; when
- * that purchase is still in the room, what went is the enabler (the held boon),
- * and an owner's purchase relying on it stays with its finding while an
- * automatic product goes. A row placed before its source existed, or one whose
- * source still produces it with other terms, stays with its finding.
+ * Shop rows whose source the edit took away: the walk reaches the row and no
+ * source produces it any more. When one produced it before the edit, its
+ * trigger is the purchase that produced it; when that purchase is still in the
+ * room, what went is the enabler (the held boon), and an owner's purchase
+ * relying on it stays with its finding while an automatic product goes. A row
+ * no source produced before the edit either (its enabler went earlier, or it
+ * was placed before its source existed) stays with its finding until the edit
+ * takes every purchase before it, its trigger among them. A row whose source
+ * still produces it with other terms stays with its finding.
  */
 function sourceGoneShopRows(
+  before: ProjectEvaluationAssembly,
   beforeArtifacts: CandidateArtifacts,
   artifacts: CandidateArtifacts,
   assembly: ProjectEvaluationAssembly,
@@ -293,14 +309,19 @@ function sourceGoneShopRows(
           .find((entry) => semanticAddressKey(entry.address) === key)?.capability;
       if (derived(artifacts) !== undefined) continue;
       const prior = derived(beforeArtifacts);
-      if (prior?.kind !== 'echoDoubleShopReward' && prior?.kind !== 'travelDealRefill') continue;
-      const triggerGone =
-        prior.sourceOfferKey !== undefined &&
-        !occurrence.roomActions.order.some(
-          (candidate) => roomActionKey(candidate) === shopPurchaseRowKey(prior.sourceOfferKey!),
-        );
-      // Enabler gone: the owner's purchase stays, invalid, for the owner to remove or restore.
-      if (!triggerGone && SOURCED_SHOP_ROWS.get(reference.entryKey) === 'decision') continue;
+      if (prior?.kind === 'echoDoubleShopReward' || prior?.kind === 'travelDealRefill') {
+        const triggerGone =
+          prior.sourceOfferKey !== undefined &&
+          !occurrence.roomActions.order.some(
+            (candidate) => roomActionKey(candidate) === shopPurchaseRowKey(prior.sourceOfferKey!),
+          );
+        // Enabler gone: the owner's purchase stays, invalid, for the owner to remove or restore.
+        if (!triggerGone && SOURCED_SHOP_ROWS.get(reference.entryKey) === 'decision') continue;
+      } else {
+        const rowKey = roomActionKey(reference);
+        if (!purchaseBefore(occurrenceAt(before.project, owner), rowKey)) continue;
+        if (purchaseBefore(occurrence, rowKey)) continue;
+      }
       removals.push({ owner, reference });
     }
   }
@@ -869,7 +890,7 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
       // A row with no context or source has nothing to repair: the edit that orphans it removes it.
       const stale = [
         ...staleRowsToRemove(before, beforeRosters, assembly),
-        ...sourceGoneShopRows(beforeArtifacts, artifacts, assembly),
+        ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly),
       ];
       if (stale.length === 0) return settled(assembly);
       const pass: { owner: OccurrenceAddress; reference: RoomActionReference; index: number }[] =

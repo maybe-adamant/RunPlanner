@@ -117,8 +117,10 @@ the final project and its exact assembly.
   that produced it is gone (the trigger) it is removed; when that purchase
   remains, the enabler went, so a Gold Gold Gold duplicate, an automatic
   product, is removed while a Travel Deal refill, the owner's purchase, stays
-  with its finding. One placed before its source existed stays with its
-  finding, and a removed row's own payload stays with the Shop. A room the run
+  with its finding. One no source produced before the edit either (its
+  enabler went earlier, or it was placed before its source existed) stays
+  with its finding until the edit takes every purchase before it, its trigger
+  among them. A removed row's own payload stays with the Shop. A room the run
   stops entering keeps its rows untouched, so they return with its door;
   unchanged rooms, rooms the evaluation does not reach and an installed route
   keep theirs. Invalid rows stay with their findings.
@@ -128,13 +130,12 @@ the final project and its exact assembly.
   at its old position when the roster allows it there and otherwise at the
   role's default. Leftover stale pickups are removed and leftover roles keep
   their default places.
-- The settlement names, by room, the removed rows the editor announces: every
-  removal outside the room the edit addresses, including the countdown
-  deliveries and trait drops a command takes from other rooms with their
-  source. Removals in the addressed room show on the Timeline being edited and
-  are not named, a reset's included; an edit that addresses no single room (a
-  route, biome or Hub owner) names every removal. Rows a rekey replaced and a
-  delivery placed again elsewhere are never named.
+- The settlement names, by room, the removals the
+  [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
+  announces, with the countdown deliveries and trait drops a command takes
+  from other rooms with their source. The room an edit addresses is the occurrence its command's
+  address names or nests. Rows a rekey replaced and a delivery placed again
+  elsewhere are never named.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
   assembly with a settlement fault naming the owner. A fault signals an engine

@@ -13,6 +13,8 @@ import {
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   hermesShrineDeliveryEntryKey,
   roomActionKey,
   type OccurrenceAddress,
@@ -122,6 +124,31 @@ describe('stale room actions in edit settlement', () => {
     expect(order(session.current().project, gOpening)).not.toContain(roomActionKey(retainedPickup));
     session.restore(start);
     expect(order(session.current().project, gOpening)).toContain(roomActionKey(retainedPickup));
+  });
+
+  it('announces every removal of an edit that addresses no single room', () => {
+    // An older save's stale pickup in the F Boss room, which Vow of Rivals replaces.
+    const boss = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:boss'),
+    );
+    const saved = JSON.parse(encodeProjectDocument(createGoldenFGHProject()));
+    const room = saved.route.biomes
+      .find((plan: { biomeKey: string }) => plan.biomeKey === boss.biomeKey)
+      .topology.occurrences.find(
+        (candidate: { occurrenceId: string }) => candidate.occurrenceId === boss.occurrenceId,
+      );
+    room.roomActions.order.push(retainedPickup);
+    const project = decodeProjectDocument(saved, catalog);
+    const settled = settle(project, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 4,
+    });
+    expect(settled.fault).toBeUndefined();
+    expect(order(settled.assembly.project, boss)).not.toContain(roomActionKey(retainedPickup));
+    expect(settled.removedStaleActions).toEqual([{ occurrence: boss, actions: [retainedPickup] }]);
   });
 
   it('keeps an invalid Pool sale with its finding', () => {
@@ -401,7 +428,14 @@ describe('stale room actions in edit settlement', () => {
       const outcome = session.apply(swapEchoAway);
       if (outcome.kind !== 'applied') throw new Error('expected the Echo swap to apply');
       const after = session.current();
-      expect(order(after.project, echoShop)).not.toContain(roomActionKey(echoDuplicate));
+      // Its source purchase stays: the Echo, its enabler, went.
+      const purchases = order(start.project, echoShop).filter((key) =>
+        key.startsWith('["interactShopOffer"'),
+      );
+      expect(purchases.length).toBeGreaterThan(0);
+      expect(order(after.project, echoShop)).toEqual(
+        order(start.project, echoShop).filter((key) => key !== roomActionKey(echoDuplicate)),
+      );
       expect(outcome.removedStaleActions).toContainEqual({
         occurrence: echoShop,
         actions: [echoDuplicate],
@@ -494,14 +528,16 @@ describe('stale room actions in edit settlement', () => {
         );
       });
 
+      // Unbuys the purchase that restocks the refill.
+      const undoPurchase: ProjectCommand = {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'MajorNonBoon'),
+        purchased: false,
+      };
+
       it('leaves silently with the purchase that restocked it, keeping its item', () => {
         const project = underworldWorldShopTravelDealProject();
         expect(refillItem(project)).toBeDefined();
-        const undoPurchase: ProjectCommand = {
-          kind: 'ReplaceShopPurchaseParticipation',
-          offer: createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'MajorNonBoon'),
-          purchased: false,
-        };
         const settled = settle(project, undoPurchase);
         expect(settled.fault).toBeUndefined();
         expect(order(settled.assembly.project, shop)).toEqual([]);
@@ -511,6 +547,19 @@ describe('stale room actions in edit settlement', () => {
         expect(site(settled.assembly.project)).toEqual(site(project));
         const { undone } = settleAndUndo(project, undoPurchase);
         expect(order(undone, shop)).toContain(refill);
+      });
+
+      it('leaves with the purchase that restocked it once Travel Deal is gone too', () => {
+        const lost = settle(underworldWorldShopTravelDealProject(), swapTravelDealAway).assembly
+          .project;
+        expect(order(lost, shop)).toContain(refill);
+        // Trigger and enabler are both gone: the trigger wins, so the refill goes.
+        const settled = settle(lost, undoPurchase);
+        expect(settled.fault).toBeUndefined();
+        expect(order(settled.assembly.project, shop)).toEqual([]);
+        expect(settled.removedStaleActions).toBeUndefined();
+        expect(refillItem(settled.assembly.project)).toEqual(refillItem(lost));
+        expect(site(settled.assembly.project)).toEqual(site(lost));
       });
     });
 
