@@ -400,7 +400,7 @@ function projectHubRailEntry(
     const sideVisits = Object.freeze(
       localVisit === undefined
         ? []
-        : localVisit.visitOrder.flatMap((occurrenceId) => {
+        : localVisit.visitOrder.flatMap((occurrenceId, orderIndex) => {
             const slot = localVisit.slots.find(
               (candidate) => candidate.occurrenceId === occurrenceId,
             );
@@ -427,7 +427,8 @@ function projectHubRailEntry(
             const sidePlanEnd = planEndRelation(slot.occurrenceId);
             return [
               Object.freeze({
-                key: `${node.key}:visit:${visit.visitIndex}:side:${slot.key}`,
+                // A side room may be visited again (kept with a finding), so its order position keys it.
+                key: `${node.key}:visit:${visit.visitIndex}:side:${orderIndex}:${slot.key}`,
                 ...(sidePlanEnd === undefined ? {} : { planEnd: sidePlanEnd }),
                 label: `Side ${slot.enteredOrdinal ?? 1}`,
                 ...railRunDepth(sideNode.room),
