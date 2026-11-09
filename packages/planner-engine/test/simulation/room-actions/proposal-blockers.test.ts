@@ -225,11 +225,11 @@ describe('room action proposal blockers', () => {
       [3, true, true],
     ]);
     expect(inserts[0]?.blockers).toEqual([
-      expect.objectContaining({ reference: second, requiredFirst: true }),
+      expect.objectContaining({ kind: 'requiredFirst', reference: second, requiredAction: first }),
     ]);
     expect(inserts[1]?.blockers).toEqual([
-      expect.objectContaining({ reference: other, requiredFirst: true }),
-      expect.objectContaining({ reference: second, requiredFirst: true }),
+      expect.objectContaining({ kind: 'requiredFirst', reference: other, requiredAction: first }),
+      expect.objectContaining({ kind: 'requiredFirst', reference: second, requiredAction: first }),
     ]);
     expect(inserts[2]?.blockers).toEqual([
       expect.objectContaining({ kind: 'window', reference: first }),

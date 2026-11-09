@@ -122,11 +122,12 @@ describe('room action insertion legality', () => {
     // The required before-combat action's deadline passes before the reward's window opens.
     expect(assessRoomActionInsertion([before, optional], reward, 0, context()).blockers).toEqual([
       {
-        kind: 'dependency',
+        kind: 'requiredFirst',
         reference: reward,
         detail: `must follow ${roomActionKey(before)}, a required action of an earlier window`,
-        dependency: { kind: 'afterAction', action: before },
-        requiredFirst: true,
+        window: { kind: 'standard', phase: 'afterCombat' },
+        requiredAction: before,
+        requiredWindow: { kind: 'standard', phase: 'beforeCombat' },
       },
     ]);
     // An optional action of an earlier window takes no part.
@@ -142,7 +143,11 @@ describe('room action insertion legality', () => {
         reference: dependent,
         detail: expect.stringMatching(/^must follow/),
       }),
-      expect.objectContaining({ kind: 'dependency', reference: dependent, requiredFirst: true }),
+      expect.objectContaining({
+        kind: 'requiredFirst',
+        reference: dependent,
+        requiredAction: before,
+      }),
     ]);
     expect(at(1).blockers).toEqual([
       expect.objectContaining({ kind: 'dependency', reference: dependent }),
@@ -184,7 +189,11 @@ describe('room action insertion legality', () => {
         dependency: expect.objectContaining({ kind: 'afterCheckpoint' }),
       }),
       expect.objectContaining({ kind: 'window', reference: optional, precedingAction: press }),
-      expect.objectContaining({ kind: 'dependency', reference: press, requiredFirst: true }),
+      expect.objectContaining({
+        kind: 'requiredFirst',
+        reference: press,
+        requiredAction: dependent,
+      }),
     ]);
   });
 
@@ -202,7 +211,11 @@ describe('room action insertion legality', () => {
     expect(issueKinds(early.order)).toEqual([['window', roomActionKey(prep)]]);
     // Ahead of the required before-combat action it is not reached.
     expect(assessRoomActionMove(order, 3, 0, context()).blockers).toEqual([
-      expect.objectContaining({ reference: optional, requiredFirst: true }),
+      expect.objectContaining({
+        kind: 'requiredFirst',
+        reference: optional,
+        requiredAction: before,
+      }),
     ]);
     // Past the press, the press in its prefix precedes the required reward.
     expect(assessRoomActionMove(order, 2, 4, context()).blockers).toEqual([
@@ -216,7 +229,7 @@ describe('room action insertion legality', () => {
         reference: press,
         dependency: expect.objectContaining({ kind: 'afterCheckpoint' }),
       }),
-      expect.objectContaining({ kind: 'dependency', reference: press, requiredFirst: true }),
+      expect.objectContaining({ kind: 'requiredFirst', reference: press, requiredAction: reward }),
     ]);
   });
 

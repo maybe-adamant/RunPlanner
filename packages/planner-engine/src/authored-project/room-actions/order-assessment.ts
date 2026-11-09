@@ -27,11 +27,6 @@ export type RoomActionOrderIssue =
       readonly detail: string;
       readonly dependency: RoomActionDependency;
       readonly checkpointUnavailable?: true;
-      /**
-       * Placement only: the action is a required one of an earlier window, so
-       * its deadline passes before this row's window opens.
-       */
-      readonly requiredFirst?: true;
     }
   | {
       readonly kind: 'window';
@@ -42,10 +37,21 @@ export type RoomActionOrderIssue =
       readonly precedingWindow: RoomActionWindow;
     };
 
-export type RoomActionPlacementBlocker = Extract<
-  RoomActionOrderIssue,
-  { kind: 'dependency' | 'window' }
->;
+/**
+ * A placement's blockers: the prefix's dependency and window issues, and each
+ * prefix row a ranked required action of an earlier window, ordered after the
+ * placement, must come before: its deadline passes before the row's window opens.
+ */
+export type RoomActionPlacementBlocker =
+  | Extract<RoomActionOrderIssue, { kind: 'dependency' | 'window' }>
+  | {
+      readonly kind: 'requiredFirst';
+      readonly reference: RoomActionReference;
+      readonly detail: string;
+      readonly window: RoomActionWindow;
+      readonly requiredAction: RoomActionReference;
+      readonly requiredWindow: RoomActionWindow;
+    };
 
 /** The structural facts one occurrence's action order is judged against. */
 export interface RoomActionOrderContext {
@@ -268,7 +274,7 @@ function requiredFirstBlockers(
     if (earliest === undefined || ordinal < earliest.ordinal) earliest = { entry, ordinal };
   }
   if (earliest === undefined) return [];
-  const required = earliest.entry.reference;
+  const required = earliest.entry;
   const blockers: RoomActionPlacementBlocker[] = [];
   for (let index = 0; index <= lastIndex && index < order.length; index += 1) {
     const key = keyOf(order[index]!);
@@ -277,11 +283,12 @@ function requiredFirstBlockers(
     if (context.windowOrdinals.get(key)! <= earliest.ordinal) continue;
     blockers.push(
       frozen({
-        kind: 'dependency',
+        kind: 'requiredFirst',
         reference: entry.reference,
-        detail: `must follow ${keyOf(required)}, a required action of an earlier window`,
-        dependency: frozen({ kind: 'afterAction', action: required }),
-        requiredFirst: true,
+        detail: `must follow ${keyOf(required.reference)}, a required action of an earlier window`,
+        window: entry.window,
+        requiredAction: required.reference,
+        requiredWindow: required.window,
       }),
     );
   }
@@ -317,9 +324,9 @@ export function assessRoomActionPlacement(
   context: RoomActionOrderContext,
 ): RoomActionPlacementAssessment {
   const { rows, windows } = rowAndWindowIssues(order, context, lastIndex);
-  const blockers = frozen([
+  const blockers: readonly RoomActionPlacementBlocker[] = frozen([
     ...[...rows, ...windows].filter(
-      (issue): issue is RoomActionPlacementBlocker =>
+      (issue): issue is Extract<RoomActionOrderIssue, { kind: 'dependency' | 'window' }> =>
         issue.kind === 'dependency' || issue.kind === 'window',
     ),
     ...requiredFirstBlockers(order, lastIndex, context),

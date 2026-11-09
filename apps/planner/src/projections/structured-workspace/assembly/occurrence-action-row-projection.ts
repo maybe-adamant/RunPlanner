@@ -296,15 +296,23 @@ function roomActionsForOccurrence(
             windowIdentity(blocker.window),
             windowIdentity(blocker.precedingWindow),
           ]
-        : [
-            blocker.kind,
-            roomActionKey(blocker.reference),
-            blocker.dependency.kind,
-            blocker.dependency.kind === 'afterAction'
-              ? roomActionKey(blocker.dependency.action)
-              : blocker.dependency.checkpointKey,
-            blocker.checkpointUnavailable === true,
-          ],
+        : blocker.kind === 'requiredFirst'
+          ? [
+              blocker.kind,
+              roomActionKey(blocker.reference),
+              roomActionKey(blocker.requiredAction),
+              windowIdentity(blocker.window),
+              windowIdentity(blocker.requiredWindow),
+            ]
+          : [
+              blocker.kind,
+              roomActionKey(blocker.reference),
+              blocker.dependency.kind,
+              blocker.dependency.kind === 'afterAction'
+                ? roomActionKey(blocker.dependency.action)
+                : blocker.dependency.checkpointKey,
+              blocker.checkpointUnavailable === true,
+            ],
     );
   const existingBlockers = new Set(
     roster.issues.flatMap((issue) =>
@@ -324,11 +332,13 @@ function roomActionsForOccurrence(
       roomActionKey(blocker.reference) === proposedKey ||
       (blocker.kind === 'window'
         ? roomActionKey(blocker.precedingAction) === proposedKey
-        : blocker.dependency.kind === 'afterAction' &&
-          roomActionKey(blocker.dependency.action) === proposedKey);
-    // The most direct blockers first: a dependency of the moved action, then its window.
+        : blocker.kind === 'requiredFirst'
+          ? roomActionKey(blocker.requiredAction) === proposedKey
+          : blocker.dependency.kind === 'afterAction' &&
+            roomActionKey(blocker.dependency.action) === proposedKey);
+    // The most direct blockers first: what must precede the moved action, then its window.
     const rank = (entry: Blocker) =>
-      (concernsProposal(entry) ? 0 : 2) + (entry.kind === 'dependency' ? 0 : 1);
+      (concernsProposal(entry) ? 0 : 2) + (entry.kind === 'window' ? 1 : 0);
     const ranked = [...candidates].sort((left, right) => rank(left) - rank(right));
     const prefix = introduced.length === 0 ? 'Existing timeline issue: ' : '';
     return Object.freeze(
@@ -343,6 +353,8 @@ function roomActionsForOccurrence(
     if (blocker.kind === 'window') {
       const movedPreceding = roomActionKey(blocker.precedingAction) === proposedKey;
       explanation = `${movedPreceding ? actionLabel(blocker.precedingAction) : label} belongs ${windowLabel(movedPreceding ? blocker.precedingWindow : blocker.window)}.`;
+    } else if (blocker.kind === 'requiredFirst') {
+      explanation = `${actionLabel(blocker.requiredAction)} must come first.`;
     } else if (blocker.dependency.kind === 'afterAction') {
       const prerequisite = blocker.dependency.action;
       const movingDependent = roomActionKey(blocker.reference) === proposedKey;

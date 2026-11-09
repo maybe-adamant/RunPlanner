@@ -396,13 +396,18 @@ An insertion or a move is judged by its prefix, the way the walk reaches it.
 An action placed at position k is legal when the rows before it, with it at k,
 are valid as the walk reaches k: no row up to k follows a row of a later
 window, every explicit dependency of those rows is among the rows before them,
-every checkpoint they wait on is met there (a doors-open action after every
-required one), and nothing up to k follows a terminal action. A required
-action's window closes at its deadline, so a ranked required action of an
-earlier window placed after k also refuses k: the walk cannot progress past
-it. Every other row after k takes no part: a later row the edit invalidates
-carries its own issue when the walk reaches it, and an unplaced required
-action is left to the walk's own stop. A prefix that is already invalid stops
+and every checkpoint they wait on is met there. The doors-open checkpoint
+counts every placed required action, those after k included, as the walk
+does, so a doors-open action needs each of them before it. A left switch
+press ends the room, so it is valid only as the room's last row: nothing may
+follow it, and the press itself is refused at k while any row follows it,
+which is the press's own validity rather than a veto from a later row. A
+required action's window closes at its deadline, so a ranked required action
+of an earlier window placed after k also refuses k: the walk cannot progress
+past it. An unplaced required action of an earlier window does not refuse k;
+the walk's own deadline stop leaves k unreached. Every other row after k
+takes no part: a later row the edit invalidates carries its own issue when
+the walk reaches it. A prefix that is already invalid stops
 the walk before k, so k is refused unless the edit repairs that prefix. A
 move is judged as an insertion at its target, and a group placed together is
 judged through its last row, each row by its own prefix. The judgement is
@@ -412,7 +417,7 @@ stays a finding.
 Insert and move proposals carry the typed dependency and fixed-window
 blockers of that prefix, each naming its affected action and its prerequisite
 or conflicting action windows; a required action of an earlier window after k
-is a dependency the placed row must follow. An action marked
+is its own blocker naming the action that must come first. An action marked
 `windowFollowsOrder` (the Postboss rack) never takes part in window crossing.
 The application labels this evidence for placement explanations; it neither
 infers legality nor attributes an existing blocker to the proposed action.

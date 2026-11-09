@@ -66,6 +66,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import {
+  createUnderworldFWellCheckpoint,
   goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
@@ -1450,6 +1451,24 @@ describe('structured workspace actions assembly', () => {
         .filter((row) => row.rank !== null)
         .map((row) => row.rewardPayload?.showOffer),
     ).toEqual([false, false, false]);
+  });
+
+  it('explains a position ahead of a required action of an earlier window', () => {
+    const postboss = createOccurrenceId('golden-f-preboss-shop:postboss');
+    const room = assemble(createUnderworldFWellCheckpoint(false), 'Underworld', 'F', postboss)
+      .assembly.node.room;
+    const ahead = room.roomActions?.proposals.find(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.reference.kind === 'purchaseStygianWellOffer' &&
+        proposal.toIndex === 0,
+    );
+    const fountain = room.roomActions?.rows.find((row) => row.reference.kind === 'useFountain');
+    expect(fountain?.label).toEqual(expect.any(String));
+    expect(ahead).toMatchObject({
+      structurallyAuthorable: false,
+      explanations: [`${fountain?.label} must come first.`],
+    });
   });
 
   it('proposes an unranked Travel refill immediately after its source purchase', () => {
