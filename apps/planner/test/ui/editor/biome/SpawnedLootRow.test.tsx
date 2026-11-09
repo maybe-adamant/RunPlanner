@@ -121,6 +121,11 @@ describe('converted and copied loot', () => {
     const originalRow = document.querySelector<HTMLElement>(
       `[data-room-action-key="${CSS.escape(original.key)}"]`,
     )!;
+    // The copy ends the row: the Pom, then its target, then Sea Star's copy.
+    const editors = originalRow.querySelector<HTMLElement>('[data-timeline-cell="editors"]')!;
+    const controls = within(editors).getAllByRole('button');
+    expect(controls.length).toBeGreaterThan(1);
+    expect(controls.at(-1)!.getAttribute('aria-label')).toBe('Sea Star copy');
     await view.user.click(within(originalRow).getByRole('button', { name: 'Sea Star copy' }));
     expect(document.activeElement?.getAttribute('data-room-action-key')).toBe(copy.key);
   });

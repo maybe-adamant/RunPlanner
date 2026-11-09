@@ -903,12 +903,6 @@ export function RoomActionsWorkbench({
                 />
               )}
               <RoomActionArtificerOutput interactions={interactions} row={row} />
-              <SpawnCopyChips
-                copies={
-                  actions.spawnCopies?.filter((copy) => copy.sourceActionKey === row.key) ?? []
-                }
-                rows={actions.rows}
-              />
               {row.slot === undefined ? null : (
                 <span className="visually-hidden">{` · slot ${row.slot}`}</span>
               )}
@@ -955,6 +949,13 @@ export function RoomActionsWorkbench({
               ) : nemesisInteraction.value === null ? (
                 <NemesisEventPending />
               ) : null}
+              {/* Sea Star's copy follows the pickup and its decisions. */}
+              <SpawnCopyChips
+                copies={
+                  actions.spawnCopies?.filter((copy) => copy.sourceActionKey === row.key) ?? []
+                }
+                rows={actions.rows}
+              />
             </>
           }
           money={
