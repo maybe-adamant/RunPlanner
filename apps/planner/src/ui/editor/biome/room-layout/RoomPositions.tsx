@@ -466,8 +466,14 @@ function FieldsSlotChip({
     const option = assessed?.find((candidate) => candidate.value === choice.value);
     const result =
       option?.evaluation.kind === 'fieldsSpatialPoint' ? option.evaluation.result : undefined;
-    // A point a sibling holds stays off the list; one the slot cannot take is listed, disabled.
-    if (result !== undefined && result.assignable && !result.selectedPossible) return [];
+    // A point a sibling holds stays off the list, before assessment too, as on the map; one the
+    // slot cannot take is listed, disabled.
+    if (
+      result === undefined
+        ? choice.value !== null && held.has(choice.value)
+        : result.assignable && !result.selectedPossible
+    )
+      return [];
     return [
       {
         key: String(choice.value),
