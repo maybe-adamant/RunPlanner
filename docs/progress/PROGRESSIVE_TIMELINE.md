@@ -41,29 +41,30 @@ H Fields, an O ship room and a Postboss.
   resolves on its own row. An unresolved spawned item stops the walk at that
   item (its row or its deadline), never at the event that spawned it. Engine
   change folded into Part 2, where pickups get their own deadlines.
-- Encounter outcome: a third encounter event between Encounter started and
-  Encounter ended hosts the choices about how the encounter went (candidates:
-  Fig Leaf skip, Nemesis outcome and kill race, Aetos wave, Gorgon condition,
-  timed outcomes), which today sit on the start or end banner without a clear
-  home. Inventory done; shape (owner 2026-11-09):
-  - Encounter started hosts no choices; it is the announcement only.
-  - Encounter outcome holds, in order: Fig Leaf first when eligible (skipped
-    or fought; a skip short-circuits every later outcome choice), the Aetos
-    wave, the Gorgon condition, the Nemesis bet, the Nemesis trade or contest
-    result, Anomaly cleared.
-  - The walk reads each choice at the event that hosts it: Fig Leaf, Aetos
-    and the Gorgon condition move from the encounter start to the outcome
-    point, so an unset one stops the walk at the outcome, never at a start
-    that hides its control. A chronology change: equivalence before/after and
-    independent review.
-  - Boss rooms: Boss defeated returns as its own event, the Boss room's
-    outcome, carrying Judgment and Figurine.
-  - Timed outcomes (Steady Growth, Embryo), the Gorgon's Athena offer and
-    trait offers stay rows after Encounter ended.
-  - Engine point: the walk's existing encounter-completed event, published
-    as a Timeline boundary; no new walk event and no plan-wire change while it
-    stays a Timeline event. Room stop rules get an outcome case. Order: after
-    the stale-row task, before the presentation round.
+- Encounter events (owner 2026-11-09, settled):
+  - **Encounter started** holds only what genuinely belongs at the start:
+    Fig Leaf (fought or skipped; the game rolls it before enemies spawn, and
+    a skip short-circuits the fight, so no outcome follows).
+  - **Encounter outcome** carries everything about how the fight ended, shown
+    only when a choice is eligible and the fight was not skipped: the Aetos
+    wave, the Gorgon condition, the Nemesis bet, the Nemesis event result,
+    Anomaly cleared; in Boss rooms Boss defeated returns as the outcome with
+    Judgment and Figurine. At most two choices per phase ({Aetos, Gorgon});
+    Nemesis, Anomaly and Boss choices are alone.
+  - **Encounter ended** is a pure event: it announces what spawns from the
+    outcome; each spawned item settles on its own row.
+  - The walk reads each choice at the event hosting it: Aetos and the Gorgon
+    condition move from the encounter start to the outcome point (Fig Leaf
+    stays read at the start). Engine point: the walk's existing encounter
+    completion, published as a Timeline boundary; no plan-wire change while
+    it stays a Timeline event.
+  - Arachne cocoon rooms fold into the ordinary room model with the game's
+    timing: cocoons appear on entry with the reward hidden (not spawned, no
+    locked notice); breaking the reward cocoon spawns the reward and ends the
+    encounter; collecting it opens the doors. The "during the encounter"
+    spawn moment is removed.
+  - Order: after the stale-row task, before the presentation round;
+    equivalence before/after and independent review.
 
 ## Progressive phases
 
