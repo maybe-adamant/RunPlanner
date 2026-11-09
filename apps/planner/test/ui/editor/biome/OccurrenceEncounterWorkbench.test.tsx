@@ -2950,7 +2950,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
     expect(screen.queryByText('Eventual God')).toBeNull();
     await pickRoomObjectAction(view.user, 'World Shop', 'Buy Travel Deal item');
-    const purchase = () => timelineRow('Buy Mystery Boon · Travel Deal Offer');
+    const purchase = () => timelineRow('Restock Mystery Boon · Travel Deal Offer');
     await view.user.click(within(purchase()).getByRole('button', { name: 'Reward' }));
     const options = within(await screen.findByRole('listbox')).getAllByRole('option');
     await view.user.click(
@@ -3014,7 +3014,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     const line = screen.getByRole('listitem', { name: 'Travel Deal' });
     expect(within(line).queryByRole('button', { name: /^Edit Anvil/ })).toBeNull();
-    const refill = timelineRow('Buy Anvil of Fates · Travel Deal Offer');
+    const refill = timelineRow('Restock Anvil of Fates · Travel Deal Offer');
     expect(within(refill).getByRole('button', { name: /^Edit Anvil/ })).toHaveProperty(
       'disabled',
       false,

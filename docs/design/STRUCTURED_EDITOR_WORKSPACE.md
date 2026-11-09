@@ -437,8 +437,8 @@ Money and delete keep one right edge on every row, and each encounter phase's
 rows read as one group. Every banner (encounter start and end, other lifecycle
 boundaries and checkpoints) shares one band style.
 
-A label is the action's verb (Buy for paid World Shop, Shrine and Well items
-and refills, Rush for rushed Shrine purchases, Collect for pickups including
+A label is the action's verb (Buy for paid World Shop, Shrine and Well items,
+Restock for their Travel Deal refills, Rush for rushed Shrine purchases, Collect for pickups including
 Contract items and Echo-generated pickups, Sell for Pool sales, Reroll for
 rerolls) followed by what it takes. A reward is shown by its icon, with its
 name as the icon's accessible name and a mark for a Boosted variant; tags name

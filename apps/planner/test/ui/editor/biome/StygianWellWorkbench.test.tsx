@@ -212,7 +212,7 @@ describe('Stygian Well workbench', () => {
 
   it.each([
     ['initial:secondLeft', 'Buy Fateful Twist'],
-    ['travelDealRefill', 'Buy Fateful Twist · Travel Deal Offer'],
+    ['travelDealRefill', 'Restock Fateful Twist · Travel Deal Offer'],
   ] as const)(
     'shows and retains the %s Twist result on its Timeline action',
     async (generationKey, label) => {

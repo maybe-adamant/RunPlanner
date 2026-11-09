@@ -869,7 +869,7 @@ describe('Hermes Shrine workbench', () => {
     ).toHaveProperty('disabled', false);
     expect(within(line).queryByRole('checkbox')).toBeNull();
 
-    await pickRoomObjectAction(view.user, 'Hermes Shrine', /^Buy .*Travel Deal Offer$/);
+    await pickRoomObjectAction(view.user, 'Hermes Shrine', /^Restock .*Travel Deal Offer$/);
     expect(shrine().roomActions.order).toContainEqual(
       expect.objectContaining({ generationKey: 'travelDealRefill' }),
     );

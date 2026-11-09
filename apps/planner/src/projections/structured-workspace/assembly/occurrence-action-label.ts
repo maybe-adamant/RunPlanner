@@ -269,7 +269,7 @@ export function occurrenceActionLabelParts(
   const plain = (label: string): OccurrenceActionLabelParts => Object.freeze({ label });
   const actionLabel = (
     subject: string | undefined,
-    verb: 'Collect' | 'Buy' = 'Collect',
+    verb: 'Collect' | 'Buy' | 'Restock' = 'Collect',
     includeOfferSummary = true,
     control = rewardControl,
     fallbackSummary?: string,
@@ -408,7 +408,9 @@ export function occurrenceActionLabelParts(
     }
     case 'purchaseStygianWellOffer': {
       const well = wellPurchaseLabel(catalog, occurrence, reference.generationKey);
-      const parts = withRoll(labelParts('Buy', well.name, well.suffix, well.slot), well.roll);
+      // A Travel Deal refill restocks the bought item.
+      const verb = reference.generationKey === 'travelDealRefill' ? 'Restock' : 'Buy';
+      const parts = withRoll(labelParts(verb, well.name, well.suffix, well.slot), well.roll);
       return well.rewardType === undefined
         ? parts
         : withReward(parts, Object.freeze({ rewardType: well.rewardType }), false, well.itemKey);
@@ -427,8 +429,8 @@ export function occurrenceActionLabelParts(
         slotKey === undefined
           ? occurrence.hermesShrine?.travelDealRefill?.offer
           : occurrence.hermesShrine?.offerBySlot[slotKey];
-      // A rushed item is delivered in the Shrine room.
-      const verb = reference.rushed ? 'Rush' : 'Buy';
+      // A rushed item is delivered in the Shrine room; a Travel Deal refill restocks the bought item.
+      const verb = reference.rushed ? 'Rush' : slotKey === undefined ? 'Restock' : 'Buy';
       const item =
         offer === null || offer === undefined
           ? undefined
@@ -510,7 +512,7 @@ export function occurrenceActionLabelParts(
       if (sourceFamily?.kind === 'shopTravelDealRefill') {
         return actionLabel(
           'Travel Deal Offer',
-          'Buy',
+          'Restock',
           true,
           supplemental?.kind === 'travelDealRefill' ? supplemental.rewardControl : rewardControl,
         );
