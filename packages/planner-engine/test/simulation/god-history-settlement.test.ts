@@ -27,6 +27,9 @@ import {
   completeWorldShopOffers,
 } from './shop-trait-purchase-support';
 
+/** A lone room materialized outside a route: no doors lead from it. */
+const LONE_ROOM = { decisions: [], occurrences: [] } as const;
+
 const biome = createBiomeAddress('Underworld', 'F');
 
 function closedBranch(): RewardBranchState {
@@ -152,6 +155,7 @@ describe('World Shop inventory generation reads god pickups', () => {
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
+      topology: LONE_ROOM,
       room,
       occurrence: Object.freeze({
         occurrenceId,

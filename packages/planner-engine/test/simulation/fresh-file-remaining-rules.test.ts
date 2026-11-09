@@ -266,6 +266,7 @@ describe('Fresh File H_Bridge01', () => {
     activeRoomActionReferences(
       catalog,
       { kind: 'biome', routeKey, biomeKey: 'H' },
+      project.route.biomes.find((plan) => plan.biomeKey === 'H')!.topology!,
       occurrence,
       resolveRoutePosition(catalog, project.route, 'H'),
     ).filter((reference) => reference.kind === 'interactEncounter');

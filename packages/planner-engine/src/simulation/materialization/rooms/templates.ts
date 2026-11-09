@@ -14,6 +14,7 @@ import { createUnresolvedAcquisitionRewardState } from '../../../authored-projec
 import type {
   AuthoredRoomState,
   AuthoredRewardState,
+  BiomeTopology,
   RoomOccurrence,
   RouteWeaponAspectLoadout,
   ShopState,
@@ -72,6 +73,8 @@ export type AuthoredRoomRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
 export interface AuthoredRoomMaterializationContext {
   readonly catalog: Catalog;
   readonly biome: BiomeAddress;
+  /** The biome topology holding the occurrence, with the doors and cages its rerolls name. */
+  readonly topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>;
   readonly routePosition: ResolvedRoutePosition;
   readonly room: RoomDeclaration;
   readonly occurrence: RoomOccurrence;

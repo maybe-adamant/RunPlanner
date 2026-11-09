@@ -382,6 +382,7 @@ describe('Nemesis random events', () => {
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
+        topology: project.route.biomes[0]!.topology!,
         occurrence: selectedOccurrence,
       }).contributions,
     ).not.toContainEqual(
@@ -540,6 +541,7 @@ describe('Nemesis random events', () => {
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
+        topology: project.route.biomes[0]!.topology!,
         occurrence,
       }).contributions,
     ).not.toContainEqual(
@@ -722,6 +724,7 @@ describe('Nemesis random events', () => {
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
+        topology: project.route.biomes[0]!.topology!,
         occurrence: selected,
       }).contributions.find(
         (entry) =>
@@ -786,6 +789,7 @@ describe('Nemesis random events', () => {
       routePosition: ordinaryPositionFor(catalog, goldenHBiome),
       catalog,
       biome: goldenHBiome,
+      topology: project.route.biomes.find((biome) => biome.biomeKey === 'H')!.topology!,
       occurrence: selected,
     }).contributions.find(
       (contribution) =>

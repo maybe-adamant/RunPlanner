@@ -967,10 +967,14 @@ describe('N Hub rewards, validation, and candidates', () => {
         }),
       }),
     });
-    const occurrences = new Map(
-      topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
-    );
-    occurrences.set(replacedLocalOccurrence.occurrenceId, replacedLocalOccurrence);
+    const replacedTopology = Object.freeze({
+      ...topology,
+      occurrences: topology.occurrences.map((occurrence) =>
+        occurrence.occurrenceId === replacedLocalOccurrence.occurrenceId
+          ? replacedLocalOccurrence
+          : occurrence,
+      ),
+    });
     const canonical = materializeHubDecision(
       catalog,
       nBiome,
@@ -978,7 +982,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       descriptor,
       decision,
       topology.decisions.filter((candidate) => candidate.kind === 'localVisit'),
-      occurrences,
+      replacedTopology,
       {
         weaponKey: route.loadout.weaponKey,
         aspectKey: route.loadout.aspectKey,

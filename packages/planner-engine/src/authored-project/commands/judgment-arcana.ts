@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument } from '../model';
-import { failCommand, requireOccurrence, type LocatedBiome } from './contract';
+import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
 import type { JudgmentArcanaCommand } from './types';
 import { assembleRoomActionDomain } from '../room-actions/domain';
@@ -30,6 +30,7 @@ export function applyJudgmentArcanaCommand(
   const lifecycle = assembleRoomActionDomain({
     catalog,
     biome: createBiomeAddress(command.judgment.routeKey, command.judgment.biomeKey),
+    topology: requireTopology(located.plan, command),
     occurrence: boss,
     routePosition: resolveRoutePosition(catalog, document.route, command.judgment.biomeKey),
   }).lifecycleStructure;

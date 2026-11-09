@@ -38,6 +38,7 @@ describe('materialized room-action roster', () => {
     const room = materializeAuthoredRoom({
       catalog,
       biome: nBiome,
+      topology: project.route.biomes.find((candidate) => candidate.biomeKey === 'N')!.topology!,
       routePosition: resolveRoutePosition(catalog, project.route, 'N'),
       room: catalog.rooms.byKey[occurrence.gameName]!,
       occurrence: {

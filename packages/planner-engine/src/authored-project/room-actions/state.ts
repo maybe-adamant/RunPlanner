@@ -1,4 +1,10 @@
-import type { AuthoredRewardState, RoomActionReference, RoomActionState } from '../model';
+import type {
+  AuthoredRewardState,
+  BiomeTopology,
+  RoomActionReference,
+  RoomActionState,
+} from '../model';
+import { missingRerollTarget } from '../rerolls';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RewardProducerBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
@@ -62,10 +68,14 @@ export function createDefaultRoomActionState(room: RoomDeclaration): RoomActionS
   });
 }
 
-/** Complete structural action domain for one authored occurrence. */
+/**
+ * Complete structural action domain for one authored occurrence of the
+ * topology, which holds the doors and cages its rerolls name.
+ */
 export function activeRoomActionReferences(
   catalog: Catalog,
   biome: import('../addresses').BiomeAddress,
+  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
   occurrence: RoomOccurrence,
   routePosition: ResolvedRoutePosition,
   scope?: {
@@ -199,10 +209,15 @@ export function activeRoomActionReferences(
       references.push(Object.freeze({ kind: 'interactWheelReward', wheelKey }));
     }
   }
-  // An authored reroll participates by its presence; a wheel reroll only while its wheel is active.
+  // An authored reroll participates by its presence while its target stands: a
+  // wheel reroll while its wheel is active, a door or cage reroll while that door or cage exists.
   for (const reference of occurrence.roomActions.order) {
     if (reference.kind !== 'reroll') continue;
-    if (reference.target.kind === 'wheelOffer' && !activeWheels.has(reference.target.wheelKey))
+    if (
+      reference.target.kind === 'wheelOffer'
+        ? !activeWheels.has(reference.target.wheelKey)
+        : missingRerollTarget(topology, occurrence.occurrenceId, reference.target) !== undefined
+    )
       continue;
     references.push(reference);
   }

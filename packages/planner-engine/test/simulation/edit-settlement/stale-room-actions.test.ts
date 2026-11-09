@@ -5,7 +5,9 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createExitDecisionAddress,
   createExitSelectionAddress,
+  createHubSlotAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -20,6 +22,7 @@ import {
   type OccurrenceAddress,
   type ProjectCommand,
   type ProjectDocument,
+  type RerollTarget,
 } from '@run-planner/engine/authored-project';
 import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
 import {
@@ -37,14 +40,24 @@ import {
 import {
   createSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNOProject,
+  loadSurfaceNProject,
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
-import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadNemesisFieldsCheckpoint,
+  loadUnderworldFGCheckpoint,
+  loadUnderworldZagreusContractCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
 
 import { createAuthoringSession } from '../../../src/simulation/authoring/session';
+import {
+  firstSupportedReroll,
+  withArcana,
+  withGoldenUnderworldJudgments,
+} from '../../support/rerolls';
 import { underworldGLockedDoorsProject } from '../../execution-plan/support/plan-end-switch-fixtures';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
@@ -747,6 +760,139 @@ describe('stale room actions in edit settlement', () => {
         expect(drop(settled.assembly.project)).toEqual(drop(project));
         expect(removedIn(settled, p3)).toBeUndefined();
       });
+    });
+  });
+  describe('door and cage rerolls', () => {
+    const f = createBiomeAddress('Underworld', 'F');
+    const h = createBiomeAddress('Underworld', 'H');
+    const rerolls = (project: ProjectDocument, source: OccurrenceAddress) =>
+      order(project, source).filter((key) => key.startsWith('["reroll"'));
+    /** Appends a press of the target to the source's doors and gives it a supported reward. */
+    const press = (project: ProjectDocument, source: OccurrenceAddress, target: RerollTarget) => {
+      const inserted = applyProjectCommand(project, catalog, {
+        kind: 'InsertReroll',
+        occurrence: source,
+        target,
+        reward: { rewardType: 'RoomMoneyDrop' },
+        index: order(project, source).length,
+      });
+      const action = createRoomActionAddress(
+        createBiomeAddress(source.routeKey, source.biomeKey),
+        source.occurrenceId,
+        rerolls(inserted, source).at(-1)!,
+      );
+      return applyProjectCommand(inserted, catalog, {
+        kind: 'ReplaceRerollReward',
+        action,
+        reward: firstSupportedReroll(inserted, action, 'RunProgress'),
+      });
+    };
+    const removeDoors = (source: OccurrenceAddress): ProjectCommand => ({
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(createBiomeAddress(source.routeKey, source.biomeKey), {
+        kind: 'occurrence',
+        occurrenceId: source.occurrenceId,
+      }),
+    });
+
+    it('leave silently with the door they redraw', () => {
+      const source = createOccurrenceAddress(f, createOccurrenceId('golden-f-b2-e1'));
+      const project = press(withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']), source, {
+        kind: 'door',
+        exitKey: 'exit2',
+        occurrenceId: createOccurrenceId('golden-f-b3-e2'),
+      });
+      expect(rerolls(project, source)).toHaveLength(1);
+      const settled = settle(project, removeDoors(source));
+      expect(settled.fault).toBeUndefined();
+      expect(rerolls(settled.assembly.project, source)).toEqual([]);
+      expect(settled.removedStaleActions).toBeUndefined();
+    });
+
+    it('leave silently with the door to the cage they redraw', () => {
+      const source = createOccurrenceAddress(h, createOccurrenceId('golden-h-miniboss01'));
+      const project = press(
+        withGoldenUnderworldJudgments(withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll'])),
+        source,
+        {
+          kind: 'cage',
+          exitKey: 'exit1',
+          occurrenceId: createOccurrenceId('golden-h-combat05'),
+          slotKey: 'cage1',
+        },
+      );
+      expect(rerolls(project, source)).toHaveLength(1);
+      const settled = settle(project, removeDoors(source));
+      expect(settled.fault).toBeUndefined();
+      expect(rerolls(settled.assembly.project, source)).toEqual([]);
+      expect(settled.removedStaleActions).toBeUndefined();
+    });
+
+    it('stay invalid at a door the game does not reroll', () => {
+      // F Combat 10's first door leads to the Preboss Shop, which refuses door rerolls.
+      const source = createOccurrenceAddress(f, createOccurrenceId('golden-f-b10-e1'));
+      const project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+      const settled = settle(project, {
+        kind: 'InsertReroll',
+        occurrence: source,
+        target: {
+          kind: 'door',
+          exitKey: 'exit1',
+          occurrenceId: createOccurrenceId('golden-f-preboss-shop'),
+        },
+        reward: { rewardType: 'RoomMoneyDrop' },
+        index: order(project, source).length,
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(rerolls(settled.assembly.project, source)).toHaveLength(1);
+      expect(settled.removedStaleActions).toBeUndefined();
+      expect(settled.assembly.evaluation.findings).toContainEqual(
+        expect.objectContaining({
+          code: 'rerollTargetUnavailable',
+          evidence: { reason: 'notRerollable' },
+        }),
+      );
+    });
+
+    it('leave a Hub reroll of a slot the board closes for repair', () => {
+      const n = createBiomeAddress('Surface', 'N');
+      const hub = {
+        kind: 'hubDecision',
+        routeKey: 'Surface',
+        biomeKey: 'N',
+        hubKey: 'hub',
+      } as const;
+      const hubRerolls = (project: ProjectDocument) =>
+        project.route.biomes[0]!.topology!.decisions.flatMap((decision) =>
+          decision.kind === 'hub'
+            ? decision.actions.filter((action) => action.kind === 'reroll')
+            : [],
+        );
+      const project = applyProjectCommand(
+        withArcana(loadSurfaceNProject(), ['DoorReroll']),
+        catalog,
+        {
+          kind: 'InsertHubReroll',
+          hub,
+          hubSlotKey: 'combat03',
+          reward: { rewardType: 'MaxHealthDrop' },
+          index: 0,
+        },
+      );
+      expect(hubRerolls(project)).toHaveLength(1);
+      const settled = settle(project, {
+        kind: 'CloseHubSlot',
+        slot: createHubSlotAddress(n, 'hub', 'combat03'),
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(hubRerolls(settled.assembly.project)).toEqual(hubRerolls(project));
+      expect(settled.removedStaleActions).toBeUndefined();
+      expect(settled.assembly.evaluation.findings).toContainEqual(
+        expect.objectContaining({
+          code: 'rerollTargetUnavailable',
+          origin: expect.objectContaining({ kind: 'hubReroll' }),
+        }),
+      );
     });
   });
 });

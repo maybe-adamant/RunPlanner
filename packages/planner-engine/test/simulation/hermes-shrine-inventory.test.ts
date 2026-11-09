@@ -692,6 +692,7 @@ describe('Hermes Shrine delayed deliveries', () => {
     const room = materializeAuthoredRoom({
       catalog,
       biome,
+      topology: plan.topology,
       routePosition,
       room: declaration,
       occurrence,
@@ -1024,6 +1025,7 @@ describe('Hermes Shrine delayed deliveries', () => {
       routePosition: ordinaryPositionFor(catalog, pBiome),
       catalog,
       biome: pBiome,
+      topology: project.route.biomes.find((biome) => biome.biomeKey === 'P')!.topology!,
       occurrence,
     });
     const roster = assembleRoomActionRoster({

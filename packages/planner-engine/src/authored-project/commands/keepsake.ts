@@ -80,6 +80,7 @@ export function applyKeepsakeCommand(
     const declarationActions = assembleRoomActionDomain({
       catalog,
       biome: createBiomeAddress(command.outcome.routeKey, command.outcome.biomeKey),
+      topology: requireTopology(located.plan, command),
       occurrence,
       routePosition: resolveRoutePosition(catalog, document.route, command.outcome.biomeKey),
     }).activeReferences;

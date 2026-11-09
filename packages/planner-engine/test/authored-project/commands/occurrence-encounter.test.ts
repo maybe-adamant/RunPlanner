@@ -380,6 +380,7 @@ describe('authored encounter occurrence commands', () => {
       activeRoomActionReferences(
         catalog,
         goldenFBiome,
+        selected.route.biomes[0]!.topology!,
         unresolved,
         ordinaryPositionFor(catalog, goldenFBiome),
       ),
@@ -446,6 +447,7 @@ describe('authored encounter occurrence commands', () => {
       activeRoomActionReferences(
         catalog,
         goldenFBiome,
+        declined.route.biomes[0]!.topology!,
         declinedOccurrence,
         ordinaryPositionFor(catalog, goldenFBiome),
       ),
@@ -488,6 +490,7 @@ describe('authored encounter occurrence commands', () => {
       activeRoomActionReferences(
         catalog,
         goldenFBiome,
+        away.route.biomes[0]!.topology!,
         occurrence(away, 'F', goldenFOccurrenceId(5, 1)),
         ordinaryPositionFor(catalog, goldenFBiome),
       ),
@@ -560,6 +563,7 @@ describe('authored encounter occurrence commands', () => {
       activeRoomActionReferences(
         catalog,
         goldenFBiome,
+        changed.route.biomes[0]!.topology!,
         occurrence(changed, 'F', goldenFOccurrenceId(5, 1)),
         ordinaryPositionFor(catalog, goldenFBiome),
       ),

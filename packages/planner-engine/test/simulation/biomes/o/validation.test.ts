@@ -298,6 +298,7 @@ describe('selected O validation', () => {
       routePosition: ordinaryPositionFor(catalog, oBiome),
       catalog,
       biome: oBiome,
+      topology: project.route.biomes.find((plan) => plan.biomeKey === 'O')!.topology!,
       occurrence: authoredOccurrence,
     });
     expect(

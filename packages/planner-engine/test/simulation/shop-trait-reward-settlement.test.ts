@@ -41,6 +41,9 @@ import { ownerRegion } from '../../src/simulation/finding-regions';
 import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 
+/** A lone room materialized outside a route: no doors lead from it. */
+const LONE_ROOM = { decisions: [], occurrences: [] } as const;
+
 describe('Shop trait acquisition processing', () => {
   it('returns unsupported inventory findings for the caller to merge at its chronology seam', () => {
     const room = catalog.rooms.byKey.F_Shop01;
@@ -71,6 +74,7 @@ describe('Shop trait acquisition processing', () => {
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
+      topology: LONE_ROOM,
       room,
       occurrence: Object.freeze({
         occurrenceId: createOccurrenceId('unsupported-inventory-emission'),
@@ -158,6 +162,7 @@ describe('Shop trait acquisition processing', () => {
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
+      topology: LONE_ROOM,
       room,
       occurrence,
       role: 'ordinary',
@@ -221,6 +226,7 @@ describe('Shop trait acquisition processing', () => {
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
+      topology: LONE_ROOM,
       room,
       occurrence: Object.freeze({
         ...occurrence,
@@ -267,6 +273,7 @@ describe('Shop trait acquisition processing', () => {
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
+      topology: LONE_ROOM,
       room,
       occurrence: Object.freeze({
         ...occurrence,
@@ -370,6 +377,7 @@ describe('Shop trait acquisition processing', () => {
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
+      topology: LONE_ROOM,
       room,
       occurrence: Object.freeze({
         occurrenceId,
@@ -506,6 +514,7 @@ describe('Shop trait acquisition processing', () => {
         routePosition: ordinaryPositionFor(catalog, biome),
         catalog,
         biome,
+        topology: LONE_ROOM,
         room,
         occurrence: Object.freeze({
           occurrenceId: createOccurrenceId(`pom-replacement-${entryOrder.join('-')}`),
@@ -719,6 +728,7 @@ describe('Shop trait acquisition processing', () => {
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
+      topology: LONE_ROOM,
       room,
       occurrence,
       role: 'ordinary',

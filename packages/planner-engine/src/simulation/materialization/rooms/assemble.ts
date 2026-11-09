@@ -388,6 +388,7 @@ export function materializeAuthoredRoom(
   const roomActionDomain = assembleRoomActionDomain({
     catalog: context.catalog,
     biome: context.biome,
+    topology: context.topology,
     occurrence: context.occurrence,
     routePosition: context.routePosition,
     lifecycleProfileKey: base.lifecycleProfileKey,

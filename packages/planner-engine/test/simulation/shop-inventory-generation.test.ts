@@ -36,6 +36,9 @@ import { loadSurfaceNOPQProject, qBiome, qOccurrenceIds } from '@run-planner/tes
 import { simulateProject } from '../../src/simulation';
 import { deriveTravelRefill } from '../../src/simulation/rewards/shop/derived-rewards';
 
+/** A lone room materialized outside a route: no doors lead from it. */
+const LONE_ROOM = { decisions: [], occurrences: [] } as const;
+
 describe('Shop trait acquisition processing', () => {
   it('projects only Purchased initial offers and gives them movement without generic membership proposals', () => {
     const room = catalog.rooms.byKey.F_Shop01;
@@ -56,6 +59,7 @@ describe('Shop trait acquisition processing', () => {
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
+      topology: LONE_ROOM,
       room,
       occurrence: Object.freeze({
         occurrenceId: shopId,

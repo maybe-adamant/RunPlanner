@@ -562,6 +562,9 @@ projects over a long edit history.
 | Travel Deal no longer held                          | 3          | refill purchase invalid                 |
 | Gold Gold Gold duplicate, boon swapped away         | 3          | removed, announced in the shop room     |
 | Matured trait drop, trait lost                      | 3          | removed, announced                      |
+| Door or cage reroll, its door removed               | 1          | removed, silent                         |
+| Reroll of a door the game refuses                   | 4          | invalid                                 |
+| Hub board reroll, its slot closed or entered        | 4          | invalid                                 |
 | Trait drop, trait held but matures elsewhere        | 4          | invalid                                 |
 | Reward swapped between kinds                        | continuity | pickup rows re-keyed in place           |
 
@@ -619,8 +622,11 @@ wheel's Choose action. Hub board-door presses sit in the Hub's own action
 order, in the stay before a later visit. The walk settles each press at its
 rank as a draw from the target's store
 ([Reward Model](REWARD_MODEL.md#rerolls)); a press of a target the game would
-refuse spends nothing and reports at the press. Screen rerolls are not
-actions: an offer's earlier screens settle with the offer.
+refuse spends nothing and reports at the press. A door or cage press is in
+its room's domain only while the saved route still has its target: the
+source's door into that room and, for a cage, that room's cage slot; a ship
+press only while its wheel is played. Screen rerolls are not actions: an
+offer's earlier screens settle with the offer.
 
 ### Spawned loot
 

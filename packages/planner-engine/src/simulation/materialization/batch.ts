@@ -329,6 +329,7 @@ function materializeTarget(
     room: materializeAuthoredRoom({
       catalog,
       biome,
+      topology,
       routePosition,
       room,
       occurrence,
@@ -392,6 +393,7 @@ export function materializeAdditionalContinuations(
         room: materializeAuthoredRoom({
           catalog,
           biome,
+          topology,
           routePosition,
           room,
           occurrence,
