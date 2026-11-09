@@ -46,11 +46,16 @@ H Fields, an O ship room and a Postboss.
   Fig Leaf skip, Nemesis outcome and kill race, Aetos wave, Gorgon condition,
   timed outcomes), which today sit on the start or end banner without a clear
   home. Inventory done; shape (owner 2026-11-09):
-  - Encounter started keeps Aetos and the Gorgon condition.
+  - Encounter started hosts no choices; it is the announcement only.
   - Encounter outcome holds, in order: Fig Leaf first when eligible (skipped
-    or fought; a skip short-circuits every later outcome choice and makes the
-    start's Aetos and Gorgon moot), then the Nemesis bet, the Nemesis trade or
-    contest result, Anomaly cleared.
+    or fought; a skip short-circuits every later outcome choice), the Aetos
+    wave, the Gorgon condition, the Nemesis bet, the Nemesis trade or contest
+    result, Anomaly cleared.
+  - The walk reads each choice at the event that hosts it: Fig Leaf, Aetos
+    and the Gorgon condition move from the encounter start to the outcome
+    point, so an unset one stops the walk at the outcome, never at a start
+    that hides its control. A chronology change: equivalence before/after and
+    independent review.
   - Boss rooms: Boss defeated returns as its own event, the Boss room's
     outcome, carrying Judgment and Figurine.
   - Timed outcomes (Steady Growth, Embryo), the Gorgon's Athena offer and
