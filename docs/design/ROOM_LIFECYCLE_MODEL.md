@@ -480,59 +480,88 @@ the active lifecycle is narrowed and is independent of an action's placed rank.
 ### Rows whose context or source is gone
 
 What the Timeline shows is what is saved: a room-action row never lingers
-hidden, and never comes back on its own. Every row that can no longer apply
-falls in one of three classes, decided by one question — is there anything to
-do with it other than delete it?
+hidden and never comes back on its own. One procedure decides what happens to
+a row that can no longer apply, so a new case is classified, not argued.
 
-- **Stale**: the row's context is gone; its entered room no longer offers the
-  action at all (a phase or wheel the room no longer plays, an action whose
-  owner was removed). Nothing can repair it.
-- **Source gone**: the row exists only as the product of a source elsewhere —
-  a boon, trait, purchase or action in this or an earlier room — and that
-  source no longer produces it (Echo's Gold Gold Gold duplicate, a Travel Deal
-  refill, a Hermes delivery, a matured trait drop once the trait is not held,
-  a Sea Star copy, an Artificer replacement, a gift or switch loot). Nothing
-  can repair it except restoring the source upstream.
-- **Invalid**: the row still means something and can be repaired another way
-  (a Shop purchase past the god cap, a Purging Pool sale the game refuses, a
-  Well or Pool purchase whose roll changed, a row out of order, a trait drop
-  whose trait is still held but now matures in another room).
+Terms:
 
-Stale and source-gone rows are removed by the edit that causes it, in the same
-edit and Undo step, each through the command that owns its removal. The
-editor announces the removal, with Undo, unless the row belongs to the owner
-the edit addresses: changing a thing changes its own rows silently, and only
-side effects elsewhere are announced. Invalid rows stay, with a finding.
+- **Spawn**: a row or item that exists because something produced it.
+- **Trigger**: the act that produces a spawn (a purchase, an encounter's end,
+  a transform choice, taking a reward, a Travel Deal's first purchase).
+- **Enabler**: an upstream condition that makes an act possible or changes
+  what it produces (a held boon, trait, Arcana or keepsake; a feature being
+  present).
+- **Decision**: something the owner chose (an act, an item, a transform, a
+  purchase).
+- **Distance**: whether the row is in the room the edit addresses (the same
+  Timeline) or in another room.
 
-Refinements:
+Procedure, first match wins:
 
-- A changed reward keeps its pickup rows: they take the new reward's pickup
-  roles in declared order (main pickup first), each at its old position where
-  the order allows, instead of being removed and placed again.
-- A room the run stops entering (another door picked upstream) keeps its rows
-  untouched, as an unselected target keeps its room-local state; they return
-  with its door. Only rooms the run enters are cleaned.
-- Source-gone rows are removed by the edit that takes their source away. A
-  Shop row (a Gold Gold Gold duplicate, a Travel Deal refill) whose source is
-  taken away while its room is off the route keeps the row with its finding
-  when the room returns; a delivery or trait drop goes with its removed source
-  wherever it is placed.
-- Older files, temporarily: a loaded document keeps the stale rows it holds
-  until an edit changes their room, which then removes and announces them,
-  and keeps a source-gone row whose source was already gone with its finding.
-  Both asymmetries end at the next major schema revision, whose upgrade
-  cleans older files once.
-- Feature state a removed row carried (a Shop's chosen refill item and the
-  refill's own choices, a delivery's payload) stays with its feature, so
-  restoring the source restores the choice; the row itself is placed afresh.
-- Never removed: a row whose source has not been reached or assessed yet (an
-  unassessed matured pickup, a pickup the run import places before its source
-  is known), and required obligations being placed.
-- `ResetRoomActionsAfter` is the explicit way to clear rows that are still
-  valid.
+1. **Context gone**: the room no longer offers the action at all (a phase or
+   wheel it no longer plays, an owner removed). The row is stale and is
+   removed.
+2. **Trigger gone**: the spawn has no slot to exist in. Removed.
+3. **Enabler gone**: a row that is the owner's decision relying on the
+   enabler (a Travel Deal refill purchase, an Artificer transform) stays,
+   invalid, with a finding: the owner removes it or restores the enabler. A
+   row that is an automatic product of the enabler (Echo's Gold Gold Gold
+   duplicate, a matured trait drop) is removed.
+4. **Otherwise unable to happen but repairable another way**: invalid, with a
+   finding (a Shop purchase past the god cap, a Purging Pool sale the game
+   refuses, a Well or Pool purchase whose roll changed, a row out of order, a
+   trait drop whose trait is held but now matures in another room).
 
-Why: removal and return as side effects of unrelated edits are hidden
-behaviour, and retained dead rows bloat projects over a long edit history.
+Every removal:
+
+- happens in the edit that causes it, in the same Undo step, through the
+  command that owns the row's removal;
+- leaves the spawn's own choices with the source or feature that owns them (a
+  delivered item's offer, a refill's item and hidden god), so restoring the
+  source restores them; only the row goes;
+- is silent in the room the edit addresses, where it happens on the Timeline
+  being edited, and announced prominently in any other room, naming the room;
+- yields to continuity: when a producer changes rather than disappears (a
+  reward swapped for another kind), its spawn rows take the new pickup roles
+  in declared order (main pickup first), each at its old position where the
+  order allows, instead of being removed and placed again.
+
+Never removed:
+
+- a row whose source has not been reached or assessed yet (an unassessed
+  matured pickup, a pickup the run import places before its source is known);
+- required obligations being placed;
+- rows of a room the run no longer enters: an unselected room keeps its rows
+  untouched, as reanchoring keeps an unselected target's room-local state,
+  and they return with its door; a Shop spawn whose source is taken while its
+  room is off the route keeps its row with its finding when the room returns.
+
+`ResetRoomActionsAfter` is the explicit exception: it removes rows after a
+point at the owner's request, silently in its own room.
+
+Older files, temporarily: a loaded document keeps the stale rows it holds
+until an edit changes their room, which then removes them, and keeps a row
+whose source was already gone with its finding. Both asymmetries end at the
+next major schema revision, whose upgrade cleans older files once.
+
+Why: distance is risk. A same-room effect is visible where it happens; a
+cross-room effect is invisible unless announced, so the owner's decisions are
+never removed from a distance, only marked. Removal and return as side
+effects of unrelated edits are hidden behaviour, and retained dead rows bloat
+projects over a long edit history.
+
+| Case                                                | Step       | Outcome                                 |
+| --------------------------------------------------- | ---------- | --------------------------------------- |
+| Phase or wheel the room no longer plays             | 1          | removed, silent                         |
+| Artificer replacement, reward set back to normal    | 2          | removed, silent                         |
+| Refill or rushed Shrine pickup, its purchase undone | 2          | removed, silent                         |
+| Hermes delivery, its Shrine purchase undone         | 2          | removed, announced in the delivery room |
+| Artificer card unequipped upstream                  | 3          | transform invalid                       |
+| Travel Deal no longer held                          | 3          | refill purchase invalid                 |
+| Gold Gold Gold duplicate, boon swapped away         | 3          | removed, announced in the shop room     |
+| Matured trait drop, trait lost                      | 3          | removed, announced                      |
+| Trait drop, trait held but matures elsewhere        | 4          | invalid                                 |
+| Reward swapped between kinds                        | continuity | pickup rows re-keyed in place           |
 
 ### Lifecycle structure and authoring timeline
 
