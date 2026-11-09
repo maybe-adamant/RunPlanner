@@ -49,6 +49,11 @@ export interface RoomActionOrderContext {
   readonly lifecycleStructure: RoomLifecycleStructure;
   /** An action nothing may follow (a left switch press: leaving ends the room). */
   readonly terminalActionKey?: string;
+  /** Each active action's window ordinal, which no order changes. */
+  readonly windowOrdinals: ReadonlyMap<string, number>;
+  /** Active required action keys, and those of each Ship wheel's post-combat window. */
+  readonly requiredKeys: readonly string[];
+  readonly requiredKeysByWheel: ReadonlyMap<string, readonly string[]>;
 }
 
 export function roomActionOrderContext(options: {
@@ -56,12 +61,22 @@ export function roomActionOrderContext(options: {
   readonly lifecycleStructure: RoomLifecycleStructure;
   readonly terminalActionKey?: string;
 }): RoomActionOrderContext {
-  return frozen({
-    active: new Map(
-      options.contributions.flatMap((entry) =>
-        entry.kind === 'action' ? [[roomActionKey(entry.reference), entry] as const] : [],
-      ),
+  const active = new Map(
+    options.contributions.flatMap((entry) =>
+      entry.kind === 'action' ? [[roomActionKey(entry.reference), entry] as const] : [],
     ),
+  );
+  const required = [...active].filter(([, entry]) => entry.participation === 'required');
+  const requiredKeysByWheel = new Map<string, string[]>();
+  for (const [key, entry] of required) {
+    if (entry.window.kind !== 'shipPostCombat') continue;
+    requiredKeysByWheel.set(entry.window.wheelKey, [
+      ...(requiredKeysByWheel.get(entry.window.wheelKey) ?? []),
+      key,
+    ]);
+  }
+  return frozen({
+    active,
     checkpoints: new Map(
       options.contributions.flatMap((entry) =>
         entry.kind === 'checkpoint' ? [[entry.checkpointKey, entry] as const] : [],
@@ -71,7 +86,27 @@ export function roomActionOrderContext(options: {
     ...(options.terminalActionKey === undefined
       ? {}
       : { terminalActionKey: options.terminalActionKey }),
+    windowOrdinals: new Map(
+      [...active].map(([key, entry]) => [
+        key,
+        roomLifecycleWindowOrdinal(options.lifecycleStructure, entry.window),
+      ]),
+    ),
+    requiredKeys: frozen(required.map(([key]) => key)),
+    requiredKeysByWheel,
   });
+}
+
+/** Action keys by reference identity; a key is a pure function of its frozen reference. */
+const actionKeys = new WeakMap<RoomActionReference, string>();
+
+function keyOf(reference: RoomActionReference): string {
+  let key = actionKeys.get(reference);
+  if (key === undefined) {
+    key = roomActionKey(reference);
+    actionKeys.set(reference, key);
+  }
+  return key;
 }
 
 /** The left switch press ends its room's actions; no other action is terminal. */
@@ -88,55 +123,51 @@ export function assessRoomActionOrder(
   order: readonly RoomActionReference[],
   context: RoomActionOrderContext,
 ): readonly RoomActionOrderIssue[] {
-  const { active, checkpoints, lifecycleStructure } = context;
+  const { active, checkpoints, lifecycleStructure, windowOrdinals } = context;
   const issues: RoomActionOrderIssue[] = [];
-  const indexes = new Map(order.map((reference, index) => [roomActionKey(reference), index]));
+  const keys = order.map(keyOf);
+  const indexes = new Map(keys.map((key, index) => [key, index]));
+  const latestIndex = (requiredKeys: readonly string[]) =>
+    requiredKeys.reduce((rank, key) => Math.max(rank, indexes.get(key) ?? -1), -1);
+  const afterIndexes = new Map<string, number>();
   const checkpointAfterIndex = (checkpointKey: string): number => {
+    let index = afterIndexes.get(checkpointKey);
+    if (index !== undefined) return index;
     // The exit is usable once every required action is done.
-    if (checkpointKey === 'exitUsable')
-      return [...active.values()]
-        .filter((entry) => entry.participation === 'required')
-        .reduce(
-          (rank, entry) => Math.max(rank, indexes.get(roomActionKey(entry.reference)) ?? -1),
-          -1,
-        );
-    if (!checkpointKey.startsWith('nextPhaseUsable:')) return -1;
-    const checkpoint = checkpoints.get(checkpointKey);
-    if (checkpoint === undefined) return -1;
-    const required = [...active.values()].filter((entry) => entry.participation === 'required');
-    const wheelKey = checkpointKey.slice('nextPhaseUsable:'.length);
-    const matching = required.filter(
-      (entry) => entry.window.kind === 'shipPostCombat' && entry.window.wheelKey === wheelKey,
-    );
-    return matching.reduce(
-      (rank, entry) => Math.max(rank, indexes.get(roomActionKey(entry.reference)) ?? -1),
-      -1,
-    );
+    index =
+      checkpointKey === 'exitUsable'
+        ? latestIndex(context.requiredKeys)
+        : !checkpointKey.startsWith('nextPhaseUsable:') || !checkpoints.has(checkpointKey)
+          ? -1
+          : latestIndex(
+              context.requiredKeysByWheel.get(checkpointKey.slice('nextPhaseUsable:'.length)) ?? [],
+            );
+    afterIndexes.set(checkpointKey, index);
+    return index;
   };
-  for (const reference of order) {
-    const entry = active.get(roomActionKey(reference));
+  order.forEach((reference, ownIndex) => {
+    const entry = active.get(keys[ownIndex]!);
     if (entry === undefined) {
       issues.push(frozen({ kind: 'stale', reference }));
-      continue;
+      return;
     }
     for (const dependency of entry.dependencies) {
-      const ownIndex = indexes.get(roomActionKey(reference));
       if (dependency.kind === 'afterAction') {
-        const dependencyIndex = indexes.get(roomActionKey(dependency.action));
-        if (dependencyIndex !== undefined && ownIndex !== undefined && ownIndex > dependencyIndex)
-          continue;
+        const dependencyKey = keyOf(dependency.action);
+        const dependencyIndex = indexes.get(dependencyKey);
+        if (dependencyIndex !== undefined && ownIndex > dependencyIndex) continue;
         issues.push(
           frozen({
             kind: 'dependency',
             reference,
-            detail: `must follow ${roomActionKey(dependency.action)}`,
+            detail: `must follow ${dependencyKey}`,
             dependency,
           }),
         );
         continue;
       }
       const checkpoint = checkpoints.get(dependency.checkpointKey);
-      if (checkpoint === undefined || ownIndex === undefined) {
+      if (checkpoint === undefined) {
         issues.push(
           frozen({
             kind: 'dependency',
@@ -148,7 +179,7 @@ export function assessRoomActionOrder(
         );
         continue;
       }
-      const ownRank = roomLifecycleWindowOrdinal(lifecycleStructure, entry.window);
+      const ownRank = windowOrdinals.get(keys[ownIndex]!)!;
       const checkpointWindowRank = roomLifecycleWindowOrdinal(
         lifecycleStructure,
         checkpoint.window,
@@ -156,7 +187,7 @@ export function assessRoomActionOrder(
       const valid =
         dependency.kind === 'afterCheckpoint'
           ? ownRank >= checkpointWindowRank &&
-            indexes.get(roomActionKey(reference))! >= checkpointAfterIndex(dependency.checkpointKey)
+            ownIndex >= checkpointAfterIndex(dependency.checkpointKey)
           : ownRank <= checkpointWindowRank;
       if (!valid) {
         issues.push(
@@ -169,23 +200,19 @@ export function assessRoomActionOrder(
         );
       }
     }
-  }
-  for (const entry of active.values()) {
-    if (entry.participation === 'required' && !indexes.has(roomActionKey(entry.reference))) {
-      issues.push(frozen({ kind: 'unrankedRequired', reference: entry.reference }));
+  });
+  for (const key of context.requiredKeys) {
+    if (!indexes.has(key)) {
+      issues.push(frozen({ kind: 'unrankedRequired', reference: active.get(key)!.reference }));
     }
   }
-  const ranked = order.flatMap((reference) => {
-    const entry = active.get(roomActionKey(reference));
-    return entry === undefined || entry.windowFollowsOrder === true ? [] : [entry];
-  });
-  for (let index = 1; index < ranked.length; index += 1) {
-    const left = ranked[index - 1]!;
-    const right = ranked[index]!;
-    if (
-      roomLifecycleWindowOrdinal(lifecycleStructure, left.window) >
-      roomLifecycleWindowOrdinal(lifecycleStructure, right.window)
-    ) {
+  let left: RoomActionContribution | undefined;
+  let leftOrdinal = 0;
+  keys.forEach((key) => {
+    const right = active.get(key);
+    if (right === undefined || right.windowFollowsOrder === true) return;
+    const rightOrdinal = windowOrdinals.get(key)!;
+    if (left !== undefined && leftOrdinal > rightOrdinal) {
       issues.push(
         frozen({
           kind: 'window',
@@ -197,7 +224,9 @@ export function assessRoomActionOrder(
         }),
       );
     }
-  }
+    left = right;
+    leftOrdinal = rightOrdinal;
+  });
   return frozen(issues);
 }
 
