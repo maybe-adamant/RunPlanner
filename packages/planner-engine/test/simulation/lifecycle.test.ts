@@ -812,6 +812,49 @@ describe('single-room lifecycle execution', () => {
     });
   });
 
+  it("keeps an earlier same-window row's own events apart from the pickup it precedes", () => {
+    const fountain = { kind: 'useFountain' as const };
+    const reward = {
+      kind: 'interactIncomingReward' as const,
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source' as const,
+    };
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        roomActionRoster: actionRoster(
+          origin,
+          [fountain, reward],
+          [
+            {
+              reference: fountain,
+              participation: 'optional',
+              window: { kind: 'standard', phase: 'afterCombat' },
+              dependencies: [],
+            },
+            {
+              reference: reward,
+              participation: 'required',
+              window: { kind: 'standard', phase: 'afterCombat' },
+              dependencies: [],
+            },
+          ],
+        ),
+      }),
+    );
+
+    expect(fragment.blockedAt).toBeUndefined();
+    const reached = new Map(fragment.reachedActions.map((action) => [action.actionKey, action]));
+    const used = reached.get(roomActionKey(fountain))!;
+    const pickup = reached.get(roomActionKey(reward))!;
+    // The fountain spans its own use; the pickup only its producer point's events.
+    expect(fragment.events[used.sequence - 1]?.kind).toBe('fountainUsed');
+    expect(used.through).toBe(used.sequence);
+    expect(fragment.events[pickup.sequence - 1]?.kind).toBe('producerPointReached');
+    expect(fragment.events[pickup.through! - 1]?.kind).toBe('producerRoleAdvanced');
+    expect(pickup.sequence).toBeGreaterThan(used.through!);
+  });
+
   it('advances the standard producer role before outgoing generation and commit effects', () => {
     const fragment = executeRoomLifecycle(catalog, input());
 

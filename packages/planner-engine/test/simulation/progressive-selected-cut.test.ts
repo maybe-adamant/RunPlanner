@@ -1839,12 +1839,18 @@ describe('room stop', () => {
     expect(claimed(at(12, 'at'))).toEqual(['first', 'second']);
     expect(claimed(at(14, 'at'))).toEqual(['first', 'second']);
     expect(claimed(at(14, 'after'))).toEqual(['first', 'second', 'silent']);
+    // At the same sequence, a row is reached at a boundary no earlier than its own.
+    expect(claimed(at(11, 'after'))).toEqual(['first']);
+    expect(claimed(at(12, 'before'))).toEqual(['first', 'second']);
+    expect(claimed(at(15, 'before'))).toEqual(['first', 'second', 'silent']);
     // The walk is at a row while the contact lies inside its own events.
     const spanning = [
       { room, actionKey: 'pickup', sequence: 20, through: 21, boundary: 'before' as const },
     ];
     expect(roomActionAtPosition(spanning, room, at(21, 'at'))).toBe('pickup');
     expect(roomActionAtPosition(spanning, room, at(22, 'at'))).toBeUndefined();
+    // A row with no event of its own spans nothing.
+    expect(roomActionAtPosition(reached, room, at(14, 'at'))).toBeUndefined();
     expect(roomActionAtPosition(reached, room, at(14, 'after'))).toBeUndefined();
     expect(
       roomActionReachedAt(
@@ -1854,6 +1860,23 @@ describe('room stop', () => {
         at(20, 'at'),
       ),
     ).toBe(false);
+  });
+
+  it('names the row at a position only when its own span alone holds it', () => {
+    const room = createOccurrenceAddress(goldenFBiome, createOccurrenceId('reached-at'));
+    const at = (sequence: number) => ({ kind: 'history', sequence, boundary: 'at' }) as const;
+    // Two pickups of one producer point share its events; a later row overlaps their end.
+    const reached = [
+      { room, actionKey: 'self', sequence: 20, through: 22, boundary: 'before' as const },
+      { room, actionKey: 'source', sequence: 20, through: 22, boundary: 'before' as const },
+      { room, actionKey: 'wide', sequence: 22, through: 24, boundary: 'before' as const },
+    ];
+    expect(roomActionAtPosition(reached, room, at(21))).toBeUndefined();
+    expect(roomActionAtPosition(reached, room, at(22))).toBeUndefined();
+    expect(roomActionAtPosition(reached, room, at(23))).toBe('wide');
+    expect(roomActionAtPosition(reached.slice(0, 1), room, at(21))).toBe('self');
+    // The same row reached twice is still one row.
+    expect(roomActionAtPosition([reached[2]!, reached[2]!], room, at(24))).toBe('wide');
   });
 
   it('publishes no stop for a settled route', () => {

@@ -371,22 +371,32 @@ export function appendRoomLifecycle(
     writer.reach(
       fragment.reachedActions.flatMap((action): ReachedHistoryRoomAction[] => {
         const sequence = placed.get(action.sequence);
-        const through = action.through === undefined ? undefined : appended.get(action.through);
-        if (sequence !== undefined)
+        if (sequence !== undefined && action.through === undefined)
           return [
             Object.freeze({
               room: room.origin,
               actionKey: action.actionKey,
               sequence,
-              ...(action.through === undefined
-                ? { boundary: 'after' as const }
-                : {
-                    boundary: 'before' as const,
-                    // Its last own event, or the end of the composed room when cut off.
-                    through: through ?? writer.nextSequence() - 1,
-                  }),
+              boundary: 'after' as const,
             }),
           ];
+        if (sequence !== undefined) {
+          // Its last own event the composed history holds; one cut off before any is not reached.
+          let through: number | undefined;
+          for (let own = action.through!; own >= action.sequence && through === undefined; own--)
+            through = appended.get(own);
+          return through === undefined
+            ? []
+            : [
+                Object.freeze({
+                  room: room.origin,
+                  actionKey: action.actionKey,
+                  sequence,
+                  boundary: 'before' as const,
+                  through,
+                }),
+              ];
+        }
         return !stopped && action.sequence > fragment.events.length
           ? [
               Object.freeze({

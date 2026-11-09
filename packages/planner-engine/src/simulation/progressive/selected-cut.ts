@@ -738,20 +738,28 @@ export function roomActionReachedAt(
   );
 }
 
-/** The room's action whose own events span a chronology position: the walk is at it there. */
+/**
+ * The room's action whose own events span a chronology position: the walk is at
+ * it there. Rows sharing those events (several pickups of one producer point)
+ * leave no single row the position belongs to, so none is named.
+ */
 export function roomActionAtPosition(
   reachedActions: readonly ReachedHistoryRoomAction[],
   room: SemanticAddress,
   position: HistoryFindingChronology,
 ): string | undefined {
   const roomKey = key(room);
-  return reachedActions.find(
-    (action) =>
+  const spanning = new Set(
+    reachedActions.flatMap((action) =>
       key(action.room) === roomKey &&
       action.through !== undefined &&
       action.sequence <= position.sequence &&
-      position.sequence <= action.through,
-  )?.actionKey;
+      position.sequence <= action.through
+        ? [action.actionKey]
+        : [],
+    ),
+  );
+  return spanning.size === 1 ? [...spanning][0] : undefined;
 }
 
 /**

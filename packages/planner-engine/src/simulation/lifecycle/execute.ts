@@ -1132,13 +1132,27 @@ export function executeRoomLifecycle(
       state,
       schedule,
     );
-    // An incoming reward pickup settles with its producer point's events.
-    if (operation.kind === 'advanceProducer' && state.events.length > eventsBefore)
+    // An incoming reward pickup settles with its producer point's events; rows the walk
+    // reached before it keep their own.
+    if (operation.kind === 'advanceProducer' && state.events.length > eventsBefore) {
+      const pickups = new Set(
+        (context.producerRewardLifecycle?.acquisitionLifecycle ?? []).flatMap((binding) =>
+          binding.lifecyclePoint === operation.point
+            ? [
+                roomActionKey({
+                  kind: 'interactIncomingReward',
+                  producerPoint: binding.lifecyclePoint,
+                  acquisitionRole: binding.role,
+                }),
+              ]
+            : [],
+        ),
+      );
       state = Object.freeze({
         ...state,
         reachedActions: Object.freeze(
           (state.reachedActions ?? []).map((action, index) =>
-            index < reachedBefore
+            index < reachedBefore || !pickups.has(action.actionKey)
               ? action
               : Object.freeze({
                   actionKey: action.actionKey,
@@ -1148,6 +1162,7 @@ export function executeRoomLifecycle(
           ),
         ),
       });
+    }
     if (state.blockedAt !== undefined) break;
     if (schedule !== undefined) {
       state = schedule.afterOperation(operation, operationIndex, state);
