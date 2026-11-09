@@ -2932,6 +2932,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     const line = () => screen.getByRole('listitem', { name: 'Restock' });
     expect(within(line()).queryByRole('checkbox')).toBeNull();
     expect(line().previousElementSibling?.textContent).toContain('slot 1');
+    // The Restock line is a notice under the purchase, which stays an action.
+    expect(line().classList).toContain('timeline-row-notice');
+    expect(line().previousElementSibling?.classList).not.toContain('timeline-row-notice');
     // The line reads Restock beside the Travel Deal icon; its picker shows no label of its own.
     expect(within(line()).getByText('Restock').tagName).toBe('STRONG');
     expect(within(line()).queryByText('Item', { selector: 'label' })).toBeNull();

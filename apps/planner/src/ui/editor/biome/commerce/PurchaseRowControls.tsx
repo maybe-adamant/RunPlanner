@@ -24,6 +24,7 @@ export function TravelDealLine({
   return (
     <TimelineRow
       aria-label="Restock"
+      className="timeline-row-notice"
       editors={travelDealLineEditor(interactions, line)}
       data-travel-deal-line=""
       kind="continuation"

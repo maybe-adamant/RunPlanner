@@ -1208,13 +1208,21 @@
   text-underline-offset: 3px;
 }
 
-/* What the game spawned or unlocked: a framed row like a collect, its items as chips in spawn order. */
-.timeline-row.timeline-row-frame {
-  background: rgb(255 255 255 / 2%);
+/*
+ * A notice tells what the game did (spawned, unlocked, delivered, restocked): a thin dashed outline
+ * in place of an action's stripe, at an action row's height and column alignment.
+ */
+.timeline-row.timeline-row-notice {
+  padding: 2px 7px 2px calc(var(--timeline-row-start) + 2px);
+  border: 1px dashed var(--timeline-notice-line);
+  background: transparent;
 }
 
-.timeline-row[data-spawned-loot] .spawned-loot-label {
+.timeline-row-notice [data-timeline-cell='label'] {
   color: var(--muted);
+}
+
+.timeline-row-notice [data-timeline-cell='label'] strong {
   font-weight: 500;
 }
 
@@ -1624,6 +1632,7 @@
    * with its badges fills a row's height inside the row's padding.
    */
   --timeline-icon-size: 23px;
+  --timeline-notice-line: rgb(255 255 255 / 16%);
   --timeline-chip-size: calc(var(--timeline-icon-size) + 9px);
   --timeline-badge-size: calc(var(--timeline-icon-size) * 2 / 3);
   --timeline-badge-small: calc(var(--timeline-icon-size) * 13 / 21);
