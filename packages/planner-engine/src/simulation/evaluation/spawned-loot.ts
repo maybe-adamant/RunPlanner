@@ -191,7 +191,7 @@ function compareOrder(left: readonly number[], right: readonly number[]): number
 
 /**
  * The collect action for an unranked active row: a required row's canonical
- * insertion, an optional row's latest legal one.
+ * insertion, otherwise its latest legal one.
  */
 function insertion(
   room: CanonicalAuthoredRoom,
@@ -204,10 +204,11 @@ function insertion(
       candidate.structurallyAuthorable &&
       roomActionKey(candidate.reference) === row.key,
   );
+  // A required row without a canonical insertion keeps its latest legal one.
   const proposal =
-    row.participation === 'required'
+    (row.participation === 'required'
       ? inserts.find((candidate) => candidate.canonical === true)
-      : inserts.at(-1);
+      : undefined) ?? inserts.at(-1);
   return proposal?.toIndex === undefined
     ? undefined
     : frozen({
