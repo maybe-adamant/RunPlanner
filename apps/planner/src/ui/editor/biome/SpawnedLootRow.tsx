@@ -59,7 +59,7 @@ function SpawnedItemChip({
   readonly copy?: WorkspaceSpawnSource;
   readonly item: WorkspaceSpawnedItem;
   readonly row: WorkspaceRoomActionRow | undefined;
-  /** What created the item, as a badge on the chip's top corner. */
+  /** What created the item, as a badge on the chip's bottom corner. */
   readonly source?: WorkspaceSpawnSource | undefined;
 }) {
   const executeIntent = useCommandIntent();

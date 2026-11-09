@@ -1139,12 +1139,12 @@
   text-align: center;
 }
 
-/* What created a derived pickup: a small icon on its top corner, where a lock would sit. */
+/* An icon's bottom corner tells its origin (what created it, its slot or the Travel Deal mark); its top corner, its status. */
 .timeline-source-badge {
   position: absolute;
   z-index: 1;
-  top: -5px;
   right: -5px;
+  bottom: -5px;
   width: 14px;
   height: 14px;
   border-radius: 50%;
