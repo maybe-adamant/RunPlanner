@@ -131,9 +131,7 @@ function isDecisionBatchNode(node: WorkspaceNode): node is WorkspaceDecisionBatc
 function railRoomSummary(node: WorkspaceNode): WorkspaceRoomSummary | undefined {
   if (node.kind === 'occurrenceWorkbench') return node.room;
   if (!isDecisionBatchNode(node)) return undefined;
-  if (node.selectedContinuation !== undefined) return node.selectedContinuation.door.room;
-  const selectedTargets = node.targets.filter((target) => target.selected);
-  return selectedTargets.length === 1 ? selectedTargets[0]?.room : undefined;
+  return selectedContinuationDoor(node)?.room;
 }
 
 function railRoomOccurrenceId(node: WorkspaceNode): OccurrenceId | undefined {
@@ -347,11 +345,13 @@ function roomRailPresentation(
   });
 }
 
+/** The selected room shows on the rail whether or not its sibling doors are ready. */
 function selectedTargetRailPresentation(
   catalog: Catalog,
   node: BatchWithContinuations,
 ): WorkspaceRailSelectedTarget | undefined {
-  const door = node.selectedContinuation?.door;
+  if (node.source.kind === 'hubDecision') return undefined;
+  const door = selectedContinuationDoor(node);
   if (door === undefined) return undefined;
   return roomRailPresentation(catalog, door.room, door);
 }
@@ -359,11 +359,7 @@ function selectedTargetRailPresentation(
 function railFocusMarkerForNode(node: WorkspaceNode, marker: WorkspaceMarker): WorkspaceMarker {
   if (node.kind === 'occurrenceWorkbench') return node.room.marker;
   if (!isDecisionBatchNode(node)) return marker;
-  if (node.selectedContinuation !== undefined) return node.selectedContinuation.marker;
-  const selectedTargets = node.targets.filter((target) => target.selected);
-  return selectedTargets.length === 1 && selectedTargets[0] !== undefined
-    ? selectedTargets[0].room.marker
-    : marker;
+  return selectedContinuationDoor(node)?.room.marker ?? marker;
 }
 
 /**

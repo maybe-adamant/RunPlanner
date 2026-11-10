@@ -474,7 +474,7 @@ describe('structured workspace biome presentation', () => {
     });
   });
 
-  it('keeps selected N Opening Chaos on its decision rail stop without a duplicate room stop', () => {
+  it('shows selected N Opening Chaos on its decision rail stop without a duplicate room stop', () => {
     const source = {
       kind: 'occurrence' as const,
       occurrenceId: nOccurrenceIds.opening,
@@ -507,9 +507,11 @@ describe('structured workspace biome presentation', () => {
     if (decision === undefined) throw new Error('N Opening decision rail entry is missing');
 
     // The selected Chaos detour's normal siblings are unauthored, so the batch
-    // advertises no continuation: the rail stop stays on the decision itself.
-    expect(decision.focusMarker.address).toEqual(owner);
-    expect(decision.selectedTarget).toBeUndefined();
+    // advertises no continuation, yet the rail stop still shows and opens Chaos.
+    expect(decision.focusMarker.address).toEqual(
+      createOccurrenceAddress(nBiome, chaosOccurrenceId),
+    );
+    expect(decision.selectedTarget?.roomIcon).toEqual({ kind: 'chaos' });
     expect(
       (decision.node.kind === 'ordinaryBatch' || decision.node.kind === 'mixedBatch') &&
         decision.node.chaos?.selected,
@@ -576,6 +578,98 @@ describe('structured workspace biome presentation', () => {
     expect(rail.node.chaos?.selected).toBe(true);
     expect(rail.label).toBe(rail.node.chaos?.door.room.label);
     expect(rail.label).toMatch(/^Chaos/);
+  });
+
+  it("shows a takeover's selected Shop on the rail while a peer door's reward is unresolved", () => {
+    const project = structuredClone(createGoldenFGHIProject()) as ProjectDocument;
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
+    const freePeer = plan?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === createOccurrenceId('golden-f-preboss-free'),
+    );
+    if (freePeer === undefined || !('reward' in freePeer.state)) {
+      throw new Error('F Preboss free-reward peer is missing');
+    }
+    (freePeer.state as { reward: unknown }).reward = null;
+
+    const rail = present(project, 'Underworld', 'F').presentation.biome.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' && entry.node.kind === 'takeoverBatch',
+    );
+    if (rail === undefined || rail.node.kind !== 'takeoverBatch') {
+      throw new Error('F takeover rail entry is missing');
+    }
+    const selected = rail.node.targets.filter((target) => target.selected);
+    expect(selected.map((target) => target.room.roomLocal.kind)).toEqual(['shop']);
+    expect(rail.node.selectedContinuation).toBeUndefined();
+    expect(rail.selectedTarget?.roomLabel).toBe(selected[0]?.room.label);
+    expect(rail.selectedTarget?.shop).toBe(true);
+  });
+
+  it('shows a selected door on the rail while a sibling target is missing', () => {
+    const startId = createOccurrenceId('presentation-rail-start');
+    const hostId = createOccurrenceId('presentation-rail-host');
+    const doorId = createOccurrenceId('presentation-rail-door');
+    const startOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: startId,
+    });
+    const hostOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: hostId,
+    });
+    let project = createProjectDocument(catalog, {
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
+      projectId: 'presentation-rail-missing-sibling',
+    });
+    project = applyProjectCommand(project, catalog, {
+      biome: goldenFBiome,
+      gameName: 'F_Opening01',
+      kind: 'CreateStart',
+      occurrenceId: startId,
+    });
+    for (const [owner, occurrenceId, gameName] of [
+      [startOwner, hostId, 'F_Combat02'],
+      [hostOwner, doorId, 'F_Combat01'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, { decision: owner, kind: 'CreateBatch' });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(goldenFBiome, owner.source),
+        storeKey: 'RunProgress',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(goldenFBiome, owner.source, 'exit1'),
+        occurrenceId,
+        gameName,
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(goldenFBiome, occurrenceId),
+        value: { rewardType: 'MaxHealthDrop' },
+      });
+    }
+
+    const rail = present(project, 'Underworld', 'F').presentation.biome.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' &&
+        entry.node.kind !== 'occurrenceWorkbench' &&
+        entry.node.kind !== 'hubDecision' &&
+        semanticAddressKey(entry.node.owner) === semanticAddressKey(hostOwner),
+    );
+    if (
+      rail === undefined ||
+      (rail.node.kind !== 'ordinaryBatch' &&
+        rail.node.kind !== 'mixedBatch' &&
+        rail.node.kind !== 'takeoverBatch')
+    ) {
+      throw new Error('the host decision rail entry is missing');
+    }
+    expect(rail.node.missingTargets.length).toBeGreaterThan(0);
+    expect(rail.node.targets.map((target) => target.selected)).toEqual([true]);
+    expect(rail.node.selectedContinuation).toBeUndefined();
+    expect(rail.selectedTarget?.roomLabel).toBe(rail.node.targets[0]?.room.label);
   });
 
   it('progressively presents one selected room and its direct reward token', () => {
