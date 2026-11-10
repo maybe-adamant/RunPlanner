@@ -12,6 +12,7 @@ import { resolveCompletionBoss } from '../../../authored-project/completion-boss
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import { encounterEntryVowRanks } from '../../arcana-fear';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
+import { ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY } from '../../../authored-project/shop';
 import {
   roomLifecycleWindowOrdinal,
   type RoomActionWindow,
@@ -151,33 +152,47 @@ function placementDeadline(
   origin: SemanticAddress,
   sequence: number,
   window: RoomActionWindow,
-): number | undefined {
+): { readonly sequence: number; readonly deadline: Readonly<Record<string, string>> } | undefined {
   const roomKey = semanticAddressKey(origin);
   const room = authoredRoom(context, origin);
-  const closing = context.history.events.find(
+  const closingEvent = context.history.events.find(
     (event) =>
       event.sequence > sequence &&
       semanticAddressKey(event.origin) === roomKey &&
       (event.kind === 'outgoingGenerationCheckpoint' || event.kind === 'roomCommitted'),
-  )?.sequence;
+  );
+  const closing =
+    closingEvent === undefined
+      ? undefined
+      : {
+          sequence: closingEvent.sequence,
+          deadline: Object.freeze({
+            deadline: closingEvent.kind === 'roomCommitted' ? 'leave' : 'doorsOpen',
+          }),
+        };
   if (room === undefined) return closing;
   const structure = room.roomActionRoster.lifecycleStructure;
   const ordinal = roomLifecycleWindowOrdinal(structure, window);
   const rows = new Map(room.roomActionRoster.rows.map((row) => [row.key, row]));
   const last = context.history.events.at(-1)?.sequence ?? 0;
-  const later = context.reachedActions.flatMap((action) => {
+  const later = context.reachedActions.find((action) => {
     const row = rows.get(action.actionKey);
-    return semanticAddressKey(action.room) === roomKey &&
+    return (
+      semanticAddressKey(action.room) === roomKey &&
       action.sequence > sequence &&
       action.sequence <= last &&
       row !== undefined &&
       !row.stale &&
-      roomLifecycleWindowOrdinal(structure, row.window) > ordinal
-      ? [action.sequence]
-      : [];
+      roomLifecycleWindowOrdinal(structure, row.window) > ordinal &&
+      (closing === undefined || action.sequence < closing.sequence)
+    );
   });
-  const due = Math.min(...later, closing ?? Number.POSITIVE_INFINITY);
-  return Number.isFinite(due) ? due : undefined;
+  return later === undefined
+    ? closing
+    : {
+        sequence: later.sequence,
+        deadline: Object.freeze({ deadline: 'action', deadlineAction: later.actionKey }),
+      };
 }
 
 /** The walk's deadline stop, the earliest of the one it has and a new one. */
@@ -206,25 +221,29 @@ function deliveryPlacementAtDeadline(
   const placement = (entry: LifecycleFinding) =>
     entry.finding.code === 'hermesShrineDeliveryPlacementRequired';
   if (!findings.some(placement)) return { findings };
-  const deadline = placementDeadline(context, origin, sequence, window);
+  const due = placementDeadline(context, origin, sequence, window);
   return {
     findings: findings.flatMap((entry) =>
       !placement(entry)
         ? [entry]
-        : deadline === undefined
+        : due === undefined
           ? []
           : [
               Object.freeze({
                 ...entry,
+                finding: Object.freeze({
+                  ...entry.finding,
+                  evidence: Object.freeze({ ...entry.finding.evidence, ...due.deadline }),
+                }),
                 chronology: Object.freeze({
                   kind: 'history' as const,
-                  sequence: deadline,
+                  sequence: due.sequence,
                   boundary: 'before' as const,
                 }),
               }),
             ],
     ),
-    ...(deadline === undefined ? {} : { haltBefore: deadline }),
+    ...(due === undefined ? {} : { haltBefore: due.sequence }),
   };
 }
 
@@ -918,13 +937,86 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
       : { derivedAcquisitionEntryCapability: derivedCapability }),
   });
   emissions.push(...acquisitionEmissions(transition, room));
-  if (transition.authoredSiteSettlement !== undefined && room !== undefined)
-    emissions.push(...siteSettlementEmissions(transition.authoredSiteSettlement, room.origin));
+  let haltBefore: number | undefined;
+  if (transition.authoredSiteSettlement !== undefined && room !== undefined) {
+    const site = echoDuplicateAtDeadline(
+      context,
+      room,
+      event.sequence,
+      siteSettlementEmissions(transition.authoredSiteSettlement, room.origin),
+    );
+    emissions.push(...site.emissions);
+    haltBefore = site.haltBefore;
+  }
   return {
-    state: withBranch(state, transition.branch),
+    state: Object.freeze({
+      ...withBranch(state, transition.branch),
+      ...haltingBefore(state, haltBefore),
+    }),
     emissions,
   };
 };
+
+/**
+ * Gold Gold Gold's duplicate left unplaced lies in the Shop from the purchase that spawns it;
+ * its placement finding stands at its deadline, where the walk stops, and is withheld while
+ * the walk does not reach it.
+ */
+function echoDuplicateAtDeadline(
+  context: ChronologyWalkContext,
+  room: CanonicalAuthoredRoom,
+  sequence: number,
+  emissions: readonly ChronologyEmission[],
+): { readonly emissions: readonly ChronologyEmission[]; readonly haltBefore?: number } {
+  const placement = (finding: { readonly code: string }) =>
+    finding.code === 'echoGoldPickupPlacementRequired';
+  const row = room.roomActionRoster.rows.find(
+    (candidate) =>
+      !candidate.stale &&
+      candidate.reference.kind === 'interactAcquisitionEntry' &&
+      candidate.reference.siteKey === 'roomExit' &&
+      candidate.reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  );
+  if (
+    row === undefined ||
+    !emissions.some(
+      (emission) =>
+        emission.kind === 'findings' && emission.entries.some((entry) => placement(entry.finding)),
+    )
+  )
+    return { emissions };
+  const due = placementDeadline(context, room.origin, sequence, row.window);
+  return {
+    emissions: emissions.map((emission) =>
+      emission.kind !== 'findings' || emission.rule !== 'add'
+        ? emission
+        : {
+            ...emission,
+            entries: emission.entries.flatMap((entry) =>
+              !placement(entry.finding)
+                ? [entry]
+                : due === undefined
+                  ? []
+                  : [
+                      {
+                        ...entry,
+                        finding: Object.freeze({
+                          ...entry.finding,
+                          evidence: Object.freeze({ ...entry.finding.evidence, ...due.deadline }),
+                        }),
+                        chronology: Object.freeze({
+                          kind: 'history' as const,
+                          sequence: due.sequence,
+                          boundary: 'before' as const,
+                        }),
+                      },
+                    ],
+            ),
+          },
+    ),
+    ...(due === undefined ? {} : { haltBefore: due.sequence }),
+  };
+}
 
 /** A Ship room captures its Run State before each encounter starts. */
 const encounterStarted: ChronologySeamHandler<'encounterStarted'> = (context, state, event) => {
@@ -1405,7 +1497,7 @@ function hubEntryCheckpoint(
   return { owner: createHubRunStateCheckpointAddress(event.origin), room, view };
 }
 
-/** Room entry captures its Run State after its own features; a pending Shrine delivery halts here. */
+/** Room entry captures its Run State after its features; a flushed delivery is due at its deadline. */
 const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event) => {
   const room = authoredRoom(context, event.origin);
   const roomView = context.views.get(semanticAddressKey(event.origin));

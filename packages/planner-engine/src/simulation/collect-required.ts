@@ -41,7 +41,7 @@ export interface CollectedRequiredItems extends ProjectEditSettlement {
   readonly stop: CollectRequiredStop;
 }
 
-interface CollectRequiredOptions {
+export interface CollectRequiredOptions {
   readonly catalog: Catalog;
   readonly before: ProjectEvaluationAssembly;
   readonly occurrence: OccurrenceAddress;

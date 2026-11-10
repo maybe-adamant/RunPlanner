@@ -17,13 +17,7 @@ import {
   type ProjectDocument,
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
-import {
-  assessRoomActionPlacements,
-  blockedOccurrenceRoomForProjectEvaluationAssembly,
-  derivedAcquisitionEntriesForProjectEvaluationAssembly,
-  settleProjectEdit,
-  simulateProjectAssembly,
-} from '@run-planner/engine/simulation';
+import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
 
 const owner = createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop'));
 const site = createAcquisitionSiteAddress(owner, 'roomExit');
@@ -200,41 +194,31 @@ describe('required Echo Gold activation', () => {
     });
     expect(gold(settle(omitted, command).project)).toBeUndefined();
   });
-  it('refuses removing active required membership', () => {
-    const settled = settle(project, purchase);
-    const room = blockedOccurrenceRoomForProjectEvaluationAssembly(settled, owner);
-    if (room === undefined) throw new Error('expected blocked source room');
-    const roster = assessRoomActionPlacements(
-      settled.project.route,
-      owner,
-      room.roomActionRoster,
-      [],
-      derivedAcquisitionEntriesForProjectEvaluationAssembly(settled, site),
-    );
-    expect(
-      roster.proposals.some(
-        (proposal) =>
-          proposal.kind === 'remove' &&
-          proposal.reference.kind === 'interactAcquisitionEntry' &&
-          proposal.reference.entryKey === entry.entryKey,
+  it('removes a placed required duplicate, which lies live again with its finding', () => {
+    const placed = evaluate(
+      authorLegalTraitOffers(
+        settle(settle(project, purchase).project, {
+          kind: 'PlaceEchoGoldPickup',
+          site,
+          entryKey: 'echoDoubleShopReward',
+          sourceOfferKey: 'Boon',
+        }).project,
       ),
-    ).toBe(false);
-    const reference = gold(settled.project);
+    );
+    const reference = gold(placed.project);
     if (reference === undefined) throw new Error('required Gold missing');
-    expect(
-      settleProjectEdit({
-        catalog,
-        before: settled,
-        evaluate,
-        command: {
-          kind: 'RemoveRoomAction',
-          action: createRoomActionAddress(
-            goldenHBiome,
-            owner.occurrenceId,
-            roomActionKey(reference),
-          ),
-        },
-      }).assembly,
-    ).toBe(settled);
+    const removed = settleProjectEdit({
+      catalog,
+      before: placed,
+      evaluate,
+      command: {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(goldenHBiome, owner.occurrenceId, roomActionKey(reference)),
+      },
+    }).assembly;
+    expect(gold(removed.project)).toBeUndefined();
+    expect(removed.evaluation.findings.map((finding) => finding.code)).toContain(
+      'echoGoldPickupPlacementRequired',
+    );
   });
 });

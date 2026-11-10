@@ -476,6 +476,12 @@ export {
   type RemovedStaleRoomActions,
   type SettlementFault,
 } from './edit-settlement';
+export {
+  collectRequiredItems,
+  type CollectedRequiredItems,
+  type CollectRequiredOptions,
+  type CollectRequiredStop,
+} from './collect-required';
 export type { RequirementEvaluationEvidence } from '../requirements/evidence';
 export type { RewardOfferExclusionReason } from './rewards/offer-exclusions';
 export type { PhantomPlaceholderExclusion } from './generation/phantom-exit';

@@ -21,7 +21,6 @@ import {
 } from './model';
 import { structurallyActiveOccurrenceIds } from './topology/query';
 import { roomActionKey } from './room-actions/key';
-import { reconcileGeneratedPickupProducerState } from './acquisition/pickup-producers';
 import { createUnresolvedAcquisitionRewardState } from './traits/state';
 
 const GENERATION_KEYS = [
@@ -499,20 +498,4 @@ export function removeHermesShrineDeliveryFromOtherHosts(
           }),
     });
   });
-}
-
-/**
- * Edit settlement has proven that this exact obligation changed contact. The
- * discarded payload's selected traits no longer own generated pickup sites.
- */
-export function discardDisplacedHermesShrineDelivery(
-  catalog: Catalog,
-  document: ProjectDocument,
-  entryKey: string,
-): ProjectDocument {
-  return reconcileGeneratedPickupProducerState(
-    document,
-    removeHermesShrineDeliveryFromOtherHosts(document, entryKey),
-    catalog,
-  );
 }

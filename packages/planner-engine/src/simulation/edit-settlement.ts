@@ -38,12 +38,9 @@ import {
 } from '../authored-project/room-actions/order-assessment';
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import {
-  discardDisplacedHermesShrineDelivery,
   HERMES_SHRINE_DELIVERY_SITE_KEY,
   hermesShrineDeliverySourceAddress,
-  hermesShrinePurchaseAction,
   isSameRoomDelivery,
-  offerFor,
   parseHermesShrineDeliveryEntryKey,
   purchasedOfferFor,
 } from '../authored-project/hermes-shrine-delivery';
@@ -84,36 +81,6 @@ function placements(assembly: ProjectEvaluationAssembly) {
     'rewards' in biome ? (biome.rewards.generatedPickupPlacements ?? []) : [],
   );
 }
-/** The authored facts behind one delivery obligation: the sold offer and its purchase terms. */
-function purchasedObligation(project: ProjectDocument, entryKey: string) {
-  const source = parseHermesShrineDeliveryEntryKey(entryKey);
-  if (source === undefined) return undefined;
-  const occurrence = occurrenceAt(project, hermesShrineDeliverySourceAddress(source));
-  const shrine = occurrence?.hermesShrine;
-  const purchased =
-    occurrence === undefined
-      ? undefined
-      : purchasedOfferFor(shrine, occurrence.roomActions.order, source.generationKey);
-  return Object.freeze({
-    rewardType: offerFor(shrine, source.generationKey)?.rewardType,
-    delay: purchased?.delay,
-    rushed:
-      occurrence === undefined
-        ? undefined
-        : hermesShrinePurchaseAction(occurrence.roomActions.order, source.generationKey)?.rushed,
-  });
-}
-function sameObligation(
-  before: ReturnType<typeof purchasedObligation>,
-  after: ReturnType<typeof purchasedObligation>,
-): boolean {
-  return (
-    before?.rewardType === after?.rewardType &&
-    before?.delay === after?.delay &&
-    before?.rushed === after?.rushed
-  );
-}
-
 /** An engine contract failure beside the settled assembly: a repair the settlement refused to repeat. */
 export interface SettlementFault {
   readonly key: string;
@@ -750,55 +717,6 @@ function exactEvaluation(
  */
 export function settleProjectEdit(options: ProjectEditSettlementOptions): ProjectEditSettlement {
   const { catalog, before, command } = options;
-  const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
-  if (command.kind === 'RemoveRoomAction') {
-    const owner = createOccurrenceAddress(
-      createBiomeAddress(command.action.routeKey, command.action.biomeKey),
-      command.action.occurrenceId,
-    );
-    const reference = occurrenceAt(before.project, owner)?.roomActions.order.find(
-      (reference) => roomActionKey(reference) === command.action.actionKey,
-    );
-    if (
-      reference?.kind === 'interactAcquisitionEntry' &&
-      reference.siteKey === 'roomExit' &&
-      reference.entryKey === 'echoDoubleShopReward'
-    ) {
-      const capability = beforeArtifacts
-        .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
-        ?.derivedAcquisitionEntries.at(
-          createAcquisitionEntryAddress(
-            createAcquisitionSiteAddress(owner, reference.siteKey),
-            reference.entryKey,
-          ),
-        );
-      if (
-        capability?.kind === 'echoDoubleShopReward' &&
-        capability.participation === 'required' &&
-        capability.retainedSourceMismatch !== true
-      )
-        return Object.freeze({ assembly: before });
-    }
-  }
-  if (command.kind === 'UnplaceGeneratedDelivery') {
-    const owner = createOccurrenceAddress(
-      createBiomeAddress(command.action.routeKey, command.action.biomeKey),
-      command.action.occurrenceId,
-    );
-    const reference = occurrenceAt(before.project, owner)?.roomActions.order.find(
-      (reference) => roomActionKey(reference) === command.action.actionKey,
-    );
-    if (reference?.kind === 'interactAcquisitionEntry') {
-      const address = createAcquisitionEntryAddress(
-        createAcquisitionSiteAddress(owner, reference.siteKey),
-        reference.entryKey,
-      );
-      const placement = placements(before).find(
-        (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(address),
-      );
-      if (placement?.assessment.kind === 'valid') return Object.freeze({ assembly: before });
-    }
-  }
   if (
     command.kind === 'PlaceClockedTraitPickup' &&
     !attestClockedTraitPickupPlacementForProjectEvaluationAssembly(before, command)
@@ -866,7 +784,7 @@ function settleProject(options: {
   const room = command === undefined ? undefined : addressedRoom(projectCommandAddress(command));
   const silentRoom = room === undefined ? undefined : semanticAddressKey(room);
   const removedStale: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
-  // Sourced rows the command or a displaced placement took; a delivery placed again elsewhere moved.
+  // Sourced rows the command or a displaced placement took; a delivery placed elsewhere moved.
   const removedElsewhere: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   // Doors an edit left on no exit of their room, by room.
   const removedDoors: { owner: OccurrenceAddress; doors: readonly RemovedRoomDoor[] }[] = [];
@@ -884,7 +802,7 @@ function settleProject(options: {
     );
     const announced = [
       ...removedStale,
-      // Only a delivery is placed again elsewhere, as a move.
+      // Only a delivery is placed elsewhere by the command itself, as a move.
       ...removedElsewhere.filter(
         ({ reference }) =>
           !(
@@ -941,15 +859,6 @@ function settleProject(options: {
           }),
     });
   };
-  const beforeExitedOwners = new Set(
-    before.evaluation.route.biomes.flatMap((biome) =>
-      'history' in biome
-        ? biome.history.events.flatMap((event) =>
-            event.kind === 'roomExited' ? [semanticAddressKey(event.origin)] : [],
-          )
-        : [],
-    ),
-  );
   const beforePlacements = new Map(
     placements(before).map((placement) => [semanticAddressKey(placement.address), placement]),
   );
@@ -1078,186 +987,85 @@ function settleProject(options: {
       }
     }
     const artifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
-    const newlyRequiredGold = occurrences(project).flatMap(({ owner, occurrence }) => {
-      const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
-      const site = createAcquisitionSiteAddress(owner, 'roomExit');
-      return (artifacts.biomeAt(biome)?.derivedAcquisitionEntries.entriesAt(site) ?? []).flatMap(
-        ({ address, capability }) => {
-          if (
-            capability.kind !== 'echoDoubleShopReward' ||
-            capability.participation !== 'required' ||
-            capability.sourceOfferKey === undefined ||
-            occurrence.roomActions.order.some(
-              (reference) =>
-                reference.kind === 'interactAcquisitionEntry' &&
-                reference.siteKey === site.pointKey &&
-                reference.entryKey === address.entryKey,
-            )
-          )
-            return [];
-          const prior = beforeArtifacts.biomeAt(biome)?.derivedAcquisitionEntries.at(address);
-          const previouslyNonrequired =
-            prior?.kind === 'echoDoubleShopPlaceholder' ||
-            (prior?.kind === 'echoDoubleShopReward' && prior.participation === 'optional') ||
-            (prior === undefined &&
-              occurrenceAt(before.project, owner)?.state.kind === 'shop' &&
-              beforeExitedOwners.has(semanticAddressKey(owner)));
-          return previouslyNonrequired
-            ? [{ address, sourceOfferKey: capability.sourceOfferKey }]
-            : [];
-        },
-      );
-    });
-    if (newlyRequiredGold.length > 0) {
-      for (const { address, sourceOfferKey } of newlyRequiredGold) {
-        const fault = consume(`gold:${semanticAddressKey(address)}`, address);
-        if (fault !== undefined) return settled(assembly, fault);
-        project = applyProjectCommand(project, catalog, {
-          kind: 'PlaceEchoGoldPickup',
-          site: address.site,
-          entryKey: 'echoDoubleShopReward',
-          sourceOfferKey,
-        });
-      }
-      assembly = evaluate(project);
-      continue;
-    }
-    const due = occurrences(project).flatMap(({ owner, occurrence }) => {
-      const site = createAcquisitionSiteAddress(owner, 'hermesShrineDelivery');
-      return (
-        artifacts
-          .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
-          ?.derivedAcquisitionEntries.entriesAt(site) ?? []
-      ).flatMap(({ address, capability }) => {
-        if (capability.kind !== 'hermesShrineDelivery') return [];
-        const ranked = occurrence.roomActions.order.some(
-          (reference) =>
-            reference.kind === 'interactAcquisitionEntry' &&
-            reference.siteKey === site.pointKey &&
-            reference.entryKey === address.entryKey,
-        );
-        const prior = occurrences(before.project).flatMap(({ occurrence, owner }) =>
-          occurrence.roomActions.order.flatMap((reference) =>
-            reference.kind === 'interactAcquisitionEntry' &&
-            reference.siteKey === 'hermesShrineDelivery' &&
-            reference.entryKey === address.entryKey
-              ? [{ owner, reference }]
-              : [],
-          ),
-        );
-        const incompatible =
-          !sameObligation(
-            purchasedObligation(before.project, address.entryKey),
-            purchasedObligation(project, address.entryKey),
-          ) ||
-          prior.some(
-            ({ owner, reference }) =>
-              semanticAddressKey(owner) !== semanticAddressKey(address.site.owner) ||
-              reference.encounterPhaseKey !== capability.encounterPhaseKey,
-          );
-        return ranked ? [] : [{ address, capability, incompatible }];
-      });
-    });
-    if (due.length === 0) {
-      // An installed route keeps exactly the rows it was authored with.
-      if (command?.kind === 'ReplaceRoute') return settled(assembly);
-      const rekeys = incomingRewardRekeys(catalog, before.project, assembly, rekeyed);
-      if (rekeys.length > 0) {
-        for (const { owner, stale, role } of rekeys) {
-          // Each new role takes one row's place, once.
-          rekeyed.add(`${semanticAddressKey(owner)}|${roomActionKey(role)}`);
-          const address = createRoomActionAddress(
-            createBiomeAddress(owner.routeKey, owner.biomeKey),
-            owner.occurrenceId,
-            roomActionKey(stale),
-          );
-          const fault = consume(`rekey:${semanticAddressKey(address)}`, address);
-          if (fault !== undefined) return settled(assembly, fault);
-          try {
-            project = rekeyIncomingRewardPickup(catalog, project, owner, stale, role);
-          } catch (error) {
-            // The roster and the room-action commands disagree: an engine defect.
-            if (error instanceof ProjectCommandContractError)
-              return settled(
-                assembly,
-                Object.freeze({ key: `rekey:${roomActionKey(stale)}`, owner: address }),
-              );
-            throw error;
-          }
-        }
-        assembly = evaluate(project);
-        continue;
-      }
-      // A row with no context or source has nothing to repair: the edit that orphans it removes it.
-      const stale = [
-        ...staleRowsToRemove(before, beforeRosters, assembly, upgrade),
-        ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly, upgrade),
-        ...cageGoneRerolls(before, assembly, upgrade),
-        ...(upgrade ? sourceGonePickups(catalog, assembly, evaluate) : []),
-      ];
-      if (stale.length === 0) return settled(assembly);
-      const pass: { owner: OccurrenceAddress; reference: RoomActionReference; index: number }[] =
-        [];
-      // Last first, each through its owning removal, as a reset removes rows.
-      for (const { owner, reference } of stale.reverse()) {
-        const key = roomActionKey(reference);
-        const order = occurrenceAt(project, owner)?.roomActions.order ?? [];
-        // A removal can take another row with it, such as a pickup with its purchase.
-        if (!order.some((candidate) => roomActionKey(candidate) === key)) continue;
+    // An installed route keeps exactly the rows it was authored with.
+    if (command?.kind === 'ReplaceRoute') return settled(assembly);
+    const rekeys = incomingRewardRekeys(catalog, before.project, assembly, rekeyed);
+    if (rekeys.length > 0) {
+      for (const { owner, stale, role } of rekeys) {
+        // Each new role takes one row's place, once.
+        rekeyed.add(`${semanticAddressKey(owner)}|${roomActionKey(role)}`);
         const address = createRoomActionAddress(
           createBiomeAddress(owner.routeKey, owner.biomeKey),
           owner.occurrenceId,
-          key,
+          roomActionKey(stale),
         );
-        const fault = consume(`stale:${semanticAddressKey(address)}`, address);
+        const fault = consume(`rekey:${semanticAddressKey(address)}`, address);
         if (fault !== undefined) return settled(assembly, fault);
-        const payload =
-          reference.kind === 'interactAcquisitionEntry' && sourcedShopRow(reference)
-            ? occurrenceAt(project, owner)?.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[
-                reference.entryKey
-              ]
-            : undefined;
         try {
-          project = applyProjectCommand(
-            project,
-            catalog,
-            roomActionRemovalCommand(owner, reference),
-          );
-          // A source-gone Shop row leaves its payload with the Shop.
-          if (payload !== undefined && reference.kind === 'interactAcquisitionEntry')
-            project = withPickupPayload(project, owner, reference, payload);
+          project = rekeyIncomingRewardPickup(catalog, project, owner, stale, role);
         } catch (error) {
-          // The roster and the removal command disagree: an engine defect.
+          // The roster and the room-action commands disagree: an engine defect.
           if (error instanceof ProjectCommandContractError)
-            return settled(assembly, Object.freeze({ key: `stale:${key}`, owner: address }));
+            return settled(
+              assembly,
+              Object.freeze({ key: `rekey:${roomActionKey(stale)}`, owner: address }),
+            );
           throw error;
         }
-        const remaining = new Set(
-          (occurrenceAt(project, owner)?.roomActions.order ?? []).map(roomActionKey),
-        );
-        order.forEach((candidate, index) => {
-          if (!remaining.has(roomActionKey(candidate)))
-            pass.push({ owner, reference: candidate, index });
-        });
       }
-      removedStale.push(...pass.sort((left, right) => left.index - right.index));
       assembly = evaluate(project);
       continue;
     }
-    for (const { address, capability, incompatible } of due) {
-      const fault = consume(`delivery:${semanticAddressKey(address)}`, address);
+    // A row with no context or source has nothing to repair: the edit that orphans it removes it.
+    const stale = [
+      ...staleRowsToRemove(before, beforeRosters, assembly, upgrade),
+      ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly, upgrade),
+      ...cageGoneRerolls(before, assembly, upgrade),
+      ...(upgrade ? sourceGonePickups(catalog, assembly, evaluate) : []),
+    ];
+    if (stale.length === 0) return settled(assembly);
+    const pass: { owner: OccurrenceAddress; reference: RoomActionReference; index: number }[] = [];
+    // Last first, each through its owning removal, as a reset removes rows.
+    for (const { owner, reference } of stale.reverse()) {
+      const key = roomActionKey(reference);
+      const order = occurrenceAt(project, owner)?.roomActions.order ?? [];
+      // A removal can take another row with it, such as a pickup with its purchase.
+      if (!order.some((candidate) => roomActionKey(candidate) === key)) continue;
+      const address = createRoomActionAddress(
+        createBiomeAddress(owner.routeKey, owner.biomeKey),
+        owner.occurrenceId,
+        key,
+      );
+      const fault = consume(`stale:${semanticAddressKey(address)}`, address);
       if (fault !== undefined) return settled(assembly, fault);
-      if (incompatible)
-        project = discardDisplacedHermesShrineDelivery(catalog, project, address.entryKey);
-      project = applyProjectCommand(project, catalog, {
-        kind: 'PlaceHermesShrineDelivery',
-        entry: address,
-        ...(capability.encounterPhaseKey === undefined
-          ? {}
-          : { encounterPhaseKey: capability.encounterPhaseKey }),
+      const payload =
+        reference.kind === 'interactAcquisitionEntry' && sourcedShopRow(reference)
+          ? occurrenceAt(project, owner)?.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[
+              reference.entryKey
+            ]
+          : undefined;
+      try {
+        project = applyProjectCommand(project, catalog, roomActionRemovalCommand(owner, reference));
+        // A source-gone Shop row leaves its payload with the Shop.
+        if (payload !== undefined && reference.kind === 'interactAcquisitionEntry')
+          project = withPickupPayload(project, owner, reference, payload);
+      } catch (error) {
+        // The roster and the removal command disagree: an engine defect.
+        if (error instanceof ProjectCommandContractError)
+          return settled(assembly, Object.freeze({ key: `stale:${key}`, owner: address }));
+        throw error;
+      }
+      const remaining = new Set(
+        (occurrenceAt(project, owner)?.roomActions.order ?? []).map(roomActionKey),
+      );
+      order.forEach((candidate, index) => {
+        if (!remaining.has(roomActionKey(candidate)))
+          pass.push({ owner, reference: candidate, index });
       });
     }
+    removedStale.push(...pass.sort((left, right) => left.index - right.index));
     assembly = evaluate(project);
+    continue;
   }
 }
 

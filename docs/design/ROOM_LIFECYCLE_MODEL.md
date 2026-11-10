@@ -399,12 +399,15 @@ the same order without choosing a different witness order.
 
 Mandatory entries derive their required classification and legal lifecycle
 window from the engine's structural action domain; membership and position
-are the required participation and chronology. The activating command inserts
-the reference (the authored model owns that membership delta) at the default
-position the [roster](#roster) schedules. Optional Shop purchases, spawned pickups
-and Fields optionals use the same order with explicit membership controls. A
-deliberately malformed missing-required reference remains explicit repair
-state. No producer owns a parallel purchase or pickup order, and an outgoing
+are the required participation and chronology. Only the owner places a row:
+a room is created with none, and no command, settlement or upgrade inserts a
+required interaction on its own, whether a pickup (a room reward, a Boss's
+forced drop, a cage reward, a due delivery, Gold Gold Gold's duplicate) or an
+action on an object (a fountain use, a contact, a cage's completion, a wheel's
+choice). An unplaced required row is ordinary incomplete state: its item lies
+live and the walk stops at its deadline with its placement finding. Optional
+Shop purchases, spawned pickups and Fields optionals use the same order with
+explicit membership controls. No producer owns a parallel purchase or pickup order, and an outgoing
 decision never adopts the source room's chronology: the editor derives
 per-row membership and one ranked Room Timeline surface on the producing
 occurrence.
@@ -413,8 +416,8 @@ Resetting a room from a point keeps the order up to that point and lets
 everything after it go, so the walk's frontier returns there. Banners are
 events the walk announces and are never removed; a reset from a banner keeps
 the actions that bring it about and drops those after it, and later banners
-reappear only as the walk reaches them again. Required rows stay in place
-until automatic placement is withdrawn, since the order may not omit them.
+reappear only as the walk reaches them again. Required rows go too: their
+items are live again and the walk shows their findings.
 
 ### Roster
 
@@ -479,19 +482,19 @@ Shop, Shrine or Well at a chosen position accepts exactly the authorable
 indices and the command's own default, and refuses any other with a contract
 error; a generic optional insertion, such as a challenge switch press or a
 locked door press, still accepts any index and reports a bad position as a
-finding. A rushed Shrine item's optional pickup moves with its purchase,
-directly after it, since the item spawns as the Shrine closes. A purchase and
+finding. A rushed Shrine item's optional pickup follows its purchase, since
+the item spawns as the Shrine closes. A purchase and
 a generated pickup's placement share one rule: the command places its action
 by default, then moves it to the chosen index, judged by that index's prefix.
 An engine authoring query publishes each such command's authorable indices by
 the same rule.
 
-Defaults are anchored differently. When a command newly activates required
-actions, or restores one without a chosen position, the engine extends the
-order with their deterministic canonical schedule, anchored to the front:
-each lands before the first retained action of a later window (or of the same
-window and later contribution order), after its dependencies; existing rows
-keep their relative order. That slot is a default, not a deadline, and may
+Defaults are anchored differently. A required action's canonical restore is
+its deterministic default, anchored to the front: before the first retained
+action of a later window (or of the same window and later contribution order),
+after its dependencies. It is advice, marked on the roster's insertion and the
+live product's placement, and the slot an insertion without a chosen position
+takes; nothing applies it on its own, and it is not a deadline, so it may
 precede other legal indices. Purchases and other object interactions are
 anchored to the end: without a chosen position they append, their latest legal
 point. An unrelated retained-invalid row or a pre-existing missing
@@ -774,11 +777,20 @@ pickups those end effects spawn are due at the next wheel's choice, after its
 Wheels open has rolled the offers; after the final phase, before Doors open. A
 pickup taken before combat (an Opening reward, Devotion's choice) and an
 action that starts a fight (a cage's completion, a wheel's choice) lead to
-that fight, so the fight waits on them. An unplaced cage or wheel choice is
+that fight, so the fight waits on them; whether a fight follows is the room
+profile's fact, an encounter later among its operations. An unplaced cage or wheel choice is
 due after the executable rows of its window the walk reaches before it, such
 as the earlier cage's reward or a delivery its wheels opening spawned, unless
 a required action of an earlier window is missing; playing forward therefore
 clears and collects a Fields room cage by cage.
+
+A countdown Hermes delivery and the fourth-biome Preboss flush are required
+objects the game registers as blocking the exit, so in a room's last or only
+phase they are due before Doors open. No placement after Doors open is legal:
+Doors open follows every placed required action, and a row of the
+post-outgoing window before the delivery crosses its window. A rushed
+same-room delivery is optional loot spawned once the doors are already
+usable; it has no door deadline.
 
 Two kinds of item are live at a gap, and nothing else:
 
@@ -906,9 +918,9 @@ The same acquisition-entry seam hosts every current generated pickup. A normal
 Quick Buck, Buried Treasure, equipping Narcissus acquisition, or selected
 Nemesis random-event result activates its declaration-owned entries at its
 declared pickup window; source selection alone does not. A trait source's
-optional same-room entries are taken with the trait, right after its
-acquisition or, for Narcissus, in its `roomExit` window; a deferred, clocked
-entry is not ([acquisition sites](AUTHORED_PROJECT_MODEL.md#acquisition-sites)). Sea Star adds one
+optional same-room entries spawn with the trait, right after its acquisition
+or, for Narcissus, in its `roomExit` window, and the owner places their
+pickups; a deferred, clocked entry likewise ([acquisition sites](AUTHORED_PROJECT_MODEL.md#acquisition-sites)). Sea Star adds one
 later source-scoped entry after an eligible normal free pickup. Nemesis
 event-family selection configures the encounter separately from its required
 interaction. Concrete offer and response detail is authored at that interaction
@@ -999,7 +1011,10 @@ completely ([Reward Model](REWARD_MODEL.md#generated-pickups)); free
 declaration-produced entries in the same occurrence are independent pickup
 actions.
 
-Travel Deal and Gold Gold Gold derive their trigger from the true action order.
+Travel Deal and Gold Gold Gold derive their trigger from the true action order:
+a refill follows the room's first purchase, and Gold Gold Gold's duplicate
+follows the room's first purchase of an item it can duplicate, so a duplicate
+placed earlier is out of order and no placement offers that position.
 The selected source slot is not a complete payload-authoring context: the
 generated payload is evaluated against the exact history prefix at the
 triggering action. A forced or ordinary Hermes delivery in `Q_PreBoss01` may
@@ -1128,8 +1143,9 @@ The fixed Postboss occurrence uses the same timeline presentation without a
 combat interval. Its active shape is `Room entered -> ranked actions -> Doors
 open`. The route enters it with the keepsake used for the Boss, so Boss
 Judgment observes the old keepsake. Every declared Postboss fountain
-contributes required `Use fountain`, and every rack-bearing Postboss has the
-permanent `Keepsake Rack` action, a no-op while the keepsake is unchanged. The
+contributes required `Use fountain`, and every rack-bearing Postboss offers
+an optional `Keepsake Rack` action; with no rack row the held keepsake stays,
+and a placed rack whose keepsake is unchanged is a no-op. The
 rack never holds the doors and is not a required room object: it may be
 ordered anywhere, before or after the fountain and the Well or Shrine
 purchases, and its window follows that position. It applies the selected

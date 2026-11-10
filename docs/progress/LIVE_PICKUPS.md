@@ -2,8 +2,8 @@
 
 Status: framing and step C decisions settled by the owner (2026-11-10);
 steps A and B's Draft half delivered and accepted on `live-pickups`; the run
-import's half of B is decided and lands as C3; C1 delivered, awaiting review;
-D not started. Temporary
+import's half of B is decided and lands as C3; C1 and C4 delivered; C2's
+engine core delivered with its test migration in progress; D not started. Temporary
 plan; delete at delivery after promoting durable results. Follows the
 progressive room Timeline and spawned-loot notices, both delivered.
 
@@ -57,10 +57,9 @@ You either interact with pickups or active objects.
     slot not yet chosen and a rack keepsake, each needing its own choice
     first; their rows are. Owner to decide whether the live row offers them
     (with the choice still to make) or they stay on their objects.
-  - The walk takes Gold Gold Gold's duplicate before the purchase that spawns
-    it: its row has no order dependency on that purchase. The live product
-    offers it only once spawned; the witness pins this leniency, closed in C2
-    with the duplicate's owner placement.
+  - Gold Gold Gold's duplicate follows its source, the room's first World
+    Shop purchase or Travel Deal refill whose item it can duplicate (C2); the
+    witness pins that the walk refuses it earlier.
   - A choice's values (a blank Travel Deal item) are read where the room's
     reached actions end, not at the gap; the indices are value-independent.
   - Exported on the `simulation` entry with Draft, its first consumer.
@@ -188,3 +187,54 @@ Planning a room mimics playing it.
   - remove Draft's wheel-reward fallback.
 
   Old saves are unaffected: placements are persisted rows.
+
+## C2 contract changes for Draft and the run import
+
+What the consumer pass starts from: every published engine entry or behaviour
+Draft or the run import depend on that C2 changes.
+
+- **No automatic placement.** No command, settlement or room creation places
+  a row the owner did not place:
+  - rooms are created with no rows (no Boss `collectRequiredReward`, no
+    `useFountain`, no keepsake rack), and a replaced room keeps only its
+    still-active rows, with no required defaults added;
+  - a command no longer inserts the required actions it activates (incoming
+    reward pickups, cage completions and rewards, wheel choices and rewards,
+    contacts, generated pickups);
+  - taking a trait no longer places its optional same-room drops (Quick Buck,
+    Buried Treasure, Narcissus, a switch claim);
+  - rushing a Shrine purchase no longer places its same-room pickup;
+    `PurchaseHermesShrineOffer { rushed: true, index }` moves only the purchase;
+  - `settleProjectEdit` no longer places due Hermes deliveries
+    (`PlaceHermesShrineDelivery`) or Gold Gold Gold duplicates
+    (`PlaceEchoGoldPickup`), and a displaced delivery is only unplaced.
+    A consumer places every required row itself, from the live product or with
+    `collectRequiredItems`. The reward-swap rekey stays.
+- **Remove and Reset.** `RemoveRoomAction` accepts a required row,
+  `UnplaceGeneratedDelivery` a reached valid delivery, and
+  `ResetRoomActionsAfter` removes required rows; `settleProjectEdit` no longer
+  refuses removing a required Gold Gold Gold duplicate or unplacing a valid
+  delivery. The roster offers a `remove` proposal for every placed row (an
+  `unplace` one for a cross-room delivery). The item is live again with its
+  finding.
+- **Keepsake rack.** An optional ordinary row: `InsertRoomAction` and
+  `RemoveRoomAction` accept `interactKeepsakeRack` (removal clears the
+  choice); the codec allows at most one rack row; `ReplacePostbossKeepsake`
+  with a key appends the rack's use when the room has none; with no rack row
+  the held keepsake stays. `RoomActionResetPlan.clearsKeepsake` is gone.
+- **Gold Gold Gold source order.** The duplicate's row depends on its source
+  (the first World Shop purchase or Travel Deal refill whose item it can
+  duplicate), an authoring-only `afterAction`: insertion before it is
+  refused and an authored row before it is out of order.
+- **Findings.** `roomActionPlacementRequired`,
+  `hermesShrineDeliveryPlacementRequired` and
+  `echoGoldPickupPlacementRequired` carry deadline evidence: `deadline`
+  (`action`, `encounter`, `phaseEnd`, `doorsOpen`, `leave`) with
+  `deadlineAction` or `deadlinePhase`. The Gold Gold Gold finding now stands
+  at its deadline (the walk passes the purchase that spawns the duplicate)
+  rather than at the Shop's last purchase, and is withheld while the walk
+  does not reach it.
+- **New export.** `collectRequiredItems` (with `CollectRequiredOptions`,
+  `CollectedRequiredItems`, `CollectRequiredStop`) on `./simulation`; its
+  first consumer is the shared test fixtures' `collectTestRequiredItems`.
+  `scheduleRequiredRoomActions` stays exported on `./authored-project`.

@@ -272,6 +272,21 @@ export interface ReachedRoomAction {
   readonly through?: number;
 }
 
+/**
+ * Where a required action left unplaced fell due: the point the walk could not
+ * pass without it.
+ */
+export type RequiredActionDeadline =
+  /** A placed row of a later window. */
+  | { readonly kind: 'action'; readonly actionKey: string }
+  /** The fight it leads to. */
+  | { readonly kind: 'encounter'; readonly phaseKey: string }
+  /** A Ship phase's end effects. */
+  | { readonly kind: 'phaseEnd'; readonly phaseKey: string }
+  | { readonly kind: 'doorsOpen' }
+  /** The room's commit, in a room whose doors do not open. */
+  | { readonly kind: 'leave' };
+
 export interface RoomHistoryFragment {
   readonly origin: RoomHistoryOrigin;
   readonly lifecycleProfileKey: string;
@@ -280,4 +295,6 @@ export interface RoomHistoryFragment {
   /** Every ranked action the walk reached, in walk order. */
   readonly reachedActions: readonly ReachedRoomAction[];
   readonly blockedAt?: RoomActionSemanticAddress;
+  /** Set when the block is a required action left unplaced. */
+  readonly blockedDeadline?: RequiredActionDeadline;
 }

@@ -94,15 +94,15 @@ and violated internal contacts throw contract errors rather than masquerading
 as user findings.
 
 `settleProjectEdit` composes a structural command with exact delivery and
-pickup reconciliation and derived required-action activation before
-application history publication. It consumes the before assembly and returns
-the final project and its exact assembly.
+pickup reconciliation before application history publication. It consumes the
+before assembly and returns the final project and its exact assembly.
 
-- Required Hermes obligations are inserted at reached due contacts read from
-  the Hermes delivery obligation product; optional clocked pickups are never
-  accepted automatically.
-- A delivery the edit proves displaced (valid before, invalid now) moves: it
-  is unplaced and placed again at its reached due contact. A displaced clocked
+- Settlement places nothing the owner has not placed: a due Hermes delivery,
+  Gold Gold Gold's duplicate and a matured clocked pickup arrive on their own
+  and lie live until the owner places their pickup, and an unplaced required
+  one stops the walk at its deadline with its placement finding.
+- A delivery the edit proves displaced (valid before, invalid now) is
+  unplaced and lies live again at its reached due contact. A displaced clocked
   pickup is removed only when its trait is no longer held; one whose held trait
   now matures elsewhere stays with its finding. Deliveries and clocked pickups
   are keyed by their source, so no inherited choice is reset for being newly
@@ -121,8 +121,7 @@ the final project and its exact assembly.
   [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
   announces, with the countdown deliveries and trait drops a command takes
   from other rooms with their source and the doors a room lost. The room an edit addresses is the occurrence its command's
-  address names or nests. Rows a rekey replaced and a delivery placed again
-  elsewhere are never named.
+  address names or nests. Rows a rekey replaced are never named.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
   assembly with a settlement fault naming the owner. A batch whose doors cannot
@@ -139,7 +138,7 @@ sequenceDiagram
   App->>Eng: semantic command + before assembly
   Eng->>Eng: apply structural command
   loop while an obligation or displaced owner remains
-    Eng->>Eng: edit settlement (timed effects, required actions)
+    Eng->>Eng: edit settlement (displaced pickups, rekeys, rows gone)
     Eng->>Eng: re-evaluate the project
   end
   Eng-->>App: final project, assembly with findings and readiness
@@ -800,7 +799,7 @@ each purchase owns its own region: purchase, Contract, refill and Gold Gold
 Gold duplicate findings belong to their acquisition entry, and a Travel Deal
 refill inventory finding to the refill offer. Inventory generation failure
 belongs to the Shop's Overview with the relevant slots in evidence; only the
-close-time Echo Gold pickup placement finding is Shop-wide. A purchase order
+Echo Gold pickup placement finding, at its deadline, is Shop-wide. A purchase order
 that loses the reached state without an entry finding is a broken engine
 contract.
 A sequence failure belongs to chronology, not every supported sibling. Missing

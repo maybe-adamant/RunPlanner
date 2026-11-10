@@ -81,6 +81,23 @@ export function echoShopDuplicateOffer(
   return declaration?.sourceResolution?.kind === 'acquisitionRole' ? null : source;
 }
 
+/** Whether Gold Gold Gold duplicates a purchase of this offer; its first such purchase is the source. */
+export function echoShopDuplicateSourceEligible(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+): boolean {
+  const disposition = Object.values(catalog.traits.byKey).find(
+    (trait) =>
+      trait.selectedDisposition?.kind === 'echo' &&
+      trait.selectedDisposition.effect === 'doubleShop',
+  )?.selectedDisposition;
+  return (
+    disposition?.kind === 'echo' &&
+    disposition.effect === 'doubleShop' &&
+    !disposition.excludedRewardTypes.includes(offer.rewardType)
+  );
+}
+
 /** A hidden-source reward is freshly resolved by the duplicate acquisition;
  * all offer-resolved rewards retain the paid source's concrete identity. */
 export function echoShopDuplicateOfferMatches(

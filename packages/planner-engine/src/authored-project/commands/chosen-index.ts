@@ -5,7 +5,6 @@ import {
   type AcquisitionSiteAddress,
   type OccurrenceAddress,
 } from '../addresses';
-import { hermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import type { ProjectDocument } from '../model';
 import {
   chosenRoomActionIndexes,
@@ -62,10 +61,7 @@ function siteOccurrence(site: AcquisitionSiteAddress): OccurrenceAddress {
   );
 }
 
-/**
- * The actions the command placed, in the order they move together: the
- * purchase, then a rushed Shrine item's pickup when the rush placed one.
- */
+/** The actions the command placed, in the order they move together. */
 function placedActions(placed: ProjectDocument, command: PositionedCommand): PlacedRoomActions {
   const occurrence = commandOccurrence(command);
   let keys: string[];
@@ -118,21 +114,6 @@ function placedActions(placed: ProjectDocument, command: PositionedCommand): Pla
           rushed: false,
         }),
       ];
-      if (command.kind === 'PurchaseHermesShrineOffer' && command.rushed) {
-        // A rushed item spawns as the Shrine closes; its optional pickup follows the purchase.
-        const pickupKey = roomActionKey({
-          kind: 'interactAcquisitionEntry',
-          siteKey: 'hermesShrineDelivery',
-          entryKey: hermesShrineDeliveryEntryKey(occurrence, command.generationKey),
-        });
-        const host = placed.route.biomes
-          .find((plan) => plan.biomeKey === occurrence.biomeKey)
-          ?.topology?.occurrences.find(
-            (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-          );
-        if (host?.roomActions.order.some((reference) => roomActionKey(reference) === pickupKey))
-          keys.push(pickupKey);
-      }
       break;
     }
   }

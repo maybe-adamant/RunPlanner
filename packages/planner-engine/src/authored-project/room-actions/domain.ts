@@ -22,7 +22,12 @@ import {
   type SemanticAddress,
 } from '../addresses';
 import type { ResolvedRoutePosition } from '../route-context';
-import { authoredShopOffer } from '../shop';
+import {
+  authoredShopOffer,
+  authoredShopOfferFromState,
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  echoShopDuplicateSourceEligible,
+} from '../shop';
 import {
   acquisitionSiteFromStorageKey,
   parseArtificerReplacementEntryKey,
@@ -324,11 +329,48 @@ function rollDependencies(
     : [frozen({ kind: 'afterAction' as const, action: reroll, authoringOnly: true as const })];
 }
 
-function travelDealDependencies(
+/**
+ * Gold Gold Gold's duplicate spawns with the first purchase it duplicates: the
+ * room's first purchase, in order, of an offer it can duplicate.
+ */
+function echoDuplicateSourceAction(
+  catalog: Catalog,
+  occurrence: RoomOccurrence,
+  reference: RoomActionReference,
+): RoomActionReference | undefined {
+  const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (
+    shop === undefined ||
+    reference.kind !== 'interactAcquisitionEntry' ||
+    reference.siteKey !== 'roomExit' ||
+    reference.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
+  )
+    return undefined;
+  return occurrence.roomActions.order.find((candidate) => {
+    const offerKey =
+      candidate.kind === 'interactShopOffer'
+        ? candidate.offerKey
+        : candidate.kind === 'interactAcquisitionEntry' &&
+            candidate.siteKey === 'roomExit' &&
+            candidate.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+          ? TRAVEL_DEAL_REFILL_ENTRY_KEY
+          : undefined;
+    const offer =
+      offerKey === undefined
+        ? undefined
+        : authoredShopOfferFromState(shop, offerKey)?.reward?.offer;
+    return offer !== undefined && echoShopDuplicateSourceEligible(catalog, offer);
+  });
+}
+
+function purchaseSourceDependencies(
+  catalog: Catalog,
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
 ): readonly RoomActionDependency[] {
-  const source = travelDealSourceAction(occurrence, reference);
+  const source =
+    travelDealSourceAction(occurrence, reference) ??
+    echoDuplicateSourceAction(catalog, occurrence, reference);
   return source === undefined
     ? []
     : [frozen({ kind: 'afterAction' as const, action: source, authoringOnly: true as const })];
@@ -406,7 +448,7 @@ function baseContribution(
         'optional',
         frozen({ kind: 'postOutgoing' }),
         [
-          ...travelDealDependencies(occurrence, reference),
+          ...purchaseSourceDependencies(catalog, occurrence, reference),
           ...rollDependencies(occurrence, reference),
         ],
       );
@@ -795,7 +837,7 @@ function baseContribution(
                   }),
                 }),
               ]),
-          ...travelDealDependencies(occurrence, reference),
+          ...purchaseSourceDependencies(catalog, occurrence, reference),
           ...hermesShrinePurchaseDependencies(
             occurrence,
             reference,

@@ -35,6 +35,7 @@ interface ExecutionState {
   readonly events: readonly RoomLifecycleEvent[];
   readonly reachedActions?: readonly import('./model').ReachedRoomAction[];
   readonly blockedAt?: import('../../authored-project/addresses').RoomActionSemanticAddress;
+  readonly blockedDeadline?: import('./model').RequiredActionDeadline;
 }
 
 interface RoomActionSchedule {
@@ -690,10 +691,15 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         });
 
   // The walk stops at a ranked row it reached; an unranked one has no position.
-  const blockAt = (initial: ExecutionState, row: RoomActionRow): ExecutionState => {
+  const blockAt = (
+    initial: ExecutionState,
+    row: RoomActionRow,
+    deadline?: import('./model').RequiredActionDeadline,
+  ): ExecutionState => {
     const state = reach(initial, initial, row);
     return Object.freeze({
       ...state,
+      ...(deadline === undefined ? {} : { blockedDeadline: deadline }),
       blockedAt:
         origin.kind === 'occurrence'
           ? createRoomActionAddress(
@@ -894,7 +900,8 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     const missingEarlier = firstMissingRequired(
       (row) => roomLifecycleWindowOrdinal(lifecycleStructure, row.window) < targetWindowRank,
     );
-    if (missingEarlier !== undefined) return blockAt(state, missingEarlier);
+    if (missingEarlier !== undefined)
+      return blockAt(state, missingEarlier, { kind: 'action', actionKey: targetKey });
     while (cursor < rankedRows.length) {
       const row = rankedRows[cursor]!;
       if (row.key === targetKey) return state;
@@ -911,13 +918,19 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     operationIndex: number,
     initial: ExecutionState,
     emitPlayerAction: boolean,
+    /** The fight that waits on the action. */
+    leadsTo?: string,
   ): ExecutionState => {
     const key = roomActionKey(reference);
     const target = roster.rows.find((row) => row.key === key && !row.stale);
     if (target === undefined) return initial;
     if (target.rank === null) {
       if (reference.kind !== 'completeFieldsCage' && reference.kind !== 'chooseRewardWheel')
-        return blockAt(initial, target);
+        return blockAt(
+          initial,
+          target,
+          leadsTo === undefined ? undefined : { kind: 'encounter', phaseKey: leadsTo },
+        );
       // An unplaced action that starts a fight (a cage, a wheel's choice) is due
       // once the executable rows of its window the walk reaches before it are
       // taken, such as the earlier cage's reward or a delivery the wheels opening
@@ -926,7 +939,8 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       const missingEarlier = firstMissingRequired(
         (row) => roomLifecycleWindowOrdinal(lifecycleStructure, row.window) < ordinal,
       );
-      if (missingEarlier !== undefined) return blockAt(initial, missingEarlier);
+      if (missingEarlier !== undefined)
+        return blockAt(initial, missingEarlier, { kind: 'action', actionKey: key });
       let state = initial;
       while (cursor < rankedRows.length) {
         const row = rankedRows[cursor]!;
@@ -935,6 +949,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         state = reach(state, playerAction(row, operationIndex, state), row);
         cursor += 1;
       }
+      // It starts the fight itself, so the fight is no deadline before it.
       return blockAt(state, target);
     }
     let state = consumeGenericBefore(
@@ -964,7 +979,8 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           roomLifecycleWindowOrdinal(lifecycleStructure, missing.window) <
           roomLifecycleWindowOrdinal(lifecycleStructure, row.window),
       );
-      if (missingEarlier !== undefined) return blockAt(state, missingEarlier);
+      if (missingEarlier !== undefined)
+        return blockAt(state, missingEarlier, { kind: 'action', actionKey: row.key });
       if (!row.executable) return blockAt(state, row);
       state = reach(state, playerAction(row, operationIndex, state), row);
       cursor += 1;
@@ -995,6 +1011,8 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           operationIndex,
           state,
           false,
+          // Only a fight still to come waits on a pickup the walk does not pass.
+          context.encounterPhases[0]?.slotKey,
         );
         if (state.blockedAt !== undefined) return state;
       }
@@ -1007,7 +1025,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       let state = drainThroughRank(checkpoint?.afterRank ?? 0, operationIndex, initial);
       if (state.blockedAt !== undefined) return state;
       const missing = firstMissingRequired((row) => row.window.kind !== 'postOutgoing');
-      if (missing !== undefined) state = blockAt(state, missing);
+      if (missing !== undefined) state = blockAt(state, missing, { kind: 'doorsOpen' });
       return state;
     }
     let scheduledInitial = initial;
@@ -1021,7 +1039,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       let state = drainThroughRank(Number.POSITIVE_INFINITY, operationIndex, scheduledInitial);
       if (state.blockedAt !== undefined) return state;
       const missing = firstMissingRequired(() => true);
-      if (missing !== undefined) state = blockAt(state, missing);
+      if (missing !== undefined) state = blockAt(state, missing, { kind: 'leave' });
       return state;
     }
     return initial;
@@ -1061,6 +1079,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         operationIndex,
         state,
         false,
+        phase.slotKey,
       );
     if (
       context.profile.key === 'ShipCombatRoom' &&
@@ -1080,6 +1099,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         operationIndex,
         opened,
         false,
+        phase.slotKey,
       );
     }
     return state;
@@ -1126,7 +1146,8 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       );
       next = drainThroughRank(lastRank, operationIndex, next);
       if (next.blockedAt !== undefined) return next;
-      if (unranked !== undefined) return blockAt(next, unranked);
+      if (unranked !== undefined)
+        return blockAt(next, unranked, { kind: 'phaseEnd', phaseKey: phase.slotKey });
     }
     return next;
   };
@@ -1260,5 +1281,6 @@ export function executeRoomLifecycle(
     events: state.events,
     reachedActions: state.reachedActions ?? Object.freeze([]),
     ...(state.blockedAt === undefined ? {} : { blockedAt: state.blockedAt }),
+    ...(state.blockedDeadline === undefined ? {} : { blockedDeadline: state.blockedDeadline }),
   });
 }

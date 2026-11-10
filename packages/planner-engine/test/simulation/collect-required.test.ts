@@ -8,6 +8,8 @@ import {
   createProjectHistory,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
+  createShopOfferAddress,
+  createAcquisitionSiteAddress,
   publishProjectHistoryEdit,
   redoProjectHistory,
   roomActionKey,
@@ -25,6 +27,7 @@ import {
   type RoomLiveActions,
 } from '@run-planner/engine/simulation';
 import { checkpointRegistry } from '@run-planner/test-fixtures/checkpoints/registry';
+import { createEchoGoldHPrebossProject } from '@run-planner/test-fixtures/underworld';
 import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   authorLegalTraitOffers,
@@ -38,30 +41,13 @@ import {
   surfaceShrineDeliverySources,
 } from '@run-planner/test-fixtures/surface';
 import { collectRequiredItems, nextRequiredPlacement } from '../../src/simulation/collect-required';
-import { collectTestRequiredItems } from '../support/collect-required';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 
 /**
  * The golden witness's tally. A room is set-restored when its rows come back
  * as a set, in whatever order collection places them.
  */
 const PINNED_COUNTS = { rooms: 107, setRestored: 107 };
-
-/**
- * Rows edit settlement still writes on its own as a collected row activates
- * them, by room, each named by its key's last part; they go with C2's removal
- * of automatic placement.
- */
-const PINNED_SETTLEMENT_EXTRAS = {
-  'underworld-fg golden-g-b3-e1': ['pom'],
-  'underworld-f-trait-order-checks 38689388-fd7d-4262-bc0c-c0951542cc3e': [
-    'smallGold',
-    'tinyGold1',
-    'tinyGold2',
-    'minorHeal1',
-    'minorHeal2',
-    'bones',
-  ],
-};
 
 const PLACEMENT_FINDINGS: ReadonlySet<string> = new Set([
   'roomActionPlacementRequired',
@@ -279,7 +265,7 @@ describe('Collect all required', () => {
           const after = new Set(roomOrder(collected.assembly.project, room).map(roomActionKey));
           const missing = [...before].filter((key) => !after.has(key));
           if (missing.length > 0) failures.push(`${name}: missing ${missing}`);
-          // Edit settlement still activates rows of its own, never by this collection.
+          // Edit settlement places no row of its own.
           const added = [...after].filter((key) => !before.has(key));
           if (added.length > 0)
             extras[name] = added.map((key) => String((JSON.parse(key) as unknown[]).at(-1)));
@@ -290,17 +276,18 @@ describe('Collect all required', () => {
     }
     expect(failures).toEqual([]);
     expect(counts).toEqual(PINNED_COUNTS);
-    expect(extras).toEqual(PINNED_SETTLEMENT_EXTRAS);
+    expect(extras).toEqual({});
   });
 
   it('collects a Ship room across Wheels open: wheel reward, then delivery, then choice', () => {
-    const project = authorLegalTraitOffers(
-      applyProjectCommand(wheel2DeliveryProject(), catalog, {
-        kind: 'ReplaceRewardWheelOffer',
-        offer: wheel2Offer,
-        value: { rewardType: 'HermesUpgrade' },
-      }),
-    );
+    // Each placed pickup's trait offer is authored once the walk reaches it.
+    let project = applyProjectCommand(wheel2DeliveryProject(), catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: wheel2Offer,
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    for (let pass = 0; pass < 4; pass += 1)
+      project = collectTestRequiredItems(authorLegalTraitOffers(project));
     const valid = evaluate(project);
     const order = roomOrder(project, ship).map(roomActionKey);
     const stripped = evaluate(withoutRows(project, ship, isRequiredShipRow));
@@ -315,10 +302,12 @@ describe('Collect all required', () => {
 
     expect(collected.stop).toBe('complete');
     expect(collected.fault).toBeUndefined();
-    // Edit settlement still places the due delivery as the first wheel's reward is taken.
+    // Collection places the due delivery itself, by the live product's command: a pickup
+    // before the next wheel's choice at the same index.
     expect(placements(collected.commands)).toEqual([
       'InsertRoomAction ["chooseRewardWheel","wheel1"]@0',
       'InsertRoomAction ["interactWheelReward","wheel1"]@1',
+      `PlaceHermesShrineDelivery ${order[2]}@2`,
       'InsertRoomAction ["chooseRewardWheel","wheel2"]@3',
       'InsertRoomAction ["interactWheelReward","wheel2"]@4',
     ]);
@@ -331,6 +320,45 @@ describe('Collect all required', () => {
     ]);
     expect(roomOrder(collected.assembly.project, ship).map(roomActionKey)).toEqual(order);
     expect(issueKey(collected.assembly)).toBe(issueKey(valid));
+  });
+
+  it('collects a stripped Gold Gold Gold duplicate after the purchase it duplicates', () => {
+    const hBiome = createBiomeAddress('Underworld', 'H');
+    const shop = createOccurrenceAddress(hBiome, createOccurrenceId('golden-h-preboss-shop'));
+    let project = applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
+      purchased: true,
+    });
+    project = authorLegalTraitOffers(
+      applyProjectCommand(project, catalog, {
+        kind: 'PlaceEchoGoldPickup',
+        site: createAcquisitionSiteAddress(shop, 'roomExit'),
+        entryKey: 'echoDoubleShopReward',
+        sourceOfferKey: 'Boon',
+      }),
+    );
+    const isDuplicate = (reference: RoomActionReference) =>
+      reference.kind === 'interactAcquisitionEntry' &&
+      reference.entryKey === 'echoDoubleShopReward';
+    const order = roomOrder(project, shop).map(roomActionKey);
+    const stripped = evaluate(withoutRows(project, shop, isDuplicate));
+    expect(isRoomPlacement(stripped, shop)).toBe(true);
+
+    const collected = collectRequiredItems({
+      catalog,
+      before: stripped,
+      occurrence: shop,
+      evaluate,
+    });
+
+    expect(collected.fault).toBeUndefined();
+    // The walk passes the purchase that spawns it and stops before leaving.
+    expect(stripped.evaluation.issue?.reasons[0]?.evidence).toMatchObject({ deadline: 'leave' });
+    expect(collected.stop).toBe('complete');
+    expect(placements(collected.commands)).toEqual([`InsertRoomAction ${order[1]}@1`]);
+    expect(roomOrder(collected.assembly.project, shop).map(roomActionKey)).toEqual(order);
+    expect(issueKey(collected.assembly)).toBe(issueKey(evaluate(project)));
   });
 
   it('pins the default order collected in a stripped Fields room: clear then collect, cage by cage', () => {
@@ -419,6 +447,7 @@ describe('Collect all required', () => {
     expect(placements(collected.commands)).toEqual([
       'InsertRoomAction ["chooseRewardWheel","wheel1"]@0',
       'InsertRoomAction ["interactWheelReward","wheel1"]@1',
+      expect.stringMatching(/^PlaceHermesShrineDelivery .*@2$/),
     ]);
     expect(isRoomPlacement(collected.assembly, ship)).toBe(false);
     expect(collected.assembly.evaluation.issue?.reasons[0]).toMatchObject({

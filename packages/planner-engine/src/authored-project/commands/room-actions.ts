@@ -220,9 +220,6 @@ export function applyRoomActionCommand(
       if (command.reference.kind === 'purchaseStygianWellOffer') {
         failCommand(command, 'Well purchases use SetStygianWellPurchase');
       }
-      if (command.reference.kind === 'interactKeepsakeRack') {
-        failCommand(command, 'the keepsake rack uses ReplacePostbossKeepsake');
-      }
       if (command.reference.kind === 'interactInfernalContractPedestal') {
         failCommand(command, 'the Contract pedestal uses SetInfernalContractPedestalCollected');
       }
@@ -311,20 +308,7 @@ export function applyRoomActionCommand(
       if (order[existingIndex]?.kind === 'interactInfernalContractPedestal') {
         failCommand(command, 'the Contract pedestal uses SetInfernalContractPedestalCollected');
       }
-      if (order[existingIndex]?.kind === 'interactKeepsakeRack') {
-        failCommand(command, 'the keepsake rack is permanent; ReplacePostbossKeepsake clears it');
-      }
-      if (
-        occurrenceIsActive &&
-        domain?.contributions.some(
-          (entry) =>
-            entry.kind === 'action' &&
-            entry.participation === 'required' &&
-            roomActionKey(entry.reference) === command.action.actionKey,
-        )
-      ) {
-        failCommand(command, 'active required room action cannot be removed');
-      }
+      // A required row may leave too: its item is live again and the walk shows its finding.
       nextOrder = order.filter((_, index) => index !== existingIndex);
       break;
     case 'MoveRoomAction':
@@ -349,6 +333,9 @@ export function applyRoomActionCommand(
       ? order[existingIndex]
       : undefined;
   const inserted = command.kind === 'InsertRoomAction' ? command.reference : undefined;
+  // The rack's keepsake is chosen at its use; without the use the held keepsake stays.
+  if (removed?.kind === 'interactKeepsakeRack' && nextOccurrence.keepsakeRack !== undefined)
+    nextOccurrence = { ...nextOccurrence, keepsakeRack: Object.freeze({ keepsakeKey: null }) };
   const travelParticipation =
     removed?.kind === 'interactAcquisitionEntry' &&
     removed.siteKey === 'roomExit' &&

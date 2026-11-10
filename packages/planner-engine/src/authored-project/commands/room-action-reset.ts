@@ -3,7 +3,6 @@ import {
   createBiomeAddress,
   createInfernalContractPedestalAddress,
   createOccurrenceAddress,
-  createPostbossKeepsakeSelectionAddress,
   createRoomActionAddress,
   createShopOfferAddress,
   type OccurrenceAddress,
@@ -15,26 +14,16 @@ import {
   parseHermesShrineDeliveryEntryKey,
 } from '../hermes-shrine-delivery';
 import type { ProjectDocument, RoomActionReference } from '../model';
-import {
-  roomActionDomainForOccurrence,
-  structurallyActiveOccurrenceIds,
-} from '../room-actions/defaults';
+import { roomActionDomainForOccurrence } from '../room-actions/defaults';
 import { roomActionKey } from '../room-actions/state';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import type { ProjectCommand, RoomActionCommand } from './types';
 
 type ResetCommand = Extract<RoomActionCommand, { readonly kind: 'ResetRoomActionsAfter' }>;
 
-/**
- * What a reset after `afterActionKey` takes back: the rows it removes, last
- * first (every row after it except those that cannot leave the order: an
- * active required row, which automatic placement keeps, and the Postboss
- * keepsake rack), and whether it clears a chosen keepsake on a rack after the
- * point.
- */
+/** What a reset after `afterActionKey` takes back: every row after it, last first. */
 export interface RoomActionResetPlan {
   readonly removals: readonly RoomActionReference[];
-  readonly clearsKeepsake: boolean;
 }
 
 /** A reset's plan; undefined when the anchor is not an ordered action. */
@@ -53,39 +42,12 @@ export function roomActionResetPlan(
       ? -1
       : order.findIndex((reference) => roomActionKey(reference) === afterActionKey);
   if (anchor < 0 && afterActionKey !== null) return undefined;
-  const plan = document.route.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
-  const active =
-    plan?.topology !== null &&
-    plan?.topology !== undefined &&
-    structurallyActiveOccurrenceIds(plan.topology).has(occurrence.occurrenceId);
-  const required = new Set(
-    active
-      ? located.domain.contributions.flatMap((entry) =>
-          entry.kind === 'action' && entry.participation === 'required'
-            ? [roomActionKey(entry.reference)]
-            : [],
-        )
-      : [],
-  );
-  const after = order.slice(anchor + 1);
-  return Object.freeze({
-    removals: Object.freeze(
-      after
-        .filter(
-          (reference) =>
-            reference.kind !== 'interactKeepsakeRack' && !required.has(roomActionKey(reference)),
-        )
-        .reverse(),
-    ),
-    clearsKeepsake:
-      (located.occurrence.keepsakeRack?.keepsakeKey ?? null) !== null &&
-      after.some((reference) => reference.kind === 'interactKeepsakeRack'),
-  });
+  return Object.freeze({ removals: Object.freeze(order.slice(anchor + 1).reverse()) });
 }
 
 /** Whether a reset plan changes anything. */
 export function roomActionResetApplies(plan: RoomActionResetPlan | undefined): boolean {
-  return plan !== undefined && (plan.removals.length > 0 || plan.clearsKeepsake);
+  return plan !== undefined && plan.removals.length > 0;
 }
 
 /** The semantic command that takes one row out of the room's actions with its own state. */
@@ -140,8 +102,7 @@ export function roomActionRemovalCommand(
 
 /**
  * Removes the occurrence's actions after one of them, or all of them, each by
- * its own removal command, as one edit; rows that cannot leave stay in order,
- * and a rack after the point drops its keepsake choice.
+ * its own removal command, as one edit.
  */
 export function applyRoomActionReset(
   document: ProjectDocument,
@@ -171,12 +132,5 @@ export function applyRoomActionReset(
       ? apply(current, roomActionRemovalCommand(occurrence, reference))
       : current;
   }, document);
-  // A rack after the point returns to its default: the held keepsake stays.
-  return plan.clearsKeepsake
-    ? apply(removed, {
-        kind: 'ReplacePostbossKeepsake',
-        selection: createPostbossKeepsakeSelectionAddress(occurrence),
-        keepsakeKey: null,
-      })
-    : removed;
+  return removed;
 }

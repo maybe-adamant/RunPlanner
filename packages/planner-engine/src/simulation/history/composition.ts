@@ -104,6 +104,7 @@ export type EncounterValidatedBiomeHistory =
       readonly kind: 'rewardBlocked';
       readonly history: BiomeHistoryPrefix;
       readonly blockedAt: import('../../authored-project/addresses').SemanticAddress;
+      readonly blockedDeadline?: import('../lifecycle/model').RequiredActionDeadline;
     };
 
 /** A prefix history and the room action, when present, at which its lifecycle stopped. */
@@ -112,12 +113,17 @@ export interface EncounterValidatedBiomeHistoryPrefix {
   /** The room actions the walk reached, placed in that history. */
   readonly reachedActions: readonly ReachedHistoryRoomAction[];
   readonly blockedAt?: import('../../authored-project/addresses').SemanticAddress;
+  /** Set when the block is a required action left unplaced. */
+  readonly blockedDeadline?: import('../lifecycle/model').RequiredActionDeadline;
 }
 
 /** Stops composition at an unauthored lifecycle producer or unplaced required
  * room action; the caller publishes the block over the pre-stop prefix. */
 class RewardAuthorshipBlocked extends Error {
-  constructor(readonly blockedAt: import('../../authored-project/addresses').SemanticAddress) {
+  constructor(
+    readonly blockedAt: import('../../authored-project/addresses').SemanticAddress,
+    readonly blockedDeadline?: import('../lifecycle/model').RequiredActionDeadline,
+  ) {
     super('reward authorship blocks room lifecycle');
     this.name = 'RewardAuthorshipBlocked';
   }
@@ -412,7 +418,7 @@ export function appendRoomLifecycle(
   }
   if (stopped) return;
   if (fragment.blockedAt !== undefined) {
-    throw new RewardAuthorshipBlocked(fragment.blockedAt);
+    throw new RewardAuthorshipBlocked(fragment.blockedAt, fragment.blockedDeadline);
   }
   if (options.stopAfterOutgoing && !reachedOutgoing) {
     fail(`${room.gameName} has no outgoing checkpoint for prefix composition`);
@@ -650,6 +656,7 @@ function composeBiomeHistoryPrefixResult({
       history: foldBiomeHistoryPrefixEvents(builder.events, seed),
       reachedActions: Object.freeze([...builder.reachedActions]),
       blockedAt: error.blockedAt,
+      ...(error.blockedDeadline === undefined ? {} : { blockedDeadline: error.blockedDeadline }),
     });
   }
   return Object.freeze({
@@ -819,6 +826,7 @@ function composeBiomeHistoryEnvelopeResult<
         kind: 'rewardBlocked',
         history: foldBiomeHistoryPrefixEvents(builder.events, seed),
         blockedAt: error.blockedAt,
+        ...(error.blockedDeadline === undefined ? {} : { blockedDeadline: error.blockedDeadline }),
       });
     }
     throw error;

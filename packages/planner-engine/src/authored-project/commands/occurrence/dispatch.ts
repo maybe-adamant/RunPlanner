@@ -458,43 +458,8 @@ export function applyOccurrenceCommand(
               hermesShrineDeliveryEntryKey(source, 'travelDealRefill'),
             )
           : followRefillTrigger(updated, catalog, located, source);
-      // A rushed item is optional loot; rank it once at its canonical position
-      // so the author starts from the pickup and may remove it.
-      const host = roomActionDomainForOccurrence(
-        updated,
-        catalog,
-        createBiomeAddress(source.routeKey, source.biomeKey),
-        source.occurrenceId,
-      );
-      if (host === undefined) failCommand(command, 'rushed Shrine host has no room-action domain');
-      const scheduled = scheduleRequiredRoomActions({
-        catalog,
-        domain: host.domain,
-        order: host.occurrence.roomActions.order,
-        requiredKeys: new Set([
-          roomActionKey({
-            kind: 'interactAcquisitionEntry',
-            siteKey: 'hermesShrineDelivery',
-            entryKey: deliveryEntryKey,
-          }),
-        ]),
-        participation: 'any',
-      });
-      return followRefillTrigger(
-        scheduled === host.occurrence.roomActions.order
-          ? updated
-          : updateOccurrence(
-              updated,
-              { ...located, plan: updated.route.biomes[located.biomeIndex]! },
-              Object.freeze({
-                ...host.occurrence,
-                roomActions: Object.freeze({ ...host.occurrence.roomActions, order: scheduled }),
-              }),
-            ),
-        catalog,
-        located,
-        source,
-      );
+      // A rushed item is optional loot the owner picks up; nothing ranks it.
+      return followRefillTrigger(updated, catalog, located, source);
     }
     case 'PurchaseHermesShrineOffer': {
       const authored = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);

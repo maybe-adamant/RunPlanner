@@ -47,6 +47,7 @@ import {
   editTestRoomActionOrder,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
+  collectTestRequiredItems,
   settleTestEdit,
 } from '../shared';
 import { authorTestArtificerReplacement } from '../room-actions';
@@ -1389,6 +1390,7 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     reward: forcedReward,
     value: replacement.offer,
   });
+  project = collectTestRequiredItems(project);
   const forcedTrait = createTraitOfferAddress(forcedReward, 'source');
   const traitDraft = createPreparedProjectCandidateSession(
     catalog,

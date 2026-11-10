@@ -126,10 +126,13 @@ export function talentDropClosureLifecycleState(context: ProgressiveBiomeContext
   return context.seed?.rewardFrontier.state.hexProgress.talentDropsClosed === true;
 }
 
+type RequiredActionDeadline = import('../lifecycle/model').RequiredActionDeadline;
+
 /** Classify only the exact active action that stopped lifecycle execution. */
 function lifecycleBlockFindings(
   blockedAt: SemanticAddress,
   snapshot: EncounterStructuralSnapshot,
+  deadline: RequiredActionDeadline | undefined,
 ): readonly SemanticFinding[] {
   for (const room of structurallyActiveEncounterRooms(snapshot)) {
     const row = room.roomActionRoster.rows.find((candidate) =>
@@ -182,7 +185,17 @@ function lifecycleBlockFindings(
       code: 'roomActionPlacementRequired',
       phase: 'completeness',
       origin: blockedAt,
-      evidence: Object.freeze({}),
+      evidence: Object.freeze(
+        deadline === undefined
+          ? {}
+          : {
+              deadline: deadline.kind,
+              ...(deadline.kind === 'action' ? { deadlineAction: deadline.actionKey } : {}),
+              ...(deadline.kind === 'encounter' || deadline.kind === 'phaseEnd'
+                ? { deadlinePhase: deadline.phaseKey }
+                : {}),
+            },
+      ),
     }),
   ]);
 }
@@ -333,7 +346,7 @@ function products(
   const lifecycleFindings =
     composed.blockedAt === undefined
       ? Object.freeze([])
-      : lifecycleBlockFindings(composed.blockedAt, prefix);
+      : lifecycleBlockFindings(composed.blockedAt, prefix, composed.blockedDeadline);
   const lastSequence = history.events.at(-1)?.sequence;
   const lifecycleStop =
     lastSequence === undefined

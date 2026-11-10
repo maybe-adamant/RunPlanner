@@ -332,7 +332,7 @@ function auditRoom(
   const probe = (key: string, gap: number, commands: readonly ProjectCommand[]) => {
     counts.complete += 1;
     if (!walkAccepts(project, before, address, commands, key)) return;
-    // A pickup is live only once spawned; the walk taking it earlier is the walk's leniency.
+    // A pickup is live only once spawned; the walk taking it earlier is a leniency to report.
     if (gap < (spawnGaps.get(key) ?? 0)) counts.beforeSpawn?.push(`${id} @${gap} ${key}`);
     else failures.push(`${id} ${address.occurrenceId} @${gap}: ${key} taken, not offered`);
   };
@@ -540,10 +540,8 @@ describe('live actions at a gap', () => {
       expect(auditRoom(name, project, address, counts, kind), name).toEqual([]);
       expect([...counts.families], name).toContain(kind);
     }
-    // Gold Gold Gold's duplicate has no order dependency on the purchase that spawns it.
-    expect(beforeSpawn).toEqual([
-      'Echo gold @0 ["interactAcquisitionEntry","roomExit","echoDoubleShopReward"]',
-    ]);
+    // Gold Gold Gold's duplicate follows the purchase that spawns it; the walk refuses it earlier.
+    expect(beforeSpawn).toEqual([]);
   });
 
   it('closes a required row’s window at its deadline, before the room’s last gap', () => {

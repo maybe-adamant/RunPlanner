@@ -656,12 +656,12 @@ export function decodeRoomOccurrence(input: {
     }
   }
   if (
-    roomActions.order.filter((reference) => reference.kind === 'interactKeepsakeRack').length !==
+    roomActions.order.filter((reference) => reference.kind === 'interactKeepsakeRack').length >
     (keepsakeRack === undefined ? 0 : 1)
   )
     failProjectDocument(
       `${rawOccurrence.path}.roomActions.order`,
-      'a keepsake rack owns exactly one interactKeepsakeRack action',
+      'a keepsake rack owns at most one interactKeepsakeRack action',
     );
   assertStygianWellPurchaseActionClosure(
     stygianWell,

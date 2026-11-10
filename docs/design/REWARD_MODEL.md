@@ -1098,7 +1098,7 @@ source owner, lifecycle binding, and requiredness; each generated entry is
 still one ordinary concrete acquisition. Nemesis's free-item and contest
 results are optional, while an accepted trade result is required after its
 required encounter interaction. Quick Buck and Buried Treasure entries are
-optional, and taking their trait adds them to the room's order
+optional, spawned when their trait is taken and placed by the owner
 ([acquisition sites](AUTHORED_PROJECT_MODEL.md#acquisition-sites)). Artificer replacements and fresh full-Pom Sea Star duplicates are
 required. A spawned pickup owns its exact authored reward and acquisition-time
 children at the site; the action row references that payload owner and does

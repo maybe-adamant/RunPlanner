@@ -25,10 +25,6 @@ import { applyRoomActionCommand } from './room-actions';
 import { applyRoomActionReset } from './room-action-reset';
 import { applyRerollCommand } from './rerolls';
 import {
-  reconcileNewRequiredRoomActions,
-  reconcileNewTraitDroppedPickupActions,
-} from '../room-actions/defaults';
-import {
   parseEchoLastRewardPickupEntryKey,
   reconcileGeneratedPickupProducerState,
   retractInactiveClockedTraitPickupActions,
@@ -424,9 +420,8 @@ export function applyProjectCommand(
   try {
     const proposal = applyUnchecked(document, catalog, command);
     if (proposal === document) return document;
-    // Close source actions, derive generated pickup sites, take newly dropped trait pickups, then
-    // close newly generated actions; the two required-action passes stay separate, since one early
-    // pass misses generated pickups.
+    // Close source actions and derive generated pickup sites; nothing places a row the owner
+    // has not placed.
     const withClearTopologyPlacements =
       command.kind === 'ClearTopology'
         ? retractResourcePlacementsForClearedBiome(proposal, command.biome.biomeKey)
@@ -435,33 +430,18 @@ export function applyProjectCommand(
       document,
       withClearTopologyPlacements,
     );
-    const withSourceActions = reconcileNewRequiredRoomActions(
-      document,
-      withoutRemovedShrineDeliveries,
-      catalog,
-    );
     const withRetractedClockedPickups = retractInactiveClockedTraitPickupActions(
       catalog,
       document,
-      withSourceActions,
+      withoutRemovedShrineDeliveries,
     );
     const withGeneratedPickupState = reconcileGeneratedPickupProducerState(
       document,
       withRetractedClockedPickups,
       catalog,
     );
-    // An installed route keeps exactly the pickups it was authored with.
-    const withTraitDroppedPickups =
-      command.kind === 'ReplaceRoute'
-        ? withGeneratedPickupState
-        : reconcileNewTraitDroppedPickupActions(document, withGeneratedPickupState, catalog);
-    const withRequiredActions = reconcileNewRequiredRoomActions(
-      withRetractedClockedPickups,
-      withTraitDroppedPickups,
-      catalog,
-    );
     const reconciled = reconcileChaosTopology(
-      reconcileLeftChallengeSwitchPresses(document, withRequiredActions, command),
+      reconcileLeftChallengeSwitchPresses(document, withGeneratedPickupState, command),
       catalog,
     );
     // Generated detours can delete occurrences after the direct command.

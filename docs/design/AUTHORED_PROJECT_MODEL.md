@@ -286,14 +286,15 @@ occurrence and its local controls are active for every supported nonterminal
 route position. The ordinary terminal I and Q positions have no Postboss
 occurrence; physical biome identity alone does not determine finality.
 
-Every structural Postboss state defaults to a `useFountain` action followed,
-where the route offers the rack, by the unchanged rack's `interactKeepsakeRack`
-action. The rack is a permanent timeline row: the codec requires exactly one
-rack action wherever the leaf exists, generic insertion and removal refuse it,
-and `MoveRoomAction` reorders it. `ReplacePostbossKeepsake { keepsakeKey:
-string | null }` sets or clears the key without moving the row. Each equip
-result belongs to one keepsake, so any key change, including null, drops the
-equip results. The action order is the sole chronology owner, and the Postboss
+The rack is an object the owner interacts with, like any other: a Postboss
+room is created with no rows, and with no `interactKeepsakeRack` row the held
+keepsake stays. The codec allows at most one rack action, and only where the
+leaf exists; `InsertRoomAction`, `MoveRoomAction` and `RemoveRoomAction` treat
+it as an ordinary optional row, and removing it clears the key, since the
+choice is made at the rack. `ReplacePostbossKeepsake { keepsakeKey: string |
+null }` sets or clears the key without moving the row; setting a key while the
+rack has no row appends its use. Each equip result belongs to one keepsake, so
+any key change, including null, drops the equip results. The action order is the sole chronology owner, and the Postboss
 occurrence owns its findings and history.
 
 Selection legality is contextual rather than codec policy. Unknown keys are
@@ -664,8 +665,8 @@ the Hub frontier and the chain is an authored, unreached context whose state
 stays finding-backed. Fountain placement is not part of that predicate;
 completeness separately requires the use before departure. The unreached chain
 still counts as structurally active for the command boundary's Room Action
-domain closure, so its delivery and pickup rows are kept and seeded like any
-other authored room, but it is not assessed until the Hub is complete.
+domain closure, so its delivery and pickup rows are kept like any other
+authored room, but it is not assessed until the Hub is complete.
 
 Each entered main occurrence may own a `LocalVisitDecision` whose generated
 targets are distinct side-room occurrences. Generation and visit order remain
@@ -811,11 +812,9 @@ acquisition entry only when its hidden source must be resolved on collection.
 Trait-generated and Sea Star duplicate sites are closed source-scoped site
 keys, not new site variants. A selected Quick Buck, Buried Treasure, or
 equipping Narcissus trait owns its exact generated entries after its normal
-trait acquisition. The command that takes such a trait also takes its optional
-same-room drops: their actions go right after the source acquisition (after
-any of its drops already in the order), or into the room-exit window for drops
-that settle there. Only drops the command newly makes active are added, so
-earlier drops keep their authored choice; clocked drops stay manual, and a
+trait acquisition. Its optional same-room drops spawn with it and stay
+unplaced until the owner picks them up, after the source acquisition or in the
+room-exit window for drops that settle there; clocked drops likewise, and a
 whole-route replacement keeps exactly the pickups it carries. Removing or
 replacing the source removes its drops with it. A Sea Star result owns at most one non-recursive duplicate
 entry at its normal source acquisition role; toggling that result adds or
@@ -861,9 +860,10 @@ position, and clearing removes that action, its pickup and placed deliveries
 while retaining delivery payload. `PurchaseHermesShrineOffer` instead appends
 the purchase of one unbought item at the end of the room's actions, bought or
 rushed, first stocking a blank Travel Deal refill when given its reward, as one
-Undo step; given an index, a rushed purchase's pickup follows it directly.
+Undo step.
 `SetHermesShrinePurchaseRush` changes rush on one exact purchase
-action, ranking or retracting its optional same-room pickup. When any of these
+action, retracting its optional same-room pickup when the rush is undone; a
+rushed item's pickup is the owner's to place. When any of these
 commands changes the first rushed initial purchase, the refill's purchase
 action and pickup are rescheduled after it; when no rushed initial purchase
 remains, the refill's pickup is retracted.
@@ -893,20 +893,16 @@ derived-pickup family.
 ### Required Room Actions
 
 The engine classifies every structurally active Room Action as required or
-optional from the same action domain consumed by simulation. The semantic
-command that newly activates a required reference inserts it in the
-occurrence's order at its engine-owned lifecycle default position, preserving
-the relative sequence of retained rows. One command and one history entry
-therefore contain both the requested edit and its mandatory membership delta.
-Optional actions remain membership-controlled by their existing owner. An
-active required row may be moved within its legal range but cannot be
-generically removed.
-
-This guarantee is delta-only. A deliberately malformed document may already
-omit a required reference, and an unrelated edit does not normalize that
-omission. Evaluation retains the missing-required finding and publishes one
-engine-owned canonical restore intent. `InsertRoomAction` restores it at that
-canonical index or at any other index the
+optional from the same action domain consumed by simulation. Classification
+is not membership: a newly created room holds no rows, and no command inserts
+a required reference the owner did not place, so the order holds exactly the
+interactions the owner placed. A required reference left out is ordinary
+incomplete state. Evaluation retains its missing-required finding and
+publishes one engine-owned canonical restore intent. Optional actions remain
+membership-controlled by their existing owner. A required row may be moved
+within its legal range or removed by `RemoveRoomAction`, a cross-room delivery
+by `UnplaceGeneratedDelivery`; its item is then live again with its finding.
+`InsertRoomAction` places it at the canonical index or at any other index the
 [roster](ROOM_LIFECYCLE_MODEL.md#roster) judges structurally authorable. The
 placement commands `PlaceHermesShrineDelivery`, `PlaceClockedTraitPickup` and
 `PlaceEchoGoldPickup` take the same optional index for a pickup they newly
@@ -921,18 +917,15 @@ it names an ordered action by its key, or none for the room's entry, and
 removes every row after it, stale rows included, each through the command
 that owns that row's removal (a Shop, Well or Shrine purchase is
 un-purchased, the Contract pedestal uncollected, a cross-room delivery
-unplaced, any other row removed), in one edit and one Undo step. Rows that
-cannot leave the order stay in their relative order after the point: active
-required rows, which automatic placement keeps, and the Postboss keepsake rack.
+unplaced, the keepsake rack's use removed with its choice, any other row
+removed), in one edit and one Undo step. Required rows go too: their items are
+live again with their findings.
 A removal never depends on its item still resolving. No other room's actions,
 and no door pick, encounter setting, Ephyra visit order or Hub action, change,
 except that removing a Shrine purchase retracts that purchase's deliveries
-placed in later rooms, as a manual un-purchase does. A reset is a clean slate
-for the Postboss rack too: from a point before the rack it clears the rack's
-keepsake choice back to keeping the held keepsake, through the rack's own
-command, while the rack row stays; a reset after the rack leaves the choice
-alone. An anchor that is not an ordered action is refused, and a reset that
-would remove no row and clear no choice leaves the document unchanged. A Timeline
+placed in later rooms, as a manual un-purchase does. An anchor that is not an
+ordered action is refused, and a reset that would remove no row leaves the
+document unchanged. A Timeline
 banner is not an address: the engine's reset query maps each Timeline entry
 to its command, a banner to the ranked actions before it.
 
@@ -1151,16 +1144,13 @@ derived validation truth, so an authored value remains persisted until an
 explicit semantic command changes or removes it.
 
 Before decoding a successful proposal, the command boundary closes it in one
-explicit command-local order: newly required source actions, then generated
-pickup sites, then a newly taken trait's dropped pickups, then the newly active
-generated actions, with resource topology
-cleanup, Shrine-source and inactive clocked-pickup retraction and Chaos
-topology reconciliation in the same pass. Each closure compares the
-structurally active Room Action domains before and after its step and closes
-only the newly required delta. It may seed several newly active occurrences or
-one Fields/Ship cohort atomically, but it does not invoke simulation or
-materialization, repair pre-existing omissions, or remove rows made dormant by
-the command. Source-owned site, entry and action change together, preserving
+explicit command-local order: resource topology cleanup, Shrine-source and
+inactive clocked-pickup retraction, generated pickup sites, a left challenge
+switch's press and Chaos topology reconciliation. No closure places a row: a
+newly required action, a newly taken trait's dropped pickup and a rushed
+Shrine item stay unplaced until the owner places them. The closure does not
+invoke simulation or materialization, repair pre-existing omissions, or remove
+rows made dormant by the command. Source-owned site, entry and action change together, preserving
 compatible authored children when their source survives; a later application
 projection never repairs the document or synthesizes a missing site. An
 extension joins this ordered closure rather than adding a second scheduler or
@@ -1183,11 +1173,11 @@ through Undo.
 `UnplaceGeneratedDelivery` removes an exact cross-room Shrine delivery action
 and its host-local payload, including nested reward choices, while preserving
 the source purchase and sibling deliveries. It validates structural ownership,
-not simulated validity; application edit settlement refuses to publish removal
-of a reached valid required delivery, proven invalid placements retain this
-explicit repair, and due-contact validation continues to
-require that delivery before publication. Same-room rushed deliveries are
-optional actions ranked by the rush command and removed through
+not simulated validity; an unplaced due delivery lies live again with its
+placement finding, proven invalid placements retain this explicit repair, and
+due-contact validation continues to require that delivery before
+publication. Same-room rushed deliveries are
+optional actions the owner places and removes through
 `RemoveRoomAction`, never unplaced; a rushed purchase may stand without its
 pickup. Source reactivation uses the existing exact placement support rather
 than guessing a replacement host.
