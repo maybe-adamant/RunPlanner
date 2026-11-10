@@ -40,6 +40,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   editTestRoomActionOrder,
   hubVisitActions,
 } from '@run-planner/test-fixtures/shared';
@@ -245,11 +246,13 @@ function echoReplayProject(child?: {
     ]) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1' as const,
   });
-  document = applyProjectCommand(document, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait,
-    value,
-  });
+  document = collectTestRequiredItems(
+    applyProjectCommand(document, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value,
+    }),
+  );
   const entry = createAcquisitionEntryAddress(
     createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridgeId), 'roomExit'),
     echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
@@ -273,7 +276,7 @@ function echoReplayProject(child?: {
         (candidate) => roomActionKey(candidate) === roomActionKey(reference),
       )
     ) {
-      throw new Error(`Echo activation did not rank ${roomActionKey(reference)}`);
+      throw new Error(`Echo activation did not collect ${roomActionKey(reference)}`);
     }
   }
   if (child !== undefined) {

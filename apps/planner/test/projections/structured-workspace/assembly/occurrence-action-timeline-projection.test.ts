@@ -38,6 +38,7 @@ import type {
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceRoomLifecycleTimelineEntry,
 } from '@planner/projections/structured-workspace';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import { galleryCases } from '@planner-test/support/gallery/cases';
 import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
@@ -215,6 +216,7 @@ describe('Nemesis interaction family', () => {
       event: createNemesisRandomEventAddress(phase),
       family: 'goldTrade',
     });
+    project = collectTestRequiredItems(project);
     const room = roomOf(project, occurrenceId);
     const order = (room.roomActions?.timeline.entries ?? []).flatMap((entry) =>
       entry.kind === 'boundary'

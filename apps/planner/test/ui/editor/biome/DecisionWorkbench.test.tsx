@@ -45,7 +45,11 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { authorLegalTraitOffers, requireTraits } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  requireTraits,
+} from '@run-planner/test-fixtures/shared';
 import {
   loadUnderworldFMidshopPomFrontierProject,
   createCompleteFGProject,
@@ -807,7 +811,9 @@ describe('DecisionWorkbench', () => {
     act(() => {
       const authored = view.application.store.getState().projectWorkspace.history?.present;
       if (authored === undefined) throw new Error('N project is missing');
-      view.application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(authored)));
+      view.application.store.dispatch(
+        authoredProjectReplaced(authorTestTraitsAndRequiredItems(authored)),
+      );
     });
     await waitFor(() =>
       expect(
@@ -1276,7 +1282,7 @@ describe('DecisionWorkbench', () => {
       reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'WeaponUpgrade' },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     renderDecisionWorkbench(
       project,
       'Underworld',
