@@ -130,9 +130,10 @@ deferred items spawn only after the wheel reward is collected.
 ## Stopping policy (owner 2026-11-09)
 
 One rule at every level: the walk's stop is the frontier (recorded in
-STRUCTURED_EDITOR_WORKSPACE). Built (6a1a3a91d). Owner 2026-11-09: opening a biome with a
-stop lands on the stop (the room and its stop entry, as the finding's repair
-link does); without a stop the existing default priority stays. Open: rooms off the selected path hidden while the
+STRUCTURED_EDITOR_WORKSPACE). Built (6a1a3a91d). Built (fcea614e9): opening a biome with a stop
+lands on it; one stop notice ("the plan stops at <place>" + link) replaces the
+Overview, ship-phase and not-reached variants; the must-come-first finding
+names the exact row. Open: rooms off the selected path hidden while the
 biome has a stop but shown when it completes; reached-room facts read in the
 planner from the walk's history (an engine-published reached-rooms product
 would be cleaner). Copy settled in one pass afterwards.
