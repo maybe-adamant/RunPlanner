@@ -140,7 +140,7 @@ export function wheelLifecycleViews(
   const selected = roomView.offerPoints?.find(
     (candidate) => candidate.offerPoint === wheel.wheelKey,
   );
-  if (selected !== undefined) {
+  if (selected?.acquisitionBefore !== undefined) {
     const acquisitionEvent = lifecycle.wheelsByOwner
       .get(semanticAddressKey(room.origin))
       ?.find(
@@ -149,7 +149,7 @@ export function wheelLifecycleViews(
           semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
           candidate.offerPoint === wheel.wheelKey,
       );
-    if (selected.acquisitionBefore === undefined || acquisitionEvent === undefined)
+    if (acquisitionEvent === undefined)
       throw new BiomeRewardSimulationContractError(
         `${room.gameName}.${wheel.wheelKey} has no acquisition lifecycle view`,
       );
@@ -175,8 +175,13 @@ export function wheelLifecycleViews(
           materializedPhase,
           encounterResolutionContext(room, declaration, room.origin.routeKey),
         );
+  // A wheel open at Wheels open whose choice is not yet taken generates there;
+  // a dormant wheel generates where the room's reached history ends.
   const generation =
-    roomView.preOutgoing ?? roomView.offerPoints?.at(-1)?.acquisitionAfter ?? roomView.entry;
+    selected?.before ??
+    roomView.preOutgoing ??
+    roomView.offerPoints?.at(-1)?.acquisitionAfter ??
+    roomView.entry;
   if (phase === undefined || generation === undefined)
     throw new BiomeRewardSimulationContractError(
       `${room.gameName}.${wheel.wheelKey} has no dormant lifecycle view`,

@@ -206,7 +206,10 @@ outgoing store from the final active wheel. The acquisition event also records
 that wheel's selected store in entered-store history before a later phase or
 room can evaluate reward-ratio support, so a two-wheel room contributes two
 ordered store entries; dormant wheel capacity emits no lifecycle or
-store-ledger event.
+store-ledger event. A wheel candidate replay projects the acquisition
+checkpoint the history lacks, its phase's fight run once from the wheel's
+generation point: Wheels open for a wheel whose choice the walk has not
+reached, where the room's reached history ends for a dormant one.
 
 Do not introduce an unrestricted callback or event DSL. Add or split an
 operation, effect, or event kind only when audited game behavior has an
