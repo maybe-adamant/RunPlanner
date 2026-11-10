@@ -41,14 +41,13 @@ only what the saved plan shows had its source or context and lost it: stale
 room-action rows; a Gold Gold Gold duplicate that a purchase stands before
 while no Echo produces it; a matured trait drop whose producing trait a walk
 without it, reaching the plan's end, never holds; a countdown Hermes delivery
-whose purchase is gone; a cage reroll whose cage the target room still holds
-authored but no longer plays; and an unselected door its source room no longer
+whose purchase is gone; and an unselected door its source room no longer
 has, with the rooms behind it. A takeover batch gains the Preboss doors it
 lacks, and a due delivery the plan lacks is placed, as any edit places it.
 Rows whose loss the plan cannot show stay with their findings: every Travel
 Deal refill, a duplicate with no purchase before it, a drop whose producer is
-held or may lie past where the walk stops, a cage reroll at a cage its room
-never held, and a taken door its room lost. Rows the walk does not reach stay
+held or may lie past where the walk stops, every door or cage reroll whose
+reward is gone, and a taken door its room lost. Rows the walk does not reach stay
 untouched. The application announces the removals and opens the plan one Undo
 ahead of it as saved; a settlement that throws opens the plan as saved with a
 settlement fault. The plan wire's schema pair becomes 103.0.

@@ -390,7 +390,8 @@ describe('upgrade settlement of a plan saved under earlier rules', () => {
     ]);
   });
 
-  it('removes a cage reroll whose cage is no longer played', () => {
+  it('keeps a cage reroll whose cage is no longer played, invalid', () => {
+    // The saved plan cannot show whether the press ever found its cage.
     const h = createBiomeAddress('Underworld', 'H');
     const intro = createOccurrenceAddress(h, createOccurrenceId('golden-h-intro'));
     const cage3: RerollTarget = {
@@ -434,8 +435,8 @@ describe('upgrade settlement of a plan saved under earlier rules', () => {
     expect(findingCodes(project)).toContain('rerollTargetUnavailable');
     const settled = upgrade(project);
     expect(settled.fault).toBeUndefined();
-    expect(rerolls(settled.assembly.project)).toEqual([]);
-    expect(removedIn(settled, intro)).toEqual(rerolls(project));
+    expect(rerolls(settled.assembly.project)).toEqual(rerolls(project));
+    expect(removedIn(settled, intro)).toBeUndefined();
   });
 
   it('keeps a cage reroll whose target room never held its cage, invalid', () => {

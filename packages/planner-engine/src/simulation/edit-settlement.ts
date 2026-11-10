@@ -362,8 +362,7 @@ function sourceGoneShopRows(
  * and its door's room no longer plays the cage, where before the edit the
  * press found it (it settled, or failed for a reason other than its target).
  * A press that never found its cage, one whose door is unavailable, and every
- * Hub reroll stay with their findings. An upgrade removes a press whose cage
- * is not played only when the target room still holds that cage authored.
+ * Hub reroll stay with their findings, and an upgrade removes none.
  */
 function cageGoneRerolls(
   before: ProjectEvaluationAssembly,
@@ -393,17 +392,8 @@ function cageGoneRerolls(
       (candidate) => roomActionKey(candidate) === action.actionKey,
     );
     if (reference?.kind !== 'reroll' || reference.target.kind !== 'cage') continue;
-    if (upgrade) {
-      // A cage the target room still holds authored was played once; a press at a cage
-      // the room never held may never have found it, and stays with its finding.
-      const room = occurrenceAt(assembly.project, {
-        ...owner,
-        occurrenceId: reference.target.occurrenceId,
-      });
-      const cages = room?.state.kind === 'fieldsCombat' ? room.state.cages : undefined;
-      if (cages?.[reference.target.slotKey] != null) removals.push({ owner, reference });
-      continue;
-    }
+    // The saved plan cannot show that a press once found its cage: an upgrade keeps it.
+    if (upgrade) continue;
     const key = semanticAddressKey(action);
     const prior = findingsAt(before, key);
     const foundCage =
