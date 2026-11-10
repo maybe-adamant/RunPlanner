@@ -437,24 +437,6 @@ function attachHubVisitPlanEnds(
   });
 }
 
-/** Hub visits return to their Timeline. */
-function attachHubRoomPresentation(nodes: WorkspaceNode[]): void {
-  for (const hub of nodes) {
-    if (hub.kind !== 'hubDecision') continue;
-    for (const visit of hub.visits) {
-      if (visit.room === undefined) continue;
-      const index = nodes.findIndex(
-        (node) =>
-          node.kind === 'occurrenceWorkbench' &&
-          node.room.occurrenceId === visit.room!.occurrenceId,
-      );
-      const room = nodes[index];
-      if (room?.kind === 'occurrenceWorkbench')
-        nodes[index] = Object.freeze({ ...room, hubTimeline: visit.marker });
-    }
-  }
-}
-
 function enrichFrontierPredecessor(
   frontier: WorkspaceAuthoringFrontierSeed | null,
   structuralNodes: readonly WorkspaceNode[],
@@ -803,7 +785,6 @@ export function assembleWorkspaceBiomeSemantics(
     projectAuthoredExitDecision(decision);
   }
   attachHubVisitPlanEnds(nodes, source.planEndRelation);
-  attachHubRoomPresentation(nodes);
   if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision') {
     markerDestinations.setHubTab([frontier.marker], 'timeline');
   }

@@ -582,8 +582,6 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   readonly railMarker?: WorkspaceMarker;
   readonly railVisibility?: 'inspectorOnly';
   readonly room: WorkspaceRoomSummary;
-  /** Stable Hub Timeline destination for visited rooms and the fountain's room host. */
-  readonly hubTimeline?: WorkspaceMarker;
   /**
    * Where leaving this room returns: a Hub visit's main room to its Hub, after
    * that visit; a side room to the main room it opened from.

@@ -96,7 +96,6 @@ function timelineHeroDoor(row: Element): string | undefined {
 }
 
 interface OccurrenceWorkbenchProps {
-  readonly headerActions?: ReactNode;
   /** The door the room was entered through, for its reward on the title line. */
   readonly incomingDoor?: WorkspaceDoorContract;
   /** Entry identity is an Overview-only biome authoring control. */
@@ -129,7 +128,6 @@ interface OccurrenceWorkbenchProps {
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
   incomingDoor,
-  headerActions,
   doorsRequested = false,
   doorsFrontier = false,
   timelineDoors,
@@ -506,7 +504,6 @@ export function OccurrenceWorkbench({
             : null}
         </nav>
         <div className="room-workbench-tab-utility">
-          {headerActions}
           {showTimelineLegend ? <TimelineLegend /> : null}
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
           {tabRunState === undefined ? null : <RunStateLauncher launcher={tabRunState} />}
