@@ -347,14 +347,7 @@ function projectRoomLifecycleTimeline(
   );
   const encounterOutcomeSupplement = (phaseKey: string) => {
     const phase = encounterByPhase.get(phaseKey);
-    // A free item ends Nemesis's event with nothing to choose.
-    const choices = outcomeChoices
-      .get(phaseKey)
-      ?.filter(
-        (choice) =>
-          choice !== 'nemesisEvent' ||
-          (phase?.nemesisEvent?.value != null && phase.nemesisEvent.value.kind !== 'freeItem'),
-      );
+    const choices = outcomeChoices.get(phaseKey);
     return phase === undefined || choices === undefined || choices.length === 0
       ? undefined
       : Object.freeze({

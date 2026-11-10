@@ -300,7 +300,8 @@ Each fight has three events. **Encounter started** holds only what belongs
 at its start: Fig Leaf, which the game rolls before enemies spawn; a skip
 short-circuits the fight, so no outcome follows. **Encounter outcome** holds
 how the fight ended: the Aetos wave, the Gorgon condition, the Nemesis bet,
-the Nemesis event's result and Anomaly cleared. **Encounter ended** is a pure
+the answer or result of a Nemesis trade or contest and Anomaly cleared; her
+free item is given, with nothing to choose. **Encounter ended** is a pure
 event announcing what spawns from the outcome; each spawned item settles on
 its own row. In a Boss room, **Boss defeated** is the outcome, with Judgment
 and Crystal Figurine.
@@ -682,9 +683,18 @@ can be taken is locked until an unlock frees it: a Fields cage's reward at its
 cage encounter's end, and an H miniboss's caged reward at that encounter's
 end. The query lists each unlock with the items it frees. Devotion locks
 nothing: the chosen boon is taken on entry, both entry loots are then
-destroyed, and the spurned god's reward spawns afresh at the combat's end. Loot an action's
-settlement spawns (a boon's own drops, Echo's last reward and Gold Gold Gold
-duplicate, a Nemesis event's result, Eris's gift, a challenge switch's claim,
+destroyed, and the spurned god's reward spawns afresh at the combat's end.
+Loot whose existence or identity an encounter outcome decides spawns at that
+outcome, after its choice and never under the action that leads to it: a
+Nemesis trade's result exists only once accepted and a contest's follows its
+result, so both spawn at her event's outcome, right after her interaction,
+once that outcome has settled.
+Every other outcome already precedes its loot: the bet's gold is not loot, an
+Anomaly's displaced reward is the room reward at the encounter's end, and a
+Boss's Judgment and Crystal Figurine are settled effects, its forced drop
+spawning at the encounter's end.
+Loot an action's settlement spawns (a boon's own drops, Echo's last reward and
+Gold Gold Gold duplicate, a Nemesis free item, Eris's gift, a challenge switch's claim,
 the Artificer's replacement under the converted pickup, Sea Star's copy under
 the pickup it copies, a rushed Shrine item under its purchase in the Shrine's
 own room) is listed under that source action instead. Each item carries its reward owner,

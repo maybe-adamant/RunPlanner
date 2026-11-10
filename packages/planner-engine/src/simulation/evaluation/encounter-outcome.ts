@@ -78,7 +78,12 @@ export function encounterOutcomesForProjectEvaluationAssembly(
           ? []
           : [Object.freeze({ phaseKey: point.phaseKey, choices: Object.freeze(choices) })];
       if (definition?.goldBet !== undefined) choices.push('nemesisBet');
+      // A trade's answer or a contest's result is chosen; a free item is given, and an
+      // unchosen family leaves nothing to answer yet.
+      const nemesisEvent = authored.nemesisRandomEventByPhase?.[point.phaseKey];
       if (
+        nemesisEvent != null &&
+        nemesisEvent.kind !== 'freeItem' &&
         structure.phases.some(
           (candidate) =>
             candidate.phaseKey === point.phaseKey && candidate.endsOnInteraction === true,

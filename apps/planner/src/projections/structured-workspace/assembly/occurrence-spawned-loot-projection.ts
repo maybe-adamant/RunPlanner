@@ -233,6 +233,11 @@ function momentAnchor(
       return first(entered);
     case 'encounterStart':
       return first(['after', boundaryAt('encounterStart', phase)], entered);
+    case 'encounterOutcome':
+      return first(
+        ['after', boundaryAt('encounterOutcome', phase)],
+        ['before', boundaryAt('encounterEnd', phase)],
+      );
     case 'encounterEnd':
       return first(
         ['after', boundaryAt('encounterEnd', phase)],

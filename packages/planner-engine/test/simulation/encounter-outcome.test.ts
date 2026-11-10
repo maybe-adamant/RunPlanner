@@ -4,6 +4,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
@@ -21,6 +22,12 @@ import {
   reachedPOutdoorIcarusFixture,
 } from '@run-planner/test-fixtures/surface';
 import { loadNemesisPomSeaStarCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+  replaceNemesisRandomEventInteraction,
+} from '@run-planner/test-fixtures/underworld';
 
 const pCombat03 = pOccurrenceId('P_Combat03', 1, 1);
 const combat = createEncounterPhaseAddress(
@@ -92,6 +99,37 @@ describe('Encounter outcome', () => {
 
   it("hosts a Nemesis event's result, alone, as answering her ends it", () => {
     expect(outcomes(loadNemesisPomSeaStarCheckpoint(), 'F', 'golden-f-b5-e1')).toEqual([
+      { phaseKey: 'Encounter', choices: ['nemesisEvent'] },
+    ]);
+  });
+
+  it('hosts nothing for a Nemesis free item or an unchosen event: nothing to answer', () => {
+    const room = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: room },
+      'Encounter',
+    );
+    const selected = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    expect(outcomes(selected, 'F', room)).toEqual([]);
+    const free = replaceNemesisRandomEventInteraction(
+      selected,
+      createNemesisRandomEventAddress(phase),
+      { kind: 'freeItem' },
+      { rewardType: 'HealDrop' },
+    );
+    expect(outcomes(free, 'F', room)).toEqual([]);
+    const contest = replaceNemesisRandomEventInteraction(
+      selected,
+      createNemesisRandomEventAddress(phase),
+      { kind: 'damageContest', result: 'failure' },
+      { rewardType: 'RoomRewardConsolationPrize' },
+    );
+    expect(outcomes(contest, 'F', room)).toEqual([
       { phaseKey: 'Encounter', choices: ['nemesisEvent'] },
     ]);
   });

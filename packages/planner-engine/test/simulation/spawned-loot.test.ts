@@ -8,9 +8,13 @@ import {
   createEncounterPhaseAddress,
   createOccurrenceAddress,
   createIncomingRewardAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceId,
   createRewardWheelOfferAddress,
+  createRoomActionAddress,
   hermesShrineDeliveryEntryKey,
+  roomActionKey,
+  type AuthoredNemesisRandomEventOutcome,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -54,10 +58,12 @@ import {
   createEchoGoldIAnvilDuplicateProject,
   createEchoTalentDropReplayProject,
   createFConversionFrontierProject,
+  createGoldenFGHIProject,
   echoGoldIDuplicateAnvilResult,
   echoGoldIPrebossShopId,
   goldenFBiome,
   goldenFOccurrenceId,
+  replaceNemesisRandomEventInteraction,
 } from '@run-planner/test-fixtures/underworld';
 import {
   createFreshFileRouteProject,
@@ -445,14 +451,81 @@ describe('spawned loot', () => {
   it('lists Sea Star’s copy under the pickup it copies once that pickup settles', () => {
     // The Nemesis Pom's own level is unset: the walk stops at its pickup, which copies nothing yet.
     const unresolved = loadNemesisPomSeaStarCheckpoint();
-    expect(actionSpawns(loot(unresolved, 'F', 'golden-f-b5-e1').spawned)).toEqual([
-      ['interactEncounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
-    ]);
+    expect(actionSpawns(loot(unresolved, 'F', 'golden-f-b5-e1').spawned)).toEqual([]);
     const { spawned } = loot(authorLegalPomResolutions(unresolved), 'F', 'golden-f-b5-e1');
     expect(actionSpawns(spawned)).toEqual([
-      ['interactEncounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
       ['interactAcquisitionEntry', [expect.stringMatching(/^seaStar required #\d+$/)]],
     ]);
+  });
+
+  describe('a Nemesis event’s result', () => {
+    const nemesisRoom = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: nemesisRoom },
+      'Encounter',
+    );
+    const event = createNemesisRandomEventAddress(phase);
+    /** Her event answered with an optional result, placed right after her interaction. */
+    const answered = (value: AuthoredNemesisRandomEventOutcome, rewardType: string) => {
+      const project = replaceNemesisRandomEventInteraction(
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'NemesisRandomEvent',
+        }),
+        event,
+        value,
+        { rewardType },
+      );
+      const reference = {
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'nemesisGenerated:Encounter',
+        entryKey: 'result',
+      };
+      const order =
+        project.route.biomes[0]?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === nemesisRoom,
+        )?.roomActions.order ?? [];
+      return applyProjectCommand(project, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(goldenFBiome, nemesisRoom, roomActionKey(reference)),
+        reference,
+        index:
+          order.findIndex(
+            (candidate) =>
+              candidate.kind === 'interactEncounter' && candidate.phaseKey === 'Encounter',
+          ) + 1,
+      });
+    };
+
+    it('spawns at her outcome when the outcome decides it: an accepted trade', () => {
+      const { spawned } = loot(loadNemesisPomSeaStarCheckpoint(), 'F', 'golden-f-b5-e1');
+      expect(moments(spawned)).toEqual([
+        ['encounterOutcome:Encounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
+      ]);
+      expect(spawned.actionSpawns).toEqual([]);
+    });
+
+    it('spawns at her outcome when the outcome decides it: a contest', () => {
+      const { spawned } = loot(
+        answered({ kind: 'damageContest', result: 'failure' }, 'RoomRewardConsolationPrize'),
+        'F',
+        nemesisRoom,
+      );
+      expect(moments(spawned)).toEqual([
+        ['encounterOutcome:Encounter', [expect.stringMatching(/^nemesisEvent optional #\d+$/)]],
+      ]);
+      expect(spawned.actionSpawns).toEqual([]);
+    });
+
+    it('spawns under her interaction when given whatever happens: a free item', () => {
+      const { spawned } = loot(answered({ kind: 'freeItem' }, 'HealDrop'), 'F', nemesisRoom);
+      expect(moments(spawned)).toEqual([]);
+      expect(actionSpawns(spawned)).toEqual([
+        ['interactEncounter', [expect.stringMatching(/^nemesisEvent optional #\d+$/)]],
+      ]);
+    });
   });
 
   it('lists a rushed Shrine item under its purchase in the Shrine’s own room', () => {

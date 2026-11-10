@@ -41,12 +41,18 @@ import {
 /**
  * When the game spawns loot on its own: on entry (an Opening or Devotion
  * reward, Fields cages and optionals), the fourth-biome Preboss delivery
- * flush, an encounter's start (H minibosses), its end (Arachne's cocoon fight
- * ends as the reward cocoon breaks), and in an O phase the deliveries and
- * drops after its wheel reward.
+ * flush, an encounter's start (H minibosses), its outcome (what a Nemesis
+ * trade or contest result gives), its end (Arachne's cocoon fight ends as the
+ * reward cocoon breaks), and in an O phase the deliveries and drops after its
+ * wheel reward.
  */
 export type SpawnMomentKind =
-  'roomEntered' | 'deliveryFlush' | 'encounterStart' | 'encounterEnd' | 'afterEncounterReward';
+  | 'roomEntered'
+  | 'deliveryFlush'
+  | 'encounterStart'
+  | 'encounterOutcome'
+  | 'encounterEnd'
+  | 'afterEncounterReward';
 
 /** What spawned one item. */
 export type SpawnedLootSource =
@@ -302,7 +308,8 @@ function roomWalk(assembly: ProjectEvaluationAssembly, occurrence: OccurrenceAdd
  * or not; undefined for a room the evaluated biome does not enter. Only what
  * the walk produced is published: a moment's items once the walk reaches its
  * Timeline boundary, all together even while it blocks there (how each item
- * resolves is its own row's question), and an action's spawn once the walk
+ * resolves is its own row's question), an outcome's once that outcome has
+ * settled, since it decides what spawns, and an action's spawn once the walk
  * settled that action. Nothing past the room's stop and nothing from a source
  * action still unresolved at it is listed.
  */
@@ -468,6 +475,11 @@ export function spawnedLootForProjectEvaluationAssembly(
         return phaseKey === undefined
           ? boundaryState('roomEntered')
           : boundaryState('encounterStart', phaseKey);
+      // The outcome decides what spawns, so it spawns once the outcome has settled.
+      case 'encounterOutcome':
+        return phaseKey !== undefined && boundaryState('encounterOutcome', phaseKey) === 'settled'
+          ? 'settled'
+          : 'unreached';
       case 'encounterEnd':
         return phaseKey === undefined
           ? walk.entry(entries.length - 1)
@@ -650,6 +662,20 @@ export function spawnedLootForProjectEvaluationAssembly(
     spawn.items.push(item);
     actionSpawns.set(key, spawn);
   };
+  /**
+   * The phase whose outcome decides a source action's spawn: a Nemesis trade's
+   * result exists only once accepted and a contest's follows its result, while
+   * her free item is given whatever happens.
+   */
+  const decidingOutcome = (
+    family: AcquisitionEntrySourceFamily,
+    source: RoomActionReference,
+  ): string | undefined =>
+    family.kind === 'nemesisEvent' &&
+    source.kind === 'interactEncounter' &&
+    room.encounters.nemesisRandomEventByPhase?.[source.phaseKey]?.kind !== 'freeItem'
+      ? source.phaseKey
+      : undefined;
   for (const row of liveRows) {
     const reference = row.reference;
     const family = row.sourceFamily;
@@ -675,8 +701,12 @@ export function spawnedLootForProjectEvaluationAssembly(
         const source = row.dependencies.find(
           (dependency) => dependency.kind === 'afterAction' && dependency.authoringOnly !== true,
         );
-        if (source?.kind === 'afterAction' && rowByKey.has(roomActionKey(source.action)))
-          addActionSpawn(source.action, fromRow(row, { kind: 'generated', family }));
+        if (source?.kind !== 'afterAction' || !rowByKey.has(roomActionKey(source.action))) break;
+        const item = fromRow(row, { kind: 'generated', family });
+        const outcomePhaseKey = decidingOutcome(family, source.action);
+        // A spawn an encounter outcome decides is announced after that outcome.
+        if (outcomePhaseKey === undefined) addActionSpawn(source.action, item);
+        else if (actionSettled(source.action)) add('encounterOutcome', outcomePhaseKey, item);
         break;
       }
       case 'hermesShrineDelivery': {
@@ -745,6 +775,7 @@ export function spawnedLootForProjectEvaluationAssembly(
   for (const phaseKey of phaseKeys)
     chronology.push(
       momentKey('encounterStart', phaseKey),
+      momentKey('encounterOutcome', phaseKey),
       momentKey('encounterEnd', phaseKey),
       momentKey('afterEncounterReward', phaseKey),
     );
