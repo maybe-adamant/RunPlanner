@@ -24,7 +24,10 @@ import {
 } from '@planner/state/projectWorkspaceSlice';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected } from '@planner/state/editorSessionSlice';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  liveActionsForProjectEvaluationAssembly,
+  simulateProject,
+} from '@run-planner/engine/simulation';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -66,6 +69,22 @@ async function chooseNemesisEvent(
   }
   await user.click(await screen.findByRole('button', { name: /^Nemesis event type/ }));
   await user.click(await screen.findByRole('option', { name: label }));
+}
+
+/** Meets Nemesis from the live row, as the owner would: her contact is the next row. */
+function meetNemesis(view: ReturnType<typeof renderOccurrenceWorkbench>, occurrenceId: string) {
+  const key = roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' });
+  const live = liveActionsForProjectEvaluationAssembly(
+    catalog,
+    view.application.store.getState().projectWorkspace.assembly!,
+    createOccurrenceAddress(goldenFBiome, createOccurrenceId(occurrenceId)),
+  );
+  const place = live?.gaps
+    .filter((gap) => gap.index === live.frontier)
+    .flatMap((gap) => gap.items.flatMap((item) => item.actions))
+    .find((action) => action.kind === 'place' && roomActionKey(action.reference) === key);
+  if (place?.kind !== 'place') throw new Error('Nemesis is not live at the frontier');
+  act(() => view.application.store.dispatch(authoredProjectCommandDispatched(place.command)));
 }
 
 describe('OccurrenceRoomFeatures', () => {
@@ -263,6 +282,7 @@ describe('OccurrenceRoomFeatures', () => {
       historyBefore,
     );
     await chooseNemesisEvent(view.user, 'Gold trade');
+    meetNemesis(view, occurrenceId);
     openRoomTab('Room Timeline');
     const authoredEvent = () =>
       view.application.store
@@ -471,6 +491,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(document.querySelector('[data-stop-notice="overview"]')).not.toBeNull();
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Free item');
+    meetNemesis(view, occurrenceId);
     openRoomTab('Room Timeline');
     expect(screen.queryByText('Choose a Nemesis event.')).toBeNull();
     let freeAction = [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
@@ -547,6 +568,7 @@ describe('OccurrenceRoomFeatures', () => {
     );
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Damage contest');
+    meetNemesis(view, occurrenceId);
     openRoomTab('Room Timeline');
     const sentence = () =>
       screen.getByText('to get').closest<HTMLElement>('[data-room-action-key]')!;
