@@ -22,6 +22,7 @@ import type {
 import type { KnownRoster } from '../../commerce/gold/known-roster';
 import type { FeatureRollWalk } from '../../commerce/feature-rolls';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../../history';
+import type { ReachedHistoryRoomAction } from '../../history/model';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
 import type { SemanticFinding } from '../../model';
 import type { RewardBranchState } from '../branch-primitives';
@@ -50,6 +51,8 @@ export interface ChronologyWalkContext {
   readonly resourceFindings: readonly SemanticFinding[];
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
   readonly history: BiomeRewardHistory;
+  /** The room actions the lifecycle walk reached, placed in that history. */
+  readonly reachedActions: readonly ReachedHistoryRoomAction[];
   readonly prepared: PreparedRewardEvaluationInputs;
   /** Sources whose outgoing checkpoint creates a Hub instead of a reward batch. */
   readonly hubTakeoverSources: ReadonlySet<string>;
@@ -105,8 +108,8 @@ export type GoldRecordedRoster =
 export interface ChronologyWalkState {
   /** The one reached state, or none once a block stopped the walk. */
   readonly branch: RewardBranchState | undefined;
-  /** A seam stopped the walk at its own sequence. */
-  readonly halted: boolean;
+  /** A required item left unplaced stops the walk before this sequence, its deadline. */
+  readonly haltBefore?: number;
   readonly stygianWellAssessments: ReadonlyMap<string, StygianWellRoomAssessment>;
   /** Each entered room's departure facts, its settled flip, by room. */
   readonly roomDepartures: ReadonlyMap<string, RoomDeparture>;
@@ -235,7 +238,6 @@ export function createChronologyWalkState(
 ): ChronologyWalkState {
   return Object.freeze({
     branch,
-    halted: false,
     stygianWellAssessments: new Map(),
     roomDepartures: new Map(),
     challengeSwitchAssessments: new Map(),

@@ -10,12 +10,9 @@ import {
   createOccurrenceId,
   createRouteAddress,
   createPostbossKeepsakeSelectionAddress,
-  createRoomActionAddress,
   hubTerminalTakeoverForSource,
   ordinaryTargetGameNames,
-  roomActionDomainForOccurrence,
   roomActionKey,
-  scheduleRequiredRoomActions,
   semanticAddressKey,
   authoredShopOffer,
   shopOfferOptionValues,
@@ -1599,69 +1596,11 @@ export class DraftWalk {
       const live = liveActionsForProjectEvaluationAssembly(this.catalog, this.assembly, room);
       if (live === undefined) return changed;
       const placement = requiredPlacement(live, placed);
-      if (placement === undefined) return changed || this.placeUnofferedRequiredActions(room, live);
+      if (placement === undefined) return changed;
       placed.add(roomActionKey(placement.reference));
       // A refused placement is the walk's dead end here, never a reason to place it elsewhere.
       if (!this.apply(placement.command)) return changed;
       changed = true;
     }
-  }
-
-  /**
-   * Inserts at its canonical default each required action of the room that is missing from its
-   * order and that no action of the live product names at any gap. Only a deferred Ship wheel's
-   * reward is such a row today: the walk stops at its encounter end while it is unplaced, before
-   * it spawns, so it is never live.
-   */
-  private placeUnofferedRequiredActions(room: OccurrenceAddress, live: RoomLiveActions): boolean {
-    const offered = new Set(
-      live.gaps.flatMap((gap) =>
-        gap.items.flatMap((item) => item.actions.map((action) => roomActionKey(action.reference))),
-      ),
-    );
-    const biome = createBiomeAddress(room.routeKey, room.biomeKey);
-    const located = roomActionDomainForOccurrence(
-      this.project,
-      this.catalog,
-      biome,
-      room.occurrenceId,
-    );
-    if (located === undefined) return false;
-    const authored = new Set(located.occurrence.roomActions.order.map(roomActionKey));
-    const missing = located.domain.contributions.flatMap((entry) =>
-      entry.kind === 'action' &&
-      entry.participation === 'required' &&
-      !authored.has(roomActionKey(entry.reference)) &&
-      !offered.has(roomActionKey(entry.reference))
-        ? [entry.reference]
-        : [],
-    );
-    let changed = false;
-    for (const reference of missing) {
-      const current = roomActionDomainForOccurrence(
-        this.project,
-        this.catalog,
-        biome,
-        room.occurrenceId,
-      );
-      if (current === undefined) break;
-      const scheduled = scheduleRequiredRoomActions({
-        catalog: this.catalog,
-        domain: current.domain,
-        order: current.occurrence.roomActions.order,
-        requiredKeys: new Set([roomActionKey(reference)]),
-      });
-      const index = scheduled.findIndex(
-        (entry) => roomActionKey(entry) === roomActionKey(reference),
-      );
-      changed =
-        this.apply({
-          kind: 'InsertRoomAction',
-          action: createRoomActionAddress(biome, room.occurrenceId, roomActionKey(reference)),
-          reference,
-          index: Math.max(index, 0),
-        }) || changed;
-    }
-    return changed;
   }
 }

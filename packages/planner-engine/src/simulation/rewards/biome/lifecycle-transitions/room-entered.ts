@@ -71,7 +71,6 @@ export interface RoomEnteredTransition {
   /** Roles realized by a Forfeit fixed at this entry, ahead of their pickup contact. */
   readonly fixedAcquisitionRealizations: readonly FixedAcquisitionRealization[];
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
-  readonly hermesShrineDeliveryPlacementRequired: boolean;
   readonly hermesShrineAssessment?: {
     readonly origin: OccurrenceAddress;
     readonly assessment: HermesShrineCandidateContext;
@@ -599,7 +598,6 @@ export function applyRoomEnteredTransition(
     fixedAcquisitionRealizations: Object.freeze(fixedAcquisitionRealizations),
     generatedPickupPlacements: dueDeliveries?.generatedPickupPlacements ?? Object.freeze([]),
     derivedAcquisitionEntryFrontiers: dueDeliveries?.frontiers ?? Object.freeze([]),
-    hermesShrineDeliveryPlacementRequired: dueDeliveries?.placementRequired ?? false,
     ...(hermesShrineAssessment === undefined ? {} : { hermesShrineAssessment }),
     ...(stygianWellAssessment === undefined ? {} : { stygianWellAssessment }),
     ...(challengeSwitchAssessment === undefined ? {} : { challengeSwitchAssessment }),

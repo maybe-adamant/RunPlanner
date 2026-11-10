@@ -721,7 +721,7 @@ describe('spawned loot', () => {
     ]);
   });
 
-  it('spawns Heracles’s bounty with the rest of an encounter end a due delivery blocks', () => {
+  it('spawns Heracles’s bounty with the rest of an encounter end whose due delivery is unplaced', () => {
     const combat09 = nOccurrenceId('combat09');
     const project = authorLegalTraitOffers(
       applyProjectCommand(loadSurfaceNShrineSideRoomDeliveryCheckpoint(), catalog, {
@@ -736,9 +736,10 @@ describe('spawned loot', () => {
     );
     const { assembly, spawned } = loot(project, 'N', combat09);
     const n = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
+    // The walk passes the encounter end and stops where the delivery falls due.
     expect(n?.coverage.kind === 'prefix' ? n.coverage.roomStop : undefined).toMatchObject({
       room: { occurrenceId: combat09 },
-      at: 'entry',
+      at: 'before',
     });
     expect(moments(spawned)).toEqual([
       [

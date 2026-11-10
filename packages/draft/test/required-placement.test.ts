@@ -32,8 +32,7 @@ const PINNED_COUNTS = {
   restored: 95,
   stoppedInRoom: 1,
   encounterChosen: 11,
-  livePlacements: 124,
-  fallbackPlacements: 7,
+  livePlacements: 131,
 };
 
 const PLACEMENT_FINDINGS: ReadonlySet<string> = new Set([
@@ -208,14 +207,6 @@ function restore(
   return { walk, placements };
 }
 
-/** The fallback's one pinned row: a deferred Ship wheel's reward, never live while unplaced. */
-function isPinnedFallback(placement: SettledPlacement): boolean {
-  return (
-    placement.command.kind === 'InsertRoomAction' &&
-    placement.command.reference.kind === 'interactWheelReward'
-  );
-}
-
 describe('Draft places what a room requires from the live product', () => {
   it('restores the stripped required rows of every golden room, each by an offered command', () => {
     const golden = checkpointRegistry.filter(
@@ -229,7 +220,6 @@ describe('Draft places what a room requires from the live product', () => {
       stoppedInRoom: 0,
       encounterChosen: 0,
       livePlacements: 0,
-      fallbackPlacements: 0,
     };
     for (const { entry, load } of golden) {
       const project = load();
@@ -267,7 +257,6 @@ describe('Draft places what a room requires from the live product', () => {
           const { walk, placements } = restore(project, biomeIndex, room, stripped);
           for (const placement of placements) {
             if (placement.offered) counts.livePlacements += 1;
-            else if (isPinnedFallback(placement)) counts.fallbackPlacements += 1;
             else failures.push(`${name}: unoffered ${JSON.stringify(placement.command)}`);
           }
           const issue = walk.assembly.evaluation.issue?.reasons[0];
@@ -296,7 +285,7 @@ describe('Draft places what a room requires from the live product', () => {
     expect(counts).toEqual(PINNED_COUNTS);
   });
 
-  it('places a deferred Ship wheel reward the live product does not offer yet', () => {
+  it('places a deferred Ship wheel reward by the command the live product offers', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
     const room = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-combat01'));
     const order = roomOrder(project, room);
@@ -310,12 +299,12 @@ describe('Draft places what a room requires from the live product', () => {
         order.filter((reference) => reference !== reward),
       ),
     );
-    // The walk stops at the encounter end the unplaced reward holds, before the reward spawns.
+    // The reward spawns as the fight completes; its encounter's end effects wait on it.
     const live = liveActionsForProjectEvaluationAssembly(catalog, stripped, room)!;
-    const offered = live.gaps.flatMap((gap) =>
-      gap.items.flatMap((item) => item.actions.map((action) => roomActionKey(action.reference))),
+    const offered = live.gaps[live.frontier]!.items.flatMap((item) =>
+      item.actions.map((action) => roomActionKey(action.reference)),
     );
-    expect(offered).not.toContain(roomActionKey(reward));
+    expect(offered).toContain(roomActionKey(reward));
     const { walk, placements } = restore(
       project,
       project.route.itineraryBiomeKeys.indexOf('O'),
@@ -325,7 +314,7 @@ describe('Draft places what a room requires from the live product', () => {
     expect(placements).toEqual([
       {
         command: expect.objectContaining({ kind: 'InsertRoomAction', reference: reward }),
-        offered: false,
+        offered: true,
       },
     ]);
     expect(isRoomPlacement(walk.assembly, room)).toBe(false);

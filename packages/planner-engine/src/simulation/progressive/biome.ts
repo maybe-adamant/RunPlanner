@@ -352,6 +352,7 @@ function products(
     context.seed?.rewardFrontier,
     context.resourcePlacements,
     context.resourceFindings,
+    composed.reachedActions,
   );
   const roomGeneration = generation(
     catalog,

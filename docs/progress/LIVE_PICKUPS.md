@@ -2,8 +2,8 @@
 
 Status: framing and step C decisions settled by the owner (2026-11-10);
 steps A and B's Draft half delivered and accepted on `live-pickups`; the run
-import's half of B is decided and lands as C3; C1 in progress; D not
-started. Temporary
+import's half of B is decided and lands as C3; C1 delivered, awaiting review;
+D not started. Temporary
 plan; delete at delivery after promoting durable results. Follows the
 progressive room Timeline and spawned-loot notices, both delivered.
 
@@ -18,10 +18,9 @@ You either interact with pickups or active objects.
    fountain, Nemesis) keep theirs. A required pickup still loose past its
    deadline (the last slot its window and dependencies allow) is a finding,
    and the walk stops there: one finding per room naming what is missing, at
-   the earliest deadline. An event is then passed once it happens, even while
+   the earliest deadline. An event is passed once it happens, even while
    items it spawned are unresolved; an unresolved spawned item stops the walk
-   at its own row or deadline, never at the event that spawned it. Until
-   then a missing required pickup stops the walk at its spawn.
+   at its own row or deadline, never at the event that spawned it (C1).
 2. **Live at Timeline position k.** The engine publishes what is live at k:
    loose pickups and active objects, each with its legal actions. The live
    row is that product at the walk frontier; the `+` at a gap is that product
@@ -54,22 +53,14 @@ You either interact with pickups or active objects.
     nothing about it.
 
   Open items, temporary limits of today's walk and scope:
-  - While a required pickup is unplaced, the walk stops at the event or source
-    action that spawns it, so the pickup may not be live where it could go: a
-    deferred Ship wheel's reward (its encounter end waits on it), an
-    Artificer's replacement, a Nemesis trade's result, a delivery due after a
-    wheel reward, a Fields cage reward (the stop rewinds to room entry), and a
-    Boss room's reward after its forced drop (the stop rewinds before the
-    drop's row). The witness pins each by room, row and kind; C's walk change
-    should turn each into an offer at its own gap and empty the pin.
   - Not offered: a new door, cage, wheel, Well or Pool reroll, a Pool sale of a
     slot not yet chosen and a rack keepsake, each needing its own choice
     first; their rows are. Owner to decide whether the live row offers them
     (with the choice still to make) or they stay on their objects.
   - The walk takes Gold Gold Gold's duplicate before the purchase that spawns
     it: its row has no order dependency on that purchase. The live product
-    offers it only once spawned; the witness pins this leniency for C or the
-    owner to settle.
+    offers it only once spawned; the witness pins this leniency, closed in C2
+    with the duplicate's owner placement.
   - A choice's values (a blank Travel Deal item) are read where the room's
     reached actions end, not at the gap; the indices are value-independent.
   - Exported on the `simulation` entry with Draft, its first consumer.
@@ -80,21 +71,20 @@ You either interact with pickups or active objects.
     Gold Gold duplicate) places, one at a time, each required pickup or object
     action live at the room's frontier by its offered command, the canonical
     restore when offered anywhere through the frontier, otherwise at the
-    frontier. A required row no action of the product names at any gap falls
-    back to the canonical schedule; only a deferred Ship wheel's reward does
-    today, pinned by the Draft witness for C to remove with that open item. The
-    witness attributes every placement to an offered command or that pin.
-    Against the old schedule, 105 of 110 stripped golden rooms restore
-    identically. The corpus is unchanged, since automatic placement still
-    places these rows first.
+    frontier. Since C1 every required row is offered at the frontier, so the
+    canonical-schedule fallback is gone and the witness attributes every
+    placement to an offered command. Against the old schedule, 105 of 110
+    stripped golden rooms restore identically. The corpus is unchanged, since
+    automatic placement still places these rows first.
   - Run import: required rows at the live product's canonical position
     (owner decision below); delivered in step C3.
 - **C.** Remove automatic placement (change 1). Placements are persisted
   rows, so no saved plan needs migrating. Slices, each independently
-  reviewed: C1 the walk passes a spawning event while its spawned item is
-  unresolved (clears the pinned held cases and Draft's wheel-reward
-  fallback); C2 removes writers W1-W6 (W8 rekey stays), allows Remove and
-  Reset of required rows and adds the missing-pickup finding wording; C3 the
+  reviewed: C1 (delivered, awaiting review) the walk passes a spawning event
+  while its spawned item is unresolved, clearing the pinned held cases and
+  Draft's wheel-reward fallback; C2 removes writers W1-W6 (W8 rekey stays), allows Remove and
+  Reset of required rows, adds the missing-pickup finding wording and closes
+  the Gold Gold Gold duplicate's order leniency; C3 the
   run import's half of B; C4 the Collect all required command.
   Equivalence and Draft corpus lanes before and after; separate and
   revertible. Expected Draft output changes, from the stripped-room witness:

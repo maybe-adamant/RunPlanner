@@ -55,6 +55,7 @@ function createWalkContext(
     | 'catalog'
     | 'snapshot'
     | 'history'
+    | 'reachedActions'
     | 'routePosition'
     | 'routeLoadout'
     | 'resourcePlacements'
@@ -383,6 +384,7 @@ export function evaluateBiomeRewardChronology(
   seedFrontier: RewardBranch | undefined = undefined,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
   resourceFindings: readonly import('../../model').SemanticFinding[] = [],
+  reachedActions: readonly import('../../history/model').ReachedHistoryRoomAction[] = [],
 ): BiomeRewardEvaluationAssembly {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRewardSimulationContractError('reward inputs do not share one biome owner');
@@ -393,6 +395,7 @@ export function evaluateBiomeRewardChronology(
     catalog,
     snapshot,
     history,
+    reachedActions,
     routePosition,
     routeLoadout,
     resourcePlacements,
@@ -424,6 +427,7 @@ export function evaluateBiomeRewardChronology(
   const steps: WalkStep[] = [];
   for (const event of history.events) {
     if (walk.branch === undefined) break;
+    if (walk.haltBefore !== undefined && event.sequence >= walk.haltBefore) break;
     steps.push({
       sequence: event.sequence,
       received: walk,
@@ -435,7 +439,6 @@ export function evaluateBiomeRewardChronology(
       walkHistoryEvent(context, accumulator, walk, event),
       event,
     );
-    if (walk.halted) break;
   }
   finalizeWalk(context, accumulator, walk);
   // A cut through the last walked event also reaches what the walk settles after it.

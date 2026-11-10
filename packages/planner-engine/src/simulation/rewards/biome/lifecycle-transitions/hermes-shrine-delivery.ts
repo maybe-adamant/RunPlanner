@@ -31,19 +31,16 @@ export function dueHermesShrineDeliveryFrontier(
 ): {
   readonly findings: readonly LifecycleFinding[];
   readonly frontiers: readonly DerivedAcquisitionEntryFrontier[];
-  readonly placementRequired: boolean;
   readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
 } {
   const findings: LifecycleFinding[] = [];
   const frontiers: DerivedAcquisitionEntryFrontier[] = [];
-  let placementRequired = false;
   const placements = new Map<string, GeneratedPickupPlacement>();
   const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
   if (branch === undefined)
     return Object.freeze({
       findings: Object.freeze([]),
       frontiers: Object.freeze([]),
-      placementRequired: false,
       generatedPickupPlacements: Object.freeze([]),
     });
   for (const delivery of Object.values(branch.state.pendingHermesShrineDeliveries)) {
@@ -81,7 +78,6 @@ export function dueHermesShrineDeliveryFrontier(
           row.reference.encounterPhaseKey === encounterPhaseKey,
       );
     if (retained === undefined || !hasExactDeliveryAction) {
-      placementRequired = true;
       findings.push(
         Object.freeze({
           finding: rewardFinding(
@@ -119,7 +115,6 @@ export function dueHermesShrineDeliveryFrontier(
   return Object.freeze({
     findings: Object.freeze(findings),
     frontiers: Object.freeze(frontiers),
-    placementRequired,
     generatedPickupPlacements: Object.freeze([...placements.values()]),
   });
 }

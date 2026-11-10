@@ -1716,15 +1716,10 @@ describe('room stop', () => {
       { room: 'surface-n-combat05', kind: 'exit', at: 'before', entry: 'end' },
     ],
     [
-      "an encounter end's due Shrine delivery not placed: that end, reached",
+      "an encounter end's due Shrine delivery not placed: its deadline, the doors opening",
       shrineDeliveryUnplaced,
       'O',
-      {
-        room: 'surface-o-devotion',
-        kind: 'timeline',
-        at: 'entry',
-        entry: 'encounterEnd:Encounter',
-      },
+      { room: 'surface-o-devotion', kind: 'timeline', at: 'before', entry: 'cleanup' },
     ],
     [
       "the doors' store unavailable at generation: the doors opening, reached (Chaos)",

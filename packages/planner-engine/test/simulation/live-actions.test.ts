@@ -239,29 +239,6 @@ function withoutEchoGold(
   };
 }
 
-/**
- * Required pickups today's walk cannot reach once unplaced, by room, row and
- * kind: the walk stops at the event or source that spawns them.
- */
-const HELD_TODAY: readonly string[] = [
-  // A Nemesis trade's result: the walk blocks at her contact.
-  'nemesis-f-trait-trade golden-f-b5-e1 #1 interactAcquisitionEntry',
-  // A cage reward: the walk stops at room entry, where the cages spawn.
-  'nemesis-h-fields golden-h-combat05 #7 interactLocalReward',
-  // A deferred Ship wheel's reward: its encounter end waits on it.
-  'surface-no-hermes-shrine-delivery surface-o-combat07 #1 interactWheelReward',
-  'surface-scheduled-lifecycle surface-o-combat01 #1 interactWheelReward',
-  'surface-shrine-travel-deal surface-o-combat04 #1 interactWheelReward',
-  'surface-shrine-travel-deal surface-o-combat07 #1 interactWheelReward',
-  // A delivery due after a wheel reward: the walk blocks at the encounter end.
-  'surface-shrine-travel-deal surface-o-combat04 #2 interactAcquisitionEntry',
-  // An Artificer replacement: the walk blocks at the pickup it converts.
-  'underworld-f-trait-order-checks e9c1775e-a04b-4ed2-b749-7ef344614cbe #1 interactAcquisitionEntry',
-  'underworld-f-trait-order-checks f4adb787-5267-4ce6-8712-e53744e505ff #2 interactAcquisitionEntry',
-  // A Boss room's reward after its forced drop: the stop rewinds before the drop's row.
-  'underworld-zagreus-contract zagreus-contract-showcase #1 interactIncomingReward',
-];
-
 /** The plan through one biome: a later biome's walk takes no part in a room's own. */
 function throughBiome(project: ProjectDocument, biomeKey: string): ProjectDocument {
   const last = project.route.biomes.findIndex((biome) => biome.biomeKey === biomeKey);
@@ -608,10 +585,10 @@ describe('live actions at a gap', () => {
     expect(tried).toBe(6);
   });
 
-  it('holds a required pickup at its spawn while it is unplaced, as today’s walk does', () => {
-    // Take each placed required pickup of a sampled room back, alone: it stands offered at its
-    // own gap unless today's walk stops, on its placement finding, at what spawns it.
-    const held = new Set<string>();
+  it('offers a required pickup taken back at its own gap: the walk passes what spawns it', () => {
+    // Take each placed required pickup of a sampled room back, alone: the walk passes the event
+    // or action that spawns it and stops at its deadline on its placement finding, with the
+    // pickup offered at its own gap.
     const failures: string[] = [];
     let tried = 0;
     for (const { id, project, assembly, address, live } of sampleRooms) {
@@ -655,24 +632,12 @@ describe('live actions at a gap', () => {
                 roomOrder(applyProjectCommand(without, catalog, action.command), address)[index]!,
               ) === row.key,
           );
-        if (offered) continue;
-        // Held: the walk stops short of the pickup's own gap, or there before it spawns, on a
-        // placement finding of this room.
-        const short =
-          reached.frontier < index ||
-          !(reached.gaps[index]?.items ?? []).some(
-            (item) => item.kind === 'pickup' && roomActionKey(item.reference) === row.key,
-          );
-        if (!short || placementFindings(after, address).size === 0) {
+        if (!offered || placementFindings(after, address).size === 0)
           failures.push(`${id} ${address.occurrenceId} #${index} ${row.key}`);
-          continue;
-        }
-        held.add(`${id} ${address.occurrenceId} #${index} ${row.reference.kind}`);
       }
     }
     expect(failures).toEqual([]);
     expect(tried).toBeGreaterThan(15);
-    expect([...held].sort()).toEqual([...HELD_TODAY].sort());
   });
 
   it('places a due delivery and a matured drop the walk left unplaced, at the gaps their commands accept', () => {
@@ -693,9 +658,9 @@ describe('live actions at a gap', () => {
       simulateProjectAssembly(catalog, project),
       room,
     )!;
-    // The walk holds at the encounter end the delivery is due at.
-    expect(live.frontier).toBe(0);
-    const unplaced = live.gaps[0]!.items.flatMap((item) =>
+    // The walk passes the encounter end the delivery spawns at and stops before Doors open.
+    expect(live.frontier).toBe(2);
+    const unplaced = live.gaps[2]!.items.flatMap((item) =>
       item.kind === 'pickup' &&
       item.actions.some(
         (action) =>
@@ -720,8 +685,8 @@ describe('live actions at a gap', () => {
     ]);
     const delivery = unplaced[0]!.actions[0]!;
     if (delivery.kind !== 'place') throw new Error('the delivery is not placeable');
-    expect(delivery.command).toMatchObject({ index: 0 });
+    expect(delivery.command).toMatchObject({ index: 2 });
     const placed = roomOrder(applyProjectCommand(project, catalog, delivery.command), room);
-    expect(roomActionKey(placed[0]!)).toBe(roomActionKey(delivery.reference));
+    expect(roomActionKey(placed[2]!)).toBe(roomActionKey(delivery.reference));
   });
 });

@@ -12,6 +12,10 @@ import { resolveCompletionBoss } from '../../../authored-project/completion-boss
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import { encounterEntryVowRanks } from '../../arcana-fear';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
+import {
+  roomLifecycleWindowOrdinal,
+  type RoomActionWindow,
+} from '../../../authored-project/room-actions/lifecycle-structure';
 import type { HistoryEvent } from '../../history';
 import { projectRoomEncounterRecords } from '../../history/facts';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
@@ -135,6 +139,93 @@ function authoredRoom(
 ): CanonicalAuthoredRoom | undefined {
   const room = context.rooms.get(semanticAddressKey(origin));
   return room?.kind === 'authored' ? room : undefined;
+}
+
+/**
+ * Where a required item spawned at a sequence with no placement falls due: before the room's
+ * first later event it must precede, a reached row of a later window, its doors opening or its
+ * commit. Undefined while the walk does not reach that point.
+ */
+function placementDeadline(
+  context: ChronologyWalkContext,
+  origin: SemanticAddress,
+  sequence: number,
+  window: RoomActionWindow,
+): number | undefined {
+  const roomKey = semanticAddressKey(origin);
+  const room = authoredRoom(context, origin);
+  const closing = context.history.events.find(
+    (event) =>
+      event.sequence > sequence &&
+      semanticAddressKey(event.origin) === roomKey &&
+      (event.kind === 'outgoingGenerationCheckpoint' || event.kind === 'roomCommitted'),
+  )?.sequence;
+  if (room === undefined) return closing;
+  const structure = room.roomActionRoster.lifecycleStructure;
+  const ordinal = roomLifecycleWindowOrdinal(structure, window);
+  const rows = new Map(room.roomActionRoster.rows.map((row) => [row.key, row]));
+  const last = context.history.events.at(-1)?.sequence ?? 0;
+  const later = context.reachedActions.flatMap((action) => {
+    const row = rows.get(action.actionKey);
+    return semanticAddressKey(action.room) === roomKey &&
+      action.sequence > sequence &&
+      action.sequence <= last &&
+      row !== undefined &&
+      !row.stale &&
+      roomLifecycleWindowOrdinal(structure, row.window) > ordinal
+      ? [action.sequence]
+      : [];
+  });
+  const due = Math.min(...later, closing ?? Number.POSITIVE_INFINITY);
+  return Number.isFinite(due) ? due : undefined;
+}
+
+/** The walk's deadline stop, the earliest of the one it has and a new one. */
+function haltingBefore(
+  state: ChronologyWalkState,
+  haltBefore: number | undefined,
+): { readonly haltBefore?: number } {
+  const earliest = Math.min(
+    state.haltBefore ?? Number.POSITIVE_INFINITY,
+    haltBefore ?? Number.POSITIVE_INFINITY,
+  );
+  return Number.isFinite(earliest) ? { haltBefore: earliest } : {};
+}
+
+/**
+ * A due delivery left unplaced lies where it spawned; its placement finding stands at its
+ * deadline, where the walk stops, and is withheld while the walk does not reach it.
+ */
+function deliveryPlacementAtDeadline(
+  context: ChronologyWalkContext,
+  origin: SemanticAddress,
+  sequence: number,
+  window: RoomActionWindow,
+  findings: readonly LifecycleFinding[],
+): { readonly findings: readonly LifecycleFinding[]; readonly haltBefore?: number } {
+  const placement = (entry: LifecycleFinding) =>
+    entry.finding.code === 'hermesShrineDeliveryPlacementRequired';
+  if (!findings.some(placement)) return { findings };
+  const deadline = placementDeadline(context, origin, sequence, window);
+  return {
+    findings: findings.flatMap((entry) =>
+      !placement(entry)
+        ? [entry]
+        : deadline === undefined
+          ? []
+          : [
+              Object.freeze({
+                ...entry,
+                chronology: Object.freeze({
+                  kind: 'history' as const,
+                  sequence: deadline,
+                  boundary: 'before' as const,
+                }),
+              }),
+            ],
+    ),
+    ...(deadline === undefined ? {} : { haltBefore: deadline }),
+  };
 }
 
 /**
@@ -560,7 +651,7 @@ const roomDeparted: ChronologySeamHandler<'roomDeparted'> = (context, state, eve
   };
 };
 
-/** A Hermes Shrine delivery that still needs a placement halts the walk here. */
+/** A Hermes Shrine delivery that still needs a placement halts the walk at its deadline. */
 const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsApplied'> = (
   context,
   state,
@@ -572,11 +663,18 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
     authoredRoom(context, event.origin),
     state.branch,
   );
+  const due = deliveryPlacementAtDeadline(
+    context,
+    event.origin,
+    event.sequence,
+    Object.freeze({ kind: 'encounterEnd', phaseKey: event.phaseKey }),
+    transition.findings,
+  );
   return {
     state: Object.freeze({
       ...state,
       branch: transition.branch,
-      halted: transition.hermesShrineDeliveryPlacementRequired,
+      ...haltingBefore(state, due.haltBefore),
     }),
     emissions: [
       { kind: 'timelineFacts', facts: transition.timelineFacts },
@@ -595,7 +693,7 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
         checkpoints: transition.traitChildSettlements,
         occurrenceOwner: event.origin,
       },
-      lifecycleFindings(transition.findings),
+      lifecycleFindings(due.findings),
     ],
   };
 };
@@ -1382,6 +1480,14 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     }),
   );
   const enteredBranch = entered.branch;
+  // A flushed delivery is a required object that gates the exit.
+  const flushed = deliveryPlacementAtDeadline(
+    context,
+    event.origin,
+    event.sequence,
+    Object.freeze({ kind: 'standard', phase: 'afterCombat' }),
+    entered.findings,
+  );
   const shrine = entered.hermesShrineAssessment;
   const well = entered.stygianWellAssessment;
   const checkpoint = entered.runStateCheckpoint ?? hubEntryCheckpoint(context, event);
@@ -1395,7 +1501,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
       mergedFindings(resourcePlacementFindingRegions(event, context.resourceFindings)),
       generationFindings(pedestal.findings),
       { kind: 'producerFrontiers', frontiers: pedestal.producerFrontiers },
-      lifecycleFindings(entered.findings),
+      lifecycleFindings(flushed.findings),
       { kind: 'generatedPickupPlacements', placements: entered.generatedPickupPlacements },
       {
         kind: 'derivedAcquisitionEntryFrontiers',
@@ -1407,7 +1513,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
       ...state,
       roomDepartures,
       branch: enteredBranch,
-      halted: entered.hermesShrineDeliveryPlacementRequired,
+      ...haltingBefore(state, flushed.haltBefore),
       encounterEntryVowRanks:
         room === undefined || enteredBranch === undefined
           ? state.encounterEntryVowRanks

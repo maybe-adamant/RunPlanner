@@ -488,10 +488,17 @@ describe('a room whose walk stops in it', () => {
     ).toMatchObject({ selectedWave: 9, contextReached: true });
   });
 
-  it('ends at the encounter end that owes an unplaced Shrine delivery', () => {
+  it('ends at the doors opening an unplaced Shrine delivery falls due at', () => {
     const timeline = galleryTimeline('shrine-delivery-unplaced', 'surface-o-devotion');
-    expect(shape(timeline.entries).at(-1)).toBe('encounterEnd');
-    expect(shape(timeline.notReached ?? [])).toEqual(['action']);
+    // The walk passes the encounter end the delivery spawns at and every row after it.
+    expect(shape(timeline.entries)).toEqual([
+      'roomEntered',
+      'action',
+      'encounterStart',
+      'encounterEnd',
+      'action',
+    ]);
+    expect(timeline.notReached).toEqual([]);
   });
 
   it('keeps the doors opening as its stop when the door store is unavailable', () => {

@@ -45,6 +45,12 @@ interface ExecutionState {
 }
 
 interface RoomActionSchedule {
+  /**
+   * Whether the walk passes this producer point uncollected: its pickup is
+   * unplaced and no encounter follows, so it lies on the ground until its
+   * deadline stops the walk.
+   */
+  readonly passesUncollected: (operation: RoomLifecycleOperation) => boolean;
   readonly encounterPhases: (
     phases: readonly ResolvedEncounterPhase[],
   ) => readonly ResolvedEncounterPhase[];
@@ -710,6 +716,47 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     });
   };
 
+  const unplacedRequired = (row: RoomActionRow | undefined): boolean =>
+    row !== undefined &&
+    row.rank === null &&
+    row.participation === 'required' &&
+    !row.stale &&
+    !skippedInteraction(row);
+
+  const producerRow = (point: string, role: string) =>
+    roster.rows.find(
+      (row) =>
+        row.key ===
+          roomActionKey({
+            kind: 'interactIncomingReward',
+            producerPoint: point,
+            acquisitionRole: role,
+          }) && !row.stale,
+    );
+
+  // A pickup taken before combat starts the fight, so the fight waits on it.
+  const passesUncollected = (operation: RoomLifecycleOperation): boolean => {
+    if (operation.kind !== 'advanceProducer') return false;
+    const index = context.profile.operations.indexOf(operation);
+    if (
+      context.profile.operations.some(
+        (later, laterIndex) =>
+          laterIndex > index &&
+          (later.kind === 'startEncounter' ||
+            later.kind === 'runEncounterSequence' ||
+            later.kind === 'runRewardEncounterSequence'),
+      )
+    )
+      return false;
+    return (
+      context.producerRewardLifecycle?.acquisitionLifecycle.some(
+        (binding) =>
+          binding.lifecyclePoint === operation.point &&
+          unplacedRequired(producerRow(binding.lifecyclePoint, binding.role)),
+      ) ?? false
+    );
+  };
+
   const firstMissingRequired = (predicate: (row: RoomActionRow) => boolean) =>
     roster.rows.find(
       (row) =>
@@ -927,6 +974,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     initial: ExecutionState,
   ): ExecutionState => {
     if (initial.blockedAt !== undefined) return initial;
+    if (passesUncollected(operation)) return initial;
     if (operation.kind === 'advanceProducer') {
       let state = initial;
       const bindings =
@@ -1020,6 +1068,15 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     return state;
   };
 
+  const postCombatRows = (wheelKey: string) =>
+    roster.rows.filter(
+      (row) =>
+        !row.stale &&
+        row.rank !== null &&
+        row.window.kind === 'shipPostCombat' &&
+        row.window.wheelKey === wheelKey,
+    );
+
   const afterEncounterPhase = (
     phase: ResolvedEncounterPhase,
     operationIndex: number,
@@ -1039,13 +1096,15 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           row.window.wheelKey === wheelKey,
       );
       const unranked = participants.find((row) => row.rank === null);
-      if (unranked !== undefined) return blockAt(next, unranked);
-      const lastParticipantRank = participants.reduce(
+      // Completion spawns the wheel reward; its end effects wait until every
+      // required post-combat interaction clears, so an unplaced one holds them.
+      const lastRank = (unranked === undefined ? participants : postCombatRows(wheelKey)).reduce(
         (rank, row) => Math.max(rank, row.rank ?? 0),
         0,
       );
-      next = drainThroughRank(lastParticipantRank, operationIndex, next);
+      next = drainThroughRank(lastRank, operationIndex, next);
       if (next.blockedAt !== undefined) return next;
+      if (unranked !== undefined) return blockAt(next, unranked);
     }
     return next;
   };
@@ -1067,11 +1126,9 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         (left, right) =>
           (left.rank ?? Number.POSITIVE_INFINITY) - (right.rank ?? Number.POSITIVE_INFINITY),
       );
-    const unranked = deliveries.find(
-      (row) => row.rank === null && row.participation === 'required' && !row.stale,
-    );
-    if (unranked !== undefined) return blockAt(next, unranked);
+    // An unplaced delivery lies where it spawned; its deadline stops the walk.
     for (const delivery of deliveries) {
+      if (delivery.rank === null) continue;
       // Encounter end makes the delivery available; it does not let the
       // delivery leapfrog a peer post-encounter action authored before it.
       const current = rankedRows[cursor];
@@ -1093,6 +1150,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       : initial;
 
   return Object.freeze({
+    passesUncollected,
     encounterPhases,
     beforeOperation,
     afterOperation,
@@ -1116,6 +1174,7 @@ export function executeRoomLifecycle(
       state = schedule.beforeOperation(operation, operationIndex, state);
       if (state.blockedAt !== undefined) break;
     }
+    if (schedule?.passesUncollected(operation) === true) continue;
     const eventsBefore = state.events.length;
     state = operationDispatchRegistry[operation.kind](
       operation,

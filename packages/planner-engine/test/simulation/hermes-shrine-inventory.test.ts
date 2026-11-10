@@ -1,6 +1,5 @@
 import { ordinaryPositionFor } from '../support/route-position';
-import { describe, expect, it, vi } from 'vitest';
-import * as rewardChronology from '../../src/simulation/rewards/biome/chronology';
+import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -37,6 +36,8 @@ import {
   hermesShrineCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
+  liveActionsForProjectEvaluationAssembly,
+  spawnedLootForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import type { RewardHistoryState, RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import {
@@ -593,46 +594,6 @@ describe('Hermes Shrine entry inventory gate', () => {
   );
 });
 
-// Observe the exact reward walk before progressive coverage bounds its public history.
-function observeDeliveryStop(
-  project: ReturnType<typeof loadSurfaceNOPQProject>,
-  kind: 'roomEntered' | 'encounterEndEffectsApplied',
-  owner: ReturnType<typeof createOccurrenceAddress>,
-) {
-  const observer = vi.spyOn(rewardChronology, 'evaluateBiomeRewardChronology');
-  try {
-    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
-    let observed = 0;
-    observer.mock.calls.forEach(([, , history], index) => {
-      const result = observer.mock.results[index];
-      if (result?.type !== 'return') return;
-      const simulation = result.value.simulation;
-      if (
-        !simulation.findings.some(
-          (finding) =>
-            finding.code === 'hermesShrineDeliveryPlacementRequired' &&
-            finding.origin.kind === 'acquisitionEntry' &&
-            semanticAddressKey(finding.origin.site.owner) === semanticAddressKey(owner),
-        )
-      )
-        return;
-      const stop = history.events.find(
-        (event) =>
-          event.kind === kind && semanticAddressKey(event.origin) === semanticAddressKey(owner),
-      );
-      if (stop === undefined) return;
-      expect(simulation.frontier).toBeDefined();
-      for (const branch of reachedFrontier(simulation))
-        expect(branch.state.reached.historyView).toBe(history.viewsBySequence[stop.sequence]);
-      observed += 1;
-    });
-    expect(observed).toBeGreaterThan(0);
-    return evaluation;
-  } finally {
-    observer.mockRestore();
-  }
-}
-
 describe('Hermes Shrine delayed deliveries', () => {
   function dreamPrebossEntry(itineraryBiomeKeys: readonly string[], biomeKey: 'I' | 'Q') {
     const biome = createBiomeAddress('Dream', biomeKey);
@@ -796,7 +757,6 @@ describe('Hermes Shrine delayed deliveries', () => {
       );
       expect(delivery === undefined).toBe(!expectedDelivery);
       if (!expectedDelivery || delivery === undefined) {
-        expect(transition.hermesShrineDeliveryPlacementRequired).toBe(false);
         expect(transition.findings).not.toContainEqual(
           expect.objectContaining({
             finding: expect.objectContaining({ code: 'hermesShrineDeliveryPlacementRequired' }),
@@ -810,7 +770,11 @@ describe('Hermes Shrine delayed deliveries', () => {
         );
         return;
       }
-      expect(transition.hermesShrineDeliveryPlacementRequired).toBe(true);
+      expect(transition.findings).toContainEqual(
+        expect.objectContaining({
+          finding: expect.objectContaining({ code: 'hermesShrineDeliveryPlacementRequired' }),
+        }),
+      );
       expect(delivery).toMatchObject({
         address: {
           site: { owner: room.origin },
@@ -975,20 +939,25 @@ describe('Hermes Shrine delayed deliveries', () => {
       outcome: finding.origin,
       targetTraitKey: 'HeraCastBoon',
     });
-    const awaitingDelivery = observeDeliveryStop(project, 'encounterEndEffectsApplied', host);
-    const deliveryFinding = awaitingDelivery.findings.find(
-      (finding) =>
-        finding.code === 'hermesShrineDeliveryPlacementRequired' &&
-        finding.origin.kind === 'acquisitionEntry' &&
-        finding.origin.site.owner.kind === 'occurrence' &&
-        finding.origin.site.owner.occurrenceId === occurrenceId,
-    );
-    if (deliveryFinding?.origin.kind !== 'acquisitionEntry') {
+    // The delivery spawns at the encounter's end; the live product offers its placement.
+    const due = spawnedLootForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+      host,
+    )
+      ?.moments.flatMap((moment) => moment.items)
+      .find(
+        (item) =>
+          item.placement.kind === 'unplaced' &&
+          item.placement.command?.kind === 'PlaceHermesShrineDelivery',
+      );
+    const placement = due?.placement.kind === 'unplaced' ? due.placement.command : undefined;
+    if (placement?.kind !== 'PlaceHermesShrineDelivery') {
       throw new Error('checkpoint lost its due P Shrine delivery');
     }
     project = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
-      entry: deliveryFinding.origin,
+      entry: placement.entry,
       encounterPhaseKey: 'Combat',
     });
     let occurrence = project.route.biomes
@@ -1875,7 +1844,7 @@ describe('Hermes Shrine Spell reservation lifecycle input', () => {
 });
 
 describe('Hermes Shrine pickup settlement', () => {
-  it('publishes the exact Preboss entry state when terminal delivery placement stops the walk', () => {
+  it('leaves a flushed delivery live at the Preboss until its deadline stops the walk', () => {
     let project = loadSurfaceNOPQProject();
     const source = createOccurrenceAddress(
       pBiome,
@@ -1885,21 +1854,36 @@ describe('Hermes Shrine pickup settlement', () => {
       delay: 8,
       rushed: false,
     });
-    const evaluation = observeDeliveryStop(
-      project,
-      'roomEntered',
-      createOccurrenceAddress(
-        createBiomeAddress('Surface', 'Q'),
-        createOccurrenceId('surface-q-preboss'),
-      ),
+    const preboss = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'Q'),
+      createOccurrenceId('surface-q-preboss'),
     );
-    const q = evaluation.route.biomes.find((biome) => biome.biomeKey === 'Q');
+    const assembly = simulateProjectAssembly(catalog, project);
+    const q = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'Q');
     if (q === undefined || !('rewards' in q)) throw new Error('missing Q evaluation');
     const finding = q.findings.find(
       (finding) => finding.code === 'hermesShrineDeliveryPlacementRequired',
     );
     if (finding?.origin.kind !== 'acquisitionEntry')
       throw new Error('missing terminal delivery placement');
+    // The walk passes the entry the delivery is flushed at and stops where it falls due.
+    expect(q.coverage.kind === 'prefix' ? q.coverage.roomStop : undefined).toMatchObject({
+      room: { occurrenceId: preboss.occurrenceId },
+      kind: 'timeline',
+      at: 'before',
+    });
+    const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, preboss)!;
+    expect(
+      live.gaps[live.frontier]!.items.some(
+        (item) =>
+          item.kind === 'pickup' &&
+          item.participation === 'required' &&
+          item.actions.some(
+            (action) =>
+              action.kind === 'place' && action.command.kind === 'PlaceHermesShrineDelivery',
+          ),
+      ),
+    ).toBe(true);
   });
 
   it('settles the canonical delayed delivery at its exact derived host and phase', () => {
@@ -2465,7 +2449,7 @@ describe('Hermes Shrine entry inventory requirements', () => {
   });
 });
 
-it('retains reached placement rejection at the first due phase stop', () => {
+it('retains reached placement rejection where the walk reaches a row of the wrong phase', () => {
   const original = loadSurfaceNOHermesShrineDeliveryCheckpoint();
   const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
   const occurrence = original.route.biomes
@@ -2489,9 +2473,18 @@ it('retains reached placement rejection at the first due phase stop', () => {
   const evaluation = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
   if (evaluation === undefined || !('rewards' in evaluation))
     throw new Error('delivery evaluation missing');
-  expect(evaluation.findings.map((finding) => finding.code)).toContain(
-    'hermesShrineDeliveryPlacementRequired',
-  );
+  // The walk passes the end the item is due at and reaches the row placed at a phase the room
+  // does not play: that row's own order finding comes before the item's deadline.
+  expect(evaluation.findings).toEqual([
+    expect.objectContaining({
+      code: 'roomActionOrderUnavailable',
+      origin: expect.objectContaining({
+        kind: 'roomAction',
+        occurrenceId: host.occurrenceId,
+        actionKey: roomActionKey(reference),
+      }),
+    }),
+  ]);
   const placement = evaluation.rewards.generatedPickupPlacements?.find(
     (candidate) => candidate.address.entryKey === entry.entryKey,
   );

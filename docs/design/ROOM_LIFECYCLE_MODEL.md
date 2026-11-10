@@ -758,6 +758,17 @@ Nothing past the frontier is live, since the walk has not reached it. The
 live row is this product at the frontier, and a Timeline gap's controls are
 the same product at that gap.
 
+A required item left unplaced never holds the walk where it spawns: the walk
+passes the event or action that spawns it, the item lies live on the ground,
+and the walk stops at its deadline with its placement finding, never at its
+spawn. The deadline is the first point the item must precede: a reached row
+of a later window, Doors open, or the room's commit. A Ship phase's end
+effects wait until its wheel reward and required contacts are taken, so an
+unplaced one is due there, after the phase's other post-combat rows. A
+pickup taken before combat (an Opening reward, Devotion's choice) and an
+action that starts a fight (a cage's completion, a wheel's choice) lead to
+that fight, so the fight waits on them.
+
 Two kinds of item are live at a gap, and nothing else:
 
 - **Loose pickups**: the [spawned loot](#spawned-loot), each live from the gap
@@ -1417,10 +1428,10 @@ state to their sequence.
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Biome start                                             | The Echo keepsake replay transition, before the first event.                                                                                                                                                      |
 | Room prepared                                           | Opens the room's reward lifecycle; Fields optional reward counts; a Preboss first captures its received start state.                                                                                              |
-| Room entered                                            | Room entry with The Centaur's cycle, Shrine and Well assessments, the room-entry Run State capture; halts for a delivery placement.                                                                               |
+| Room entered                                            | Room entry with The Centaur's cycle, Shrine and Well assessments, the room-entry Run State capture; a flushed delivery left unplaced halts the walk at its deadline.                                              |
 | Encounter started                                       | Fig Leaf; the Ship pre-encounter Run State capture.                                                                                                                                                               |
 | Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions; the Gorgon condition is read at completion.                                                                 |
-| Encounter ended                                         | End effects; halts when a Shrine delivery needs placement.                                                                                                                                                        |
+| Encounter ended                                         | End effects; a due Shrine delivery left unplaced halts the walk at its deadline.                                                                                                                                  |
 | Offer point materialized, acquired; role advanced       | Offer materialization and reached-offer settlement.                                                                                                                                                               |
 | Acquisition point reached                               | Acquisition settlement and Purging Pool sale nodes.                                                                                                                                                               |
 | Outgoing generation, room created, target generated     | Batch generation, the pre-outgoing Run State capture and target-slot history; the Hub board flushes once every Hub slot participates; a Postboss room's creation judges a keepsake drafted at its unchanged rack. |

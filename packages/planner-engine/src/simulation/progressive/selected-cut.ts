@@ -762,17 +762,36 @@ export function roomActionAtPosition(
   return spanning.size === 1 ? [...spanning][0] : undefined;
 }
 
+/** Findings a required item raises when the walk reaches its deadline unplaced. */
+const PLACEMENT_REQUIRED: ReadonlySet<string> = new Set([
+  'roomActionPlacementRequired',
+  'hermesShrineDeliveryPlacementRequired',
+  'echoGoldPickupPlacementRequired',
+]);
+
+/** Whether the block is a required item the walk passed unplaced until its deadline. */
+function unplacedRequired(room: CanonicalAuthoredRoom, located: LocatedFinding): boolean {
+  const finding = located.finding;
+  if (!PLACEMENT_REQUIRED.has(finding.code)) return false;
+  if (finding.origin.kind !== 'roomAction') return true;
+  const origin = finding.origin;
+  return room.roomActionRoster.rows.some(
+    (row) => row.key === origin.actionKey && row.rank === null && !row.stale,
+  );
+}
+
 /**
  * Where the walk stopped inside the room a block lies in, never claiming an
  * entry it did not pass. An Overview block stops past entry; exit work, after
  * the room committed or when a restored room departs again, past every entry.
- * A Timeline block stops at the first row of its blocking product the walk
- * reached by the contact, else at the blocking contact's own entry (a row only
- * when reached by then), at the row whose own settlement holds the contact, at
- * Doors open for a contact inside the doors opening,
- * at a boundary whose own event is the contact, or just past the last boundary
- * the walk passed before the contact. Only that last stop is before its entry;
- * every other Timeline stop reached its entry and blocks on it.
+ * A required item left unplaced stops at its deadline, before the first entry
+ * the walk did not reach. Any other Timeline block stops at the first row of
+ * its blocking product the walk reached by the contact, else at the blocking
+ * contact's own entry (a row only when reached by then), at the row whose own
+ * settlement holds the contact, at Doors open for a contact inside the doors
+ * opening, at a boundary whose own event is the contact, or just past the last
+ * boundary the walk passed before the contact. Only those two stops are before
+ * their entry; every other Timeline stop reached its entry and blocks on it.
  */
 function roomStop(
   catalog: Catalog,
@@ -872,6 +891,17 @@ function roomStop(
         return false;
     }
   };
+  const endsOnInteraction = (phaseKey: string) =>
+    room.roomLifecycleTimeline.structure.phases.some(
+      (phase) => phase.phaseKey === phaseKey && phase.endsOnInteraction === true,
+    );
+  const answered = (phaseKey: string) =>
+    passed.find(
+      (event) =>
+        event.kind === 'encounterInteractionReached' &&
+        event.interaction === 'encounter' &&
+        event.phaseKey === phaseKey,
+    );
   const boundaryPassed = (index: number): boolean => {
     const entry = entries[index];
     if (entry?.kind !== 'boundary') return true;
@@ -880,11 +910,20 @@ function roomStop(
       case 'roomEntered':
         return true;
       case 'encounterStart':
+        // A Nemesis event never starts an encounter; answering her is its start and outcome.
+        return endsOnInteraction(boundary.phaseKey)
+          ? answered(boundary.phaseKey) !== undefined
+          : passed.some((event) => boundaryEvent(index, event));
       case 'encounterOutcome':
       case 'bossDefeated':
         return passed.some((event) => boundaryEvent(index, event));
       case 'encounterEnd': {
         if (passed.some((event) => boundaryEvent(index, event))) return true;
+        // A Nemesis event no encounter runs for ends once the walk goes on from answering her.
+        const answer = endsOnInteraction(boundary.phaseKey)
+          ? answered(boundary.phaseKey)
+          : undefined;
+        if (answer !== undefined) return passed.some((event) => event.sequence > answer.sequence);
         // A phase without end effects (a Nemesis interaction, a story phase) ends at its
         // completion, passed once the walk goes on from it; deferred effects must apply.
         const completed = passed.find(
@@ -923,6 +962,38 @@ function roomStop(
     if (entry?.kind === 'action') return rowReached(entry.action.key);
     return entries.every((candidate, earlier) => earlier >= index || boundaryPassed(earlier));
   };
+  // A required item left unplaced blocks at its deadline: the walk passed every entry it reached.
+  if (unplacedRequired(room, located)) {
+    const endEffectsApplied = (phaseKey: string) =>
+      passed.some(
+        (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === phaseKey,
+      );
+    const entryReached = (index: number): boolean => {
+      const entry = entries[index]!;
+      switch (entry.kind) {
+        case 'action':
+          return rowReached(entry.action.key);
+        case 'automaticEffect':
+          return endEffectsApplied(entry.phaseKey);
+        case 'boundary': {
+          // A deferred Ship phase's visible end is its completion; its effects follow its rows.
+          const boundary = entry.boundary;
+          return (
+            boundaryPassed(index) ||
+            (boundary.kind === 'encounterEnd' &&
+              passed.some(
+                (event) =>
+                  event.kind === 'encounterCompleted' &&
+                  event.phaseKey === boundary.phaseKey &&
+                  event.endEffects === 'deferred',
+              ))
+          );
+        }
+      }
+    };
+    const unreached = entries.findIndex((_, index) => !entryReached(index));
+    return stop('timeline', unreached < 0 ? entries.length : unreached, 'before');
+  }
   const firstRow = entries.findIndex(
     (entry) => entry.kind === 'action' && rowKeys?.includes(entry.action.key) === true,
   );

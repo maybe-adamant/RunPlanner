@@ -67,8 +67,6 @@ export interface EncounterEndEffectsTransition {
   readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
   readonly branch: RewardBranchState | undefined;
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
-  /** A due Shrine delivery has no exact ranked/retained host action yet. */
-  readonly hermesShrineDeliveryPlacementRequired: boolean;
   readonly steadyGrowthThresholds: readonly SteadyGrowthLanding[];
   readonly transcendentEmbryoThresholds: readonly {
     readonly address: TranscendentEmbryoOutcomeAddress;
@@ -628,7 +626,6 @@ export function applyEncounterEndEffectsTransition(
     branch: advanceReachedBranch(final, event.sequence),
     generatedPickupPlacements: Object.freeze(generatedPickupPlacements),
     derivedAcquisitionEntryFrontiers: Object.freeze(derivedAcquisitionEntryFrontiers),
-    hermesShrineDeliveryPlacementRequired: deliveryPlacementFindings.length > 0,
     steadyGrowthThresholds: steadyAdvance?.thresholds ?? Object.freeze([]),
     transcendentEmbryoThresholds:
       embryoAdvance?.threshold === undefined
