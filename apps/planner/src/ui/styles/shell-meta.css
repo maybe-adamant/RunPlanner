@@ -226,9 +226,9 @@
   gap: 12px;
   max-width: min(640px, calc(100vw - 32px));
   padding: 10px 10px 10px 16px;
-  border: 1px solid #8a6a3c;
+  border: 1px solid color-mix(in srgb, var(--attention) 50%, var(--surface));
   border-radius: 10px;
-  background: #2b2620;
+  background: color-mix(in srgb, var(--attention) 8%, var(--surface));
   box-shadow: 0 16px 44px rgb(0 0 0 / 45%);
   font-size: 0.9rem;
   transform: translateX(-50%);

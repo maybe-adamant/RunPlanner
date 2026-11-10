@@ -14,7 +14,8 @@ import { hintProps } from '@planner/ui/controls/hint';
 
 /**
  * The last edit's removals in rooms it did not address, each room linked as every reference
- * names a place; it stays until dismissed, undone or replaced by the next edit.
+ * names a place; it stays until dismissed (Escape inside it too), undone or replaced by the
+ * next edit.
  */
 export function RemovedActionsNotice({
   catalog,
@@ -35,7 +36,15 @@ export function RemovedActionsNotice({
   return (
     <div aria-live="polite" className="removed-actions-region">
       {rooms === undefined || rooms.length === 0 ? null : (
-        <div className="removed-actions-notice" data-removed-actions-notice="">
+        <div
+          className="removed-actions-notice"
+          data-removed-actions-notice=""
+          onKeyDown={(event) => {
+            if (event.key !== 'Escape') return;
+            event.preventDefault();
+            dispatch(removedActionsAnnouncementDismissed());
+          }}
+        >
           <ul className="removed-actions-rooms">
             {rooms.map((room) => (
               <li key={room.key}>

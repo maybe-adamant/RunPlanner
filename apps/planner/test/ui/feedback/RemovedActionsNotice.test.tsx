@@ -70,4 +70,16 @@ describe('removed actions notice', () => {
     expect(notice()).toBeNull();
     expect(application.store.getState().projectWorkspace.history).toBe(history);
   });
+
+  it('closes on Escape from inside it without changing the plan', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createEchoGoldIAnvilDuplicateProject()));
+    const { user } = renderPlannerForInteraction({ application });
+    act(() => application.store.dispatch(authoredProjectCommandDispatched(swapEchoAway)));
+    const history = application.store.getState().projectWorkspace.history;
+    within(notice()!).getByRole('button', { name: 'Dismiss' }).focus();
+    await user.keyboard('{Escape}');
+    expect(notice()).toBeNull();
+    expect(application.store.getState().projectWorkspace.history).toBe(history);
+  });
 });
