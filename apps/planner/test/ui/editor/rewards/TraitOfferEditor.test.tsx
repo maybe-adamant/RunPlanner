@@ -69,6 +69,7 @@ import {
   reachedEchoProject,
 } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import { hintOf } from '@planner-test/support/hints';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import { dialogFinding } from '@planner-test/support/editor-dialog';
 
 afterEach(cleanup);
@@ -661,6 +662,7 @@ describe('trait offer editor entry and dialog', () => {
                 ],
         },
       });
+      project = collectTestRequiredItems(project);
       application.store.dispatch(authoredProjectReplaced(project));
       const workspace = application.selectStructuredWorkspace(application.store.getState())!;
       const user = userEvent.setup();
