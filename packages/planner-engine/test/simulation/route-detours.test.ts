@@ -50,6 +50,10 @@ import {
   goldenGBiome,
   goldenGStartId,
 } from '@run-planner/test-fixtures/underworld';
+import {
+  collectTestRequiredItems,
+  scheduleTestRequiredRoomActions,
+} from '@run-planner/test-fixtures/shared';
 import { reachedFrontier } from '../support/reward-frontier';
 import type { RewardBranch } from '../../src/simulation/rewards/model';
 
@@ -84,7 +88,7 @@ function prefix(
   readonly snapshot: MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom };
   readonly history: BiomeHistoryPrefix;
 } {
-  const authored = project;
+  const authored = scheduleTestRequiredRoomActions(project, catalog, biome);
   const snapshot = materializeBiomePrefix(
     catalog,
     biome,
@@ -833,7 +837,7 @@ describe('route-detour simulation', () => {
     project = replaceIncomingReward(project, fBiome, secondCombat, 'MaxManaDrop');
     const { snapshot, history } = prefix(project, fBiome);
     const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 1);
-    const generationAssembly = simulateProjectAssembly(catalog, project);
+    const generationAssembly = simulateProjectAssembly(catalog, collectTestRequiredItems(project));
 
     expect(
       chaosCandidateForProjectEvaluationAssembly(
@@ -1302,9 +1306,12 @@ describe('route-detour simulation', () => {
     expect(
       contractRoom?.roomLifecycleTimeline.structure.points.map((point) => point.kind),
     ).not.toContain('bossDefeated');
+    // The Contract room's fixed reward is a required collect the owner places.
     expect(
-      plan(project, fBiome).topology!.occurrences.find((room) => room.occurrenceId === contract)
-        ?.roomActions.order,
+      plan(
+        scheduleTestRequiredRoomActions(project, catalog, fBiome),
+        fBiome,
+      ).topology!.occurrences.find((room) => room.occurrenceId === contract)?.roomActions.order,
     ).toContainEqual({ kind: 'collectRequiredReward' });
     const rewards = evaluateBiomeRewards(
       catalog,
