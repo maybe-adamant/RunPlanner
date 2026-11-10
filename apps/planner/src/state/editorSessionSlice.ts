@@ -19,6 +19,8 @@ export interface FindingSelection {
   readonly key: string;
   /** Stable finding owner that remains authoritative for workspace navigation. */
   readonly origin: SemanticAddress;
+  /** How the destination is presented where its owner alone does not say, such as on a Timeline. */
+  readonly presentation?: FocusPresentation;
   /** The panel hosting the finding's destination, which may differ from its owner's biome. */
   readonly presentationPanel?: Extract<
     RoutePanel,
@@ -65,7 +67,8 @@ export interface RoutePanelSelection {
 
 /**
  * How an opened owner is presented, where its destination alone does not say:
- * a room on its Timeline tab, or the Hub Timeline with one visit's segment.
+ * a room on its Timeline tab (the Hub on its Timeline), or the Hub Timeline with one
+ * visit's segment.
  */
 export type FocusPresentation =
   { readonly kind: 'roomTimeline' } | { readonly kind: 'hubSegment'; readonly segment: number };
@@ -239,7 +242,7 @@ const editorSessionSlice = createSlice({
       };
     },
     findingSelected(state, action: PayloadAction<FindingSelection>) {
-      state.focusPresentation = null;
+      state.focusPresentation = action.payload.presentation ?? null;
       state.selectedFinding = action.payload;
       const focusAddress = action.payload.focusAddress ?? action.payload.origin;
       state.focusedSemanticOwner = focusAddress;

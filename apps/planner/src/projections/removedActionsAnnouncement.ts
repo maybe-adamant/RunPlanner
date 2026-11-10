@@ -6,7 +6,7 @@ import { findingLocation, ownerSelection } from './evaluationProjection';
 import type { StructuredWorkspaceProjection } from './structured-workspace';
 import { stopNoticeLink } from './walkStopCopy';
 
-/** One room an edit removed rows in, named and reached as the stop notice names its place. */
+/** One room an edit removed rows in, named as the stop notice names it, opened on its Timeline. */
 export interface RemovedActionsRoom {
   readonly key: string;
   readonly count: number;
@@ -34,7 +34,11 @@ export function removedActionsAnnouncement(
         key,
         count: actions.length,
         place: stopNoticeLink({ kind: 'past', place }),
-        selection: ownerSelection(occurrence, `removedActions:${key}`, workspace.focusByOwner),
+        // The removed rows lived on the room's Timeline.
+        selection: {
+          ...ownerSelection(occurrence, `removedActions:${key}`, workspace.focusByOwner),
+          presentation: { kind: 'roomTimeline' as const },
+        },
       });
     }),
   );

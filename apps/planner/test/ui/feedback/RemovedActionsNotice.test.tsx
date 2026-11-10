@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, within } from '@testing-library/react';
+import { act, cleanup, screen, within } from '@testing-library/react';
 import { createEchoGoldIAnvilDuplicateProject } from '@run-planner/test-fixtures/underworld';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -24,7 +24,7 @@ function notice(): HTMLElement | null {
 }
 
 describe('removed actions notice', () => {
-  it('announces another room’s removed row, links that room and undoes the edit', async () => {
+  it('announces another room’s removed row, opens that room’s Timeline and undoes the edit', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createEchoGoldIAnvilDuplicateProject()));
     const { user } = renderPlannerForInteraction({ application });
@@ -42,6 +42,9 @@ describe('removed actions notice', () => {
       kind: 'biome',
       biomeKey: echoShop.biomeKey,
     });
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
     expect(notice()).not.toBeNull();
 
     await user.click(within(notice()!).getByRole('button', { name: 'Undo' }));

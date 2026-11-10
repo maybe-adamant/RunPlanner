@@ -938,9 +938,11 @@ export function BiomeWorkspace({
             {...(sourceOccurrence === undefined ? {} : { sourceOccurrence })}
             {...(focusPresentation?.kind === 'hubSegment'
               ? { hubTab: 'timeline' as const, hubSegment: focusPresentation.segment }
-              : explicitDestination?.hubTab === undefined
-                ? {}
-                : { hubTab: explicitDestination.hubTab })}
+              : focusPresentation?.kind === 'roomTimeline'
+                ? { hubTab: 'timeline' as const }
+                : explicitDestination?.hubTab === undefined
+                  ? {}
+                  : { hubTab: explicitDestination.hubTab })}
             {...(focusPresentation?.kind === 'roomTimeline'
               ? { roomTab: 'actions' as const }
               : explicitDestination?.roomTab === undefined

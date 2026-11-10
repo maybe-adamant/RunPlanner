@@ -8,7 +8,7 @@ import { createStructuredWorkspaceTestServices } from '@planner-test/fixtures/st
 import { echoShop, swapEchoAway } from '@planner-test/support/removed-actions';
 
 describe('removed actions announcement', () => {
-  it('names each room by its location and reaches it as the stop notice does', () => {
+  it('names each room by its location and opens it on its Timeline', () => {
     const before = simulateProjectAssembly(catalog, createEchoGoldIAnvilDuplicateProject());
     const settled = settleProjectEdit({
       catalog,
@@ -31,6 +31,7 @@ describe('removed actions announcement', () => {
       place: 'Location 40',
       selection: {
         origin: echoShop,
+        presentation: { kind: 'roomTimeline' },
         presentationPanel: { kind: 'biome', biomeKey: echoShop.biomeKey },
       },
     });
