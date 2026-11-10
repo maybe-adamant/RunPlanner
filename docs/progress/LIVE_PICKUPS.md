@@ -29,8 +29,8 @@ You either interact with pickups or active objects.
 - **A.** The live-at-k product, a pure addition.
 - **B.** Draft and the run import author pickups from it, placing what they
   relied on being inserted.
-- **C.** Remove automatic placement (change 1). If placements are derived,
-  fold any old-plan materialization into the unreleased schema 103.
+- **C.** Remove automatic placement (change 1). Placements are persisted
+  rows, so no saved plan needs migrating.
   Equivalence and Draft corpus lanes before and after; separate and
   revertible.
 - **D.** The UI product as a whole:

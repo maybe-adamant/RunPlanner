@@ -39,6 +39,7 @@ export function liftProjectDocument(value) {
  * Catalog-aware transform: the lifted plan, saved under the earlier settlement
  * rules, is settled once as the current rules would have left it. A plan that
  * does not decode, or whose settlement throws or faults, keeps the bare lift.
+ * It settles only while 103 is the current schema; later it keeps the bare lift.
  */
 export function migrateProjectDocument(value, { catalog }) {
   const lifted = liftProjectDocument(value);
