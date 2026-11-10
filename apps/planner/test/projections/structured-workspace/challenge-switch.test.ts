@@ -10,6 +10,7 @@ import {
   roomActionKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import { placeTestLivePickupsAtSite } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import type {
@@ -245,9 +246,13 @@ describe('challenge switch in the structured workspace', () => {
     ).toMatchObject({ outcome: 'finished', nectar: true });
     // The claim's gold sits on its Collect row with the estimate's hover, not on the use row.
     expect(row.goldGained).toBeUndefined();
-    const claim = room(workspace, 'F', 'golden-f-b5-e1').roomActions!.rows.find(
+    const claimed = projectStructuredWorkspaceFixture(
+      placeTestLivePickupsAtSite(project, host(project, 'F', 'golden-f-b5-e1'), 'challengeSwitch'),
+    ).workspace;
+    const claim = room(claimed, 'F', 'golden-f-b5-e1').roomActions!.rows.find(
       (candidate) => candidate.sourceFamily?.kind === 'challengeSwitch',
     );
+    expect(claim?.rank).not.toBeNull();
     expect(claim?.goldGained?.hint).toEqual(expect.any(String));
 
     const left = projectStructuredWorkspaceFixture(
