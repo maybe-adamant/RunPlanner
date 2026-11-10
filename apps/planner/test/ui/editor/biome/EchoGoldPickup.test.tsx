@@ -31,7 +31,6 @@ import {
 } from '@planner-test/support/biome-workbench';
 import {
   occurrenceById,
-  openNotReached,
   openRoomTab,
   pickRoomObjectAction,
 } from '@planner-test/support/occurrence-workbench';
@@ -103,7 +102,7 @@ it('keeps a stale Gold pickup removable after its triggering purchase is cleared
   ).toBe(false);
 });
 
-it('adds required Gold with the purchase and restores both through one Undo and Redo', async () => {
+it('buys the Gold Gold Gold source without placing its Gold, through one Undo and Redo', async () => {
   const project = createEchoGoldHPrebossProject();
   const view = renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(shopId));
   openRoomTab('Room Timeline');
@@ -111,15 +110,13 @@ it('adds required Gold with the purchase and restores both through one Undo and 
   await pickRoomObjectAction(view.user, 'World Shop', 'Buy Apollo');
   const history = view.application.store.getState().projectWorkspace.history!;
   expect(history.past).toHaveLength(1);
-  // The walk stops at the purchase, so the Gold waits past it.
-  openNotReached();
-  expect(goldRow().queryByRole('button', { name: 'Restore pickup' })).toBeNull();
-  expect(
-    (goldRow().getByRole('button', { name: /Remove .* from timeline/ }) as HTMLButtonElement)
-      .disabled,
-  ).toBe(true);
-  // A waiting row is not reordered until the walk reaches it.
-  expect(goldRow().queryByRole('button', { name: /^Reorder / })).toBeNull();
+  // The Gold arrives on the ground; picking it up is the owner's own row.
+  const shopOrder = history.present.route.biomes
+    .find((candidate) => candidate.biomeKey === 'H')
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)
+    ?.roomActions.order.map(roomActionKey);
+  expect(shopOrder).toContain(roomActionKey({ kind: 'interactShopOffer', offerKey: 'Boon' }));
+  expect(shopOrder).not.toContain(goldActionKey);
   act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
   expect(view.application.store.getState().projectWorkspace.history!.present).toBe(project);
   act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
