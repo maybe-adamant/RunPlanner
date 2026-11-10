@@ -49,7 +49,7 @@ import {
   assessGorgonEligibility,
 } from '../../src/simulation/keepsakes/encounter-effects';
 import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
-import { resolveGorgonCandidateRarity } from '../../src/simulation/rewards/biome/encounter-acquisition/gorgon-started';
+import { resolveGorgonCandidateRarity } from '../../src/simulation/rewards/biome/encounter-acquisition/gorgon-outcome';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 
 import {

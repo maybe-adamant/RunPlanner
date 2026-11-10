@@ -105,7 +105,6 @@ export type RoomLifecycleEvent =
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterStarted';
-      readonly aetos?: import('../encounters/aetos').AetosPhaseSupport;
       readonly phaseKey: string;
       readonly encounterEnvelopeKey: string;
       readonly encounterKey: string;
@@ -120,6 +119,8 @@ export type RoomLifecycleEvent =
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterCompleted';
+      /** The Aetos wave, read at the fight's outcome; history composition attaches it. */
+      readonly aetos?: import('../encounters/aetos').AetosPhaseSupport;
       readonly phaseKey: string;
       readonly execution: 'normal' | 'skippedByFigLeaf';
       readonly figLeafSkipOwner: boolean;

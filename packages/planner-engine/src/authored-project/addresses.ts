@@ -247,7 +247,7 @@ export interface FigLeafPhaseAddress extends BiomeOwnedAddress {
   readonly kind: 'figLeafPhase';
   readonly encounter: EncounterPhaseAddress;
 }
-/** The Aetos appearance of one encounter phase, settled when that phase starts. */
+/** The Aetos appearance of one encounter phase, settled at that fight's outcome. */
 export interface AetosPhaseAddress extends BiomeOwnedAddress {
   readonly kind: 'aetosPhase';
   readonly encounter: EncounterPhaseAddress;

@@ -192,11 +192,6 @@ function encounterEntry(
     slotKey: event.phaseKey,
     encounterKey: event.encounterKey,
     phaseKind: event.phaseKind,
-    ...(event.kind === 'encounterStarted' &&
-    event.aetos?.selectedWave !== undefined &&
-    event.aetos.reason === undefined
-      ? { aetosWave: event.aetos.selectedWave }
-      : {}),
     ...(event.kind !== 'encounterRecorded' || event.generatedCustomization === undefined
       ? {}
       : { knownEnemyBlacklistAdditions: event.generatedCustomization.knownRunBlacklistAdditions }),
@@ -722,7 +717,15 @@ function foldHistoryEventStream(
         }
         activeEncounters.delete(key);
         completedEncounters.set(key, event);
-        ledgers.encounterCompletions.push(Object.freeze({ ...started, sequence: event.sequence }));
+        ledgers.encounterCompletions.push(
+          Object.freeze({
+            ...started,
+            sequence: event.sequence,
+            ...(event.aetos?.selectedWave !== undefined && event.aetos.reason === undefined
+              ? { aetosWave: event.aetos.selectedWave }
+              : {}),
+          }),
+        );
         break;
       }
       case 'encounterEndEffectsApplied': {

@@ -12,6 +12,7 @@ import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import { encounterEntryVowRanks } from '../../arcana-fear';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
 import type { HistoryEvent } from '../../history';
+import { projectRoomEncounterRecords } from '../../history/facts';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
 import { forGeneration } from '../../materialization';
 import { resourcePlacementFindingRegions } from '../../resources';
@@ -50,7 +51,7 @@ import {
 } from './chronology-walk';
 import { applyAcquisitionPointReachedTransition } from './encounter-acquisition/acquisition-point-reached';
 import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
-import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
+import { applyGorgonOutcomeTransition } from './encounter-acquisition/gorgon-outcome';
 import { applyHermesShrinePurchaseReachedTransition } from './encounter-acquisition/hermes-shrine-purchase';
 import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
 import { withPoolSaleGold } from './gold-event-seams';
@@ -854,49 +855,60 @@ const encounterStarted: ChronologySeamHandler<'encounterStarted'> = (context, st
     room,
     state.branch,
   );
-  const gorgon = applyGorgonStartedTransition({
-    catalog: context.catalog,
-    event,
-    room,
-    view:
-      sourceRoom === undefined
-        ? undefined
-        : context.views.get(semanticAddressKey(sourceRoom.origin)),
-    branch: figLeaf.branch,
-    evaluationBlocked: state.gorgonEvaluationBlocked,
-  });
   return {
-    state: Object.freeze({
-      ...state,
-      branch: gorgon.branch,
-      eligibleGorgonPhases:
-        gorgon.eligiblePhaseKey === undefined
-          ? state.eligibleGorgonPhases
-          : withMember(state.eligibleGorgonPhases, gorgon.eligiblePhaseKey, true),
-    }),
+    state: Object.freeze({ ...state, branch: figLeaf.branch }),
     emissions: [
       { kind: 'figLeafPhaseCandidates', candidates: figLeaf.figLeafCandidates },
       lifecycleFindings(figLeaf.findings),
-      ...(gorgon.candidate === undefined
-        ? []
-        : [
-            {
-              kind: 'gorgonPhaseCandidate' as const,
-              key: gorgon.candidate.key,
-              candidate: gorgon.candidate.value,
-            },
-          ]),
-      lifecycleFindings(gorgon.findings),
     ],
     ...(runStateCheckpoint === undefined ? {} : { runStateCheckpoint }),
   };
 };
 
+function gorgonOutcome(
+  context: Parameters<ChronologySeamHandler<'encounterCompleted'>>[0],
+  state: Parameters<ChronologySeamHandler<'encounterCompleted'>>[1],
+  event: Extract<HistoryEvent, { readonly kind: 'encounterCompleted' }>,
+) {
+  const sourceRoom = context.rooms.get(semanticAddressKey(event.origin));
+  const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
+  const view = context.views.get(semanticAddressKey(event.origin));
+  const encounterKey =
+    view === undefined
+      ? undefined
+      : projectRoomEncounterRecords(view.entry, event.origin).find(
+          (record) => record.slotKey === event.phaseKey,
+        )?.encounterKey;
+  if (room === undefined || encounterKey === undefined) return undefined;
+  return applyGorgonOutcomeTransition({
+    catalog: context.catalog,
+    event: { ...event, encounterKey },
+    room,
+    view,
+    branch: state.branch,
+    evaluationBlocked: state.gorgonEvaluationBlocked,
+  });
+}
+
 /** Encounter completion and its cleanup-window Room Actions settle through one transition. */
 const encounterSettled: ChronologySeamHandler<
   'bossDefeated' | 'encounterInteractionReached' | 'encounterCompleted'
-> = (context, state, event) => {
+> = (context, received, event) => {
   const room = context.rooms.get(semanticAddressKey(event.origin));
+  // The Gorgon condition is read at the fight's outcome, its completion.
+  const gorgon =
+    event.kind !== 'encounterCompleted' ? undefined : gorgonOutcome(context, received, event);
+  const state =
+    gorgon === undefined
+      ? received
+      : Object.freeze({
+          ...received,
+          branch: gorgon.branch,
+          eligibleGorgonPhases:
+            gorgon.eligiblePhaseKey === undefined
+              ? received.eligibleGorgonPhases
+              : withMember(received.eligibleGorgonPhases, gorgon.eligiblePhaseKey, true),
+        });
   const gorgonPhaseKey = `${semanticAddressKey(event.origin)}::${event.phaseKey}`;
   const gorgonCandidate =
     room?.kind === 'authored'
@@ -937,6 +949,16 @@ const encounterSettled: ChronologySeamHandler<
       gorgonEvaluationBlocked: transition.gorgonEvaluationBlocked,
     }),
     emissions: [
+      ...(gorgon?.candidate === undefined
+        ? []
+        : [
+            {
+              kind: 'gorgonPhaseCandidate' as const,
+              key: gorgon.candidate.key,
+              candidate: gorgon.candidate.value,
+            },
+          ]),
+      lifecycleFindings(gorgon?.findings ?? []),
       settledFindings(transition.findings),
       { kind: 'acquisitionRoleFrontiers', frontiers: transition.roleFrontiers },
       {

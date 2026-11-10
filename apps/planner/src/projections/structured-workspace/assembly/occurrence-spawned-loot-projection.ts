@@ -233,13 +233,6 @@ function momentAnchor(
       return first(entered);
     case 'encounterStart':
       return first(['after', boundaryAt('encounterStart', phase)], entered);
-    case 'duringEncounter':
-      return first(
-        ['before', boundaryAt('bossDefeated', phase)],
-        ['before', boundaryAt('encounterEnd', phase)],
-        ['after', boundaryAt('encounterStart', phase)],
-        entered,
-      );
     case 'encounterEnd':
       return first(
         ['after', boundaryAt('encounterEnd', phase)],

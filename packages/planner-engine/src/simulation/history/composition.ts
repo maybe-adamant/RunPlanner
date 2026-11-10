@@ -423,31 +423,45 @@ export function appendRoomLifecycle(
 
   /** Appends the room's events; `stopped` when a prefix stop ends the room early. */
   function composeLifecycleEvents(): 'stopped' | 'done' {
+    // Whether an earlier fight of the biome placed Aetos, read as each phase starts: its
+    // outcome follows with no other fight between.
+    const aetosPlacedBefore = new Map<string, boolean>();
     for (const sourceEvent of fragment.events) {
       placed.set(sourceEvent.sequence, writer.nextSequence());
-      const event =
+      const startedPhase =
         sourceEvent.kind === 'encounterStarted'
+          ? effectiveEncounterPhases.find((candidate) => candidate.slotKey === sourceEvent.phaseKey)
+          : undefined;
+      if (
+        sourceEvent.kind === 'encounterStarted' &&
+        (startedPhase?.aetosWaves !== undefined || startedPhase?.aetosWave !== undefined)
+      )
+        aetosPlacedBefore.set(
+          sourceEvent.phaseKey,
+          writer
+            .current()
+            .ledgers.encounterCompletions.some(
+              (entry) =>
+                entry.origin.routeKey === room.origin.routeKey &&
+                entry.origin.biomeKey === room.origin.biomeKey &&
+                entry.aetosWave !== undefined,
+            ),
+        );
+      const event =
+        sourceEvent.kind === 'encounterCompleted'
           ? (() => {
               const phase = effectiveEncounterPhases.find(
                 (candidate) => candidate.slotKey === sourceEvent.phaseKey,
               )!;
               if (phase.aetosWaves === undefined && phase.aetosWave === undefined)
                 return sourceEvent;
-              const prior = writer
-                .current()
-                .ledgers.encounterStarts.some(
-                  (entry) =>
-                    entry.origin.routeKey === room.origin.routeKey &&
-                    entry.origin.biomeKey === room.origin.biomeKey &&
-                    entry.aetosWave !== undefined,
-                );
               return Object.freeze({
                 ...sourceEvent,
                 aetos: assessAetosAppearance(
                   phase,
                   declaration.structuralTags.includes('Outdoor'),
                   sourceEvent.execution === 'skippedByFigLeaf',
-                  prior,
+                  aetosPlacedBefore.get(sourceEvent.phaseKey) === true,
                 ),
               });
             })()

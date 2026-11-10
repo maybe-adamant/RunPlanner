@@ -4,7 +4,9 @@ import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createAdditionalExitAddress,
+  createAetosPhaseAddress,
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   createRoomActionAddress,
   createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
@@ -28,6 +30,8 @@ import type { ResourceFamily } from '@run-planner/engine/catalog-schema';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
+  encounterPhaseGorgonSupportForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   generatedEncounterSupportForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
@@ -35,6 +39,7 @@ import {
 import {
   createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
   loadSurfaceNOProject,
+  loadSurfaceNOPProject,
   loadSurfaceNProject,
   nBiome,
   nLocalOccurrenceId,
@@ -44,6 +49,7 @@ import {
   oBiome,
   oOccurrenceIds,
   pBiome,
+  pOccurrenceId,
   pOccurrenceIds,
   surfaceEncounterShowcaseProject,
   surfaceTravelDealRefillAnvilProject,
@@ -1232,6 +1238,30 @@ describe('room stop', () => {
     });
   }
 
+  const pCombat = createEncounterPhaseAddress(
+    pBiome,
+    { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
+    'Combat',
+  );
+
+  /** An Aetos wave the fight cannot field: its outcome, read when the fight ends, blocks. */
+  function aetosWaveUnavailable() {
+    return applyProjectCommand(loadSurfaceNOPProject(), catalog, {
+      kind: 'ReplaceAetosWave',
+      phase: pCombat,
+      value: 3,
+    });
+  }
+
+  /** The Gorgon condition met with no Gorgon Amulet held: its outcome blocks. */
+  function gorgonConditionUnavailable() {
+    return applyProjectCommand(loadSurfaceNOPProject(), catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase: pCombat,
+      value: true,
+    });
+  }
+
   function partialWheel() {
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
     const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
@@ -1592,6 +1622,28 @@ describe('room stop', () => {
       },
     ],
     [
+      "an outcome contact (Aetos): the fight's outcome, reached, not its start",
+      aetosWaveUnavailable,
+      'P',
+      {
+        room: pOccurrenceId('P_Combat03', 1, 1),
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterOutcome:Combat',
+      },
+    ],
+    [
+      "an outcome contact (the Gorgon condition): the fight's outcome, reached",
+      gorgonConditionUnavailable,
+      'P',
+      {
+        room: pOccurrenceId('P_Combat03', 1, 1),
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterOutcome:Combat',
+      },
+    ],
+    [
       'Boss defeated: reached, blocked on its due Judgment',
       () =>
         applyProjectCommand(loadSurfaceNOProject(), catalog, {
@@ -1745,6 +1797,20 @@ describe('room stop', () => {
 
   it.each(cases)('%s', (_name, build, biomeKey, expected) => {
     expect(stopAt(biomeEvaluation(build(), biomeKey))).toEqual(expected);
+  });
+
+  it("keeps a phase's outcome support where its outcome blocks", () => {
+    const aetos = simulateProjectAssembly(catalog, aetosWaveUnavailable());
+    expect(aetos.evaluation.issue).toMatchObject({ owner: createAetosPhaseAddress(pCombat) });
+    expect(encounterPhaseSequenceStatusForProjectEvaluationAssembly(aetos, pCombat)).toMatchObject({
+      execution: 'normal',
+      aetos: { selectedWave: 3, reason: 'wave' },
+    });
+    const gorgon = simulateProjectAssembly(catalog, gorgonConditionUnavailable());
+    expect(gorgon.evaluation.issue).toMatchObject({ owner: createGorgonPhaseAddress(pCombat) });
+    expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(gorgon, pCombat)).toMatchObject({
+      supported: false,
+    });
   });
 
   it('stops at a Postboss Well purchase the required fountain must precede', () => {

@@ -346,6 +346,11 @@ export {
 } from './evaluation/gold-query';
 export { roomActionResetsForProjectEvaluationAssembly } from './evaluation/room-action-reset';
 export {
+  encounterOutcomesForProjectEvaluationAssembly,
+  type EncounterOutcome,
+  type EncounterOutcomeChoice,
+} from './evaluation/encounter-outcome';
+export {
   spawnedLootForProjectEvaluationAssembly,
   type ActionSpawn,
   type RoomSpawnedLoot,
