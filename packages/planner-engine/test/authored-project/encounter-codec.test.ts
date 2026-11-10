@@ -195,7 +195,11 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     // The result spawns from the Nemesis contact, so the contact is placed first.
     const unplaced = applyProjectCommand(uncontacted, catalog, {
       kind: 'InsertRoomAction',
-      action: createRoomActionAddress(goldenFBiome, goldenFOccurrenceId(5, 1), roomActionKey(contact)),
+      action: createRoomActionAddress(
+        goldenFBiome,
+        goldenFOccurrenceId(5, 1),
+        roomActionKey(contact),
+      ),
       reference: contact,
       index: uncontacted.route.biomes[0]!.topology!.occurrences.find(
         (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),

@@ -463,7 +463,11 @@ describe('authored encounter occurrence commands', () => {
     ).not.toContainEqual(result);
     const collected = applyProjectCommand(accepted, catalog, {
       kind: 'InsertRoomAction',
-      action: createRoomActionAddress(goldenFBiome, goldenFOccurrenceId(5, 1), roomActionKey(result)),
+      action: createRoomActionAddress(
+        goldenFBiome,
+        goldenFOccurrenceId(5, 1),
+        roomActionKey(result),
+      ),
       reference: result,
       index: occurrence(accepted, 'F', goldenFOccurrenceId(5, 1)).roomActions.order.length,
     });

@@ -73,8 +73,7 @@ function offeredDrops(
   siteKey: string,
 ) {
   return (
-    roomActionDomainForOccurrence(project, catalog, biome, occurrenceId)?.domain.contributions ??
-    []
+    roomActionDomainForOccurrence(project, catalog, biome, occurrenceId)?.domain.contributions ?? []
   ).flatMap((entry) =>
     entry.kind === 'action' &&
     entry.reference.kind === 'interactAcquisitionEntry' &&
@@ -223,9 +222,9 @@ describe('trait-dropped pickups', () => {
     });
     const again = traitGeneratedPickupSiteKey(boonTrait, 'option2');
     expect(taken(project)).toEqual([]);
-    expect(offeredDrops(project, goldenF, combatId, again).map(({ reference }) => reference)).toEqual(
-      drops(again, buriedTreasureDrops),
-    );
+    expect(
+      offeredDrops(project, goldenF, combatId, again).map(({ reference }) => reference),
+    ).toEqual(drops(again, buriedTreasureDrops));
   });
 
   it('offers Quick Buck’s gold without placing it', () => {

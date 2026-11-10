@@ -368,7 +368,9 @@ describe('timed-effect edit settlement', () => {
     expect(settled.assembly.evaluation.findings).toContainEqual(
       expect.objectContaining({
         code: 'hermesShrineDeliveryPlacementRequired',
-        origin: expect.objectContaining({ entryKey: reference.entryKey }),
+        origin: expect.objectContaining({
+          entryKey: reference.kind === 'interactAcquisitionEntry' ? reference.entryKey : undefined,
+        }),
       }),
     );
   });
@@ -690,7 +692,11 @@ describe('timed-effect edit settlement', () => {
       purchased: true,
     });
     const key = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
-    const delivery = { kind: 'interactAcquisitionEntry', siteKey: 'hermesShrineDelivery', entryKey: key };
+    const delivery = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey: key,
+    };
     expect(occurrence(settled.project, 'surface-q-preboss').roomActions.order).not.toContainEqual(
       delivery,
     );

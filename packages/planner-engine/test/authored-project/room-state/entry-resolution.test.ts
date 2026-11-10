@@ -219,14 +219,16 @@ describe('contextual entry resolution', () => {
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );
+    const sourceAction = producer.sourceAction;
+    if (sourceAction === undefined) throw new Error('missing Buried Treasure source action');
     const placed = applyProjectCommand(project, catalog, {
       kind: 'InsertRoomAction',
-      action: createRoomActionAddress(biome, occurrenceId, roomActionKey(producer.sourceAction)),
-      reference: producer.sourceAction,
+      action: createRoomActionAddress(biome, occurrenceId, roomActionKey(sourceAction)),
+      reference: sourceAction,
       index: 0,
     });
     expect(placed.route.biomes[0]?.topology?.occurrences[0]?.roomActions.order).toEqual([
-      producer.sourceAction,
+      sourceAction,
     ]);
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(placed)), catalog)).toEqual(
       placed,

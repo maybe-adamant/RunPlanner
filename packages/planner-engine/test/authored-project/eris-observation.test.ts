@@ -135,7 +135,11 @@ describe('SetErisSpawned', () => {
     for (const [index, reference] of intro(freshRoute()).roomActions.order.entries())
       replaced = applyProjectCommand(replaced, catalog, {
         kind: 'InsertRoomAction',
-        action: createRoomActionAddress(freshFileGBiome, freshFileGIntroId, roomActionKey(reference)),
+        action: createRoomActionAddress(
+          freshFileGBiome,
+          freshFileGIntroId,
+          roomActionKey(reference),
+        ),
         reference,
         index,
       });

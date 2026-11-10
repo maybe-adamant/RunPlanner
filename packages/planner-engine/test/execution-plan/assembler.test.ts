@@ -789,7 +789,9 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     expect(sale).not.toHaveProperty('transactionOwner');
 
-    const well = productFor(authorTestTraitsAndRequiredItems(loadUnderworldFStygianWellCheckpoint()));
+    const well = productFor(
+      authorTestTraitsAndRequiredItems(loadUnderworldFStygianWellCheckpoint()),
+    );
     expect(
       well.occurrences
         .flatMap((occurrence) => occurrence.roomGuide)

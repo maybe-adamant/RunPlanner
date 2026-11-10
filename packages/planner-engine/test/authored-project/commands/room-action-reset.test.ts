@@ -142,9 +142,8 @@ describe('ResetRoomActionsAfter', () => {
     const authored = createGoldenFGHProject();
     const fieldsOrder = authored.route.biomes
       .find((plan) => plan.biomeKey === fields.biomeKey)!
-      .topology!.occurrences.find(
-        (candidate) => candidate.occurrenceId === fields.occurrenceId,
-      )!.roomActions.order;
+      .topology!.occurrences.find((candidate) => candidate.occurrenceId === fields.occurrenceId)!
+      .roomActions.order;
     expect(applyProjectCommand(authored, catalog, reset(fields, fieldsOrder.at(-1)!))).toBe(
       authored,
     );

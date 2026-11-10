@@ -1164,7 +1164,11 @@ describe('room-action commands', () => {
         occurrence: fields!,
       }).contributions,
     ).toContainEqual(
-      expect.objectContaining({ kind: 'action', reference: replacement, participation: 'required' }),
+      expect.objectContaining({
+        kind: 'action',
+        reference: replacement,
+        participation: 'required',
+      }),
     );
     expect(undoProjectHistory(history).present).toBe(withSource);
   });
