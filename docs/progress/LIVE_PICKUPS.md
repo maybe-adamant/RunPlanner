@@ -70,3 +70,54 @@ collect in spawn order, in one edit, never placing optional pickups.
 
 Inventory: pending (Part 2 step 0), recording the decision for each pickup
 kind.
+
+## Vision (owner, 2026-11-10)
+
+Planning a room mimics playing it.
+
+- **Existence is a game fact** the player does not control: items spawn on
+  the ground, an NPC stands there, a delivery arrives when it matures, a shop
+  exists. The engine announces it as spawn notices and lifecycle events.
+- **Interaction is the player's**, in the order they choose: talk to the NPC,
+  collect an item, unlock a cage, transform a Pom, buy. Only interactions are
+  Timeline rows; placing a row places the interaction, never the spawn.
+- **The live row** is a one-line snapshot of everything interactable at that
+  point: Required items/NPCs | Optional items | Active objects. Clicking an
+  icon performs that interaction as the next row; lifecycle events (encounter
+  ends, doors open) then progress and the live row updates. The `+` at a gap
+  is the same snapshot at that earlier point.
+
+## Step C decisions (owner, 2026-11-10)
+
+- **Owner-placed interactions:** the Boss forced drop, NPC/encounter contacts
+  (Nemesis, Gorgon, Eris), the Fields cage unlock, Hermes deliveries and Gold
+  Gold Gold duplicates. Settlement stops auto-placing deliveries and
+  duplicates (they arrive automatically; their pickup is a row). Rooms are
+  created without seeded rows.
+- **Remove and Reset of a required row** are allowed: the item is live on the
+  ground again and the walk shows its finding.
+- The reward-swap rekey stays.
+- **Collect all required:** a simple command placing every required live
+  item at its canonical spot; dropped if it feels bad in the planner.
+- **Draft order:** Fields goes clear then collect, cage by cage. Boss rooms
+  are like normal rooms, with no preferred order between the forced drop and
+  the room reward.
+- **Run import** (B's second half): required rows at the live product's
+  canonical position. Independent rows' order does not change the end state;
+  dependent rows produce different end states, which the end-room
+  conformance catches.
+- **Choice actions:** rerolls (door, cage, wheel, Well, Pool), Pool sales and
+  rack keepsakes are listed on their object with an action that opens the
+  picker on click. They appear only once their context is resolved (doors
+  unlocked and door values settled; Pool slot resolved, otherwise "resolve
+  first").
+- **Engine work:**
+  - the walk passes spawning events while their spawned item is unresolved,
+    clearing the pinned held cases;
+  - a new missing-pickup finding wording ("Collect X before …"), routed into
+    Draft's `placeRequiredActions`;
+  - close the walk leniency that accepts a Gold Gold Gold duplicate before
+    its purchase;
+  - remove Draft's wheel-reward fallback.
+
+  Old saves are unaffected: placements are persisted rows.
