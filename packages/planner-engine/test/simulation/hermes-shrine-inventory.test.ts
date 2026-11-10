@@ -62,6 +62,7 @@ import {
 } from '@run-planner/test-fixtures/dream';
 import {
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   purchaseTestHermesShrineOffer,
   supportedTraitOffer,
   testHermesShrinePurchaseAction,
@@ -92,6 +93,39 @@ import {
   initializeTestRewardBranchForRoute,
 } from '../support/arcana-fear';
 import { reachedFrontier } from '../support/reward-frontier';
+
+/** Picks up a rushed Shrine purchase's item right after its purchase. */
+function takeRushedItem(
+  project: ProjectDocument,
+  host: ReturnType<typeof createOccurrenceAddress>,
+  generationKey: Parameters<typeof hermesShrineDeliveryEntryKey>[1],
+): ProjectDocument {
+  const order =
+    project.route.biomes
+      .find((biome) => biome.biomeKey === host.biomeKey)
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === host.occurrenceId)
+      ?.roomActions.order ?? [];
+  const purchase = order.findIndex(
+    (reference) =>
+      reference.kind === 'purchaseHermesShrineOffer' && reference.generationKey === generationKey,
+  );
+  if (purchase < 0) throw new Error(`${generationKey} is not purchased`);
+  const reference = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'hermesShrineDelivery',
+    entryKey: hermesShrineDeliveryEntryKey(host, generationKey),
+  };
+  return applyProjectCommand(project, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(
+      createBiomeAddress(host.routeKey, host.biomeKey),
+      host.occurrenceId,
+      roomActionKey(reference),
+    ),
+    reference,
+    index: purchase + 1,
+  });
+}
 
 function branchWithTravelDeal() {
   const traits = foldTraitHistoryEvents(catalog, [
@@ -1214,6 +1248,11 @@ describe('Hermes Shrine Travel Deal generation', () => {
       delay: 3,
       rushed: true,
     });
+    project = takeRushedItem(
+      takeRushedItem(project, host, 'initial:first'),
+      host,
+      'travelDealRefill',
+    );
     const refillEntry = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
       hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
@@ -1437,7 +1476,11 @@ describe('Hermes Shrine Travel Deal generation', () => {
       ['initial:first', { delay: 2, rushed: true }],
       ['travelDealRefill', { delay: 3, rushed: true }],
     ] as const)
-      project = purchaseTestHermesShrineOffer(project, catalog, host, generationKey, purchase);
+      project = takeRushedItem(
+        purchaseTestHermesShrineOffer(project, catalog, host, generationKey, purchase),
+        host,
+        generationKey,
+      );
     const refillKey = hermesShrineDeliveryEntryKey(host, 'travelDealRefill');
     const removePickup = (
       document: typeof project,
@@ -1620,7 +1663,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
       // The route has no earlier Hermes boon; the Shrine's rushed Hermes boon
       // grants Travel Deal, then the first slot is rushed and the refill bought.
       const shrineTravelDeal = (selectedOptionKey: 'option1' | 'option2') => {
-        let project = authorLegalTraitOffers(
+        let project = authorTestTraitsAndRequiredItems(
           applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
             kind: 'ReplaceIncomingReward',
             reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
@@ -1637,6 +1680,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
           delay: 2,
           rushed: true,
         });
+        project = takeRushedItem(project, shrine, 'initial:secondRight');
         project = applyProjectCommand(project, catalog, {
           kind: 'ReplaceTraitOffer',
           trait: createTraitOfferAddress(hermesEntry, 'hermes'),
@@ -2009,6 +2053,7 @@ describe('Hermes Shrine pickup settlement', () => {
       delay: 2,
       rushed: true,
     });
+    project = takeRushedItem(project, host, 'initial:secondRight');
 
     const assembly = simulateProjectAssembly(catalog, project);
     expect(assembly.evaluation.findings.map((finding) => finding.code)).toContain('rewardMissing');
@@ -2065,6 +2110,7 @@ describe('Hermes Shrine pickup settlement', () => {
       delay: 2,
       rushed: true,
     });
+    project = takeRushedItem(project, host, 'initial:first');
     const site = createAcquisitionSiteAddress(host, 'hermesShrineDelivery');
     const entry = createAcquisitionEntryAddress(
       site,
@@ -2272,6 +2318,7 @@ describe('Hermes Shrine pickup settlement', () => {
       delay: 2,
       rushed: true,
     });
+    project = takeRushedItem(project, host, 'initial:secondLeft');
     const entry = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
       hermesShrineDeliveryEntryKey(host, 'initial:secondLeft'),
@@ -2284,7 +2331,7 @@ describe('Hermes Shrine pickup settlement', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     expect(
       deliveredBoonRarityValues(project, createTraitOfferAddress(entry, 'hiddenSource'), 'Apollo'),
     ).toEqual([
