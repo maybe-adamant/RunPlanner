@@ -21,7 +21,11 @@ import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoin
 import { describe, expect, it } from 'vitest';
 import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
 import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
-import { legacyRareEpicHexTrees, legacySchema99Body } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  legacyRareEpicHexTrees,
+  legacySchema99Body,
+} from '@run-planner/test-fixtures/shared';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { viewChanged } from '@planner/state/librarySessionSlice';
@@ -616,7 +620,8 @@ describe('project operations', () => {
         candidate.origin.site.owner.kind === 'occurrence' &&
         candidate.origin.site.owner.occurrenceId === 'c34604d0-c4e3-4c26-8539-54a82158716f',
     );
-    expect(deliveryFinding).toBeUndefined();
+    // Reached past the outcome, the delivery waits on the ground until the owner picks it up.
+    expect(deliveryFinding).toMatchObject({ evidence: { deadline: 'doorsOpen' } });
     const host = application.store
       .getState()
       .projectWorkspace.history!.present.route.biomes.flatMap(
@@ -629,7 +634,7 @@ describe('project operations', () => {
           reference.kind === 'interactAcquisitionEntry' &&
           reference.siteKey === 'hermesShrineDelivery',
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('reconciles a pre-fix Ixion purchase into its forced gate while opening', async () => {
@@ -978,7 +983,9 @@ describe('sending to the game', () => {
   it('publishes a valid Dream prefix through the game capability', async () => {
     const game = createFakeGameModuleHost();
     const application = createApplication({ gameModuleHost: game.host });
-    application.store.dispatch(authoredProjectReplaced(dreamMixedPrefixProject()));
+    application.store.dispatch(
+      authoredProjectReplaced(authorTestTraitsAndRequiredItems(dreamMixedPrefixProject())),
+    );
 
     await expect(application.projectOperations.publishGame(3)).resolves.toEqual({
       operation: 'publishGame',
