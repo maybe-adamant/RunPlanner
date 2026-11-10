@@ -575,8 +575,9 @@ Never removed:
 The **Reset from here** command is the explicit exception: it removes rows
 after a point at the owner's request, silently in its own room.
 
-A plan saved before schema 103 is settled once when it is opened, removing
-only what the saved plan itself shows had its context or source and lost it:
+The schema 102 → 103 migration settles a plan saved before it once,
+silently, removing only what the saved plan itself shows had its context or
+source and lost it:
 every stale row the walk reaches; a Gold Gold Gold duplicate that a purchase
 stands before while no Echo produces it; a matured trait drop whose producing
 trait a walk without it never holds and that reaches the plan's end; and a
@@ -587,10 +588,9 @@ saved plan already shows unproduced, a drop whose producer is held or may lie
 past where the walk stops, and every door or cage reroll whose reward is gone;
 a removal in the same settlement, such as a stale purchase's, can still take a
 refill or duplicate with its trigger. Rows the
-walk does not reach and rows of rooms the run does not enter stay untouched.
-Every removal is announced, and one Undo restores the plan as saved. A stale
-row a plan still holds, such as one that Undo restores, goes at the next edit
-of its room.
+walk does not reach and rows of rooms the run does not enter stay untouched;
+a stale row a plan still holds, such as one in a room the walk did not reach,
+goes at the next edit of its room.
 
 A batch's door is classified the same way: its context is its source room's
 declared exit, and the rooms behind a removed door go with it

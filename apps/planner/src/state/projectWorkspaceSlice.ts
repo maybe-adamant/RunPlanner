@@ -55,26 +55,9 @@ export const authoredProjectCommandsDispatched = createAction<readonly ProjectCo
 );
 export const authoredProjectUndoRequested = createAction('projectWorkspace/undoRequested');
 export const authoredProjectRedoRequested = createAction('projectWorkspace/redoRequested');
-/**
- * What settling a plan saved before schema 103 changed on opening: the plan as saved, which
- * one Undo restores, and the removals the settlement announces.
- */
-export interface OpenedProjectUpgrade {
-  readonly before: ProjectDocument;
-  readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
-  readonly fault?: SettlementFault;
-}
-
-/**
- * Opens another document, starting a new history; a document its upgrade settled starts with
- * the plan as saved behind it, one Undo away, and announces what the settlement removed.
- */
-export const authoredProjectReplaced = createAction(
+/** Opens another document, starting a new history. */
+export const authoredProjectReplaced = createAction<ProjectDocument>(
   'projectWorkspace/projectReplaced',
-  (project: ProjectDocument, upgrade?: OpenedProjectUpgrade) => ({
-    payload: project,
-    meta: upgrade,
-  }),
 );
 /** Closes the open plan, as when its library item is deleted. */
 export const authoredProjectClosed = createAction('projectWorkspace/projectClosed');
@@ -230,20 +213,7 @@ export function createProjectWorkspaceReducer(
         : publishWorkspace(history, assembleProjectEvaluation);
     }
     if (authoredProjectReplaced.match(action)) {
-      const upgrade = action.meta;
-      if (upgrade === undefined) {
-        return publishWorkspace(createProjectHistory(action.payload), assembleProjectEvaluation);
-      }
-      const history = publishProjectHistoryEdit(
-        createProjectHistory(upgrade.before),
-        action.payload,
-      );
-      return publishPreparedWorkspace(
-        history,
-        { project: action.payload, assembly: assembleProjectEvaluation(action.payload) },
-        upgrade.fault,
-        upgrade.removedStaleActions,
-      );
+      return publishWorkspace(createProjectHistory(action.payload), assembleProjectEvaluation);
     }
     if (authoredProjectClosed.match(action)) return initialState;
     if (removedActionsAnnouncementDismissed.match(action)) {

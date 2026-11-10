@@ -57,7 +57,7 @@ describe('schema 101 to 102 migration', () => {
   const decode = (document) =>
     engine.parseProjectDocument(
       JSON.stringify(
-        document.schemaVersion === 102 ? nextStep.migrateProjectDocument(document) : document,
+        document.schemaVersion === 102 ? nextStep.liftProjectDocument(document) : document,
       ),
       engine.catalog,
     );

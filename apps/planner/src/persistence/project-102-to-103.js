@@ -1,3 +1,4 @@
+import { encodeProjectDocument, parseProjectDocument } from '@run-planner/engine/authored-project';
 import { settleProjectUpgrade } from '@run-planner/engine/project-migration';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 
@@ -13,13 +14,8 @@ function record(value, label) {
   return value;
 }
 
-/**
- * The transform: schema 103 keeps schema 102's shape, so only the version
- * changes. What makes 103 differ is the settlement every plan opened from an
- * older schema receives once, `settleUpgradedProject`, which needs the
- * document decoded at 103.
- */
-export function migrateProjectDocument(value) {
+/** Schema 103 keeps schema 102's shape, so the lift changes only the version. */
+export function liftProjectDocument(value) {
   const source = record(value, 'project document');
   if (source.schemaVersion !== SOURCE_SCHEMA_VERSION)
     throw new Error(
@@ -40,15 +36,21 @@ export function migrateProjectDocument(value) {
 }
 
 /**
- * A plan saved before schema 103, read at 103, settled once as the current
- * rules would have left it: its stale and source-gone rows removed and its
- * batches' doors settled, every removal announced. Runs exactly once, on
- * opening a document whose source schema is older than 103.
+ * Catalog-aware transform: the lifted plan, saved under the earlier settlement
+ * rules, is settled once as the current rules would have left it. A plan that
+ * does not decode, or whose settlement throws or faults, keeps the bare lift.
  */
-export function settleUpgradedProject(project, catalog) {
-  return settleProjectUpgrade({
-    catalog,
-    project,
-    evaluate: (document) => simulateProjectAssembly(catalog, document),
-  });
+export function migrateProjectDocument(value, { catalog }) {
+  const lifted = liftProjectDocument(value);
+  try {
+    const settled = settleProjectUpgrade({
+      catalog,
+      project: parseProjectDocument(JSON.stringify(lifted), catalog),
+      evaluate: (document) => simulateProjectAssembly(catalog, document),
+    });
+    if (settled.fault !== undefined) return lifted;
+    return JSON.parse(encodeProjectDocument(settled.assembly.project));
+  } catch {
+    return lifted;
+  }
 }

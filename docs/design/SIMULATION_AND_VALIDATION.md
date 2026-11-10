@@ -147,12 +147,12 @@ sequenceDiagram
 ```
 
 The upgrade settlement settles a plan saved before schema 103 the same way,
-once when it is opened and with no command. With no walk before an edit, it
-removes only rows the plan itself shows lost their context or source, as the
+once, silently, inside its 102 → 103 migration and with no command. With no
+walk before an edit, it removes only rows the plan itself shows lost their
+context or source, as the
 [policy's upgrade paragraph](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
-lists; every batch's doors settle, every removal is announced, and a row whose
-loss the plan cannot show, such as every reroll whose reward is gone, stays
-with its finding. Loading a
+lists; every batch's doors settle, and a row whose loss the plan cannot show,
+such as every reroll whose reward is gone, stays with its finding. Loading a
 current plan and projection remain read-only, and Undo/Redo restore the
 settled snapshots.
 

@@ -46,47 +46,63 @@ describe('schema 102 to 103 migration', () => {
       runner,
     ));
   });
+  const migrate = (document) => step.migrateProjectDocument(document, { catalog: engine.catalog });
 
-  it('changes only the version', () => {
+  it('lifts by the version alone', () => {
     const current = checkpoint('underworld-fg');
-    const migrated = step.migrateProjectDocument(at102(current));
-    assert.equal(migrated.schemaVersion, 103);
-    assert.equal('schemaRevision' in migrated, false);
-    assert.deepEqual(migrated, current);
+    const lifted = step.liftProjectDocument(at102(current));
+    assert.equal(lifted.schemaVersion, 103);
+    assert.equal('schemaRevision' in lifted, false);
+    assert.deepEqual(lifted, current);
   });
 
   it('rejects another schema, a later revision or another catalog', () => {
     const legacy = at102(checkpoint('underworld-fg'));
-    assert.throws(
-      () => step.migrateProjectDocument({ ...legacy, schemaVersion: 101 }),
-      /expects schema 102/,
-    );
-    assert.throws(
-      () => step.migrateProjectDocument({ ...legacy, schemaRevision: 2 }),
-      /schema 102\.2 is newer than schema 102's final revision 1/,
-    );
-    assert.throws(
-      () => step.migrateProjectDocument({ ...legacy, catalogVersion: 'other' }),
-      /expects catalog/,
-    );
+    for (const transform of [step.liftProjectDocument, migrate]) {
+      assert.throws(() => transform({ ...legacy, schemaVersion: 101 }), /expects schema 102/);
+      assert.throws(
+        () => transform({ ...legacy, schemaRevision: 2 }),
+        /schema 102\.2 is newer than schema 102's final revision 1/,
+      );
+      assert.throws(() => transform({ ...legacy, catalogVersion: 'other' }), /expects catalog/);
+    }
   });
 
-  it('settles a schema 102 plan offline as opening it does', () => {
+  it('settles a plan saved under the earlier rules', () => {
     const current = checkpoint('underworld-fg');
     assert.ok(gOpening(current).includes(stalePickup));
-    const migrated = migrateProjectDocumentTo(at102(current));
-    assert.equal(migrated.schemaVersion, 103);
+    for (const revision of [0, 1]) {
+      const migrated = migrate(at102(current, revision));
+      assert.equal(migrated.schemaVersion, 103);
+      assert.deepEqual(
+        gOpening(migrated),
+        gOpening(current).filter((action) => action !== stalePickup),
+      );
+      assert.doesNotThrow(() =>
+        engine.parseProjectDocument(JSON.stringify(migrated), engine.catalog),
+      );
+    }
+    // The offline tool runs the same chain.
+    assert.deepEqual(migrateProjectDocumentTo(at102(current)), migrate(at102(current)));
+  });
+
+  it('lifts by the version alone a plan its settlement leaves as it was', () => {
+    const current = checkpoint('surface-n');
+    assert.deepEqual(migrate(at102(current)), current);
+  });
+
+  it('keeps the bare lift when the plan does not decode or its settlement throws', () => {
+    const undecodable = { ...at102(checkpoint('underworld-fg')), route: 'not a route' };
+    assert.deepEqual(migrate(undecodable), step.liftProjectDocument(undecodable));
+    // A catalog the plan decodes against but its evaluation cannot read makes the settlement throw.
+    const legacy = at102(checkpoint('underworld-fg'));
+    const catalog = { ...engine.catalog, heroMaxStats: undefined };
+    assert.doesNotThrow(() =>
+      engine.parseProjectDocument(JSON.stringify(step.liftProjectDocument(legacy)), catalog),
+    );
     assert.deepEqual(
-      gOpening(migrated),
-      gOpening(current).filter((action) => action !== stalePickup),
-    );
-    const settled = step.settleUpgradedProject(
-      engine.parseProjectDocument(JSON.stringify(current), engine.catalog),
-      engine.catalog,
-    );
-    assert.equal(
-      engine.encodeProjectDocument(settled.assembly.project),
-      `${JSON.stringify(migrated, null, 2)}\n`,
+      step.migrateProjectDocument(legacy, { catalog }),
+      step.liftProjectDocument(legacy),
     );
   });
 });
