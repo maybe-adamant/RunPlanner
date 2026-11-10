@@ -26,6 +26,7 @@ import {
   semanticOwnerNavigated,
 } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { pinToggleGlyph } from '@planner/ui/controls/pinToggleGlyph';
 import type {
   StructuredWorkspaceProjection,
   WorkspaceInteractionCatalog,
@@ -252,8 +253,7 @@ export function RouteWorkspace({
           }}
           type="button"
         >
-          {/* Too narrow to pin, the list only opens and closes: no pin glyph. */}
-          {pinned ? '⇤' : !navigationOpen || navigationAutoFolded ? '☰' : '⇥'}
+          {pinToggleGlyph({ pinned, open: navigationOpen, autoFolded: navigationAutoFolded })}
         </button>
         <nav className="panel-navigation" aria-label={`${navigation.label} panels`}>
           {/* Panels stay put while a draft runs. */}

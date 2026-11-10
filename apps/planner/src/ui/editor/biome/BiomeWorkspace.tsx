@@ -25,6 +25,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { pinToggleGlyph } from '@planner/ui/controls/pinToggleGlyph';
 import { FindingCount } from '@planner/ui/feedback/EvaluationFeedback';
 import { AuthoringFrontier, TopologyRemovalAction } from './DecisionWorkbench';
 import { BiomeFieldControls } from './BiomeFieldControls';
@@ -92,8 +93,7 @@ function useRailFold(
       : autoFolded
         ? 'Hide rooms'
         : 'Pin rooms';
-  // Too narrow to pin, the rail only opens and closes: no pin glyph.
-  const toggleGlyph = !folded ? '⇤' : !open || autoFolded ? '☰' : '⇥';
+  const toggleGlyph = pinToggleGlyph({ pinned: !folded, open, autoFolded });
   return { folded, open, setOpen, toggle, toggleGlyph, toggleLabel };
 }
 
