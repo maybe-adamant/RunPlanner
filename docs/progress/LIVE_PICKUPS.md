@@ -3,7 +3,10 @@
 Status: framing and step C decisions settled by the owner (2026-11-10);
 steps A and B's Draft half delivered and accepted on `live-pickups`; the run
 import's half of B is decided and lands as C3; C1 and C4 delivered; C2's
-engine core delivered with its test migration in progress; D not started. Temporary
+engine core and its engine and planner test migration delivered on
+`live-pickups` (engine and planner lanes green, equivalence unchanged past
+the migrated recipe checkpoints), Draft and run-import consumer pass next; D
+not started. Temporary
 plan; delete at delivery after promoting durable results. Follows the
 progressive room Timeline and spawned-loot notices, both delivered.
 
@@ -222,7 +225,17 @@ Draft or the run import depend on that C2 changes.
   finding.
 - **Reward swap.** The rekey is gone: `ReplaceIncomingReward` and settlement
   remove the old reward's pickup rows and place nothing; the new reward's
-  pickups are live. A consumer places them like any required row.
+  pickups are live. A consumer places them like any required row. The same
+  holds whenever an owner's settled reward changes, such as a removed Hub
+  press returning a visited room to its first draw: the rerolled pick
+  stays with its `rerolledRewardMismatch` finding, its pickup rows go
+  (announced from a Hub edit), and the first draw is live once the pick is
+  dropped.
+- **Wheel candidates.** `rewardWheelStore`, `rewardWheelOfferCount` and the
+  Ship encounter-count candidates answer for a wheel opened at Wheels open
+  whose choice is unplaced (they threw before); its acquisition is projected
+  from its Wheels open point, as a dormant wheel's is from the room's reached
+  end.
 - **Rescheduled delivery.** `PlaceHermesShrineDelivery` reuses a retained
   payload only from the host it places at; a payload retained at another host
   is dropped and the delivery arrives with its default reward; settlement

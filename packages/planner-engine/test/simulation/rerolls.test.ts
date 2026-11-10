@@ -27,6 +27,7 @@ import {
   rerollSettlementForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
+  spawnedLootForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import {
   locallyValidRewardOffers,
@@ -766,9 +767,11 @@ describe('Hub board rerolls', () => {
     ['a restored board', 'combat09', 5],
     ['the first entry', 'combat05', 0],
   ] as const)(
-    'keep a visited Boon pick when its press on %s leaves, and report it',
+    'keep a visited Boon pick when its press on %s leaves, and take its item',
     (_stay, hubSlotKey, index) => {
       const occurrenceId = `surface-n-${hubSlotKey}`;
+      const room = createOccurrenceAddress(n, occurrenceId as never);
+      const incoming = createIncomingRewardAddress(n, occurrenceId as never);
       const ares: ResolvedRewardOffer = {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'AresUpgrade' },
@@ -782,10 +785,7 @@ describe('Hub board rerolls', () => {
       });
       const offered = settle(pressed, {
         kind: 'ReplaceTraitOffer',
-        trait: createTraitOfferAddress(
-          createIncomingRewardAddress(n, occurrenceId as never),
-          'source',
-        ),
+        trait: createTraitOfferAddress(incoming, 'source'),
         value: {
           kind: 'traits',
           giverKey: 'Ares',
@@ -804,20 +804,44 @@ describe('Hub board rerolls', () => {
         kind: 'interactIncomingReward',
         producerPoint: 'roomRewardPickup',
         acquisitionRole: 'source',
-      };
+      } as const;
       expect(occurrence(picked, occurrenceId).roomActions.order).toContainEqual(sourceRow);
 
-      // The visit enters the first draw again; the Boon pick and its pickup stay for repair.
-      const removed = settle(picked, {
-        kind: 'RemoveHubReroll',
-        reroll: createHubRerollAddress(n, 'hub', 'r1'),
+      // The visit enters the first draw again: the Boon pick stays for repair, its item goes.
+      const settlement = settleProjectEdit({
+        catalog,
+        before: evaluate(picked),
+        command: { kind: 'RemoveHubReroll', reroll: createHubRerollAddress(n, 'hub', 'r1') },
+        evaluate,
       });
+      const removed = settlement.assembly.project;
       expect(occurrence(removed, occurrenceId).rerolledIncomingReward).toEqual(
         occurrence(picked, occurrenceId).rerolledIncomingReward,
       );
-      expect(occurrence(removed, occurrenceId).roomActions.order).toContainEqual(sourceRow);
+      expect(occurrence(removed, occurrenceId).roomActions.order).not.toContainEqual(sourceRow);
+      // A Hub edit addresses no single room, so the removal is announced.
+      expect(settlement.removedStaleActions).toEqual([{ occurrence: room, actions: [sourceRow] }]);
       expect(rerollFindings(removed).map((finding) => [finding.code, finding.origin])).toEqual([
-        ['rerolledRewardMismatch', createIncomingRewardAddress(n, occurrenceId as never)],
+        ['rerolledRewardMismatch', incoming],
+      ]);
+
+      // Dropping the pick leaves the first draw, live and not yet picked up.
+      const repaired = settle(removed, { kind: 'DropRerolledReward', owner: incoming });
+      const state = occurrence(picked, occurrenceId).state;
+      const firstDraw = state.kind === 'ephyraCombat' ? state.reward?.offer : undefined;
+      expect(firstDraw).toBeDefined();
+      expect(firstDraw?.rewardType).not.toBe('Boon');
+      const items = spawnedLootForProjectEvaluationAssembly(
+        catalog,
+        evaluate(repaired),
+        room,
+      )?.moments.flatMap((moment) => moment.items);
+      expect(items).toEqual([
+        expect.objectContaining({
+          reward: { kind: 'offer', offer: firstDraw },
+          reference: { ...sourceRow, acquisitionRole: 'self' },
+          placement: expect.objectContaining({ kind: 'unplaced' }),
+        }),
       ]);
     },
   );
