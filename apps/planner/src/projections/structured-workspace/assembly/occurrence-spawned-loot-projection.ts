@@ -112,6 +112,7 @@ function projectItem(
     key: semanticAddressKey(item.owner),
     actionKey,
     label,
+    ...(item.reward === undefined ? {} : { reward: item.reward }),
     hint: itemHint(item, place === undefined ? label : `${label} · ${place.label}`, placement),
     participation: item.participation,
     ...(place === undefined ? {} : { place }),

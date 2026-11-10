@@ -9,6 +9,7 @@ import {
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   activeSelectedPickupProducers,
+  sitesWithNemesisResultPickups,
   acquisitionSiteFromStorageKey,
   echoLastRewardPickupEntryKeys,
   defaultHermesShrineDeliveryReward,
@@ -121,8 +122,14 @@ export function assembleOccurrenceRewardLocal(
           },
         )
       : Object.freeze([]);
+  // A Nemesis result's collect acquires what her outcome spawns, not her offer.
+  const pickupSites = sitesWithNemesisResultPickups(
+    input.catalog,
+    input.occurrence,
+    input.biome.routeKey,
+  );
   const pickupRewardControls =
-    !input.facts.detailsActive || input.occurrence.acquisitionSites === undefined
+    !input.facts.detailsActive || pickupSites === undefined
       ? Object.freeze([])
       : (() => {
           const pickupProducers = activeSelectedPickupProducers(
@@ -145,7 +152,7 @@ export function assembleOccurrenceRewardLocal(
             echoLastRewardPickupEntryKeys(input.catalog, input.occurrence.encounters),
           );
           return Object.freeze(
-            Object.entries(input.occurrence.acquisitionSites).flatMap(([siteKey, state]) => {
+            Object.entries(pickupSites).flatMap(([siteKey, state]) => {
               const site = acquisitionSiteFromStorageKey(address, siteKey);
               if (site === undefined) {
                 throw new StructuredWorkspaceProjectionContractError(

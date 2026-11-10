@@ -800,6 +800,15 @@ undo step. A retained result that becomes inactive remains authored for repair
 but has no active child action. The persisted entry is ordinary
 `AuthoredRewardState`, so no reward-copy tree or second timeline is needed.
 
+A Nemesis random event's site holds her offer as its one `result` entry: the
+item she gives or trades, the trait trade's fixed Triple Gold, and for a
+damage contest the planned success item, kept whatever the contest's result.
+What spawns derives from the outcome: the offer for her free item, an
+accepted trade or a won contest, nothing for a declined trade, and the fixed
+Consolation prize for a lost contest, which therefore needs no offer.
+Consolation is never a contest's offer: a lost contest whose file stores it
+there reads as no success item chosen yet.
+
 ### Shop and pickup commands
 
 `ClearShopOffer` empties one declared inventory slot, removing its

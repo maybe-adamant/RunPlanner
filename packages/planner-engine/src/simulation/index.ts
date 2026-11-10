@@ -359,6 +359,7 @@ export {
   type SpawnMomentKind,
   type SpawnedLootItem,
   type SpawnedLootPlacement,
+  type SpawnedLootReward,
   type SpawnedLootSource,
 } from './evaluation/spawned-loot';
 export { GoldLedgerContractError } from './commerce/gold/ledger';

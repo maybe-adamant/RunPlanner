@@ -1,4 +1,5 @@
 import {
+  createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -7,6 +8,7 @@ import {
   semanticAddressKey,
   type AcquisitionEntryAddress,
   type OccurrenceAddress,
+  type TraitOfferOwnerAddress,
   type RoomActionAddress,
   type SemanticAddress,
 } from '../../authored-project/addresses';
@@ -28,11 +30,13 @@ import {
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../../authored-project/shop';
 import type { Catalog } from '../../catalog-schema';
+import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import { candidateBiome, candidateBiomeRooms } from '../candidates/evaluated-biome';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { RoomActionParticipation, RoomActionRow } from '../room-actions';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import {
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
@@ -80,9 +84,22 @@ export type SpawnedLootPlacement =
   /** `command` places it; absent when no placement is authorable now. */
   | { readonly kind: 'unplaced'; readonly command?: ProjectCommand };
 
+/**
+ * What an item spawns as: its reward offer; the concrete pickup where that
+ * differs from the offer (one role of a reward that spawns per role, such as
+ * a Trial's chosen or spurned boon, or a forfeited reward's Red Onion); or a
+ * Boss's forced drop.
+ */
+export type SpawnedLootReward =
+  | { readonly kind: 'offer'; readonly offer: ResolvedRewardOffer }
+  | { readonly kind: 'pickup'; readonly gameName: string }
+  | { readonly kind: 'requiredDrop'; readonly consumableKey: string };
+
 export interface SpawnedLootItem {
   /** The reward owner the collect action acquires: a role, local reward, wheel offer or entry. */
   readonly owner: SemanticAddress;
+  /** What it spawns as; absent while its reward is not chosen. */
+  readonly reward?: SpawnedLootReward;
   /** The action that collects it. */
   readonly reference: RoomActionReference;
   readonly source: SpawnedLootSource;
@@ -237,6 +254,95 @@ function rowResolvesLevel(room: CanonicalAuthoredRoom, reference: RoomActionRefe
   }
 }
 
+/** The offer a collect row acquires, as the room's settled products hold it. */
+function rowOffer(
+  room: CanonicalAuthoredRoom,
+  reference: RoomActionReference,
+): ResolvedRewardOffer | undefined {
+  switch (reference.kind) {
+    case 'interactIncomingReward':
+      return room.incomingReward?.offer;
+    case 'interactLocalReward':
+      return [...(room.localRewards ?? []), ...(room.fieldsOptionalRewards ?? [])].find(
+        (reward) => reward.groupKey === reference.groupKey && reward.slotKey === reference.slotKey,
+      )?.offer;
+    case 'interactWheelReward':
+      return room.rewardWheels
+        ?.find((wheel) => wheel.wheelKey === reference.wheelKey)
+        ?.offers.find((offer) => offer.picked)?.offer;
+    case 'interactAcquisitionEntry':
+      return (
+        room.acquisitionSites[reference.siteKey]?.entries[reference.entryKey]?.offer ??
+        fixedPickupOffer(room, reference.siteKey, reference.entryKey)
+      );
+    default:
+      return undefined;
+  }
+}
+
+/** A producer pickup whose reward type its source fixes, before its entry is authored. */
+function fixedPickupOffer(
+  room: CanonicalAuthoredRoom,
+  siteKey: string,
+  entryKey: string,
+): ResolvedRewardOffer | undefined {
+  const rewardType = room.pickupProducers
+    ?.find((producer) => producer.siteKey === siteKey)
+    ?.pickups.find((pickup) => pickup.key === entryKey)?.rewardType;
+  return rewardType === undefined ? undefined : Object.freeze({ rewardType });
+}
+
+const REWARD_OWNER_KINDS: ReadonlySet<string> = new Set([
+  'incomingReward',
+  'localReward',
+  'rewardWheelOffer',
+  'shopOffer',
+  'infernalContractPedestal',
+  'acquisitionEntry',
+]);
+
+/**
+ * What an item spawns as: a forfeited reward's realized pickup, one role's
+ * pickup of a reward that spawns per role, else the offer itself.
+ */
+function spawnedReward(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  owner: SemanticAddress,
+  reference: RoomActionReference,
+  offer: ResolvedRewardOffer | undefined,
+): SpawnedLootReward | undefined {
+  if (offer === undefined) return undefined;
+  const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  const roleKeys =
+    owner.kind === 'acquisitionRole'
+      ? [owner.acquisitionRole]
+      : 'acquisitionRole' in reference && typeof reference.acquisitionRole === 'string'
+        ? [reference.acquisitionRole]
+        : (declaration?.acquisitionRoles.values.map((role) => role.key) ?? []);
+  const rewardOwner = owner.kind === 'acquisitionRole' ? owner.owner : owner;
+  if (REWARD_OWNER_KINDS.has(rewardOwner.kind))
+    for (const roleKey of roleKeys) {
+      const realized = acquisitionConversionCandidateForProjectEvaluationAssembly(
+        assembly,
+        createAcquisitionRoleAddress(rewardOwner as TraitOfferOwnerAddress, roleKey),
+      )?.realizedAcquisition;
+      if (realized !== undefined)
+        return Object.freeze({ kind: 'pickup' as const, gameName: realized.acquisition.gameName });
+    }
+  const role =
+    declaration !== undefined && declaration.acquisitionRoles.values.length > 1
+      ? declaration.acquisitionRoles.byKey[roleKeys[0] ?? '']
+      : undefined;
+  if (role?.resolution.kind === 'payloadSource') {
+    const gameName = (offer.payload as Readonly<Record<string, unknown>> | undefined)?.[
+      role.resolution.field
+    ];
+    if (typeof gameName === 'string') return Object.freeze({ kind: 'pickup' as const, gameName });
+  }
+  return Object.freeze({ kind: 'offer' as const, offer });
+}
+
 /**
  * The collect action for an unranked active row: a required row's canonical
  * insertion, otherwise its latest legal one.
@@ -336,8 +442,18 @@ export function spawnedLootForProjectEvaluationAssembly(
     const action = actionAddress(row.reference);
     const command = row.rank === null ? insertion(room, row, action) : undefined;
     const needsChoice = row.rank === null && rowResolvesLevel(room, row.reference);
+    const reward =
+      row.reference.kind === 'collectRequiredReward'
+        ? room.requiredReward === undefined
+          ? undefined
+          : frozen({
+              kind: 'requiredDrop' as const,
+              consumableKey: room.requiredReward.consumableKey,
+            })
+        : spawnedReward(catalog, assembly, row.owner, row.reference, rowOffer(room, row.reference));
     return frozen({
       owner: row.owner,
+      ...(reward === undefined ? {} : { reward }),
       reference: row.reference,
       source: frozen(source),
       participation: row.participation,
@@ -394,8 +510,20 @@ export function spawnedLootForProjectEvaluationAssembly(
         row.reference.siteKey === entry.site.pointKey &&
         row.reference.entryKey === entry.entryKey,
     );
+    const authored = room.acquisitionSites[entry.site.pointKey]?.entries[entry.entryKey];
+    const singleType = capability.rewardTypes?.length === 1 ? capability.rewardTypes[0] : undefined;
+    const reward = spawnedReward(
+      catalog,
+      assembly,
+      entry,
+      reference,
+      authored?.offer ??
+        capability.fixedReward?.offer ??
+        (singleType === undefined ? undefined : frozen({ rewardType: singleType })),
+    );
     return frozen({
       owner: entry,
+      ...(reward === undefined ? {} : { reward }),
       reference: placed?.reference ?? reference,
       source: frozen({ kind: 'generated' as const, family }),
       participation: placed?.participation ?? participation,

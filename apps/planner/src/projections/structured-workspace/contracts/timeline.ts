@@ -285,6 +285,8 @@ export interface WorkspaceSpawnedItem {
   /** The collect action's Timeline row. */
   readonly actionKey: string;
   readonly label: string;
+  /** What it spawns as, which its chip shows; absent while its reward is not chosen. */
+  readonly reward?: import('@run-planner/engine/simulation').SpawnedLootReward;
   /** What using its chip does, said on hover. */
   readonly hint: string;
   readonly participation: 'required' | 'optional';
