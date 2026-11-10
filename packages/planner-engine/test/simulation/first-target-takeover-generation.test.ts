@@ -18,6 +18,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { createCompleteFGProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
+import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
 import { createExitDecisionAddress } from '@run-planner/engine/authored-project';
 import { evaluateTakeoverPrebossBatchCandidate } from '@run-planner/engine/simulation';
 import {
@@ -36,7 +37,8 @@ import {
   dreamGBiome,
 } from './support/detour-generation-fixtures';
 
-function prefix(project: ProjectDocument) {
+function prefix(unplaced: ProjectDocument) {
+  const project = scheduleTestRequiredRoomActions(unplaced, catalog, detourGBiome);
   const plan = project.route.biomes.find((biome) => biome.biomeKey === detourGBiome.biomeKey);
   const route = project.route;
   if (plan === undefined || route === undefined) throw new Error('G detour fixture is missing');
@@ -58,7 +60,8 @@ function prefix(project: ProjectDocument) {
   return { snapshot: { ...snapshot, entryRoom: snapshot.entryRoom }, history };
 }
 
-function dreamPrefix(project: ProjectDocument) {
+function dreamPrefix(unplaced: ProjectDocument) {
+  const project = scheduleTestRequiredRoomActions(unplaced, catalog, dreamGBiome);
   const plan = project.route.biomes.find((biome) => biome.biomeKey === dreamGBiome.biomeKey);
   if (plan === undefined) throw new Error('Dream G detour fixture is missing');
   const routePosition = resolveRoutePosition(catalog, project.route, dreamGBiome.biomeKey);

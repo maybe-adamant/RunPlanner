@@ -51,6 +51,7 @@ import {
   withJudgment,
   withGuessedRerolledScreens,
 } from '../support/rerolls';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 
 const f = createBiomeAddress('Underworld', 'F');
 const source = 'golden-f-b2-e1';
@@ -591,11 +592,14 @@ describe('Hub board rerolls', () => {
       reroll,
       reward,
       inserted,
-      project: applyProjectCommand(inserted, catalog, {
-        kind: 'ReplaceHubRerollReward',
-        reroll,
-        reward,
-      }),
+      // The owner picks up the reward the press drew.
+      project: collectTestRequiredItems(
+        applyProjectCommand(inserted, catalog, {
+          kind: 'ReplaceHubRerollReward',
+          reroll,
+          reward,
+        }),
+      ),
     };
   }
 
@@ -609,11 +613,14 @@ describe('Hub board rerolls', () => {
 
     // combat05 is the first visit: once entered its door is closed for the run.
     const actions = hubActions(project);
-    const late = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceHubActionOrder',
-      hub,
-      actions: [...actions.slice(1), actions[0]!],
-    });
+    // The visit enters its first draw again, which the owner picks up.
+    const late = collectTestRequiredItems(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub,
+        actions: [...actions.slice(1), actions[0]!],
+      }),
+    );
     expect(hubFindings(late)).toEqual([['rerollTargetUnavailable', 'slotEntered']]);
     // The refused press redraws nothing the visit entered.
     expect(occurrence(late, 'surface-n-combat05').rerolledIncomingReward).toBeUndefined();
@@ -773,7 +780,7 @@ describe('Hub board rerolls', () => {
         reward: ares,
         index,
       });
-      const picked = settle(pressed, {
+      const offered = settle(pressed, {
         kind: 'ReplaceTraitOffer',
         trait: createTraitOfferAddress(
           createIncomingRewardAddress(n, occurrenceId as never),
@@ -791,6 +798,8 @@ describe('Hub board rerolls', () => {
           rarificationActions: [],
         },
       });
+      // The owner picks up the drawn Boon.
+      const picked = collectTestRequiredItems(offered);
       const sourceRow = {
         kind: 'interactIncomingReward',
         producerPoint: 'roomRewardPickup',
