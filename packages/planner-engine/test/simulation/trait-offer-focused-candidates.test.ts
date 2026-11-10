@@ -30,6 +30,7 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
@@ -111,23 +112,26 @@ function reachedContext(before = createTraitHistoryState()): TraitOfferCandidate
 describe('focused trait offer candidates', () => {
   it('retains weapon and aspect eligibility when an Artificer hammer reaches its later pickup', () => {
     const fixture = createFConversionFrontierProject('MetaCardPointsCommonDrop');
-    const authored = authorTestArtificerReplacement(
-      applyProjectCommand(fixture.project, catalog, {
-        kind: 'ReplaceRouteLoadout',
-        route: { kind: 'route', routeKey: 'Underworld' },
-        weaponKey: 'WeaponLob',
-        aspectKey: 'LobImpulseAspect',
-      }),
-      catalog,
-      fixture.acquisition,
-      createUnresolvedAcquisitionRewardState(
+    // The owner picks up the hammer the replacement spawns.
+    const authored = collectTestRequiredItems(
+      authorTestArtificerReplacement(
+        applyProjectCommand(fixture.project, catalog, {
+          kind: 'ReplaceRouteLoadout',
+          route: { kind: 'route', routeKey: 'Underworld' },
+          weaponKey: 'WeaponLob',
+          aspectKey: 'LobImpulseAspect',
+        }),
         catalog,
-        { rewardType: 'WeaponUpgrade' },
-        {
-          kind: 'producerLifecycle',
-          key: 'RoomReward',
-        },
-        'Underworld',
+        fixture.acquisition,
+        createUnresolvedAcquisitionRewardState(
+          catalog,
+          { rewardType: 'WeaponUpgrade' },
+          {
+            kind: 'producerLifecycle',
+            key: 'RoomReward',
+          },
+          'Underworld',
+        ),
       ),
     );
     const site = artificerAcquisitionSite(

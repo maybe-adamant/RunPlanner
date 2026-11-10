@@ -28,6 +28,7 @@ import {
   qOccurrenceIds,
   surfaceShrineDeliveriesProject,
 } from '@run-planner/test-fixtures/surface';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   roomLifecycleWindowOrdinal,
   type RoomLifecycleStructure,
@@ -284,6 +285,8 @@ describe('Shrine purchases after the doors open', () => {
       generationKey: 'initial:secondLeft',
       purchased: true,
     });
+    // The owner collects the Reprieve's reward and uses its fountain.
+    project = collectTestRequiredItems(project);
     const purchase: RoomActionReference = {
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'initial:secondLeft',

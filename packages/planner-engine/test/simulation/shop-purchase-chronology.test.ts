@@ -671,7 +671,8 @@ describe('Gold Gold Gold Shop pickups', () => {
     };
     expect(order(place())).toEqual([purchase, pickup]);
     expect(order(place(1))).toEqual([purchase, pickup]);
-    expect(order(place(0))).toEqual([pickup, purchase]);
+    // The duplicate spawns with the purchase it duplicates, so it cannot precede it.
+    expect(() => place(0)).toThrow('must follow ["interactShopOffer","Boon"]');
     expect(() => place(2)).toThrow('index must be an integer from 0 through 1');
   });
 

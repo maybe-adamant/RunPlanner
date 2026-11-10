@@ -58,7 +58,7 @@ describe('room action resets', () => {
       // Nothing follows the last purchase.
       [purchase('travelDealRefill'), undefined],
     ]);
-    // A banner's reset removes what follows it; the required fountain and the rack stay.
+    // A banner's reset removes every row after it, the rack included; the fountain before it stays.
     const doorsOpen = resets[2]!;
     const reset = applyProjectCommand(assembly.project, catalog, doorsOpen);
     expect(
@@ -68,7 +68,7 @@ describe('room action resets', () => {
           (occurrence) => occurrence.occurrenceId === postboss.occurrenceId,
         )!
         .roomActions.order.map(roomActionKey),
-    ).toEqual([fountain, rack]);
+    ).toEqual([fountain]);
   });
 
   it('applies a reset as one authoring edit', () => {
@@ -84,8 +84,13 @@ describe('room action resets', () => {
       outcome.assembly,
       postboss,
     )!;
-    // Only the required fountain and the permanent rack remain: no entry has anything to reset.
-    expect(after.every((entry) => entry === undefined)).toBe(true);
+    // The fountain and the rack remain; only a reset before them would take them back.
+    expect(after.map((entry) => entry?.afterActionKey)).toEqual([
+      null,
+      fountain,
+      fountain,
+      undefined,
+    ]);
   });
 
   it('offers a reset before the rack that only clears its keepsake choice', () => {
