@@ -23,11 +23,15 @@ import {
 } from '../topology/query';
 import { sameExitDecisionSource } from '../topology/source-identity';
 import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../topology/impact';
-import { failCommand, locateConfiguredBiome, type LocatedBiome } from './contract';
+import {
+  failCommand,
+  locateConfiguredBiome,
+  type CommandContractSubject,
+  type LocatedBiome,
+} from './contract';
 import { reconcileNormalTargetEntryStates } from './selection-state';
 import { exitKeysForTopologySource, updateTopology } from './topology/construction';
 import { reconcileTakeoverBatchExits } from './topology/takeover';
-import type { ProjectCommand, RouteDetourCommand } from './types';
 
 function replaceExitDecision(topology: BiomeTopology, replacement: ExitDecision): BiomeTopology {
   return Object.freeze({
@@ -145,7 +149,7 @@ export function reconcileExitDecisionToDeclaredCapacity(
   topology: BiomeTopology,
   decision: ExitDecision,
   undeclaredSelectedDoor: UndeclaredSelectedDoor,
-  command: ProjectCommand | RouteDetourCommand,
+  command: CommandContractSubject,
 ): BiomeTopology {
   if (batchTakesOverNormalDoors(catalog, topology, decision)) {
     return reconcileTakeoverBatchExits(
@@ -234,13 +238,13 @@ export function exitCapacityDrifts(
  * Settles one drifted batch to its source's declared exits: its unselected
  * undeclared doors go with their downstream topology, and a takeover batch
  * gains a default Preboss offer at each missing door its Preboss fills. The
- * failing contact of a contract error is the edit that left the drift.
+ * failing contact of a contract error is the edit or upgrade that left the drift.
  */
 export function settleExitCapacity(
   document: ProjectDocument,
   catalog: Catalog,
   decision: ExitDecisionAddress,
-  edit: ProjectCommand,
+  edit: CommandContractSubject,
 ): ProjectDocument {
   const located = locateConfiguredBiome(document, catalog, decision.biomeKey);
   const topology = located?.plan.topology;

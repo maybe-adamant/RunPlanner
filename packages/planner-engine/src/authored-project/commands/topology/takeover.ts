@@ -32,9 +32,10 @@ import {
   failCommand,
   requireRoom,
   requireTopology,
+  type CommandContractSubject,
   type LocatedBiome,
 } from '../contract';
-import type { ProjectCommand, RouteDetourCommand, TopologyCommand } from '../types';
+import type { TopologyCommand } from '../types';
 import { reconcileNormalTargetEntryStates } from '../selection-state';
 import {
   sourceFromAddress,
@@ -92,7 +93,7 @@ function completionChainForSelection(
   located: LocatedBiome,
   topology: BiomeTopology,
   prebossOccurrenceId: OccurrenceId,
-  command: ProjectCommand | RouteDetourCommand,
+  command: CommandContractSubject,
 ): BiomeTopology {
   const preboss = topology.occurrences.find(
     (occurrence) => occurrence.occurrenceId === prebossOccurrenceId,
@@ -270,7 +271,7 @@ export function reconcileCompletionChain(
   topology: BiomeTopology,
   previousPrebossOccurrenceId: OccurrenceId | undefined,
   nextPrebossOccurrenceId: OccurrenceId | undefined,
-  command: ProjectCommand | RouteDetourCommand,
+  command: CommandContractSubject,
 ): BiomeTopology {
   if (previousPrebossOccurrenceId === nextPrebossOccurrenceId) {
     if (nextPrebossOccurrenceId === undefined) return topology;
@@ -557,7 +558,7 @@ export function reconcileTakeoverBatchExits(
   topology: BiomeTopology,
   decision: ExitDecision,
   reconciliation: TakeoverExitReconciliation,
-  command: ProjectCommand | RouteDetourCommand,
+  command: CommandContractSubject,
 ): BiomeTopology {
   const source = decision.source;
   if (source.kind !== 'occurrence') {
