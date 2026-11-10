@@ -2425,9 +2425,6 @@
                 "order": [
                   {
                     "kind": "useFountain"
-                  },
-                  {
-                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },

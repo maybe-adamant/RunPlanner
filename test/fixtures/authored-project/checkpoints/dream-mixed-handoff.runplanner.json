@@ -622,9 +622,6 @@
                 "order": [
                   {
                     "kind": "useFountain"
-                  },
-                  {
-                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },
@@ -1765,9 +1762,6 @@
                 "order": [
                   {
                     "kind": "useFountain"
-                  },
-                  {
-                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },
@@ -2310,9 +2304,6 @@
                 "order": [
                   {
                     "kind": "useFountain"
-                  },
-                  {
-                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },

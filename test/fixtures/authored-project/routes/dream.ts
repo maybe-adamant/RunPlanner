@@ -32,6 +32,7 @@ import {
   authorLegalTraitOffers,
   authorLegalPomResolutions,
   authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   purchaseTestHermesShrineOffer,
 } from '../shared';
 import { hubVisitActions } from '../hub-actions';
@@ -521,7 +522,9 @@ export function dreamMixedHandoffProject(fBatchOrder?: readonly number[]): Proje
     });
   }
   for (let pass = 0; pass < 16; pass += 1) {
-    const settled = authorLegalPomResolutions(authorLegalTraitOffers(project));
+    const settled = collectTestRequiredItems(
+      authorLegalPomResolutions(authorLegalTraitOffers(project)),
+    );
     if (settled === project) return project;
     project = settled;
   }

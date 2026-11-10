@@ -113,11 +113,6 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
-                  },
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
                     "acquisitionRole": "self"
                   },
                   {
@@ -496,11 +491,6 @@
               },
               "roomActions": {
                 "order": [
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
-                  },
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",

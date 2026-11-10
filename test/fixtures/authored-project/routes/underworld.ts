@@ -886,7 +886,7 @@ export function underworldZagreusContractProject(): ProjectDocument {
     pedestal,
     collected: true,
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 /** Complete F/G route with reached Judgment and Crystal Figurine Boss outcomes. */
