@@ -147,6 +147,11 @@ function structure(
       const previousWheelKey = phases[index - 1]?.rewardWheelKey;
       points.push(
         Object.freeze({
+          kind: 'wheelsOpen',
+          key: `wheelsOpen:${phase.rewardWheelKey}`,
+          wheelKey: phase.rewardWheelKey,
+        }),
+        Object.freeze({
           kind: 'nextPhase',
           key: `nextPhase:${phase.rewardWheelKey}`,
           wheelKey: phase.rewardWheelKey,
@@ -785,9 +790,11 @@ describe('room lifecycle timeline', () => {
       'roomEntered',
       'encounterStart',
       'encounterEnd',
+      'wheelsOpen',
       'nextPhase',
       'encounterStart',
       'encounterEnd',
+      'wheelsOpen',
       'nextPhase',
       'encounterStart',
       'encounterEnd',
@@ -804,8 +811,8 @@ describe('room lifecycle timeline', () => {
         (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'nextPhase',
       )[0],
     ).toMatchObject({
-      rank: 1,
-      placement: 'before',
+      rank: 0,
+      placement: 'after',
     });
     const wheelOnePickup = timeline.entries.findIndex(
       (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(reward1),

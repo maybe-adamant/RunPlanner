@@ -197,6 +197,11 @@ function actionRoster(
     if (phase.rewardWheelKey !== undefined && index > 0) {
       points.push(
         Object.freeze({
+          kind: 'wheelsOpen',
+          key: `wheelsOpen:${phase.rewardWheelKey}`,
+          wheelKey: phase.rewardWheelKey,
+        }),
+        Object.freeze({
           kind: 'nextPhase',
           key: `nextPhase:${phase.rewardWheelKey}`,
           wheelKey: phase.rewardWheelKey,
@@ -364,132 +369,130 @@ describe('single-room lifecycle execution', () => {
     });
   });
 
-  it('drains every O delivery at its exact encounter-end phase in authored order', () => {
-    const oOrigin = createOccurrenceAddress(
-      createBiomeAddress('Surface', 'O'),
-      createOccurrenceId('o-exact-shrine-delivery-phases'),
-    );
-    const source = createOccurrenceAddress(
-      createBiomeAddress('Surface', 'N'),
-      createOccurrenceId('n-shrine-delivery-source'),
-    );
-    const delivery1 = Object.freeze({
-      kind: 'interactAcquisitionEntry' as const,
-      siteKey: 'hermesShrineDelivery',
-      entryKey: hermesShrineDeliveryEntryKey(source, 'initial:first'),
-      encounterPhaseKey: 'Combat1',
-    });
-    const delivery2 = Object.freeze({
-      kind: 'interactAcquisitionEntry' as const,
-      siteKey: 'hermesShrineDelivery',
-      entryKey: hermesShrineDeliveryEntryKey(source, 'initial:secondLeft'),
-      encounterPhaseKey: 'Combat1',
-    });
-    const delivery3 = Object.freeze({
-      kind: 'interactAcquisitionEntry' as const,
-      siteKey: 'hermesShrineDelivery',
-      entryKey: hermesShrineDeliveryEntryKey(source, 'initial:secondRight'),
-      encounterPhaseKey: 'Combat2',
-    });
-    const choose1 = Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' });
-    const interact1 = Object.freeze({
-      kind: 'interactWheelReward' as const,
-      wheelKey: 'wheel1',
-    });
-    const choose2 = Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' });
-    const interact2 = Object.freeze({
-      kind: 'interactWheelReward' as const,
-      wheelKey: 'wheel2',
-    });
-    const roster = actionRoster(
-      oOrigin,
-      [choose1, interact1, delivery1, delivery2, choose2, interact2, delivery3],
-      [
-        {
-          reference: choose1,
-          participation: 'required',
-          window: { kind: 'shipPreCombat', wheelKey: 'wheel1' },
-          dependencies: [],
-        },
-        {
-          reference: interact1,
-          participation: 'required',
-          window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
-          dependencies: [{ kind: 'afterAction', action: choose1 }],
-        },
-        {
-          reference: delivery1,
-          participation: 'required',
-          window: { kind: 'encounterEnd', phaseKey: 'Combat1' },
-          dependencies: [],
-        },
-        {
-          reference: delivery2,
-          participation: 'required',
-          window: { kind: 'encounterEnd', phaseKey: 'Combat1' },
-          dependencies: [],
-        },
-        {
-          reference: choose2,
-          participation: 'required',
-          window: { kind: 'shipPreCombat', wheelKey: 'wheel2' },
-          dependencies: [],
-        },
-        {
-          reference: interact2,
-          participation: 'required',
-          window: { kind: 'shipPostCombat', wheelKey: 'wheel2' },
-          dependencies: [{ kind: 'afterAction', action: choose2 }],
-        },
-        {
-          reference: delivery3,
-          participation: 'required',
-          window: { kind: 'encounterEnd', phaseKey: 'Combat2' },
-          dependencies: [],
-        },
-      ],
-      'ShipCombatRoom',
-    );
-    const fragment = executeRoomLifecycle(
-      catalog,
-      inputWithoutProducer({
-        origin: oOrigin,
-        lifecycleProfileKey: 'ShipCombatRoom',
-        encounterEnvelopeKey: 'ShipEncounter',
-        encounterPhases: phases('ShipEncounter', [
-          'GeneratedO_Intro01',
-          'GeneratedO',
-          'GeneratedO',
-        ]),
-        roomActionRoster: roster,
-      }),
-    );
+  it.each([['GeneratedO_Intro01'], ['HeraclesCombatO']])(
+    'opens each O wheel before the deliveries its choice waits on (%s Intro)',
+    (introKey) => {
+      const oOrigin = createOccurrenceAddress(
+        createBiomeAddress('Surface', 'O'),
+        createOccurrenceId('o-exact-shrine-delivery-phases'),
+      );
+      const source = createOccurrenceAddress(
+        createBiomeAddress('Surface', 'N'),
+        createOccurrenceId('n-shrine-delivery-source'),
+      );
+      const delivery = (generationKey: 'first' | 'secondLeft' | 'secondRight', phaseKey: string) =>
+        Object.freeze({
+          kind: 'interactAcquisitionEntry' as const,
+          siteKey: 'hermesShrineDelivery',
+          entryKey: hermesShrineDeliveryEntryKey(source, `initial:${generationKey}`),
+          encounterPhaseKey: phaseKey,
+        });
+      const delivery0 = delivery('first', 'Intro');
+      const delivery1 = delivery('secondLeft', 'Combat1');
+      const delivery2 = delivery('secondRight', 'Combat2');
+      const choose1 = Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' });
+      const interact1 = Object.freeze({
+        kind: 'interactWheelReward' as const,
+        wheelKey: 'wheel1',
+      });
+      const choose2 = Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' });
+      const interact2 = Object.freeze({
+        kind: 'interactWheelReward' as const,
+        wheelKey: 'wheel2',
+      });
+      const roster = actionRoster(
+        oOrigin,
+        [delivery0, choose1, interact1, delivery1, choose2, interact2, delivery2],
+        [
+          ...[delivery0, delivery1, delivery2].map((reference) => ({
+            reference,
+            participation: 'required' as const,
+            window: { kind: 'encounterEnd' as const, phaseKey: reference.encounterPhaseKey },
+            dependencies: [],
+          })),
+          {
+            reference: choose1,
+            participation: 'required',
+            window: { kind: 'shipPreCombat', wheelKey: 'wheel1' },
+            dependencies: [],
+          },
+          {
+            reference: interact1,
+            participation: 'required',
+            window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
+            dependencies: [{ kind: 'afterAction', action: choose1 }],
+          },
+          {
+            reference: choose2,
+            participation: 'required',
+            window: { kind: 'shipPreCombat', wheelKey: 'wheel2' },
+            dependencies: [],
+          },
+          {
+            reference: interact2,
+            participation: 'required',
+            window: { kind: 'shipPostCombat', wheelKey: 'wheel2' },
+            dependencies: [{ kind: 'afterAction', action: choose2 }],
+          },
+        ],
+        'ShipCombatRoom',
+      );
+      expect(roster.valid).toBe(true);
+      const fragment = executeRoomLifecycle(
+        catalog,
+        inputWithoutProducer({
+          origin: oOrigin,
+          lifecycleProfileKey: 'ShipCombatRoom',
+          encounterEnvelopeKey: 'ShipEncounter',
+          encounterPhases: phases('ShipEncounter', [introKey, 'GeneratedO', 'GeneratedO']),
+          roomActionRoster: roster,
+        }),
+      );
 
-    expect(fragment.blockedAt).toBeUndefined();
-    const reached = fragment.events.flatMap((event, index) =>
-      event.kind === 'acquisitionPointReached' && event.entryKey !== undefined
-        ? [{ entryKey: event.entryKey, index }]
-        : [],
-    );
-    expect(reached.map((event) => event.entryKey)).toEqual([
-      delivery1.entryKey,
-      delivery2.entryKey,
-      delivery3.entryKey,
-    ]);
-    const phase1End = fragment.events.findIndex(
-      (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === 'Combat1',
-    );
-    const phase2Start = fragment.events.findIndex(
-      (event) => event.kind === 'encounterStarted' && event.phaseKey === 'Combat2',
-    );
-    const phase2End = fragment.events.findIndex(
-      (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === 'Combat2',
-    );
-    expect(reached[0]?.index).toBeGreaterThan(phase1End);
-    expect(reached[1]?.index).toBeGreaterThan(reached[0]?.index ?? -1);
-    expect(reached[1]?.index).toBeLessThan(phase2Start);
-    expect(reached[2]?.index).toBeGreaterThan(phase2End);
-  });
+      expect(fragment.blockedAt).toBeUndefined();
+      // The previous phase's end effects spawn the delivery, the next encounter's setup rolls
+      // its wheels, and only then is the delivery taken; the final phase's waits for the doors.
+      expect(
+        fragment.events.flatMap((event) => {
+          switch (event.kind) {
+            case 'encounterStarted':
+              return [`start ${event.phaseKey}`];
+            case 'encounterEndEffectsApplied':
+              return [`end ${event.phaseKey}`];
+            case 'offerPointMaterialized':
+              return [`open ${event.offerPoint}`];
+            case 'offerPointAcquired':
+              return [`reward ${event.offerPoint}`];
+            case 'acquisitionPointReached':
+              return event.entryKey === undefined
+                ? []
+                : [
+                    `delivery ${[delivery0, delivery1, delivery2].findIndex((entry) => entry.entryKey === event.entryKey)}`,
+                  ];
+            case 'outgoingGenerationCheckpoint':
+              return ['doors'];
+            default:
+              return [];
+          }
+        }),
+      ).toEqual([
+        'start Intro',
+        'end Intro',
+        'open wheel1',
+        'delivery 0',
+        'start Combat1',
+        'reward wheel1',
+        'end Combat1',
+        'open wheel2',
+        'delivery 1',
+        'start Combat2',
+        'reward wheel2',
+        'end Combat2',
+        'delivery 2',
+        'doors',
+      ]);
+    },
+  );
 
   it.each([
     ['Icarus before wheel', true],

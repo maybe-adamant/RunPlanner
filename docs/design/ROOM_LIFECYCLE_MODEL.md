@@ -189,8 +189,9 @@ Two grouped operations compose encounter sequences:
   acquisitions remain separate local producers.
 - `runRewardEncounterSequence` adds declaration-owned phase offer points around
   that sequence. For every selected O ShipCombat phase that declares an offer
-  point it emits the phase offer before encounter start and the picked
-  acquisition after completion. Intro has no offer: the ordinary Intro
+  point it emits the phase offer at the phase's **Wheels open**, right after
+  the previous phase's end effects and before the pickups the wheel's choice
+  waits on, and the picked acquisition after completion. Intro has no offer: the ordinary Intro
   definition is non-counting, while a selected Heracles Intro increments
   encounter depth once. Combat1 and the conditionally selected Combat2 each
   increment encounter depth once, materialize one complete active wheel, and
@@ -626,7 +627,7 @@ The engine constructs one closed lifecycle structure from the resolved profile
 and its active declaration-owned phase scope. Its ordered points are the rigid
 room skeleton: Room entered, each exact encounter start, its encounter
 outcome boundary where the phase can host one (Boss defeated in a Boss room),
-then the encounter end, Ship next-phase seams, internal outgoing generation,
+then the encounter end, Ship Wheels open and next-phase seams, internal outgoing generation,
 and final cleanup. The
 same frozen structure is carried by the roster and consumed by required-action
 scheduling, lifecycle execution, checkpoint assembly, and the room timeline.
@@ -651,7 +652,7 @@ tabs, labels, callbacks, or another eligibility/order calculation.
 An action rank selects only the inter-action slot to which a boundary is
 anchored. The profile and its active phase order independently own the
 structural boundary sequence: Room entered, each phase's Start then End, the
-next-phase seams between phases, and the profile-specific final seams. If
+Wheels open and next-phase seams between phases, and the profile-specific final seams. If
 retained-invalid action ranks imply contradictory boundary anchors, the
 timeline keeps the authored action order for repair and moves the later
 semantic boundary forward to the earliest compatible slot. It never sorts
@@ -1095,8 +1096,9 @@ separate history engine:
 prepareRoom
 enterRoom
 runRewardEncounterSequence
-  intro: start, complete
-  combat1: wheel1 offer point, start, complete, wheel1 acquisition, end effects
+  intro: start, complete, end effects
+  combat1: wheel1 offer point (Wheels open), intro end-effect pickups,
+           start, complete, wheel1 acquisition, end effects
   ... optional declared phases ...
 generateOutgoingBatch
 commitRoom
@@ -1108,6 +1110,19 @@ phase carrying a reward wheel applies them after its wheel acquisition. The
 [O rules](../biomes/O_GAME_RULES.md#shipcombat-phase-and-wheel-contract) own its
 active phases, offer points and the derived `nextPhaseUsable` barrier between
 Ship phases; O has one room-level Cleanup after its final active phase.
+
+Between Ship phases the points run: the previous phase's **Encounter ended**
+(its end effects, which spawn its matured deliveries and drops), **Wheels
+open** (the next encounter's setup rolls its wheels, so their store and offers
+are fixed here), the pickups those end effects spawned, **Next phase ready**
+(the wheel can be used once no required pickup is loose), the wheel's rerolls
+and its choice, then the next encounter's start. The end-effect pickups' window
+opens at Wheels open and closes at the choice, so a required one is due before
+Next phase ready, and a pickup taken there never feeds the wheel's offers:
+neither their candidate context, store ledger nor reward state. Intro and a
+Heracles Intro set up no wheel of their own; the next wheel's Wheels open
+follows their end the same way. After the final phase there is no Wheels open:
+its end-effect pickups follow its wheel reward and are due before Doors open.
 
 P consumes the same ordered engine without a P-only profile. Its
 declaration-owned `Intro` and `Combat` positions are prepared sequentially, so

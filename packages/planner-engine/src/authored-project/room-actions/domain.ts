@@ -842,12 +842,19 @@ function checkpoints(
   });
   for (const point of structure.points) {
     if (point.kind === 'nextPhase' && point.previousWheelKey !== undefined) {
+      const previousPhase = structure.phases.find(
+        (phase) => phase.rewardWheelKey === point.previousWheelKey,
+      );
       result.push(
         frozen({
           kind: 'checkpoint',
           checkpointKey: `nextPhaseUsable:${point.previousWheelKey}`,
           label: `${point.previousWheelKey} next phase usable`,
-          window: frozen({ kind: 'shipPostCombat', wheelKey: point.previousWheelKey }),
+          // Usable once the previous phase's end-effect pickups after Wheels open are taken.
+          window:
+            previousPhase === undefined
+              ? frozen({ kind: 'shipPostCombat', wheelKey: point.previousWheelKey })
+              : frozen({ kind: 'encounterEnd', phaseKey: previousPhase.phaseKey }),
         }),
       );
     }

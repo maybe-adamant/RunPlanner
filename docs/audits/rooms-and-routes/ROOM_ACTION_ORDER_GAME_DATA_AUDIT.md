@@ -365,8 +365,14 @@ wheel choice. Heracles O is likewise an Intro-family replacement with skipped
 wheel setup. Ordinary and Icarus Combat phases run `ShipsEncounterSetup`.
 
 For each wheel-bearing phase, the game first creates the wheel offer objects
-and waits for `ShipsEncounterSelected`. `UseShipWheel` fixes the selected
-reward/store on that exact encounter. Only then do encounter-start effects and
+and waits for `ShipsEncounterSelected`; the setup reseeds the RNG
+(`RandomSynchronize(3)`) and rolls the store and every wheel reward at once.
+The wheels are usable from then on, but `UseShipWheelForward`, `Left` and
+`Right` refuse while `HasRoomRequiredObject()`
+(`PresentationBiomeO.lua:880-928`), so a required object the previous phase's
+end effects spawned, such as a matured delivery, is taken after the roll and
+before the choice. `UseShipWheel` fixes the selected reward/store on that
+exact encounter. Only then do encounter-start effects and
 combat proceed. After combat, `SpawnRoomReward` creates the selected concrete
 reward. The reward is not acquired by choosing the wheel.
 
@@ -389,12 +395,14 @@ O therefore has one physical room chronology partitioned into repeated fixed
 phase windows:
 
 ```text
-finish Intro
+finish Intro and apply its end effects
+roll Wheel 1, then take the required objects those end effects spawned
 choose Wheel 1 reward
 complete Combat 1
 resolve Combat 1 reward/NPC actions in a legal order
 cross the required-object barrier
 apply Combat 1 end effects
+roll Wheel 2 and take its spawned required objects, when active
 choose Wheel 2 reward, when active
 complete Combat 2
 resolve Combat 2 reward/NPC actions in a legal order

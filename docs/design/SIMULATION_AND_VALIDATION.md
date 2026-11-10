@@ -388,15 +388,15 @@ so the entry stands with its controls to repair it; a stop **before** its
 entry did not reach it. The stop is where the walk actually stopped, never
 past it: it claims no entry the walk did not pass.
 
-| Stop                                                                                                                                            | Entry                                                                                                      | Reached |
-| ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------- |
-| Overview                                                                                                                                        | The entry after **Room entered**: entry and its entry effects are reached, nothing the Timeline settles is | Before  |
-| A Timeline row                                                                                                                                  | The first row of the blocking product the walk reached by the contact                                      | At      |
-| A contact with its own entry (a Fig Leaf at its phase start; Aetos or the Gorgon condition at its fight's **Encounter outcome**)                | That entry                                                                                                 | At      |
-| A door's generation or offer, or the store the doors draw from                                                                                  | **Doors open**                                                                                             | At      |
-| A boundary's own contact: Boss defeated's Judgment, an encounter end's due outcome or Shrine delivery, a wheel's offers at **Next phase ready** | That boundary                                                                                              | At      |
-| Any other Timeline contact, such as an unplaced required action                                                                                 | The entry after the last boundary the walk passed before the contact                                       | Before  |
-| Exit work, after the room committed or as a restored room departs again                                                                         | Past every entry                                                                                           | Before  |
+| Stop                                                                                                                                       | Entry                                                                                                      | Reached |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ------- |
+| Overview                                                                                                                                   | The entry after **Room entered**: entry and its entry effects are reached, nothing the Timeline settles is | Before  |
+| A Timeline row                                                                                                                             | The first row of the blocking product the walk reached by the contact                                      | At      |
+| A contact with its own entry (a Fig Leaf at its phase start; Aetos or the Gorgon condition at its fight's **Encounter outcome**)           | That entry                                                                                                 | At      |
+| A door's generation or offer, or the store the doors draw from                                                                             | **Doors open**                                                                                             | At      |
+| A boundary's own contact: Boss defeated's Judgment, an encounter end's due outcome or Shrine delivery, a wheel's offers at **Wheels open** | That boundary                                                                                              | At      |
+| Any other Timeline contact, such as an unplaced required action                                                                            | The entry after the last boundary the walk passed before the contact                                       | Before  |
+| Exit work, after the room committed or as a restored room departs again                                                                    | Past every entry                                                                                           | Before  |
 
 The blocking product's rows are the row whose own contact the blocking region
 is (a Well or Pool reroll's list, a Pool sale, a wheel's choice) and every row
@@ -408,7 +408,7 @@ and a Shrine purchase its initial item. A Travel Deal restock is judged at the
 earlier purchase that restocks it and a Pool list as the fountain opens it, so
 neither has a row. A row is claimed only when the walk reached it at or before
 the blocking contact: never a later row of the same stretch of the Timeline,
-nor a wheel's choice row while its offers block at **Next phase ready**, which
+nor a wheel's choice row while its offers block at **Wheels open**, which
 settles with them. A deferred Ship wheel's post-combat rows run before its
 encounter's end effects, so the walk reaches them while that encounter end is
 not yet passed. A contact inside a reached row's own settlement, such as a

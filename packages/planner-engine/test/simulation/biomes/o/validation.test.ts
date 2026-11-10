@@ -33,8 +33,16 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
-import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
+import {
+  authorLegalTraitOffers,
+  purchaseTestHermesShrineOffer,
+} from '@run-planner/test-fixtures/shared';
+import {
+  authorSurfaceWorldShop,
+  placeDueHermesShrineDeliveries,
+  surfaceShrineDeliveriesProject,
+  surfaceShrineDeliverySources,
+} from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { reachedFrontier } from '../../../support/reward-frontier';
 
@@ -535,6 +543,96 @@ describe('selected O validation', () => {
         origin: wheel1,
       }),
     );
+  });
+
+  it('rolls a wheel at Wheels open, before the delivery its choice waits on', () => {
+    // A Shrine Hermes boon bought in O matures at combat02's Intro end. Its pickup spends the
+    // biome's Hermes boon, but only after the next encounter's setup rolled wheel 1.
+    const { oShrine } = surfaceShrineDeliverySources;
+    let project = applyProjectCommand(surfaceShrineDeliveriesProject(), catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: oShrine,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'ShopHermesUpgrade' },
+    });
+    project = purchaseTestHermesShrineOffer(project, catalog, oShrine, 'initial:secondLeft', {
+      delay: 4,
+      rushed: false,
+    });
+    project = placeDueHermesShrineDeliveries(project);
+    const wheelOffer = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat02,
+      'wheel1',
+      'offer1',
+    );
+    project = authorLegalTraitOffers(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceRewardWheelOffer',
+        offer: wheelOffer,
+        value: { rewardType: 'HermesUpgrade' },
+      }),
+    );
+    const { biome } = evaluateValidO(project);
+    expect(biome.rewards.findings).not.toContainEqual(
+      expect.objectContaining({ origin: wheelOffer }),
+    );
+
+    const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
+    const deliveryKey = roomActionKey(
+      project.route.biomes
+        .find((candidate) => candidate.biomeKey === 'O')!
+        .topology!.occurrences.find(
+          (candidate) => candidate.occurrenceId === oOccurrenceIds.combat02,
+        )!
+        .roomActions.order.find(
+          (reference) =>
+            reference.kind === 'interactAcquisitionEntry' &&
+            reference.siteKey === 'hermesShrineDelivery',
+        )!,
+    );
+    const events = biome.history.events.filter(
+      (event) => 'origin' in event && semanticAddressKey(event.origin) === semanticAddressKey(ship),
+    );
+    const at = (predicate: (event: (typeof events)[number]) => boolean) =>
+      events.findIndex(predicate);
+    const order = [
+      at((event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === 'Intro'),
+      at((event) => event.kind === 'offerPointMaterialized' && event.offerPoint === 'wheel1'),
+      at(
+        (event) =>
+          event.kind === 'acquisitionPointReached' && event.siteKey === 'hermesShrineDelivery',
+      ),
+      at((event) => event.kind === 'encounterStarted' && event.phaseKey === 'Combat1'),
+    ];
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((left, right) => left - right)).toEqual(order);
+
+    const room = biome.snapshot.decisions
+      .flatMap((decision) => (decision.kind === 'batch' ? decision.targets : []))
+      .find((target) => target.room.origin.occurrenceId === oOccurrenceIds.combat02)!.room;
+    const timeline = room.roomLifecycleTimeline.entries.flatMap((entry) =>
+      entry.kind === 'boundary'
+        ? [entry.boundary.key]
+        : entry.kind === 'action' &&
+            (entry.action.key === deliveryKey ||
+              entry.action.reference.kind === 'chooseRewardWheel')
+          ? [entry.action.key === deliveryKey ? 'delivery' : 'choose']
+          : [],
+    );
+    expect(
+      timeline.slice(
+        timeline.indexOf('encounterEnd:Intro'),
+        timeline.indexOf('encounterStart:Combat1') + 1,
+      ),
+    ).toEqual([
+      'encounterEnd:Intro',
+      'wheelsOpen:wheel1',
+      'delivery',
+      'nextPhase:wheel1',
+      'choose',
+      'encounterStart:Combat1',
+    ]);
   });
 
   it('preserves a non-Ship terminal base store through the Preboss takeover and fixed completion chain', () => {

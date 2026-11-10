@@ -35,6 +35,8 @@ function lifecycleBoundaryLabel(boundary: WorkspaceRoomLifecycleBoundary): strin
       return 'Encounter ended';
     case 'bossDefeated':
       return 'Boss defeated';
+    case 'wheelsOpen':
+      return 'Wheels open';
     case 'nextPhase':
       return 'Next phase ready';
     case 'cleanup':
@@ -378,6 +380,7 @@ function projectRoomLifecycleTimeline(
       // encounter's end announces what it spawns; a Boss defeat hosts its own content.
       case 'encounterEnd':
       case 'bossDefeated':
+      case 'wheelsOpen':
       case 'nextPhase':
       case 'cleanup':
         return undefined;

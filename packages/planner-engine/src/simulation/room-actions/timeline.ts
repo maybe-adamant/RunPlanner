@@ -9,10 +9,14 @@ import type {
   RoomLifecycleStructurePhase,
   RoomLifecycleStructurePoint,
 } from '../../authored-project/room-actions/lifecycle-structure';
-import { scopeRoomLifecycleStructure } from '../../authored-project/room-actions/lifecycle-structure';
+import {
+  roomLifecycleWindowOrdinal,
+  scopeRoomLifecycleStructure,
+} from '../../authored-project/room-actions/lifecycle-structure';
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RoomActionRoster, RoomActionRow } from './model';
+import { lastRequiredRankThrough } from './assemble';
 
 export type RoomLifecycleBoundary =
   | Exclude<
@@ -418,21 +422,37 @@ export function assembleRoomLifecycleTimeline(
           0;
         return boundaryEntry(point, rank, firstPostCombatRank === undefined ? 'after' : 'before');
       }
-      case 'nextPhase':
-        return point.previousWheelKey === undefined
-          ? boundaryEntry(
-              point,
-              actionRank(roster, {
-                kind: 'chooseRewardWheel',
-                wheelKey: point.wheelKey,
-              }) ?? 0,
-              'before',
-            )
-          : boundaryEntry(
-              point,
-              checkpointRank(roster, `nextPhaseUsable:${point.previousWheelKey}`) ?? 0,
-              'after',
-            );
+      // The next wheels roll right after the previous phase's end effects; the choice
+      // becomes possible once the pickups those effects spawned are taken.
+      case 'wheelsOpen':
+      case 'nextPhase': {
+        const previousPhase =
+          structure.phases[
+            structure.phases.findIndex((phase) => phase.rewardWheelKey === point.wheelKey) - 1
+          ];
+        if (previousPhase === undefined) return boundaryEntry(point, 0, 'after');
+        const opened = Object.freeze({
+          kind: 'encounterEnd' as const,
+          phaseKey: previousPhase.phaseKey,
+        });
+        if (point.kind === 'nextPhase')
+          return boundaryEntry(
+            point,
+            lastRequiredRankThrough(structure, roster.rows, opened),
+            'after',
+          );
+        const openedOrdinal = roomLifecycleWindowOrdinal(structure, opened);
+        return boundaryEntry(
+          point,
+          lastRank(
+            rankedRows,
+            (row) =>
+              row.participation === 'required' &&
+              roomLifecycleWindowOrdinal(structure, row.window) < openedOrdinal,
+          ) ?? 0,
+          'after',
+        );
+      }
       case 'cleanup':
         return boundaryEntry(point, checkpointRank(roster, 'exitUsable') ?? finalRank, 'after');
     }
@@ -511,6 +531,7 @@ export function scopeRoomLifecycleTimeline(
       case 'bossDefeated':
       case 'encounterEnd':
         return active.has(boundary.phaseKey);
+      case 'wheelsOpen':
       case 'nextPhase':
         return activeWheelKeys.has(boundary.wheelKey);
       case 'roomEntered':

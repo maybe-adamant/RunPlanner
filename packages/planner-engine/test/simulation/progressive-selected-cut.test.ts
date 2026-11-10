@@ -1671,10 +1671,10 @@ describe('room stop', () => {
       },
     ],
     [
-      "a Ship wheel offer: its next phase, reached; the wheel's later choice row is not",
+      "a Ship wheel offer: its Wheels open, reached; the wheel's later choice row is not",
       partialWheel,
       'O',
-      { room: oOccurrenceIds.combat07, kind: 'timeline', at: 'entry', entry: 'nextPhase' },
+      { room: oOccurrenceIds.combat07, kind: 'timeline', at: 'entry', entry: 'wheelsOpen' },
     ],
     [
       // The replacement's row comes later; the walk stops inside the source's settlement.

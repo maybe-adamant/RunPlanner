@@ -59,6 +59,7 @@ function shipWorkbenchPresentation(
         return phaseIndexForKey(boundary.phaseKey);
       case 'bossDefeated':
         return phaseIndexForKey(boundary.phaseKey);
+      case 'wheelsOpen':
       case 'nextPhase': {
         const targetIndex = roomLocal.phases.findIndex(
           (phase) => phase.rewardWheelKey === boundary.wheelKey,

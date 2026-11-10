@@ -229,19 +229,7 @@ export function assembleRoomActionRoster(options: {
           entry.checkpointKey === 'outgoingGeneration'
             ? lastRequiredRank
             : entry.checkpointKey.startsWith('nextPhaseUsable:')
-              ? (() => {
-                  const wheelKey = entry.checkpointKey.slice('nextPhaseUsable:'.length);
-                  return rows.reduce(
-                    (rank, row) =>
-                      row.rank !== null &&
-                      row.participation === 'required' &&
-                      row.window.kind === 'shipPostCombat' &&
-                      row.window.wheelKey === wheelKey
-                        ? Math.max(rank, row.rank)
-                        : rank,
-                    0,
-                  );
-                })()
+              ? lastRequiredRankThrough(options.lifecycleStructure, rows, entry.window)
               : entry.checkpointKey === 'exitUsable'
                 ? rows.reduce(
                     (rank, row) =>
@@ -296,6 +284,25 @@ export function assembleRoomActionRoster(options: {
     }),
     valid: issues.length === 0,
   });
+}
+
+/** The last ranked required row whose window opens no later than `window`. */
+export function lastRequiredRankThrough(
+  structure: RoomLifecycleStructure,
+  rows: readonly RoomActionRow[],
+  window: RoomActionRow['window'],
+): number {
+  const through = roomLifecycleWindowOrdinal(structure, window);
+  return rows.reduce(
+    (rank, row) =>
+      row.rank !== null &&
+      !row.stale &&
+      row.participation === 'required' &&
+      roomLifecycleWindowOrdinal(structure, row.window) <= through
+        ? Math.max(rank, row.rank)
+        : rank,
+    0,
+  );
 }
 
 /** Restrict execution to an engine-assessed active phase prefix without mutating authorship. */

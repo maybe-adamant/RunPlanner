@@ -865,9 +865,10 @@ function roomStop(
         return phaseEvent('bossDefeated', boundary.phaseKey, event);
       case 'encounterEnd':
         return phaseEvent('encounterEndEffectsApplied', boundary.phaseKey, event);
+      case 'wheelsOpen':
+        return event.kind === 'offerPointMaterialized' && event.offerPoint === boundary.wheelKey;
       case 'nextPhase':
-        // A wheel's offers materialize as its next phase gets ready.
-        return event.kind === 'offerPointMaterialized';
+        return false;
       case 'cleanup':
         return false;
     }
@@ -882,6 +883,7 @@ function roomStop(
       case 'encounterStart':
       case 'encounterOutcome':
       case 'bossDefeated':
+      case 'wheelsOpen':
         return passed.some((event) => boundaryEvent(index, event));
       case 'encounterEnd': {
         if (passed.some((event) => boundaryEvent(index, event))) return true;

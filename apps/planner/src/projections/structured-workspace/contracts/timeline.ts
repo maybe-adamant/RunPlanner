@@ -344,6 +344,7 @@ export type WorkspaceRoomLifecycleBoundary =
   | { readonly kind: 'encounterOutcome'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'bossDefeated'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
+  | { readonly kind: 'wheelsOpen'; readonly key: string; readonly wheelKey: string }
   | { readonly kind: 'nextPhase'; readonly key: string; readonly wheelKey: string }
   | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
 
