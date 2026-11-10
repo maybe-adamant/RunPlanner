@@ -126,7 +126,8 @@ the final project and its exact assembly.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
   assembly with a settlement fault naming the owner. A batch whose doors cannot
-  settle keeps them and its fault, while the edit's other repairs still settle.
+  settle keeps them and its fault, while the edit's other repairs still settle;
+  when both fault, the door fault is the one reported.
   A fault signals an engine defect, not an authoring task: the application
   publishes it beside the assembly, never as an editor finding; dev builds warn
   in the console and bug reports carry the current one.

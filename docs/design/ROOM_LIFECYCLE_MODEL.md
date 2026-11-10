@@ -1173,8 +1173,8 @@ publishes none. The `beforeTargetGeneration` product remains internally useful
 for generation assessment, but only N's Hub-sourced Preboss generation
 exception retains a public launcher; the Hub board's generation captures no
 Run State. The pre-exit snapshot has no launcher (the run as a room is left is
-the next room's entry), and must not replace or relabel that exception. Hub departures capture conformance
-snapshots described in the [N rules](../biomes/N_GAME_RULES.md#restoration-and-departures).
+the next room's entry), and must not replace or relabel that exception. Hub
+departures capture conformance snapshots described in the [N rules](../biomes/N_GAME_RULES.md#restoration-and-departures).
 
 Separately, each Preboss and completion Boss occurrence captures the raw states
 its preparation receives as the source of a mid-run start installation: after
