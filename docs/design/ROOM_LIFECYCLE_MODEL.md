@@ -322,7 +322,7 @@ vanishes); a skipped fight's outcome hosts only such authored values.
 **Automatic outcomes.** Fixed automatic outcomes (Steady Growth, Transcendent
 Embryo, Judgment, Crystal Figurine) settle at their seam and are never
 reorderable Room Actions: Judgment and Crystal Figurine at a non-final Boss's
-`bossDefeated` seam, the [timed outcomes](TRAIT_OFFERS.md#timed-outcomes) at
+Boss defeated seam, the [timed outcomes](TRAIT_OFFERS.md#timed-outcomes) at
 encounter end. At a Boss the boss seam settles first; the encounter-end
 checkpoint then settles its effects before it publishes pickups created by
 matured clocks. The
@@ -462,9 +462,8 @@ stays a finding.
 Insert and move proposals carry the typed dependency and fixed-window
 blockers of that prefix, each naming its affected action and its prerequisite
 or conflicting action windows; a required action of an earlier window after k
-is its own blocker naming the action that must come first. An action marked
-`windowFollowsOrder` (the Postboss rack) never takes part in window crossing
-or required-first order.
+is its own blocker naming the action that must come first. An action whose window follows its authored order (the Postboss rack) never
+takes part in window crossing or required-first order.
 The application labels this evidence for placement explanations; it neither
 infers legality nor attributes an existing blocker to the proposed action.
 Authorable proposals, canonical required restores, and removals carry no
@@ -552,22 +551,29 @@ Every removal:
   an edit that addresses no single room (a route, biome or Hub owner)
   announces every removal;
 - yields to continuity: when a producer changes rather than disappears (a
-  reward swapped for another kind), its spawn rows take the new pickup roles
-  in declared order (main pickup first), each at its old position where the
-  order allows, instead of being removed and placed again.
+  reward swapped for another kind), its spawn rows, in the former reward's
+  declared role order, take the new reward's pickup roles in its declared
+  order (main pickup first), each at its old position where the order allows
+  and otherwise at the role's default, instead of being removed and placed
+  again; leftover old rows are removed and leftover roles keep their default
+  places.
 
 Never removed:
 
 - a row whose source has not been reached or assessed yet (an unassessed
   matured pickup, a pickup the run import places before its source is known);
 - required obligations being placed;
+- a row that already lacked its source or target before the edit (its
+  enabler went earlier, it was placed before its source existed, a reroll
+  that never found its cage): it keeps its finding until an edit takes its
+  trigger, for a Shop row every purchase before it;
 - rows of a room the run no longer enters: an unselected room keeps its rows
   untouched, as reanchoring keeps an unselected target's room-local state,
   and they return with its door; a Shop spawn whose source is taken while its
   room is off the route keeps its row with its finding when the room returns.
 
-`ResetRoomActionsAfter` is the explicit exception: it removes rows after a
-point at the owner's request, silently in its own room.
+The **Reset from here** command is the explicit exception: it removes rows
+after a point at the owner's request, silently in its own room.
 
 Older files, temporarily: a loaded document keeps the stale rows it holds
 until an edit changes their room, which then removes them, and keeps a row
@@ -606,10 +612,10 @@ projects over a long edit history.
 
 The engine constructs one closed lifecycle structure from the resolved profile
 and its active declaration-owned phase scope. Its ordered points are the rigid
-room skeleton: `roomEntered`, each exact `encounterStart`, its
-`encounterOutcome` where the phase can host one (a Boss room's `bossDefeated`
-instead), then `encounterEnd`, Ship `nextPhase` seams, internal outgoing
-generation, and final `cleanup`. The
+room skeleton: Room entered, each exact encounter start, its encounter
+outcome boundary where the phase can host one (Boss defeated in a Boss room),
+then the encounter end, Ship next-phase seams, internal outgoing generation,
+and final cleanup. The
 same frozen structure is carried by the roster and consumed by required-action
 scheduling, lifecycle execution, checkpoint assembly, and the room timeline.
 None of those consumers may reconstruct phase membership or boundary order
@@ -625,7 +631,7 @@ The application consumes the engine's phase status and scoping operation
 rather than deciding suffix activity from the selected encounter label.
 
 The roster remains authoritative for active action rows, dependencies,
-proposals, stale repair, and structural validity. The timeline places those
+proposals, and structural validity. The timeline places those
 exact roster keys into the structure's flexible intervals. It may carry
 declaration-owned phase identity and before/action/after placement, but never
 tabs, labels, callbacks, or another eligibility/order calculation.
@@ -707,7 +713,9 @@ own room) is listed under that source action instead. Each item carries its rewa
 what it spawns as (its reward, which for a Nemesis result is the one her
 outcome spawns, or the concrete pickup where that differs: one role of a
 reward that spawns per role, a forfeited reward's Red Onion), source,
-participation and placement: its ranked action, or the command that places it. Items come from the active action domain and the reached due
+participation and placement: its ranked action, or the command that places it,
+an unplaced item that needs an input once placed (a Pom Slice's Pom) marked as
+needing that choice. Items come from the active action domain and the reached due
 contacts rather than the authored order, so an unplaced item still appears.
 Only loot the walk produced is listed, and spawning is kept apart from
 resolving. Everything a moment spawns spawns together once the walk reaches
@@ -1135,7 +1143,7 @@ Anomaly's fixed `GeneratedAnomalyB` uses the normal counting encounter path,
 and its retained incoming offer is acquired only when authored success is true.
 `C_Boss01` is classified as Combat with the contract-specific template and the
 standard reward lifecycle: it runs fixed `BossZagreus01` and requires acquiring
-`InfernalContractBoon`, but does not emit `bossDefeated`, advance encounter
+`InfernalContractBoon`, but does not emit Boss defeated, advance encounter
 depth, or complete the host biome. A selected Chaos room runs `Empty_Chaos`,
 acquires direct `TrialUpgrade` and adds its own room-history record; skipped
 and selected gates consume the same source offer, while only selected Chaos

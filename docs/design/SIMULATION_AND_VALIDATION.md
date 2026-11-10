@@ -108,38 +108,15 @@ the final project and its exact assembly.
   are keyed by their source, so no inherited choice is reset for being newly
   reached; one that is invalid where it lands keeps its finding.
 - Settlement carries out the policy for
-  [rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
-  In each room the run enters, a room-action row the edit leaves stale, one
-  the room no longer offers, is removed through its owning removal command;
-  in a room the edit changes, stale rows retained from before it (an older
-  save) go too. A Shop row the walk reaches with no source producing it, where
-  one did before the edit, is judged by what the edit took: when the purchase
-  that produced it is gone (the trigger) it is removed; when that purchase
-  remains, the enabler went, so a Gold Gold Gold duplicate, an automatic
-  product, is removed while a Travel Deal refill, the owner's purchase, stays
-  with its finding. One no source produced before the edit either (its
-  enabler went earlier, or it was placed before its source existed) stays
-  with its finding until the edit takes every purchase before it, its trigger
-  among them. A removed row's own payload stays with the Shop. A cage reroll
-  the walk reaches with the reward it rerolls gone (its door's room stands
-  but no longer plays the cage, a reason the walk reports apart from a
-  missing or unavailable door), where before the edit the press found that
-  cage, is removed the same way; one that never found it, one whose door is
-  unavailable, and every Hub board reroll stay with their findings. A room the run
-  stops entering keeps its rows untouched, so they return with its door;
-  unchanged rooms, rooms the evaluation does not reach and an installed route
-  keep theirs. Invalid rows stay with their findings. Every generated batch's
-  doors are settled the same way to its source room's declared exits
-  ([exit capacity](AUTHORED_PROJECT_MODEL.md#exit-capacity)): an untaken door
-  the room no longer has goes with the rooms behind it, a takeover batch gains
-  the doors its Preboss fills, and a taken door stays with its finding. A
-  door its source room lacks is never published.
-- A changed incoming reward keeps its pickups where they were: the stale
-  pickup rows, in their former reward's declared role order, take the roles
-  the edit newly placed, in the new reward's (each main pickup first), each
-  at its old position when the roster allows it there and otherwise at the
-  role's default. Leftover stale pickups are removed and leftover roles keep
-  their default places.
+  [rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
+  in every room the evaluation reaches: it judges each room-action row by what
+  the edit changed, comparing the walk before and after it, and removes,
+  re-keys or keeps the row as that policy classifies it, through the row's
+  owning removal command. Every generated batch's doors are settled the same
+  way to its source room's declared exits, as
+  [exit capacity](AUTHORED_PROJECT_MODEL.md#exit-capacity) defines; a door
+  its source room lacks is never published. An installed route is not
+  settled.
 - The settlement names, by room, the removals the
   [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
   announces, with the countdown deliveries and trait drops a command takes
@@ -571,7 +548,8 @@ A stored position is kept when it becomes invalid and raises its finding; a
 default re-derives and raises none. An item left no free point has no
 position, which only an invalid or over-capacity room can reach. Authoring
 products, the Chaos gate's included, mark each position chosen or default; execution publishes both
-alike, so the runtime steers every one.
+alike, so the runtime steers every one. Draft and the run import leave
+positions unset and take the defaults.
 
 ### Persistent and multi-phase rooms
 

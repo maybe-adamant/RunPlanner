@@ -95,7 +95,7 @@ invalidity alone does not.
 ### Naming places
 
 Every place in the run is named by one rule, chosen by where the reader
-stands (owner 2026-11-10):
+stands:
 
 - **The place itself** (its own workbench title, its rail line, moments
   inside it such as Run State launchers and their moments) is named by its
@@ -452,24 +452,27 @@ product; it never infers that row set. Those rows keep their row-level edits
 editable only where the engine published a reached capability, so rows past
 the failing contact show it read-only with the unreached hint.
 
-The Timeline ends where the engine's room stop says the walk stopped: entries
-before the stop, and the stop's own entry when the walk reached it, so its
-controls repair it there. Authored rows past the stop never vanish: they wait,
-in order and without their events, in one dimmed **Not reached yet** group
-after the Timeline, with the authored values of events not reached yet (a Fig
-Leaf skip, an outcome's choices). The group is collapsed until opened, an
-open state of the session that never enters history; its rows cannot be
-reordered until the walk reaches them, and can still be deleted.
+The Timeline ends at the room's stop as the engine publishes it
+([selected cut](SIMULATION_AND_VALIDATION.md#selected-cut)), with the stop's
+own entry and its controls when the walk reached it. Authored rows past the
+stop never vanish: they wait, in order and without their events, in one dimmed
+group of rows not reached yet after the Timeline, with the authored values of
+events not reached yet (a Fig Leaf skip, an outcome's choices). The group is
+collapsed until opened, an open state of the session that never enters
+history; its rows cannot be reordered until the walk reaches them, and can
+still be deleted.
 
 The walk's stop is the frontier at every level: before it, everything is
 shown and editable; at it, the stopping item is shown with its controls so it
-can be repaired; past it, authored content stays saved but is not shown or
-editable. Opening a biome that holds the stop lands on it, where the blocking
+can be repaired; past it, authored content stays saved but leaves its place:
+a room's rows past the stop are hidden from their phases and cannot be
+reordered, though the not-reached group still lets them be deleted, and later
+places show only the stop notice. Opening a biome that holds the stop lands on it, where the blocking
 finding's repair link lands; without a stop the biome opens on its usual
 default. Whatever waits on the stop shows one stop notice: one sentence naming
 where the plan stops and the blocking finding's own repair link there. A room
-stopped in its Overview shows it in place of its Timeline, with no Not reached
-yet group; a Ship phase the walk has not reached shows it naming the earlier
+stopped in its Overview shows it in place of its Timeline, with no
+not-reached group; a Ship phase the walk has not reached shows it naming the earlier
 phase. A room or Hub past the stop (later on the rail, in this biome or a later
 one) stays on the rail, dimmed, and opening it shows only its title and the
 notice, which names the stopping room (its biome too when that is another) or
@@ -481,7 +484,9 @@ object or NPC it uses (badged with the inventory slot it buys from, and marked
 for a Travel Deal restock), its label, its decisions, its money and its delete.
 Money and delete keep one right edge on every row, and each encounter phase's
 rows read as one group. Every banner (encounter start and end, other lifecycle
-boundaries and checkpoints) shares one band style.
+boundaries and checkpoints) shares one band style. A banner is an event the
+engine announces once the walk reaches it, brought about by the rows before
+it, so it can host choices but cannot be inserted, moved or deleted.
 
 A label is the action's verb (Buy for paid World Shop, Shrine and Well items
 and refills, Rush for rushed Shrine purchases, Collect for pickups including
@@ -549,7 +554,12 @@ entry, an encounter's end, an O phase's wheel reward, the Preboss delivery
 flush, read as Delivered) or sits under the action whose settlement spawns it.
 It lists the items in spawn order as chips, grouped by what spawned them (a
 boon, keepsake, NPC, the Hermes Shrine, the Artificer, Sea Star or a switch);
-the room's own reward and Fields slots stand alone. A derived pickup's chip and
+the room's own reward and Fields slots stand alone. It shows exactly the
+engine's [spawned loot](ROOM_LIFECYCLE_MODEL.md#spawned-loot), which holds
+only what the walk produced from a settled source, so an unresolved source
+shows no spawn row while its own row marks what is missing; the planner never
+filters it. Loot spawned before it can be taken carries the lock badge, and a
+read-only row at the moment that frees it lists the same items. A derived pickup's chip and
 its collect row's item carry that source as a badge. Every item and object
 icon, in every view, follows one badge scheme: the bottom corner tells its
 origin (a cage or optional slot, the source that created it, a store slot or
@@ -583,8 +593,7 @@ any owner it repairs, the room's doors being the next required input, or
 navigation to a door owner or one of their findings opens it. An explicit open
 or close is remembered per room for the session (neither authored nor in
 history) and yields only to attention it has not yet seen.
-The table's header ends in one quiet red action, **Reset Doors**, which
-removes the batch. The batch's notes sit in the Timeline's side column, under
+The table's header ends in one quiet red action that removes the batch. The batch's notes sit in the Timeline's side column, under
 the Add area.
 
 The room's last Timeline row says how it is left. **Leave room** is one picker
