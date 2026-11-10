@@ -92,6 +92,28 @@ visible when blocked and its contextual state remains unassessed. Required
 upstream incompleteness locks its semantic authoring controls; upstream
 invalidity alone does not.
 
+### Naming places
+
+Every place in the run is named by one rule, chosen by where the reader
+stands (owner 2026-11-10):
+
+- **The place itself** (its own workbench title, its rail line, moments
+  inside it such as Run State launchers and their moments) is named by its
+  room name, with no biome.
+- **A reference to a place from elsewhere** (finding destinations, the stop
+  notice, removal announcements, plan-end controls, route-wide panels, links)
+  names it by its run-wide **Location N**, with the room name on hover. The
+  biome is never prefixed: location numbers are unique across the run, and
+  the biome is shown by its tab.
+- **A place with no location number** (the Hub before its first entry, a
+  biome's unchosen start, a room past the stop or the plan's end) is named by
+  its own name: the Hub, the biome's name, or the room name. A stop or
+  reference outside any biome names the Loadout.
+- Raw identifiers (biome keys, room game names, phase keys) are never shown.
+- The rail keeps its location badge and room number.
+
+One planner helper names places for every surface.
+
 ### Plan end
 
 Every room's Leave row offers to end the plan at that room, enabled by the
