@@ -42,6 +42,8 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 
 import {
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -1244,11 +1246,13 @@ describe('OccurrenceEncounterWorkbench', () => {
         selectedOptionKey: 'option1',
       },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SelectEncounter',
-      phase,
-      encounterKey: 'AthenaCombatP',
-    });
+    project = collectTestRequiredItems(
+      applyProjectCommand(project, catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'AthenaCombatP',
+      }),
+    );
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('button', {
@@ -1256,8 +1260,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     }) as HTMLButtonElement;
     expect(condition.getAttribute('aria-pressed')).toBe('true');
     expect(condition.disabled).toBe(false);
-    // The Combat phase starts before the blocked Athena offer: its reached Gorgon support is unsupported.
-    openNotReached();
+    // Collected before the blocked Athena offer, the Gorgon row is reached with its unsupported support.
     expect(screen.getByRole('button', { name: 'Edit Trait · Divine Dash' })).toBeTruthy();
     await view.user.click(condition);
     await waitFor(() => {
@@ -2051,6 +2054,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         'Encounter',
       ),
     });
+    project = collectTestRequiredItems(project);
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Overview');
 
@@ -2425,6 +2429,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer2'),
       value: { rewardType: 'MaxManaDrop' },
     });
+    project = collectTestRequiredItems(project);
 
     const view = renderOccurrenceWorkbench(
       project,
@@ -2509,6 +2514,14 @@ describe('OccurrenceEncounterWorkbench', () => {
       encounterKey: 'IcarusCombatO',
     });
     project = authorLegalTraitOffers(project);
+    // The owner meets Icarus in Combat 2 before dropping the phase.
+    project = insertRoomAction(
+      project,
+      oBiome,
+      occurrenceId,
+      reference,
+      occurrenceRoomActionOrder(project, 'Surface', 'O', occurrenceId)?.length ?? 0,
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
@@ -2557,7 +2570,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       phase,
       encounterKey: 'IcarusCombatO',
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
       phase,
