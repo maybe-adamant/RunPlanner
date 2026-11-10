@@ -8,9 +8,11 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectHistory,
+  createRoomActionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   redoProjectHistory,
+  roomActionKey,
   undoProjectHistory,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -109,7 +111,7 @@ describe('Eris observation codec', () => {
 });
 
 describe('SetErisSpawned', () => {
-  it('sets and clears the observation with its derived talk and gift', () => {
+  it('sets and clears the observation with its gift, leaving the talk and gift to place', () => {
     const cleared = applyProjectCommand(freshRoute(), catalog, {
       kind: 'SetErisSpawned',
       occurrence: gIntro,
@@ -127,7 +129,17 @@ describe('SetErisSpawned', () => {
       occurrence: gIntro,
       spawned: true,
     });
-    expect(encodeProjectDocument(restored)).toBe(encodeProjectDocument(freshRoute()));
+    // The observation places nothing; the route's own talk and gift rows are placed back.
+    expect(intro(restored).roomActions.order).toEqual([]);
+    let replaced = restored;
+    for (const [index, reference] of intro(freshRoute()).roomActions.order.entries())
+      replaced = applyProjectCommand(replaced, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(freshFileGBiome, freshFileGIntroId, roomActionKey(reference)),
+        reference,
+        index,
+      });
+    expect(encodeProjectDocument(replaced)).toBe(encodeProjectDocument(freshRoute()));
     expect(
       applyProjectCommand(cleared, catalog, {
         kind: 'SetErisSpawned',

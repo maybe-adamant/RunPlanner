@@ -52,6 +52,21 @@ function insertInteraction(project: ProjectDocument) {
   });
 }
 
+/** Picks up one of the switch's claims at the end of the room. */
+function insertClaim(project: ProjectDocument, entryKey: 'reward' | 'nectar') {
+  const claim: RoomActionReference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey: 'challengeSwitch',
+    entryKey,
+  };
+  return applyProjectCommand(project, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(fBiome, hostId, roomActionKey(claim)),
+    reference: claim,
+    index: occurrenceOf(project).roomActions.order.length,
+  });
+}
+
 function editOccurrence(
   project: ProjectDocument,
   occurrenceId: string,
@@ -135,8 +150,10 @@ describe('challenge switch observation', () => {
     ).toBe('left');
   });
 
-  it('takes the claim pickups with the interaction and follows the outcome', () => {
-    const used = insertInteraction(observe(golden(), 'PerfectClearChallengeSwitch_Pom'));
+  it('places no claim pickup with the interaction; placed claims follow the outcome', () => {
+    const interacted = insertInteraction(observe(golden(), 'PerfectClearChallengeSwitch_Pom'));
+    expect(occurrenceOf(interacted).roomActions.order.at(-1)).toEqual(interaction);
+    const used = insertClaim(interacted, 'reward');
     const order = occurrenceOf(used).roomActions.order;
     expect(order.slice(-2)).toEqual([
       interaction,
@@ -152,12 +169,14 @@ describe('challenge switch observation', () => {
       occurrenceOf(hit).acquisitionSites?.challengeSwitch?.pickupEntries?.reward?.offer.rewardType,
     ).toBe('RoomRewardConsolationPrize');
     expect(occurrenceOf(hit).roomActions.order).toEqual(order);
-    const nectar = applyProjectCommand(used, catalog, {
+    const nectarDropped = applyProjectCommand(used, catalog, {
       kind: 'ReplaceChallengeSwitchOutcome',
       occurrence: host,
       outcome: 'hitless',
       nectarDropped: true,
     });
+    expect(occurrenceOf(nectarDropped).roomActions.order).toEqual(order);
+    const nectar = insertClaim(nectarDropped, 'nectar');
     expect(occurrenceOf(nectar).roomActions.order.slice(-3)).toEqual([
       interaction,
       { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },

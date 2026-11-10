@@ -400,9 +400,10 @@ describe('completion Boss variants', () => {
     );
     if (postboss === undefined)
       throw new Error('selected Dream I Preboss must own Dream Postboss 01');
+    // Created with no rows: the fountain and the rack are the owner's to use.
     expect(postboss).toMatchObject({
       state: { kind: 'none' },
-      roomActions: { order: [{ kind: 'useFountain' }, { kind: 'interactKeepsakeRack' }] },
+      roomActions: { order: [] },
       keepsakeRack: { keepsakeKey: null },
     });
     project = applyProjectCommand(project, catalog, {
@@ -418,7 +419,8 @@ describe('completion Boss variants', () => {
       ),
     ).toMatchObject({
       keepsakeRack: { keepsakeKey: 'HadesAndPersephoneKeepsake' },
-      roomActions: { order: [{ kind: 'useFountain' }, { kind: 'interactKeepsakeRack' }] },
+      // Choosing a keepsake appends the rack's use.
+      roomActions: { order: [{ kind: 'interactKeepsakeRack' }] },
     });
     expect(
       project.route!.biomes[0]!.topology!.occurrences.find(

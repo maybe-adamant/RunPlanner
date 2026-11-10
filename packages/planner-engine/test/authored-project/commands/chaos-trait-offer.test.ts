@@ -22,6 +22,7 @@ import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/project-evaluation-assembly';
 
 import { underworldCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import type { AuthoredChaosTraitOffer } from '../../../src/authored-project/traits/state';
 
 const chaosReward = createIncomingRewardAddress(
@@ -71,11 +72,13 @@ function reachableUnresolvedProject() {
     occurrenceId: createOccurrenceId('fixture-chaos-normal-target'),
     gameName: 'F_Combat01',
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, createOccurrenceId('fixture-chaos-normal-target')),
-    value: { rewardType: 'MaxHealthDrop' },
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, createOccurrenceId('fixture-chaos-normal-target')),
+      value: { rewardType: 'MaxHealthDrop' },
+    }),
+  );
 }
 
 function pair(values: Partial<AuthoredChaosTraitOffer> = {}): AuthoredChaosTraitOffer {
