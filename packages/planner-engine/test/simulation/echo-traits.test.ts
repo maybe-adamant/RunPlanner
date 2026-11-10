@@ -41,7 +41,11 @@ import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { authorLegalTraitOffers, editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  editTestRoomActionOrder,
+  settleTestEdit,
+} from '@run-planner/test-fixtures/shared';
 import {
   createEchoTalentDropReplayProject,
   createGoldenFGHProject,
@@ -275,7 +279,7 @@ function replaceLatestGoldenRewardWithConsumable(project = selectGoldenBridge())
 
 function makeBridgeOutgoingEligible(project: ReturnType<typeof completeGoldenFGHProject>) {
   const targetId = createOccurrenceId('golden-h-combat05');
-  const replaced = applyProjectCommand(project, catalog, {
+  const replaced = settleTestEdit(project, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(goldenHBiome, targetId),
     gameName: 'H_MiniBoss02',

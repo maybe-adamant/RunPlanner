@@ -47,6 +47,7 @@ import {
   editTestRoomActionOrder,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
+  settleTestEdit,
 } from '../shared';
 import { authorTestArtificerReplacement } from '../room-actions';
 import {
@@ -264,35 +265,25 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
   if (options.pickedMiniboss !== undefined) {
     const first = goldenGOccurrenceId(6, 1);
     const second = goldenGOccurrenceId(6, 2);
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenGBiome, first),
       gameName: options.pickedMiniboss,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenGBiome, second),
       gameName: options.pickedMiniboss === 'G_MiniBoss02' ? 'G_MiniBoss01' : 'G_MiniBoss02',
     });
-    if (options.pickedMiniboss === 'G_MiniBoss02') {
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReconcileBatchExitCapacity',
-        decision: createExitDecisionAddress(goldenGBiome, source(first)),
-      });
-    }
   }
   if (options.prebossSource !== undefined) {
     const sourceOccurrence = goldenGOccurrenceId(7, 1);
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenGBiome, sourceOccurrence),
       gameName: options.prebossSource,
     });
     if (options.prebossSource === 'G_Combat14') {
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReconcileBatchExitCapacity',
-        decision: createExitDecisionAddress(goldenGBiome, source(sourceOccurrence)),
-      });
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(
@@ -1365,7 +1356,7 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
       rarificationActions: [],
     },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTarget),
     gameName: 'H_MiniBoss02',

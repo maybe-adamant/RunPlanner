@@ -128,7 +128,12 @@ the final project and its exact assembly.
   unavailable, and every Hub board reroll stay with their findings. A room the run
   stops entering keeps its rows untouched, so they return with its door;
   unchanged rooms, rooms the evaluation does not reach and an installed route
-  keep theirs. Invalid rows stay with their findings.
+  keep theirs. Invalid rows stay with their findings. Every generated batch's
+  doors are settled the same way to its source room's declared exits
+  ([exit capacity](AUTHORED_PROJECT_MODEL.md#exit-capacity)): an untaken door
+  the room no longer has goes with the rooms behind it, a takeover batch gains
+  the doors its Preboss fills, and a taken door stays with its finding. A
+  door its source room lacks is never published.
 - A changed incoming reward keeps its pickups where they were: the stale
   pickup rows, in their former reward's declared role order, take the roles
   the edit newly placed, in the new reward's (each main pickup first), each
@@ -138,7 +143,7 @@ the final project and its exact assembly.
 - The settlement names, by room, the removals the
   [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
   announces, with the countdown deliveries and trait drops a command takes
-  from other rooms with their source. The room an edit addresses is the occurrence its command's
+  from other rooms with their source and the doors a room lost. The room an edit addresses is the occurrence its command's
   address names or nests. Rows a rekey replaced and a delivery placed again
   elsewhere are never named.
 - Each repair consumes an explicit obligation or displaced owner. A repeated

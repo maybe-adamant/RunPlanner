@@ -260,28 +260,6 @@ function nOpeningDecisionProject(): ProjectDocument {
   });
 }
 
-function takeoverDecision(project: ProjectDocument) {
-  const plan = project.route.biomes.find((biome) => biome.biomeKey === 'G');
-  const decision = plan?.topology?.decisions.find(
-    (candidate) =>
-      candidate.kind === 'exit' &&
-      candidate.normal.kind === 'batch' &&
-      candidate.normal.targets.every(
-        (target) =>
-          plan.topology?.occurrences.find(
-            (occurrence) => occurrence.occurrenceId === target.occurrenceId,
-          )?.gameName === 'G_PreBoss01',
-      ),
-  );
-  if (decision?.kind !== 'exit' || decision.source.kind !== 'occurrence') {
-    throw new Error('G takeover source is missing');
-  }
-  return {
-    decision,
-    occurrenceId: decision.source.occurrenceId,
-  };
-}
-
 function requiredTakeoverOwner(
   project: ProjectDocument,
   routeKey: 'Surface' | 'Underworld',
@@ -1803,7 +1781,6 @@ describe('DecisionWorkbench', () => {
     ).toBe(true);
     const trigger = within(leaveRow()).getByRole('button', { name: 'Exit door' });
     expect(trigger.querySelector('.timeline-door-chip-blank')).toBeNull();
-    expect(document.querySelector('[data-command="ReconcileBatchExitCapacity"]')).toBeNull();
   });
 
   it('executes fixed width-one O and reordered-Q takeovers through Door 1', async () => {
@@ -1988,67 +1965,7 @@ describe('DecisionWorkbench', () => {
     );
   });
 
-  it('reconciles retained, expanded, ordinary, and blocked-suffix repair controls', async () => {
-    const complete = createCompleteFGProject();
-    const takeover = takeoverDecision(complete);
-    let retainedProject = applyProjectCommand(complete, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(goldenGBiome, takeover.occurrenceId),
-      gameName: 'G_MiniBoss02',
-    });
-    retainedProject = applyProjectCommand(retainedProject, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(goldenFBiome, {
-        kind: 'occurrence',
-        occurrenceId: goldenFStartId,
-      }),
-      storeKey: 'RunProgress',
-    });
-    const retainedOwner = createExitDecisionAddress(goldenGBiome, takeover.decision.source);
-    const retained = renderDecisionWorkbench(
-      retainedProject,
-      'Underworld',
-      'G',
-      subjectForOwner(retainedOwner),
-    );
-    const retainedRepair = screen.getByRole('button', { name: 'Fix Preboss' });
-    expect(retainedRepair.dataset.command).toBe('ReconcileBatchExitCapacity');
-    expect(retainedRepair.dataset.tone).toBe('danger');
-    expect(retainedRepair.dataset.attention).toBe('');
-    await retained.user.click(retainedRepair);
-    expect(screen.queryByRole('button', { name: 'Fix Preboss' })).toBeNull();
-    expect(
-      workspaceBiome(retained.application, 'Underworld', 'G').nodes.find(
-        (node) => node.kind === 'takeoverBatch' && ownerMatches(node, retainedOwner),
-      ),
-    ).toMatchObject({ targets: [{ exitKey: 'exit1', physicalState: 'available' }] });
-    cleanup();
-
-    const expandedProject = applyProjectCommand(complete, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(goldenGBiome, takeover.occurrenceId),
-      gameName: 'G_Combat03',
-    });
-    const expanded = renderDecisionWorkbench(
-      expandedProject,
-      'Underworld',
-      'G',
-      subjectForOwner(retainedOwner),
-    );
-    const expandedRepair = screen.getByRole('button', { name: 'Fix Preboss' });
-    expect(expandedRepair.dataset.tone).toBe('danger');
-    expect(expandedRepair.dataset.hasFindings).toBe('true');
-    await expanded.user.click(expandedRepair);
-    expect(
-      workspaceBiome(expanded.application, 'Underworld', 'G').nodes.find(
-        (node) => node.kind === 'takeoverBatch' && ownerMatches(node, retainedOwner),
-      ),
-    ).toMatchObject({
-      missingTargets: [],
-      targets: [{ exitKey: 'exit1' }, { exitKey: 'exit2' }, { exitKey: 'exit3' }],
-    });
-    cleanup();
-
+  it('shows a drifted file’s door its source room lacks as unavailable, with no repair', async () => {
     const ordinaryOwner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(1, 1),
@@ -2072,53 +1989,23 @@ describe('DecisionWorkbench', () => {
       'F',
       subjectForOwner(ordinaryOwner),
     );
-    expect(document.querySelector('[data-command="ReconcileBatchExitCapacity"]')).not.toBeNull();
     expect(
       screen.queryByText(
         'This saved door is no longer available here. Fix the earlier route first.',
       ),
     ).toBeNull();
-    const repair = screen.getByRole('button', { name: 'Fix Doors' });
-    expect(repair.dataset.tone).toBe('danger');
+    expect(screen.queryByRole('button', { name: 'Fix Doors' })).toBeNull();
     expect(doorRow('Door 2').dataset.available).toBe('false');
     // The unavailable door stays listed as an exit that cannot be picked.
     const unavailable = await exitChip('Door 2');
     expect(unavailable.getAttribute('aria-disabled')).toBe('true');
     expect(hintOf(unavailable)).toBe('This saved room is no longer offered here.');
     await closeExitOptions();
-    await ordinary.user.click(repair);
     expect(
       workspaceBiome(ordinary.application, 'Underworld', 'F').nodes.find(
         (node) => node.kind === 'ordinaryBatch' && ownerMatches(node, ordinaryOwner),
       ),
-    ).toMatchObject({ targets: [{ exitKey: 'exit1' }] });
-  });
-
-  it('hands focus to the doors once a keyboard repair removes its own button', async () => {
-    const owner = createExitDecisionAddress(goldenFBiome, {
-      kind: 'occurrence',
-      occurrenceId: goldenFOccurrenceId(1, 1),
-    });
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
-      gameName: 'F_Combat01',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(goldenFBiome, {
-        kind: 'occurrence',
-        occurrenceId: goldenFStartId,
-      }),
-      storeKey: 'RunProgress',
-    });
-    const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
-    act(() => screen.getByRole('button', { name: 'Fix Doors' }).focus());
-    await view.user.keyboard('{Enter}');
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Fix Doors' })).toBeNull());
-    await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByRole('region', { name: 'Door details' })),
-    );
+    ).toMatchObject({ targets: [{ exitKey: 'exit1' }, { exitKey: 'exit2' }] });
   });
 
   it('renders mixed Preboss decisions through the shared batch workbench', () => {

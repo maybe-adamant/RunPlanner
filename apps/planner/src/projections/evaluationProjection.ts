@@ -1101,7 +1101,7 @@ export function presentFinding(
   ) {
     return Object.freeze({
       title: 'Saved door unavailable',
-      description: 'Restore the source room’s doors or use Remove unavailable doors.',
+      description: 'Restore the source room’s doors or take another door.',
     });
   }
   if (

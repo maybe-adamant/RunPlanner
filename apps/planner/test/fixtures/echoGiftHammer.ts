@@ -15,7 +15,7 @@ import {
   createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 import {
   createPreparedProjectCandidateSession,
@@ -123,7 +123,7 @@ function createGoldenEchoGiftKeepsakePendingProject(
       rarificationActions: [],
     },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
     gameName: 'H_MiniBoss02',

@@ -254,7 +254,6 @@ export type TopologyCommand =
       readonly gameName: string;
       readonly targetOccurrenceIds: Readonly<Record<string, OccurrenceId>>;
     }
-  | { readonly kind: 'ReconcileBatchExitCapacity'; readonly decision: ExitDecisionAddress }
   | {
       readonly kind: 'ReplaceWithHubDecision';
       readonly decision: ExitDecisionAddress;

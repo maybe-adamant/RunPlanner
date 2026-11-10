@@ -19,7 +19,11 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
-import { authorLegalTraitOffers, editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  editTestRoomActionOrder,
+  settleTestEdit,
+} from '@run-planner/test-fixtures/shared';
 import {
   authorFreshFileRoomIssues,
   createFreshFileRouteProject,
@@ -82,7 +86,7 @@ export function createEchoHammerReplayMissingProject(): ProjectDocument {
   if (reachedH === undefined || !('rewards' in reachedH) || reachedH.rewards === undefined)
     throw new Error('expected reached forced H miniboss frontier');
   const before = reachedH.rewards.frontier?.state.traitHistory ?? createTraitHistoryState();
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
     gameName: 'H_MiniBoss02',
@@ -241,7 +245,7 @@ export function createEchoReplayUnresolvedHammerProject(): ProjectDocument {
     },
   );
   const forced = createOccurrenceId('golden-h-combat05');
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(goldenHBiome, forced),
     gameName: 'H_MiniBoss02',

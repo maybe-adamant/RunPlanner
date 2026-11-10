@@ -1,19 +1,33 @@
 import type { Catalog } from '../../catalog-schema';
-import type { BiomeTopology, ExitDecision, ExitSelection, ExitTargetReference } from '../model';
+import {
+  createBiomeAddress,
+  createExitDecisionAddress,
+  type ExitDecisionAddress,
+} from '../addresses';
+import type {
+  BiomeTopology,
+  ExitDecision,
+  ExitSelection,
+  ExitTargetReference,
+  ProjectDocument,
+} from '../model';
 import {
   additionalExitsForDecision,
   batchTakesOverNormalDoors,
+  declaredPhysicalExitKeys,
   exitDecisionForSource,
   selectedExitKey,
   selectedExitTarget,
+  takeoverPrebossDeclarationForBatch,
+  takeoverPrebossFillsDeclaredExits,
 } from '../topology/query';
 import { sameExitDecisionSource } from '../topology/source-identity';
 import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../topology/impact';
-import { failCommand, type LocatedBiome } from './contract';
+import { failCommand, locateConfiguredBiome, type LocatedBiome } from './contract';
 import { reconcileNormalTargetEntryStates } from './selection-state';
-import { exitKeysForTopologySource } from './topology/construction';
+import { exitKeysForTopologySource, updateTopology } from './topology/construction';
 import { reconcileTakeoverBatchExits } from './topology/takeover';
-import type { RouteDetourCommand, TopologyCommand } from './types';
+import type { ProjectCommand, RouteDetourCommand } from './types';
 
 function replaceExitDecision(topology: BiomeTopology, replacement: ExitDecision): BiomeTopology {
   return Object.freeze({
@@ -32,13 +46,18 @@ function replaceExitDecision(topology: BiomeTopology, replacement: ExitDecision)
 function capacityTargets(
   decision: ExitDecision,
   allowedExitKeys: readonly string[],
-  rekeySelected: boolean,
+  undeclaredSelectedDoor: UndeclaredSelectedDoor,
 ): readonly ExitTargetReference[] {
   const allowed = new Set(allowedExitKeys);
-  const declared = decision.normal.targets.filter((target) => allowed.has(target.exitKey));
   const selected = selectedExitTarget(decision);
+  if (undeclaredSelectedDoor === 'keep') {
+    return decision.normal.targets.filter(
+      (target) => allowed.has(target.exitKey) || target === selected,
+    );
+  }
+  const declared = decision.normal.targets.filter((target) => allowed.has(target.exitKey));
   if (
-    !rekeySelected ||
+    undeclaredSelectedDoor !== 'rekey' ||
     selected === undefined ||
     allowed.has(selected.exitKey) ||
     allowedExitKeys.length === 0
@@ -69,9 +88,9 @@ function reconcileExitDecisionCapacity(
   topology: BiomeTopology,
   decision: ExitDecision,
   allowedExitKeys: readonly string[],
-  rekeySelected: boolean,
+  undeclaredSelectedDoor: UndeclaredSelectedDoor,
 ): BiomeTopology {
-  const retained = capacityTargets(decision, allowedExitKeys, rekeySelected);
+  const retained = capacityTargets(decision, allowedExitKeys, undeclaredSelectedDoor);
   const retainedIds = new Set(retained.map((target) => target.occurrenceId));
   const removed = new Set(
     decision.normal.targets
@@ -113,11 +132,12 @@ function reconcileExitDecisionCapacity(
 }
 
 /**
- * `rekey` keeps a selected continuation whose door the source lacks; `prune`
- * removes it with every other undeclared door. A takeover batch always drops
- * its undeclared doors.
+ * `rekey` moves a selected continuation whose door the source lacks onto a
+ * free declared door; `prune` removes it with every other undeclared door;
+ * `keep` leaves it where it is, the owner's route decision. Only `keep`
+ * applies to a takeover batch, whose undeclared doors otherwise always go.
  */
-export type UndeclaredSelectedDoor = 'rekey' | 'prune';
+export type UndeclaredSelectedDoor = 'rekey' | 'prune' | 'keep';
 
 export function reconcileExitDecisionToDeclaredCapacity(
   catalog: Catalog,
@@ -125,7 +145,7 @@ export function reconcileExitDecisionToDeclaredCapacity(
   topology: BiomeTopology,
   decision: ExitDecision,
   undeclaredSelectedDoor: UndeclaredSelectedDoor,
-  command: TopologyCommand | RouteDetourCommand,
+  command: ProjectCommand | RouteDetourCommand,
 ): BiomeTopology {
   if (batchTakesOverNormalDoors(catalog, topology, decision)) {
     return reconcileTakeoverBatchExits(
@@ -133,7 +153,7 @@ export function reconcileExitDecisionToDeclaredCapacity(
       located,
       topology,
       decision,
-      'removeUndeclared',
+      undeclaredSelectedDoor === 'keep' ? 'settle' : 'removeUndeclared',
       command,
     );
   }
@@ -142,7 +162,7 @@ export function reconcileExitDecisionToDeclaredCapacity(
     topology,
     decision,
     allowed,
-    undeclaredSelectedDoor === 'rekey',
+    undeclaredSelectedDoor,
   );
   const reconciledDecision = exitDecisionForSource(reconciled, decision.source);
   if (reconciledDecision === undefined) {
@@ -156,4 +176,84 @@ export function reconcileExitDecisionToDeclaredCapacity(
     selectedExitKey(reconciledDecision),
     command,
   );
+}
+
+/**
+ * A generated batch whose doors disagree with its source's declared exits: the
+ * unselected targets on doors the source no longer has, and the declared doors
+ * a takeover Preboss fills that the batch lacks. A selected target on such a
+ * door is the owner's route decision and stays, with its finding.
+ */
+export interface ExitCapacityDrift {
+  readonly decision: ExitDecisionAddress;
+  readonly undeclared: readonly ExitTargetReference[];
+  readonly missing: readonly string[];
+}
+
+/** Every batch of the route whose doors drifted from its source's declared exits. */
+export function exitCapacityDrifts(
+  document: ProjectDocument,
+  catalog: Catalog,
+): readonly ExitCapacityDrift[] {
+  const drifts: ExitCapacityDrift[] = [];
+  for (const plan of document.route.biomes) {
+    const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+    const topology = plan.topology;
+    // Only a generated layout retains a door its source does not declare.
+    if (layout?.progression.kind !== 'generated' || topology == null) continue;
+    const biome = createBiomeAddress(document.route.routeKey, plan.biomeKey);
+    for (const decision of topology.decisions) {
+      if (decision.kind !== 'exit' || decision.source.kind !== 'occurrence') continue;
+      const declared = declaredPhysicalExitKeys(catalog, layout, topology, decision.source);
+      if (declared === undefined) continue;
+      const selected = selectedExitTarget(decision);
+      const undeclared = decision.normal.targets.filter(
+        (target) => !declared.includes(target.exitKey) && target !== selected,
+      );
+      const takeover = takeoverPrebossDeclarationForBatch(catalog, topology, decision);
+      const missing =
+        takeover !== undefined && takeoverPrebossFillsDeclaredExits(takeover, declared.length)
+          ? declared.filter(
+              (exitKey) => !decision.normal.targets.some((target) => target.exitKey === exitKey),
+            )
+          : [];
+      if (undeclared.length === 0 && missing.length === 0) continue;
+      drifts.push(
+        Object.freeze({
+          decision: createExitDecisionAddress(biome, decision.source),
+          undeclared: Object.freeze(undeclared),
+          missing: Object.freeze(missing),
+        }),
+      );
+    }
+  }
+  return Object.freeze(drifts);
+}
+
+/**
+ * Settles one drifted batch to its source's declared exits: its unselected
+ * undeclared doors go with their downstream topology, and a takeover batch
+ * gains a default Preboss offer at each missing door its Preboss fills. The
+ * failing contact of a contract error is the edit that left the drift.
+ */
+export function settleExitCapacity(
+  document: ProjectDocument,
+  catalog: Catalog,
+  decision: ExitDecisionAddress,
+  edit: ProjectCommand,
+): ProjectDocument {
+  const located = locateConfiguredBiome(document, catalog, decision.biomeKey);
+  const topology = located?.plan.topology;
+  const current = topology == null ? undefined : exitDecisionForSource(topology, decision.source);
+  if (located === undefined || topology == null || current === undefined)
+    failCommand(edit, `exit decision ${decision.biomeKey} is not configured`);
+  const reconciled = reconcileExitDecisionToDeclaredCapacity(
+    catalog,
+    located,
+    topology,
+    current,
+    'keep',
+    edit,
+  );
+  return reconciled === topology ? document : updateTopology(document, located, reconciled);
 }

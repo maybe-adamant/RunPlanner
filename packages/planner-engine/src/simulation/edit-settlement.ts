@@ -15,6 +15,10 @@ import {
   projectCommandAddress,
 } from '../authored-project/commands/contract';
 import { applyProjectCommand } from '../authored-project/commands/dispatch';
+import {
+  exitCapacityDrifts,
+  settleExitCapacity,
+} from '../authored-project/commands/topology-reconciliation';
 import { roomActionRemovalCommand } from '../authored-project/commands/room-action-reset';
 import { authoredLevelResolutionAt } from '../authored-project/commands/level-resolution';
 import { authoredTraitOfferAt } from '../authored-project/commands/trait-offer';
@@ -115,10 +119,21 @@ export interface SettlementFault {
   readonly owner: SemanticAddress;
 }
 
-/** The stale and source-gone actions one room lost to an edit, in their former order. */
+/** A door an edit took from a room because the room no longer has it, with the room behind it. */
+export interface RemovedRoomDoor {
+  readonly exitKey: string;
+  readonly occurrenceId: OccurrenceId;
+  readonly gameName: string;
+}
+
+/**
+ * The stale and source-gone actions one room lost to an edit, in their former
+ * order, and the doors it lost with the room having fewer, in door order.
+ */
 export interface RemovedStaleRoomActions {
   readonly occurrence: OccurrenceAddress;
   readonly actions: readonly RoomActionReference[];
+  readonly doors?: readonly RemovedRoomDoor[];
 }
 
 export interface ProjectEditSettlement {
@@ -619,6 +634,8 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
   const removedStale: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   // Sourced rows the command or a displaced placement took; a delivery placed again elsewhere moved.
   const removedElsewhere: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
+  // Doors an edit left on no exit of their room, by room.
+  const removedDoors: { owner: OccurrenceAddress; doors: readonly RemovedRoomDoor[] }[] = [];
   const settled = (
     assembly: ProjectEvaluationAssembly,
     fault?: SettlementFault,
@@ -661,8 +678,18 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
         return index < 0 ? former.length : index;
       };
       byRoom.set(key, {
-        occurrence: room.occurrence,
+        ...room,
         actions: Object.freeze([...room.actions].sort((left, right) => rank(left) - rank(right))),
+      });
+    }
+    for (const { owner, doors } of removedDoors) {
+      if (semanticAddressKey(owner) === silentRoom) continue;
+      const key = semanticAddressKey(owner);
+      const room = byRoom.get(key);
+      byRoom.set(key, {
+        occurrence: owner,
+        actions: room?.actions ?? Object.freeze([]),
+        doors: Object.freeze([...(room?.doors ?? []), ...doors]),
       });
     }
     return Object.freeze({
@@ -742,9 +769,42 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
     return Object.freeze({ assembly: before });
   let project = applyProjectCommand(before.project, catalog, command);
   if (project === before.project) return Object.freeze({ assembly: before });
-  // An installed route keeps exactly the rows it was authored with.
-  if (command.kind !== 'ReplaceRoute')
+  // An installed route keeps exactly the doors and rows it was authored with.
+  if (command.kind !== 'ReplaceRoute') {
+    // A door its room no longer has is context gone: an unselected one goes,
+    // and a takeover batch fills the doors its Preboss takes over.
+    const settledDecisions = new Set<string>();
+    for (;;) {
+      const drift = exitCapacityDrifts(project, catalog)[0];
+      if (drift === undefined) break;
+      const decisionKey = semanticAddressKey(drift.decision);
+      const fault = Object.freeze({ key: `exitCapacity:${decisionKey}`, owner: drift.decision });
+      // A batch that drifts again after settling is an engine defect, never replayed.
+      if (settledDecisions.has(decisionKey)) return settled(evaluate(project), fault);
+      settledDecisions.add(decisionKey);
+      const biome = createBiomeAddress(drift.decision.routeKey, drift.decision.biomeKey);
+      const doors = drift.undeclared.map(({ exitKey, occurrenceId }) =>
+        Object.freeze({
+          exitKey,
+          occurrenceId,
+          gameName: occurrenceAt(project, createOccurrenceAddress(biome, occurrenceId))!.gameName,
+        }),
+      );
+      try {
+        project = settleExitCapacity(project, catalog, drift.decision, command);
+      } catch (error) {
+        // The topology and its reconciliation disagree: an engine defect.
+        if (error instanceof ProjectCommandContractError) return settled(evaluate(project), fault);
+        throw error;
+      }
+      if (doors.length > 0 && drift.decision.source.kind === 'occurrence')
+        removedDoors.push({
+          owner: createOccurrenceAddress(biome, drift.decision.source.occurrenceId),
+          doors,
+        });
+    }
     removedElsewhere.push(...sourcedRowsTaken(before.project, project));
+  }
   let assembly = evaluate(project);
   // The reroll pool is a fixed budget at each spend's own point: a new spend
   // past it is refused. An earlier spend takes precedence, so an edit that

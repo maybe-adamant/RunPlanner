@@ -3,7 +3,6 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
-  type WorkspaceBatchRepairIntent,
   type WorkspaceEffectiveRewardPool,
   type WorkspaceInteractionCatalog,
   type WorkspaceLockedDoors,
@@ -30,8 +29,7 @@ import {
 } from '@planner/ui/feedback/useFindingTarget';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
-import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { useId, type ReactNode } from 'react';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RoomFeatureMapLegend, RoomFeatureMapPoints } from './room-map/RoomMapPoints';
 import { useRoomMapLinks, type RoomMapHighlight } from './room-map/roomMapHighlight';
@@ -284,38 +282,6 @@ function DoorRowWaiting({ children }: { readonly children: string }) {
     <span aria-live="polite" className="door-row-waiting">
       {children}
     </span>
-  );
-}
-
-/** The repair's projected effect names and styles it; a projected mark owner carries the batch's mark. */
-function ExactRepairAction({
-  intent,
-  label,
-  onFocusedUse,
-}: {
-  readonly intent: WorkspaceBatchRepairIntent | undefined;
-  readonly label: string;
-  /** The repair removes its own button, so a focused use hands focus on. */
-  readonly onFocusedUse: () => void;
-}) {
-  const findingTarget = useFindingTarget();
-  const executeIntent = useCommandIntent();
-  if (intent === undefined) return null;
-  return (
-    <button
-      {...(intent.markOwner === undefined ? {} : findingTarget(intent.markOwner))}
-      className="text-action"
-      data-attention=""
-      data-command={intent.command.kind}
-      data-tone="danger"
-      onClick={(event) => {
-        if (document.activeElement === event.currentTarget) onFocusedUse();
-        executeIntent(intent);
-      }}
-      type="button"
-    >
-      {label}
-    </button>
   );
 }
 
@@ -819,7 +785,7 @@ function BatchSettings({
   );
 }
 
-/** The doors' repair where one applies, otherwise their removal. */
+/** The doors' removal. */
 export function BatchDoorsRepair({
   interactions,
   node,
@@ -834,16 +800,8 @@ export function BatchDoorsRepair({
           workspaceInteractionKey(node.owner),
         )
       : undefined;
-  // A repair removes its own button, so a keyboard use hands focus to the doors.
-  const doorsId = semanticOwnerControlElementId(node.owner);
-  const refocusDoors = useRef(false);
-  useEffect(() => {
-    if (!refocusDoors.current || node.repairIntent !== undefined) return;
-    refocusDoors.current = false;
-    document.getElementById(doorsId)?.focus();
-  });
   const executeIntent = useCommandIntent();
-  return node.repairIntent === undefined ? (
+  return (
     <button
       className="text-action"
       data-tone="danger"
@@ -854,14 +812,6 @@ export function BatchDoorsRepair({
     >
       Reset Doors
     </button>
-  ) : (
-    <ExactRepairAction
-      intent={node.repairIntent}
-      label={node.kind === 'takeoverBatch' ? 'Fix Preboss' : 'Fix Doors'}
-      onFocusedUse={() => {
-        refocusDoors.current = true;
-      }}
-    />
   );
 }
 
@@ -1075,7 +1025,7 @@ export function BatchDoorsDetail({
       className="biome-batch-workbench door-workbench timeline-doors-detail"
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}
-      {...(node.repairIntent?.markOwner === undefined ? findingAnchor(node.owner) : {})}
+      {...findingAnchor(node.owner)}
       data-door-note-focus={batchNote?.focusKey}
       tabIndex={-1}
     >

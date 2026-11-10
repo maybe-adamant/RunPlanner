@@ -38,7 +38,7 @@ export function RemovedActionsNotice({
           <ul className="removed-actions-rooms">
             {rooms.map((room) => (
               <li key={room.key}>
-                {removedActionsLead(room.count)}{' '}
+                {removedActionsLead(room.count, room.doors)}{' '}
                 <button
                   className="stop-notice-link"
                   disabled={drafting}

@@ -119,7 +119,13 @@ function mergeRemovedStaleActions(
       key,
       earlier === undefined
         ? removed
-        : { occurrence: removed.occurrence, actions: [...earlier.actions, ...removed.actions] },
+        : {
+            occurrence: removed.occurrence,
+            actions: [...earlier.actions, ...removed.actions],
+            ...(earlier.doors === undefined && removed.doors === undefined
+              ? {}
+              : { doors: [...(earlier.doors ?? []), ...(removed.doors ?? [])] }),
+          },
     );
   }
   return Object.freeze([...byRoom.values()]);

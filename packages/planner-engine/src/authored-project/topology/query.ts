@@ -374,27 +374,6 @@ export function takeoverPrebossFillsDeclaredExits(
   );
 }
 
-/**
- * True when exit-capacity repair would change this takeover batch: its doors
- * differ from the source's declared doors and the Preboss can fill them.
- */
-export function takeoverBatchExitRepairAvailable(
-  catalog: Catalog,
-  layout: BiomeLayout,
-  topology: BiomeTopology,
-  decision: ExitDecision,
-): boolean {
-  if (decision.source.kind !== 'occurrence') return false;
-  const room = takeoverPrebossDeclarationForBatch(catalog, topology, decision);
-  const declared = declaredPhysicalExitKeys(catalog, layout, topology, decision.source);
-  if (room === undefined || declared === undefined) return false;
-  if (!takeoverPrebossFillsDeclaredExits(room, declared.length)) return false;
-  const authored = decision.normal.targets.map((target) => target.exitKey);
-  return (
-    authored.length !== declared.length || authored.some((exitKey) => !declared.includes(exitKey))
-  );
-}
-
 function realizedOrdinaryBatchCount(catalog: Catalog, topology: BiomeTopology): number {
   return topology.decisions.filter(
     (decision): decision is ExitDecision =>

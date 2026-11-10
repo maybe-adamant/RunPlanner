@@ -6,6 +6,7 @@ import {
   createEncounterPhaseAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
+  createProjectAddress,
   createProjectDocument,
   createRouteAddress,
   DEFAULT_PROJECT_NAME,
@@ -17,7 +18,11 @@ import {
 import { fillNemesisBetOutcomeWins } from '@run-planner/engine/project-migration';
 import { migrateProjectDocument as migrate101To102 } from '@planner/persistence/project-101-to-102.js';
 import { catalog } from '@run-planner/hades2-catalog';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  settleProjectEdit,
+  simulateProject,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import {
   createGoldenFGHIProject,
@@ -1004,7 +1009,15 @@ describe('project document loader', () => {
       ),
       'echoDoubleShopReward',
     );
-    const evaluation = simulateProject(catalog, loaded.project);
+    // The file's H Preboss source lost a door before settlement owned doors;
+    // its first edit lets the door go, and the route evaluates as it did.
+    const edited = settleProjectEdit({
+      catalog,
+      before: simulateProjectAssembly(catalog, loaded.project),
+      command: { kind: 'RenameProject', project: createProjectAddress(), name: 'Renamed' },
+      evaluate: (project) => simulateProjectAssembly(catalog, project),
+    }).assembly.project;
+    const evaluation = simulateProject(catalog, edited);
     expect(evaluation.status).toBe('incomplete');
     expect(evaluation.findings).toEqual([
       expect.objectContaining({

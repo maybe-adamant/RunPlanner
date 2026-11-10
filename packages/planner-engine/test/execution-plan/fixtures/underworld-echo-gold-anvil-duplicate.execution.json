@@ -5735,17 +5735,6 @@
               "producerLifecycleKey": "RoomReward",
               "resolvedStoreKey": "RunProgress"
             }
-          },
-          {
-            "exitKey": "exit2",
-            "index": 2,
-            "room": { "id": "golden-h-preboss-free", "biomeKey": "H", "gameName": "H_PreBoss01" },
-            "zagreusContractPresent": false,
-            "reward": {
-              "rewardType": "StackUpgrade",
-              "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress"
-            }
           }
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
@@ -5771,20 +5760,6 @@
               "routeEncounterDepth": 22,
               "roomHistoryOrdinal": 30
             },
-            "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 20 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
-              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
-              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
-              {
-                "storeKey": "FieldsOptionalRewards",
-                "remaining": { "kind": "exact", "count": 15 }
-              },
-              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
-              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
-              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
-            ],
             "traits": {
               "equipped": [
                 { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
@@ -5809,32 +5784,7 @@
               "godRarityCounts": { "Common": 4, "Epic": 1 },
               "upgradableCount": 4,
               "bannedTraitKeys": []
-            },
-            "rewardStores": [
-              {
-                "name": "RunProgress",
-                "remainingEntryCounts": [1, 0, 1, 0, 2, 1, 0, 0, 2, 2, 1, 3, 1, 3, 1, 1, 1, 0]
-              },
-              {
-                "name": "MetaProgress",
-                "remainingEntryCounts": [1, 1, 1, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 2, 2, 1, 1]
-              },
-              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
-              {
-                "name": "SubRoomRewards",
-                "remainingEntryCounts": [
-                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-                ]
-              },
-              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
-              {
-                "name": "FieldsOptionalRewards",
-                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-              },
-              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
-              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
-              { "name": "Secrets", "remainingEntryCounts": [1] }
-            ]
+            }
           }
         }
       }
@@ -5932,30 +5882,6 @@
             }
           }
         }
-      }
-    },
-    {
-      "id": "golden-h-preboss-free",
-      "owner": "[\"occurrence\",\"Underworld\",\"H\",\"golden-h-preboss-free\"]",
-      "biomeKey": "H",
-      "gameName": "H_PreBoss01",
-      "kind": "SingleEncounter",
-      "overview": {
-        "incomingReward": {
-          "rewardType": "StackUpgrade",
-          "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "RunProgress"
-        },
-        "encounterPhases": [
-          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
-        ],
-        "requiredObjects": []
-      },
-      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
-      "roomGuide": [],
-      "doors": {
-        "owner": "[\"occurrence\",\"Underworld\",\"H\",\"golden-h-preboss-free\"]",
-        "kind": "terminal"
       }
     },
     {
@@ -6285,7 +6211,7 @@
               "roomHistoryOrdinal": 36
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 20 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 21 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -6301,7 +6227,7 @@
             "rewardStores": [
               {
                 "name": "RunProgress",
-                "remainingEntryCounts": [1, 0, 1, 0, 2, 1, 0, 0, 2, 2, 1, 3, 1, 3, 1, 1, 1, 0]
+                "remainingEntryCounts": [1, 0, 1, 0, 2, 1, 1, 0, 2, 2, 1, 3, 1, 3, 1, 1, 1, 0]
               },
               {
                 "name": "MetaProgress",
@@ -6553,7 +6479,7 @@
               "roomHistoryOrdinal": 39
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 20 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 21 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -6569,7 +6495,7 @@
             "rewardStores": [
               {
                 "name": "RunProgress",
-                "remainingEntryCounts": [1, 0, 1, 0, 2, 1, 0, 0, 2, 2, 1, 3, 1, 3, 1, 1, 1, 0]
+                "remainingEntryCounts": [1, 0, 1, 0, 2, 1, 1, 0, 2, 2, 1, 3, 1, 3, 1, 1, 1, 0]
               },
               {
                 "name": "MetaProgress",
@@ -6862,5 +6788,5 @@
       }
     }
   ],
-  "planFingerprint": "0b8cffc2"
+  "planFingerprint": "8170aec0"
 }

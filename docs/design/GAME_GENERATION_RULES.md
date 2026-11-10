@@ -61,7 +61,7 @@ layout declares one) reward-store state. A target owns its room-local reward,
 shop, wheel, side-room, or Fields cage state.
 
 Batch and target creation, continuation changes (reanchoring), exit-capacity
-repair and the retained-key codec rule are command behavior; the
+reconciliation and the retained-key codec rule are authored-model behavior; the
 [authored model](AUTHORED_PROJECT_MODEL.md#reanchoring) is their single owner.
 Generation decides only which targets a source can offer.
 
@@ -85,7 +85,7 @@ set. The first target owns the Preboss Shop state. Later targets own complete
 free offers only when `remainingOffers` is a counted binding; a width-one or
 `none` policy has no later offer.
 
-The takeover commands and their minimal exit-capacity repair are owned by the
+The takeover commands and their exit-capacity reconciliation are owned by the
 [authored model](AUTHORED_PROJECT_MODEL.md#takeover-batches).
 
 A `retainNormalPeers` Preboss is different: it is an ordinary target beside

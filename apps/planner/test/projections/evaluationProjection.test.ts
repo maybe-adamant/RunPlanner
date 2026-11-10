@@ -110,7 +110,7 @@ describe('evaluation presentation', () => {
       }),
     ).toEqual({
       title: 'Saved door unavailable',
-      description: 'Restore the source room’s doors or use Remove unavailable doors.',
+      description: 'Restore the source room’s doors or take another door.',
     });
     expect(
       presentFinding({

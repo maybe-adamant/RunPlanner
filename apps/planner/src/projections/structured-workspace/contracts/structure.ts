@@ -129,17 +129,6 @@ export type WorkspaceMissingTargetAuthoring =
   | { readonly kind: 'awaitingBatchRewardStore' }
   | { readonly kind: 'awaitingFieldsCageOutcome' };
 
-/**
- * `effect` says whether the repair removes unavailable doors or adds missing
- * ones. `markOwner` is present when the repair carries the batch's finding mark.
- */
-export type WorkspaceBatchRepairIntent = WorkspaceCommandIntent<
-  Extract<ProjectCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>
-> & {
-  readonly effect: 'removeUnavailable' | 'addMissing';
-  readonly markOwner?: ExitDecisionAddress;
-};
-
 export interface WorkspaceMissingPhysicalTarget {
   readonly authoring: WorkspaceMissingTargetAuthoring;
   readonly exitKey: string;
@@ -205,7 +194,6 @@ interface WorkspaceBatchNodeBase {
   readonly notes: readonly WorkspaceDoorNote[];
   readonly owner: ExitDecisionAddress;
   readonly persistence: 'authored' | 'uncommitted';
-  readonly repairIntent?: WorkspaceBatchRepairIntent;
   /** Present wherever the batch carries a pool: an editable picker or a ship-decided value. */
   readonly rewardPool?: WorkspaceBatchRewardPool;
   readonly rewardStore?: WorkspaceMarker;

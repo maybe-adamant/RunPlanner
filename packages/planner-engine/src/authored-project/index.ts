@@ -375,7 +375,6 @@ export {
   declaredPhysicalExits,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
-  takeoverBatchExitRepairAvailable,
   normalDecisionProgressionForLayout,
   bossDoorRewardStoreKeysForLayout,
   bossDoorLinkForSource,

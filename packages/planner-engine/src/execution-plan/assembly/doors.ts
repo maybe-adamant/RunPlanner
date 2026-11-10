@@ -49,6 +49,12 @@ export function assembleExecutionDoors({
       throw new CompilerError('openingSelectionMissing', `${room.gameName} has no selected exit`);
     const targets: readonly ExecutionDoorTarget[] = Object.freeze(
       batch.targets.map((target) => {
+        // A door its room does not have carries a finding, so no eligible plan holds one.
+        if (target.exit.kind === 'unavailable')
+          throw new CompilerError(
+            'executionCoverageMissing',
+            `${room.gameName} has no door ${target.exit.exitKey}`,
+          );
         const reward = rewardForRoom(target.room);
         const cageRewards = executionCageRewards(target.room);
         return Object.freeze({

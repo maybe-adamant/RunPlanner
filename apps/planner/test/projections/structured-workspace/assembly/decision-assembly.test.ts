@@ -2,7 +2,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
-  createBiomeAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
@@ -818,7 +817,6 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.batch.targets.every((target) => target.physicalState === 'available')).toBe(
       true,
     );
-    expect(assembly.batch.repairIntent).toBeUndefined();
     expect(
       assembly.batch.targets.every((target) => target.marker.assessment === 'unassessed'),
     ).toBe(true);
@@ -1123,7 +1121,7 @@ describe('structured workspace decision assembly', () => {
     expect(ordinaryTargetGameNames).not.toContain('F_PostBoss01');
   });
 
-  it('projects an exact repair intent for unavailable authored exits', () => {
+  it('projects authored doors their source room lacks as unavailable', () => {
     const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       gameName: 'F_Combat01',
       kind: 'ReplaceOccurrenceRoom',
@@ -1153,14 +1151,9 @@ describe('structured workspace decision assembly', () => {
       ['exit1', 'available'],
       ['exit2', 'unavailable'],
     ]);
-    expect(assembly.batch.repairIntent).toEqual({
-      command: { kind: 'ReconcileBatchExitCapacity', decision: assembly.batch.owner },
-      effect: 'removeUnavailable',
-      focus: { owner: assembly.batch.owner, timing: 'before' },
-    });
   });
 
-  it('retains repair controls for physically unavailable ordinary and takeover batches in blocked suffixes', () => {
+  it('retains physically unavailable doors of ordinary and takeover batches in blocked suffixes', () => {
     const fOwner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(1, 1),
@@ -1190,14 +1183,7 @@ describe('structured workspace decision assembly', () => {
       source: fSource,
     });
     if (f.kind !== 'batch') throw new Error('blocked F ordinary batch is missing');
-    expect(f.batch).toMatchObject({
-      repairIntent: {
-        command: { kind: 'ReconcileBatchExitCapacity', decision: fOwner },
-        effect: 'removeUnavailable',
-        focus: { owner: fOwner, timing: 'before' },
-      },
-      topologyState: 'retained',
-    });
+    expect(f.batch).toMatchObject({ owner: fOwner, topologyState: 'retained' });
     expect(f.batch.targets).toContainEqual(
       expect.objectContaining({ exitKey: 'exit2', index: 2, physicalState: 'unavailable' }),
     );
@@ -1251,96 +1237,7 @@ describe('structured workspace decision assembly', () => {
       .filter((target) => target.physicalState === 'unavailable')
       .map((target) => target.room.occurrenceId);
     expect(unavailable).not.toHaveLength(0);
-    expect(g.batch).toMatchObject({
-      repairIntent: {
-        command: { kind: 'ReconcileBatchExitCapacity', decision: g.batch.owner },
-        effect: 'removeUnavailable',
-        focus: { owner: g.batch.owner, timing: 'before' },
-        markOwner: g.batch.owner,
-      },
-      topologyState: 'retained',
-    });
-  });
-
-  it('projects takeover repair for missing doors only where the Preboss can fill them', () => {
-    const takeoverSource = (
-      project: ProjectDocument,
-      biomeKey: string,
-      prebossGameName: string,
-    ) => {
-      const topology = project.route.biomes.find((biome) => biome.biomeKey === biomeKey)?.topology;
-      const preboss = topology?.occurrences.find(
-        (occurrence) => occurrence.gameName === prebossGameName,
-      );
-      const owner = topology?.decisions.find(
-        (decision) =>
-          decision.kind === 'exit' &&
-          decision.normal.targets.some((target) => target.occurrenceId === preboss?.occurrenceId),
-      );
-      if (owner?.kind !== 'exit' || owner.source.kind !== 'occurrence') {
-        throw new Error(`${prebossGameName} source is missing`);
-      }
-      return owner.source;
-    };
-    const assembleTakeover = (
-      project: ProjectDocument,
-      routeKey: string,
-      biomeKey: string,
-      prebossGameName: string,
-      widerGameName: string,
-    ) => {
-      const sourceAddress = takeoverSource(project, biomeKey, prebossGameName);
-      const widened = applyProjectCommand(project, catalog, {
-        gameName: widerGameName,
-        kind: 'ReplaceOccurrenceRoom',
-        occurrence: createOccurrenceAddress(
-          createBiomeAddress(routeKey, biomeKey),
-          sourceAddress.occurrenceId,
-        ),
-      });
-      const source = biomeSource(widened, routeKey, biomeKey);
-      const decision = source.exitDecision(sourceAddress);
-      if (decision?.normal.kind !== 'batch') throw new Error(`${biomeKey} takeover is missing`);
-      const kit = decisionKit(source);
-      const assembly = assembleWorkspaceDecision({
-        persistence: 'authored',
-        assembleOccurrence: kit.assembleOccurrence,
-        catalog,
-        decision: decision as WorkspaceAuthoredBatchDecision,
-        kind: 'batch',
-        markerDestinations: kit.markers.emitter,
-        source,
-      });
-      if (assembly.kind !== 'batch' || assembly.batch.kind !== 'takeoverBatch') {
-        throw new Error(`${biomeKey} takeover batch is missing`);
-      }
-      return assembly.batch;
-    };
-
-    const g = assembleTakeover(
-      createGoldenFGHIProject(),
-      'Underworld',
-      'G',
-      'G_PreBoss01',
-      'G_Combat02',
-    );
-    expect(g.missingTargets).not.toHaveLength(0);
-    expect(g.repairIntent).toEqual({
-      command: { kind: 'ReconcileBatchExitCapacity', decision: g.owner },
-      effect: 'addMissing',
-      focus: { owner: g.owner, timing: 'before' },
-      markOwner: g.owner,
-    });
-
-    const q = assembleTakeover(
-      loadSurfaceNOPQProject(),
-      'Surface',
-      'Q',
-      'Q_PreBoss01',
-      'Q_Combat12',
-    );
-    expect(q.missingTargets).not.toHaveLength(0);
-    expect(q.repairIntent).toBeUndefined();
+    expect(g.batch.topologyState).toBe('retained');
   });
 
   it('keeps a reward-invalid physical peer as an authored target rather than a missing exit', () => {

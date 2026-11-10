@@ -915,33 +915,59 @@ describe('stale room actions in edit settlement', () => {
       });
     });
 
-    it('stay invalid when the door to their cage becomes an unavailable exit', () => {
+    describe('when their door’s source room loses it', () => {
       const source = createOccurrenceAddress(h, createOccurrenceId('golden-h-miniboss01'));
-      const project = press(
-        withGoldenUnderworldJudgments(withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll'])),
-        source,
-        {
-          kind: 'cage',
-          exitKey: 'exit2',
-          occurrenceId: createOccurrenceId('golden-h-combat04'),
-          slotKey: 'cage1',
-        },
-      );
-      expect(rerolls(project, source)).toHaveLength(1);
-      // Miniboss 2 has one door, so the retained second door is unavailable; an upstream edit can restore it.
-      const settled = settle(project, {
+      const target = {
+        kind: 'cage',
+        exitKey: 'exit2',
+        occurrenceId: createOccurrenceId('golden-h-combat04'),
+        slotKey: 'cage1',
+      } as const;
+      const pressed = (exitKey: 'exit1' | 'exit2') =>
+        press(
+          applyProjectCommand(
+            withGoldenUnderworldJudgments(
+              withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll']),
+            ),
+            catalog,
+            {
+              kind: 'SetExitSelection',
+              selection: createExitSelectionAddress(h, source),
+              value: { kind: 'normal', exitKey },
+            },
+          ),
+          source,
+          target,
+        );
+      // Miniboss 2 has one door.
+      const swap = {
         kind: 'ReplaceOccurrenceRoom',
         occurrence: source,
         gameName: 'H_MiniBoss02',
+      } as const;
+
+      it('go with an unselected door, silently in the edited room', () => {
+        const project = pressed('exit1');
+        expect(rerolls(project, source)).toHaveLength(1);
+        const settled = settle(project, swap);
+        expect(settled.fault).toBeUndefined();
+        expect(rerolls(settled.assembly.project, source)).toEqual([]);
+        expect(settled.removedStaleActions).toBeUndefined();
       });
-      expect(settled.fault).toBeUndefined();
-      expect(rerolls(settled.assembly.project, source)).toEqual(rerolls(project, source));
-      expect(settled.assembly.evaluation.findings).toContainEqual(
-        expect.objectContaining({
-          code: 'targetRoomUnavailable',
-          evidence: expect.objectContaining({ exclusionReasons: ['physicalExitUnavailable'] }),
-        }),
-      );
+
+      it('stay invalid at a selected door, an owner’s route decision', () => {
+        const project = pressed('exit2');
+        expect(rerolls(project, source)).toHaveLength(1);
+        const settled = settle(project, swap);
+        expect(settled.fault).toBeUndefined();
+        expect(rerolls(settled.assembly.project, source)).toEqual(rerolls(project, source));
+        expect(settled.assembly.evaluation.findings).toContainEqual(
+          expect.objectContaining({
+            code: 'targetRoomUnavailable',
+            evidence: expect.objectContaining({ exclusionReasons: ['physicalExitUnavailable'] }),
+          }),
+        );
+      });
     });
 
     it('stay out of order before the doors they redraw open', () => {

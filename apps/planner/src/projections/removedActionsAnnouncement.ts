@@ -10,6 +10,8 @@ import { stopNoticeLink } from './walkStopCopy';
 export interface RemovedActionsRoom {
   readonly key: string;
   readonly count: number;
+  /** Doors the room lost because it no longer has them. */
+  readonly doors: number;
   /** The room's link text, such as "Location 40". */
   readonly place: string;
   readonly selection: FindingSelection;
@@ -22,7 +24,7 @@ export function removedActionsAnnouncement(
   workspace: Pick<StructuredWorkspaceProjection, 'focusByOwner' | 'route'>,
 ): readonly RemovedActionsRoom[] {
   return Object.freeze(
-    removed.map(({ occurrence, actions }) => {
+    removed.map(({ occurrence, actions, doors }) => {
       const key = semanticAddressKey(occurrence);
       const place = findingLocation(
         catalog,
@@ -33,8 +35,9 @@ export function removedActionsAnnouncement(
       return Object.freeze({
         key,
         count: actions.length,
+        doors: doors?.length ?? 0,
         place: stopNoticeLink({ kind: 'past', place }),
-        // The removed rows lived on the room's Timeline.
+        // The removed rows and doors lived on the room's Timeline.
         selection: {
           ...ownerSelection(occurrence, `removedActions:${key}`, workspace.focusByOwner),
           presentation: { kind: 'roomTimeline' as const },

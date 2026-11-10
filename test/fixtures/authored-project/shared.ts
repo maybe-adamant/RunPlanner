@@ -22,6 +22,7 @@ export {
   testHermesShrinePurchaseAction,
 } from './room-actions';
 export { hubVisitActions } from './hub-actions';
+export { settleTestEdit } from './settled-edit';
 export { catalogWithEmptyShopGroup } from './empty-shop-group';
 export { legacyRareEpicHexTrees } from './legacy-hex-trees';
 export { legacySchema99Body } from './legacy-schema-99';

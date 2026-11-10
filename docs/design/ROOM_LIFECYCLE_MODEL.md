@@ -574,6 +574,10 @@ until an edit changes their room, which then removes them, and keeps a row
 whose source was already gone with its finding. Both asymmetries end at the
 next major schema revision, whose upgrade cleans older files once.
 
+A batch's door is classified the same way: its context is its source room's
+declared exit, and the rooms behind a removed door go with it
+([exit capacity](AUTHORED_PROJECT_MODEL.md#exit-capacity)).
+
 Why: distance is risk. A same-room effect is visible where it happens; a
 cross-room effect is invisible unless announced, so the owner's decisions are
 never removed from a distance, only marked. Removal and return as side
@@ -591,6 +595,8 @@ projects over a long edit history.
 | Gold Gold Gold duplicate, boon swapped away         | 3          | removed, announced in the shop room     |
 | Matured trait drop, trait lost                      | 3          | removed, announced                      |
 | Door or cage reroll, the reward it rerolls gone     | 1          | removed, silent                         |
+| Door its source room no longer has, not taken       | 1          | removed, announced in the source room   |
+| Door its source room no longer has, taken           | 4          | invalid                                 |
 | Reroll of a door the game refuses or not available  | 4          | invalid                                 |
 | Hub board reroll, its slot closed or entered        | 4          | invalid                                 |
 | Trait drop, trait held but matures elsewhere        | 4          | invalid                                 |

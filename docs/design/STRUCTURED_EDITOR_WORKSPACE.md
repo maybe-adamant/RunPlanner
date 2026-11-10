@@ -583,12 +583,9 @@ any owner it repairs, the room's doors being the next required input, or
 navigation to a door owner or one of their findings opens it. An explicit open
 or close is remembered per room for the session (neither authored nor in
 history) and yields only to attention it has not yet seen.
-The table's header ends in one quiet red action: **Fix Preboss** where a
-takeover batch can be matched to its source's declared doors, **Fix Doors**
-where an ordinary batch removes its unavailable doors, otherwise **Reset
-Doors**, which removes the batch. A repair draws the eye, as does each door row
-it removes. The batch's notes sit in the Timeline's side column, under the Add
-area.
+The table's header ends in one quiet red action, **Reset Doors**, which
+removes the batch. The batch's notes sit in the Timeline's side column, under
+the Add area.
 
 The room's last Timeline row says how it is left. **Leave room** is one picker
 whose closed face is the chosen way out: the door's room and final reward
@@ -1163,21 +1160,12 @@ subtractive effect. They do not receive a different command, history,
 confirmation, or recovery path. The workspace has no generic removal-action
 abstraction, completion status, or post-edit focus policy.
 
-Retained-overflow and Preboss repairs remain explicit:
-
-1. show unavailable retained targets at their semantic owner;
-2. show which picked target or Preboss realization is no longer available;
-3. let the user select a representable continuation;
-4. expose the owning reconciliation command;
-5. reconcile immediately when the user invokes that explicit action;
-6. rely on the existing Undo/Redo history controls for recovery when needed.
-
-An ordinary and a takeover batch share one exact repair slot bound to
-`ReconcileBatchExitCapacity`. The projected repair names its effect: removing
-unavailable doors (a danger action) or adding missing Preboss doors. A takeover
-batch offers it whenever the engine can match the batch to its source's
-declared doors, and its repair carries the batch's finding mark, including that
-of a missing door, which has no row of its own.
+A batch's doors follow its source room through edit settlement
+([exit capacity](AUTHORED_PROJECT_MODEL.md#exit-capacity)), so the workspace
+offers no door-set repair. A picked door its source room no
+longer has stays at its semantic owner as unavailable, with its finding, until
+the user takes another door or restores the room; Undo/Redo recovers anything
+the edit removed.
 
 Action labels invoke semantic commands; they do not calculate deletion scope
 or repair the project themselves. Persistent deletion-scope copy belongs only
