@@ -355,10 +355,15 @@ function rewardPoolForBatch(
 function fieldsDoorNotes(fields: WorkspaceFieldsBatchContext): readonly WorkspaceDoorNote[] {
   return fields.cageTargetCount === 0
     ? [
-        Object.freeze({ target: 'batch', text: 'No room here uses the cage count' }),
-        Object.freeze({ target: 'batch', text: 'Max still affects later Fields rolls' }),
+        Object.freeze({ target: 'cageCount', text: 'No room here uses the cage count' }),
+        Object.freeze({ target: 'doorRoll', text: 'Max still affects later Fields rolls' }),
       ]
-    : [Object.freeze({ target: 'batch', text: 'Cage rewards appear bottom to top on the door' })];
+    : [
+        Object.freeze({
+          target: 'rewardColumn',
+          text: 'Cage rewards appear bottom to top on the door',
+        }),
+      ];
 }
 
 function missingTargetPrerequisite(

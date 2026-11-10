@@ -14,6 +14,7 @@ import type { FindingMarkProps, FindingTargetProps } from '@planner/ui/feedback/
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { showTruncatedTitle } from './truncatedTitle';
 import { hintProps } from './hint';
+import { NotedText } from './NotedText';
 
 import type {
   ContextualPickerItem,
@@ -38,6 +39,8 @@ interface ContextualPickerProps<T> {
   readonly label: string;
   /** The field label's full name, on hover and as its accessible name, where the label is a short badge. */
   readonly labelHint?: string;
+  /** A note on the field label's words, shown on hover or keyboard focus of the label. */
+  readonly labelNote?: string | undefined;
   /** An image shown before the field label. */
   readonly labelIcon?: ArtworkSource | undefined;
   readonly layout?: 'inline' | 'stacked';
@@ -388,6 +391,7 @@ export function ContextualPicker<T>({
   id,
   label,
   labelHint,
+  labelNote,
   labelIcon,
   layout = 'stacked',
   loading = false,
@@ -477,7 +481,9 @@ export function ContextualPicker<T>({
             <ArtworkIcon className="artwork-label-icon" source={labelIcon} />
           )}
           {labelHint === undefined ? (
-            label
+            <NotedText label={label} note={labelNote}>
+              {label}
+            </NotedText>
           ) : (
             <>
               <span aria-hidden="true">{label}</span>

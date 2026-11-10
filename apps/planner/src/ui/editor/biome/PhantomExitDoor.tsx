@@ -13,7 +13,8 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingMark, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { DoorRow, NoteMarked } from './DecisionWorkbench';
+import { DoorRow } from './DecisionWorkbench';
+import { NotedText } from '@planner/ui/controls/NotedText';
 import { roomKindIcon } from './roomIcon';
 
 const emptyModel: ContextualPickerModel<string> = Object.freeze({
@@ -62,9 +63,11 @@ export function PhantomExitDoor({
     <DoorRow
       ariaLabel="Hidden return door"
       identity={
-        <NoteMarked note={note}>
-          <span className="door-row-number">Hidden</span>
-        </NoteMarked>
+        <span className="door-row-number">
+          <NotedText label="Hidden" note={note}>
+            Hidden
+          </NotedText>
+        </span>
       }
       room={
         expanded ? (

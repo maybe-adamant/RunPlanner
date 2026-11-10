@@ -73,6 +73,7 @@ import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-fi
 import { swapEchoAway } from '../removed-actions';
 import {
   createEchoGoldIAnvilDuplicateProject,
+  createCompleteFGProject,
   createGoldenFGHIProject,
   createUnderworldFWellCheckpoint,
   loadUnderworldFGProject,
@@ -493,6 +494,14 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('H', 'golden-h-combat02'),
   },
   {
+    id: 'fields-doors-no-cage',
+    doorsExpanded: true,
+    label: 'Fields doors where no offered room uses cages: the cage count and roll notes',
+    shows: ['Fields settings line', 'cage count note', 'door roll note'],
+    project: createGoldenFGHIProject,
+    target: room('H', 'golden-h-combat09'),
+  },
+  {
     id: 'doors-table',
     doorsExpanded: true,
     label: 'Doors table: one reward per door',
@@ -515,6 +524,14 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['fixed boss pool', 'door note marker'],
     project: createGoldenFGHIProject,
     target: room('H', 'golden-h-preboss-shop'),
+  },
+  {
+    id: 'boss-door-ignored-pool',
+    doorsExpanded: true,
+    label: 'Preboss doors whose boss ignores the carried pool: the effective pool and its note',
+    shows: ['effective pool', 'effective pool note'],
+    project: createCompleteFGProject,
+    target: room('F', 'golden-f-preboss-shop'),
   },
   {
     id: 'side-room-hidden-door',

@@ -328,42 +328,41 @@ describe('a room’s door notes', () => {
 
   const noteText = (marker: Element) => marker.getAttribute('aria-description');
 
-  it('marks the hidden door with its note, in no notes section', async () => {
+  it('hints the hidden door’s name with its note, in no notes section', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const details = await openRoom(view, sideRoom);
     await openDoors(view, details);
     expect(screen.queryByRole('complementary', { name: 'Notes' })).toBeNull();
     const door = within(details).getByRole('article', { name: 'Hidden return door' });
-    const marker = within(door).getByRole('note', { name: 'Note' });
-    expect(noteText(marker)).toBe(
+    const name = within(door).getByRole('group', { name: 'Hidden' });
+    expect(noteText(name)).toBe(
       'Its room and reward are drawn when the doors first unlock, before any side door.',
     );
-    expect(marker.tabIndex).toBe(0);
+    expect(name.tabIndex).toBe(0);
   });
 
-  it('marks the Doors open title with a note on the doors as a whole, shut or open', async () => {
+  it('hints the door table’s Reward column with the Fields cage order', async () => {
     const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'H');
     const details = await openRoom(
       view,
       createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-miniboss01')),
     );
-    const disclosure = within(details).getByRole('button', { name: 'Door details' });
-    const titleNote = () => within(disclosure.parentElement!).getByRole('note', { name: 'Note' });
-    expect(noteText(titleNote())).toBe('Cage rewards appear bottom to top on the door');
-    await view.user.click(disclosure);
-    expect(noteText(titleNote())).toBe('Cage rewards appear bottom to top on the door');
+    await openDoors(view, details);
+    const column = within(details).getByRole('group', { name: 'Reward' });
+    expect(noteText(column)).toBe('Cage rewards appear bottom to top on the door');
+    expect(column.tabIndex).toBe(0);
   });
 
-  it('marks a boss door’s fixed pool with its note', async () => {
+  it('hints a boss door’s fixed pool with its note', async () => {
     const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'H');
     const details = await openRoom(
       view,
       createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop')),
     );
     await openDoors(view, details);
-    const marker = within(details).getByRole('note', { name: 'Note' });
-    expect(noteText(marker)).toBe('Fixed for this boss');
-    expect(marker.parentElement?.textContent).toContain('Major Reward');
+    expect(noteText(within(details).getByRole('group', { name: 'Major Reward' }))).toBe(
+      'Fixed for this boss',
+    );
   });
 });
 

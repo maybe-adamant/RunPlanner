@@ -1194,8 +1194,10 @@
   white-space: nowrap;
 }
 
-/* A pickup's origin is told on hover and focus. */
-.timeline-row-origin {
+/* A pickup's origin, or a note on a word or value, is told on hover and focus. */
+.timeline-row-origin,
+.noted-text,
+.noted-text .fixed-value-chip-text {
   cursor: help;
   text-decoration: underline dotted rgb(180 175 187 / 55%);
   text-underline-offset: 3px;

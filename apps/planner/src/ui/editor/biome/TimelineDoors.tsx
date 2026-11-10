@@ -6,7 +6,7 @@ import type {
 } from '@planner/projections/structured-workspace';
 import type { DoorChip } from './doorSummary';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
-import { DoorChips, NoteMarker } from './DecisionWorkbench';
+import { DoorChips } from './DecisionWorkbench';
 import { TimelineRow } from './TimelineRow';
 import { doorsOpenToggle, type BannerToggle } from './doorSummary';
 
@@ -37,8 +37,6 @@ export interface TimelineDoorsContent {
   readonly endsPlan?: true;
   /** False where the room shows no doors, only its last row. */
   readonly doorsOpenRow?: false;
-  /** A note on the doors as a whole, marked on the Doors open title. */
-  readonly note?: string;
   /** The Doors object in the Add area, where presses on the doors are added. */
   readonly object?: ReactNode;
   /** The presses on the doors, each edited on its own Timeline row. */
@@ -94,14 +92,7 @@ export function BannerTitle({
       <strong>{label}</strong>
     </button>
   );
-  return toggle.note === undefined ? (
-    button
-  ) : (
-    <>
-      {button}
-      <NoteMarker note={toggle.note} />
-    </>
-  );
+  return button;
 }
 
 /** The expanded doors, as one full-width Timeline line under the Doors open row. */

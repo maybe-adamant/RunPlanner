@@ -1613,47 +1613,16 @@ select {
   padding: 12px 0 0;
 }
 
-/* A note's footnote star after the value it explains; hovering or focusing it shows the note. */
-.door-note-symbol {
-  margin-inline-start: 2px;
-  padding: 0 2px;
-  border-radius: 3px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: help;
-  outline: none;
-}
-
-.door-note-symbol:hover {
-  color: var(--selection-accent);
-}
-
-.door-note-symbol:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--selection-accent) 80%, transparent);
-  outline-offset: 1px;
-}
-
-.door-note-marked {
+.door-pool-value > .noted-text {
   display: inline-flex;
   min-height: 30px;
   align-items: center;
 }
 
-.door-note-marked > .fixed-value-chip,
+.door-pool-value > .noted-text > .fixed-value-chip,
 .door-pool-effective .fixed-value-chip {
   min-height: 0;
   padding: 0;
-}
-
-.door-note-marked > .door-note-symbol {
-  align-self: flex-start;
-  margin-top: 3px;
-}
-
-.timeline-banner-title > .door-note-symbol {
-  align-self: flex-start;
-  margin-inline-start: -4px;
 }
 
 .room-workbench-panel-content {

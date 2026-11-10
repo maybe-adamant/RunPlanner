@@ -2156,7 +2156,7 @@ describe('boss-door reward pool in the Doors open row', () => {
     expect(within(section).queryByRole('button', { name: 'Reward Pool' })).toBeNull();
     expect(within(section).getByText('Major Reward')).toBeTruthy();
     expect(
-      within(section).getByRole('note', { name: 'Note' }).getAttribute('aria-description'),
+      within(section).getByRole('group', { name: 'Major Reward' }).getAttribute('aria-description'),
     ).toBe('Fixed for this boss');
     expect(within(section).getByRole('listitem', { name: 'Leave room' })).toBeTruthy();
   });
@@ -2168,7 +2168,7 @@ describe('boss-door reward pool in the Doors open row', () => {
       'None',
     );
     expect(
-      within(section).getByRole('note', { name: 'Note' }).getAttribute('aria-description'),
+      within(section).getByRole('group', { name: 'None' }).getAttribute('aria-description'),
     ).toBe('Ignored for this boss');
     expect(within(section).getByRole('listitem', { name: 'Leave room' })).toBeTruthy();
   });

@@ -12,6 +12,8 @@ interface CandidatePickerProps<T extends number | string> {
   readonly id: string;
   readonly interaction: WorkspacePickerCandidateInteraction<T>;
   readonly label: string;
+  /** A note on the label's words. */
+  readonly labelNote?: string | undefined;
   readonly onReplace: (value: T) => void;
   readonly placeholder: string;
   /** A short fixed list opens without a search field. */
@@ -31,6 +33,7 @@ export function CandidatePicker<T extends number | string>({
   id,
   interaction,
   label,
+  labelNote,
   onReplace,
   placeholder,
   searchable,
@@ -46,6 +49,7 @@ export function CandidatePicker<T extends number | string>({
       {...(bindFindingTarget ? { findingTarget: findingTarget(interaction.owner, id) } : {})}
       id={id}
       label={label}
+      {...(labelNote === undefined ? {} : { labelNote })}
       layout="inline"
       {...(interaction.contextReached === false ? { disabledHint: candidateWaitingHint } : {})}
       loading={projection.pending}

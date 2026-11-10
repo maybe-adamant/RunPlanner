@@ -45,6 +45,7 @@ import {
   RerolledRewardRepairs,
 } from './DoorRewardEditor';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
+import { NotedText } from '@planner/ui/controls/NotedText';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
@@ -223,6 +224,7 @@ export function FixedExitRow({
 export function DoorRowsHeader({
   action,
   identity = 'Door',
+  rewardNote,
   room = 'Room',
   select,
 }: {
@@ -233,13 +235,26 @@ export function DoorRowsHeader({
   readonly room?: string;
   /** Names the selection column where it is not a pick between exits. */
   readonly select?: ReactNode;
+  /** A note on the Reward column, on its header. */
+  readonly rewardNote?: string | undefined;
 } = {}) {
   return (
-    <div {...(action === undefined ? { 'aria-hidden': true } : {})} className="door-rows-header">
+    <div
+      {...(action === undefined && rewardNote === undefined ? { 'aria-hidden': true } : {})}
+      className="door-rows-header"
+    >
       <span aria-hidden="true">{select}</span>
       <span aria-hidden="true">{identity}</span>
       <span aria-hidden="true">{room}</span>
-      <span aria-hidden="true">Reward</span>
+      {rewardNote === undefined ? (
+        <span aria-hidden="true">Reward</span>
+      ) : (
+        <span>
+          <NotedText label="Reward" note={rewardNote}>
+            Reward
+          </NotedText>
+        </span>
+      )}
       <span className="door-rows-header-action">{action}</span>
     </div>
   );
@@ -562,38 +577,6 @@ function AdditionalExitRow({
   );
 }
 
-/** A note's footnote star, which shows the note on hover or keyboard focus. */
-export function NoteMarker({ note }: { readonly note: string }) {
-  return (
-    <sup
-      aria-label="Note"
-      className="door-note-symbol"
-      role="note"
-      tabIndex={0}
-      {...hintProps(note, undefined, 'Note')}
-    >
-      *
-    </sup>
-  );
-}
-
-/** A value a note explains, its footnote star following it. */
-export function NoteMarked({
-  children,
-  note,
-}: {
-  readonly children: ReactNode;
-  readonly note: string | undefined;
-}) {
-  if (note === undefined) return children;
-  return (
-    <span className="door-note-marked">
-      {children}
-      <NoteMarker note={note} />
-    </span>
-  );
-}
-
 /** The pool line: the batch's pool, then what the selected exit counts where that differs. */
 export function RewardPoolLine({
   effective,
@@ -621,9 +604,9 @@ export function RewardPoolLine({
             {label}
           </span>
           {fixedLabel === undefined ? null : (
-            <NoteMarked note={poolNote}>
+            <NotedText label={fixedLabel} note={poolNote}>
               <FixedValueChip label={fixedLabel} />
-            </NoteMarked>
+            </NotedText>
           )}
         </span>
       )}
@@ -638,11 +621,11 @@ export function RewardPoolLine({
           <span className="visually-hidden" id={effectiveLabelId}>
             Effective Pool
           </span>
-          <NoteMarked note={effectiveNote}>
-            <span aria-labelledby={effectiveLabelId} role="status">
+          <span aria-labelledby={effectiveLabelId} role="status">
+            <NotedText label={effective.label} note={effectiveNote}>
               <FixedValueChip label={effective.label} />
-            </span>
-          </NoteMarked>
+            </NotedText>
+          </span>
         </span>
       )}
     </div>
@@ -702,6 +685,7 @@ function BatchSettings({
               id={`${node.key}-fields-roll`}
               interaction={fields}
               label="Fields door roll"
+              labelNote={noteFor('doorRoll')}
               onReplace={(cageOutcome) => executeIntent(fields.intentFor(cageOutcome))}
               placeholder="Select roll"
             />
@@ -710,7 +694,11 @@ function BatchSettings({
             <>
               <dl className="fields-batch-summary">
                 <div>
-                  <dt>Cages per combat room</dt>
+                  <dt>
+                    <NotedText label="Cages per combat room" note={noteFor('cageCount')}>
+                      Cages per combat room
+                    </NotedText>
+                  </dt>
                   <dd>{node.fields.doorCageRewardCount}</dd>
                 </div>
                 <div>
@@ -972,7 +960,10 @@ export function BatchDoorsDetail({
           <BatchSettings interactions={interactions} noteFor={noteFor} node={node} />
         </div>
         <DoorRows ariaLabel="Door rows" role="group">
-          <DoorRowsHeader {...(repair === undefined ? {} : { action: repair })} />
+          <DoorRowsHeader
+            {...(repair === undefined ? {} : { action: repair })}
+            rewardNote={noteFor('rewardColumn')}
+          />
           {node.targets.map((target) => (
             <TargetRow
               interactions={interactions}

@@ -214,7 +214,6 @@ export function doorsOpenToggle(doors: TimelineDoors): BannerToggle | undefined 
     controls: doors.detailId,
     expanded: doors.expanded,
     label: doors.noun === 'door' ? 'Door details' : 'Offer details',
-    ...(doors.note === undefined ? {} : { note: doors.note }),
     onToggle: () => toggle(!doors.expanded),
   };
 }
@@ -224,7 +223,5 @@ export interface BannerToggle {
   readonly controls: string;
   readonly expanded: boolean;
   readonly label: string;
-  /** A note on what the banner opens, marked after its title. */
-  readonly note?: string;
   readonly onToggle: () => void;
 }

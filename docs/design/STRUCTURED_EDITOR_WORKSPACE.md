@@ -593,8 +593,7 @@ any owner it repairs, the room's doors being the next required input, or
 navigation to a door owner or one of their findings opens it. An explicit open
 or close is remembered per room for the session (neither authored nor in
 history) and yields only to attention it has not yet seen.
-The table's header ends in one quiet red action that removes the batch. The batch's notes sit in the Timeline's side column, under
-the Add area.
+The table's header ends in one quiet red action that removes the batch.
 
 The room's last Timeline row says how it is left. **Leave room** is one picker
 whose closed face is the chosen way out: the door's room and final reward
@@ -940,16 +939,18 @@ additional exit's own store. A Fields batch states its door roll and its cage
 facts on the same line. React derives none of these values. A decision without
 a pool renders no pool line.
 
-Batch-wide facts are notes, each a footnote star after what it explains that
-shows the note on hover or keyboard focus: where an inherited pool was chosen,
-why the effective store differs (the forcing room, the discarding room, the
-counting exit), and how Fields cages read. There is no notes block and nothing
-is reserved when a batch has none. The projection supplies each batch's notes,
-each naming what it explains: the pool, the store after the arrow, a room's
-hidden return door, or the batch as a whole, whose notes mark the Doors open
-title and read one per line. A note shows only on its star, which also carries
-it as the star's accessible description. Row state stays on its row and
-findings stay on their controls.
+Batch facts are notes, each a hover hint on the word or value it explains,
+shown on hover or keyboard focus: where an inherited pool was chosen (on the
+pool value), why the effective store differs (the forcing room, the
+discarding room, the counting exit; on the value after the arrow), and how
+Fields cages read (the cage order on the door table's Reward column; with no
+cage room, the unused cage count on its label and the Max roll's later effect
+on the Fields door roll label). There is no notes block, no marker, and
+nothing is reserved when a batch has none. The projection supplies each
+batch's notes, each naming the word or value it explains; React only places
+them. Explained text is keyboard-reachable where it is not already a control,
+and carries its note as its accessible description. Row state stays on its row
+and findings stay on their controls.
 
 A boss door uses the same pool line and notes. A boss that resolves its entered
 store from the chosen offer authors the pool there; one that pins its store

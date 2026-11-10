@@ -163,12 +163,12 @@ export interface WorkspaceEffectiveRewardPool {
 }
 
 /**
- * A fact beside the doors, with the value it explains: the carried pool, the
- * pool the selected exit counts, or the batch as a whole.
+ * A fact beside the doors, with the word or value it explains: the carried pool, the pool
+ * the selected exit counts, the hidden return door's name, the door table's Reward column,
+ * or a Fields batch's cage count or door roll.
  */
 export interface WorkspaceDoorNote {
-  /** `hiddenDoor` explains a room's hidden return door; `batch` the doors as a whole. */
-  readonly target: 'pool' | 'effective' | 'hiddenDoor' | 'batch';
+  readonly target: 'pool' | 'effective' | 'hiddenDoor' | 'rewardColumn' | 'cageCount' | 'doorRoll';
   readonly text: string;
 }
 

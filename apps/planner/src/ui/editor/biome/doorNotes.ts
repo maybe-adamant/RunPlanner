@@ -1,6 +1,6 @@
 import type { WorkspaceDoorNote } from '@planner/projections/structured-workspace';
 
-/** What a note explains: one pool value, the hidden door, or the doors as a whole. */
+/** The word or value a note explains, such as a pool value or the Reward column. */
 export type DoorNoteTarget = WorkspaceDoorNote['target'];
 
 /** The note on one explained value, absent where it has none. */

@@ -217,7 +217,6 @@ function roomTimelineDoors({
     door.locked ? [door.exitKey] : [],
   );
   if (batch !== undefined) {
-    const batchNote = noteFor('batch');
     return {
       summary: { chips: batchDoorChips(batch, lockedAsOpened) },
       findingOwners: [...batchDoorFindingOwners(batch), ...unlockOwners],
@@ -247,7 +246,6 @@ function roomTimelineDoors({
         batchDoorsStatus(batch),
         batch.selection.address,
       ),
-      ...(batchNote === undefined ? {} : { note: batchNote }),
       ...(batch.rerolls === undefined ? {} : { rerolls: batch.rerolls }),
       ...(batch.doorSteps === undefined ? {} : { steps: batch.doorSteps }),
       ...(batch.rerolls === undefined && unlocks.options === undefined
