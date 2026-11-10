@@ -79,20 +79,26 @@ You either interact with pickups or active objects.
     Gold Gold duplicate) places, one at a time, each required pickup or object
     action live at the room's frontier by its offered command, the canonical
     restore when offered anywhere through the frontier, otherwise at the
-    frontier. A required row the product does not offer at all falls back to
-    the canonical schedule; witnessed only for a deferred Ship wheel's reward,
-    pinned by the Draft witness for C to remove with that open item. Against
-    the old schedule, 105 of 110 stripped golden rooms restore identically;
-    the rest place at the frontier where the canonical index lies past it (a
-    Boss room's reward before its forced drop) or complete every Fields cage
-    before collecting the rewards. A stripped Hermes delivery lands at the
-    frontier rather than settlement's due contact.
+    frontier. A required row no action of the product names at any gap falls
+    back to the canonical schedule; only a deferred Ship wheel's reward does
+    today, pinned by the Draft witness for C to remove with that open item. The
+    witness attributes every placement to an offered command or that pin.
+    Against the old schedule, 105 of 110 stripped golden rooms restore
+    identically. The corpus is unchanged, since automatic placement still
+    places these rows first.
   - Run import: waits on the owner (canonical position vs. a "place all
     required here" engine helper).
 - **C.** Remove automatic placement (change 1). If placements are derived,
   fold any old-plan materialization into the unreleased schema 103.
   Equivalence and Draft corpus lanes before and after; separate and
-  revertible.
+  revertible. Expected Draft output changes, from the stripped-room witness:
+  - a room reward placed at the frontier, before the required drop
+    (`collectRequiredReward`), where the reward's canonical index lies past
+    the frontier (the Zagreus contract rooms);
+  - Fields rooms completing every cage before collecting the cage rewards;
+  - Hermes deliveries at the frontier rather than settlement's due contact.
+  - Owner to confirm whether the reward-before-drop and cages-before-rewards
+    orders are game-correct.
 - **D.** The UI product as a whole:
   - the live row (one per Ship phase), placing through the engine's
     insert-at-index commands and query;
