@@ -50,6 +50,7 @@ import {
 import {
   candidateArtifactsForProjectEvaluationAssembly,
   attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
+  rerollSettlementForProjectEvaluationAssembly,
 } from './evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from './evaluation/evaluation-products';
 import { candidateBiome, candidateBiomeRooms } from './candidates/evaluated-biome';
@@ -324,6 +325,48 @@ function sourceGoneShopRows(
       }
       removals.push({ owner, reference });
     }
+  }
+  return removals;
+}
+
+/**
+ * Cage rerolls whose cage the edit stopped playing: the walk reaches the press
+ * and its cage is gone, where before the edit the press found it (it settled,
+ * or failed for a reason other than its cage). A press that never found its
+ * cage, and every Hub reroll, stays with its finding.
+ */
+function cageGoneRerolls(before: ProjectEvaluationAssembly, assembly: ProjectEvaluationAssembly) {
+  const findingsAt = (evaluated: ProjectEvaluationAssembly, key: string) =>
+    evaluated.evaluation.findings.filter(
+      (finding) =>
+        finding.origin.kind === 'roomAction' && semanticAddressKey(finding.origin) === key,
+    );
+  const missing = (finding: { readonly code: string; readonly evidence: unknown }) =>
+    finding.code === 'rerollTargetUnavailable' &&
+    (finding.evidence as { readonly reason?: unknown }).reason === 'missing';
+  const removals: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
+  for (const finding of assembly.evaluation.findings) {
+    if (!missing(finding) || finding.origin.kind !== 'roomAction') continue;
+    const action = finding.origin;
+    const owner = createOccurrenceAddress(
+      createBiomeAddress(action.routeKey, action.biomeKey),
+      action.occurrenceId,
+    );
+    const reference = occurrenceAt(assembly.project, owner)?.roomActions.order.find(
+      (candidate) => roomActionKey(candidate) === action.actionKey,
+    );
+    if (reference?.kind !== 'reroll' || reference.target.kind !== 'cage') continue;
+    const key = semanticAddressKey(action);
+    const prior = findingsAt(before, key);
+    const foundCage =
+      rerollSettlementForProjectEvaluationAssembly(before, action) !== undefined ||
+      prior.some(
+        (candidate) =>
+          (candidate.code === 'rerollTargetUnavailable' && !missing(candidate)) ||
+          candidate.code === 'rerollPoolExceeded',
+      );
+    if (!foundCage || prior.some(missing)) continue;
+    removals.push({ owner, reference });
   }
   return removals;
 }
@@ -891,6 +934,7 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
       const stale = [
         ...staleRowsToRemove(before, beforeRosters, assembly),
         ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly),
+        ...cageGoneRerolls(before, assembly),
       ];
       if (stale.length === 0) return settled(assembly);
       const pass: { owner: OccurrenceAddress; reference: RoomActionReference; index: number }[] =

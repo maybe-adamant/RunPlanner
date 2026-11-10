@@ -574,6 +574,36 @@ describe('stale room actions in edit settlement', () => {
         expect(refillItem(settled.assembly.project)).toEqual(refillItem(lost));
         expect(site(settled.assembly.project)).toEqual(site(lost));
       });
+
+      it('stays invalid without Travel Deal while a later purchase still stands before it', () => {
+        const lost = settle(underworldWorldShopTravelDealProject(), swapTravelDealAway).assembly
+          .project;
+        const bought = applyProjectCommand(lost, catalog, {
+          kind: 'ReplaceShopPurchaseParticipation',
+          offer: createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'Minor'),
+          purchased: true,
+        });
+        const minor = roomActionKey({ kind: 'interactShopOffer', offerKey: 'Minor' });
+        const project = applyProjectCommand(bought, catalog, {
+          kind: 'MoveRoomAction',
+          action: createRoomActionAddress(goldenFBiome, shop.occurrenceId, minor),
+          toIndex: order(bought, shop).indexOf(refill),
+        });
+        expect(order(project, shop).indexOf(minor)).toBeLessThan(
+          order(project, shop).indexOf(refill),
+        );
+        // Its first purchase goes; the later one is still a trigger before it.
+        const settled = settle(project, undoPurchase);
+        expect(settled.fault).toBeUndefined();
+        expect(order(settled.assembly.project, shop)).toEqual([minor, refill]);
+        expect(removedIn(settled, shop)).toBeUndefined();
+        expect(settled.assembly.evaluation.findings).toContainEqual(
+          expect.objectContaining({
+            code: 'shopPurchaseUnavailable',
+            evidence: { kind: 'travelDealRefillUnavailable' },
+          }),
+        );
+      });
     });
 
     it('keeps a refill placed before Travel Deal was held', () => {
@@ -795,7 +825,7 @@ describe('stale room actions in edit settlement', () => {
       }),
     });
 
-    it('leave silently with the door they redraw', () => {
+    it('leave silently when the door they reroll is removed', () => {
       const source = createOccurrenceAddress(f, createOccurrenceId('golden-f-b2-e1'));
       const project = press(withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']), source, {
         kind: 'door',
@@ -809,7 +839,7 @@ describe('stale room actions in edit settlement', () => {
       expect(settled.removedStaleActions).toBeUndefined();
     });
 
-    it('leave silently with the door to the cage they redraw', () => {
+    it('leave silently when the door to the cage they reroll is removed', () => {
       const source = createOccurrenceAddress(h, createOccurrenceId('golden-h-miniboss01'));
       const project = press(
         withGoldenUnderworldJudgments(withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll'])),
@@ -828,7 +858,91 @@ describe('stale room actions in edit settlement', () => {
       expect(settled.removedStaleActions).toBeUndefined();
     });
 
-    it('stay invalid at a door the game does not reroll', () => {
+    describe('whose reward is gone', () => {
+      // The H intro's doors play Combat 2's third cage only at their maximum cage outcome.
+      const intro = createOccurrenceAddress(h, createOccurrenceId('golden-h-intro'));
+      const combat02 = createOccurrenceAddress(h, createOccurrenceId('golden-h-combat02'));
+      const cage3: RerollTarget = {
+        kind: 'cage',
+        exitKey: 'exit1',
+        occurrenceId: combat02.occurrenceId,
+        slotKey: 'cage3',
+      };
+      const outcome = (cageOutcome: 'min' | 'max'): ProjectCommand => ({
+        kind: 'ReplaceFieldsCageOutcome',
+        decision: createExitDecisionAddress(h, {
+          kind: 'occurrence',
+          occurrenceId: intro.occurrenceId,
+        }),
+        cageOutcome,
+      });
+      const fields = () =>
+        withGoldenUnderworldJudgments(withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll']));
+      const thirdCage = [
+        { kind: 'completeFieldsCage', phaseKey: 'Cage03' },
+        { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage3' },
+      ];
+
+      it('leave silently when the cage they reroll is no longer played, and do not return', () => {
+        const project = press(settle(fields(), outcome('max')).assembly.project, intro, cage3);
+        expect(rerolls(project, intro)).toHaveLength(1);
+        const lowered = settle(project, outcome('min'));
+        expect(lowered.fault).toBeUndefined();
+        expect(rerolls(lowered.assembly.project, intro)).toEqual([]);
+        // Only the cage's own rows, in its room, are announced.
+        expect(lowered.removedStaleActions).toEqual([{ occurrence: combat02, actions: thirdCage }]);
+        const raised = settle(lowered.assembly.project, outcome('max'));
+        expect(rerolls(raised.assembly.project, intro)).toEqual([]);
+      });
+
+      it('stay invalid when placed after their cage already stopped playing', () => {
+        const project = fields();
+        const settled = settle(project, {
+          kind: 'InsertReroll',
+          occurrence: intro,
+          target: cage3,
+          reward: { rewardType: 'RoomMoneyDrop' },
+          index: order(project, intro).length,
+        });
+        expect(settled.fault).toBeUndefined();
+        expect(rerolls(settled.assembly.project, intro)).toHaveLength(1);
+        expect(settled.assembly.evaluation.findings).toContainEqual(
+          expect.objectContaining({
+            code: 'rerollTargetUnavailable',
+            evidence: { reason: 'missing' },
+          }),
+        );
+      });
+    });
+
+    it('stay out of order before the doors they redraw open', () => {
+      const source = createOccurrenceAddress(h, createOccurrenceId('golden-h-miniboss01'));
+      const project = withGoldenUnderworldJudgments(
+        withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll']),
+      );
+      const settled = settle(project, {
+        kind: 'InsertReroll',
+        occurrence: source,
+        target: {
+          kind: 'cage',
+          exitKey: 'exit1',
+          occurrenceId: createOccurrenceId('golden-h-combat05'),
+          slotKey: 'cage1',
+        },
+        reward: { rewardType: 'RoomMoneyDrop' },
+        index: 0,
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(rerolls(settled.assembly.project, source)).toHaveLength(1);
+      expect(settled.assembly.evaluation.findings).toContainEqual(
+        expect.objectContaining({
+          code: 'roomActionOrderUnavailable',
+          evidence: expect.objectContaining({ reason: 'requiredFirst' }),
+        }),
+      );
+    });
+
+    it('stay invalid at a door the game refuses, its reward still there', () => {
       // F Combat 10's first door leads to the Preboss Shop, which refuses door rerolls.
       const source = createOccurrenceAddress(f, createOccurrenceId('golden-f-b10-e1'));
       const project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);

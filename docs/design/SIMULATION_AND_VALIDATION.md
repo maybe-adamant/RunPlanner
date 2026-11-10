@@ -120,7 +120,11 @@ the final project and its exact assembly.
   with its finding. One no source produced before the edit either (its
   enabler went earlier, or it was placed before its source existed) stays
   with its finding until the edit takes every purchase before it, its trigger
-  among them. A removed row's own payload stays with the Shop. A room the run
+  among them. A removed row's own payload stays with the Shop. A cage reroll
+  the walk reaches with the reward it rerolls gone (its cage no longer
+  played), where before the edit the press found that cage, is removed the
+  same way; one that never found it, and every Hub board reroll, stays with
+  its finding. A room the run
   stops entering keeps its rows untouched, so they return with its door;
   unchanged rooms, rooms the evaluation does not reach and an installed route
   keep theirs. Invalid rows stay with their findings.
