@@ -102,9 +102,16 @@ describe('keepsake authored selections', () => {
     postboss.keepsakeRack = rack;
     const roomActions = postboss.roomActions as { order: { kind: string }[] };
     const order = roomActions.order;
+    // The rack's use is an optional row: absent is fine, twice is not.
     roomActions.order = order.filter((reference) => reference.kind !== 'interactKeepsakeRack');
+    expect(() => decodeProjectDocument(encoded, catalog)).not.toThrow();
+    roomActions.order = [
+      ...roomActions.order,
+      { kind: 'interactKeepsakeRack' },
+      { kind: 'interactKeepsakeRack' },
+    ];
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
-      'a keepsake rack owns exactly one interactKeepsakeRack action',
+      'duplicates room action ["interactKeepsakeRack"]',
     );
     roomActions.order = order;
     expect(decodeProjectDocument(encoded, catalog)).toEqual(project);

@@ -83,7 +83,9 @@ function comesFirst(left: RequiredPlacement, right: RequiredPlacement): boolean 
  * live product offers for it: its canonical restore where offered through the
  * frontier and not before an item this collection already took, otherwise its
  * placement at the frontier. Collection plays forward, so a Fields cage's
- * reward is collected before the next cage is cleared. Placements are ordered
+ * reward is collected before the next cage is cleared, and nothing is placed
+ * while the walk stands before a row it took (that row blocks on its own
+ * contact, such as an unauthored trait offer). Placements are ordered
  * as `comesFirst` says. A caged pickup waits for its unlock, and a placement
  * that still needs a Travel Deal item's value is left to its owner.
  */
@@ -102,6 +104,8 @@ export function nextRequiredPlacement(
         else if (action.kind === 'placed' && collected.has(key))
           floor = Math.max(floor, gap.index + 1);
       }
+  // The walk stopped at or before a row this collection placed: nothing is collected behind it.
+  if (live.frontier < floor) return undefined;
   let next: RequiredPlacement | undefined;
   for (const item of live.gaps[live.frontier]?.items ?? []) {
     const actions: readonly LiveAction[] =

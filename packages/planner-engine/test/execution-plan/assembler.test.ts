@@ -16,7 +16,8 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   replaceTestShopOfferActions,
   hubVisitActions,
   purchaseTestHermesShrineOffer,
@@ -147,7 +148,7 @@ function artificerCreatedBoonProject() {
       }),
     }),
   );
-  return fOnlyProject(authorLegalTraitOffers(project));
+  return fOnlyProject(authorTestTraitsAndRequiredItems(project));
 }
 
 function timePieceArtificerChildProject() {
@@ -185,7 +186,7 @@ function timePieceArtificerChildProject() {
     acquisition: createAcquisitionRoleAddress(entry, 'source'),
     value: { kind: 'timePiece' },
   });
-  return fOnlyProject(authorLegalTraitOffers(project));
+  return fOnlyProject(authorTestTraitsAndRequiredItems(project));
 }
 
 function timePieceCreatedBoonProject() {
@@ -205,7 +206,7 @@ function timePieceCreatedBoonProject() {
     acquisition: createAcquisitionRoleAddress(source, 'source'),
     value: { kind: 'timePiece' },
   });
-  return fOnlyProject(authorLegalTraitOffers(project));
+  return fOnlyProject(authorTestTraitsAndRequiredItems(project));
 }
 
 function narcissusMysteryBoonProject(includePickup = true) {
@@ -254,23 +255,30 @@ function narcissusMysteryBoonProject(includePickup = true) {
       payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
     },
   });
-  // Taking Mixed Blessings takes its Mystery Boon pickup.
-  if (!includePickup) {
+  // The owner picks up Mixed Blessings' Mystery Boon right after talking to Narcissus.
+  if (includePickup) {
     const reference = {
       kind: 'interactAcquisitionEntry' as const,
       siteKey: generated[0],
       entryKey: 'mysteryBoon',
     };
+    const order =
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find((room) => room.occurrenceId === occurrence.occurrenceId)
+        ?.roomActions.order ?? [];
     project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveRoomAction',
+      kind: 'InsertRoomAction',
       action: createRoomActionAddress(
         goldenGBiome,
         occurrence.occurrenceId,
         roomActionKey(reference),
       ),
+      reference,
+      index: order.findIndex((candidate) => candidate.kind === 'interactEncounter') + 1,
     });
   }
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 function onionObligationProject() {
@@ -286,7 +294,7 @@ function onionObligationProject() {
     reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
-  return fOnlyProject(authorLegalTraitOffers(project));
+  return fOnlyProject(authorTestTraitsAndRequiredItems(project));
 }
 
 function automaticOutcomeProject() {
@@ -359,7 +367,7 @@ function nemesisFreeItemProject() {
     { kind: 'freeItem' },
     { rewardType: 'EmptyMaxHealthDrop' },
   );
-  return fOnlyProject(authorLegalTraitOffers(project));
+  return fOnlyProject(authorTestTraitsAndRequiredItems(project));
 }
 
 function postbossKeepsakeOrderProject(
@@ -390,7 +398,7 @@ function postbossKeepsakeOrderProject(
       ),
       targetTraitKey: 'ApolloWeaponBoon',
     });
-  return fOnlyProject(authorLegalTraitOffers(project));
+  return fOnlyProject(authorTestTraitsAndRequiredItems(project));
 }
 
 describe('engine-owned F/G execution semantic product', () => {
@@ -449,7 +457,7 @@ describe('engine-owned F/G execution semantic product', () => {
       }),
     });
     const product = assembleExecutionProduct({
-      assembly: simulateProjectAssembly(catalog, authorLegalTraitOffers(project)),
+      assembly: simulateProjectAssembly(catalog, authorTestTraitsAndRequiredItems(project)),
       catalog,
     });
     const preHub = product.occurrences.find((entry) => entry.id === 'surface-n-prehub');
@@ -625,7 +633,8 @@ describe('engine-owned F/G execution semantic product', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
       value: { rewardType: 'RoomMoneyDrop' },
     });
-    const room = productFor(project).occurrences.find(
+    // The owner collects each wheel's choice and pickup.
+    const room = productFor(authorTestTraitsAndRequiredItems(project)).occurrences.find(
       (candidate) => candidate.id === occurrence.occurrenceId,
     );
     expect(room?.overview.encounterPhases.map((phase) => phase.slotKey)).toEqual([
@@ -767,7 +776,7 @@ describe('engine-owned F/G execution semantic product', () => {
       ),
     );
 
-    const pool = productFor(authorLegalTraitOffers(loadUnderworldFPoolCheckpoint()));
+    const pool = productFor(authorTestTraitsAndRequiredItems(loadUnderworldFPoolCheckpoint()));
     const sale = pool.occurrences
       .flatMap((occurrence) => occurrence.roomGuide)
       .find((row) => row.description.kind === 'sellPurgingPoolTrait');
@@ -780,7 +789,9 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     expect(sale).not.toHaveProperty('transactionOwner');
 
-    const well = productFor(authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint()));
+    const well = productFor(
+      authorTestTraitsAndRequiredItems(loadUnderworldFStygianWellCheckpoint()),
+    );
     expect(
       well.occurrences
         .flatMap((occurrence) => occurrence.roomGuide)
@@ -1138,7 +1149,7 @@ describe('engine-owned F/G execution semantic product', () => {
         'combat03',
       ]),
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const phase = createEncounterPhaseAddress(
       oBiome,
       { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat01 },
@@ -1163,6 +1174,8 @@ describe('engine-owned F/G execution semantic product', () => {
         selectedOptionKey: 'option1',
       },
     });
+    // The owner talks to Icarus.
+    project = collectTestRequiredItems(project);
     const assembly = simulateProjectAssembly(catalog, project);
     const biome = assembly.evaluation.route.biomes.find(
       (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
@@ -1235,7 +1248,7 @@ describe('engine-owned F/G execution semantic product', () => {
 
   it('publishes Echo Boon Boon Boon as one exact mixed-provider nested menu', () => {
     const bridgeId = createOccurrenceId('golden-h-bridge01');
-    let project = authorLegalTraitOffers(createGoldenFGHProject());
+    let project = authorTestTraitsAndRequiredItems(createGoldenFGHProject());
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenHBiome, {
@@ -1293,7 +1306,7 @@ describe('engine-owned F/G execution semantic product', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const biome = simulateProjectAssembly(catalog, project).evaluation.route.biomes.find(
       (candidate) => candidate.biomeKey === 'H',
     );
@@ -1372,7 +1385,7 @@ describe('engine-owned F/G execution semantic product', () => {
     } as typeof declarations);
     const bridgeId = createOccurrenceId('golden-h-bridge01');
     const forcedTargetId = createOccurrenceId('golden-h-combat05');
-    let project = authorLegalTraitOffers(loadUnderworldFGHICheckpoint());
+    let project = authorTestTraitsAndRequiredItems(loadUnderworldFGHICheckpoint());
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenHBiome, {
@@ -1381,7 +1394,7 @@ describe('engine-owned F/G execution semantic product', () => {
       }),
       value: { kind: 'normal', exitKey: 'exit2' },
     });
-    project = applyProjectCommand(authorLegalTraitOffers(project), catalog, {
+    project = applyProjectCommand(authorTestTraitsAndRequiredItems(project), catalog, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(
         createEncounterPhaseAddress(
@@ -1413,7 +1426,7 @@ describe('engine-owned F/G execution semantic product', () => {
       reward: createIncomingRewardAddress(goldenHBiome, forcedTargetId),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const held = (id: string) =>
       productFor(project)
         .occurrences.find((candidate) => candidate.id === id)
@@ -1501,7 +1514,7 @@ describe('engine-owned F/G execution semantic product', () => {
       generationKey: 'initial:healing',
       purchased: true,
     });
-    const neutral = productFor(authorLegalTraitOffers(neutralProject));
+    const neutral = productFor(authorTestTraitsAndRequiredItems(neutralProject));
     const neutralPurchase = neutral.occurrences
       .flatMap((occurrence) => occurrence.timeline.transactions)
       .find(
@@ -1555,7 +1568,7 @@ describe('engine-owned F/G execution semantic product', () => {
         selectedOptionKey: 'option1',
       },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const product = productFor(project);
     const shopOffer = product.occurrences
       .find((occurrence) => occurrence.id === shop.occurrenceId)
@@ -1659,7 +1672,7 @@ describe('engine-owned F/G execution semantic product', () => {
       offer: createShopOfferAddress(qBiome, shopId, 'PremiumProgress'),
       value: { rewardType: 'ChaosWeaponUpgrade' },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const assembly = simulateProjectAssembly(catalog, project);
     const biome = assembly.evaluation.route.biomes.find(
       (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
@@ -1827,7 +1840,7 @@ describe('engine-owned F/G execution semantic product', () => {
       value: { rewardType: 'StoreRewardRandomStack' },
     });
     project = replaceTestShopOfferActions(project, catalog, shop, ['Minor', 'Boon']);
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceLevelResolution',
       levelResolution: createLevelResolutionAddress(minor, 'self'),
@@ -1929,7 +1942,7 @@ describe('engine-owned F/G execution semantic product', () => {
       generationKey: 'initial:secondRight',
       purchased: true,
     });
-    const product = productFor(authorLegalTraitOffers(project));
+    const product = productFor(authorTestTraitsAndRequiredItems(project));
     const yarn = product.occurrences
       .flatMap((occurrence) => occurrence.timeline.transactions)
       .find((transaction) => transaction.kind === 'itemEffect' && transaction.effect === 'yarn');
@@ -1961,7 +1974,7 @@ describe('engine-owned F/G execution semantic product', () => {
         generationKey: 'initial:healing',
         purchased,
       });
-      return authorLegalTraitOffers(project);
+      return authorTestTraitsAndRequiredItems(project);
     };
     const bought = withCharityBottle(true);
     const charityUses = (biomeKey: string) => {
@@ -2014,7 +2027,7 @@ describe('engine-owned F/G execution semantic product', () => {
       ),
       keepsakeKey: 'DecayingBoostKeepsake',
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const valueless = createCatalog({
       ...declarations,
       keepsakes: declarations.keepsakes.map((keepsake) => {
@@ -2155,7 +2168,7 @@ describe('engine-owned F/G execution semantic product', () => {
       generationKey: 'initial:secondRight',
       itemKey: 'TemporaryBoonRarityTrait',
     });
-    const product = productFor(authorLegalTraitOffers(project));
+    const product = productFor(authorTestTraitsAndRequiredItems(project));
     const twist = product.occurrences
       .flatMap((occurrence) => occurrence.timeline.transactions)
       .find(
@@ -2210,7 +2223,7 @@ describe('engine-owned F/G execution semantic product', () => {
       generationKey: 'initial:secondRight',
       purchased: false,
     });
-    const dormant = productFor(authorLegalTraitOffers(project));
+    const dormant = productFor(authorTestTraitsAndRequiredItems(project));
     expect(
       dormant.occurrences
         .flatMap((occurrence) => occurrence.timeline.transactions)
@@ -2228,7 +2241,7 @@ describe('engine-owned F/G execution semantic product', () => {
 
     const compatibleAssembly = simulateProjectAssembly(
       catalog,
-      authorLegalTraitOffers(purchasedWithResult),
+      authorTestTraitsAndRequiredItems(purchasedWithResult),
     );
     const f = compatibleAssembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
     if (f?.authoring !== 'complete' || !('snapshot' in f))
@@ -2432,7 +2445,7 @@ describe('engine-owned F/G execution semantic product', () => {
       checkpoint: 'roomExit',
     });
 
-    const pool = productFor(authorLegalTraitOffers(loadUnderworldFPoolCheckpoint()));
+    const pool = productFor(authorTestTraitsAndRequiredItems(loadUnderworldFPoolCheckpoint()));
     expect(
       pool.occurrences.flatMap((occurrence) =>
         occurrence.timeline.transactions.map((transaction) => transaction.kind),
@@ -2480,7 +2493,7 @@ describe('engine-owned F/G execution semantic product', () => {
       action: createRoomActionAddress(goldenFBiome, wellId, roomActionKey(nextWell)),
       toIndex: 3,
     });
-    const wellProduct = productFor(authorLegalTraitOffers(wellProject));
+    const wellProduct = productFor(authorTestTraitsAndRequiredItems(wellProject));
     const wellOccurrence = wellProduct.occurrences.find((occurrence) =>
       occurrence.id.endsWith(':postboss'),
     );
@@ -2561,7 +2574,7 @@ describe('engine-owned F/G execution semantic product', () => {
       generationKey: 'travelDealRefill',
       purchased: false,
     });
-    const occurrence = productFor(authorLegalTraitOffers(project)).occurrences.find(
+    const occurrence = productFor(authorTestTraitsAndRequiredItems(project)).occurrences.find(
       (candidate) => candidate.id === wellId,
     );
     const refill = occurrence?.timeline.transactions.find(
@@ -2606,7 +2619,7 @@ describe('engine-owned F/G execution semantic product', () => {
       generationKey: 'initial:secondLeft',
       purchased: false,
     });
-    const inactive = productFor(authorLegalTraitOffers(project));
+    const inactive = productFor(authorTestTraitsAndRequiredItems(project));
     expect(
       inactive.occurrences.find((candidate) => candidate.id === wellId)?.timeline.transactions,
     ).not.toContainEqual(expect.objectContaining({ kind: 'travelDealRefill' }));

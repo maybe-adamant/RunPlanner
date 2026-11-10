@@ -24,7 +24,11 @@ import {
   type ProjectDocument,
   type RerollTarget,
 } from '@run-planner/engine/authored-project';
-import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
+import {
+  liveActionsForProjectEvaluationAssembly,
+  settleProjectEdit,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import {
   createEchoGoldIAnvilDuplicateProject,
   createGoldenFGHProject,
@@ -50,7 +54,11 @@ import {
   loadUnderworldZagreusContractCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
-import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalPomResolutions,
+  collectTestRequiredItems,
+  scheduleTestRequiredRoomActions,
+} from '@run-planner/test-fixtures/shared';
 
 import { createAuthoringSession } from '../../../src/simulation/authoring/session';
 import {
@@ -83,11 +91,16 @@ const retainedPickup = {
 describe('stale room actions in edit settlement', () => {
   it('removes the rows an edit orphans in the same edit, silently in the room it addresses', () => {
     const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const three = settle(loadSurfaceNOProject(), {
-      kind: 'ReplaceShipEncounterCount',
-      occurrence: ship,
-      encounterCount: 3,
-    }).assembly.project;
+    // The third encounter's wheel rows, placed by the owner.
+    const three = scheduleTestRequiredRoomActions(
+      settle(loadSurfaceNOProject(), {
+        kind: 'ReplaceShipEncounterCount',
+        occurrence: ship,
+        encounterCount: 3,
+      }).assembly.project,
+      catalog,
+      oBiome,
+    );
     const wheel2 = order(three, ship).filter((key) => key.includes('wheel2'));
     expect(wheel2.length).toBeGreaterThan(0);
     const settled = settle(three, {
@@ -234,6 +247,23 @@ describe('stale room actions in edit settlement', () => {
         spurnedSource: 'ZeusUpgrade',
       },
     } as const;
+    /** The reward pickups the live product offers to place in the room, in item order. */
+    const livePickups = (
+      assembly: ReturnType<typeof evaluate>,
+      room: OccurrenceAddress,
+    ): readonly string[] => {
+      const keys = new Set<string>();
+      for (const gap of liveActionsForProjectEvaluationAssembly(catalog, assembly, room)?.gaps ??
+        [])
+        for (const item of gap.items)
+          if (
+            item.kind === 'pickup' &&
+            item.reference.kind === 'interactIncomingReward' &&
+            item.actions.some((action) => action.kind === 'place')
+          )
+            keys.add(roomActionKey(item.reference));
+      return [...keys];
+    };
 
     describe('beside other rows', () => {
       // G Combat 2 holds two lockable doors whose optional presses stand around its pickup.
@@ -252,37 +282,7 @@ describe('stale room actions in edit settlement', () => {
         value: Extract<ProjectCommand, { kind: 'ReplaceIncomingReward' }>['value'],
       ) => settle(project, { kind: 'ReplaceIncomingReward', reward: lockedReward, value });
 
-      it('keeps each changed pickup at its place among them', () => {
-        let project = replace(underworldGLockedDoorsProject(), devotion).assembly.project;
-        project = insertPress(insertPress(project, 'exit2', 1), 'exit3', 3);
-        expect(order(project, room)).toEqual([
-          pickup('beforeCombat', 'chosenSource'),
-          press('exit2'),
-          pickup('afterCombat', 'spurnedSource'),
-          press('exit3'),
-        ]);
-        // The chosen pickup becomes the Boon's; the spurned one leaves silently.
-        const toBoon = replace(project, boon);
-        expect(toBoon.fault).toBeUndefined();
-        expect(toBoon.removedStaleActions).toBeUndefined();
-        expect(order(toBoon.assembly.project, room)).toEqual([
-          pickup('roomRewardPickup', 'source'),
-          press('exit2'),
-          press('exit3'),
-        ]);
-        // Back to Devotion: the Boon's pickup becomes the chosen one; the spurned one is new.
-        const toDevotion = replace(toBoon.assembly.project, devotion);
-        expect(toDevotion.removedStaleActions).toBeUndefined();
-        expect(order(toDevotion.assembly.project, room)).toEqual([
-          pickup('beforeCombat', 'chosenSource'),
-          pickup('afterCombat', 'spurnedSource'),
-          press('exit2'),
-          press('exit3'),
-        ]);
-      });
-
-      it('leaves the new role at its default where the old place is refused', () => {
-        // A press authored before the pickup holds the pickup at a place no new placement may take.
+      it('removes the old pickup silently and keeps the presses around it', () => {
         const project = insertPress(
           insertPress(underworldGLockedDoorsProject(), 'exit2', 0),
           'exit3',
@@ -296,15 +296,11 @@ describe('stale room actions in edit settlement', () => {
         const settled = replace(project, boon);
         expect(settled.fault).toBeUndefined();
         expect(settled.removedStaleActions).toBeUndefined();
-        expect(order(settled.assembly.project, room)).toEqual([
-          pickup('roomRewardPickup', 'source'),
-          press('exit2'),
-          press('exit3'),
-        ]);
+        expect(order(settled.assembly.project, room)).toEqual([press('exit2'), press('exit3')]);
       });
     });
 
-    it('rekeys its pickup in place between one-role rewards, silently', () => {
+    it('replaces a one-role reward’s pickup with nothing placed, both ways', () => {
       const project = createGoldenFGHProject();
       expect(order(project, boonRoom)).toEqual([pickup('roomRewardPickup', 'source')]);
       const gold = settle(project, {
@@ -314,46 +310,66 @@ describe('stale room actions in edit settlement', () => {
       });
       expect(gold.fault).toBeUndefined();
       expect(gold.removedStaleActions).toBeUndefined();
-      expect(order(gold.assembly.project, boonRoom)).toEqual([pickup('roomRewardPickup', 'self')]);
+      expect(order(gold.assembly.project, boonRoom)).toEqual([]);
+      expect(livePickups(gold.assembly, boonRoom)).toEqual([pickup('roomRewardPickup', 'self')]);
       const back = settle(gold.assembly.project, {
         kind: 'ReplaceIncomingReward',
         reward: reward(boonRoom),
         value: boon,
       });
       expect(back.removedStaleActions).toBeUndefined();
-      expect(order(back.assembly.project, boonRoom)).toEqual([
-        pickup('roomRewardPickup', 'source'),
-      ]);
+      expect(order(back.assembly.project, boonRoom)).toEqual([]);
+      expect(livePickups(back.assembly, boonRoom)).toEqual([pickup('roomRewardPickup', 'source')]);
     });
 
-    it('gives a Boon’s pickup to Devotion’s chosen god and places the spurned one', () => {
-      const settled = settle(createGoldenFGHProject(), {
+    it('removes a Boon’s pickup for Devotion, and Devotion’s placed pickups for a Boon', () => {
+      const toDevotion = settle(createGoldenFGHProject(), {
         kind: 'ReplaceIncomingReward',
         reward: reward(boonRoom),
         value: devotion,
       });
-      expect(settled.fault).toBeUndefined();
-      expect(settled.removedStaleActions).toBeUndefined();
-      expect(order(settled.assembly.project, boonRoom)).toEqual([
+      expect(toDevotion.fault).toBeUndefined();
+      expect(toDevotion.removedStaleActions).toBeUndefined();
+      expect(order(toDevotion.assembly.project, boonRoom)).toEqual([]);
+      // Devotion's placed pickups go with it when a Boon replaces it.
+      let placed = toDevotion.assembly.project;
+      for (const [index, [producerPoint, acquisitionRole]] of [
+        ['beforeCombat', 'chosenSource'],
+        ['afterCombat', 'spurnedSource'],
+      ].entries()) {
+        const reference = {
+          kind: 'interactIncomingReward',
+          producerPoint,
+          acquisitionRole,
+        } as never;
+        placed = applyProjectCommand(placed, catalog, {
+          kind: 'InsertRoomAction',
+          action: createRoomActionAddress(
+            goldenFBiome,
+            boonRoom.occurrenceId,
+            roomActionKey(reference),
+          ),
+          reference,
+          index,
+        });
+      }
+      expect(order(placed, boonRoom)).toEqual([
         pickup('beforeCombat', 'chosenSource'),
         pickup('afterCombat', 'spurnedSource'),
       ]);
-    });
-
-    it('gives Devotion’s chosen pickup to a Boon in place and drops the spurned one silently', () => {
-      const project = settle(createGoldenFGHProject(), {
-        kind: 'ReplaceIncomingReward',
-        reward: reward(boonRoom),
-        value: devotion,
-      }).assembly.project;
-      const settled = settle(project, {
+      const toBoon = settle(placed, {
         kind: 'ReplaceIncomingReward',
         reward: reward(boonRoom),
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
       });
-      expect(settled.fault).toBeUndefined();
-      expect(settled.removedStaleActions).toBeUndefined();
-      expect(order(settled.assembly.project, boonRoom)).toEqual([
+      expect(toBoon.fault).toBeUndefined();
+      expect(toBoon.removedStaleActions).toBeUndefined();
+      expect(
+        order(toBoon.assembly.project, boonRoom).filter((key) =>
+          key.includes('interactIncomingReward'),
+        ),
+      ).toEqual([]);
+      expect(livePickups(toBoon.assembly, boonRoom)).toEqual([
         pickup('roomRewardPickup', 'source'),
       ]);
     });
@@ -734,11 +750,15 @@ describe('stale room actions in edit settlement', () => {
             encounterCount,
           });
         const three = authorLegalPomResolutions(
-          applyProjectCommand(count(loadSurfaceScheduledLifecycleCheckpoint(), 3), catalog, {
-            kind: 'ReplaceRewardWheelOffer',
-            offer: createRewardWheelOfferAddress(o, combat02.occurrenceId, 'wheel2', 'offer1'),
-            value: { rewardType: 'StackUpgrade' },
-          }),
+          collectTestRequiredItems(
+            authorLegalPomResolutions(
+              applyProjectCommand(count(loadSurfaceScheduledLifecycleCheckpoint(), 3), catalog, {
+                kind: 'ReplaceRewardWheelOffer',
+                offer: createRewardWheelOfferAddress(o, combat02.occurrenceId, 'wheel2', 'offer1'),
+                value: { rewardType: 'StackUpgrade' },
+              }),
+            ),
+          ),
         );
         const project = count(three, 2);
         expect(drop(project)).toHaveLength(1);
@@ -884,7 +904,16 @@ describe('stale room actions in edit settlement', () => {
       ];
 
       it('leave silently when the cage they reroll is no longer played, and do not return', () => {
-        const project = press(settle(fields(), outcome('max')).assembly.project, intro, cage3);
+        // The third cage's rows, placed by the owner once it plays.
+        const project = press(
+          scheduleTestRequiredRoomActions(
+            settle(fields(), outcome('max')).assembly.project,
+            catalog,
+            h,
+          ),
+          intro,
+          cage3,
+        );
         expect(rerolls(project, intro)).toHaveLength(1);
         const lowered = settle(project, outcome('min'));
         expect(lowered.fault).toBeUndefined();

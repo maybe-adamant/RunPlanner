@@ -555,14 +555,7 @@ Every removal:
 - is silent in the room the edit addresses, where it happens on the Timeline
   being edited, and announced prominently in any other room, naming the room;
   an edit that addresses no single room (a route, biome or Hub owner)
-  announces every removal;
-- yields to continuity: when a producer changes rather than disappears (a
-  reward swapped for another kind), its spawn rows, in the former reward's
-  declared role order, take the new reward's pickup roles in its declared
-  order (main pickup first), each at its old position where the order allows
-  and otherwise at the role's default, instead of being removed and placed
-  again; leftover old rows are removed and leftover roles keep their default
-  places.
+  announces every removal.
 
 Never removed:
 
@@ -608,23 +601,23 @@ never removed from a distance, only marked. Removal and return as side
 effects of unrelated edits are hidden behaviour, and retained dead rows bloat
 projects over a long edit history.
 
-| Case                                                | Step       | Outcome                                 |
-| --------------------------------------------------- | ---------- | --------------------------------------- |
-| Phase or wheel the room no longer plays             | 1          | removed, silent                         |
-| Artificer replacement, reward set back to normal    | 2          | removed, silent                         |
-| Refill or rushed Shrine pickup, its purchase undone | 2          | removed, silent                         |
-| Hermes delivery, its Shrine purchase undone         | 2          | removed, announced in the delivery room |
-| Artificer card unequipped upstream                  | 3          | transform invalid                       |
-| Travel Deal no longer held                          | 3          | refill purchase invalid                 |
-| Gold Gold Gold duplicate, boon swapped away         | 3          | removed, announced in the shop room     |
-| Matured trait drop, trait lost                      | 3          | removed, announced                      |
-| Door or cage reroll, the reward it rerolls gone     | 1          | removed, silent                         |
-| Door its source room no longer has, not taken       | 1          | removed, announced in the source room   |
-| Door its source room no longer has, taken           | 4          | invalid                                 |
-| Reroll of a door the game refuses or not available  | 4          | invalid                                 |
-| Hub board reroll, its slot closed or entered        | 4          | invalid                                 |
-| Trait drop, trait held but matures elsewhere        | 4          | invalid                                 |
-| Reward swapped between kinds                        | continuity | pickup rows re-keyed in place           |
+| Case                                                | Step | Outcome                                 |
+| --------------------------------------------------- | ---- | --------------------------------------- |
+| Phase or wheel the room no longer plays             | 1    | removed, silent                         |
+| Artificer replacement, reward set back to normal    | 2    | removed, silent                         |
+| Refill or rushed Shrine pickup, its purchase undone | 2    | removed, silent                         |
+| Hermes delivery, its Shrine purchase undone         | 2    | removed, announced in the delivery room |
+| Artificer card unequipped upstream                  | 3    | transform invalid                       |
+| Travel Deal no longer held                          | 3    | refill purchase invalid                 |
+| Gold Gold Gold duplicate, boon swapped away         | 3    | removed, announced in the shop room     |
+| Matured trait drop, trait lost                      | 3    | removed, announced                      |
+| Door or cage reroll, the reward it rerolls gone     | 1    | removed, silent                         |
+| Door its source room no longer has, not taken       | 1    | removed, announced in the source room   |
+| Door its source room no longer has, taken           | 4    | invalid                                 |
+| Reroll of a door the game refuses or not available  | 4    | invalid                                 |
+| Hub board reroll, its slot closed or entered        | 4    | invalid                                 |
+| Trait drop, trait held but matures elsewhere        | 4    | invalid                                 |
+| Reward swapped for another, its old pickup rows     | 1    | removed, silent; the new reward is live |
 
 ### Lifecycle structure and authoring timeline
 
@@ -1092,7 +1085,11 @@ finding is reported. Each purchase's delivery is one engine obligation (source,
 generation key, reward type, rushed, and once due its host, encounter phase and
 cause: rush, countdown or flush); the frontier, placement assessment, due
 spawn, edit settlement, authored domain and execution assembly all read that
-obligation rather than recomputing the due contact. A Hub side-room source is
+obligation rather than recomputing the due contact. A delivery that comes due
+at another host than the one holding its retained item is a new item: it
+arrives with no choices, and the earlier item, with its choices and outcomes
+(a Mystery Boon's pick, a Quick Buck offer), goes in the same edit. Due again at the same
+host, it is the same item and keeps them. A Hub side-room source is
 ordinary for scheduling, but cannot advance an older pending delivery; later
 qualifying main Hub visits can advance or host it. Fixed Boss occurrences are
 ordinary later delivery hosts. The Shrine source action and its later required

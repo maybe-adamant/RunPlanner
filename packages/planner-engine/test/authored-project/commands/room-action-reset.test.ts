@@ -37,6 +37,7 @@ import {
   surfaceShrineDeliveriesProject,
   surfaceShrineTravelDealProject,
 } from '@run-planner/test-fixtures/surface';
+import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
@@ -108,7 +109,7 @@ describe('ResetRoomActionsAfter', () => {
   const fountain: RoomActionReference = { kind: 'useFountain' };
   const rack: RoomActionReference = { kind: 'interactKeepsakeRack' };
 
-  it('removes every later row through its own removal; the rack and required rows stay', () => {
+  it('removes every later row through its own removal, the rack and required rows included', () => {
     const project = createUnderworldFWellCheckpoint();
     expect(order(project, fPostboss)).toEqual([
       roomActionKey(fountain),
@@ -118,11 +119,11 @@ describe('ResetRoomActionsAfter', () => {
       roomActionKey({ kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' }),
     ]);
     const after = applyProjectCommand(project, catalog, reset(fPostboss, fountain));
-    // The Well purchases leave as un-purchases; the permanent rack keeps its place.
-    expect(order(after, fPostboss)).toEqual([roomActionKey(fountain), roomActionKey(rack)]);
-    // From the room's entry the required fountain stays too.
+    // The Well purchases leave as un-purchases, and the rack's use with them.
+    expect(order(after, fPostboss)).toEqual([roomActionKey(fountain)]);
+    // From the room's entry the required fountain leaves too.
     expect(order(applyProjectCommand(project, catalog, reset(fPostboss, null)), fPostboss)).toEqual(
-      [roomActionKey(fountain), roomActionKey(rack)],
+      [],
     );
   });
 
@@ -137,9 +138,16 @@ describe('ResetRoomActionsAfter', () => {
     const project = createUnderworldFWellCheckpoint();
     const last = { kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' } as const;
     expect(applyProjectCommand(project, catalog, reset(fPostboss, last))).toBe(project);
-    // Every row of a Fields room is a required cage contact: nothing leaves.
+    // After a Fields room's last row nothing leaves; from its entry every row does.
     const authored = createGoldenFGHProject();
-    expect(applyProjectCommand(authored, catalog, reset(fields, null))).toBe(authored);
+    const fieldsOrder = authored.route.biomes
+      .find((plan) => plan.biomeKey === fields.biomeKey)!
+      .topology!.occurrences.find((candidate) => candidate.occurrenceId === fields.occurrenceId)!
+      .roomActions.order;
+    expect(applyProjectCommand(authored, catalog, reset(fields, fieldsOrder.at(-1)!))).toBe(
+      authored,
+    );
+    expect(order(applyProjectCommand(authored, catalog, reset(fields, null)), fields)).toEqual([]);
   });
 
   it('refuses an anchor that is not an ordered action of the room', () => {
@@ -170,26 +178,34 @@ describe('ResetRoomActionsAfter', () => {
 
   it('removes rows in later Ship phases after a point inside an earlier one', () => {
     const combat07 = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const authored = applyProjectCommand(loadSurfaceNOProject(), catalog, {
-      kind: 'ReplaceShipEncounterCount',
-      occurrence: combat07,
-      encounterCount: 3,
-    });
+    const authored = scheduleTestRequiredRoomActions(
+      applyProjectCommand(loadSurfaceNOProject(), catalog, {
+        kind: 'ReplaceShipEncounterCount',
+        occurrence: combat07,
+        encounterCount: 3,
+      }),
+      catalog,
+      oBiome,
+    );
     const original = order(authored, combat07);
     const wheel1: RoomActionReference = { kind: 'interactWheelReward', wheelKey: 'wheel1' };
-    // Phase 2's wheel rows are required and stay; the stale row after them goes.
-    expect(original.indexOf(roomActionKey(wheel1))).toBeLessThan(original.length - 1);
+    // Phase 2's required wheel rows go with the stale row after them.
+    const through = original.indexOf(roomActionKey(wheel1)) + 1;
+    expect(through).toBeLessThan(original.length);
     const retained = withAppended(authored, combat07, [invented]);
     expect(
       order(applyProjectCommand(retained, catalog, reset(combat07, wheel1)), combat07),
-    ).toEqual(original);
+    ).toEqual(original.slice(0, through));
   });
 
-  it('keeps a due delivery and its required wheel rows, and settles a reset without a fault', () => {
+  it('removes a due delivery and its required wheel rows, and settles a reset without a fault', () => {
     const combat04 = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const project = surfaceShrineDeliveriesProject();
-    // Wheel choice, its pickup and the due delivery are all automatic required placements.
-    expect(applyProjectCommand(project, catalog, reset(combat04, null))).toBe(project);
+    // Wheel choice, its pickup and the due delivery are all placed rows the owner can take back.
+    expect(order(project, combat04).length).toBeGreaterThan(0);
+    expect(order(applyProjectCommand(project, catalog, reset(combat04, null)), combat04)).toEqual(
+      [],
+    );
     const evaluate = (document: ProjectDocument) => simulateProjectAssembly(catalog, document);
     const settled = settleProjectEdit({
       catalog,
@@ -198,10 +214,7 @@ describe('ResetRoomActionsAfter', () => {
       evaluate,
     });
     expect(settled.fault).toBeUndefined();
-    expect(order(settled.assembly.project, fPostboss)).toEqual([
-      roomActionKey(fountain),
-      roomActionKey(rack),
-    ]);
+    expect(order(settled.assembly.project, fPostboss)).toEqual([]);
   });
 
   it('removes a Shop purchase with the Travel Deal refill it stocked', () => {
@@ -338,7 +351,6 @@ describe('ResetRoomActionsAfter', () => {
     expect(fromFountain).toHaveLength(2);
     expect(order(applyProjectCommand(project, catalog, fromFountain[1]!), fPostboss)).toEqual([
       roomActionKey(fountain),
-      roomActionKey(rack),
     ]);
   });
 
@@ -387,16 +399,13 @@ describe('ResetRoomActionsAfter', () => {
       reset(fPostboss, fountain),
     );
     expect(keepsake(history.present)).toBeNull();
-    expect(order(history.present, fPostboss)).toEqual([
-      roomActionKey(fountain),
-      roomActionKey(rack),
-    ]);
+    expect(order(history.present, fPostboss)).toEqual([roomActionKey(fountain)]);
     expect(undoProjectHistory(history).present).toBe(chosen);
     // A reset after the rack leaves its choice alone.
     const afterRack = applyProjectCommand(chosen, catalog, reset(fPostboss, rack));
     expect(keepsake(afterRack)).toBe('BossPreDamageKeepsake');
     expect(order(afterRack, fPostboss)).toEqual([roomActionKey(fountain), roomActionKey(rack)]);
-    // With no row left to remove, clearing the choice is still a change.
+    // Removing the rack's use clears its choice.
     const cleared = applyProjectCommand(afterRack, catalog, reset(fPostboss, fountain));
     expect(keepsake(cleared)).toBeNull();
     expect(applyProjectCommand(cleared, catalog, reset(fPostboss, fountain))).toBe(cleared);

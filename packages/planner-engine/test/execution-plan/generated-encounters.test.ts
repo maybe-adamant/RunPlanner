@@ -34,7 +34,7 @@ import {
   nOccurrenceIds,
   surfaceNOpeningCompositionProject,
 } from '@run-planner/test-fixtures/surface';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 import { generatedEncounter } from '../../src/execution-plan/codec/generated-encounter';
 import { targetRewardGenerationCheckpoint } from '../../src/simulation/encounters/generation-preparation';
 import { executionFixturePath } from './support/execution-fixtures';
@@ -106,7 +106,7 @@ describe('generated customization publication', () => {
         occurrenceIds: [id],
       });
     }
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const before = publish(project);
     expect(
       before.occurrences.find((room) => room.id === id)?.overview.encounterPhases[0]?.customization,
@@ -288,7 +288,7 @@ describe('generated customization publication', () => {
         },
       },
     );
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const assembly = simulateProjectAssembly(catalog, project);
     const support = generatedEncounterSupportForProjectEvaluationAssembly(assembly, trialPhase);
     expect(support, JSON.stringify(assembly.evaluation.findings)).toBeDefined();

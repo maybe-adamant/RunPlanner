@@ -49,8 +49,7 @@ You either interact with pickups or active objects.
   - Hermes deliveries and Gold Gold Gold's duplicate: pickups at their derived
     host, placed by `PlaceHermesShrineDelivery` / `PlaceEchoGoldPickup` at any
     index the command accepts; required as the engine says today.
-  - W8 rekey: settlement-time only; the product is read-only and carries
-    nothing about it.
+  - W8 rekey: deleted (owner, 2026-11-10); a reward swap replaces the item.
 
   Open items, temporary limits of today's walk and scope:
   - Not offered: a new door, cage, wheel, Well or Pool reroll, a Pool sale of a
@@ -81,7 +80,7 @@ You either interact with pickups or active objects.
   rows, so no saved plan needs migrating. Slices, each independently
   reviewed: C1 (delivered, awaiting review) the walk passes a spawning event
   while its spawned item is unresolved, clearing the pinned held cases and
-  Draft's wheel-reward fallback; C2 removes writers W1-W6 (W8 rekey stays), allows Remove and
+  Draft's wheel-reward fallback; C2 removes writers W1-W6 (and, by a later owner decision, the W8 rekey), allows Remove and
   Reset of required rows, adds the missing-pickup finding wording and closes
   the Gold Gold Gold duplicate's order leniency; C3 the
   run import's half of B; C4 (delivered, awaiting review) Collect all
@@ -162,7 +161,11 @@ Planning a room mimics playing it.
   created without seeded rows.
 - **Remove and Reset of a required row** are allowed: the item is live on the
   ground again and the walk shows its finding.
-- The reward-swap rekey stays.
+- The reward-swap rekey is deleted (owner, revised 2026-11-10): a reward swap
+  replaces the item; the old item's rows go and the new item is live.
+- A rescheduled Hermes delivery (due at another host) is a new item: it
+  arrives with no choices, and the old item's chain goes with it. Due again at
+  the same host, it keeps its choices.
 - **Collect all required:** a simple command placing every required live
   item at its canonical spot; dropped if it feels bad in the planner.
 - **Draft order:** Fields goes clear then collect, cage by cage. Boss rooms
@@ -209,7 +212,7 @@ Draft or the run import depend on that C2 changes.
     (`PlaceHermesShrineDelivery`) or Gold Gold Gold duplicates
     (`PlaceEchoGoldPickup`), and a displaced delivery is only unplaced.
     A consumer places every required row itself, from the live product or with
-    `collectRequiredItems`. The reward-swap rekey stays.
+    `collectRequiredItems`.
 - **Remove and Reset.** `RemoveRoomAction` accepts a required row,
   `UnplaceGeneratedDelivery` a reached valid delivery, and
   `ResetRoomActionsAfter` removes required rows; `settleProjectEdit` no longer
@@ -217,6 +220,13 @@ Draft or the run import depend on that C2 changes.
   delivery. The roster offers a `remove` proposal for every placed row (an
   `unplace` one for a cross-room delivery). The item is live again with its
   finding.
+- **Reward swap.** The rekey is gone: `ReplaceIncomingReward` and settlement
+  remove the old reward's pickup rows and place nothing; the new reward's
+  pickups are live. A consumer places them like any required row.
+- **Rescheduled delivery.** `PlaceHermesShrineDelivery` reuses a retained
+  payload only from the host it places at; a payload retained at another host
+  is dropped and the delivery arrives with its default reward; settlement
+  removes a retained item whose delivery the walk has due at another host.
 - **Keepsake rack.** An optional ordinary row: `InsertRoomAction` and
   `RemoveRoomAction` accept `interactKeepsakeRack` (removal clears the
   choice); the codec allows at most one rack row; `ReplacePostbossKeepsake`

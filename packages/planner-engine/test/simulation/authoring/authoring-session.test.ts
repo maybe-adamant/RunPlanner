@@ -3,13 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createAcquisitionEntryAddress,
-  createAcquisitionSiteAddress,
   createBiomeAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
   createRouteAddress,
-  hermesShrineDeliveryEntryKey,
   ProjectCommandContractError,
   type ProjectCommand,
   type ProjectDocument,
@@ -21,8 +18,10 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
 import {
   createSurfaceNOHermesShrineDeliveryCheckpoint,
+  loadSurfaceNOProject,
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
@@ -32,6 +31,26 @@ import * as commands from '../../../src/authored-project/commands/dispatch';
 import { firstSupportedReroll, withArcana } from '../../support/rerolls';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
+
+const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+
+/** O Combat07 with a third encounter and its placed wheel rows, which a return to two orphans. */
+function threeEncounterShip(): ProjectDocument {
+  return scheduleTestRequiredRoomActions(
+    applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: ship,
+      encounterCount: 3,
+    }),
+    catalog,
+    oBiome,
+  );
+}
+const twoEncounters = {
+  kind: 'ReplaceShipEncounterCount',
+  occurrence: ship,
+  encounterCount: 2,
+} as const;
 
 const shrineOffer = {
   kind: 'ReplaceHermesShrineOffer',
@@ -123,25 +142,17 @@ describe('authoring session', () => {
   });
 
   it('passes a settlement fault through with the applied assembly', () => {
-    const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
-    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const entry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(
-        createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
-        'hermesShrineDelivery',
-      ),
-      hermesShrineDeliveryEntryKey(source, 'initial:secondLeft'),
-    );
+    const project = threeEncounterShip();
     const apply = commands.applyProjectCommand;
-    // The due delivery's placement never takes effect, so its obligation stays due.
+    // The orphaned rows' removal never takes effect, so they stay stale.
     vi.spyOn(commands, 'applyProjectCommand').mockImplementation((document, catalog, command) =>
-      command.kind === 'PlaceHermesShrineDelivery' ? document : apply(document, catalog, command),
+      command.kind === 'RemoveRoomAction' ? document : apply(document, catalog, command),
     );
     const session = createAuthoringSession(catalog, evaluate(project));
-    const outcome = session.apply(shrineOffer);
+    const outcome = session.apply(twoEncounters);
     expect(outcome).toMatchObject({
       kind: 'applied',
-      fault: { key: expect.stringMatching(/^delivery:/), owner: entry },
+      fault: { key: expect.stringMatching(/^stale:/), owner: { kind: 'roomAction' } },
     });
     if (outcome.kind === 'applied') expect(session.current()).toBe(outcome.assembly);
   });
@@ -162,16 +173,22 @@ describe('authoring session', () => {
     expect(session.current()).toBe(start);
   });
 
-  it('throws a repair the command authority refuses after evaluation', () => {
-    const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+  it('reports a repair the command authority refuses after evaluation as a fault', () => {
+    const project = threeEncounterShip();
     const apply = commands.applyProjectCommand;
     vi.spyOn(commands, 'applyProjectCommand').mockImplementation((document, catalog, command) => {
-      if (command.kind === 'PlaceHermesShrineDelivery')
-        throw new ProjectCommandContractError(command.kind, command.entry, 'refused repair');
+      if (command.kind === 'RemoveRoomAction')
+        throw new ProjectCommandContractError(command.kind, command.action, 'refused repair');
       return apply(document, catalog, command);
     });
     const session = createAuthoringSession(catalog, evaluate(project));
-    expect(() => session.apply(shrineOffer)).toThrow('refused repair');
+    const outcome = session.apply(twoEncounters);
+    // The removal and the roster disagree: an engine defect, published beside the assembly.
+    expect(outcome).toMatchObject({
+      kind: 'applied',
+      fault: { key: expect.stringMatching(/^stale:/), owner: { kind: 'roomAction' } },
+    });
+    if (outcome.kind === 'applied') expect(session.current()).toBe(outcome.assembly);
   });
 
   it('refuses a command that leaves the project unchanged', () => {

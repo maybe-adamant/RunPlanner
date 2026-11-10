@@ -302,12 +302,22 @@ describe('authored-project route detour commands', () => {
       occurrence: host,
       variantKey: 'PerfectClearChallengeSwitch_Pom',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'InsertRoomAction',
-      action: createRoomActionAddress(gBiome, target, roomActionKey(useSwitch)),
-      reference: useSwitch,
-      index: occurrenceOf(project).roomActions.order.length,
-    });
+    // The room's reward, the switch and its claim, each placed by its owner.
+    for (const reference of [
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      },
+      useSwitch,
+      { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(gBiome, target, roomActionKey(reference)),
+        reference,
+        index: occurrenceOf(project).roomActions.order.length,
+      });
     project = applyProjectCommand(project, catalog, { kind: 'AddStygianWell', occurrence: host });
     project = applyProjectCommand(project, catalog, {
       kind: 'InsertStygianWellReroll',
@@ -892,11 +902,12 @@ describe('authored-project route detour commands', () => {
         (occurrence) => occurrence.occurrenceId === shop,
       )?.additionalExits,
     ).toEqual([{ kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: contract }]);
+    // The contract room is created with no rows.
     expect(
       biomeTopology(project, 'Underworld', 'F').occurrences.find(
         (occurrence) => occurrence.occurrenceId === contract,
       )?.roomActions.order,
-    ).toEqual([{ kind: 'collectRequiredReward' }]);
+    ).toEqual([]);
 
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceBatchRewardStore',

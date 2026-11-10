@@ -20,7 +20,7 @@ import {
   loadNemesisTraitTradeCheckpoint,
   loadUnderworldFGHICheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOPQProject,
@@ -100,7 +100,7 @@ function dreamMedeaInThirdBiome(): ProjectDocument {
         : action,
     ),
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 const clone = (wire: unknown): Wire => structuredClone(wire) as Wire;
 

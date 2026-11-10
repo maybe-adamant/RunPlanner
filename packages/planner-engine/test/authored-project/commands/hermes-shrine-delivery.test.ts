@@ -1,4 +1,6 @@
 import {
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   purchaseTestHermesShrineOffer,
   testHermesShrinePurchaseAction,
 } from '@run-planner/test-fixtures/shared';
@@ -250,7 +252,7 @@ describe('Hermes Shrine delivery placement', () => {
     );
   });
 
-  it('buys a Shrine item at a chosen legal index, a rushed one with its pickup right after', () => {
+  it('buys a Shrine item at a chosen legal index, a rushed one without placing its pickup', () => {
     const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
     const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const order = (document: typeof project) =>
@@ -294,9 +296,9 @@ describe('Hermes Shrine delivery placement', () => {
     expect(order(applyProjectCommand(project, catalog, { ...purchase(true), index: 2 }))).toEqual([
       ...before.slice(0, 2),
       bought(true),
-      pickup,
       ...before.slice(2),
     ]);
+    expect(order(applyProjectCommand(project, catalog, purchase(true)))).not.toContainEqual(pickup);
     expect(() => applyProjectCommand(project, catalog, { ...purchase(true), index: 1 })).toThrow(
       /index 1 is not a legal position .* a required action of an earlier window/,
     );
@@ -855,7 +857,7 @@ function projectWithTwoSideRoomDeliveries() {
   const parentId = createOccurrenceId('round-trip-n-combat02');
   const sourceId = nLocalOccurrenceId('combat02', 'sideDoor1');
   const hostId = createOccurrenceId('round-trip-n-combat04');
-  const base = createEnteredNLocalProject();
+  const base = authorTestTraitsAndRequiredItems(createEnteredNLocalProject());
   const plan = base.route.biomes.find((candidate) => candidate.biomeKey === 'N');
   const sourceOccurrence = plan?.topology?.occurrences.find(
     (candidate) => candidate.occurrenceId === sourceId,
@@ -1068,16 +1070,21 @@ describe('Hermes Shrine delivery source participation', () => {
       );
       for (const entryKey of entryKeys) {
         expect(contributionKeys).toContain(roomActionKey(deliveryAction(entryKey)));
-        expect(() =>
-          applyProjectCommand(loaded, catalog, {
-            kind: 'RemoveRoomAction',
-            action: createRoomActionAddress(
-              biome,
-              host.occurrenceId,
-              roomActionKey(deliveryAction(entryKey)),
-            ),
-          }),
-        ).toThrow('active required room action cannot be removed');
+        // A required row may be removed: the delivery lies live again.
+        expect(
+          orderedDeliveryKeys(
+            applyProjectCommand(loaded, catalog, {
+              kind: 'RemoveRoomAction',
+              action: createRoomActionAddress(
+                biome,
+                host.occurrenceId,
+                roomActionKey(deliveryAction(entryKey)),
+              ),
+            }),
+            biome.biomeKey,
+            host.occurrenceId,
+          ),
+        ).toEqual(entryKeys.filter((key) => key !== entryKey));
       }
 
       const materialized = materializedRoom(loaded, host.occurrenceId);
@@ -1128,7 +1135,7 @@ describe('Hermes Shrine delivery source participation', () => {
     },
   );
 
-  it('keeps an entered source required with its reward editor context and refuses removal', () => {
+  it('keeps an entered source required with its reward editor context and allows removal', () => {
     const { project, biome, host, entryKeys } = projectWithTwoSideRoomDeliveries();
     const domain = roomActionDomainForOccurrence(
       project,
@@ -1146,12 +1153,16 @@ describe('Hermes Shrine delivery source participation', () => {
         participation: 'required',
         owner: { kind: 'acquisitionEntry', entryKey },
       });
-      expect(() =>
-        applyProjectCommand(project, catalog, {
-          kind: 'RemoveRoomAction',
-          action: createRoomActionAddress(biome, host.occurrenceId, key),
-        }),
-      ).toThrow('active required room action cannot be removed');
+      expect(
+        orderedDeliveryKeys(
+          applyProjectCommand(project, catalog, {
+            kind: 'RemoveRoomAction',
+            action: createRoomActionAddress(biome, host.occurrenceId, key),
+          }),
+          biome.biomeKey,
+          host.occurrenceId,
+        ),
+      ).toEqual(entryKeys.filter((candidate) => candidate !== entryKey));
     }
     const room = materializedRoom(project, host.occurrenceId);
     for (const entryKey of entryKeys) {
@@ -1579,14 +1590,17 @@ describe('flush-host admission after source retraction', () => {
       purchased: true,
     });
     expect(settled.fault).toBeUndefined();
-    expect(settled.assembly.evaluation.status).toBe('valid');
-    expect(orderedKeys(settled.assembly.project)).toEqual([
+    // Settlement leaves the due delivery live; its owner picks it up at the flush host.
+    expect(orderedKeys(settled.assembly.project)).toEqual([]);
+    const collected = collectTestRequiredItems(settled.assembly.project);
+    expect(evaluate(collected).evaluation.status).toBe('valid');
+    expect(orderedKeys(collected)).toEqual([
       { kind: 'interactAcquisitionEntry', siteKey: 'hermesShrineDelivery', entryKey },
     ]);
-    expect(requiredContribution(settled.assembly.project)).toMatchObject({
+    expect(requiredContribution(collected)).toMatchObject({
       participation: 'required',
     });
-    return settled.assembly.project;
+    return collected;
   }
 
   function expectDormant(project: ProjectDocument) {
@@ -1629,9 +1643,15 @@ describe('flush-host admission after source retraction', () => {
       purchased: true,
     });
     expect(repurchased.fault).toBeUndefined();
-    expect(repurchased.assembly.evaluation.status).toBe('valid');
-    expect(orderedKeys(repurchased.assembly.project)).toHaveLength(1);
-    expect(requiredContribution(repurchased.assembly.project)).toMatchObject({
+    // The delivery is due again and lies live until it is picked up.
+    expect(orderedKeys(repurchased.assembly.project)).toEqual([]);
+    expect(repurchased.assembly.evaluation.issue?.reasons[0]?.code).toBe(
+      'hermesShrineDeliveryPlacementRequired',
+    );
+    const collected = collectTestRequiredItems(repurchased.assembly.project);
+    expect(evaluate(collected).evaluation.status).toBe('valid');
+    expect(orderedKeys(collected)).toHaveLength(1);
+    expect(requiredContribution(collected)).toMatchObject({
       participation: 'required',
     });
   });
@@ -1669,6 +1689,18 @@ describe('Hermes Shrine purchase actions', () => {
     project.route.biomes
       .find((biome) => biome.biomeKey === shrine.biomeKey)!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === shrine.occurrenceId)!;
+  /** Picks up a rushed item's pickup at the end of the room, as its owner would. */
+  const placePickup = (project: ProjectDocument, generationKey: HermesShrineGenerationKey) =>
+    applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        surfaceNBiome,
+        shrine.occurrenceId,
+        roomActionKey(pickup(generationKey)),
+      ),
+      reference: pickup(generationKey),
+      index: shrineRoom(project).roomActions.order.length,
+    });
   const rush = (
     project: ProjectDocument,
     generationKey: HermesShrineGenerationKey,
@@ -1737,23 +1769,24 @@ describe('Hermes Shrine purchase actions', () => {
     );
   });
 
-  it('rushes on the purchase action, which adds and removes only its own pickup', () => {
+  it('rushes on the purchase action, which places no pickup and removes only its own', () => {
     const project = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
       kind: 'SetHermesShrinePurchase',
       occurrence: shrine,
       generationKey: 'initial:secondLeft',
       purchased: true,
     });
-    const rushed = rush(project, 'initial:secondLeft', true);
-    expect(shrineRoom(rushed).roomActions.order).toEqual([
+    const rushedOnly = rush(project, 'initial:secondLeft', true);
+    expect(shrineRoom(rushedOnly).roomActions.order).toEqual([
       { kind: 'useFountain' },
       rack,
       purchase('initial:first', true),
       purchase('initial:secondLeft', true),
       purchase('travelDealRefill', false),
       pickup('initial:first'),
-      pickup('initial:secondLeft'),
     ]);
+    const rushed = placePickup(rushedOnly, 'initial:secondLeft');
+    expect(shrineRoom(rushed).roomActions.order.at(-1)).toEqual(pickup('initial:secondLeft'));
     const pickupContribution = roomActionDomainForOccurrence(
       rushed,
       catalog,
@@ -1779,7 +1812,7 @@ describe('Hermes Shrine purchase actions', () => {
     ).toHaveProperty(pickup('initial:secondLeft').entryKey);
 
     // The refill pickup needs a rushed initial purchase to have created the refill.
-    const refillRushed = rush(project, 'travelDealRefill', true);
+    const refillRushed = placePickup(rush(project, 'travelDealRefill', true), 'travelDealRefill');
     expect(shrineRoom(refillRushed).roomActions.order).toContainEqual(pickup('travelDealRefill'));
     const sourceUnrushed = rush(refillRushed, 'initial:first', false);
     expect(shrineRoom(sourceUnrushed).roomActions.order).toEqual([
@@ -1815,7 +1848,7 @@ describe('Hermes Shrine purchase actions', () => {
       'initial:secondLeft',
       true,
     );
-    project = rush(project, 'travelDealRefill', true);
+    project = placePickup(rush(project, 'travelDealRefill', true), 'travelDealRefill');
     project = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
       action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
@@ -1877,7 +1910,6 @@ describe('Hermes Shrine purchase actions', () => {
     expect(shrineRoom(rushed.present).roomActions.order).toEqual([
       ...order,
       purchase('initial:secondLeft', true),
-      pickup('initial:secondLeft'),
     ]);
     expect(undoProjectHistory(rushed).present).toBe(project);
 

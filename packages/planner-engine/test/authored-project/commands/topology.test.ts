@@ -27,7 +27,11 @@ import {
   undoProjectHistory,
   hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
-import { replaceTestShopOfferActions, hubVisitActions } from '@run-planner/test-fixtures/shared';
+import {
+  collectTestRequiredItems,
+  hubVisitActions,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
@@ -1390,7 +1394,7 @@ describe('authored-project commands and topology', () => {
     ).toThrow(ProjectCommandContractError);
   });
 
-  it('re-anchors one selected ordinary continuation without rewriting its subtree or target payload beyond activated defaults', () => {
+  it('re-anchors one selected ordinary continuation without rewriting its subtree or target payload', () => {
     const openingId = createOccurrenceId('reanchor-opening');
     const sourceId = createOccurrenceId('reanchor-source');
     const priorId = createOccurrenceId('reanchor-prior');
@@ -1590,18 +1594,10 @@ describe('authored-project commands and topology', () => {
     expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === priorId)).toEqual(
       priorPackage,
     );
-    expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === nextId)).toEqual({
-      ...nextPackage,
-      roomActions: {
-        order: [
-          {
-            kind: 'interactIncomingReward',
-            producerPoint: 'roomRewardPickup',
-            acquisitionRole: 'self',
-          },
-        ],
-      },
-    });
+    // Selecting it activates its reward pickup without placing a row.
+    expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === nextId)).toEqual(
+      nextPackage,
+    );
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(reanchored)), catalog)).toEqual(
       reanchored,
     );
@@ -1635,7 +1631,9 @@ describe('authored-project commands and topology', () => {
       parent: { occurrenceId: nextId },
     });
     expect(historyPrefix).not.toBeNull();
-    const evaluated = simulateProject(catalog, reanchored).route?.biomes[0];
+    // The walk reaches the re-anchored room once the rooms before it are collected.
+    const evaluated = simulateProject(catalog, collectTestRequiredItems(reanchored)).route
+      ?.biomes[0];
     if (evaluated === undefined || !('history' in evaluated)) {
       throw new Error('re-anchor simulation did not retain its reached history');
     }

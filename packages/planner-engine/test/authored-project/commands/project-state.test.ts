@@ -17,6 +17,7 @@ import {
   createBiomeAddress,
   createOccurrenceId,
   createOccurrenceAddress,
+  createRoomActionAddress,
   createRouteAddress,
   decodeProjectDocument,
   deriveRouteLoadout,
@@ -27,12 +28,49 @@ import {
   ProjectCommandContractError,
   ProjectDocumentContractError,
   redoProjectHistory,
+  roomActionKey,
   undoProjectHistory,
   type AuthoredTraitOfferTraits,
+  type HermesShrineGenerationKey,
+  type OccurrenceAddress,
+  type ProjectDocument,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 
 import { fBiome, fProject, iBiome, iProject } from '../support/configured-projects';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+
+/** Buys a Shrine item rushed and picks up its same-room pickup at the end of the room. */
+function purchaseRushedAndPickUp(
+  project: ProjectDocument,
+  occurrence: OccurrenceAddress,
+  generationKey: HermesShrineGenerationKey,
+): ProjectDocument {
+  const purchased = purchaseTestHermesShrineOffer(project, catalog, occurrence, generationKey, {
+    delay: 2,
+    rushed: true,
+  });
+  const pickup: RoomActionReference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey: 'hermesShrineDelivery',
+    entryKey: hermesShrineDeliveryEntryKey(occurrence, generationKey),
+  };
+  const order =
+    purchased.route.biomes
+      .find((biome) => biome.biomeKey === occurrence.biomeKey)
+      ?.topology?.occurrences.find((room) => room.occurrenceId === occurrence.occurrenceId)
+      ?.roomActions.order ?? [];
+  return applyProjectCommand(purchased, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(
+      createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+      occurrence.occurrenceId,
+      roomActionKey(pickup),
+    ),
+    reference: pickup,
+    index: order.length,
+  });
+}
 
 describe('authored-project project-state commands', () => {
   it('adds and removes an ordinary Shrine shell atomically without admitting forced hosts', () => {
@@ -291,20 +329,18 @@ describe('authored-project project-state commands', () => {
       completionBiome,
       createOccurrenceId('surface-n-preboss:postboss'),
     );
-    const completion = purchaseTestHermesShrineOffer(
+    const completion = purchaseRushedAndPickUp(
       applyProjectCommand(loadSurfaceNOProject(), catalog, {
         kind: 'ReplaceHermesShrineOffer',
         occurrence: completionOccurrence,
         slotKey: 'first',
         value: { rewardType: 'HealBigDrop' },
       }),
-      catalog,
       completionOccurrence,
       'initial:first',
-      { delay: 2, rushed: true },
     );
     const ordinaryOccurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const ordinary = purchaseTestHermesShrineOffer(
+    const ordinary = purchaseRushedAndPickUp(
       applyProjectCommand(
         applyProjectCommand(loadSurfaceNOProject(), catalog, {
           kind: 'SetHermesShrinePresence',
@@ -319,10 +355,8 @@ describe('authored-project project-state commands', () => {
           value: { rewardType: 'HealBigDrop' },
         },
       ),
-      catalog,
       ordinaryOccurrence,
       'initial:first',
-      { delay: 2, rushed: true },
     );
     const mutate = (
       document: Record<string, unknown>,
@@ -447,13 +481,7 @@ describe('authored-project project-state commands', () => {
       slotKey: 'first',
       value: { rewardType: 'GiftDrop' },
     });
-    const authored = purchaseTestHermesShrineOffer(
-      inventoryAuthored,
-      catalog,
-      occurrence,
-      'initial:first',
-      { delay: 2, rushed: true },
-    );
+    const authored = purchaseRushedAndPickUp(inventoryAuthored, occurrence, 'initial:first');
     const occurrenceState = authored.route.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     );

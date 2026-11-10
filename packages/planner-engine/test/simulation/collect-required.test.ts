@@ -3,6 +3,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectHistory,
@@ -27,6 +28,11 @@ import {
   type RoomLiveActions,
 } from '@run-planner/engine/simulation';
 import { checkpointRegistry } from '@run-planner/test-fixtures/checkpoints/registry';
+import {
+  createFreshFileRouteProject,
+  newHFieldsRoomId,
+  withNewHFieldsRoom,
+} from '@run-planner/test-fixtures/fresh-file';
 import { createEchoGoldHPrebossProject } from '@run-planner/test-fixtures/underworld';
 import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
@@ -388,6 +394,46 @@ describe('Collect all required', () => {
       'InsertRoomAction ["completeFieldsCage","Cage03"]@4',
       'InsertRoomAction ["interactLocalReward","cages","cage3"]@5',
     ]);
+  });
+
+  it('collects a new Fields room cage by cage, stopping at a cage reward whose offer is unauthored', () => {
+    const hBiome = createBiomeAddress('FreshFile', 'H');
+    const room = createOccurrenceAddress(hBiome, newHFieldsRoomId);
+    let project = withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'max');
+    for (const slotKey of ['optional1', 'optional2'])
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(hBiome, newHFieldsRoomId, 'optionalRewards', slotKey),
+        value: { rewardType: 'RoomMoneyTinyDrop' },
+      });
+    const stripped = evaluate(withoutRows(project, room, () => true));
+
+    const first = collectRequiredItems({ catalog, before: stripped, occurrence: room, evaluate });
+
+    // The cage 2 reward's trait offer stops the walk at its row; Cage03 is not placed before it.
+    expect(first.stop).toBe('blocked');
+    expect(first.fault).toBeUndefined();
+    expect(placements(first.commands)).toEqual([
+      'InsertRoomAction ["completeFieldsCage","Cage01"]@0',
+      'InsertRoomAction ["interactLocalReward","cages","cage1"]@1',
+      'InsertRoomAction ["completeFieldsCage","Cage02"]@2',
+      'InsertRoomAction ["interactLocalReward","cages","cage2"]@3',
+    ]);
+    expect(first.assembly.evaluation.issue?.reasons[0]?.code).toBe('traitOfferMissing');
+
+    const second = collectRequiredItems({
+      catalog,
+      before: evaluate(authorLegalTraitOffers(first.assembly.project)),
+      occurrence: room,
+      evaluate,
+    });
+    expect(placements(second.commands)).toEqual([
+      'InsertRoomAction ["completeFieldsCage","Cage03"]@4',
+      'InsertRoomAction ["interactLocalReward","cages","cage3"]@5',
+    ]);
+    expect(roomOrder(second.assembly.project, room).map(roomActionKey)).toEqual(
+      roomOrder(project, room).map(roomActionKey),
+    );
   });
 
   it('collects a pickup before acting on an object at the same index, whatever the item order', () => {

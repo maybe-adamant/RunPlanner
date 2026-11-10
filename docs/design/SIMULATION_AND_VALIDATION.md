@@ -102,7 +102,9 @@ before assembly and returns the final project and its exact assembly.
   and lie live until the owner places their pickup, and an unplaced required
   one stops the walk at its deadline with its placement finding.
 - A delivery the edit proves displaced (valid before, invalid now) is
-  unplaced and lies live again at its reached due contact. A displaced clocked
+  unplaced and lies live again at its reached due contact. A delivery item
+  retained at a host while the walk has it due at another is removed: it
+  arrives there as a new item. A displaced clocked
   pickup is removed only when its trait is no longer held; one whose held trait
   now matures elsewhere stays with its finding. Deliveries and clocked pickups
   are keyed by their source, so no inherited choice is reset for being newly
@@ -110,9 +112,9 @@ before assembly and returns the final project and its exact assembly.
 - Settlement carries out the policy for
   [rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
   in every room the evaluation reaches: it judges each room-action row by what
-  the edit changed, comparing the walk before and after it, and removes,
-  re-keys or keeps the row as that policy classifies it, through the row's
-  owning removal command. Every generated batch's doors are settled the same
+  the edit changed, comparing the walk before and after it, and removes or
+  keeps the row as that policy classifies it, through the row's owning
+  removal command. Every generated batch's doors are settled the same
   way to its source room's declared exits, as
   [exit capacity](AUTHORED_PROJECT_MODEL.md#exit-capacity) defines; a door
   its source room lacks is never published. An installed route is not
@@ -121,7 +123,7 @@ before assembly and returns the final project and its exact assembly.
   [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
   announces, with the countdown deliveries and trait drops a command takes
   from other rooms with their source and the doors a room lost. The room an edit addresses is the occurrence its command's
-  address names or nests. Rows a rekey replaced are never named.
+  address names or nests.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
   assembly with a settlement fault naming the owner. A batch whose doors cannot
@@ -138,7 +140,7 @@ sequenceDiagram
   App->>Eng: semantic command + before assembly
   Eng->>Eng: apply structural command
   loop while an obligation or displaced owner remains
-    Eng->>Eng: edit settlement (displaced pickups, rekeys, rows gone)
+    Eng->>Eng: edit settlement (displaced pickups, rows gone)
     Eng->>Eng: re-evaluate the project
   end
   Eng-->>App: final project, assembly with findings and readiness

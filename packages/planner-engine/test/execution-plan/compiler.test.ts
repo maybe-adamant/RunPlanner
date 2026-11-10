@@ -21,7 +21,11 @@ import {
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '../../src/simulation';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+} from '@run-planner/test-fixtures/shared';
 import { oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
@@ -649,7 +653,7 @@ describe('execution-plan compiler and codec', () => {
       2,
     );
     const rarityAt = (blessingKey: string, blessingValues: Readonly<Record<string, number>>) => {
-      let authored = authorLegalTraitOffers(
+      let authored = authorTestTraitsAndRequiredItems(
         applyProjectCommand(project, catalog, {
           kind: 'ReplaceTranscendentEmbryoTransformation',
           outcome,
@@ -671,7 +675,7 @@ describe('execution-plan compiler and codec', () => {
           candidate.result.eligibleTargetKeys[0] === undefined
         )
           throw new Error('missing shifted Steady target');
-        authored = authorLegalTraitOffers(
+        authored = authorTestTraitsAndRequiredItems(
           applyProjectCommand(authored, catalog, {
             kind: 'ReplaceSteadyGrowthTarget',
             outcome: missing.origin,
@@ -2058,7 +2062,8 @@ describe('execution-plan compiler and codec', () => {
   });
 
   it('compiles a command-authored Dream Q/F/N/H itinerary as a configured Q prefix', () => {
-    const project = dreamMixedPrefixProject();
+    // The owner collects each room's required items.
+    const project = collectTestRequiredItems(dreamMixedPrefixProject());
     const assembly = simulateProjectAssembly(catalog, project);
     expect(assembly.evaluation.status, JSON.stringify(assembly.evaluation.findings)).toBe('valid');
     const { plan } = planFor(project);
