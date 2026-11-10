@@ -432,31 +432,6 @@ export function retractMissingHermesShrineDeliveryActions(
   return reconciled;
 }
 
-/** Find one retained payload, preferring the destination's context-specific draft. */
-export function retainedHermesShrineDeliveryReward(
-  document: ProjectDocument,
-  entryKey: string,
-  preferredHost: OccurrenceAddress,
-): AuthoredRewardState | null | undefined {
-  let fallback: AuthoredRewardState | null | undefined;
-  let foundFallback = false;
-  const route = document.route;
-  for (const biome of route.biomes) {
-    for (const occurrence of biome.topology?.occurrences ?? []) {
-      const retained =
-        occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY]?.pickupEntries?.[entryKey];
-      if (retained === undefined) continue;
-      if (occurrenceMatchesAddress(route.routeKey, biome.biomeKey, occurrence, preferredHost))
-        return retained;
-      if (!foundFallback) {
-        fallback = retained;
-        foundFallback = true;
-      }
-    }
-  }
-  return fallback;
-}
-
 /**
  * Once the simulator identifies the new due host, the concrete delivery has
  * exactly one payload owner and one timeline reference again.

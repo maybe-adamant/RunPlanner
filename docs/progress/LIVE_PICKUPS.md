@@ -163,6 +163,9 @@ Planning a room mimics playing it.
   ground again and the walk shows its finding.
 - The reward-swap rekey is deleted (owner, revised 2026-11-10): a reward swap
   replaces the item; the old item's rows go and the new item is live.
+- A rescheduled Hermes delivery (due at another host) is a new item: it
+  arrives with no choices, and the old item's chain goes with it. Due again at
+  the same host, it keeps its choices.
 - **Collect all required:** a simple command placing every required live
   item at its canonical spot; dropped if it feels bad in the planner.
 - **Draft order:** Fields goes clear then collect, cage by cage. Boss rooms
@@ -220,6 +223,9 @@ Draft or the run import depend on that C2 changes.
 - **Reward swap.** The rekey is gone: `ReplaceIncomingReward` and settlement
   remove the old reward's pickup rows and place nothing; the new reward's
   pickups are live. A consumer places them like any required row.
+- **Rescheduled delivery.** `PlaceHermesShrineDelivery` reuses a retained
+  payload only from the host it places at; a payload retained at another host
+  is dropped and the delivery arrives with its default reward.
 - **Keepsake rack.** An optional ordinary row: `InsertRoomAction` and
   `RemoveRoomAction` accept `interactKeepsakeRack` (removal clears the
   choice); the codec allows at most one rack row; `ReplacePostbossKeepsake`
