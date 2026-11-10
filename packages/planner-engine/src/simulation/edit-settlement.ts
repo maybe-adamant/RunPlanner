@@ -290,7 +290,8 @@ function purchaseBefore(occurrence: RoomOccurrence | undefined, rowKey: string):
  * no source produced before the edit either (its enabler went earlier, or it
  * was placed before its source existed) stays with its finding until the edit
  * takes every purchase before it, its trigger among them. A row whose source
- * still produces it with other terms stays with its finding.
+ * still produces it with other terms stays with its finding. An upgrade, with no
+ * walk before it, removes only an automatic product that a purchase stands before.
  */
 function sourceGoneShopRows(
   before: ProjectEvaluationAssembly,
@@ -336,12 +337,18 @@ function sourceGoneShopRows(
           );
         // Enabler gone: the owner's purchase stays, invalid, for the owner to remove or restore.
         if (!triggerGone && SOURCED_SHOP_ROWS.get(reference.entryKey) === 'decision') continue;
-      } else if (upgrade && SOURCED_SHOP_ROWS.get(reference.entryKey) === 'product') {
-        // An automatic product goes whether its trigger or its enabler went.
+      } else if (upgrade) {
+        // A purchase before an automatic product proves its trigger stands, so its enabler went.
+        // An owner's purchase, or a product with no purchase before it, may have been placed
+        // before its source existed: it stays with its finding.
+        if (
+          SOURCED_SHOP_ROWS.get(reference.entryKey) !== 'product' ||
+          !purchaseBefore(occurrence, roomActionKey(reference))
+        )
+          continue;
       } else {
         const rowKey = roomActionKey(reference);
-        // An upgrade judges an owner's purchase by its trigger alone: no purchase before it.
-        if (!upgrade && !purchaseBefore(occurrenceAt(before.project, owner), rowKey)) continue;
+        if (!purchaseBefore(occurrenceAt(before.project, owner), rowKey)) continue;
         if (purchaseBefore(occurrence, rowKey)) continue;
       }
       removals.push({ owner, reference });
@@ -355,8 +362,8 @@ function sourceGoneShopRows(
  * and its door's room no longer plays the cage, where before the edit the
  * press found it (it settled, or failed for a reason other than its target).
  * A press that never found its cage, one whose door is unavailable, and every
- * Hub reroll stay with their findings. An upgrade removes every press whose
- * cage is not played.
+ * Hub reroll stay with their findings. An upgrade removes a press whose cage
+ * is not played only when the target room still holds that cage authored.
  */
 function cageGoneRerolls(
   before: ProjectEvaluationAssembly,
@@ -387,7 +394,14 @@ function cageGoneRerolls(
     );
     if (reference?.kind !== 'reroll' || reference.target.kind !== 'cage') continue;
     if (upgrade) {
-      removals.push({ owner, reference });
+      // A cage the target room still holds authored was played once; a press at a cage
+      // the room never held may never have found it, and stays with its finding.
+      const room = occurrenceAt(assembly.project, {
+        ...owner,
+        occurrenceId: reference.target.occurrenceId,
+      });
+      const cages = room?.state.kind === 'fieldsCombat' ? room.state.cages : undefined;
+      if (cages?.[reference.target.slotKey] != null) removals.push({ owner, reference });
       continue;
     }
     const key = semanticAddressKey(action);
@@ -404,42 +418,54 @@ function cageGoneRerolls(
   return removals;
 }
 
-/**
- * Pickups an upgrade finds with their source gone in the rooms the run enters:
- * a countdown delivery whose Shrine purchase is gone (its trigger), and a
- * matured trait drop whose trait the run holds nowhere (an automatic product of
- * a gone enabler). A drop whose trait is held but matures elsewhere stays with
- * its finding.
- */
-function sourceGonePickups(assembly: ProjectEvaluationAssembly, artifacts: CandidateArtifacts) {
-  const project = assembly.project;
-  const maturing = new Set(
-    occurrences(project).flatMap(({ owner }) =>
-      (
-        artifacts
-          .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
-          ?.derivedAcquisitionEntries.entriesAt(createAcquisitionSiteAddress(owner, 'roomExit')) ??
-        []
-      ).flatMap(({ address, capability }) => {
-        const drop =
-          capability.kind === 'clockedTraitPickup'
-            ? parseClockedTraitGeneratedPickupEntryKey(address.entryKey)
-            : undefined;
-        return drop === undefined ? [] : [drop.acquisitionIdentity];
-      }),
-    ),
-  );
-  const lostDrops = new Set(
-    placements(assembly).flatMap(({ address, assessment }) =>
-      assessment.kind === 'invalid' &&
-      assessment.source.kind === 'clockedTraitPickup' &&
-      assessment.reason === 'sourceInactive' &&
-      !maturing.has(assessment.source.acquisitionIdentity)
-        ? [semanticAddressKey(address)]
+/** The acquisitions whose trait produces timed drops at some checkpoint the walk reached. */
+function heldDropProducers(assembly: ProjectEvaluationAssembly): ReadonlySet<string> {
+  return new Set(
+    assembly.evaluation.route.biomes.flatMap((biome) =>
+      'rewards' in biome
+        ? biome.rewards.runStateSnapshots.flatMap((snapshot) =>
+            Object.values(snapshot.traits.equippedTraits).flatMap((trait) =>
+              trait.acquisitionIdentity === undefined || trait.pickupProducerInterval === undefined
+                ? []
+                : [trait.acquisitionIdentity],
+            ),
+          )
         : [],
     ),
   );
+}
+
+/**
+ * Pickups an upgrade finds with their source gone in the rooms the run enters:
+ * a countdown delivery whose Shrine purchase is gone (its trigger), and a
+ * matured trait drop whose producing trait the run never holds (an automatic
+ * product of a gone enabler). A drop stands where its producer is not held, so
+ * the walk stops at it: the drops are judged by the walk without them, which
+ * must reach the plan's end holding none of their producers. A drop whose
+ * producer that walk holds, before or after it, or that a walk stopping short
+ * of the end may still hold, stays with its finding.
+ */
+function sourceGonePickups(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  evaluate: (project: ProjectDocument) => ProjectEvaluationAssembly,
+) {
+  const project = assembly.project;
   const removals: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
+  const drops: {
+    owner: OccurrenceAddress;
+    reference: RoomActionReference;
+    acquisitionIdentity: string;
+  }[] = [];
+  const unheld = new Map(
+    placements(assembly).flatMap(({ address, assessment }) =>
+      assessment.kind === 'invalid' &&
+      assessment.source.kind === 'clockedTraitPickup' &&
+      assessment.reason === 'sourceInactive'
+        ? [[semanticAddressKey(address), assessment.source.acquisitionIdentity] as const]
+        : [],
+    ),
+  );
   for (const { owner } of enteredRosters(assembly).values()) {
     for (const reference of occurrenceAt(project, owner)?.roomActions.order ?? []) {
       if (reference.kind !== 'interactAcquisitionEntry') continue;
@@ -463,13 +489,32 @@ function sourceGonePickups(assembly: ProjectEvaluationAssembly, artifacts: Candi
         removals.push({ owner, reference });
         continue;
       }
-      const address = createAcquisitionEntryAddress(
-        createAcquisitionSiteAddress(owner, reference.siteKey),
-        reference.entryKey,
+      const acquisitionIdentity = unheld.get(
+        semanticAddressKey(
+          createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(owner, reference.siteKey),
+            reference.entryKey,
+          ),
+        ),
       );
-      if (lostDrops.has(semanticAddressKey(address))) removals.push({ owner, reference });
+      if (acquisitionIdentity !== undefined) drops.push({ owner, reference, acquisitionIdentity });
     }
   }
+  if (drops.length === 0) return removals;
+  let without = project;
+  try {
+    for (const { owner, reference } of drops)
+      without = applyProjectCommand(without, catalog, roomActionRemovalCommand(owner, reference));
+  } catch (error) {
+    // A drop its removal command refuses cannot be judged; it stays with its finding.
+    if (error instanceof ProjectCommandContractError) return removals;
+    throw error;
+  }
+  const probe = evaluate(without);
+  if (probe.evaluation.issue !== undefined) return removals;
+  const held = heldDropProducers(probe);
+  for (const { owner, reference, acquisitionIdentity } of drops)
+    if (!held.has(acquisitionIdentity)) removals.push({ owner, reference });
   return removals;
 }
 
@@ -1158,7 +1203,7 @@ function settleProject(options: {
         ...staleRowsToRemove(before, beforeRosters, assembly, upgrade),
         ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly, upgrade),
         ...cageGoneRerolls(before, assembly, upgrade),
-        ...(upgrade ? sourceGonePickups(assembly, artifacts) : []),
+        ...(upgrade ? sourceGonePickups(catalog, assembly, evaluate) : []),
       ];
       if (stale.length === 0) return settled(assembly);
       const pass: { owner: OccurrenceAddress; reference: RoomActionReference; index: number }[] =

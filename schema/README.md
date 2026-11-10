@@ -36,17 +36,22 @@ rules for [rows whose context or source is gone](../docs/design/ROOM_LIFECYCLE_M
 and [exit capacity](../docs/design/AUTHORED_PROJECT_MODEL.md#exit-capacity)
 covered every edit. The migration only changes the version and accepts schema
 102 through its final revision 1. A plan saved before 103 is then settled once,
-by the application on opening and by the offline tool before writing: stale
-room-action rows go; a Gold Gold Gold duplicate whose Echo is gone, a matured
-trait drop whose trait the run no longer takes, a countdown Hermes delivery
-whose purchase is gone and a door or cage reroll whose cage no longer plays
-go; an unselected door its source room no longer has goes with the rooms
-behind it, and a takeover batch gains the Preboss doors it lacks. A Travel
-Deal refill without Travel Deal and a taken door its room lost stay with their
-findings, and rows of rooms the walk does not reach stay untouched. A due
-delivery the plan lacks is placed, as any edit places it. The application
-announces the removals and opens the plan one Undo ahead of it as saved. The
-plan wire's schema pair becomes 103.0.
+by the application on opening and by the offline tool before writing, removing
+only what the saved plan shows had its source or context and lost it: stale
+room-action rows; a Gold Gold Gold duplicate that a purchase stands before
+while no Echo produces it; a matured trait drop whose producing trait a walk
+without it, reaching the plan's end, never holds; a countdown Hermes delivery
+whose purchase is gone; a cage reroll whose cage the target room still holds
+authored but no longer plays; and an unselected door its source room no longer
+has, with the rooms behind it. A takeover batch gains the Preboss doors it
+lacks, and a due delivery the plan lacks is placed, as any edit places it.
+Rows whose loss the plan cannot show stay with their findings: every Travel
+Deal refill, a duplicate with no purchase before it, a drop whose producer is
+held or may lie past where the walk stops, a cage reroll at a cage its room
+never held, and a taken door its room lost. Rows the walk does not reach stay
+untouched. The application announces the removals and opens the plan one Undo
+ahead of it as saved; a settlement that throws opens the plan as saved with a
+settlement fault. The plan wire's schema pair becomes 103.0.
 
 Revision 102.1 gives every unset position a meaning: a rolled flip, an entry
 the game picks among ties, an anchor object's anchor, a Fields cage, optional

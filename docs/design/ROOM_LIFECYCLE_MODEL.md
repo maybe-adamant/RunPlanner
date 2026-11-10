@@ -575,13 +575,21 @@ Never removed:
 The **Reset from here** command is the explicit exception: it removes rows
 after a point at the owner's request, silently in its own room.
 
-A plan saved before schema 103 is settled once when it is opened, as this
-procedure would have left it: every row the walk reaches is judged as though
-it had just lost what it lacks, and every batch's doors settle. Rows the
-procedure keeps invalid stay with their findings, and rows the walk does not
-reach or of rooms the run does not enter stay untouched. Every removal is
-announced, and one Undo restores the plan as saved. A stale row a plan still
-holds, such as one that Undo restores, goes at the next edit of its room.
+A plan saved before schema 103 is settled once when it is opened, removing
+only what the saved plan itself shows had its context or source and lost it:
+every stale row the walk reaches; a Gold Gold Gold duplicate that a purchase
+stands before while no Echo produces it; a matured trait drop whose producing
+trait a walk without it never holds and that reaches the plan's end; a
+countdown delivery whose purchase is gone; and a cage reroll whose cage the
+target room still holds authored but no longer plays. Every batch's doors
+settle as above. Whatever the plan cannot show had its source stays with its
+finding, as the never-removed list keeps it: a Travel Deal refill, a duplicate
+with no purchase before it, a drop whose producer is held or may lie past
+where the walk stops, a cage reroll at a cage its room never held. Rows the
+walk does not reach and rows of rooms the run does not enter stay untouched.
+Every removal is announced, and one Undo restores the plan as saved. A stale
+row a plan still holds, such as one that Undo restores, goes at the next edit
+of its room.
 
 A batch's door is classified the same way: its context is its source room's
 declared exit, and the rooms behind a removed door go with it

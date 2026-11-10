@@ -173,6 +173,28 @@ describe('upgrade settlement of a plan saved under earlier rules', () => {
       expect(payload(settled.assembly.project)).toEqual(payload(project));
     });
 
+    it('keeps a Gold Gold Gold duplicate placed ahead of every purchase, invalid', () => {
+      const shop = createOccurrenceAddress(goldenIBiome, echoGoldIPrebossShopId);
+      const duplicate = roomActionKey({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: 'echoDoubleShopReward',
+      });
+      // An earlier build let the duplicate stand before the purchase it copies.
+      const document = raw(createEchoGoldIAnvilDuplicateProject());
+      const room = rawRoom(document, shop.occurrenceId);
+      const row = room.roomActions.order.find(
+        (action) => roomActionKey(action as never) === duplicate,
+      )!;
+      room.roomActions.order = [row, ...room.roomActions.order.filter((action) => action !== row)];
+      const project = decodeProjectDocument(document, catalog);
+      expect(order(project, shop)[0]).toBe(duplicate);
+      const settled = upgrade(project);
+      expect(settled.fault).toBeUndefined();
+      expect(order(settled.assembly.project, shop)).toEqual(order(project, shop));
+      expect(removedIn(settled, shop)).toBeUndefined();
+    });
+
     it('removes a matured trait drop whose trait the run no longer takes', () => {
       const p3 = createOccurrenceAddress(
         createBiomeAddress('Surface', 'P'),
@@ -414,5 +436,36 @@ describe('upgrade settlement of a plan saved under earlier rules', () => {
     expect(settled.fault).toBeUndefined();
     expect(rerolls(settled.assembly.project)).toEqual([]);
     expect(removedIn(settled, intro)).toEqual(rerolls(project));
+  });
+
+  it('keeps a cage reroll whose target room never held its cage, invalid', () => {
+    const h = createBiomeAddress('Underworld', 'H');
+    const intro = createOccurrenceAddress(h, createOccurrenceId('golden-h-intro'));
+    const combat02 = createOccurrenceId('golden-h-combat02');
+    const rerolls = (document: ProjectDocument) =>
+      order(document, intro).filter((key) => key.startsWith('["reroll"'));
+    const fields = withGoldenUnderworldJudgments(
+      withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll']),
+    );
+    // Pressed at the third cage while the room played two, with no third cage ever authored.
+    const pressed = raw(
+      saved(fields, {
+        kind: 'InsertReroll',
+        occurrence: intro,
+        target: { kind: 'cage', exitKey: 'exit1', occurrenceId: combat02, slotKey: 'cage3' },
+        reward: { rewardType: 'RoomMoneyDrop' },
+        index: order(fields, intro).length,
+      }),
+    );
+    const target = rawRoom(pressed, combat02) as unknown as {
+      state: { cages: Record<string, unknown> };
+    };
+    target.state.cages = { ...target.state.cages, cage3: null };
+    const project = decodeProjectDocument(pressed, catalog);
+    expect(findingCodes(project)).toContain('rerollTargetUnavailable');
+    const settled = upgrade(project);
+    expect(settled.fault).toBeUndefined();
+    expect(rerolls(settled.assembly.project)).toEqual(rerolls(project));
+    expect(removedIn(settled, intro)).toBeUndefined();
   });
 });
