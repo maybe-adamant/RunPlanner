@@ -1,4 +1,5 @@
 import {
+  createProjectAddress,
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
@@ -140,7 +141,24 @@ export function loadProjectDocument(
     return Object.freeze({ migrationProvenance: migrated.migrationProvenance, project: before });
   }
   // A plan saved under the earlier settlement rules is settled once, as they now would.
-  const settled = settleUpgradedProject(before, catalog);
+  let settled: ReturnType<typeof settleUpgradedProject>;
+  try {
+    settled = settleUpgradedProject(before, catalog);
+  } catch (error) {
+    // A settlement that throws is an engine defect, never a reason the plan cannot open: it
+    // opens as saved, with the fault reported where settlement faults are.
+    return Object.freeze({
+      migrationProvenance: migrated.migrationProvenance,
+      project: before,
+      upgrade: Object.freeze({
+        before,
+        fault: Object.freeze({
+          key: `upgradeSettlement:${error instanceof Error ? error.message : String(error)}`,
+          owner: createProjectAddress(),
+        }),
+      }),
+    });
+  }
   const project = settled.assembly.project;
   return Object.freeze({
     migrationProvenance: migrated.migrationProvenance,
