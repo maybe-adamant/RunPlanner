@@ -10,6 +10,7 @@ import {
   createShopOfferAddress,
   roomActionKey,
   semanticAddressKey,
+  sitesWithNemesisResultPickups,
   stygianWellGenerationItemKey,
   stygianWellGenerationTwistResultKey,
   type EncounterPhaseAddress,
@@ -21,6 +22,7 @@ import {
   type SemanticAddress,
   type FountainRarityOutcomeAddress,
 } from '@run-planner/engine/authored-project';
+import { requiredFirstTitle } from '@planner/projections/walkStopCopy';
 import type { WorkspaceDerivedAcquisitionEntry } from './occurrence-reward-assembly';
 import { observedChallengeSwitchKind } from './challenge-switch-assembly';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -57,7 +59,10 @@ import {
   occurrenceActionLabelParts,
 } from './occurrence-action-label';
 import { assembleFeatureRerollSlots } from './feature-roll-assembly';
-import { projectRoomLifecycleTimeline } from './occurrence-action-timeline-projection';
+import {
+  projectRoomLifecycleTimeline,
+  splitAtRoomStop,
+} from './occurrence-action-timeline-projection';
 import { projectSpawnedLoot } from './occurrence-spawned-loot-projection';
 import type { WorkspaceRoomTab } from '../contracts/navigation';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
@@ -108,9 +113,13 @@ export interface WorkspaceOccurrenceActionsInput {
   readonly gold?: import('@run-planner/engine/simulation').GoldLedger;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
+  /** Where the walk stopped inside this room, when the assessment blocks in it. */
+  readonly roomStop?: import('../source-index').WorkspaceRoomStop;
   readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
   /** The loot the room spawns on its own, by moment and source action. */
   readonly spawnedLoot?: import('@run-planner/engine/simulation').RoomSpawnedLoot;
+  /** Each phase's Encounter outcome that hosts a choice. */
+  readonly encounterOutcomes?: readonly import('@run-planner/engine/simulation').EncounterOutcome[];
 }
 
 /** The Phial target control for one fountain use; pending until the engine requires a target. */
@@ -296,19 +305,29 @@ function roomActionsForOccurrence(
             windowIdentity(blocker.window),
             windowIdentity(blocker.precedingWindow),
           ]
-        : [
-            blocker.kind,
-            roomActionKey(blocker.reference),
-            blocker.dependency.kind,
-            blocker.dependency.kind === 'afterAction'
-              ? roomActionKey(blocker.dependency.action)
-              : blocker.dependency.checkpointKey,
-            blocker.checkpointUnavailable === true,
-          ],
+        : blocker.kind === 'requiredFirst'
+          ? [
+              blocker.kind,
+              roomActionKey(blocker.reference),
+              roomActionKey(blocker.requiredAction),
+              windowIdentity(blocker.window),
+              windowIdentity(blocker.requiredWindow),
+            ]
+          : [
+              blocker.kind,
+              roomActionKey(blocker.reference),
+              blocker.dependency.kind,
+              blocker.dependency.kind === 'afterAction'
+                ? roomActionKey(blocker.dependency.action)
+                : blocker.dependency.checkpointKey,
+              blocker.checkpointUnavailable === true,
+            ],
     );
   const existingBlockers = new Set(
     roster.issues.flatMap((issue) =>
-      issue.kind === 'dependency' || issue.kind === 'window' ? [blockerIdentity(issue)] : [],
+      issue.kind === 'dependency' || issue.kind === 'window' || issue.kind === 'requiredFirst'
+        ? [blockerIdentity(issue)]
+        : [],
     ),
   );
   const explanationFor = (
@@ -324,11 +343,13 @@ function roomActionsForOccurrence(
       roomActionKey(blocker.reference) === proposedKey ||
       (blocker.kind === 'window'
         ? roomActionKey(blocker.precedingAction) === proposedKey
-        : blocker.dependency.kind === 'afterAction' &&
-          roomActionKey(blocker.dependency.action) === proposedKey);
-    // The most direct blockers first: a dependency of the moved action, then its window.
+        : blocker.kind === 'requiredFirst'
+          ? roomActionKey(blocker.requiredAction) === proposedKey
+          : blocker.dependency.kind === 'afterAction' &&
+            roomActionKey(blocker.dependency.action) === proposedKey);
+    // The most direct blockers first: what must precede the moved action, then its window.
     const rank = (entry: Blocker) =>
-      (concernsProposal(entry) ? 0 : 2) + (entry.kind === 'dependency' ? 0 : 1);
+      (concernsProposal(entry) ? 0 : 2) + (entry.kind === 'window' ? 1 : 0);
     const ranked = [...candidates].sort((left, right) => rank(left) - rank(right));
     const prefix = introduced.length === 0 ? 'Existing timeline issue: ' : '';
     return Object.freeze(
@@ -343,6 +364,8 @@ function roomActionsForOccurrence(
     if (blocker.kind === 'window') {
       const movedPreceding = roomActionKey(blocker.precedingAction) === proposedKey;
       explanation = `${movedPreceding ? actionLabel(blocker.precedingAction) : label} belongs ${windowLabel(movedPreceding ? blocker.precedingWindow : blocker.window)}.`;
+    } else if (blocker.kind === 'requiredFirst') {
+      explanation = `${requiredFirstTitle(actionLabel(blocker.requiredAction))}.`;
     } else if (blocker.dependency.kind === 'afterAction') {
       const prerequisite = blocker.dependency.action;
       const movingDependent = roomActionKey(blocker.reference) === proposedKey;
@@ -436,6 +459,16 @@ function roomActionsForOccurrence(
       : Object.freeze({ ...control, ...children });
   };
   const purchaseRowProducts = shopPurchaseRowProducts(input, roomLocal, features);
+  // A Nemesis result's collect names what her outcome spawns, not her offer.
+  const pickupSites = sitesWithNemesisResultPickups(
+    input.catalog,
+    input.occurrence,
+    input.biome.routeKey,
+  );
+  const labelOccurrence =
+    pickupSites === input.occurrence.acquisitionSites || pickupSites === undefined
+      ? input.occurrence
+      : Object.freeze({ ...input.occurrence, acquisitionSites: pickupSites });
   const projectedRows = Object.freeze(
     presentedRows.map((row) => {
       const address = createRoomActionAddress(input.biome, input.occurrence.occurrenceId, row.key);
@@ -572,7 +605,7 @@ function roomActionsForOccurrence(
         roomLocal,
         encounterPhases,
         resolvedRewardControl,
-        input.occurrence,
+        labelOccurrence,
         input.occurrence.purgingPool?.traitKeyBySlot,
         sourceFamily,
         input.rerollTargetLabel,
@@ -1096,8 +1129,16 @@ function roomActionsForOccurrence(
   const optionalRows = Object.freeze(
     unplacedOptionalRows.filter((row) => !spawnPlacedKeys.has(row.key)),
   );
+  // The Timeline ends where the room's walk stops; what spawns past it is not yet shown.
+  const stop = splitAtRoomStop(spawned.entries, lifecycleTimeline.entries, input);
   return Object.freeze({
-    timeline: Object.freeze({ ...projectedTimeline, entries: spawned.entries }),
+    timeline: Object.freeze({
+      ...projectedTimeline,
+      entries: stop?.reached ?? spawned.entries,
+      ...(stop === undefined ? {} : { notReached: stop.notReached }),
+      ...(stop?.waitsOn === undefined ? {} : { waitsOn: stop.waitsOn }),
+      ...(stop?.doorsWait === undefined ? {} : { doorsWait: stop.doorsWait }),
+    }),
     ...(spawned.actionSpawns.length === 0 ? {} : { actionSpawns: spawned.actionSpawns }),
     ...(spawned.copies.length === 0 ? {} : { spawnCopies: spawned.copies }),
     checkpoints: Object.freeze(

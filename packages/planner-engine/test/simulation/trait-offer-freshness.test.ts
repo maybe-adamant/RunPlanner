@@ -1031,6 +1031,7 @@ describe('room rewards created before combat', () => {
     const realRoom = materializeAuthoredRoom({
       catalog,
       biome: underworldH,
+      topology: project.route!.biomes.find((biome) => biome.biomeKey === 'H')!.topology!,
       routePosition,
       room: declaration,
       occurrence,
@@ -1049,6 +1050,7 @@ describe('room rewards created before combat', () => {
         phaseKind: 'miniboss' as const,
         execution: 'skippedByFigLeaf' as const,
         figLeafSkipOwner: true,
+        endEffects: 'applied' as const,
         operationIndex: sequence,
         sequence,
       });

@@ -605,14 +605,11 @@
   background: color-mix(in srgb, var(--selection-accent) 7%, transparent);
 }
 
-.biome-rail-node[data-assessment='unassessed'] {
+/* A stop past the walk's stop stays on the rail, dimmed, until the walk reaches it. */
+.biome-rail-node[data-not-reached='true'] {
   border-style: dashed;
   color: #aaa7af;
-  opacity: 0.6;
-}
-
-.biome-rail-node[data-assessment='blocked'] {
-  opacity: 0.66;
+  opacity: 0.55;
 }
 
 .biome-rail-node[data-findings='true']:not([data-selected='true']) {

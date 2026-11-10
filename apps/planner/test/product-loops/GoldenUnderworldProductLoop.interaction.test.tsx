@@ -663,7 +663,7 @@ describe('underworld product loop', () => {
     ).toBe(false);
   });
 
-  it('keeps a blocked downstream biome visible but prevents authoring it', async () => {
+  it('keeps a blocked downstream biome on the rail, its rooms waiting, with a link to the stop', async () => {
     const application = createApplication({
       projectLibrary: createMemoryProjectLibrary().adapter,
     });
@@ -689,11 +689,15 @@ describe('underworld product loop', () => {
         .getElementById(oceanus.getAttribute('aria-describedby') ?? '')
         ?.getAttribute('aria-label'),
     ).toBe('Blocked');
-    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const start = screen.getByRole('button', { name: 'Door 1 room' });
-    expect(start.getAttribute('aria-disabled')).toBe('true');
+    // Past the walk's stop its opening shows only the way back to where the walk stopped.
+    expect(screen.queryByRole('tab', { name: 'Room Timeline' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Door 1 room' })).toBeNull();
     const before = currentProject(application);
-    await view.user.click(start);
+    await view.user.click(stopLink(document.body));
+    expect(application.store.getState().editorSession.activePanel).toEqual({
+      kind: 'biome',
+      biomeKey: 'F',
+    });
     const g = currentProject(application).route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(g?.topology?.occurrences).toHaveLength(1);
     expect(currentProject(application)).toBe(before);
@@ -1070,3 +1074,10 @@ describe('underworld product loop', () => {
     });
   });
 });
+
+/** The stop notice's link to where the plan stops. */
+function stopLink(scope: ParentNode): HTMLButtonElement {
+  const link = scope.querySelector<HTMLButtonElement>('[data-stop-notice] button');
+  if (link === null) throw new Error('no stop notice link');
+  return link;
+}

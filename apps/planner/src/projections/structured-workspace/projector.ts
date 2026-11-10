@@ -48,6 +48,7 @@ import {
   rerollSurfaceForProjectEvaluationAssembly,
   hubStaysForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
+  encounterOutcomesForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -61,8 +62,9 @@ import { assembleWorkspaceBiomeSemantics } from './assembly/biome-semantic-assem
 import { requireWorkspaceRoom } from './assembly/catalog-room';
 import { projectRoutePlanEnd } from './assembly/plan-end-assembly';
 import { presentWorkspaceBiome } from './presentation/biome-presentation';
-import { roomLocationLabel } from './presentation/room-location';
+import { roomPlace } from './presentation/room-location';
 import { registerWorkspaceFindingDestinations } from './navigation/finding-routing';
+import { walkStopOf } from '@planner/projections/evaluationProjection';
 import {
   indexFindingsByRepairTarget,
   indexTraitDialogFindings,
@@ -393,6 +395,16 @@ export function createStructuredWorkspaceProjection(
         (occurrence) => {
           try {
             return spawnedLootForProjectEvaluationAssembly(catalog, assembly, occurrence);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return undefined;
+            }
+            throw error;
+          }
+        },
+        (occurrence) => {
+          try {
+            return encounterOutcomesForProjectEvaluationAssembly(catalog, assembly, occurrence);
           } catch (error) {
             if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
               return undefined;
@@ -745,7 +757,12 @@ export function createStructuredWorkspaceProjection(
             : [],
         ),
       ]);
-      const routePlanEnd = projectRoutePlanEnd(catalog, authoredRoute, routeSource.evaluation);
+      const routePlanEnd = projectRoutePlanEnd(
+        catalog,
+        authoredRoute,
+        routeSource.evaluation,
+        routeSource.roomLocation,
+      );
       const route = Object.freeze({
         runModifiers: bindRunModifiers(catalog, project, evaluation, devBuild),
         ...(fixedLoadout ? {} : { startingReward }),
@@ -792,7 +809,7 @@ export function createStructuredWorkspaceProjection(
                       ?.planEndRelation(placement.occurrenceId) === 'pastEnd'
                       ? { pastPlanEnd: true as const }
                       : {}),
-                    ...roomLocationLabel(catalog, placementAddress, routeSource.roomLocation),
+                    ...roomPlace(catalog, placementAddress, routeSource.roomLocation),
                   });
             const placementRoom =
               placementAddress === undefined
@@ -840,7 +857,10 @@ export function createStructuredWorkspaceProjection(
       });
       registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, route);
       const projectAddress = { kind: 'project' as const };
+      const walkStop = walkStopOf(catalog, evaluation.route.issue, focusByOwner, route);
       const result = Object.freeze({
+        ...(walkStop === undefined ? {} : { walkStop }),
+        roomActionLabel: roomActionLabels(route),
         authoringReadiness: (owner: SemanticAddress) => authoringReadinessAt(assembly, owner),
         focusByOwner,
         findingsByRepairTarget: indexFindingsByRepairTarget(
@@ -864,4 +884,22 @@ export function createStructuredWorkspaceProjection(
       return result;
     },
   });
+}
+
+/** Each projected room's Timeline row labels, read by the room holding an owner. */
+function roomActionLabels(
+  route: import('./contracts/structure').WorkspaceRoute,
+): import('./contracts/structure').StructuredWorkspaceProjection['roomActionLabel'] {
+  const rows = new Map<string, ReadonlyMap<string, string>>();
+  for (const biome of route.biomes)
+    for (const node of [...biome.nodes, ...biome.completionOutline])
+      if (node.kind === 'occurrenceWorkbench' && node.room.roomActions !== undefined)
+        rows.set(
+          `${biome.biomeKey}\u0000${node.room.occurrenceId}`,
+          new Map(node.room.roomActions.rows.map((row) => [row.key, row.label] as const)),
+        );
+  return (owner, actionKey) =>
+    'biomeKey' in owner && 'occurrenceId' in owner
+      ? rows.get(`${owner.biomeKey}\u0000${owner.occurrenceId}`)?.get(actionKey)
+      : undefined;
 }

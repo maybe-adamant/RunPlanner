@@ -56,16 +56,17 @@ describe('room action proposal blockers', () => {
       }),
     ]);
   });
-  it('retains the actual dependency pair even when an unrelated action is inserted or moved', () => {
+  it('retains the prefix dependency pair for an unrelated insertion or move after it, and none before it', () => {
+    const contributions = [
+      action(first),
+      action(second, [{ kind: 'afterAction', action: first }]),
+      action(other),
+    ];
     const roster = assembleRoomActionRoster({
       owner,
       lifecycleStructure: structure,
       order: [second, first],
-      contributions: [
-        action(first),
-        action(second, [{ kind: 'afterAction', action: first }]),
-        action(other),
-      ],
+      contributions,
     });
     const insert = roster.proposals.find((p) => p.kind === 'insert' && p.toIndex === 2)!;
     expect(insert.structurallyAuthorable).toBe(false);
@@ -76,17 +77,22 @@ describe('room action proposal blockers', () => {
         dependency: { kind: 'afterAction', action: first },
       }),
     ]);
-    const move = assembleRoomActionRoster({
+    // Before the invalid row the walk has not reached it yet.
+    expect(roster.proposals.find((p) => p.kind === 'insert' && p.toIndex === 0)).toMatchObject({
+      structurallyAuthorable: true,
+      blockers: [],
+    });
+    const moves = assembleRoomActionRoster({
       owner,
       lifecycleStructure: structure,
       order: [second, first, other],
-      contributions: [
-        action(first),
-        action(second, [{ kind: 'afterAction', action: first }]),
-        action(other),
-      ],
-    }).proposals.find((p) => p.kind === 'move' && p.fromIndex === 2 && p.toIndex === 0)!;
-    expect(move.blockers).toEqual(insert.blockers);
+      contributions,
+    }).proposals.filter((p) => p.kind === 'move' && p.fromIndex === 2);
+    expect(moves.find((p) => p.toIndex === 1)!.blockers).toEqual(insert.blockers);
+    expect(moves.find((p) => p.toIndex === 0)).toMatchObject({
+      structurallyAuthorable: true,
+      blockers: [],
+    });
     expect(
       roster.proposals
         .filter((p) => p.structurallyAuthorable)
@@ -186,13 +192,19 @@ describe('room action proposal blockers', () => {
       reference: RoomActionReference,
       window: RoomActionWindow,
     ): RoomActionContribution => ({ ...action(reference, [], window), participation: 'required' });
+    const extra: RoomActionReference = { kind: 'interactEncounter', phaseKey: 'extra' };
     const roster = assembleRoomActionRoster({
       owner,
       lifecycleStructure: structure,
-      // The retained afterCombat row has a later contribution ordinal than the missing one.
-      order: [first, other],
-      contributions: [required(first, before), required(second, after), action(other)],
-      canonicalRequiredInsertions: [{ actionKey: roomActionKey(second), toIndex: 1 }],
+      // The retained before-combat row follows an after-combat one: its own window issue.
+      order: [other, first, extra],
+      contributions: [
+        required(first, before),
+        required(second, after),
+        action(other),
+        action(extra),
+      ],
+      canonicalRequiredInsertions: [{ actionKey: roomActionKey(second), toIndex: 3 }],
     });
     const inserts = roster.proposals.filter(
       (proposal) => proposal.kind === 'insert' && proposal.reference === second,
@@ -204,10 +216,24 @@ describe('room action proposal blockers', () => {
         proposal.canonical,
       ]),
     ).toEqual([
+      // Ahead of the required before-combat row, the walk does not reach the insertion.
       [0, false, undefined],
-      [1, true, true],
-      [2, true, undefined],
+      [1, false, undefined],
+      // Past it, the retained row's own window issue is in the prefix.
+      [2, false, undefined],
+      // The default restore stays authorable past the retained issue.
+      [3, true, true],
     ]);
-    expect(inserts[0]?.blockers).toEqual([expect.objectContaining({ kind: 'window' })]);
+    expect(inserts[0]?.blockers).toEqual([
+      expect.objectContaining({ kind: 'requiredFirst', reference: second, requiredAction: first }),
+    ]);
+    expect(inserts[1]?.blockers).toEqual([
+      expect.objectContaining({ kind: 'requiredFirst', reference: other, requiredAction: first }),
+      expect.objectContaining({ kind: 'requiredFirst', reference: second, requiredAction: first }),
+    ]);
+    expect(inserts[2]?.blockers).toEqual([
+      expect.objectContaining({ kind: 'window', reference: first }),
+    ]);
+    expect(inserts[3]?.blockers).toEqual([]);
   });
 });

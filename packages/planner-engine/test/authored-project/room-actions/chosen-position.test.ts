@@ -82,7 +82,7 @@ describe('placing actions at a chosen index', () => {
       });
     expect(at(0)).toMatchObject({
       kind: 'refused',
-      reason: expect.stringMatching(/crosses a fixed lifecycle window/),
+      reason: expect.stringMatching(/a required action of an earlier window/),
     });
     expect(
       placeRoomActionsAtChosenIndex(

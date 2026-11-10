@@ -60,7 +60,11 @@ function quickBuckOpening() {
       project.route.loadout.startingReward,
       occurrence.startingRewardAcquisition,
     ) ?? undefined;
-  return { occurrence, startingReward };
+  return {
+    occurrence,
+    startingReward,
+    topology: project.route.biomes.find((candidate) => candidate.biomeKey === 'N')!.topology!,
+  };
 }
 
 function quickBuckProducer(): SelectedPickupProducer {
@@ -223,7 +227,7 @@ describe('acquisition entry source family', () => {
 
 describe('stale room-action row source family', () => {
   it('names a stale pickup row’s source from its key or its retained producer', () => {
-    const { occurrence, startingReward } = quickBuckOpening();
+    const { occurrence, startingReward, topology } = quickBuckOpening();
     const producer = quickBuckProducer();
     const quickBuck = {
       kind: 'interactAcquisitionEntry' as const,
@@ -266,6 +270,7 @@ describe('stale room-action row source family', () => {
     const domain = assembleRoomActionDomain({
       catalog,
       biome: nBiome,
+      topology,
       occurrence: retained,
       routePosition: ordinaryPositionFor(catalog, nBiome),
       ...(startingReward === undefined ? {} : { incomingRewardState: startingReward }),

@@ -66,6 +66,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import {
+  createUnderworldFWellCheckpoint,
   goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
@@ -1450,6 +1451,54 @@ describe('structured workspace actions assembly', () => {
         .filter((row) => row.rank !== null)
         .map((row) => row.rewardPayload?.showOffer),
     ).toEqual([false, false, false]);
+  });
+
+  it('explains a position ahead of a required action of an earlier window', () => {
+    const postboss = createOccurrenceId('golden-f-preboss-shop:postboss');
+    const room = assemble(createUnderworldFWellCheckpoint(false), 'Underworld', 'F', postboss)
+      .assembly.node.room;
+    const ahead = room.roomActions?.proposals.find(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.reference.kind === 'purchaseStygianWellOffer' &&
+        proposal.toIndex === 0,
+    );
+    const fountain = room.roomActions?.rows.find((row) => row.reference.kind === 'useFountain');
+    expect(fountain?.label).toEqual(expect.any(String));
+    expect(ahead).toMatchObject({
+      structurallyAuthorable: false,
+      explanations: [`${fountain?.label} must come first.`],
+    });
+  });
+
+  it('reads a required-first problem already in the order as an existing issue', () => {
+    const postboss = createOccurrenceId('golden-f-preboss-shop:postboss');
+    const initial = createUnderworldFWellCheckpoint(false);
+    const purchase = initial.route.biomes
+      .find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === postboss)
+      ?.roomActions.order.find((reference) => reference.kind === 'purchaseStygianWellOffer');
+    if (purchase === undefined) throw new Error('missing Well purchase');
+    // The saved order already buys at the Well before the fountain.
+    const project = applyProjectCommand(initial, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(goldenFBiome, postboss, roomActionKey(purchase)),
+      toIndex: 0,
+    });
+    const room = assemble(project, 'Underworld', 'F', postboss).assembly.node.room;
+    const fountain = room.roomActions?.rows.find((row) => row.reference.kind === 'useFountain');
+    // The rack takes no part in window order; moving it right after the purchase keeps the
+    // purchase ahead of the fountain, a problem the move did not make.
+    const rack = room.roomActions?.proposals.find(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.reference.kind === 'interactKeepsakeRack' &&
+        proposal.toIndex === 1,
+    );
+    expect(rack).toMatchObject({
+      structurallyAuthorable: false,
+      explanations: [`Existing timeline issue: ${fountain?.label} must come first.`],
+    });
   });
 
   it('proposes an unranked Travel refill immediately after its source purchase', () => {

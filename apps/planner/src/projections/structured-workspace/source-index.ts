@@ -13,6 +13,7 @@ import {
   createLocalVisitDecisionAddress,
   createLocalVisitOrderAddress,
   createOccurrenceAddress,
+  createHubRunStateCheckpointAddress,
   createRoomRunStateCheckpointAddress,
   routeStartIncomingReward,
   ixionGeneratedChaosOccurrenceKeys,
@@ -30,6 +31,7 @@ import {
   type EncounterPhaseAddress,
   type HubDecision,
   type HubDecisionAddress,
+  type HubRoomAddress,
   type OccurrenceId,
   type OccurrenceAddress,
   type ProjectDocument,
@@ -91,6 +93,15 @@ export interface WorkspaceEvaluatedBatchOverlay {
   readonly partial: boolean;
 }
 
+/** Where the walk stopped inside the room an assessment blocks in, as the engine publishes it. */
+export interface WorkspaceRoomStop {
+  readonly kind: 'overview' | 'timeline' | 'exit';
+  /** The room's lifecycle Timeline entry the walk stopped at; later entries are unreached. */
+  readonly entryIndex: number;
+  /** `entry`: the walk reached that entry and blocks on its own contact; `before`: it did not. */
+  readonly at: 'entry' | 'before';
+}
+
 export interface WorkspaceBiomeSource {
   readonly structuralPlacementRepairs: (
     owner: OccurrenceAddress,
@@ -139,6 +150,15 @@ export interface WorkspaceBiomeSource {
   readonly isAssessed: (owner: SemanticAddress) => boolean;
   /** Engine-published Timeline rows of the product a room's assessment stops at. */
   readonly blockingRowKeys: (owner: OccurrenceAddress) => ReadonlySet<string> | undefined;
+  /** Where the walk stopped inside this room, when the assessment blocks in it. */
+  readonly roomStop: (owner: OccurrenceAddress) => WorkspaceRoomStop | undefined;
+  /**
+   * Whether a room or Hub lies before the walk's stop: false only where the walk stops
+   * earlier in the route and never entered it.
+   */
+  readonly walkReached: (room: OccurrenceAddress | HubRoomAddress) => boolean;
+  /** The walk stops in an earlier biome, before this one starts. */
+  readonly walkStopsBefore: boolean;
   /** Exact engine-reached trait child coverage; authored dormant children stay retained. */
   readonly isActiveTraitOffer: (
     owner: import('@run-planner/engine/authored-project').TraitOfferAddress,
@@ -191,6 +211,10 @@ export interface WorkspaceBiomeSource {
   readonly spawnedLoot: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomSpawnedLoot | undefined;
+  /** Each phase's Encounter outcome that hosts a choice; undefined while unentered. */
+  readonly encounterOutcomes: (
+    occurrence: OccurrenceAddress,
+  ) => readonly import('@run-planner/engine/simulation').EncounterOutcome[] | undefined;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
@@ -267,6 +291,8 @@ export interface WorkspaceBiomeSource {
   readonly roomLocation: (
     room: OccurrenceAddress,
   ) => { readonly gameName: string; readonly runDepth?: number } | undefined;
+  /** The Hub's run depth (its Location) on its first entry, where the plan reaches it. */
+  readonly hubRunDepth: (hub: HubRoomAddress) => number | undefined;
   /** Where a room stands against the plan's end: the end room, or a room past it. */
   readonly planEndRelation: (occurrenceId: OccurrenceId) => WorkspacePlanEndRelation | undefined;
   /** The whole biome lies after the biome the plan ends in. */
@@ -769,6 +795,7 @@ function createWorkspaceBiomeSource(
   stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'],
   resourceAuthoring: RouteResourceAuthoring,
   roomLocation: WorkspaceBiomeSource['roomLocation'],
+  hubRunDepth: WorkspaceBiomeSource['hubRunDepth'],
   acquisitionConversionCandidate: WorkspaceBiomeSource['acquisitionConversionCandidate'],
   chaosAssessment: WorkspaceBiomeSource['chaosAssessment'],
   chaosGateForced: WorkspaceBiomeSource['chaosGateForced'],
@@ -787,6 +814,7 @@ function createWorkspaceBiomeSource(
   roomAnchorSlots: WorkspaceBiomeSource['roomAnchorSlots'],
   roomLayout: WorkspaceBiomeSource['roomLayout'],
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'],
+  encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -911,6 +939,31 @@ function createWorkspaceBiomeSource(
     ).map((outcome) => [semanticAddressKey(outcome.address), outcome] as const),
   );
   const pastPlanEnd = planEnd.afterPlanEnd.has(plan.biomeKey);
+  // The rooms the walk entered, in a biome where it stops; a biome it never starts
+  // (later in the route, or stopped at its start) entered none. Past the plan end
+  // nothing is walked, and the plan end presents those rooms itself.
+  const walkedRooms =
+    evaluation === undefined
+      ? pastPlanEnd
+        ? undefined
+        : new Set<string>()
+      : evaluation.coverage.kind === 'complete' || evaluation.authoring === 'ended'
+        ? undefined
+        : new Set(
+            'history' in evaluation
+              ? evaluation.history.rooms.map((room) => semanticAddressKey(room.origin))
+              : [],
+          );
+  // A biome the walk stops at the start of stops in its entry room's Overview.
+  const startStop =
+    evaluation?.coverage.kind === 'none' && topology !== null
+      ? semanticAddressKey(createOccurrenceAddress(biome, topology.startOccurrenceId))
+      : undefined;
+  const walkReached = (room: OccurrenceAddress | HubRoomAddress): boolean => {
+    if (walkedRooms === undefined) return true;
+    const key = semanticAddressKey(room);
+    return walkedRooms.has(key) || key === startStop;
+  };
   const endOccurrenceId =
     planEnd.endRoom?.biomeKey === plan.biomeKey ? planEnd.endRoom.occurrenceId : undefined;
   // In the biome the plan ends in, the engine locks exactly what lies past the end.
@@ -1055,6 +1108,15 @@ function createWorkspaceBiomeSource(
         ? new Set(timeline.blockingRowKeys)
         : undefined;
     },
+    roomStop: (owner: OccurrenceAddress) => {
+      const stop =
+        evaluation?.coverage.kind === 'prefix' ? evaluation.coverage.roomStop : undefined;
+      if (stop === undefined || semanticAddressKey(stop.room) !== semanticAddressKey(owner))
+        return undefined;
+      return Object.freeze({ kind: stop.kind, entryIndex: stop.entryIndex, at: stop.at });
+    },
+    walkReached,
+    walkStopsBefore: evaluation === undefined && !pastPlanEnd,
     isActiveTraitOffer,
     isActiveInventoryOffer,
     shopOfferAssessment,
@@ -1069,6 +1131,7 @@ function createWorkspaceBiomeSource(
     roomAnchorSlots,
     roomLayout,
     spawnedLoot,
+    encounterOutcomes,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -1102,6 +1165,7 @@ function createWorkspaceBiomeSource(
     plan,
     resourceAuthoring,
     roomLocation,
+    hubRunDepth,
     runState: (owner: RunStateOwner) => {
       const availability = runStateAvailability.get(semanticAddressKey(owner));
       if (availability === undefined) return undefined;
@@ -1166,6 +1230,7 @@ export function createWorkspaceProjectSourceIndex(
   roomAnchorSlots: WorkspaceBiomeSource['roomAnchorSlots'] = () => undefined,
   roomLayout: WorkspaceBiomeSource['roomLayout'] = () => undefined,
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'] = () => undefined,
+  encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1209,6 +1274,11 @@ export function createWorkspaceProjectSourceIndex(
         );
     return Object.freeze({ gameName, ...(runDepth === undefined ? {} : { runDepth }) });
   };
+  const hubRunDepth = (hub: HubRoomAddress) =>
+    planEnd.afterPlanEnd.has(hub.biomeKey) ||
+    (planEnd.endRoom?.biomeKey === hub.biomeKey && planEnd.readiness(hub) === 'locked')
+      ? undefined
+      : enteredRunDepths.get(semanticAddressKey(createHubRunStateCheckpointAddress(hub)));
   return Object.freeze({
     route: Object.freeze({
       biomes: Object.freeze(
@@ -1232,6 +1302,7 @@ export function createWorkspaceProjectSourceIndex(
             stygianWellAssessment,
             resources,
             roomLocation,
+            hubRunDepth,
             acquisitionConversionCandidate,
             chaosAssessment,
             (owner) => ixionGeneratedChaos.has(semanticAddressKey(owner)),
@@ -1250,6 +1321,7 @@ export function createWorkspaceProjectSourceIndex(
             roomAnchorSlots,
             roomLayout,
             spawnedLoot,
+            encounterOutcomes,
           ),
         ),
       ),

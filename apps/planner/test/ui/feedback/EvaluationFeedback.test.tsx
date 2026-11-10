@@ -59,7 +59,7 @@ it.each(['Decision 1', 'Decision 3'])(
     const target = workspace.focusByOwner.get(semanticAddressKey(frontier.owner));
     expect(target).toBeDefined();
     expect(findingDestinationLabel(catalog, frontier.owner, target, workspace.route)).toMatch(
-      new RegExp(`^${fields.label} · Location ${predecessor.runDepth} · `),
+      new RegExp(`^Location ${predecessor.runDepth} · `),
     );
   },
 );
@@ -129,10 +129,11 @@ it('names rail destinations by Location for decision, room, and Hub visit stops'
           target,
           workspace.route,
         );
-        // Reached rooms read by their Location; the Hub and stops without a room keep a title.
+        // Reached stops read by their Location, their own name after it; never by their biome.
         if ('runDepth' in stop && stop.runDepth !== undefined)
-          expect(label.startsWith(`${biome.label} · Location ${stop.runDepth} · `)).toBe(true);
-        else expect(label).toBe(`${biome.label} · ${stop.label}`);
+          expect(label).toMatch(new RegExp(`^Location ${stop.runDepth} · `));
+        else expect(label).toMatch(new RegExp(`^(Location \\d+ · )?${stop.label}$`));
+        expect(label).not.toContain(biome.label);
         labels.push(stop.label);
       }
     }

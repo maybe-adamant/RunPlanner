@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
+import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { hintOf } from '@planner-test/support/hints';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -79,12 +80,14 @@ function renderProjectedBiome(application: PlannerApplication, biome: WorkspaceB
   const workspace = workspaceProjection(application);
   return render(
     <Provider store={application.store}>
-      <BiomeWorkspace
-        biome={biome}
-        focusByOwner={workspace.focusByOwner}
-        interactions={workspace.interactions}
-        runStateLaunchers={workspace.runStateLaunchers}
-      />
+      <FindingTargetScope findings={workspace.findingsByRepairTarget} walkStop={workspace.walkStop}>
+        <BiomeWorkspace
+          biome={biome}
+          focusByOwner={workspace.focusByOwner}
+          interactions={workspace.interactions}
+          runStateLaunchers={workspace.runStateLaunchers}
+        />
+      </FindingTargetScope>
     </Provider>,
   );
 }
@@ -202,7 +205,7 @@ function keyboardReorder(scope: HTMLElement, row: string, place: RegExp): void {
 }
 
 describe('Biome inspector controls', () => {
-  it('locks the F opening identity behind an incomplete route-start result', async () => {
+  it('shows only that the F opening is not reached behind an incomplete route-start result', () => {
     const occurrenceId = createOccurrenceId('locked-start-identity');
     let project = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
       biome: goldenFBiome,
@@ -215,23 +218,14 @@ describe('Biome inspector controls', () => {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
     });
-    const view = renderWorkspace(project, 'Underworld', 'F');
-    const identity = screen.getByRole('region', { name: 'Start room configuration' });
-    const room = within(identity).getByRole('button', { name: 'Room' });
-    if (!(room instanceof HTMLButtonElement))
-      throw new Error('opening identity control is not a button');
-    expect(room.disabled).toBe(true);
-    expect(within(identity).queryByRole('button', { name: 'Reward' })).toBeNull();
-
-    const historyBefore = view.application.store.getState().projectWorkspace.history;
-    await view.user.click(room);
-    const roomLabel = identity.querySelector<HTMLLabelElement>(
-      `label[for="${room.getAttribute('id') ?? ''}"]`,
-    );
-    if (roomLabel === null) throw new Error('opening room label is missing');
-    await view.user.click(roomLabel);
-    expect(screen.queryByRole('listbox')).toBeNull();
-    expect(view.application.store.getState().projectWorkspace.history).toBe(historyBefore);
+    renderWorkspace(project, 'Underworld', 'F');
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    expect(
+      within(inspector).queryByRole('region', { name: 'Start room configuration' }),
+    ).toBeNull();
+    expect(within(inspector).queryByRole('tab')).toBeNull();
+    expect(inspector.querySelector('article[data-not-reached]')).not.toBeNull();
+    expect(stopLink(inspector)).toBeTruthy();
   });
 
   it('edits entry identity in Overview only and undoes exactly', async () => {
@@ -410,7 +404,7 @@ describe('Biome inspector controls', () => {
     );
   });
 
-  it('names a placement the plan does not reach by its room, its Location unknown', async () => {
+  it('names a placement the plan does not reach by its room', async () => {
     const project = applyProjectCommand(loadSurfaceNResourcesProject(), catalog, {
       kind: 'ReplacePlanEnd',
       route: createRouteAddress('Surface'),
@@ -428,22 +422,18 @@ describe('Biome inspector controls', () => {
     )?.currentPlacement;
     if (unreached === undefined) throw new Error('resource placed past the plan end is missing');
     expect(unreached.runDepth).toBeUndefined();
-    expect(unreached.locationLabel).toContain('Location ?');
-    expect(unreached.roomLabel).toBeTypeOf('string');
-    expect(unreached.locationLabel).not.toContain(unreached.roomLabel!);
+    expect(unreached.place.text).not.toMatch(/Location|Ephyra/);
+    expect(unreached.place.hint).toBeUndefined();
     // The route's Resources index names the placement as the marker does.
     const indexed = workspaceProjection(view.application).route.resources.find(
       (resource) =>
         resource.placement?.biomeKey === unreached.biomeKey &&
         resource.placement.occurrenceId === unreached.address.occurrenceId,
     )?.placement;
-    expect(indexed).toMatchObject({
-      locationLabel: unreached.locationLabel,
-      roomLabel: unreached.roomLabel,
-    });
+    expect(indexed?.place).toEqual(unreached.place);
   });
 
-  it('names a reached placement in the route Resources index by its biome and Location', () => {
+  it('names a reached placement in the route Resources index by its Location', () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
     const placed = workspaceProjection(view.application).route.resources.flatMap((resource) =>
       resource.placement === undefined ? [] : [resource.placement],
@@ -451,8 +441,8 @@ describe('Biome inspector controls', () => {
     expect(placed.length).toBeGreaterThan(0);
     for (const placement of placed) {
       expect(placement.runDepth).toBeTypeOf('number');
-      expect(placement.locationLabel).toBe(`Ephyra · Location ${placement.runDepth}`);
-      expect(placement.roomLabel).toBeUndefined();
+      expect(placement.place.text).toBe(`Location ${placement.runDepth}`);
+      expect(placement.place.hint).toBeTypeOf('string');
     }
   });
 
@@ -492,11 +482,9 @@ describe('Biome inspector controls', () => {
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
     // A placement is named by its Location, the number its rail shows.
     expect(moved.currentPlacement.biomeKey).toBe('N');
-    expect(moved.currentPlacement.locationLabel).toContain(
-      `Location ${moved.currentPlacement.runDepth}`,
-    );
+    expect(moved.currentPlacement.place.text).toBe(`Location ${moved.currentPlacement.runDepth}`);
     expect(toggle.getAttribute('data-hint')).toBe(
-      `Collect ${moved.element} · ${moved.currentPlacement.locationLabel}`,
+      `Collect ${moved.element} · ${moved.currentPlacement.place.text} · ${moved.currentPlacement.place.hint}`,
     );
 
     const historyBeforeMove = view.application.store.getState().projectWorkspace.history!;
@@ -597,9 +585,8 @@ describe('Biome inspector controls', () => {
     );
     expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
     expect(within(inspector).getByText('Encounter started')).toBeTruthy();
-    // The boss defeat reads as its encounter's end, which leads with the Judgment.
-    expect(within(inspector).queryByText('Boss defeated')).toBeNull();
-    expect(within(inspector).getAllByText('Encounter ended')).toHaveLength(1);
+    // The boss defeat is the fight's outcome, which leads with the Judgment.
+    expect(within(inspector).getAllByText('Boss defeated')).toHaveLength(1);
     const timeline = within(inspector).getByRole('region', { name: 'Room Timeline' });
     expect(timeline.classList.contains('room-actions-workbench')).toBe(true);
     expect(
@@ -608,10 +595,10 @@ describe('Biome inspector controls', () => {
       }),
     ).toBeTruthy();
     const timelineEntries = Array.from(timeline.querySelectorAll('ol > li'));
-    const ended = timelineEntries.findIndex(
-      (entry) => entry.getAttribute('aria-label') === 'Encounter ended',
+    const defeated = timelineEntries.findIndex(
+      (entry) => entry.getAttribute('aria-label') === 'Boss defeated',
     );
-    expect(timelineEntries[ended + 1]?.getAttribute('aria-label')).toMatch(/^Judgment — /);
+    expect(timelineEntries[defeated + 1]?.getAttribute('aria-label')).toMatch(/^Judgment — /);
     act(() => judgmentLauncher.click());
     const optionList = inspector.querySelector('.room-judgment-options');
     if (optionList === null) throw new Error('Judgment options list is missing');
@@ -652,7 +639,7 @@ describe('Biome inspector controls', () => {
     );
   });
 
-  it('reads a boss defeat as its encounter end banner, its fixed effects first and its fight gold on it', () => {
+  it('gives a boss defeat its own event with its fixed effects, the fight gold on the encounter end', () => {
     const view = renderWorkspace(loadUnderworldAutomaticBossCheckpoint(), 'Underworld', 'F');
     const bossOccurrence = createOccurrenceAddress(
       goldenFBiome,
@@ -667,16 +654,17 @@ describe('Biome inspector controls', () => {
       'region',
       { name: 'Room Timeline' },
     );
-    expect(within(timeline).queryByRole('listitem', { name: 'Boss defeated' })).toBeNull();
+    expect(within(timeline).getAllByRole('listitem', { name: 'Boss defeated' })).toHaveLength(1);
     const ended = within(timeline).getAllByRole('listitem', { name: 'Encounter ended' });
     expect(ended).toHaveLength(1);
     expect(within(ended[0]!).getByText(/gold/)).toBeTruthy();
     const names = within(timeline)
       .getAllByRole('listitem')
       .map((item) => item.getAttribute('aria-label') ?? '');
-    const end = names.indexOf('Encounter ended');
-    expect(names[end + 1]).toMatch(/^Judgment/);
-    expect(names[end + 2]).toMatch(/^Crystal Figurine/);
+    const defeated = names.indexOf('Boss defeated');
+    expect(names[defeated + 1]).toMatch(/^Judgment/);
+    expect(names[defeated + 2]).toMatch(/^Crystal Figurine/);
+    expect(names[defeated + 3]).toBe('Encounter ended');
   });
 
   it('keeps Judgment and Crystal Figurine independently authorable and undoable', async () => {
@@ -932,3 +920,10 @@ describe('Biome inspector controls', () => {
     );
   });
 });
+
+/** The stop notice's link to where the plan stops. */
+function stopLink(scope: ParentNode): HTMLButtonElement {
+  const link = scope.querySelector<HTMLButtonElement>('[data-stop-notice] button');
+  if (link === null) throw new Error('no stop notice link');
+  return link;
+}

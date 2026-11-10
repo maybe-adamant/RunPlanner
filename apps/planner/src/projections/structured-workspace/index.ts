@@ -35,7 +35,6 @@ export type {
   StructuredWorkspaceProjection,
   StructuredWorkspaceProjectionService,
   WorkspaceAuthoringFrontier,
-  WorkspaceBatchRepairIntent,
   WorkspaceBatchRewardPool,
   WorkspaceDoorNote,
   WorkspaceEffectiveRewardPool,
@@ -250,6 +249,8 @@ export type {
 export { createStructuredWorkspaceProjection } from './projector';
 export type {
   WorkspaceEncounterBannerSupplement,
+  WorkspaceNotReachedEntry,
+  WorkspaceTimelineWait,
   WorkspaceJudgmentArcanaInteraction,
   WorkspaceFigurineArcanaInteraction,
 } from './contracts/timeline';

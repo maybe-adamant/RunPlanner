@@ -6,7 +6,7 @@ export interface AetosPhaseSupport {
   readonly reason?: 'encounter' | 'indoor' | 'skipped' | 'alreadyPlaced' | 'wave';
 }
 
-/** Assesses the event at its reached start, using the folded earlier start history. */
+/** Assesses the event at its fight's reached outcome, using the folded earlier completions. */
 export function assessAetosAppearance(
   phase: ResolvedEncounterPhase,
   outdoor: boolean,

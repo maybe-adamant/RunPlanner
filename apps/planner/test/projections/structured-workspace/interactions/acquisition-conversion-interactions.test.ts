@@ -255,6 +255,7 @@ describe('acquisition-conversion-interactions', () => {
       activeRoomActionReferences(
         catalog,
         pBiome,
+        project.route.biomes.find((biome) => biome.biomeKey === 'P')!.topology!,
         shop,
         resolveRoutePosition(catalog, project.route, 'P'),
       ),

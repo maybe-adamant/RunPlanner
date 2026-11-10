@@ -265,7 +265,11 @@ wait for them before applying end effects. Completion still makes those
 interactions available; it does not imply that end effects have already run,
 and the visible End Encounter boundary stays before this interval. The event
 is absent for noncombat and `skipEndEncounterEffects` phases; Fig Leaf's
-skipped execution does not by itself remove it. N entered side-room
+skipped execution does not by itself remove it. The completion itself records
+which case holds: end effects applied at once, deferred past those
+interactions, or none. The walk also publishes each ranked action it reached,
+settled or stopped at, with where it reached it, so coverage never infers
+reach from the Timeline's boundaries. N entered side-room
 occurrences execute their own preparation and lifecycle in authored
 `enteredOrdinal` order before the corresponding parent restore. The same
 ordered history therefore supports ordinary rooms, O/P/H multi-phase rooms,
@@ -283,16 +287,42 @@ The Nemesis random event is the exception: Nemesis is a required room object
 that keeps the exits locked until answering her resolves the event (a trade's
 choice, the free item, or the contest's timer), so her interaction ends that
 encounter. Its phase has Encounter and Encounter ended boundaries, the
-interaction inside them and the event's result pickup after the end. In Fields
+interaction inside them, its [outcome](#encounter-outcome) right after the
+interaction, and the event's result pickup after the end. In Fields
 the Passive event orders among the cages by its interaction, each boundary
 directly around it. The boundaries only shape the Timeline and window
 positions: no encounter start or completion is executed for a Fields Passive
 event, and its history is unchanged.
 
+### Encounter outcome
+
+Each fight has three events. **Encounter started** holds only what belongs
+at its start: Fig Leaf, which the game rolls before enemies spawn; a skip
+short-circuits the fight, so no outcome follows. **Encounter outcome** holds
+how the fight ended: the Aetos wave, the Gorgon condition, the Nemesis bet,
+the answer or result of a Nemesis trade or contest and Anomaly cleared; her
+free item is given, with nothing to choose. **Encounter ended** is a pure
+event announcing what spawns from the outcome; each spawned item settles on
+its own row. In a Boss room, **Boss defeated** is the outcome, with Judgment
+and Crystal Figurine.
+
+The outcome is the walk's encounter completion (for a Nemesis event, the
+interaction that ends it), published as a lifecycle structure point and
+Timeline boundary between the phase's start and end wherever the phase could
+host a choice or the room authors one; it changes no plan wire. The walk
+reads each choice there: the Aetos wave is assessed against the biome's
+earlier completed fights and the Gorgon condition against the state at the
+completion, both ineligible after a Fig Leaf skip. An unset or invalid choice
+therefore stops the walk at the outcome, never at the start. At most two
+choices share one outcome (Aetos and the Gorgon condition); a Nemesis, Anomaly
+or Boss outcome stands alone. An engine query publishes, per entered room,
+each outcome that hosts an eligible choice or an authored value (which never
+vanishes); a skipped fight's outcome hosts only such authored values.
+
 **Automatic outcomes.** Fixed automatic outcomes (Steady Growth, Transcendent
 Embryo, Judgment, Crystal Figurine) settle at their seam and are never
 reorderable Room Actions: Judgment and Crystal Figurine at a non-final Boss's
-`bossDefeated` seam, the [timed outcomes](TRAIT_OFFERS.md#timed-outcomes) at
+Boss defeated seam, the [timed outcomes](TRAIT_OFFERS.md#timed-outcomes) at
 encounter end. At a Boss the boss seam settles first; the encounter-end
 checkpoint then settles its effects before it publishes pickups created by
 matured clocks. The
@@ -329,11 +359,13 @@ the optional Combat 2 plays), P's two phases, Fields Passive and cages, NPC
 encounters and introductions; the Nemesis random-event family is part of that
 identity. The Timeline keeps each phase read-only at its start and end, the
 order it controls (Fields cage order, Ship phase seams and wheel picks) and the
-events decided in the encounter: Fig Leaf (including P's pre-combat cascade,
-which suppresses execution without changing the recorded identity), Gorgon,
-Aetos, NPC trait offers, the Nemesis response, the Anomaly capture-point
-outcome (which decides whether the room reward spawns) and encounter-end
-checkpoints. Fig Leaf, Aetos and Gorgon keep their own phase-child addresses.
+events decided in the encounter: Fig Leaf at its start (including P's
+pre-combat cascade, which suppresses execution without changing the recorded
+identity), NPC trait offers, the Nemesis response, the
+[outcome](#encounter-outcome) choices (Gorgon, Aetos, the Nemesis bet or
+event result, and the Anomaly capture-point outcome, which decides whether the
+room reward spawns) and encounter-end checkpoints. Fig Leaf, Aetos and Gorgon
+keep their own phase-child addresses.
 
 The editor presents the stages as Room Overview and Room Timeline, whose Doors
 open row and last row present the exit stage. These are transient views over unchanged semantic owners, not persisted
@@ -376,6 +408,13 @@ decision never adopts the source room's chronology: the editor derives
 per-row membership and one ranked Room Timeline surface on the producing
 occurrence.
 
+Resetting a room from a point keeps the order up to that point and lets
+everything after it go, so the walk's frontier returns there. Banners are
+events the walk announces and are never removed; a reset from a banner keeps
+the actions that bring it about and drops those after it, and later banners
+reappear only as the walk reaches them again. Required rows stay in place
+until automatic placement is withdrawn, since the order may not omit them.
+
 ### Roster
 
 Semantic action producers contribute explicit action contributions. One roster
@@ -387,38 +426,62 @@ communicate action membership through sidecar state.
 Roster assembly reconciles every authored and derived key exactly once: ranked
 active actions become the executable chronology, active but unranked actions
 remain explicit incomplete rows, and ranked keys whose action is no longer
-active remain stale repair rows. Invalid or incomplete authorship is therefore
-retained for correction rather than dropped or silently reordered. There is no
+active are stale rows: never executed and without a finding, and handled as
+[rows whose context or source is gone](#rows-whose-context-or-source-is-gone). Invalid
+or incomplete authorship is retained for correction rather than dropped or
+silently reordered. There is no
 parallel Fields, Shop, Acquisitions, or presentation-owned action assembler and
 no second order authority.
 
-Insert and move proposals retain all typed dependency and fixed-window blockers
-from their existing order assessment, including the affected action and its
-prerequisite or conflicting action windows; an action marked
-`windowFollowsOrder` (the Postboss rack) never takes part in window crossing.
+An insertion or a move is judged by its prefix, the way the walk reaches it.
+An action placed at position k is legal when the rows before it, with it at k,
+are valid as the walk reaches k: no row up to k follows a row of a later
+window, every explicit dependency of those rows is among the rows before them,
+and every checkpoint they wait on is met there. The doors-open checkpoint
+counts every placed required action, those after k included, as the walk
+does, so a doors-open action needs each of them before it. A left switch
+press ends the room, so it is valid only as the room's last row: nothing may
+follow it, and the press itself is refused at k while any row follows it,
+which is the press's own validity rather than a veto from a later row. A
+required action's window closes at its deadline, so a ranked required action
+of an earlier window placed after k also refuses k: the walk cannot progress
+past it. The walk applies the same rule to the authored order, stopping at the
+first row such an action follows, before that row settles: a Postboss Well,
+Pool, Shrine or switch row before the fountain use that unlocks the exits is
+never reached. A required action placed at a phase the room does not play
+sets no deadline; its placement is its own finding. An unplaced required
+action of an earlier window does not refuse k; the walk's own deadline stop
+leaves k unreached. Every other row after k takes no part: a later row the
+edit invalidates carries its own issue when the walk reaches it. A prefix that
+is already invalid stops the walk before k, so k is refused unless the edit repairs that prefix. A
+move is judged as an insertion at its target, and a group placed together is
+judged through its last row, each row by its own prefix. The judgement is
+structural; it never reads affordability or other simulated state, which
+stays a finding.
+
+Insert and move proposals carry the typed dependency and fixed-window
+blockers of that prefix, each naming its affected action and its prerequisite
+or conflicting action windows; a required action of an earlier window after k
+is its own blocker naming the action that must come first. An action whose window follows its authored order (the Postboss rack) never
+takes part in window crossing or required-first order.
 The application labels this evidence for placement explanations; it neither
 infers legality nor attributes an existing blocker to the proposed action.
 Authorable proposals, canonical required restores, and removals carry no
-blocker evidence.
+blocker evidence. The roster's issues for the authored order stay whole-order.
 
 An unranked action, required or optional, has an insert proposal at every
-index. One structural rule judges each: the resulting order keeps every
-window, explicit dependency and checkpoint (a doors-open action after every
-required one), and puts nothing after a terminal action. A required action
-may therefore be inserted anywhere inside its window, exactly as a placed one
-may be moved; its canonical restore is marked and stays authorable even when
-an unrelated retained issue blocks every other index. Restoring a required
-action, placing a generated pickup, or buying at a Shop, Shrine or Well at a
-chosen position accepts exactly the authorable indices and the command's own
-default, and refuses any other with a contract error; a generic optional
-insertion, such as a challenge switch press or a locked door press, still
-accepts any index and reports a bad position as a finding. A purchase is
-judged with the room's actions as they would stand after it, and a rushed
-Shrine item's optional pickup moves with its purchase, directly after it,
-since the item spawns as the Shrine closes. An engine authoring query
-publishes each purchase command's authorable indices, judged the same way.
-Legality never reads affordability or other simulated state, which stays a
-finding.
+index, judged by the same rule, so a required action may be inserted anywhere
+its prefix allows, exactly as a placed one may be moved; its canonical restore
+is marked and stays authorable even when a retained issue blocks every other
+index. Restoring a required action, placing a generated pickup, or buying at a
+Shop, Shrine or Well at a chosen position accepts exactly the authorable
+indices and the command's own default, and refuses any other with a contract
+error; a generic optional insertion, such as a challenge switch press or a
+locked door press, still accepts any index and reports a bad position as a
+finding. A rushed Shrine item's optional pickup moves with its purchase,
+directly after it, since the item spawns as the Shrine closes. An engine
+authoring query publishes each purchase command's authorable indices, judged
+the same way.
 
 Defaults are anchored differently. When a command newly activates required
 actions, or restores one without a chosen position, the engine extends the
@@ -441,12 +504,118 @@ Fields cage rewards remain room-scoped despite their source phase; a contact
 that blocks a later cage inherits a phase obligation. Scope is recomputed when
 the active lifecycle is narrowed and is independent of an action's placed rank.
 
+### Rows whose context or source is gone
+
+What the Timeline shows is what is saved: a room-action row never lingers
+hidden and never comes back on its own. One procedure decides what happens to
+a row that can no longer apply, so a new case is classified, not argued.
+
+Terms:
+
+- **Spawn**: a row or item that exists because something produced it.
+- **Trigger**: the act that produces a spawn (a purchase, an encounter's end,
+  a transform choice, taking a reward, a Travel Deal's first purchase).
+- **Enabler**: an upstream condition that makes an act possible or changes
+  what it produces (a held boon, trait, Arcana or keepsake; a feature being
+  present).
+- **Decision**: something the owner chose (an act, an item, a transform, a
+  purchase).
+- **Distance**: whether the row is in the room the edit addresses (the same
+  Timeline) or in another room.
+
+Procedure, first match wins:
+
+1. **Context gone**: the room no longer offers the action at all (a phase or
+   wheel it no longer plays, an owner removed). The row is stale and is
+   removed.
+2. **Trigger gone**: the spawn has no slot to exist in. Removed.
+3. **Enabler gone**: a row that is the owner's decision relying on the
+   enabler (a Travel Deal refill purchase, an Artificer transform) stays,
+   invalid, with a finding: the owner removes it or restores the enabler. A
+   row that is an automatic product of the enabler (Echo's Gold Gold Gold
+   duplicate, a matured trait drop) is removed.
+4. **Otherwise unable to happen but repairable another way**: invalid, with a
+   finding (a Shop purchase past the god cap, a Purging Pool sale the game
+   refuses, a Well or Pool purchase whose roll changed, a row out of order, a
+   trait drop whose trait is held but now matures in another room).
+
+Every removal:
+
+- happens in the edit that causes it, in the same Undo step, through the
+  command that owns the row's removal;
+- leaves the spawn's own choices with the source or feature that owns them (a
+  delivered item's offer, a refill's item and hidden god), so restoring the
+  source restores them; only the row goes;
+- is silent in the room the edit addresses, where it happens on the Timeline
+  being edited, and announced prominently in any other room, naming the room;
+  an edit that addresses no single room (a route, biome or Hub owner)
+  announces every removal;
+- yields to continuity: when a producer changes rather than disappears (a
+  reward swapped for another kind), its spawn rows, in the former reward's
+  declared role order, take the new reward's pickup roles in its declared
+  order (main pickup first), each at its old position where the order allows
+  and otherwise at the role's default, instead of being removed and placed
+  again; leftover old rows are removed and leftover roles keep their default
+  places.
+
+Never removed:
+
+- a row whose source has not been reached or assessed yet (an unassessed
+  matured pickup, a pickup the run import places before its source is known);
+- required obligations being placed;
+- a row that already lacked its source or target before the edit (its
+  enabler went earlier, it was placed before its source existed, a reroll
+  that never found its cage): it keeps its finding until an edit takes its
+  trigger, for a Shop row every purchase before it;
+- rows of a room the run no longer enters: an unselected room keeps its rows
+  untouched, as reanchoring keeps an unselected target's room-local state,
+  and they return with its door; a Shop spawn whose source is taken while its
+  room is off the route keeps its row with its finding when the room returns.
+
+The **Reset from here** command is the explicit exception: it removes rows
+after a point at the owner's request, silently in its own room.
+
+Older files, temporarily: a loaded document keeps the stale rows it holds
+until an edit changes their room, which then removes them, and keeps a row
+whose source was already gone with its finding. Both asymmetries end at the
+next major schema revision, whose upgrade cleans older files once.
+
+A batch's door is classified the same way: its context is its source room's
+declared exit, and the rooms behind a removed door go with it
+([exit capacity](AUTHORED_PROJECT_MODEL.md#exit-capacity)).
+
+Why: distance is risk. A same-room effect is visible where it happens; a
+cross-room effect is invisible unless announced, so the owner's decisions are
+never removed from a distance, only marked. Removal and return as side
+effects of unrelated edits are hidden behaviour, and retained dead rows bloat
+projects over a long edit history.
+
+| Case                                                | Step       | Outcome                                 |
+| --------------------------------------------------- | ---------- | --------------------------------------- |
+| Phase or wheel the room no longer plays             | 1          | removed, silent                         |
+| Artificer replacement, reward set back to normal    | 2          | removed, silent                         |
+| Refill or rushed Shrine pickup, its purchase undone | 2          | removed, silent                         |
+| Hermes delivery, its Shrine purchase undone         | 2          | removed, announced in the delivery room |
+| Artificer card unequipped upstream                  | 3          | transform invalid                       |
+| Travel Deal no longer held                          | 3          | refill purchase invalid                 |
+| Gold Gold Gold duplicate, boon swapped away         | 3          | removed, announced in the shop room     |
+| Matured trait drop, trait lost                      | 3          | removed, announced                      |
+| Door or cage reroll, the reward it rerolls gone     | 1          | removed, silent                         |
+| Door its source room no longer has, not taken       | 1          | removed, announced in the source room   |
+| Door its source room no longer has, taken           | 4          | invalid                                 |
+| Reroll of a door the game refuses or not available  | 4          | invalid                                 |
+| Hub board reroll, its slot closed or entered        | 4          | invalid                                 |
+| Trait drop, trait held but matures elsewhere        | 4          | invalid                                 |
+| Reward swapped between kinds                        | continuity | pickup rows re-keyed in place           |
+
 ### Lifecycle structure and authoring timeline
 
 The engine constructs one closed lifecycle structure from the resolved profile
 and its active declaration-owned phase scope. Its ordered points are the rigid
-room skeleton: `roomEntered`, each exact `encounterStart` then `encounterEnd`,
-Ship `nextPhase` seams, internal outgoing generation, and final `cleanup`. The
+room skeleton: Room entered, each exact encounter start, its encounter
+outcome boundary where the phase can host one (Boss defeated in a Boss room),
+then the encounter end, Ship next-phase seams, internal outgoing generation,
+and final cleanup. The
 same frozen structure is carried by the roster and consumed by required-action
 scheduling, lifecycle execution, checkpoint assembly, and the room timeline.
 None of those consumers may reconstruct phase membership or boundary order
@@ -462,7 +631,7 @@ The application consumes the engine's phase status and scoping operation
 rather than deciding suffix activity from the selected encounter label.
 
 The roster remains authoritative for active action rows, dependencies,
-proposals, stale repair, and structural validity. The timeline places those
+proposals, and structural validity. The timeline places those
 exact roster keys into the structure's flexible intervals. It may carry
 declaration-owned phase identity and before/action/after placement, but never
 tabs, labels, callbacks, or another eligibility/order calculation.
@@ -495,8 +664,14 @@ wheel's Choose action. Hub board-door presses sit in the Hub's own action
 order, in the stay before a later visit. The walk settles each press at its
 rank as a draw from the target's store
 ([Reward Model](REWARD_MODEL.md#rerolls)); a press of a target the game would
-refuse spends nothing and reports at the press. Screen rerolls are not
-actions: an offer's earlier screens settle with the offer.
+refuse spends nothing and reports at the press. A door or cage press acts on
+one reward on a door, so it lives only while that reward exists: the door is
+removed, or the cage is no longer played, and the press goes with it. A door
+the game refuses to reroll still has its reward, so its press stays invalid. A
+door or cage press is in its room's domain only while the saved route still
+has its target: the source's door into that room and, for a cage, that room's
+cage slot; a ship press only while its wheel is played. Screen rerolls are not actions: an
+offer's earlier screens settle with the offer.
 
 ### Spawned loot
 
@@ -504,9 +679,12 @@ An engine-owned read-only query publishes, for each entered room, the loot
 the game spawns on its own, grouped by the moment it appears, each moment
 keyed by its kind and phase and listing its items in spawn order. The room
 reward spawns at the encounter's end; on entry for a role taken before combat
-(an Opening reward, Devotion's choice) or a room without combat; at the start
-of an encounter that spawns it first (the H minibosses); and during an
-encounter whose chosen enemy carries it (Arachne's cocoon). A Boss's forced
+(an Opening reward, Devotion's choice) or a room without combat; and at the
+start of an encounter that spawns it first (the H minibosses). Arachne's
+cocoons stand from entry with the reward hidden, neither spawned nor locked:
+breaking the reward cocoon spawns it and ends her encounter
+(`EncounterEventsArachneCombat` waits for `ArachneRewardFound`), so it is an
+ordinary encounter-end spawn, and collecting it opens the doors. A Boss's forced
 drop and a Ship wheel's reward spawn at their phase's end. After the reward,
 an encounter's end spawns its due Hermes deliveries in purchase order, then
 matured clock drops such as Supply Chain's, then Heracles's bounty; in a Ship
@@ -517,15 +695,41 @@ can be taken is locked until an unlock frees it: a Fields cage's reward at its
 cage encounter's end, and an H miniboss's caged reward at that encounter's
 end. The query lists each unlock with the items it frees. Devotion locks
 nothing: the chosen boon is taken on entry, both entry loots are then
-destroyed, and the spurned god's reward spawns afresh at the combat's end. Loot an action's
-settlement spawns (a boon's own drops, Echo's last reward and Gold Gold Gold
-duplicate, a Nemesis event's result, Eris's gift, a challenge switch's claim,
+destroyed, and the spurned god's reward spawns afresh at the combat's end.
+Loot whose existence or identity an encounter outcome decides spawns at that
+outcome, after its choice and never under the action that leads to it: a
+Nemesis trade's result exists only once accepted and a contest's follows its
+result, so both spawn at her event's outcome, right after her interaction,
+once that outcome has settled.
+Every other outcome already precedes its loot: the bet's gold is not loot, an
+Anomaly's displaced reward is the room reward at the encounter's end, and a
+Boss's Judgment and Crystal Figurine are settled effects, its forced drop
+spawning at the encounter's end.
+Loot an action's settlement spawns (a boon's own drops, Echo's last reward and
+Gold Gold Gold duplicate, a Nemesis free item, Eris's gift, a challenge switch's claim,
 the Artificer's replacement under the converted pickup, Sea Star's copy under
 the pickup it copies, a rushed Shrine item under its purchase in the Shrine's
 own room) is listed under that source action instead. Each item carries its reward owner,
-source, participation and placement: its ranked action, or the command that
-places it. Items come from the active action domain and the reached due
+what it spawns as (its reward, which for a Nemesis result is the one her
+outcome spawns, or the concrete pickup where that differs: one role of a
+reward that spawns per role, a forfeited reward's Red Onion), source,
+participation and placement: its ranked action, or the command that places it,
+an unplaced item that needs an input once placed (a Pom Slice's Pom) marked as
+needing that choice. Items come from the active action domain and the reached due
 contacts rather than the authored order, so an unplaced item still appears.
+Only loot the walk produced is listed, and spawning is kept apart from
+resolving. Everything a moment spawns spawns together once the walk reaches
+its Timeline boundary, even when the walk blocks there: an encounter end a due
+delivery or a Steady Growth outcome holds still lists its room reward,
+deliveries, bounty and matured clock drops. How each item resolves (a Pom
+target, a boon) is that item's own row and finding. A Ship phase's deferred
+end effects spawn only once its wheel reward is collected. An action's loot
+appears once the walk settles that ranked action, because there the
+unresolved choice is what spawns: an Artificer transform with no replacement
+chosen has spawned nothing known. A room's stop therefore hides every moment
+past it and the loot of a source action unresolved at it, and a room the
+assessed history does not reach lists nothing. A Supply Chain Pom Slice spawns
+once its boon is taken and its encounter ends.
 A Travel Deal refill is a purchase, not spawned loot.
 
 ## Canonical Lifecycle Profiles
@@ -823,8 +1027,9 @@ through a door still locked blocks at the room's exit.
 
 The fixed Boss occurrence has the `BossRoom` lifecycle. Its player-facing
 timeline is `Room entered -> Encounter -> Boss defeated -> Encounter ended
--> Doors open`. `Boss defeated` is an exact lifecycle seam before generic
-encounter-end effects. When Judgment is active, it is one engine-owned fixed
+-> Doors open`. `Boss defeated` is the Boss room's
+[Encounter outcome](#encounter-outcome), an exact lifecycle seam before
+generic encounter-end effects. When Judgment is active, it is one engine-owned fixed
 effect at that seam, not a Room Action or persisted ordering value. The
 occurrence-plus-phase Judgment Arcana address owns the editor, candidate
 frontier, finding, and semantic command. Encounter ended remains the later seam
@@ -938,7 +1143,7 @@ Anomaly's fixed `GeneratedAnomalyB` uses the normal counting encounter path,
 and its retained incoming offer is acquired only when authored success is true.
 `C_Boss01` is classified as Combat with the contract-specific template and the
 standard reward lifecycle: it runs fixed `BossZagreus01` and requires acquiring
-`InfernalContractBoon`, but does not emit `bossDefeated`, advance encounter
+`InfernalContractBoon`, but does not emit Boss defeated, advance encounter
 depth, or complete the host biome. A selected Chaos room runs `Empty_Chaos`,
 acquires direct `TrialUpgrade` and adds its own room-history record; skipped
 and selected gates consume the same source offer, while only selected Chaos
@@ -954,6 +1159,9 @@ authority](SIMULATION_AND_VALIDATION.md#run-state-snapshots) owns its
 projection and cache contract. An ordinary occurrence publishes `roomEntered`
 and `beforeRoomExit`; a ShipCombat occurrence instead publishes one
 `beforeEncounterStart` checkpoint for each active phase plus `beforeRoomExit`.
+N's Hub publishes one `roomEntered` checkpoint of its own, owned by the Hub
+rather than an occurrence, at its first entry; each later stay is a restore,
+not an entry, and publishes none.
 Entry consumes the existing entry history, each Ship phase consumes the history
 fold captured immediately before its `encounterStarted` event, and pre-exit
 consumes post-commit room-local settlement immediately before `roomExited`.
@@ -962,11 +1170,11 @@ These checkpoint addresses and snapshots are not authored or persisted. A
 structurally retained occurrence beyond progressive coverage may expose a
 disabled launcher, while an occurrence absent from the materialized prefix
 publishes none. The `beforeTargetGeneration` product remains internally useful
-for generation assessment, but only N's Hub-board and Hub-sourced Preboss
-generation exceptions retain public launchers. The pre-exit snapshot has no
-launcher (the run as a room is left is the next room's entry), and must not
-replace or relabel either exception. Hub departures capture conformance
-snapshots described in the [N rules](../biomes/N_GAME_RULES.md#restoration-and-departures).
+for generation assessment, but only N's Hub-sourced Preboss generation
+exception retains a public launcher; the Hub board's generation captures no
+Run State. The pre-exit snapshot has no launcher (the run as a room is left is
+the next room's entry), and must not replace or relabel that exception. Hub
+departures capture conformance snapshots described in the [N rules](../biomes/N_GAME_RULES.md#restoration-and-departures).
 
 Separately, each Preboss and completion Boss occurrence captures the raw states
 its preparation receives as the source of a mid-run start installation: after
@@ -1151,8 +1359,8 @@ state to their sequence.
 | Biome start                                             | The Echo keepsake replay transition, before the first event.                                                                                                                                                      |
 | Room prepared                                           | Opens the room's reward lifecycle; Fields optional reward counts; a Preboss first captures its received start state.                                                                                              |
 | Room entered                                            | Room entry with The Centaur's cycle, Shrine and Well assessments, the room-entry Run State capture; halts for a delivery placement.                                                                               |
-| Encounter started                                       | Fig Leaf and Gorgon start; the Ship pre-encounter Run State capture.                                                                                                                                              |
-| Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions.                                                                                                             |
+| Encounter started                                       | Fig Leaf; the Ship pre-encounter Run State capture.                                                                                                                                                               |
+| Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions; the Gorgon condition is read at completion.                                                                 |
 | Encounter ended                                         | End effects; halts when a Shrine delivery needs placement.                                                                                                                                                        |
 | Offer point materialized, acquired; role advanced       | Offer materialization and reached-offer settlement.                                                                                                                                                               |
 | Acquisition point reached                               | Acquisition settlement and Purging Pool sale nodes.                                                                                                                                                               |

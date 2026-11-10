@@ -3,7 +3,7 @@ import { createBiomeAddress } from '../addresses';
 import { assembleRoomActionDomain } from '../room-actions/domain';
 import type { ProjectDocument } from '../model';
 import type { FigurineArcanaCommand } from './types';
-import { failCommand, requireOccurrence, type LocatedBiome } from './contract';
+import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
 import { resolveRoutePosition } from '../route-context';
 
@@ -30,6 +30,7 @@ export function applyFigurineArcanaCommand(
   const lifecycle = assembleRoomActionDomain({
     catalog,
     biome: createBiomeAddress(command.figurine.routeKey, command.figurine.biomeKey),
+    topology: requireTopology(located.plan, command),
     occurrence: boss,
     routePosition: resolveRoutePosition(catalog, document.route, command.figurine.biomeKey),
   }).lifecycleStructure;

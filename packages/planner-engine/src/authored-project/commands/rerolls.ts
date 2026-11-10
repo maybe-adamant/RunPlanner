@@ -14,6 +14,7 @@ import type {
 } from '../model';
 import {
   biomeRerolledOwners,
+  missingRerollTarget,
   nextRerollId,
   rerolledRewardOf,
   rerollTargetOwner,
@@ -151,30 +152,9 @@ function requireRerollTarget(
       failCommand(command, 'names no wheel offer of this room');
     return;
   }
-  const exit = topology.decisions.find(
-    (decision) =>
-      decision.kind === 'exit' &&
-      decision.source.kind === 'occurrence' &&
-      decision.source.occurrenceId === source.occurrenceId,
-  );
-  const door =
-    exit?.kind === 'exit'
-      ? exit.normal.targets.find(
-          (candidate) =>
-            candidate.exitKey === target.exitKey && candidate.occurrenceId === target.occurrenceId,
-        )
-      : undefined;
-  if (door === undefined) failCommand(command, 'names no door of this room');
-  if (target.kind === 'cage') {
-    const destination = topology.occurrences.find(
-      (candidate) => candidate.occurrenceId === target.occurrenceId,
-    );
-    if (
-      destination?.state.kind !== 'fieldsCombat' ||
-      !Object.hasOwn(destination.state.cages, target.slotKey)
-    )
-      failCommand(command, 'names no cage of that door');
-  }
+  const missing = missingRerollTarget(topology, source.occurrenceId, target);
+  if (missing === 'door') failCommand(command, 'names no door of this room');
+  if (missing === 'cage') failCommand(command, 'names no cage of that door');
 }
 
 function hubRerolls(hub: HubDecision) {

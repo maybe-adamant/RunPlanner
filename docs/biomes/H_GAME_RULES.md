@@ -108,9 +108,10 @@ two disjoint routes of which a project carries one, so on an ordinary Surface
 run no H room has been entered at all. A Dream itinerary is the one context
 that can mix biomes across routes, and therefore the one context in which H's
 RunProgress mass suppresses `C` for a Surface biome.
-Changing a source to a narrower room preserves structurally represented
-overflow targets until the explicit `ReconcileBatchExitCapacity` command
-removes unavailable exits and their downstream subtrees.
+Changing a source to a narrower room removes its unselected overflow targets
+with their downstream subtrees in the same edit; a selected one stays,
+unavailable, with its finding
+([exit capacity](../design/AUTHORED_PROJECT_MODEL.md#exit-capacity)).
 
 ### Physical doors and cage lifecycle
 

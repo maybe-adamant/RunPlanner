@@ -312,9 +312,6 @@ export function applyOccurrenceCommand(
       requireShrineGeneration(command, command.generationKey);
       if (typeof command.purchased !== 'boolean')
         failCommand(command, 'Shrine purchased must be boolean');
-      const selectedOffer = offerFor(occurrence.hermesShrine, command.generationKey);
-      if (selectedOffer === undefined || selectedOffer === null)
-        failCommand(command, 'Shrine offer is unresolved');
       const order = occurrence.roomActions.order;
       const existing = hermesShrinePurchaseAction(order, command.generationKey);
       const deliveryEntryKey = hermesShrineDeliveryEntryKey(
@@ -354,6 +351,10 @@ export function applyOccurrenceCommand(
           failCommand(command, 'an index places only a new purchase');
         return document;
       }
+      // Only a purchase needs its offer; an existing purchase leaves without it.
+      const selectedOffer = offerFor(occurrence.hermesShrine, command.generationKey);
+      if (selectedOffer === undefined || selectedOffer === null)
+        failCommand(command, 'Shrine offer is unresolved');
       // A new purchase starts unrushed at its canonical timeline position.
       const reference = Object.freeze({
         kind: 'purchaseHermesShrineOffer' as const,

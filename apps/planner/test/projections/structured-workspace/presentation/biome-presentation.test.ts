@@ -6,6 +6,8 @@ import {
   createBiomeAddress,
   createEchoKeepsakeReplayAddress,
   createHubDecisionAddress,
+  createHubRoomAddress,
+  createHubRunStateCheckpointAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
@@ -41,6 +43,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import type { WorkspaceBiome } from '@planner/projections/structured-workspace/contracts/structure';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
+import { presentRunState } from '@planner/projections/structured-workspace/presentation/run-state';
 import { presentWorkspaceBiome } from '@planner/projections/structured-workspace/presentation/biome-presentation';
 import { assembleWorkspaceBiomeSemantics } from '@planner/projections/structured-workspace/assembly/biome-semantic-assembly';
 import {
@@ -52,6 +55,8 @@ import type {
   WorkspaceRailEntry,
 } from '@planner/projections/structured-workspace/contracts/structure';
 import { hubVisitActions } from '@run-planner/test-fixtures/shared';
+import { galleryCases } from '@planner-test/support/gallery/cases';
+import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
 
 let goldenProject: ReturnType<typeof createGoldenFGHIProject>;
 let surfaceProject: ReturnType<typeof loadSurfaceNOPQProject>;
@@ -179,8 +184,19 @@ describe('structured workspace biome presentation', () => {
       (decision) => decision.source.kind === 'hubDecision' && decision.source.decisionKey === 'hub',
     );
     if (handoff === undefined) throw new Error('N Hub handoff owner missing');
+    // The Hub's Run State is its on-entry snapshot, at the run's third room.
+    const hubEntry = createHubRunStateCheckpointAddress(createHubRoomAddress(source.biome, 'hub'));
+    const entered = source.runState(hubEntry);
+    if (entered?.availability !== 'available') throw new Error('N Hub entry Run State missing');
+    expect(entered.snapshot.counters.runDepthCache).toBe(3);
+    expect(launchers[0]).toEqual({
+      availability: 'available',
+      owner: hubEntry,
+      state: presentRunState(catalog, entered.snapshot, 'Before Ephyra Hub'),
+      title: 'Hub',
+    });
     expect(launchers.map((launcher) => semanticAddressKey(launcher.owner))).toEqual([
-      semanticAddressKey(createHubDecisionAddress(source.biome, 'hub')),
+      semanticAddressKey(hubEntry),
       semanticAddressKey(createExitDecisionAddress(source.biome, handoff.source)),
     ]);
     const preboss = biome.nodes.find(
@@ -458,7 +474,7 @@ describe('structured workspace biome presentation', () => {
     });
   });
 
-  it('keeps selected N Opening Chaos on its decision rail stop without a duplicate room stop', () => {
+  it('shows selected N Opening Chaos on its decision rail stop without a duplicate room stop', () => {
     const source = {
       kind: 'occurrence' as const,
       occurrenceId: nOccurrenceIds.opening,
@@ -491,9 +507,11 @@ describe('structured workspace biome presentation', () => {
     if (decision === undefined) throw new Error('N Opening decision rail entry is missing');
 
     // The selected Chaos detour's normal siblings are unauthored, so the batch
-    // advertises no continuation: the rail stop stays on the decision itself.
-    expect(decision.focusMarker.address).toEqual(owner);
-    expect(decision.selectedTarget).toBeUndefined();
+    // advertises no continuation, yet the rail stop still shows and opens Chaos.
+    expect(decision.focusMarker.address).toEqual(
+      createOccurrenceAddress(nBiome, chaosOccurrenceId),
+    );
+    expect(decision.selectedTarget?.roomIcon).toEqual({ kind: 'chaos' });
     expect(
       (decision.node.kind === 'ordinaryBatch' || decision.node.kind === 'mixedBatch') &&
         decision.node.chaos?.selected,
@@ -560,6 +578,98 @@ describe('structured workspace biome presentation', () => {
     expect(rail.node.chaos?.selected).toBe(true);
     expect(rail.label).toBe(rail.node.chaos?.door.room.label);
     expect(rail.label).toMatch(/^Chaos/);
+  });
+
+  it("shows a takeover's selected Shop on the rail while a peer door's reward is unresolved", () => {
+    const project = structuredClone(createGoldenFGHIProject()) as ProjectDocument;
+    const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
+    const freePeer = plan?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === createOccurrenceId('golden-f-preboss-free'),
+    );
+    if (freePeer === undefined || !('reward' in freePeer.state)) {
+      throw new Error('F Preboss free-reward peer is missing');
+    }
+    (freePeer.state as { reward: unknown }).reward = null;
+
+    const rail = present(project, 'Underworld', 'F').presentation.biome.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' && entry.node.kind === 'takeoverBatch',
+    );
+    if (rail === undefined || rail.node.kind !== 'takeoverBatch') {
+      throw new Error('F takeover rail entry is missing');
+    }
+    const selected = rail.node.targets.filter((target) => target.selected);
+    expect(selected.map((target) => target.room.roomLocal.kind)).toEqual(['shop']);
+    expect(rail.node.selectedContinuation).toBeUndefined();
+    expect(rail.selectedTarget?.roomLabel).toBe(selected[0]?.room.label);
+    expect(rail.selectedTarget?.shop).toBe(true);
+  });
+
+  it('shows a selected door on the rail while a sibling target is missing', () => {
+    const startId = createOccurrenceId('presentation-rail-start');
+    const hostId = createOccurrenceId('presentation-rail-host');
+    const doorId = createOccurrenceId('presentation-rail-door');
+    const startOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: startId,
+    });
+    const hostOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: hostId,
+    });
+    let project = createProjectDocument(catalog, {
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
+      projectId: 'presentation-rail-missing-sibling',
+    });
+    project = applyProjectCommand(project, catalog, {
+      biome: goldenFBiome,
+      gameName: 'F_Opening01',
+      kind: 'CreateStart',
+      occurrenceId: startId,
+    });
+    for (const [owner, occurrenceId, gameName] of [
+      [startOwner, hostId, 'F_Combat02'],
+      [hostOwner, doorId, 'F_Combat01'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, { decision: owner, kind: 'CreateBatch' });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(goldenFBiome, owner.source),
+        storeKey: 'RunProgress',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(goldenFBiome, owner.source, 'exit1'),
+        occurrenceId,
+        gameName,
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(goldenFBiome, occurrenceId),
+        value: { rewardType: 'MaxHealthDrop' },
+      });
+    }
+
+    const rail = present(project, 'Underworld', 'F').presentation.biome.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' &&
+        entry.node.kind !== 'occurrenceWorkbench' &&
+        entry.node.kind !== 'hubDecision' &&
+        semanticAddressKey(entry.node.owner) === semanticAddressKey(hostOwner),
+    );
+    if (
+      rail === undefined ||
+      (rail.node.kind !== 'ordinaryBatch' &&
+        rail.node.kind !== 'mixedBatch' &&
+        rail.node.kind !== 'takeoverBatch')
+    ) {
+      throw new Error('the host decision rail entry is missing');
+    }
+    expect(rail.node.missingTargets.length).toBeGreaterThan(0);
+    expect(rail.node.targets.map((target) => target.selected)).toEqual([true]);
+    expect(rail.node.selectedContinuation).toBeUndefined();
+    expect(rail.selectedTarget?.roomLabel).toBe(rail.node.targets[0]?.room.label);
   });
 
   it('progressively presents one selected room and its direct reward token', () => {
@@ -1058,5 +1168,82 @@ describe('structured workspace biome presentation', () => {
     expect(selected.selectedContinuation?.marker).toBe(
       selected.targets.find((target) => target.selected)?.door.room.marker,
     );
+  });
+});
+
+describe("rooms past the walk's stop", () => {
+  function galleryProject(id: string): ProjectDocument {
+    const entry = galleryCases.find((candidate) => candidate.id === id);
+    if (entry === undefined) throw new Error(`No gallery case ${id}`);
+    return buildGalleryProject(entry);
+  }
+  // Each rail stop as its room (or `hub`) and whether it waits past the stop.
+  const railRooms = (biome: WorkspaceBiome): readonly (readonly [string, boolean])[] =>
+    biome.rail.flatMap((entry): (readonly [string, boolean])[] => {
+      if (entry.kind === 'node') {
+        const address = entry.focusMarker.address;
+        return [
+          [address.kind === 'occurrence' ? address.occurrenceId : '', entry.notReached === true],
+        ];
+      }
+      if (entry.kind !== 'hubGroup') return [];
+      return [
+        ['hub', entry.notReached === true],
+        ...entry.visits.flatMap((visit): (readonly [string, boolean])[] => [
+          [visit.node.room.occurrenceId, visit.notReached === true],
+          ...visit.sideVisits.map((side): readonly [string, boolean] => [
+            side.node.room.occurrenceId,
+            side.notReached === true,
+          ]),
+        ]),
+      ];
+    });
+  const notReachedRooms = (biome: WorkspaceBiome) =>
+    railRooms(biome).flatMap(([room, notReached]) => (notReached ? [room] : []));
+
+  it('marks only the rooms the walk never entered, from the stopped room on', () => {
+    const project = galleryProject('progressive-stop-at-entry');
+    const f = present(project, 'Underworld', 'F').presentation.biome;
+    // The room stopped in its Overview was entered; the rooms after it were not.
+    expect(notReachedRooms(f)).not.toContain('golden-f-start');
+    expect(notReachedRooms(f)).not.toContain('golden-f-b1-e1');
+    expect(notReachedRooms(f)).toContain('golden-f-b2-e1');
+    expect(f.notReached).toBeUndefined();
+    const stopped = f.nodes.find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === 'golden-f-b1-e1',
+    );
+    expect(stopped?.kind === 'occurrenceWorkbench' && stopped.room.notReached).toBeFalsy();
+    expect(f.completionOutline.every((node) => node.room.notReached === true)).toBe(true);
+    // A later biome is never started: every room in it waits.
+    const g = present(project, 'Underworld', 'G').presentation.biome;
+    expect(g.notReached).toBe(true);
+    expect(railRooms(g).every(([, notReached]) => notReached)).toBe(true);
+  });
+
+  it('does not count a room offered behind the stopped doors as reached', () => {
+    const f = present(galleryProject('progressive-stop-door-offer'), 'Underworld', 'F').presentation
+      .biome;
+    expect(notReachedRooms(f)).not.toContain('golden-f-start');
+    expect(notReachedRooms(f)).toContain('golden-f-b1-e1');
+  });
+
+  it('keeps a reached Hub and its stopped visit, and waits every later visit and side room', () => {
+    const n = present(galleryProject('progressive-stop-ephyra'), 'Surface', 'N').presentation.biome;
+    const waiting = notReachedRooms(n);
+    expect(waiting).not.toContain('hub');
+    expect(waiting).not.toContain('surface-n-combat05');
+    expect(waiting).toEqual(
+      expect.arrayContaining([
+        'surface-n-combat05-sideDoor1',
+        'surface-n-combat05-sideDoor2',
+        'surface-n-miniBoss01',
+        'surface-n-preboss',
+      ]),
+    );
+  });
+
+  it('marks nothing where the walk completes the biome', () => {
+    expect(notReachedRooms(directRewardBiome)).toEqual([]);
+    expect(directRewardBiome.notReached).toBeUndefined();
   });
 });

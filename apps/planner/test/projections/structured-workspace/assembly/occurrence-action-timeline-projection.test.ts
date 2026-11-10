@@ -39,7 +39,9 @@ import type {
   WorkspaceRoomLifecycleTimelineEntry,
 } from '@planner/projections/structured-workspace';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
-import { foldedBossDefeats } from '@planner/projections/structured-workspace/assembly/occurrence-action-timeline-projection';
+import { galleryCases } from '@planner-test/support/gallery/cases';
+import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
+import { splitAtRoomStop } from '@planner/projections/structured-workspace/assembly/occurrence-action-timeline-projection';
 
 function projectedWhere(
   project: ProjectDocument,
@@ -79,37 +81,76 @@ function startIdentities(room: ReturnType<typeof roomOf>) {
 }
 
 describe('encounter banner supplements', () => {
-  it('hosts the start events on the start banner and the Anomaly outcome on its end banner', () => {
+  const shapeOf = (room: ReturnType<typeof roomOf>) =>
+    (room.roomActions?.timeline.entries ?? []).flatMap((entry) =>
+      entry.kind === 'boundary' ? [entry.boundary.kind] : [],
+    );
+
+  it('hosts the identity on the start and the Anomaly capture point on its outcome', () => {
     const room = roomOf(
       loadUnderworldGAnomalyRosterCheckpoint(),
       createOccurrenceId('golden-g-b3-e2'),
     );
     const [start] = banners(room, 'encounterStart');
-    const [end] = banners(room, 'encounterEnd');
+    const [outcome] = banners(room, 'encounterOutcome');
     expect(start?.supplement).toMatchObject({
       kind: 'encounterStart',
       identityLabel: 'Anomaly combat',
       phase: { address: { phaseKey: 'Encounter' } },
     });
-    // No kill race: the end banner carries only the Anomaly's capture point.
-    expect(end?.supplement).toEqual({ kind: 'encounterEnd', anomalyCleared: true });
+    expect(outcome?.supplement).toMatchObject({
+      kind: 'encounterOutcome',
+      choices: ['anomalyCleared'],
+    });
+    expect(outcome?.label).toBe('Encounter outcome');
+    // The end announces what spawns and hosts no choice.
+    expect(banners(room, 'encounterEnd').every((entry) => entry.supplement === undefined)).toBe(
+      true,
+    );
+    expect(shapeOf(room).slice(1, 4)).toEqual([
+      'encounterStart',
+      'encounterOutcome',
+      'encounterEnd',
+    ]);
   });
 
-  it('keeps the Gorgon condition on the start banner, settled as the encounter starts', () => {
+  it('keeps the Gorgon condition on the Encounter outcome, read as the fight ends', () => {
     const room = roomOf(
       loadUnderworldGorgonAthenaCheckpoint(),
       createOccurrenceId('golden-g-b1-e1'),
     );
-    const [start] = banners(room, 'encounterStart');
-    expect(start?.supplement?.kind === 'encounterStart' && start.supplement.phase).toMatchObject({
-      gorgonCondition: { selected: true, supported: true },
+    const [outcome] = banners(room, 'encounterOutcome');
+    expect(outcome?.supplement).toMatchObject({
+      kind: 'encounterOutcome',
+      choices: expect.arrayContaining(['gorgonCondition']),
+      phase: { gorgonCondition: { selected: true, supported: true } },
     });
     expect(banners(room, 'encounterEnd').every((entry) => entry.supplement === undefined)).toBe(
       true,
     );
   });
 
-  it('gives a Nemesis kill race its end banner beside its bet gold', () => {
+  it('shows no outcome where the fight hosts no choice', () => {
+    const room = roomOf(loadUnderworldFigLeafCheckpoint(), createOccurrenceId('golden-f-start'));
+    expect(banners(room, 'encounterOutcome')).toEqual([]);
+    expect(room.roomActions?.timeline.boundaries.map((boundary) => boundary.kind)).not.toContain(
+      'encounterOutcome',
+    );
+  });
+
+  it('hosts the Aetos wave and the Gorgon condition on one outcome', () => {
+    const entry = galleryCases.find((candidate) => candidate.id === 'outcome-aetos-gorgon')!;
+    const room = roomOf(buildGalleryProject(entry), createOccurrenceId('surface-p-1-1-p_combat03'));
+    const outcomes = banners(room, 'encounterOutcome');
+    expect(outcomes).toHaveLength(1);
+    expect(outcomes[0]?.supplement).toMatchObject({
+      kind: 'encounterOutcome',
+      choices: ['aetos', 'gorgonCondition'],
+      phase: { address: { phaseKey: 'Combat' } },
+    });
+  });
+
+  it('gives a Nemesis kill race its outcome beside its bet gold on the end', () => {
     const occurrenceId = goldenGOccurrenceId(4, 1);
     const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'SelectEncounter',
@@ -122,16 +163,16 @@ describe('encounter banner supplements', () => {
     });
     const room = roomOf(project, occurrenceId);
     const [start] = banners(room, 'encounterStart');
-    const [end] = banners(room, 'encounterEnd');
+    const [outcome] = banners(room, 'encounterOutcome');
     expect(start?.supplement).toMatchObject({
       kind: 'encounterStart',
       identityLabel: 'Nemesis combat',
     });
-    expect(end?.supplement).toMatchObject({
-      kind: 'encounterEnd',
+    expect(outcome?.supplement).toMatchObject({
+      kind: 'encounterOutcome',
+      choices: ['nemesisBet'],
       phase: { address: { phaseKey: 'Encounter' }, nemesisBet: expect.any(Object) },
     });
-    expect(end?.supplement).not.toHaveProperty('anomalyCleared');
     // An unauthored race is a win: the bet's payout joins the phase's fight gold.
     expect(room.roomActions?.phaseFightGold).toEqual([
       {
@@ -182,13 +223,9 @@ describe('Nemesis interaction family', () => {
           ? ['interaction']
           : [],
     );
-    // Answering her ends the encounter: start, her interaction, then the end.
+    // Answering her ends the encounter; until her offer is settled the room stops at her row.
     const start = order.indexOf('encounterStart');
-    expect(order.slice(start, start + 3)).toEqual([
-      'encounterStart',
-      'interaction',
-      'encounterEnd',
-    ]);
+    expect(order.slice(start)).toEqual(['encounterStart', 'interaction']);
     expect(interactionRows(room)).toEqual([
       expect.objectContaining({
         actionKey: roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
@@ -197,10 +234,22 @@ describe('Nemesis interaction family', () => {
     ]);
     expect(banners(room, 'roomEntered')[0]?.supplement).toBeUndefined();
     expect(identityLabels(room)).toEqual(['Nemesis event · Gold trade']);
-    expect(banners(room, 'encounterEnd')[0]?.supplement).toMatchObject({
-      kind: 'encounterEnd',
-      phase: { nemesisEvent: { value: { kind: 'goldTrade' } } },
-    });
+    // The trade's outcome, read as answering her ends the encounter, waits with that outcome.
+    expect(room.roomActions?.timeline.notReached).toContainEqual(
+      expect.objectContaining({
+        kind: 'events',
+        label: 'Encounter outcome',
+        supplement: expect.objectContaining({
+          kind: 'encounterOutcome',
+          choices: ['nemesisEvent'],
+          phase: expect.objectContaining({
+            nemesisEvent: expect.objectContaining({
+              value: expect.objectContaining({ kind: 'goldTrade' }),
+            }),
+          }),
+        }),
+      }),
+    );
   });
 
   it('names the Fields Passive event on its start banner and keeps its interaction on its row', () => {
@@ -351,59 +400,160 @@ describe('engine-published row facts', () => {
   });
 });
 
-describe('boss defeat fold', () => {
-  it('reads an adjacent boss defeat as its encounter end banner and hides its checkpoint', () => {
+describe('boss defeat', () => {
+  it('stands as the Boss room outcome between the encounter start and end', () => {
     const room = roomOf(
       loadUnderworldAutomaticBossCheckpoint(),
       createOccurrenceId('golden-f-preboss-shop:boss'),
     );
-    expect(banners(room, 'bossDefeated')).toEqual([]);
-    const ends = banners(room, 'encounterEnd');
-    expect(ends).toHaveLength(1);
-    expect(ends[0]?.bossDefeated).toEqual({
-      kind: 'bossDefeated',
-      key: 'bossDefeated:Encounter',
-      phaseKey: 'Encounter',
-    });
+    expect(
+      (room.roomActions?.timeline.entries ?? []).flatMap((entry) =>
+        entry.kind === 'boundary' ? [entry.boundary.kind] : [],
+      ),
+    ).toEqual(['roomEntered', 'encounterStart', 'bossDefeated', 'encounterEnd', 'cleanup']);
+    expect(banners(room, 'bossDefeated')[0]?.label).toBe('Boss defeated');
     expect(room.roomActions?.timeline.suppressedCheckpointKeys).toContain('bossDefeated:Encounter');
   });
+});
 
-  type Entry = Parameters<typeof foldedBossDefeats>[0][number];
-  const boundary = (
-    kind: 'bossDefeated' | 'encounterEnd' | 'encounterStart',
-    phaseKey: string,
-    rank: number,
-  ): Entry => ({
-    kind: 'boundary',
-    boundary: { kind, key: `${kind}:${phaseKey}`, phaseKey },
-    rank,
-    placement: 'before',
+describe('a room whose walk stops in it', () => {
+  function galleryTimeline(id: string, occurrenceId: string) {
+    const entry = galleryCases.find((candidate) => candidate.id === id);
+    if (entry === undefined) throw new Error(`No gallery case ${id}`);
+    return roomOf(buildGalleryProject(entry), createOccurrenceId(occurrenceId)).roomActions!
+      .timeline;
+  }
+  const shape = (entries: readonly { readonly kind: string }[]) =>
+    entries.flatMap((entry) =>
+      entry.kind === 'boundary'
+        ? [(entry as BoundaryEntry).boundary.kind]
+        : entry.kind === 'action' || entry.kind === 'events'
+          ? [entry.kind]
+          : [],
+    );
+
+  it('ends at the blocking row, its later rows waiting without banners', () => {
+    const timeline = galleryTimeline('progressive-stop-encounter-end', 'surface-o-devotion');
+    expect(shape(timeline.entries)).toEqual([
+      'roomEntered',
+      'action',
+      'encounterStart',
+      'encounterEnd',
+      'action',
+    ]);
+    expect(shape(timeline.notReached ?? [])).toEqual(['action']);
   });
-  const cleanupBoundary: Entry = {
-    kind: 'boundary',
-    boundary: { kind: 'cleanup', key: 'cleanup' },
-    rank: 2,
-    placement: 'after',
-  };
 
-  it('folds only a defeat whose own phase ends at the same position right after it', () => {
-    expect([
-      ...foldedBossDefeats([
-        boundary('bossDefeated', 'Encounter', 1),
-        boundary('encounterEnd', 'Encounter', 1),
-      ]).keys(),
-    ]).toEqual(['encounterEnd:Encounter']);
-    // Something between them, another phase's end, a later end or no end keeps its own banner.
-    for (const entries of [
-      [
-        boundary('bossDefeated', 'Encounter', 1),
-        boundary('encounterStart', 'Second', 1),
-        boundary('encounterEnd', 'Encounter', 1),
-      ],
-      [boundary('bossDefeated', 'Encounter', 1), boundary('encounterEnd', 'Second', 1)],
-      [boundary('bossDefeated', 'Encounter', 1), boundary('encounterEnd', 'Encounter', 2)],
-      [boundary('bossDefeated', 'Encounter', 1), cleanupBoundary],
-    ])
-      expect(foldedBossDefeats(entries).size).toBe(0);
+  it('waits on its Overview when its Overview blocks, its saved rows unshown', () => {
+    const timeline = galleryTimeline('progressive-stop-at-entry', 'golden-f-b1-e1');
+    expect(shape(timeline.entries)).toEqual(['roomEntered']);
+    expect(timeline.waitsOn).toEqual({ kind: 'overview' });
+    expect(timeline.notReached).toEqual([]);
+  });
+
+  it('ends before the doors open while a required pickup is not placed', () => {
+    const timeline = galleryTimeline('required-unplaced', 'golden-f-b1-e1');
+    expect(shape(timeline.entries)).toEqual(['roomEntered', 'encounterStart', 'encounterEnd']);
+    expect(timeline.notReached).toEqual([]);
+    expect(timeline.doorsWait).toBe(true);
+    expect(timeline.waitsOn).toBeUndefined();
+  });
+
+  it('keeps the doors opening as its stop when a door offer blocks', () => {
+    const timeline = galleryTimeline('progressive-stop-door-offer', 'golden-f-start');
+    expect(shape(timeline.entries).at(-1)).toBe('cleanup');
+    expect(timeline.notReached).toBeDefined();
+    expect(timeline.doorsWait).toBeUndefined();
+  });
+
+  it('holds its doors when it stops at a row after the doors open', () => {
+    const timeline = galleryTimeline('well-twist-unset', 'golden-f-preboss-shop:postboss');
+    expect(shape(timeline.entries)).toContain('cleanup');
+    expect(shape(timeline.entries).at(-1)).toBe('action');
+    expect(timeline.doorsWait).toBe(true);
+  });
+
+  it('keeps its Encounter outcome with its controls when it stops there', () => {
+    const room = roomOf(
+      buildGalleryProject(galleryCases.find((entry) => entry.id === 'outcome-aetos-unavailable')!),
+      createOccurrenceId('surface-p-1-1-p_combat03'),
+    );
+    const timeline = room.roomActions!.timeline;
+    expect(shape(timeline.entries).at(-1)).toBe('encounterOutcome');
+    const outcome = timeline.entries.at(-1);
+    expect(
+      outcome?.kind === 'boundary' && outcome.supplement?.kind === 'encounterOutcome'
+        ? outcome.supplement.phase.aetos
+        : undefined,
+    ).toMatchObject({ selectedWave: 9, contextReached: true });
+  });
+
+  it('ends at the encounter end that owes an unplaced Shrine delivery', () => {
+    const timeline = galleryTimeline('shrine-delivery-unplaced', 'surface-o-devotion');
+    expect(shape(timeline.entries).at(-1)).toBe('encounterEnd');
+    expect(shape(timeline.notReached ?? [])).toEqual(['action']);
+  });
+
+  it('keeps the doors opening as its stop when the door store is unavailable', () => {
+    const timeline = galleryTimeline('chaos-time-piece', 'fixture-chaos-room');
+    expect(shape(timeline.entries)).toEqual(['roomEntered', 'action', 'cleanup']);
+    expect(timeline.notReached).toEqual([]);
+  });
+
+  it('shows every entry when it stops only in its exit work', () => {
+    const timeline = galleryTimeline('side-visit-repeat', 'surface-n-combat05');
+    expect(timeline.notReached).toBeUndefined();
+    expect(shape(timeline.entries)).toContain('cleanup');
+  });
+
+  it('keeps a reached stop only when it shows the engine entry', () => {
+    type Engine = Parameters<typeof splitAtRoomStop>[1][number];
+    type Shown = Parameters<typeof splitAtRoomStop>[0][number];
+    const engine = (kind: string, phaseKey?: string): Engine =>
+      ({
+        kind: 'boundary',
+        boundary: { kind, key: phaseKey === undefined ? kind : `${kind}:${phaseKey}`, phaseKey },
+        rank: 1,
+        placement: 'before',
+      }) as unknown as Engine;
+    const shown = (entry: Engine): Shown => entry as unknown as Shown;
+    const keys = (split: ReturnType<typeof splitAtRoomStop>) =>
+      split?.reached.map((entry) => (entry.kind === 'boundary' ? entry.boundary.key : entry.kind));
+    const stopAt = { kind: 'timeline', entryIndex: 1, at: 'entry' } as const;
+    // A stop at an Encounter outcome keeps that outcome to repair its choices there.
+    const fight = [
+      engine('roomEntered'),
+      engine('encounterOutcome', 'Encounter'),
+      engine('encounterEnd', 'Encounter'),
+      engine('cleanup'),
+    ];
+    expect(keys(splitAtRoomStop(fight.map(shown), fight, { roomStop: stopAt }))).toEqual([
+      'roomEntered',
+      'encounterOutcome:Encounter',
+    ]);
+    // A later entry shown in place of the stop entry is not reached.
+    const start = [engine('roomEntered'), engine('encounterStart', 'Encounter'), engine('cleanup')];
+    expect(
+      keys(splitAtRoomStop([start[0]!, start[2]!].map(shown), start, { roomStop: stopAt })),
+    ).toEqual(['roomEntered']);
+  });
+
+  it('leaves a Ship phase the walk has not reached waiting on the phase it stopped in', () => {
+    const entry = galleryCases.find((candidate) => candidate.id === 'ship-phase-waiting')!;
+    const workbench = roomOf(
+      buildGalleryProject(entry),
+      createOccurrenceId('surface-o-combat04'),
+    ).workbench;
+    if (workbench.kind !== 'ship') throw new Error('Not a Ship room');
+    expect(workbench.phases.map((phase) => [phase.label, phase.waitsOn])).toEqual([
+      ['Intro', undefined],
+      ['Combat 1', { kind: 'phase', phaseLabel: 'Intro' }],
+    ]);
+  });
+
+  it('shows every phase of a room the walk passes', () => {
+    const timeline = galleryTimeline('boon-offer-picked', 'golden-f-start');
+    expect(timeline.notReached).toBeUndefined();
+    expect(shape(timeline.entries)).toContain('cleanup');
   });
 });

@@ -54,7 +54,7 @@ export interface FigLeafPhaseCandidateSupport {
 export interface GorgonPhaseCandidateSupport {
   readonly origin: EncounterPhaseAddress;
   readonly supported: boolean;
-  /** Encounter-start source level and one resolved deterministic Athena rarity. */
+  /** Source level at the outcome and one resolved deterministic Athena rarity. */
   readonly rarityLevel?: import('../keepsakes/state').GorgonRarityLevel;
   readonly rarity?: TraitRarity;
   /** Sparse source override is lower precedence than a room override. */

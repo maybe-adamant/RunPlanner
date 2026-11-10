@@ -107,7 +107,9 @@ it.each([
           ),
         ),
       );
-    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    // The biome may open on a room past the walk's stop, which has no tabs to leave.
+    const overview = screen.queryByRole('tab', { name: 'Room Overview' });
+    if (overview !== null) await view.user.click(overview);
     const findings = render(
       <Provider store={view.application.store}>
         <ProjectFindings catalog={catalog} issue={issue} focusByOwner={workspace.focusByOwner} />

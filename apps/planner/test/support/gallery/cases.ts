@@ -8,6 +8,7 @@ import {
   createHubDecisionAddress,
   createIncomingRewardAddress,
   createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -16,6 +17,7 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createRoomActionAddress,
   createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   rerollAppendIndex,
   roomActionKey,
   type AuthoredNemesisRandomEventOutcome,
@@ -62,13 +64,25 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   roomLayoutAuthoringForProjectEvaluationAssembly,
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
+  simulateProject,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
   type RoomAnchorObjectKind,
 } from '@run-planner/engine/simulation';
 import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
-import { surfaceShrineDeliveriesProject } from '@run-planner/test-fixtures/surface';
+import { swapEchoAway } from '../removed-actions';
+import {
+  createEchoGoldIAnvilDuplicateProject,
+  createCompleteFGProject,
+  createGoldenFGHIProject,
+  createUnderworldFWellCheckpoint,
+  loadUnderworldFGProject,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  loadSurfaceNOPProject,
+  surfaceShrineDeliveriesProject,
+} from '@run-planner/test-fixtures/surface';
+import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
 import { createReachableNaturalChaosProject } from '../structured-workspace/interaction-binding.test-support';
 import {
   appendRoomAction,
@@ -121,6 +135,49 @@ function placeLastSpawned(biomeKey: string, occurrenceId: string): GalleryStep {
   };
 }
 
+/**
+ * Gives one settled boon offer in a room a rarity its giver cannot offer there, through the
+ * engine's own offer command: the room's walk stops at the row collecting it.
+ */
+function unofferableRarity(
+  biomeKey: string,
+  occurrenceId: string,
+  acquisitionRole: string,
+  slotKey?: string,
+): GalleryStep {
+  return (project) => {
+    const evaluation = simulateProject(catalog, project).route.biomes.find(
+      (biome) => biome.biomeKey === biomeKey,
+    );
+    const selected = (
+      evaluation !== undefined && 'rewards' in evaluation
+        ? evaluation.rewards.selectedTraitOffers
+        : []
+    ).find((trace) => {
+      const owner = trace.address.owner;
+      return (
+        'occurrenceId' in owner &&
+        owner.occurrenceId === occurrenceId &&
+        trace.address.acquisitionRole === acquisitionRole &&
+        (slotKey === undefined || ('slotKey' in owner && owner.slotKey === slotKey))
+      );
+    });
+    const offer = selected?.offer;
+    if (selected === undefined || offer?.kind !== 'traits')
+      throw new Error(`${occurrenceId} has no settled ${acquisitionRole} boon offer`);
+    const [first, ...rest] = offer.options;
+    if (first === undefined) throw new Error(`${occurrenceId} offers no boon`);
+    return {
+      kind: 'ReplaceTraitOffer',
+      trait: selected.address,
+      value: {
+        ...offer,
+        options: [{ ...first, rarity: first.rarity === 'Heroic' ? 'Common' : 'Heroic' }, ...rest],
+      },
+    };
+  };
+}
+
 /** A room's object anchors by ascending id, as the Objects line numbers them. */
 function anchorIds(gameName: string): readonly number[] {
   return (catalog.rooms.byKey[gameName]?.mapPoints?.challengeSwitchAnchors ?? [])
@@ -142,6 +199,19 @@ const nemesisPhase = createEncounterPhaseAddress(
   'Encounter',
 );
 
+// The first P combat room, where Aetos and the Gorgon condition share an outcome.
+const pCombat03Phase = createEncounterPhaseAddress(
+  createBiomeAddress('Surface', 'P'),
+  { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-p-1-1-p_combat03') },
+  'Combat',
+);
+
+const athenaAmulet: GalleryStep = {
+  kind: 'ReplaceStartingKeepsake',
+  selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+  keepsakeKey: 'AthenaEncounterKeepsake',
+};
+
 /** One case per Nemesis event family, each with its setup row and end outcome. */
 function nemesisFamilyCases(): readonly GalleryCase[] {
   const event = createNemesisRandomEventAddress(nemesisPhase);
@@ -149,6 +219,7 @@ function nemesisFamilyCases(): readonly GalleryCase[] {
     id: string,
     label: string,
     value: AuthoredNemesisRandomEventOutcome,
+    rewardType: string,
   ): GalleryCase => ({
     id,
     label,
@@ -157,28 +228,41 @@ function nemesisFamilyCases(): readonly GalleryCase[] {
     commands: [
       { kind: 'SelectEncounter', phase: nemesisPhase, encounterKey: 'NemesisRandomEvent' },
       { kind: 'SelectNemesisRandomEventFamily', event, family: value.kind },
-      { kind: 'ReplaceNemesisRandomEventInteraction', event, value: { ...value, reward: null } },
+      {
+        kind: 'ReplaceNemesisRandomEventInteraction',
+        event,
+        value: { ...value, reward: { rewardType } },
+      },
     ],
     target: room('F', 'golden-f-b5-e1'),
   });
   return [
-    entry('nemesis-free-item', 'Nemesis free item', { kind: 'freeItem' }),
-    entry('nemesis-gold-trade', 'Nemesis gold trade, declined', {
-      kind: 'goldTrade',
-      response: 'decline',
-    }),
-    entry('nemesis-damage-trade', 'Nemesis damage trade', {
-      kind: 'damageTrade',
-      response: 'accept',
-    }),
-    entry('nemesis-damage-contest', 'Nemesis damage contest', {
-      kind: 'damageContest',
-      result: 'success',
-    }),
-    entry('nemesis-damage-contest-failed', 'Nemesis damage contest, failed', {
-      kind: 'damageContest',
-      result: 'failure',
-    }),
+    entry('nemesis-free-item', 'Nemesis free item', { kind: 'freeItem' }, 'ArmorBoost'),
+    entry(
+      'nemesis-gold-trade',
+      'Nemesis gold trade, declined',
+      { kind: 'goldTrade', response: 'decline' },
+      'MaxHealthDropBig',
+    ),
+    entry(
+      'nemesis-damage-trade',
+      'Nemesis damage trade',
+      { kind: 'damageTrade', response: 'accept' },
+      'RoomMoneyDrop',
+    ),
+    entry(
+      'nemesis-damage-contest',
+      'Nemesis damage contest',
+      { kind: 'damageContest', result: 'success' },
+      'MaxHealthDrop',
+    ),
+    // Losing keeps the planned item; she drops Consolation instead.
+    entry(
+      'nemesis-damage-contest-failed',
+      'Nemesis damage contest, failed',
+      { kind: 'damageContest', result: 'failure' },
+      'MaxHealthDrop',
+    ),
   ];
 }
 
@@ -295,7 +379,8 @@ export const galleryCases: readonly GalleryCase[] = [
     id: 'pom-sea-star-nemesis',
     label: 'Nemesis Pom trade with Sea Star Double Up',
     shows: ['Nemesis event row', 'Pom', 'Double Up'],
-    project: loadNemesisPomSeaStarCheckpoint,
+    // The traded Pom's level chosen, so the walk collects it and Sea Star copies it.
+    project: () => authorLegalPomResolutions(loadNemesisPomSeaStarCheckpoint()),
     target: room('F', 'golden-f-b5-e1'),
   },
   {
@@ -409,6 +494,14 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('H', 'golden-h-combat02'),
   },
   {
+    id: 'fields-doors-no-cage',
+    doorsExpanded: true,
+    label: 'Fields doors where no offered room uses cages: the cage count and roll notes',
+    shows: ['Fields settings line', 'cage count note', 'door roll note'],
+    project: createGoldenFGHIProject,
+    target: room('H', 'golden-h-combat09'),
+  },
+  {
     id: 'doors-table',
     doorsExpanded: true,
     label: 'Doors table: one reward per door',
@@ -425,11 +518,55 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('P', 'surface-p-6-1-p_combat10'),
   },
   {
+    id: 'boss-door-fixed-pool',
+    doorsExpanded: true,
+    label: 'Preboss doors with the boss’s fixed Reward Pool and its note',
+    shows: ['fixed boss pool', 'door note marker'],
+    project: createGoldenFGHIProject,
+    target: room('H', 'golden-h-preboss-shop'),
+  },
+  {
+    id: 'boss-door-ignored-pool',
+    doorsExpanded: true,
+    label: 'Preboss doors whose boss ignores the carried pool: the effective pool and its note',
+    shows: ['effective pool', 'effective pool note'],
+    project: createCompleteFGProject,
+    target: room('F', 'golden-f-preboss-shop'),
+  },
+  {
+    id: 'side-room-hidden-door',
+    doorsExpanded: true,
+    label: 'Ephyra side room doors: the hidden return door and its note',
+    shows: ['hidden door row', 'door note marker'],
+    project: loadSurfaceNOPQCheckpoint,
+    target: room('N', 'surface-n-combat05-sideDoor1'),
+  },
+  {
     id: 'side-room-doors',
     overview: true,
     label: 'Ephyra main room: side doors in Spawns, a Leave room picker per side visit',
     shows: ['side-door spawns', 'side-visit Leave rows', 'side-room returns'],
     project: loadSurfaceNOPQCheckpoint,
+    target: room('N', 'surface-n-combat05'),
+  },
+  {
+    id: 'side-door-closed',
+    overview: true,
+    label: 'Ephyra main room with one side door closed',
+    shows: ['closed side door in Spawns'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [
+      {
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(
+          createBiomeAddress('Surface', 'N'),
+          createOccurrenceId('surface-n-combat05'),
+          'sideRooms',
+          'sideDoor3',
+        ),
+        generation: 'notGenerated',
+      },
+    ],
     target: room('N', 'surface-n-combat05'),
   },
   {
@@ -589,6 +726,61 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['ship phase', 'doors'],
     project: loadSurfaceEncounterShowcaseCheckpoint,
     target: room('O', 'surface-o-combat04'),
+  },
+  {
+    id: 'ship-phase-waiting',
+    roomTab: 'shipCombat1Actions',
+    label: 'Ship room combat phase waiting on its Intro phase',
+    shows: ['ship phase', 'phase not reached'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceRewardWheelOfferCount',
+        wheel: createRewardWheelAddress(
+          createBiomeAddress('Surface', 'O'),
+          createOccurrenceId('surface-o-combat04'),
+          'wheel1',
+        ),
+        offerCount: 2,
+      },
+    ],
+    target: room('O', 'surface-o-combat04'),
+  },
+  {
+    id: 'outcome-aetos-gorgon',
+    label: 'P combat room: Aetos wave and Gorgon condition at the Encounter outcome',
+    shows: ['encounter outcome', 'Aetos wave', 'Gorgon condition'],
+    project: loadSurfaceNOPProject,
+    commands: [athenaAmulet],
+    target: room('P', 'surface-p-1-1-p_combat03'),
+  },
+  {
+    id: 'outcome-aetos-gorgon-set',
+    label: 'P combat room: Aetos wave and Gorgon condition set',
+    shows: ['encounter outcome', 'Aetos wave', 'Gorgon condition'],
+    project: loadSurfaceNOPProject,
+    commands: [
+      athenaAmulet,
+      {
+        kind: 'ReplaceAetosWave',
+        phase: pCombat03Phase,
+        value: 2,
+      },
+      {
+        kind: 'ReplaceGorgonDeathDefianceCondition',
+        phase: pCombat03Phase,
+        value: true,
+      },
+    ],
+    target: room('P', 'surface-p-1-1-p_combat03'),
+  },
+  {
+    id: 'outcome-aetos-unavailable',
+    label: 'P combat room stopped at its Encounter outcome: an Aetos wave the fight cannot field',
+    shows: ['stop at the encounter outcome', 'Aetos wave', 'Not reached yet'],
+    project: loadSurfaceNOPProject,
+    commands: [athenaAmulet, { kind: 'ReplaceAetosWave', phase: pCombat03Phase, value: 9 }],
+    target: room('P', 'surface-p-1-1-p_combat03'),
   },
   {
     id: 'anomaly-encounter-end',
@@ -1076,6 +1268,18 @@ export const galleryCases: readonly GalleryCase[] = [
         value: { rewardType: 'HealBigDrop' },
       }),
       (project) => ({
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
+        slotKey: 'secondLeft',
+        value: { rewardType: 'MaxHealthDrop' },
+      }),
+      (project) => ({
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
+        slotKey: 'secondRight',
+        value: { rewardType: 'BlindBoxLoot' },
+      }),
+      (project) => ({
         kind: 'PurchaseHermesShrineOffer',
         occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
         generationKey: 'initial:first',
@@ -1274,6 +1478,49 @@ export const galleryCases: readonly GalleryCase[] = [
     label: 'Stygian Well purchases with a Fateful Twist',
     shows: ['Well purchase', 'Fateful Twist', 'fountain + Phial', 'Keepsake Rack'],
     project: loadUnderworldTwistScyllaCheckpoint,
+    target: room('F', 'golden-f-preboss-shop:postboss'),
+  },
+  {
+    id: 'well-twist-unset',
+    label: 'Stygian Well Fateful Twist bought, its result not set',
+    shows: ['stop at the purchase row', 'Twist result repair', 'Not reached yet'],
+    project: loadUnderworldFGProject,
+    commands: [
+      ...(
+        [
+          ['healing', 'ArmorBoostStore'],
+          ['secondLeft', 'RandomStoreItem'],
+          ['secondRight', 'TemporaryBoonRarityTrait'],
+        ] as const
+      ).map(([slotKey, itemKey]): GalleryStep => (project) => ({
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
+        slotKey,
+        itemKey,
+      })),
+      (project) => ({
+        kind: 'SetStygianWellPurchase',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
+        generationKey: 'initial:secondLeft',
+        purchased: true,
+      }),
+    ],
+    target: room('F', 'golden-f-preboss-shop:postboss'),
+  },
+  {
+    id: 'postboss-rack-result-unset',
+    label: 'Keepsake Rack takes the Jeweled Pom, its equip result not set',
+    shows: ['stop at the rack row', 'equip result repair', 'Not reached yet'],
+    project: loadUnderworldFGCheckpoint,
+    commands: [
+      (project) => ({
+        kind: 'ReplacePostbossKeepsake',
+        selection: createPostbossKeepsakeSelectionAddress(
+          occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
+        ),
+        keepsakeKey: 'HadesAndPersephoneKeepsake',
+      }),
+    ],
     target: room('F', 'golden-f-preboss-shop:postboss'),
   },
   {
@@ -1514,4 +1761,244 @@ export const galleryCases: readonly GalleryCase[] = [
     ],
     target: hub('N', 1),
   },
+  // Progressive Timeline: a room's Timeline ends where its walk stops.
+  {
+    id: 'progressive-stop-at-entry',
+    label: 'Room stopped at entry: its Timeline waits on the Overview',
+    shows: ['Room entered only', 'Not reached yet'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceRoomLayout',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b1-e1'),
+        layout: { flipped: false },
+      }),
+    ],
+    target: room('F', 'golden-f-b1-e1'),
+  },
+  {
+    id: 'progressive-stop-encounter-end',
+    label: 'Room stopped at its encounter end: a boon it cannot offer, later rows waiting',
+    shows: ['stop at a row', 'Not reached yet', 'no Doors open'],
+    project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
+    commands: [unofferableRarity('O', 'surface-o-devotion', 'spurnedSource')],
+    target: room('O', 'surface-o-devotion'),
+  },
+  {
+    id: 'progressive-stop-encounter-end-expanded',
+    notReachedExpanded: true,
+    label: 'Room stopped at its encounter end, its waiting rows opened',
+    shows: ['stop at a row', 'Not reached yet opened'],
+    project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
+    commands: [unofferableRarity('O', 'surface-o-devotion', 'spurnedSource')],
+    target: room('O', 'surface-o-devotion'),
+  },
+  {
+    id: 'progressive-stop-before-encounter',
+    label: 'Room stopped before its encounter: the first pickup cannot be offered',
+    shows: ['stop at a row', 'Not reached yet', 'no encounter banners'],
+    project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
+    commands: [unofferableRarity('O', 'surface-o-devotion', 'chosenSource')],
+    target: room('O', 'surface-o-devotion'),
+  },
+  {
+    id: 'progressive-stop-fields',
+    label: 'Fields room stopped at its first cage reward: later cages waiting',
+    shows: ['stop at a row', 'Not reached yet', 'Fields cages'],
+    project: loadUnderworldFGHICheckpoint,
+    commands: [unofferableRarity('H', 'golden-h-combat05', 'source', 'cage3')],
+    target: room('H', 'golden-h-combat05'),
+  },
+  ...(['shipIntroActions', 'shipCombat1Actions'] as const).map((roomTab): GalleryCase => ({
+    id: `progressive-stop-ship-${roomTab.replace('ship', '').replace('Actions', '').toLowerCase()}`,
+    roomTab,
+    label: `Ship room stopped at its first wheel reward, a boon not offered yet: ${roomTab}`,
+    shows: ['stop at a row', 'Not reached yet per phase', 'no later phase banners'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceRewardWheelOffer',
+        offer: createRewardWheelOfferAddress(
+          createBiomeAddress(project.route.routeKey, 'O'),
+          createOccurrenceId('surface-o-combat04'),
+          'wheel1',
+          'offer1',
+        ),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      }),
+    ],
+    target: room('O', 'surface-o-combat04'),
+  })),
+  {
+    id: 'progressive-stop-door-offer',
+    label: 'Room stopped at its doors opening: a door reward with no offer chosen',
+    shows: ['stop at Doors open', 'doors kept for repair', 'Not reached yet'],
+    project: loadUnderworldFGCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('golden-f-b1-e1'),
+        ),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+      },
+    ],
+    target: room('F', 'golden-f-start'),
+  },
+  {
+    id: 'progressive-stop-ephyra',
+    label: 'Ephyra main room stopped at its reward: doors and side visits waiting',
+    shows: ['stop at a row', 'no Doors open', 'no side-visit Leave rows'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [unofferableRarity('N', 'surface-n-combat05', 'self')],
+    target: room('N', 'surface-n-combat05'),
+  },
+  // Opening a biome holding the walk's stop lands on the stop, as its repair link does.
+  {
+    id: 'stop-notice-open-biome-overview',
+    opensBiome: true,
+    label: 'Biome opened with a stop in a room Overview',
+    shows: ['opens on the stop'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceRoomLayout',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b1-e1'),
+        layout: { flipped: false },
+      }),
+    ],
+    target: room('F', 'golden-f-b1-e1'),
+  },
+  {
+    id: 'stop-notice-open-biome-row',
+    opensBiome: true,
+    findingPill: true,
+    label: 'Biome opened with a stop at a Timeline row',
+    shows: ['opens on the stop'],
+    project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
+    commands: [unofferableRarity('O', 'surface-o-devotion', 'spurnedSource')],
+    target: room('O', 'surface-o-devotion'),
+  },
+  {
+    id: 'stop-notice-past-hub',
+    overview: true,
+    label: 'Past the stop: the Hub',
+    shows: ['Hub not reached', 'link to the stop'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [unofferableRarity('N', 'surface-n-prehub', 'source')],
+    target: hub('N'),
+  },
+  {
+    id: 'removed-actions-announced',
+    label: 'An edit removes a row in another room',
+    shows: ['announcement naming the room', 'link to that room', 'Undo'],
+    project: createEchoGoldIAnvilDuplicateProject,
+    edit: swapEchoAway,
+    target: room('H', 'golden-h-bridge01'),
+  },
+  {
+    id: 'stop-notice-loadout',
+    label: 'Past the stop: a room while the Loadout stops the plan',
+    shows: ['room not reached', 'link to the Loadout'],
+    findingPill: true,
+    project: createGoldenFGHIProject,
+    commands: [
+      {
+        kind: 'ReplaceStartingKeepsake',
+        keepsakeKey: 'HadesAndPersephoneKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      },
+    ],
+    target: room('F', 'golden-f-b1-e1'),
+  },
+  {
+    id: 'stop-notice-required-first',
+    findingPill: true,
+    label: 'A Well purchase ordered before the Postboss fountain',
+    shows: ['must come first finding', 'stop at a row'],
+    project: () => createUnderworldFWellCheckpoint(false),
+    commands: [
+      (project) => {
+        const postboss = 'golden-f-preboss-shop:postboss';
+        const purchase = project.route.biomes
+          .find((biome) => biome.biomeKey === 'F')
+          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === postboss)
+          ?.roomActions.order.find((reference) => reference.kind === 'purchaseStygianWellOffer');
+        if (purchase === undefined) throw new Error('missing Well purchase');
+        return {
+          kind: 'MoveRoomAction',
+          action: createRoomActionAddress(
+            createBiomeAddress('Underworld', 'F'),
+            createOccurrenceId(postboss),
+            roomActionKey(purchase),
+          ),
+          toIndex: 0,
+        };
+      },
+    ],
+    target: room('F', 'golden-f-preboss-shop:postboss'),
+  },
+  {
+    id: 'stop-notice-required-first-pickup',
+    findingPill: true,
+    label: 'A Well purchase ordered before the room reward pickup',
+    shows: ['must come first finding', 'stop at a row'],
+    project: () => underworldCheckpointArtifacts['underworld-f-trait-order-checks'].load(),
+    commands: [
+      (project) => {
+        const occurrenceId = '8bf76f54-d35c-44dc-a243-4e3d1f37300c';
+        const purchase = project.route.biomes
+          .find((biome) => biome.biomeKey === 'F')
+          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+          ?.roomActions.order.find((reference) => reference.kind === 'purchaseStygianWellOffer');
+        if (purchase === undefined) throw new Error('missing Well purchase');
+        return {
+          kind: 'MoveRoomAction',
+          action: createRoomActionAddress(
+            createBiomeAddress('Underworld', 'F'),
+            createOccurrenceId(occurrenceId),
+            roomActionKey(purchase),
+          ),
+          toIndex: 0,
+        };
+      },
+    ],
+    target: room('F', '8bf76f54-d35c-44dc-a243-4e3d1f37300c'),
+  },
+  // Past the walk's stop: rooms stay on the rail, dimmed, and show only that they are not reached.
+  ...(
+    [
+      ['room', 'F', 'golden-f-b2-e1', 'the room after one stopped in its Overview'],
+      ['later-biome', 'G', 'golden-g-intro', 'a later biome room'],
+    ] as const
+  ).map(([id, biomeKey, occurrenceId, what]): GalleryCase => ({
+    id: `progressive-past-stop-${id}`,
+    overview: true,
+    label: `Past the stop: ${what}`,
+    shows: ['room not reached', 'link to the stop', 'dimmed rail'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceRoomLayout',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b1-e1'),
+        layout: { flipped: false },
+      }),
+    ],
+    target: room(biomeKey, occurrenceId),
+  })),
+  ...(
+    [
+      ['visit', 'surface-n-miniBoss01', 'a Hub visit'],
+      ['side', 'surface-n-combat05-sideDoor2', 'a side room of the stopped Ephyra room'],
+    ] as const
+  ).map(([id, occurrenceId, what]): GalleryCase => ({
+    id: `progressive-past-stop-${id}`,
+    overview: true,
+    label: `Past the stop: ${what}`,
+    shows: ['room not reached', 'link to the stop', 'dimmed rail'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [unofferableRarity('N', 'surface-n-combat05', 'self')],
+    target: room('N', occurrenceId),
+  })),
 ];

@@ -14,6 +14,7 @@ import { hintProps } from '@planner/ui/controls/hint';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
+import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { roomKindIcon } from '../roomIcon';
 import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from '../DoorRewardEditor';
 import { DoorRow, DoorRowsHeader } from '../DecisionWorkbench';
@@ -113,7 +114,12 @@ function SideDoorRow({
             layout="row"
           />
         ) : (
-          <span className="door-row-waiting">Door closed</span>
+          <img
+            alt="Door closed"
+            className="door-lock-indicator"
+            data-hint="Door closed"
+            src={roomObjectIcon('doorLock')}
+          />
         )
       }
       room={

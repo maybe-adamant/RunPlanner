@@ -1,4 +1,5 @@
 import { challengeSwitchRuleSentence, challengeSwitchRuleTitle } from './challengeSwitchCopy';
+import { requiredFirstTitle } from './walkStopCopy';
 import {
   routeRoomDeclaration,
   semanticAddressKey,
@@ -24,6 +25,7 @@ import {
   rosterIssueTitles,
   type EncounterIssueNames,
 } from './encounterIssueCopy';
+import { locationName, placeNameLabel } from './placeName';
 
 import type { FindingSelection } from '@planner/state/editorSessionSlice';
 
@@ -695,6 +697,8 @@ export interface FindingLabels extends EncounterIssueNames {
   readonly eliteAttribute: (attributeKey: string) => string | undefined;
   /** A room of the open project, by its biome and occurrence. */
   readonly room?: (biomeKey: string, occurrenceId: string) => string | undefined;
+  /** A Timeline row's label, in the room holding the owner. */
+  readonly roomAction?: (owner: SemanticAddress, actionKey: string) => string | undefined;
 }
 
 const labelsByCatalog = new WeakMap<Catalog, FindingLabels>();
@@ -884,6 +888,15 @@ export function presentTraitOfferGenerationFinding(
   const filler =
     facts.reason === 'screenSize' ? named((trait) => `${trait} can fill it.`) : undefined;
   return Object.freeze(filler === undefined ? { title } : { title, description: filler });
+}
+
+/** The required action a row must follow, by its own row in the finding's room. */
+function requiredFirstLabel(
+  finding: SemanticFinding,
+  labels: FindingLabels | undefined,
+): string | undefined {
+  const actionKey = evidenceString(finding.evidence.requiredAction);
+  return actionKey === undefined ? undefined : labels?.roomAction?.(finding.origin, actionKey);
 }
 
 function evidenceString(value: unknown): string | undefined {
@@ -1089,7 +1102,7 @@ export function presentFinding(
   ) {
     return Object.freeze({
       title: 'Saved door unavailable',
-      description: 'Restore the source room’s doors or use Remove unavailable doors.',
+      description: 'Restore the source room’s doors or take another door.',
     });
   }
   if (
@@ -1125,6 +1138,10 @@ export function presentFinding(
     }
   }
   if (finding.code === 'roomActionOrderUnavailable') {
+    if (finding.evidence.reason === 'requiredFirst')
+      return Object.freeze({
+        title: requiredFirstTitle(requiredFirstLabel(finding, labels)),
+      });
     if (finding.evidence.reason === 'dependency' && finding.evidence.checkpointUnavailable === true)
       return Object.freeze({ title: 'Room phase for this action is gone' });
     return Object.freeze({
@@ -1613,11 +1630,20 @@ export function nextRepairSelection(
   issue: AssessmentIssue,
   focusByOwner: ReadonlyMap<string, import('./structured-workspace').WorkspaceInspectorDestination>,
 ): FindingSelection {
-  const destination = focusByOwner.get(semanticAddressKey(issue.owner));
+  return ownerSelection(issue.owner, issue.regionKey, focusByOwner);
+}
+
+/** The navigation to an owner's place, as a finding pill there takes it. */
+export function ownerSelection(
+  owner: SemanticAddress,
+  key: string,
+  focusByOwner: ReadonlyMap<string, import('./structured-workspace').WorkspaceInspectorDestination>,
+): FindingSelection {
+  const destination = focusByOwner.get(semanticAddressKey(owner));
   return {
-    focusAddress: destination?.focusAddress ?? issue.owner,
-    key: issue.regionKey,
-    origin: issue.owner,
+    focusAddress: destination?.focusAddress ?? owner,
+    key,
+    origin: owner,
     ...(destination?.presentationPanel !== undefined
       ? { presentationPanel: { kind: destination.presentationPanel } as const }
       : destination?.biomeKey === undefined
@@ -1634,7 +1660,7 @@ type WorkspaceRoomIconProduct = import('./structured-workspace').WorkspaceRoomIc
 
 /** Where a finding is: its place in words, and the room there in the rail's short form. */
 export interface FindingDestination {
-  /** The place up to its room, such as "Oceanus · Location 15". */
+  /** The place as references name it, such as "Location 15". */
   readonly place: string;
   /** The room there, as the folded rail shows it: its icon and number. */
   readonly room?: {
@@ -1642,26 +1668,54 @@ export interface FindingDestination {
     readonly number?: string;
     readonly label: string;
   };
-  /** The whole location in words, the room named in full. */
+  /** The place in words with its own name, as its hover reads it. */
   readonly label: string;
 }
 
-function destinationAt(
+/** Where a finding is, by the kind of place that holds it. */
+export type FindingLocation =
+  | { readonly kind: 'route' | 'loadout' | 'project' }
+  | {
+      readonly kind: 'biome';
+      readonly biomeKey: string;
+      readonly biomeLabel: string;
+    }
+  | {
+      readonly kind: 'hub';
+      readonly biomeKey: string;
+      readonly biomeLabel: string;
+      /** The run depth on first entering the Hub, where it is reached. */
+      readonly depth?: number;
+    }
+  | {
+      /** A rail stop without a room yet, named by its title. */
+      readonly kind: 'step';
+      readonly biomeKey: string;
+      readonly biomeLabel: string;
+      readonly depth?: number;
+      readonly label: string;
+    }
+  | {
+      readonly kind: 'room';
+      readonly biomeKey: string;
+      readonly biomeLabel: string;
+      readonly depth?: number;
+      readonly room: NonNullable<FindingDestination['room']>;
+    };
+
+function roomAt(
+  biomeKey: string,
   biomeLabel: string,
   depth: number | undefined,
-  room: FindingDestination['room'],
-): FindingDestination {
-  // The game calls a room's place in the run its Location.
-  const place = depth === undefined ? biomeLabel : `${biomeLabel} · Location ${depth}`;
+  room: FindingDestination['room'] & object,
+): FindingLocation {
   return Object.freeze({
-    place,
-    ...(room === undefined ? {} : { room: Object.freeze(room) }),
-    label: room === undefined ? place : `${place} · ${room.label}`,
+    kind: 'room',
+    biomeKey,
+    biomeLabel,
+    ...(depth === undefined ? {} : { depth }),
+    room: Object.freeze(room),
   });
-}
-
-function plainDestination(label: string): FindingDestination {
-  return Object.freeze({ place: label, label });
 }
 
 function railTargetRoom(target: {
@@ -1676,42 +1730,51 @@ function railTargetRoom(target: {
   };
 }
 
-function railStopDestination(
+function railStopLocation(
+  biomeKey: string,
   biomeLabel: string,
   entry: Extract<import('./structured-workspace').WorkspaceRailEntry, { readonly kind: 'node' }>,
-): FindingDestination {
+): FindingLocation {
   if (entry.selectedTarget !== undefined)
-    return destinationAt(biomeLabel, entry.runDepth, railTargetRoom(entry.selectedTarget));
+    return roomAt(biomeKey, biomeLabel, entry.runDepth, railTargetRoom(entry.selectedTarget));
   if (entry.node.kind === 'occurrenceWorkbench' && entry.roomIcon !== undefined)
-    return destinationAt(biomeLabel, entry.runDepth, {
+    return roomAt(biomeKey, biomeLabel, entry.runDepth, {
       icon: entry.roomIcon,
       ...(entry.roomNumber === undefined ? {} : { number: entry.roomNumber }),
       label: entry.node.room.label,
     });
   // A stop without a room yet keeps its title.
-  return plainDestination(`${biomeLabel} · ${entry.label}`);
+  return Object.freeze({
+    kind: 'step',
+    biomeKey,
+    biomeLabel,
+    ...(entry.runDepth === undefined ? {} : { depth: entry.runDepth }),
+    label: entry.label,
+  });
 }
 
-export function findingDestination(
+/** Where a finding is: the place its repair destination opens. */
+export function findingLocation(
   catalog: Catalog,
   origin: SemanticAddress,
   destination?: import('./structured-workspace').WorkspaceInspectorDestination,
   route?: import('./structured-workspace').WorkspaceRoute,
-): FindingDestination {
+): FindingLocation {
   // A destination names the biome that hosts it, e.g. where a timed outcome lands.
-  if (destination?.presentationPanel === 'route') return plainDestination('Route');
+  if (destination?.presentationPanel === 'route') return Object.freeze({ kind: 'route' });
   const biomeKey =
     destination?.presentationPanel === 'loadout'
       ? undefined
       : (destination?.biomeKey ??
         ('biomeKey' in origin && origin.biomeKey !== 'routeStart' ? origin.biomeKey : undefined));
   if (biomeKey === undefined) {
-    return plainDestination(origin.kind === 'project' ? 'Project' : 'Loadout');
+    return Object.freeze({ kind: origin.kind === 'project' ? 'project' : 'loadout' });
   }
   const biome = catalog.biomes.byKey[biomeKey];
   if (biome === undefined) {
     throw new Error(`Finding references unknown biome ${biomeKey}`);
   }
+  const biomeLabel = biome.label;
   const workspaceBiome = route?.biomes.find((value) => value.biomeKey === biomeKey);
   const railKey = destination?.selectedRailKey;
   const frontier = workspaceBiome?.frontier;
@@ -1728,13 +1791,18 @@ export function findingDestination(
         (entry.marker.focusKey === railKey || entry.node.key === predecessorNodeKey)
       ) {
         return entry.kind === 'hubGroup'
-          ? plainDestination(`${biome.label} · Hub`)
-          : railStopDestination(biome.label, entry);
+          ? Object.freeze({
+              kind: 'hub',
+              biomeKey,
+              biomeLabel,
+              ...(entry.runDepth === undefined ? {} : { depth: entry.runDepth }),
+            })
+          : railStopLocation(biomeKey, biomeLabel, entry);
       }
       if (entry.kind === 'hubGroup') {
         for (const visit of entry.visits) {
           if (visit.marker.focusKey === railKey || visit.node.key === predecessorNodeKey)
-            return destinationAt(biome.label, visit.runDepth, {
+            return roomAt(biomeKey, biomeLabel, visit.runDepth, {
               ...railTargetRoom(visit.room),
               label: visit.node.room.label,
             });
@@ -1742,7 +1810,7 @@ export function findingDestination(
             (side) => side.marker.focusKey === railKey || side.node.key === predecessorNodeKey,
           );
           if (sideVisit !== undefined)
-            return destinationAt(biome.label, sideVisit.runDepth, {
+            return roomAt(biomeKey, biomeLabel, sideVisit.runDepth, {
               ...railTargetRoom(sideVisit.room),
               label: sideVisit.node.room.label,
             });
@@ -1757,11 +1825,30 @@ export function findingDestination(
       ? workspaceBiome?.completionOutline.find((node) => node.key === subject.nodeKey)
       : undefined;
   return completion === undefined
-    ? plainDestination(biome.label)
-    : destinationAt(biome.label, completion.room.runDepth, {
+    ? Object.freeze({ kind: 'biome', biomeKey, biomeLabel })
+    : roomAt(biomeKey, biomeLabel, completion.room.runDepth, {
         icon: completion.room.roomIcon,
         label: completion.room.label,
       });
+}
+
+/** A finding's place in words, as the finding pill names it. */
+function destinationOf(location: FindingLocation): FindingDestination {
+  const name = locationName(location);
+  return Object.freeze({
+    place: name.text,
+    ...(location.kind === 'room' ? { room: location.room } : {}),
+    label: placeNameLabel(name),
+  });
+}
+
+export function findingDestination(
+  catalog: Catalog,
+  origin: SemanticAddress,
+  destination?: import('./structured-workspace').WorkspaceInspectorDestination,
+  route?: import('./structured-workspace').WorkspaceRoute,
+): FindingDestination {
+  return destinationOf(findingLocation(catalog, origin, destination, route));
 }
 
 /** Where a finding is, in words. */
@@ -1772,4 +1859,44 @@ export function findingDestinationLabel(
   route?: import('./structured-workspace').WorkspaceRoute,
 ): string {
   return findingDestination(catalog, origin, destination, route).label;
+}
+
+/** Where the walk stops: the route's next repair, the place holding it and the way there. */
+export interface WalkStop {
+  readonly place: FindingLocation;
+  /** The finding pill's own navigation to the repair. */
+  readonly selection: FindingSelection;
+}
+
+/** The route's walk stop, from its next repair; absent when nothing stops the walk. */
+export function walkStopOf(
+  catalog: Catalog,
+  issue: AssessmentIssue | undefined,
+  focusByOwner: ReadonlyMap<string, import('./structured-workspace').WorkspaceInspectorDestination>,
+  route: import('./structured-workspace').WorkspaceRoute,
+): WalkStop | undefined {
+  if (issue === undefined) return undefined;
+  const destination = focusByOwner.get(semanticAddressKey(issue.owner));
+  return Object.freeze({
+    place: findingLocation(catalog, destination?.focusAddress ?? issue.owner, destination, route),
+    selection: nextRepairSelection(issue, focusByOwner),
+  });
+}
+
+/** Opening a biome that holds the walk stop lands where the repair link does. */
+export function walkStopOpening(
+  walkStop: WalkStop | undefined,
+  biomeKey: string,
+): FindingSelection | undefined {
+  if (walkStop === undefined) return undefined;
+  const panel = walkStop.selection.presentationPanel;
+  const stopBiome =
+    panel === undefined
+      ? 'biomeKey' in walkStop.place
+        ? walkStop.place.biomeKey
+        : undefined
+      : panel.kind === 'biome'
+        ? panel.biomeKey
+        : undefined;
+  return stopBiome === biomeKey ? walkStop.selection : undefined;
 }

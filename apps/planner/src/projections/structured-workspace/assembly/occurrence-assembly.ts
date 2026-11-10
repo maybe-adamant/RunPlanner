@@ -60,7 +60,7 @@ import {
   occurrenceRoomIcon,
   sharedRoomIconNumber,
 } from '../presentation/room-icon';
-import { roomLocationLabel } from '../presentation/room-location';
+import { roomPlace } from '../presentation/room-location';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceBossDoorRewardStoreControl,
@@ -339,6 +339,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
   ) => import('@run-planner/engine/simulation').RoomLayoutAuthoring | undefined;
   /** The loot the room spawns on its own; undefined while unentered. */
   readonly spawnedLoot?: import('../source-index').WorkspaceBiomeSource['spawnedLoot'];
+  readonly encounterOutcomes?: import('../source-index').WorkspaceBiomeSource['encounterOutcomes'];
   /** Whether a new Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance?: import('../source-index').WorkspaceBiomeSource['rerollSpendAllowance'];
   /** A screen's next reroll and how far the pool at its point takes it. */
@@ -346,6 +347,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
+  /** Where the walk stopped inside this room, when the assessment blocks in it. */
+  readonly roomStop?: import('../source-index').WorkspaceRoomStop;
   readonly judgmentArcanaCapability?: (
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
   ) =>
@@ -367,6 +370,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly occurrence: RoomOccurrence;
   /** The room's plan-end action, bound by the biome assembly. */
   readonly planEnd?: import('../contracts/structure').WorkspaceRoomPlanEnd;
+  /** The walk stops before entering the room. */
+  readonly notReached?: boolean;
   readonly runState: (owner: RoomRunStateCheckpointAddress) =>
     | { readonly availability: 'available'; readonly snapshot: RunStateSnapshot }
     | {
@@ -530,9 +535,13 @@ export function assembleWorkspaceOccurrence(
   const spawnedLoot = input.spawnedLoot?.(
     createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
   );
+  const encounterOutcomes = input.encounterOutcomes?.(
+    createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+  );
   const actionAssembly = assembleOccurrenceActions({
     roomActionPlacementRoster: input.roomActionPlacementRoster,
     ...(spawnedLoot === undefined ? {} : { spawnedLoot }),
+    ...(encounterOutcomes === undefined ? {} : { encounterOutcomes }),
     biome: input.biome,
     catalog: input.catalog,
     encounterPhaseStatus: input.encounterPhaseStatus,
@@ -563,6 +572,7 @@ export function assembleWorkspaceOccurrence(
       : { purgingPoolAssessment: input.purgingPoolAssessment }),
     ...(input.gold === undefined ? {} : { gold: input.gold }),
     ...(input.blockingRowKeys === undefined ? {} : { blockingRowKeys: input.blockingRowKeys }),
+    ...(input.roomStop === undefined ? {} : { roomStop: input.roomStop }),
     ...(input.rerollTargetLabel === undefined
       ? {}
       : { rerollTargetLabel: input.rerollTargetLabel }),
@@ -878,6 +888,7 @@ export function assembleWorkspaceOccurrence(
     ...(lockedDoors === undefined ? {} : { lockedDoors: lockedDoors.lockedDoors }),
     encounterPhases,
     entered,
+    ...(input.notReached === true ? { notReached: true as const } : {}),
     gameName: occurrence.gameName,
     kind: room.kind,
     label: room.label,
@@ -982,7 +993,7 @@ export function assembleWorkspaceOccurrence(
                       return Object.freeze({
                         address: placementAddress,
                         biomeKey: placement.biomeKey,
-                        ...roomLocationLabel(input.catalog, placementAddress, input.roomLocation),
+                        ...roomPlace(input.catalog, placementAddress, input.roomLocation),
                       });
                     })()
                   : undefined;
@@ -1171,7 +1182,12 @@ export function assembleWorkspaceOccurrence(
       workbench.kind === 'ship'
         ? [
             ...workbench.phases.flatMap((phase) => {
-              const actionKeys = new Set(phase.actionRows.map((row) => row.key));
+              const actionKeys = new Set([
+                ...phase.actionRows.map((row) => row.key),
+                ...(phase.notReached ?? []).flatMap((entry) =>
+                  entry.kind === 'action' ? [entry.actionKey] : [],
+                ),
+              ]);
               return [
                 ...[
                   ...phase.timeline.flatMap((entry) =>
@@ -1189,6 +1205,11 @@ export function assembleWorkspaceOccurrence(
             ...workbench.phases.flatMap((phase) =>
               [...phase.actionRows, ...phase.optionalRows, ...phase.unplacedRows].map(
                 (row) => [row.key, phase.tab] as const,
+              ),
+            ),
+            ...workbench.phases.flatMap((phase) =>
+              (phase.notReached ?? []).flatMap((entry) =>
+                entry.kind === 'action' ? [[entry.actionKey, phase.tab] as const] : [],
               ),
             ),
           ]
@@ -1348,7 +1369,10 @@ export function assembleWorkspaceOccurrence(
               (workbench.kind === 'ship' &&
               workbench.repairRows.some((repair) => repair.key === row.key)
                 ? 'shipInactiveRepair'
-                : undefined))
+                : // A Timeline waiting on its Overview shows no row: its first phase says so.
+                  workbench.kind === 'ship' && roomActions.timeline.waitsOn !== undefined
+                  ? workbench.phases[0]?.tab
+                  : undefined))
             : 'actions';
       if (tab === undefined) {
         throw new StructuredWorkspaceProjectionContractError(

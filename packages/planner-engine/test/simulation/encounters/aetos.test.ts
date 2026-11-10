@@ -265,7 +265,7 @@ describe('Aetos appearance', () => {
     const p = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P')!;
     if (p.authoring !== 'complete' || p.validity !== 'valid') throw new Error('P missing');
     expect(
-      p.history.afterTransition.ledgers.encounterStarts.filter(
+      p.history.afterTransition.ledgers.encounterCompletions.filter(
         (entry) => entry.aetosWave !== undefined,
       ),
     ).toHaveLength(1);
@@ -291,7 +291,7 @@ describe('Aetos appearance', () => {
     if (!('history' in invalidP)) throw new Error('missing retained history');
     expect(
       invalidP.history.events.filter(
-        (event) => event.kind === 'encounterStarted' && event.aetos?.selectedWave !== undefined,
+        (event) => event.kind === 'encounterCompleted' && event.aetos?.selectedWave !== undefined,
       ),
     ).toEqual([]);
   });
@@ -334,7 +334,7 @@ describe('Aetos appearance', () => {
     if (!('history' in duplicateP)) throw new Error('missing retained history');
     expect(
       duplicateP.history.events.filter(
-        (event) => event.kind === 'encounterStarted' && event.aetos?.selectedWave !== undefined,
+        (event) => event.kind === 'encounterCompleted' && event.aetos?.selectedWave !== undefined,
       ),
     ).toHaveLength(1);
     project = applyProjectCommand(project, catalog, {
@@ -354,7 +354,7 @@ describe('Aetos appearance', () => {
     if (!('history' in blockedP)) throw new Error('missing retained history');
     expect(
       blockedP.history.events.filter(
-        (event) => event.kind === 'encounterStarted' && event.aetos?.selectedWave !== undefined,
+        (event) => event.kind === 'encounterCompleted' && event.aetos?.selectedWave !== undefined,
       ),
     ).toEqual([]);
     expect(

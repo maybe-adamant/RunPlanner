@@ -12,13 +12,16 @@ import type {
   RoomHistoryOrigin,
 } from '@run-planner/engine/simulation';
 
-import type { WorkspaceInspectorDestination } from './structured-workspace';
+import { findingLocation } from './evaluationProjection';
+import { locationName, type PlaceName } from './placeName';
+import type { WorkspaceInspectorDestination, WorkspaceRoute } from './structured-workspace';
 
 /** A resolved NPC encounter together with its exact semantic navigation owner. */
 export interface RouteNpcIndexEntry {
   readonly encounterKey: string;
   readonly label: string;
-  readonly locationLabel: string;
+  /** The encounter's room as references name it. */
+  readonly place: PlaceName;
   readonly phase: EncounterPhaseAddress;
   readonly sequence: number;
 }
@@ -122,6 +125,7 @@ export function projectRouteNpcIndex(
   catalog: Catalog,
   route: ProjectRouteEvaluation,
   focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>,
+  workspaceRoute: WorkspaceRoute,
 ): RouteNpcIndex {
   const historyBiome = latestHistoryBearingBiome(route);
   if (historyBiome === undefined) return Object.freeze({ groups: Object.freeze([]) });
@@ -143,17 +147,18 @@ export function projectRouteNpcIndex(
       );
     }
     requireExactInspectorDestination(focusByOwner, phase);
-    const biome = catalog.biomes.byKey[phase.biomeKey];
-    if (biome === undefined) {
-      throw new RouteNpcIndexProjectionContractError(
-        `${semanticAddressKey(phase)} references unknown biome ${phase.biomeKey}`,
-      );
-    }
     const entries = entriesByPresentationKey.get(presentationKey);
     const entry = Object.freeze({
       encounterKey: definition.key,
       label: definition.label,
-      locationLabel: `${biome.label} · ${phase.phaseKey}`,
+      place: locationName(
+        findingLocation(
+          catalog,
+          phase,
+          focusByOwner.get(semanticAddressKey(phase)),
+          workspaceRoute,
+        ),
+      ),
       phase,
       sequence: record.sequence,
     });

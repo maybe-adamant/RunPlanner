@@ -371,6 +371,7 @@ describe('authored-project incoming reward commands', () => {
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
       catalog,
       biome: goldenFBiome,
+      topology: procced.present.route.biomes[0]!.topology!,
       occurrence,
     });
     const source = domain.contributions.find(
@@ -557,6 +558,7 @@ describe('authored-project incoming reward commands', () => {
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
       catalog,
       biome: goldenFBiome,
+      topology: procced.present.route.biomes[0]!.topology!,
       occurrence,
     });
     const child = domain.contributions.find(

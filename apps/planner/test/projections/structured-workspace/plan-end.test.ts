@@ -110,8 +110,7 @@ describe('plan end in the structured workspace', () => {
     }
     expect(workspace.route.planEnd).toMatchObject({
       biomeKey: 'F',
-      biomeLabel: 'Erebus',
-      roomLabel: 'Combat 06',
+      place: { text: expect.stringMatching(/^Location \d+$/), hint: 'Combat 06' },
       room: { kind: 'occurrence', biomeKey: 'F', occurrenceId: goldenEnd },
     });
     expect(workspace.route.planEnd?.unreached).toBeUndefined();

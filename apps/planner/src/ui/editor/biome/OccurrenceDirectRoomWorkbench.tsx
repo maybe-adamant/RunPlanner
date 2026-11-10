@@ -1,7 +1,7 @@
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { RewardPoolLine } from './DecisionWorkbench';
-import type { DoorNoteMark, DoorNoteTarget } from './doorNotes';
+import type { DoorNoteFor } from './doorNotes';
 import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { ReactNode } from 'react';
 import type {
@@ -20,7 +20,7 @@ import { roomFeatureSections } from './room-features/roomFeatureSections';
 import { RoomOverviewSections } from './RoomOverviewSections';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
 import {
-  EncounterEndControls,
+  EncounterOutcomeControls,
   EncounterPhaseControl,
   EncounterStartControls,
 } from './locals/EncounterPhaseControl';
@@ -117,12 +117,12 @@ function BossDoorRewardStoreEditor({
 export function BossDoorRewardPoolRow({
   idPrefix,
   interactions,
-  markFor,
+  noteFor,
   store,
 }: {
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
+  readonly noteFor: DoorNoteFor;
   readonly store: WorkspaceBossDoorRewardStoreControl;
 }) {
   switch (store.kind) {
@@ -141,13 +141,13 @@ export function BossDoorRewardPoolRow({
       );
     case 'fixed':
       return (
-        <RewardPoolLine fixedLabel={store.label} label="Reward Pool" poolMark={markFor('pool')} />
+        <RewardPoolLine fixedLabel={store.label} label="Reward Pool" poolNote={noteFor('pool')} />
       );
     case 'ignored':
       return (
         <RewardPoolLine
           effective={store.effective}
-          effectiveMark={markFor('effective')}
+          effectiveNote={noteFor('effective')}
           fixedLabel={store.label}
           label="Reward Pool"
         />
@@ -192,10 +192,12 @@ export function DirectRoomWorkbench({
       <EncounterStartControls interactions={interactions} phase={controls.phase} />
     ) : (
       <>
-        {controls.phase === undefined ? null : (
-          <EncounterEndControls interactions={interactions} phase={controls.phase} />
-        )}
-        {controls.anomalyCleared === true ? <AnomalyClearedControl room={room} /> : null}
+        <EncounterOutcomeControls
+          choices={new Set(controls.choices)}
+          interactions={interactions}
+          phase={controls.phase}
+        />
+        {controls.choices.includes('anomalyCleared') ? <AnomalyClearedControl room={room} /> : null}
       </>
     );
   // Every phase's identity and customization are fixed on entry: the room Overview.

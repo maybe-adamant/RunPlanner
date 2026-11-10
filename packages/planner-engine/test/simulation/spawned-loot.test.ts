@@ -3,17 +3,28 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionRoleAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createOccurrenceAddress,
+  createIncomingRewardAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceId,
+  createRewardWheelOfferAddress,
+  createRoomActionAddress,
+  createRouteAddress,
+  createStartingRewardAddress,
   hermesShrineDeliveryEntryKey,
+  roomActionKey,
+  type AuthoredNemesisRandomEventOutcome,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
+  roomObjectAnchorSlotsForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
+  encounterOutcomesForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
   type RoomSpawnedLoot,
   type SpawnedLootItem,
@@ -21,6 +32,7 @@ import {
 import {
   loadSurfaceNCheckpoint,
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
+  loadSurfaceNOPQCheckpoint,
   loadSurfaceNQuickBuckCheckpoint,
   loadSurfaceNShrineSideRoomDeliveryCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
@@ -45,6 +57,25 @@ import {
   surfaceShrineDeliverySources,
 } from '@run-planner/test-fixtures/surface';
 import {
+  createEchoGoldIAnvilDuplicateProject,
+  createEchoTalentDropReplayProject,
+  createFConversionFrontierProject,
+  createCompleteFGProject,
+  createGoldenFGHIProject,
+  echoGoldIDuplicateAnvilResult,
+  echoGoldIPrebossShopId,
+  goldenFBiome,
+  goldenFOccurrenceId,
+  goldenFStartId,
+  replaceNemesisRandomEventInteraction,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createFreshFileRouteProject,
+  newHFieldsRoomId,
+  withNewHFieldsRoom,
+} from '@run-planner/test-fixtures/fresh-file';
+import {
+  authorLegalPomResolutions,
   authorLegalTraitOffers,
   editTestRoomActionOrder,
   purchaseTestHermesShrineOffer,
@@ -92,6 +123,13 @@ function unlocks(spawned: RoomSpawnedLoot) {
   return spawned.unlocks.map((unlock) => [unlock.key, unlock.items.map(describeItem)]);
 }
 
+/** What each moment's items spawn as. */
+function momentRewards(spawned: RoomSpawnedLoot) {
+  return spawned.moments.map((moment) => [moment.key, moment.items.map((item) => item.reward)]);
+}
+
+const offer = (rewardType: string) => ({ kind: 'offer', offer: { rewardType } });
+
 const pCombat03 = 'surface-p-1-1-p_combat03';
 const oPostboss = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-preboss:postboss'));
 
@@ -138,6 +176,46 @@ describe('spawned loot', () => {
       hermesShrineDeliveryEntryKey(oPostboss, 'initial:secondLeft'),
     ]);
     expect(spawned.actionSpawns).toEqual([]);
+  });
+
+  // A Supply Chain Pom Slice spawns once its boon is taken and the encounter that matures it
+  // ends; the Pom it levels is the slice's own choice, which never holds the spawn back.
+  it('spawns a Supply Chain Pom Slice before and after its Pom is chosen', () => {
+    const project = loadSurfaceScheduledLifecycleCheckpoint();
+    const { assembly, spawned } = loot(project, 'P', pCombat03);
+    const drop = spawned.moments[0]!.items.at(-1)!;
+    if (drop.placement.kind !== 'unplaced') throw new Error('the second drop is placed');
+    const placed = settleProjectEdit({
+      catalog,
+      before: assembly,
+      command: drop.placement.command!,
+      evaluate,
+    }).assembly;
+    const room = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'P'),
+      createOccurrenceId(pCombat03),
+    );
+    const p = placed.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
+    // Placed, its Pom is unchosen and the walk stops at its pickup.
+    expect(p?.coverage.kind === 'prefix' ? p.coverage.roomStop?.room : undefined).toEqual(room);
+    const unchosen = spawnedLootForProjectEvaluationAssembly(catalog, placed, room)!;
+    const chosen = spawnedLootForProjectEvaluationAssembly(
+      catalog,
+      evaluate(authorLegalPomResolutions(placed.project)),
+      room,
+    )!;
+    for (const after of [unchosen, chosen])
+      expect(moments(after)).toEqual([
+        [
+          'encounterEnd:Combat',
+          [
+            'roomReward required #1',
+            'hermesShrineDelivery required #2',
+            'trait:SupplyDropBoon optional #3',
+            'trait:SupplyDropBoon optional #4',
+          ],
+        ],
+      ]);
   });
 
   it('places an unplaced optional Supply Chain drop with its attested command', () => {
@@ -206,10 +284,22 @@ describe('spawned loot', () => {
     ]);
   });
 
-  it('spawns Arachne’s reward during her cocoon fight', () => {
-    expect(
-      moments(loot(loadUnderworldArachneCocoonsCheckpoint(), 'F', 'golden-f-b5-e1').spawned),
-    ).toEqual([['duringEncounter:Encounter', ['roomReward required #1']]]);
+  it('spawns Arachne’s reward as breaking its cocoon ends her fight', () => {
+    // The cocoons stand from entry with the reward hidden: nothing spawns or locks before.
+    const { assembly, spawned } = loot(
+      loadUnderworldArachneCocoonsCheckpoint(),
+      'F',
+      'golden-f-b5-e1',
+    );
+    expect(moments(spawned)).toEqual([['encounterEnd:Encounter', ['roomReward required #1']]]);
+    expect(unlocks(spawned)).toEqual([]);
+    // An ordinary fight: nothing about how it ended is a choice, and the walk passes through.
+    expect(encounterOutcomesForProjectEvaluationAssembly(catalog, assembly, spawned.owner)).toEqual(
+      [],
+    );
+    const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
+    const stop = f?.coverage.kind === 'prefix' ? f.coverage.roomStop : undefined;
+    expect(stop?.room.occurrenceId).not.toBe('golden-f-b5-e1');
   });
 
   it('spawns an H miniboss reward caged at its encounter start, freed at its end', () => {
@@ -255,6 +345,73 @@ describe('spawned loot', () => {
     expect(unlocks(spawned)).toEqual([]);
   });
 
+  it('publishes what each item spawns as', () => {
+    // A room reward, a due delivery and Supply Chain's Pom Slices.
+    expect(
+      momentRewards(loot(loadSurfaceScheduledLifecycleCheckpoint(), 'P', pCombat03).spawned),
+    ).toEqual([
+      [
+        'encounterEnd:Combat',
+        [
+          offer('MaxHealthDrop'),
+          offer('MaxHealthDrop'),
+          offer('StoreRewardRandomStack'),
+          offer('StoreRewardRandomStack'),
+        ],
+      ],
+    ]);
+    // A Trial spawns each god's boon on its own.
+    expect(
+      momentRewards(
+        loot(loadSurfaceNOHermesShrineDeliveryCheckpoint(), 'O', 'surface-o-devotion').spawned,
+      ),
+    ).toEqual([
+      ['roomEntered', [{ kind: 'pickup', gameName: 'AresUpgrade' }]],
+      [
+        'encounterEnd:Encounter',
+        [{ kind: 'pickup', gameName: 'HephaestusUpgrade' }, offer('MaxHealthDrop')],
+      ],
+    ]);
+    // Fields cages and optional rewards.
+    expect(
+      momentRewards(loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-combat02').spawned),
+    ).toEqual([
+      [
+        'roomEntered',
+        [
+          offer('MaxManaDrop'),
+          offer('MaxHealthDrop'),
+          offer('MaxManaDropSmall'),
+          offer('MaxManaDropSmall'),
+        ],
+      ],
+    ]);
+    // A Boss's forced drop.
+    expect(
+      momentRewards(loot(loadUnderworldFGHCheckpoint(), 'F', 'golden-f-preboss-shop:boss').spawned),
+    ).toEqual([
+      ['encounterEnd:Encounter', [{ kind: 'requiredDrop', consumableKey: 'MixerFBossDrop' }]],
+    ]);
+  });
+
+  it('publishes a forfeited reward as the Red Onion it spawns as', () => {
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: createRouteAddress('Underworld'),
+      vowKey: 'BoonSkipShrineUpgrade',
+      rank: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    const { spawned } = loot(project, 'F', goldenFStartId);
+    expect(momentRewards(spawned)[0]?.[1]).toEqual([
+      { kind: 'pickup', gameName: 'RoomRewardConsolationPrize' },
+    ]);
+  });
+
   it('locks nothing in an ordinary reward room', () => {
     expect(unlocks(loot(loadSurfaceNCheckpoint(), 'N', nOccurrenceIds.opening).spawned)).toEqual(
       [],
@@ -288,6 +445,18 @@ describe('spawned loot', () => {
         ],
       ],
     ]);
+  });
+
+  it('publishes no moment past the room’s stop: a Fields room stopped at its Overview', () => {
+    const project = withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'min');
+    const { assembly, spawned } = loot(project, 'H', newHFieldsRoomId);
+    const h = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'H');
+    const stop = h?.coverage.kind === 'prefix' ? h.coverage.roomStop : undefined;
+    expect(stop).toMatchObject({ kind: 'overview', at: 'before' });
+    // Its cages spawn on entry, locked; the fights that free them are past the stop.
+    expect(spawned.moments.map((moment) => moment.key)).toEqual(['roomEntered']);
+    expect(spawned.moments[0]!.items.some((item) => item.lockedUntil !== undefined)).toBe(true);
+    expect(spawned.unlocks).toEqual([]);
   });
 
   it('drops Heracles’s bounty after the encounter end’s own spawns', () => {
@@ -340,12 +509,180 @@ describe('spawned loot', () => {
     ]);
   });
 
-  it('lists Sea Star’s copy under the pickup it copies', () => {
-    const { spawned } = loot(loadNemesisPomSeaStarCheckpoint(), 'F', 'golden-f-b5-e1');
+  it('spawns nothing from an Artificer transform whose replacement is not chosen', () => {
+    const source = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const project = applyProjectCommand(
+      createFConversionFrontierProject('MetaCurrencyDrop').project,
+      catalog,
+      {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: createAcquisitionRoleAddress(source, 'self'),
+        value: { kind: 'artificer' },
+      },
+    );
+    const { spawned } = loot(project, 'F', goldenFOccurrenceId(1, 1));
+    // The walk stops inside the transformed pickup: the reward it reached spawns, the replacement not.
+    expect(moments(spawned)).toEqual([['encounterEnd:Encounter', ['roomReward required #1']]]);
+    expect(spawned.actionSpawns).toEqual([]);
+  });
+
+  it('lists Sea Star’s copy under the pickup it copies once that pickup settles', () => {
+    // The Nemesis Pom's own level is unset: the walk stops at its pickup, which copies nothing yet.
+    const unresolved = loadNemesisPomSeaStarCheckpoint();
+    expect(actionSpawns(loot(unresolved, 'F', 'golden-f-b5-e1').spawned)).toEqual([]);
+    const { spawned } = loot(authorLegalPomResolutions(unresolved), 'F', 'golden-f-b5-e1');
     expect(actionSpawns(spawned)).toEqual([
-      ['interactEncounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
       ['interactAcquisitionEntry', [expect.stringMatching(/^seaStar required #\d+$/)]],
     ]);
+  });
+
+  describe('a Nemesis event’s result', () => {
+    const nemesisRoom = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: nemesisRoom },
+      'Encounter',
+    );
+    const event = createNemesisRandomEventAddress(phase);
+    /** Her event answered with an optional result, placed right after her interaction. */
+    const answered = (value: AuthoredNemesisRandomEventOutcome, rewardType: string) => {
+      const project = replaceNemesisRandomEventInteraction(
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'NemesisRandomEvent',
+        }),
+        event,
+        value,
+        { rewardType },
+      );
+      const reference = {
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'nemesisGenerated:Encounter',
+        entryKey: 'result',
+      };
+      const order =
+        project.route.biomes[0]?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === nemesisRoom,
+        )?.roomActions.order ?? [];
+      return applyProjectCommand(project, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(goldenFBiome, nemesisRoom, roomActionKey(reference)),
+        reference,
+        index:
+          order.findIndex(
+            (candidate) =>
+              candidate.kind === 'interactEncounter' && candidate.phaseKey === 'Encounter',
+          ) + 1,
+      });
+    };
+
+    it('spawns at her outcome when the outcome decides it: an accepted trade', () => {
+      const { spawned } = loot(loadNemesisPomSeaStarCheckpoint(), 'F', 'golden-f-b5-e1');
+      expect(moments(spawned)).toEqual([
+        ['encounterOutcome:Encounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
+      ]);
+      expect(spawned.actionSpawns).toEqual([]);
+    });
+
+    it('spawns at her outcome when the outcome decides it: a contest', () => {
+      const { spawned } = loot(
+        answered({ kind: 'damageContest', result: 'failure' }, 'RoomRewardConsolationPrize'),
+        'F',
+        nemesisRoom,
+      );
+      expect(moments(spawned)).toEqual([
+        ['encounterOutcome:Encounter', [expect.stringMatching(/^nemesisEvent optional #\d+$/)]],
+      ]);
+      expect(spawned.actionSpawns).toEqual([]);
+    });
+
+    it('spawns the planned item from a won contest and Consolation from a lost one', () => {
+      const won = loot(
+        answered({ kind: 'damageContest', result: 'success' }, 'MaxHealthDrop'),
+        'F',
+        nemesisRoom,
+      ).spawned;
+      expect(momentRewards(won)).toEqual([
+        ['encounterOutcome:Encounter', [offer('MaxHealthDrop')]],
+      ]);
+      // Losing keeps the planned item as the offer; Consolation is what spawns.
+      const lost = loot(
+        answered({ kind: 'damageContest', result: 'failure' }, 'MaxHealthDrop'),
+        'F',
+        nemesisRoom,
+      );
+      expect(momentRewards(lost.spawned)).toEqual([
+        ['encounterOutcome:Encounter', [offer('RoomRewardConsolationPrize')]],
+      ]);
+      expect(lost.assembly.evaluation.findings).toEqual([]);
+    });
+
+    it('spawns Consolation from a lost contest with no success item planned', () => {
+      const project = replaceNemesisRandomEventInteraction(
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'NemesisRandomEvent',
+        }),
+        event,
+        { kind: 'damageContest', result: 'failure' },
+        null,
+      );
+      const { assembly, spawned } = loot(project, 'F', nemesisRoom);
+      expect(assembly.evaluation.findings).toEqual([]);
+      expect(momentRewards(spawned)).toEqual([
+        ['encounterOutcome:Encounter', [offer('RoomRewardConsolationPrize')]],
+      ]);
+    });
+
+    it('spawns nothing from a declined trade', () => {
+      const project = replaceNemesisRandomEventInteraction(
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'NemesisRandomEvent',
+        }),
+        event,
+        { kind: 'goldTrade', response: 'decline' },
+        { rewardType: 'MaxHealthDropBig' },
+      );
+      const { spawned } = loot(project, 'F', nemesisRoom);
+      expect(spawned.moments).toEqual([]);
+      expect(spawned.actionSpawns).toEqual([]);
+    });
+
+    it('spawns nothing her outcome decides while the walk is stopped at her row', () => {
+      // A won contest with no item planned blocks her interaction.
+      const project = replaceNemesisRandomEventInteraction(
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'NemesisRandomEvent',
+        }),
+        event,
+        { kind: 'damageContest', result: 'success' },
+        null,
+      );
+      const { assembly, spawned } = loot(project, 'F', nemesisRoom);
+      const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
+      const stop = f?.coverage.kind === 'prefix' ? f.coverage.roomStop : undefined;
+      expect(assembly.evaluation.findings.map((finding) => finding.code)).toEqual([
+        'nemesisOutcomeMissing',
+      ]);
+      expect(stop?.room.occurrenceId).toBe(nemesisRoom);
+      expect(stop?.at).toBe('entry');
+      expect(spawned.moments).toEqual([]);
+      expect(spawned.actionSpawns).toEqual([]);
+    });
+
+    it('spawns under her interaction when given whatever happens: a free item', () => {
+      const { spawned } = loot(answered({ kind: 'freeItem' }, 'HealDrop'), 'F', nemesisRoom);
+      expect(moments(spawned)).toEqual([]);
+      expect(actionSpawns(spawned)).toEqual([
+        ['interactEncounter', [expect.stringMatching(/^nemesisEvent optional #\d+$/)]],
+      ]);
+    });
   });
 
   it('lists a rushed Shrine item under its purchase in the Shrine’s own room', () => {
@@ -370,5 +707,108 @@ describe('spawned loot', () => {
       'golden-f-preboss-shop',
     );
     expect(spawned.actionSpawns).toEqual([]);
+  });
+
+  it('spawns an O phase’s deliveries only once its wheel reward is collected', () => {
+    // Wheel 1 offers a Boon whose trait offer is unset: the walk stops at its pickup.
+    const project = applyProjectCommand(surfaceShrineDeliveriesProject(), catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    expect(moments(loot(project, 'O', oOccurrenceIds.combat04).spawned)).toEqual([
+      ['encounterEnd:Combat1', ['rewardWheel required #2']],
+    ]);
+  });
+
+  it('spawns Heracles’s bounty with the rest of an encounter end a due delivery blocks', () => {
+    const combat09 = nOccurrenceId('combat09');
+    const project = authorLegalTraitOffers(
+      applyProjectCommand(loadSurfaceNShrineSideRoomDeliveryCheckpoint(), catalog, {
+        kind: 'SelectEncounter',
+        phase: createEncounterPhaseAddress(
+          nBiome,
+          { kind: 'occurrence', occurrenceId: combat09 },
+          'Encounter',
+        ),
+        encounterKey: 'HeraclesCombatN',
+      }),
+    );
+    const { assembly, spawned } = loot(project, 'N', combat09);
+    const n = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
+    expect(n?.coverage.kind === 'prefix' ? n.coverage.roomStop : undefined).toMatchObject({
+      room: { occurrenceId: combat09 },
+      at: 'entry',
+    });
+    expect(moments(spawned)).toEqual([
+      [
+        'encounterEnd:Encounter',
+        [
+          'roomReward required #1',
+          'hermesShrineDelivery required unplaced:PlaceHermesShrineDelivery',
+          expect.stringMatching(/^heraclesBounty required #\d+$/),
+        ],
+      ],
+    ]);
+  });
+
+  it('lists Echo’s last reward under its encounter while the copy’s own choice is unset', () => {
+    const { spawned } = loot(createEchoTalentDropReplayProject(), 'H', 'golden-h-bridge01');
+    expect(actionSpawns(spawned)).toEqual([
+      ['interactEncounter', [expect.stringMatching(/^echo:lastReward /)]],
+    ]);
+  });
+
+  it('lists Gold Gold Gold’s duplicate under its purchase, its own result set or not', () => {
+    for (const project of [
+      createEchoGoldIAnvilDuplicateProject(),
+      createEchoGoldIAnvilDuplicateProject(echoGoldIDuplicateAnvilResult),
+    ])
+      expect(actionSpawns(loot(project, 'I', echoGoldIPrebossShopId).spawned)).toEqual([
+        ['interactShopOffer', [expect.stringMatching(/^echo:doubleShop /)]],
+      ]);
+  });
+
+  it('lists a rushed Shrine item only once the walk settles its purchase', () => {
+    const combat02 = createOccurrenceId('surface-o-combat02');
+    const shrine = createOccurrenceAddress(oBiome, combat02);
+    let project = loadSurfaceNOPQCheckpoint();
+    const place = roomObjectAnchorSlotsForProjectEvaluationAssembly(
+      catalog,
+      evaluate(project),
+      shrine,
+    )?.objects.find((object) => object.kind === 'hermesShrine')?.place;
+    if (place === undefined) throw new Error('O Combat02 cannot place a Hermes Shrine');
+    project = applyProjectCommand(project, catalog, place);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: shrine,
+      slotKey: 'first',
+      value: { rewardType: 'HealBigDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'PurchaseHermesShrineOffer',
+      occurrence: shrine,
+      generationKey: 'initial:first',
+      rushed: true,
+    });
+    // Its other offers unset, the walk stops at the room's Overview, before the purchase.
+    expect(loot(project, 'O', combat02).spawned.actionSpawns).toEqual([]);
+    for (const [slotKey, rewardType] of [
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'BlindBoxLoot'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: shrine,
+        slotKey,
+        value: { rewardType },
+      });
+    expect(actionSpawns(loot(project, 'O', combat02).spawned)).toEqual([
+      [
+        'purchaseHermesShrineOffer',
+        [expect.stringMatching(/^hermesShrineDelivery optional #\d+$/)],
+      ],
+    ]);
   });
 });

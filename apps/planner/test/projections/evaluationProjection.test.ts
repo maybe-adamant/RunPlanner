@@ -24,6 +24,7 @@ import {
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  roomActionKey,
   semanticAddressKey,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -109,7 +110,7 @@ describe('evaluation presentation', () => {
       }),
     ).toEqual({
       title: 'Saved door unavailable',
-      description: 'Restore the source room’s doors or use Remove unavailable doors.',
+      description: 'Restore the source room’s doors or take another door.',
     });
     expect(
       presentFinding({
@@ -483,7 +484,7 @@ describe('evaluation presentation', () => {
     const hRoom = createOccurrenceId('fields-room');
     const nRoom = createOccurrenceId('ephyra-room');
 
-    expect(findingDestinationLabel(catalog, createProjectAddress())).toBe('Project');
+    expect(findingDestinationLabel(catalog, createProjectAddress())).toBe('Loadout');
     expect(findingDestinationLabel(catalog, createBiomeFieldAddress(biome, 'field'))).toBe(
       'Erebus',
     );
@@ -652,6 +653,26 @@ describe('timeline finding guidance', () => {
     expect(presentFinding(finding('dependency', 'afterCheckpoint', true))).toEqual({
       title: 'Room phase for this action is gone',
     });
+  });
+
+  it('names the required action a row must follow by its row in the room', () => {
+    const requiredAction = roomActionKey({ kind: 'useFountain' });
+    const requiredFirst: SemanticFinding = {
+      ...finding('requiredFirst'),
+      evidence: { reason: 'requiredFirst', requiredAction },
+    };
+    const rows = new Map([[requiredAction, 'Use Fountain of Restoration']]);
+    expect(
+      presentFinding(requiredFirst, {
+        ...catalogFindingLabels(catalog),
+        roomAction: (owner, actionKey) =>
+          semanticAddressKey(owner) === semanticAddressKey(requiredFirst.origin)
+            ? rows.get(actionKey)
+            : undefined,
+      }).title,
+    ).toBe('Use Fountain of Restoration must come first');
+    // Without the room's projected rows the title stays neutral.
+    expect(presentFinding(requiredFirst).title).toBe('A required action must come first');
   });
 
   it.each([

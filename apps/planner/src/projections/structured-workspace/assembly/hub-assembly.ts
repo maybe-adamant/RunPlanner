@@ -1,6 +1,8 @@
 import {
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
+  createHubRoomAddress,
+  createHubRunStateCheckpointAddress,
   createHubFountainAddress,
   createExitDecisionAddress,
   createHubOpenSetAddress,
@@ -63,7 +65,7 @@ import {
   type WorkspaceOccurrenceActionsInput,
 } from './occurrence-action-row-projection';
 import type { WorkspaceBiomeSource } from '../source-index';
-import { presentRunState } from '../presentation/run-state';
+import { roomEnteredRunStateLauncher } from './occurrence-action-run-state';
 import { projectWorkspaceDoorContract } from './door-contract';
 import { assembleHubStayRerolls, workspaceRerolledDoor } from './reroll-assembly';
 import type {
@@ -666,7 +668,17 @@ function projectHubNode(
       visitIndex,
     });
   });
-  const runState = input.source?.runState(owner);
+  const runState =
+    input.source === undefined
+      ? undefined
+      : roomEnteredRunStateLauncher(
+          { catalog, runState: input.source.runState },
+          createHubRunStateCheckpointAddress(createHubRoomAddress(biome, descriptor.hubKey)),
+          routeRoomDeclaration(
+            requireWorkspaceRoom(catalog, descriptor.terminal.roomGameName),
+            biome.routeKey,
+          ).label,
+        );
   const completedExitRoom = requireWorkspaceRoom(catalog, descriptor.completedExit.roomGameName);
   const completedExitOwner = createExitDecisionAddress(biome, {
     decisionKey: descriptor.hubKey,
@@ -848,12 +860,17 @@ function projectHubNode(
   );
   const rerollsRemaining = stays.findLast((stay) => stay.rerolls?.poolRemaining !== undefined)
     ?.rerolls?.poolRemaining;
+  const runDepth = input.source?.hubRunDepth(createHubRoomAddress(biome, descriptor.hubKey));
   const node = Object.freeze({
     authoring: 'authored' as const,
     kind: 'hubDecision' as const,
+    ...(input.source?.walkReached(createHubRoomAddress(biome, descriptor.hubKey)) === false
+      ? { notReached: true as const }
+      : {}),
     fountain,
     stays: Object.freeze(stays),
     ...(rerollsRemaining === undefined ? {} : { rerollsRemaining }),
+    ...(runDepth === undefined ? {} : { runDepth }),
     key: nodeKey,
     hubKey: descriptor.hubKey,
     gameName: descriptor.terminal.roomGameName,
@@ -883,23 +900,7 @@ function projectHubNode(
     completedExit,
     slots: Object.freeze(slots),
     visits: Object.freeze(visits),
-    ...(runState === undefined
-      ? {}
-      : {
-          runState:
-            runState.availability === 'available'
-              ? Object.freeze({
-                  availability: 'available' as const,
-                  owner,
-                  state: presentRunState(input.catalog, runState.snapshot, 'Before the Hub'),
-                  title: 'Hub',
-                })
-              : Object.freeze({
-                  availability: 'unavailable' as const,
-                  owner,
-                  title: 'Hub',
-                }),
-        }),
+    ...(runState === undefined ? {} : { runState }),
   });
   markerDestinations.redirect(
     Object.freeze([

@@ -26,11 +26,18 @@ export interface RoomLifecycleStructurePhase {
   readonly rewardWheelKey?: string;
   /** A noncombat event its required encounter interaction ends, not a fight. */
   readonly endsOnInteraction?: true;
+  /** The phase's end can host an outcome choice, or the room authors one for it. */
+  readonly hostsOutcome?: true;
 }
 
 export type RoomLifecycleStructurePoint =
   | { readonly kind: 'roomEntered'; readonly key: 'roomEntered' }
   | { readonly kind: 'encounterStart'; readonly key: string; readonly phaseKey: string }
+  /**
+   * How a non-Boss fight ended (Aetos wave, Gorgon condition, Nemesis bet or
+   * event result, Anomaly cleared); a Boss room's outcome is its Boss defeated.
+   */
+  | { readonly kind: 'encounterOutcome'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'bossDefeated'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
   | {
@@ -81,8 +88,16 @@ export function assembleRoomLifecycleStructure(options: {
       (options.occurrence.state.kind !== 'shipCombat' ||
         index < options.occurrence.state.encounterCount),
   );
+  const outdoor = options.declaration.structuralTags.includes('Outdoor');
+  const encounters = options.occurrence.encounters;
   const lifecycleSlots = activeSlots.flatMap(
-    (slot): readonly { readonly slot: typeof slot; readonly endsOnInteraction: boolean }[] => {
+    (
+      slot,
+    ): readonly {
+      readonly slot: typeof slot;
+      readonly endsOnInteraction: boolean;
+      readonly hostsOutcome: boolean;
+    }[] => {
       const encounterKey = selectedEncounterAuthoringProfileKey(
         options.catalog,
         options.declaration,
@@ -108,6 +123,23 @@ export function assembleRoomLifecycleStructure(options: {
             )
           : undefined;
       const encounter = definition ?? profile;
+      const candidates = (
+        definition !== undefined ? [definition.key] : (profile?.encounterDefinitionKeys ?? [])
+      ).flatMap((key) => options.catalog.encounterDefinitions.byKey[key] ?? []);
+      // Every choice an outcome can host, before the walk decides which are eligible.
+      const hostsOutcome =
+        encounters.aetosWaveByPhase?.[slot.key] !== undefined ||
+        encounters.gorgonResultByPhase[slot.key]?.athenaTriggerConditionMet === true ||
+        options.occurrence.state.kind === 'anomaly' ||
+        candidates.some(
+          (candidate) =>
+            (outdoor && candidate.aetosWaves !== undefined) ||
+            (candidate.hostsGorgon &&
+              !candidate.blocksGorgon &&
+              !options.declaration.blocksGorgon) ||
+            candidate.goldBet !== undefined ||
+            candidate.nemesisRandomEvent !== undefined,
+        );
       const directDefinition =
         definition ??
         (profile?.resolution.kind === 'direct'
@@ -116,7 +148,7 @@ export function assembleRoomLifecycleStructure(options: {
       // Nemesis keeps the exits locked until answering her resolves the event (EncounterLogic
       // SpawnNemesisForRandomEvents, InteractLogic UnlockRoomExits), so that interaction ends it.
       if (directDefinition?.nemesisRandomEvent !== undefined)
-        return [{ slot, endsOnInteraction: true }];
+        return [{ slot, endsOnInteraction: true, hostsOutcome: true }];
       if (
         options.lifecycleProfileKey === 'FieldsCombatRoom' &&
         slot.rewardAttachment?.kind !== 'localReward'
@@ -125,18 +157,22 @@ export function assembleRoomLifecycleStructure(options: {
       }
       return options.occurrence.state.kind === 'shipCombat' ||
         (encounter !== undefined && isCombatBearingEncounterPhaseKind(encounter.kind))
-        ? [{ slot, endsOnInteraction: false }]
+        ? [{ slot, endsOnInteraction: false, hostsOutcome }]
         : [];
     },
   );
   const declaredPhases: RoomLifecycleStructurePhase[] = lifecycleSlots.map(
-    ({ slot, endsOnInteraction }) =>
+    ({ slot, endsOnInteraction, hostsOutcome }) =>
       frozen({
         phaseKey: slot.key,
         ...(slot.rewardAttachment?.kind === 'rewardWheel'
           ? { rewardWheelKey: slot.rewardAttachment.key }
           : {}),
         ...(endsOnInteraction ? { endsOnInteraction: true as const } : {}),
+        // A Boss room's outcome is its Boss defeated.
+        ...(hostsOutcome && options.lifecycleProfileKey !== 'BossRoom'
+          ? { hostsOutcome: true as const }
+          : {}),
       }),
   );
   const phases =
@@ -180,6 +216,15 @@ export function assembleRoomLifecycleStructure(options: {
         key: `encounterStart:${phase.phaseKey}`,
         phaseKey: phase.phaseKey,
       }),
+      ...(phase.hostsOutcome === true
+        ? [
+            frozen({
+              kind: 'encounterOutcome' as const,
+              key: `encounterOutcome:${phase.phaseKey}`,
+              phaseKey: phase.phaseKey,
+            }),
+          ]
+        : []),
       ...(options.lifecycleProfileKey === 'BossRoom'
         ? [
             frozen({
@@ -222,6 +267,7 @@ export function scopeRoomLifecycleStructure(
   const points = structure.points.filter((point) => {
     switch (point.kind) {
       case 'encounterStart':
+      case 'encounterOutcome':
       case 'bossDefeated':
       case 'encounterEnd':
         return active.has(point.phaseKey);
@@ -313,6 +359,29 @@ export function roomLifecycleWindowOrdinal(
       return structure.points.some((point) => point.kind === 'outgoingGeneration')
         ? afterPoint((point) => point.kind === 'outgoingGeneration')
         : beforePoint((point) => point.kind === 'cleanup');
+  }
+}
+
+/**
+ * Whether the window names a phase or wheel this room's structure has; a
+ * retained placement at a phase the room no longer plays names none.
+ */
+export function roomLifecycleWindowResolves(
+  structure: RoomLifecycleStructure,
+  window: RoomActionWindow,
+): boolean {
+  switch (window.kind) {
+    case 'encounterEnd':
+      return structure.points.some(
+        (point) => point.kind === 'encounterEnd' && point.phaseKey === window.phaseKey,
+      );
+    case 'shipPreCombat':
+    case 'shipPostCombat':
+      return structure.phases.some((phase) => phase.rewardWheelKey === window.wheelKey);
+    case 'standard':
+    case 'fields':
+    case 'postOutgoing':
+      return true;
   }
 }
 

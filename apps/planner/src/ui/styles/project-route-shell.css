@@ -331,10 +331,13 @@
   min-height: 0;
 }
 
-/* Pins or unpins the panel list; unpinned, the list folds to its biome icons. */
+/*
+ * Pins or unpins the panel list. It leads its column as the rail's toggle
+ * leads the rail, at one place whether the list is pinned, folded or opened.
+ */
 .panel-navigation-pin {
-  align-self: flex-end;
-  margin: 8px 8px -4px;
+  align-self: flex-start;
+  margin: 8px 8px -4px 10px;
   padding: 2px 7px;
   border: 0;
   border-radius: 6px;
@@ -354,9 +357,9 @@
   grid-template-columns: 48px minmax(0, 1fr);
 }
 
+/* Folded, the toggle keeps its full row above the strip's icons. */
 .editor-workspace[data-navigation-pinned='false'] .panel-navigation-pin {
-  align-self: center;
-  margin: 8px 0 0;
+  margin-bottom: 0;
 }
 
 .editor-workspace[data-navigation-pinned='false']

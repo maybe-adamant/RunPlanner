@@ -44,6 +44,7 @@ import { HintLayer } from '../controls/HintLayer';
 import { HomeScreen } from '../home/HomeScreen';
 import { RouteWorkspace } from './RouteWorkspace';
 import { FindingTargetScope } from '../feedback/useFindingTarget';
+import { RemovedActionsNotice } from '../feedback/RemovedActionsNotice';
 import { useAppScale } from './useAppScale';
 import { LoadoutPresetsContext } from './loadoutPresetsContext';
 import { NoticeArea } from './NoticeArea';
@@ -116,12 +117,16 @@ export function App({
     (state) => state.editorSession.levelResolutionDialogTarget ?? null,
   );
   const feedback = evaluation === undefined ? undefined : projectFeedbackHierarchy(evaluation);
+  const roomActionLabel = workspace?.roomActionLabel;
   const findingLabels = useMemo(
     () =>
       project === undefined
         ? catalogFindingLabels(catalog)
-        : projectFindingLabels(catalog, project),
-    [catalog, project],
+        : {
+            ...projectFindingLabels(catalog, project),
+            ...(roomActionLabel === undefined ? {} : { roomAction: roomActionLabel }),
+          },
+    [catalog, project, roomActionLabel],
   );
   const activeRouteNavigation =
     project === undefined ? undefined : projectRouteNavigation(catalog, project.route);
@@ -152,6 +157,7 @@ export function App({
         {...(workspace === undefined ? {} : { authoringReadiness: workspace.authoringReadiness })}
         findings={workspace?.findingsByRepairTarget}
         labels={findingLabels}
+        walkStop={workspace?.walkStop}
       >
         <main className="app-shell" data-view={showEditor ? 'editor' : 'home'}>
           {showEditor &&
@@ -250,6 +256,9 @@ export function App({
               key={semanticAddressKey(levelResolutionDialogTarget)}
               target={levelResolutionDialogTarget}
             />
+          )}
+          {!showEditor || workspace === undefined ? null : (
+            <RemovedActionsNotice catalog={catalog} workspace={workspace} />
           )}
           {closeRequest === undefined ? null : <CloseConfirmDialog controller={closeRequest} />}
           <HintLayer />

@@ -2,6 +2,7 @@ import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createHubRunStateCheckpointAddress,
   createRoomRunStateCheckpointAddress,
   createTravelDealRefillRealizationAddress,
   semanticAddressKey,
@@ -12,6 +13,7 @@ import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import { encounterEntryVowRanks } from '../../arcana-fear';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
 import type { HistoryEvent } from '../../history';
+import { projectRoomEncounterRecords } from '../../history/facts';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
 import { forGeneration } from '../../materialization';
 import { resourcePlacementFindingRegions } from '../../resources';
@@ -46,11 +48,12 @@ import {
   type ChronologySeamStep,
   type ChronologyWalkContext,
   type ChronologyWalkState,
+  type RunStateCheckpointRequest,
   type SeamEvent,
 } from './chronology-walk';
 import { applyAcquisitionPointReachedTransition } from './encounter-acquisition/acquisition-point-reached';
 import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
-import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
+import { applyGorgonOutcomeTransition } from './encounter-acquisition/gorgon-outcome';
 import { applyHermesShrinePurchaseReachedTransition } from './encounter-acquisition/hermes-shrine-purchase';
 import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
 import { withPoolSaleGold } from './gold-event-seams';
@@ -81,7 +84,7 @@ import {
   applyRewardRerolledTransition,
   hubTargetContext,
   reachedRerollPool,
-  roomTargetContext,
+  resolveRoomTarget,
 } from './lifecycle-transitions/reward-rerolled';
 import { captureRerollSurfaces } from './reroll-surfaces';
 import { captureRoomActionEnd } from './object-interaction-seams';
@@ -332,17 +335,19 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
   )?.reference;
   if (source === undefined || reroll?.kind !== 'reroll')
     throw new BiomeRewardSimulationContractError(`${ownerKey} reached without its reroll`);
+  const target = resolveRoomTarget(
+    context.catalog,
+    source,
+    context.prepared.batchesByParent.get(semanticAddressKey(source.origin)),
+    reroll.target,
+    state.peers,
+  );
   const transition = applyRewardRerolledTransition({
     catalog: context.catalog,
     owner: event.owner,
     reward: reroll.reward,
-    target: roomTargetContext(
-      context.catalog,
-      source,
-      context.prepared.batchesByParent.get(semanticAddressKey(source.origin)),
-      reroll.target,
-      state.peers,
-    ),
+    target: target === 'cageNotPlayed' ? undefined : target,
+    ...(target === 'cageNotPlayed' ? { refused: target } : {}),
     flagged:
       state.rerollsFlagged.get(
         rerollFlagKey(
@@ -854,49 +859,60 @@ const encounterStarted: ChronologySeamHandler<'encounterStarted'> = (context, st
     room,
     state.branch,
   );
-  const gorgon = applyGorgonStartedTransition({
-    catalog: context.catalog,
-    event,
-    room,
-    view:
-      sourceRoom === undefined
-        ? undefined
-        : context.views.get(semanticAddressKey(sourceRoom.origin)),
-    branch: figLeaf.branch,
-    evaluationBlocked: state.gorgonEvaluationBlocked,
-  });
   return {
-    state: Object.freeze({
-      ...state,
-      branch: gorgon.branch,
-      eligibleGorgonPhases:
-        gorgon.eligiblePhaseKey === undefined
-          ? state.eligibleGorgonPhases
-          : withMember(state.eligibleGorgonPhases, gorgon.eligiblePhaseKey, true),
-    }),
+    state: Object.freeze({ ...state, branch: figLeaf.branch }),
     emissions: [
       { kind: 'figLeafPhaseCandidates', candidates: figLeaf.figLeafCandidates },
       lifecycleFindings(figLeaf.findings),
-      ...(gorgon.candidate === undefined
-        ? []
-        : [
-            {
-              kind: 'gorgonPhaseCandidate' as const,
-              key: gorgon.candidate.key,
-              candidate: gorgon.candidate.value,
-            },
-          ]),
-      lifecycleFindings(gorgon.findings),
     ],
     ...(runStateCheckpoint === undefined ? {} : { runStateCheckpoint }),
   };
 };
 
+function gorgonOutcome(
+  context: Parameters<ChronologySeamHandler<'encounterCompleted'>>[0],
+  state: Parameters<ChronologySeamHandler<'encounterCompleted'>>[1],
+  event: Extract<HistoryEvent, { readonly kind: 'encounterCompleted' }>,
+) {
+  const sourceRoom = context.rooms.get(semanticAddressKey(event.origin));
+  const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
+  const view = context.views.get(semanticAddressKey(event.origin));
+  const encounterKey =
+    view === undefined
+      ? undefined
+      : projectRoomEncounterRecords(view.entry, event.origin).find(
+          (record) => record.slotKey === event.phaseKey,
+        )?.encounterKey;
+  if (room === undefined || encounterKey === undefined) return undefined;
+  return applyGorgonOutcomeTransition({
+    catalog: context.catalog,
+    event: { ...event, encounterKey },
+    room,
+    view,
+    branch: state.branch,
+    evaluationBlocked: state.gorgonEvaluationBlocked,
+  });
+}
+
 /** Encounter completion and its cleanup-window Room Actions settle through one transition. */
 const encounterSettled: ChronologySeamHandler<
   'bossDefeated' | 'encounterInteractionReached' | 'encounterCompleted'
-> = (context, state, event) => {
+> = (context, received, event) => {
   const room = context.rooms.get(semanticAddressKey(event.origin));
+  // The Gorgon condition is read at the fight's outcome, its completion.
+  const gorgon =
+    event.kind !== 'encounterCompleted' ? undefined : gorgonOutcome(context, received, event);
+  const state =
+    gorgon === undefined
+      ? received
+      : Object.freeze({
+          ...received,
+          branch: gorgon.branch,
+          eligibleGorgonPhases:
+            gorgon.eligiblePhaseKey === undefined
+              ? received.eligibleGorgonPhases
+              : withMember(received.eligibleGorgonPhases, gorgon.eligiblePhaseKey, true),
+        });
   const gorgonPhaseKey = `${semanticAddressKey(event.origin)}::${event.phaseKey}`;
   const gorgonCandidate =
     room?.kind === 'authored'
@@ -937,6 +953,16 @@ const encounterSettled: ChronologySeamHandler<
       gorgonEvaluationBlocked: transition.gorgonEvaluationBlocked,
     }),
     emissions: [
+      ...(gorgon?.candidate === undefined
+        ? []
+        : [
+            {
+              kind: 'gorgonPhaseCandidate' as const,
+              key: gorgon.candidate.key,
+              candidate: gorgon.candidate.value,
+            },
+          ]),
+      lifecycleFindings(gorgon?.findings ?? []),
       settledFindings(transition.findings),
       { kind: 'acquisitionRoleFrontiers', frontiers: transition.roleFrontiers },
       {
@@ -1223,7 +1249,6 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
             source.origin.routeKey,
           ),
     batch: prepared.batchesByParent.get(ownerKey),
-    hubDecisionOwner: context.hubDecisionOwnerBySource.get(ownerKey),
     frontierOwner,
     emptyOutgoing: prepared.lifecycle.emptyOutgoingOwnerKeys.has(ownerKey),
     hubTakeover: context.hubTakeoverSources.has(ownerKey),
@@ -1267,6 +1292,20 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
     ],
   };
 };
+
+/** The Hub's Run State on its one entry; a restored stay is not an entry. */
+function hubEntryCheckpoint(
+  context: ChronologyWalkContext,
+  event: SeamEvent<'roomEntered'>,
+): RunStateCheckpointRequest | undefined {
+  if (event.origin.kind !== 'hubRoom') return undefined;
+  const key = semanticAddressKey(event.origin);
+  const room = context.rooms.get(key);
+  const view = context.views.get(key)?.entry;
+  if (room?.kind !== 'hub' || view === undefined)
+    throw new BiomeRewardSimulationContractError(`${key} has no Hub-entry Run State view`);
+  return { owner: createHubRunStateCheckpointAddress(event.origin), room, view };
+}
 
 /** Room entry captures its Run State after its own features; a pending Shrine delivery halts here. */
 const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event) => {
@@ -1345,7 +1384,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
   const enteredBranch = entered.branch;
   const shrine = entered.hermesShrineAssessment;
   const well = entered.stygianWellAssessment;
-  const checkpoint = entered.runStateCheckpoint;
+  const checkpoint = entered.runStateCheckpoint ?? hubEntryCheckpoint(context, event);
   if (checkpoint !== undefined && checkpoint.view === undefined)
     throw new BiomeRewardSimulationContractError(
       `${checkpoint.room.gameName} has no room-entry Run State view`,

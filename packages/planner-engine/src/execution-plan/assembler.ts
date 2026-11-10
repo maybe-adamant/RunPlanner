@@ -369,7 +369,7 @@ export function assembleExecutionProduct({
     ...(() => {
       const olympus = biomes.find((biome) => biome.biomeKey === 'P');
       if (olympus === undefined) return {};
-      const targets = olympus.history.ledgers.encounterStarts.filter(
+      const targets = olympus.history.ledgers.encounterCompletions.filter(
         (entry) => entry.aetosWave !== undefined,
       );
       if (targets.length > 1)

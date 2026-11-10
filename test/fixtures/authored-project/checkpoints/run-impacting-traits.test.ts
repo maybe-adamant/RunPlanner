@@ -93,6 +93,7 @@ describe('run-impacting trait checkpoint workflows', () => {
       const domain = assembleRoomActionDomain({
         catalog,
         biome: nBiome,
+        topology: project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!,
         occurrence,
         routePosition,
         ...(routeStartIncoming === undefined || routeStartIncoming === null
@@ -192,6 +193,7 @@ describe('run-impacting trait checkpoint workflows', () => {
     const domain = assembleRoomActionDomain({
       catalog,
       biome: nBiome,
+      topology: project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!,
       occurrence: occurrence(),
       routePosition: resolveRoutePosition(catalog, project.route, 'N'),
     });

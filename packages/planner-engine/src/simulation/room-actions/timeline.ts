@@ -381,6 +381,8 @@ export function assembleRoomLifecycleTimeline(
           firstPostCombatRank === undefined ? 'after' : 'before',
         );
       }
+      // How the fight ended stands where it ends, just before its end.
+      case 'encounterOutcome':
       case 'encounterEnd': {
         const phase = phaseByKey.get(point.phaseKey);
         if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
@@ -505,6 +507,7 @@ export function scopeRoomLifecycleTimeline(
   const boundaryActive = (boundary: RoomLifecycleBoundary): boolean => {
     switch (boundary.kind) {
       case 'encounterStart':
+      case 'encounterOutcome':
       case 'bossDefeated':
       case 'encounterEnd':
         return active.has(boundary.phaseKey);

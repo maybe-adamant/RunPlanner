@@ -200,6 +200,40 @@ export function rerollAppendIndex(
   return use < 0 ? order.length : use;
 }
 
+/**
+ * What a door or cage reroll's target lacks in the authored topology: the
+ * source's door into that room, or that room's cage slot. A wheel offer is the
+ * source room's own.
+ */
+export function missingRerollTarget(
+  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
+  sourceOccurrenceId: OccurrenceId,
+  target: Exclude<RerollTarget, { readonly kind: 'wheelOffer' }>,
+): 'door' | 'cage' | undefined {
+  const exit = topology.decisions.find(
+    (decision) =>
+      decision.kind === 'exit' &&
+      decision.source.kind === 'occurrence' &&
+      decision.source.occurrenceId === sourceOccurrenceId,
+  );
+  if (
+    exit?.kind !== 'exit' ||
+    !exit.normal.targets.some(
+      (candidate) =>
+        candidate.exitKey === target.exitKey && candidate.occurrenceId === target.occurrenceId,
+    )
+  )
+    return 'door';
+  if (target.kind === 'door') return undefined;
+  const destination = topology.occurrences.find(
+    (candidate) => candidate.occurrenceId === target.occurrenceId,
+  );
+  return destination?.state.kind === 'fieldsCombat' &&
+    Object.hasOwn(destination.state.cages, target.slotKey)
+    ? undefined
+    : 'cage';
+}
+
 /** The reward owner a room reroll of this target redraws. */
 export function rerollTargetOwner(
   biome: BiomeAddress,

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createIncomingRewardAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
   createRoomActionAddress,
   createShopOfferAddress,
   decodeProjectDocument,
@@ -17,7 +20,10 @@ import {
   loadSurfaceShrineTravelDealCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
+  loadSurfaceNOProject,
   nLocalOccurrenceId,
+  oBiome,
+  oOccurrenceIds,
   qBiome,
   qOccurrenceIds,
   surfaceShrineDeliveriesProject,
@@ -157,7 +163,7 @@ describe('Shrine purchases after the doors open', () => {
     ]);
   });
 
-  it('reports a saved side-room purchase ranked before its reward as out of order', () => {
+  it('stops at a saved side-room purchase ranked before its reward', () => {
     const saved = reorder(
       loadSurfaceNShrineSideRoomDeliveryCheckpoint(),
       'N',
@@ -173,13 +179,22 @@ describe('Shrine purchases after the doors open', () => {
         rushed: false,
       }),
     );
-    expect(simulateProject(catalog, saved).findings).toContainEqual(
+    const reward = roomActionKey({
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'self',
+    });
+    // The reward's deadline passes before the doors open: one finding, on the purchase.
+    expect(
+      simulateProject(catalog, saved).findings.filter(
+        (finding) => finding.code === 'roomActionOrderUnavailable',
+      ),
+    ).toEqual([
       expect.objectContaining({
-        code: 'roomActionOrderUnavailable',
         origin: purchase,
-        evidence: expect.objectContaining({ reason: 'window' }),
+        evidence: expect.objectContaining({ reason: 'requiredFirst', requiredAction: reward }),
       }),
-    );
+    ]);
   });
 
   it('ranks Postboss purchases after the fountain and Doors open', () => {
@@ -194,14 +209,138 @@ describe('Shrine purchases after the doors open', () => {
       'interactAcquisitionEntry',
     ]);
     // The first purchase, ranked after the unchanged rack, moves ahead of the fountain.
-    const beforeFountain = reorder(project, 'N', nPostbossId, (order) => [
-      order[2]!,
-      order[0]!,
-      order[1]!,
-      ...order.slice(3),
+    let purchase: RoomActionReference | undefined;
+    const beforeFountain = reorder(project, 'N', nPostbossId, (order) => {
+      purchase = order[2];
+      return [order[2]!, order[0]!, order[1]!, ...order.slice(3)];
+    });
+    // The order holds both the purchase's required-first issue and the fountain's
+    // window crossing that names the purchase as the row before it.
+    expect(evaluatedRoom(beforeFountain, 'N', nPostbossId).roomActionRoster.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'requiredFirst',
+          reference: purchase,
+          requiredAction: { kind: 'useFountain' },
+        }),
+        expect.objectContaining({
+          kind: 'window',
+          reference: { kind: 'useFountain' },
+          precedingAction: purchase,
+        }),
+      ]),
+    );
+    // The walk stops at the purchase, before anything is bought, with one finding: the
+    // crossing is not reported again as a window reason.
+    expect(
+      simulateProject(catalog, beforeFountain).findings.filter(
+        (finding) => finding.code === 'roomActionOrderUnavailable',
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        origin: createRoomActionAddress(
+          { kind: 'biome', routeKey: 'Surface', biomeKey: 'N' },
+          createOccurrenceId(nPostbossId),
+          roomActionKey(purchase!),
+        ),
+        evidence: expect.objectContaining({ reason: 'requiredFirst' }),
+      }),
     ]);
-    expect(evaluatedRoom(beforeFountain, 'N', nPostbossId).roomActionRoster.issues).toContainEqual(
-      expect.objectContaining({ kind: 'window', reference: { kind: 'useFountain' } }),
+  });
+
+  it('stops at an O Reprieve Shrine purchase ranked before the fountain, before its doors generate', () => {
+    // The Reprieve's fountain unlocks its exits as the Postboss's does, but the
+    // room also takes a reward and generates outgoing doors.
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: host,
+      gameName: 'O_Reprieve01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:secondLeft',
+      purchased: true,
+    });
+    const purchase: RoomActionReference = {
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:secondLeft',
+      rushed: false,
+    };
+    expect(timeline(evaluatedRoom(project, 'O', host.occurrenceId)).slice(-4)).toEqual([
+      'interactIncomingReward',
+      'useFountain',
+      '[cleanup]',
+      'purchaseHermesShrineOffer',
+    ]);
+    expect(simulateProject(catalog, project).findings).toEqual([]);
+
+    // Reward, purchase, fountain: the purchase is not reached.
+    const beforeFountain = reorder(project, 'O', host.occurrenceId, (order) => [
+      order[0]!,
+      order[2]!,
+      order[1]!,
+    ]);
+    const evaluation = simulateProject(catalog, beforeFountain);
+    expect(evaluation.findings).toEqual([
+      expect.objectContaining({
+        code: 'roomActionOrderUnavailable',
+        origin: createRoomActionAddress(oBiome, host.occurrenceId, roomActionKey(purchase)),
+        evidence: expect.objectContaining({
+          reason: 'requiredFirst',
+          requiredAction: roomActionKey({ kind: 'useFountain' }),
+        }),
+      }),
+    ]);
+    const o = evaluation.route?.biomes.find((biome) => biome.biomeKey === 'O');
+    if (o === undefined || !('history' in o) || o.coverage.kind !== 'prefix')
+      throw new Error('O lost its blocked evaluation');
+    const roomEvents = o.history.events.filter(
+      (event) =>
+        event.origin.kind === 'occurrence' && event.origin.occurrenceId === host.occurrenceId,
+    );
+    // The reward is taken; neither the purchase nor the doors' generation is reached.
+    expect(roomEvents.some((event) => event.kind === 'producerRoleAdvanced')).toBe(true);
+    expect(
+      roomEvents.some(
+        (event) =>
+          event.kind === 'outgoingGenerationCheckpoint' ||
+          event.kind === 'hermesShrinePurchaseReached',
+      ),
+    ).toBe(false);
+    expect(o.coverage.roomStop).toMatchObject({
+      room: host,
+      kind: 'timeline',
+      at: 'entry',
+    });
+    if (!('materializedPrefix' in o)) throw new Error('O lost its materialized prefix');
+    const stopped = rooms(o.materializedPrefix).find(
+      (room) => room.occurrenceId === host.occurrenceId,
+    )?.roomLifecycleTimeline.entries[o.coverage.roomStop!.entryIndex];
+    expect(stopped?.kind === 'action' ? stopped.action.key : undefined).toBe(
+      roomActionKey(purchase),
     );
   });
 

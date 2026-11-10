@@ -184,10 +184,13 @@ export function reconcileReplacementRoomLocalState(
     ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
     roomActions: previous.roomActions,
   });
+  const topology = located.plan.topology;
+  if (topology === null) throw new Error('a replaced room needs its biome topology');
   const activeKeys = new Set(
     activeRoomActionReferences(
       catalog,
       biome,
+      topology,
       withSites,
       routePosition,
       startingReward === undefined

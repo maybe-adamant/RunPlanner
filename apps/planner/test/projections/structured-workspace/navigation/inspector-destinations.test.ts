@@ -1600,17 +1600,6 @@ describe('workspace inspector destinations', () => {
     }
     const lastPlanned = placed(nVisitSlotKeys.slice(0, 3), 3);
     expect(destination(lastPlanned, outcome)).toMatchObject(onTimeline(lastPlanned));
-
-    // A visited room still returns to its Hub visit.
-    const beforePreboss = placed(nVisitSlotKeys, 6);
-    const returnMarker = occurrenceWorkbenchFor(
-      biome(beforePreboss, 'N'),
-      nOccurrenceId(nVisitSlotKeys[5]!),
-    ).hubTimeline;
-    expect(returnMarker).toBeDefined();
-    expect(destination(beforePreboss, returnMarker!.address)).toMatchObject(
-      onTimeline(beforePreboss),
-    );
   });
 
   it('binds Fields and Ship local leaves to their containing decision rail', () => {

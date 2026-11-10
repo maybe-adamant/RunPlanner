@@ -101,16 +101,36 @@ the final project and its exact assembly.
 - Required Hermes obligations are inserted at reached due contacts read from
   the Hermes delivery obligation product; optional clocked pickups are never
   accepted automatically.
-- A placement the edit proves displaced (valid before, invalid now) is
-  removed. Deliveries and clocked pickups are keyed by their source, so no
-  inherited choice is reset for being newly reached; one that is invalid where
-  it lands keeps its finding.
+- A delivery the edit proves displaced (valid before, invalid now) moves: it
+  is unplaced and placed again at its reached due contact. A displaced clocked
+  pickup is removed only when its trait is no longer held; one whose held trait
+  now matures elsewhere stays with its finding. Deliveries and clocked pickups
+  are keyed by their source, so no inherited choice is reset for being newly
+  reached; one that is invalid where it lands keeps its finding.
+- Settlement carries out the policy for
+  [rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
+  in every room the evaluation reaches: it judges each room-action row by what
+  the edit changed, comparing the walk before and after it, and removes,
+  re-keys or keeps the row as that policy classifies it, through the row's
+  owning removal command. Every generated batch's doors are settled the same
+  way to its source room's declared exits, as
+  [exit capacity](AUTHORED_PROJECT_MODEL.md#exit-capacity) defines; a door
+  its source room lacks is never published. An installed route is not
+  settled.
+- The settlement names, by room, the removals the
+  [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
+  announces, with the countdown deliveries and trait drops a command takes
+  from other rooms with their source and the doors a room lost. The room an edit addresses is the occurrence its command's
+  address names or nests. Rows a rekey replaced and a delivery placed again
+  elsewhere are never named.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
-  assembly with a settlement fault naming the owner. A fault signals an engine
-  defect, not an authoring task: the application publishes it beside the
-  assembly, never as an editor finding; dev builds warn in the console and bug
-  reports carry the current one.
+  assembly with a settlement fault naming the owner. A batch whose doors cannot
+  settle keeps them and its fault, while the edit's other repairs still settle;
+  when both fault, the door fault is the one reported.
+  A fault signals an engine defect, not an authoring task: the application
+  publishes it beside the assembly, never as an editor finding; dev builds warn
+  in the console and bug reports carry the current one.
 
 ```mermaid
 sequenceDiagram
@@ -352,12 +372,54 @@ participation). Inside it, only rows at or before the failing contact have
 reached inner capabilities; later rows show their inner pickers read-only.
 Findings arise only at or before that contact, so no repair is locked.
 
+Every block in an entered room also publishes the room's stop on coverage:
+the room, whether it stopped in its Overview, Timeline or exit work, the entry
+of its lifecycle Timeline it stopped at, and whether the walk reached that
+entry. Entries before the stop are reached and every later entry is not. A
+stop **at** its entry reached it and is blocked on that entry's own contact,
+so the entry stands with its controls to repair it; a stop **before** its
+entry did not reach it. The stop is where the walk actually stopped, never
+past it: it claims no entry the walk did not pass.
+
+| Stop                                                                                                                                            | Entry                                                                                                      | Reached |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------- |
+| Overview                                                                                                                                        | The entry after **Room entered**: entry and its entry effects are reached, nothing the Timeline settles is | Before  |
+| A Timeline row                                                                                                                                  | The first row of the blocking product the walk reached by the contact                                      | At      |
+| A contact with its own entry (a Fig Leaf at its phase start; Aetos or the Gorgon condition at its fight's **Encounter outcome**)                | That entry                                                                                                 | At      |
+| A door's generation or offer, or the store the doors draw from                                                                                  | **Doors open**                                                                                             | At      |
+| A boundary's own contact: Boss defeated's Judgment, an encounter end's due outcome or Shrine delivery, a wheel's offers at **Next phase ready** | That boundary                                                                                              | At      |
+| Any other Timeline contact, such as an unplaced required action                                                                                 | The entry after the last boundary the walk passed before the contact                                       | Before  |
+| Exit work, after the room committed or as a restored room departs again                                                                         | Past every entry                                                                                           | Before  |
+
+The blocking product's rows are the row whose own contact the blocking region
+is (a Well or Pool reroll's list, a Pool sale, a wheel's choice) and every row
+that settles an owner of the region: besides a row's own acquisition or reward,
+the Keepsake Rack settles its selection and equip result, a fountain use its
+rarity outcome, a Well purchase its Fateful Twist (a Travel Deal refill's Twist
+is judged at the refill purchase, so its row) and its initial or rolled item,
+and a Shrine purchase its initial item. A Travel Deal restock is judged at the
+earlier purchase that restocks it and a Pool list as the fountain opens it, so
+neither has a row. A row is claimed only when the walk reached it at or before
+the blocking contact: never a later row of the same stretch of the Timeline,
+nor a wheel's choice row while its offers block at **Next phase ready**, which
+settles with them. A deferred Ship wheel's post-combat rows run before its
+encounter's end effects, so the walk reaches them while that encounter end is
+not yet passed. A contact inside a reached row's own settlement, such as a
+Travel Deal restock judged at its purchase or an Artificer item judged as its
+source's pickup converts, stops at that row. A contact entry lies past the
+contact when a boundary before it was not passed; an encounter end is passed
+once its end effects apply, or, for a phase without them, once the walk goes
+on. A stop that claims neither takes the boundary rule instead.
+
+A Hub board or its Handoff and a block at the biome start have no room stop.
+
 Encounter support follows the same cut. Every phase of a room prepared through
 the cut keeps its identity, composition, generation and roster support, since
 those read only the room's preparation and entry state. A phase that started
-before the cut keeps its status and Fig Leaf and Gorgon support; a phase
-blocked at its own start by a Fig Leaf, Aetos or Gorgon finding keeps its
-status without execution and its Fig Leaf support.
+before the cut keeps its status and Fig Leaf support, and its Aetos and Gorgon
+support once the walk reached its outcome, including an outcome blocked by an
+Aetos or Gorgon finding; a phase blocked at its own start by a Fig Leaf
+finding keeps its status without execution and its Fig Leaf support.
 
 ### Generated-batch retention
 
@@ -488,7 +550,8 @@ A stored position is kept when it becomes invalid and raises its finding; a
 default re-derives and raises none. An item left no free point has no
 position, which only an invalid or over-capacity room can reach. Authoring
 products, the Chaos gate's included, mark each position chosen or default; execution publishes both
-alike, so the runtime steers every one.
+alike, so the runtime steers every one. Draft and the run import leave
+positions unset and take the defaults.
 
 ### Persistent and multi-phase rooms
 
@@ -682,7 +745,15 @@ candidate is impossible is a candidate product, not a finding: see
 Instance identity belongs in the address, not the code. Messages and display
 labels are application products. An actual lifecycle action block retains each
 matching dependency or window violation as invalid ordering; a missing required
-action remains incomplete. Dormant stale roster rows do not create findings.
+action remains incomplete. Stale roster rows are never executed and create no
+findings; a Purging Pool sale of a trait the game cannot sell is an active,
+invalid row with its finding, like a Shop purchase past the god cap.
+The walk enforces the [roster's](ROOM_LIFECYCLE_MODEL.md#roster) required-first
+order as placement does: a row ranked before a required action of an earlier
+window is not reached, because that action's deadline passes before the row's
+window opens. The walk stops at that row before it settles, and its one
+invalid-ordering finding names the required action that must come first; the
+same crossing is not reported again as a window violation of the later action.
 
 Three responsibilities stay separate:
 
@@ -732,7 +803,9 @@ Encounter identity, composition and
 [introduction](ENCOUNTER_PREPARATION.md#enemy-introductions) findings stop
 assessment at the room's Overview; the Fresh File introduction finding on the
 exact phase of a retained enemy withholds execution. Fig Leaf, Aetos and Gorgon findings have
-their own phase-child owners and stop assessment where the phase starts.
+their own phase-child owners: a Fig Leaf finding stops assessment where the phase starts, an
+Aetos or Gorgon finding at the fight's [Encounter outcome](ROOM_LIFECYCLE_MODEL.md#encounter-outcome),
+so its control stands reached.
 
 Reroll findings belong to the press, the roll or the screen that made the
 spend: an unavailable target, reward or roll at its press or roll action, an
@@ -754,9 +827,12 @@ the exit selection, at the room's exit, and the room's Timeline stays
 evaluated.
 
 Toggling a participant at its default position changes membership without
-replaying chronological legality; a chosen insertion position or a move is
-judged only by the roster's structural order rule, so an unresolved earlier item
-cannot prevent adding the action that repairs the room.
+replaying chronological legality. A chosen insertion position or a move is
+judged by the [roster's prefix rule](ROOM_LIFECYCLE_MODEL.md#roster): the rows
+up to it must be structurally valid as the walk reaches it, and rows after it
+take no part, so an edit is never refused for a downstream problem. The rule
+reads structure, never simulated state, so an unresolved earlier item cannot
+prevent adding the action that repairs the room.
 
 ## Run-State Snapshots
 
@@ -773,8 +849,10 @@ and persistent reward lookups can differ. Immutable substate identities permit
 reuse without serializing the whole state or recomputing every projection.
 
 Ordinary occurrences expose entry and pre-exit snapshots. Ship phases expose
-pre-encounter snapshots and the occurrence exposes pre-exit. N also retains
-the meaningful pre-board and pre-handoff generation contacts. The
+pre-encounter snapshots and the occurrence exposes pre-exit. N's Hub exposes
+one entry snapshot, at its first entry: a return to the Hub restores it and
+captures nothing new. N also retains the Hub-sourced pre-Preboss generation
+contact; the Hub board's generation captures none. The
 [lifecycle checkpoint contract](ROOM_LIFECYCLE_MODEL.md#run-state-checkpoints)
 owns their precise timing.
 

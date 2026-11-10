@@ -2,6 +2,7 @@ import { ordinaryRoutePosition } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import { settleTestEdit } from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
@@ -915,7 +916,7 @@ describe('Echo Gift Gift Gift', () => {
     // Echo lengthens this characterized route into H's forced-miniboss window.
     // Reauthor only that target and its Boon leaf: retaining H_Combat05's old
     // Apollo leaf after changing the room would be chronologically false.
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
       gameName: 'H_MiniBoss02',

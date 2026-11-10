@@ -781,7 +781,7 @@ export function HubTimeline({
         }}
         gameName={node.gameName}
         hubIdentity={hubIdentity}
-        label={`Ephyra Hub at ${segmentLabel(view.stay)}`}
+        label={`Hub at ${segmentLabel(view.stay)}`}
         slots={node.slots}
       />
     </div>

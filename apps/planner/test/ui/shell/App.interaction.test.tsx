@@ -483,7 +483,11 @@ describe('About build identity', () => {
 
 /** Route-start choices live on the Loadout panel; the workspace opens on Route. */
 const openLoadout = (user: ReturnType<typeof renderPlannerForInteraction>['user']) =>
-  user.click(screen.getByRole('button', { name: 'Loadout' }));
+  user.click(
+    within(screen.getByRole('navigation', { name: /panels$/ })).getByRole('button', {
+      name: 'Loadout',
+    }),
+  );
 
 describe('planner history interaction', () => {
   it('keeps the one route repair in the header on every panel and navigates to its owner', async () => {
@@ -675,7 +679,11 @@ describe('planner history interaction', () => {
     expect(screen.queryByRole('navigation', { name: 'Planner sections' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Project history' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'About' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Loadout' })).toBeTruthy();
+    expect(
+      within(screen.getByRole('navigation', { name: /panels$/ })).getByRole('button', {
+        name: 'Loadout',
+      }),
+    ).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Home' }));
     await user.click(screen.getByRole('button', { name: 'About' }));
@@ -792,7 +800,10 @@ describe('planner history interaction', () => {
         name: 'Erebus',
       }),
     );
-    const loadout = screen.getByRole('button', { name: 'Loadout' });
+    const loadout = within(screen.getByRole('navigation', { name: /panels$/ })).getByRole(
+      'button',
+      { name: 'Loadout' },
+    );
     expect(loadout.getAttribute('aria-current')).toBeNull();
     expect(
       document
@@ -805,7 +816,7 @@ describe('planner history interaction', () => {
     expect(screen.getByRole('button', { name: 'Starting reward' })).toBeTruthy();
   });
 
-  it('keeps relocated opening controls locked behind incomplete loadout results', async () => {
+  it('hides the relocated opening behind incomplete loadout results and links to their repair', async () => {
     const { application, user } = renderPlannerForInteraction();
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
@@ -827,14 +838,37 @@ describe('planner history interaction', () => {
         }),
       ),
     );
-    const identity = screen.getByRole('region', { name: 'Start room configuration' });
+    // The opening lies past the walk's stop: only the way to the loadout repair shows.
+    expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
     const before = application.store.getState().projectWorkspace.history;
-    const roomControl = identity.querySelector<HTMLButtonElement>('button[id$="-room"]');
-    if (roomControl === null) throw new Error('start room control is missing');
-    expect(roomControl.disabled).toBe(true);
-    expect(within(identity).queryByText('Reward', { selector: 'label' })).toBeNull();
-    expect(screen.queryByRole('listbox')).toBeNull();
+    await user.click(stopLink(document.body));
+    expect(
+      within(screen.getByRole('navigation', { name: /panels$/ }))
+        .getByRole('button', { name: 'Loadout' })
+        .getAttribute('aria-current'),
+    ).toBe('page');
     expect(application.store.getState().projectWorkspace.history).toBe(before);
+  });
+
+  it('opens a biome holding the walk stop on that stop', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: 'Erebus',
+      }),
+    );
+    await openLoadout(user);
+    await user.click(screen.getByRole('button', { name: 'Starting reward' }));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Hammer'));
+    await user.click(screen.getByRole('button', { name: 'Erebus' }));
+    await user.click(screen.getByRole('button', { name: 'Starting room' }));
+    await user.click(within(screen.getByRole('listbox')).getAllByRole('option')[0]!);
+    const issue = application.store.getState().projectWorkspace.assembly?.evaluation.route.issue;
+    expect(issue?.owner).toMatchObject({ biomeKey: 'F' });
+    await openLoadout(user);
+    await user.click(screen.getByRole('button', { name: 'Erebus' }));
+    // The same landing as the repair link: the stop's own finding selected.
+    expect(application.store.getState().editorSession.selectedFinding?.key).toBe(issue?.regionKey);
   });
 
   it('supports Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, and Ctrl+Y', async () => {
@@ -950,7 +984,9 @@ describe('planner history interaction', () => {
     });
     expect(tartarus.getAttribute('aria-current')).toBe('page');
 
-    const route = screen.getByRole('button', { name: 'Loadout' });
+    const route = within(screen.getByRole('navigation', { name: /panels$/ })).getByRole('button', {
+      name: 'Loadout',
+    });
     route.focus();
     await user.keyboard(' ');
     expect(application.store.getState().editorSession.activePanel).toEqual({
@@ -968,7 +1004,7 @@ describe('planner history interaction', () => {
     await view.user.click(screen.getByRole('button', { name: 'NPCs' }));
     const historyBeforeNavigation = application.store.getState().projectWorkspace.history!;
     const npcEntry = screen.getByRole('button', {
-      name: 'Inspect Artemis combat in Erebus · Encounter',
+      name: 'Inspect Artemis combat in Location 6 · Combat 06',
     });
     npcEntry.focus();
     await view.user.keyboard('{Enter}');
@@ -2749,3 +2785,10 @@ describe('route loadout interaction', () => {
     );
   });
 });
+
+/** The stop notice's link to where the plan stops. */
+function stopLink(scope: ParentNode): HTMLButtonElement {
+  const link = scope.querySelector<HTMLButtonElement>('[data-stop-notice] button');
+  if (link === null) throw new Error('no stop notice link');
+  return link;
+}

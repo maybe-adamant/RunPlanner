@@ -117,14 +117,6 @@ function createWalkContext(
     snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
       ? semanticAddressKey(snapshot.frontier.parent.origin)
       : undefined;
-  const hubDecisionOwnerBySource = new Map(
-    snapshot.decisions
-      .filter(
-        (decision): decision is Extract<CanonicalDecision, { readonly kind: 'hub' }> =>
-          decision.kind === 'hub',
-      )
-      .map((decision) => [semanticAddressKey(decision.source.origin), decision.origin]),
-  );
   return Object.freeze({
     ...inputs,
     rooms,
@@ -134,7 +126,6 @@ function createWalkContext(
     authoredSeaStarDuplicateSiteKeys,
     hubTakeoverSources,
     hubRestoringSources,
-    hubDecisionOwnerBySource,
     frontierSource,
     chaosGateSourceOccurrenceIds,
     ixionGeneratedChaosSourceOccurrenceIds,

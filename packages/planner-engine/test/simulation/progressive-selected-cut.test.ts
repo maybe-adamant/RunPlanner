@@ -1,15 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import {
   createAcquisitionRoleAddress,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createAdditionalExitAddress,
+  createAetosPhaseAddress,
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   createRoomActionAddress,
   createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
+  createLocalVisitOrderAddress,
+  createExitSelectionAddress,
+  createPostbossKeepsakeSelectionAddress,
+  createRewardWheelAddress,
+  createRewardWheelOfferAddress,
+  createStartingRewardAddress,
+  decodeProjectDocument,
+  type RoomActionReference,
   type OccurrenceId,
   type ProjectDocument,
   roomActionKey,
@@ -19,6 +30,8 @@ import type { ResourceFamily } from '@run-planner/engine/catalog-schema';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
+  encounterPhaseGorgonSupportForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   generatedEncounterSupportForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
@@ -26,13 +39,17 @@ import {
 import {
   createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
   loadSurfaceNOProject,
+  loadSurfaceNOPProject,
+  loadSurfaceNProject,
   nBiome,
+  nLocalOccurrenceId,
   qBiome,
   qOccurrenceIds,
   surfaceShrineDeliveriesProject,
   oBiome,
   oOccurrenceIds,
   pBiome,
+  pOccurrenceId,
   pOccurrenceIds,
   surfaceEncounterShowcaseProject,
   surfaceTravelDealRefillAnvilProject,
@@ -40,14 +57,33 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import {
   createCompleteFGProject,
+  createFConversionFrontierProject,
   createUnderworldFPoolCheckpoint,
+  createUnderworldFWellCheckpoint,
   loadUnderworldFGProject,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
+import {
+  loadUnderworldFGCheckpoint,
+  loadUnderworldFGHICheckpoint,
+  loadNemesisPomSeaStarCheckpoint,
+  loadUnderworldFigLeafCheckpoint,
+  loadUnderworldTwistScyllaCheckpoint,
+  underworldCheckpointArtifacts,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadSurfaceNOHermesShrineDeliveryCheckpoint,
+  loadSurfaceNOPQCheckpoint,
+  loadSurfaceNSteadyGrowthFrontierCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/surface';
 
 import * as fixture from './support/progressive-biome-fixtures';
+import {
+  roomActionAtPosition,
+  roomActionReachedAt,
+} from '../../src/simulation/progressive/selected-cut';
 import { reachedFrontier } from '../support/reward-frontier';
 
 const {
@@ -242,6 +278,72 @@ function biomeEvaluation(project: ProjectDocument, biomeKey: string) {
   )
     throw new Error(`${biomeKey} lost its blocked evaluation`);
   return Object.freeze({ ...evaluation, coverage: evaluation.coverage });
+}
+
+/**
+ * The entry the walk stopped at in its blocked room, named by kind or row key (`end` past
+ * every entry), and whether the walk reached it.
+ */
+function stopAt(evaluation: ReturnType<typeof biomeEvaluation>) {
+  const stop = evaluation.coverage.roomStop;
+  if (stop === undefined) return undefined;
+  const prefix = evaluation.materializedPrefix;
+  const rooms = [
+    ...(prefix.entryRoom === undefined ? [] : [prefix.entryRoom]),
+    ...prefix.decisions.flatMap((decision) =>
+      decision.kind === 'batch'
+        ? [...decision.targets, ...decision.additional].map((target) => target.room)
+        : decision.visits.flatMap((visit) => [visit.target.room, ...visit.enteredLocalRooms]),
+    ),
+    ...(prefix.fixedRoomLinks ?? []).map((link) => link.target),
+  ];
+  const room = rooms.find((candidate) => candidate.occurrenceId === stop.room.occurrenceId);
+  if (room === undefined) throw new Error(`${stop.room.occurrenceId} is not materialized`);
+  const entry = room.roomLifecycleTimeline.entries[stop.entryIndex];
+  return {
+    room: stop.room.occurrenceId,
+    kind: stop.kind,
+    at: stop.at,
+    entry:
+      entry === undefined
+        ? 'end'
+        : entry.kind === 'boundary'
+          ? 'phaseKey' in entry.boundary
+            ? `${entry.boundary.kind}:${entry.boundary.phaseKey}`
+            : entry.boundary.kind
+          : entry.kind === 'action'
+            ? entry.action.key
+            : entry.effect,
+  };
+}
+
+const qRefillRow = Object.freeze({
+  kind: 'interactAcquisitionEntry' as const,
+  siteKey: 'roomExit' as const,
+  entryKey: 'travelDealRefill',
+});
+
+/** Q's Preboss Shop buys Premium Progress, then a refill whose Anvil removes a Hammer the run lacks. */
+function failingQShopRefill(): ProjectDocument {
+  const shopId = qOccurrenceIds.preboss;
+  const shop = createOccurrenceAddress(qBiome, shopId);
+  const refill = createShopOfferAddress(qBiome, shopId, 'travelDealRefill');
+  let project = replaceTestShopOfferActions(surfaceTravelDealRefillAnvilProject(), catalog, shop, [
+    'PremiumProgress',
+    'MixedProgress1',
+  ]);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'MoveRoomAction',
+    action: createRoomActionAddress(qBiome, shopId, roomActionKey(qRefillRow)),
+    toIndex: 1,
+  });
+  // Removing a Hammer the run does not hold makes the refill's Anvil illegal.
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAnvilResult',
+    acquisition: createAcquisitionRoleAddress(refill, 'self'),
+    value: { ...surfaceTravelDealRefillAnvilResult, removedTraitKey: 'StaffTripleShotTrait' },
+  });
+  return project;
 }
 
 function runStateAvailability(
@@ -920,34 +1022,15 @@ describe('room Timeline block', () => {
     const shopId = qOccurrenceIds.preboss;
     const shop = createOccurrenceAddress(qBiome, shopId);
     const premium = createShopOfferAddress(qBiome, shopId, 'PremiumProgress');
-    const refill = createShopOfferAddress(qBiome, shopId, 'travelDealRefill');
-    const refillRow = {
-      kind: 'interactAcquisitionEntry' as const,
-      siteKey: 'roomExit' as const,
-      entryKey: 'travelDealRefill',
-    };
-    let project = replaceTestShopOfferActions(
-      surfaceTravelDealRefillAnvilProject(),
-      catalog,
-      shop,
-      ['PremiumProgress', 'MixedProgress1'],
-    );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'MoveRoomAction',
-      action: createRoomActionAddress(qBiome, shopId, rowKey(refillRow)),
-      toIndex: 1,
-    });
-    // Removing a Hammer the run does not hold makes the refill's Anvil illegal.
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAnvilResult',
-      acquisition: createAcquisitionRoleAddress(refill, 'self'),
-      value: { ...surfaceTravelDealRefillAnvilResult, removedTraitKey: 'StaffTripleShotTrait' },
-    });
+    const project = failingQShopRefill();
     const assembly = simulateProjectAssembly(catalog, project);
     const q = biomeEvaluation(project, 'Q');
 
     // A (Premium) settles, B (the refill) blocks alone, C (Mixed Progress) is after the block.
-    expect(q.coverage.roomTimeline).toEqual({ room: shop, blockingRowKeys: [rowKey(refillRow)] });
+    expect(q.coverage.roomTimeline).toEqual({
+      room: shop,
+      blockingRowKeys: [roomActionKey(qRefillRow)],
+    });
     expect(
       candidateArtifactsForProjectEvaluationAssembly(assembly)
         .biomeAt(qBiome)
@@ -1090,5 +1173,780 @@ describe('opening room blocks', () => {
       kind: 'exitDecision',
       origin: createExitDecisionAddress(pBiome, source(pIntro)),
     });
+  });
+});
+
+describe('room stop', () => {
+  /** A save that never placed some of a room's actions: its required ones stay owed. */
+  function withRoomActions(
+    project: ProjectDocument,
+    biomeKey: string,
+    occurrenceId: string,
+    keep: (reference: RoomActionReference) => boolean,
+  ) {
+    return decodeProjectDocument(
+      {
+        ...project,
+        route: {
+          ...project.route,
+          biomes: project.route.biomes.map((biome) =>
+            biome.biomeKey !== biomeKey || biome.topology === null
+              ? biome
+              : {
+                  ...biome,
+                  topology: {
+                    ...biome.topology,
+                    occurrences: biome.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId === occurrenceId
+                        ? {
+                            ...occurrence,
+                            roomActions: { order: occurrence.roomActions.order.filter(keep) },
+                          }
+                        : occurrence,
+                    ),
+                  },
+                },
+          ),
+        },
+      },
+      catalog,
+    );
+  }
+
+  function repeatedSideVisit() {
+    const project = loadSurfaceNOPQCheckpoint();
+    const main = createOccurrenceId('surface-n-combat05');
+    const decision = project.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
+      ?.topology?.decisions.find(
+        (candidate) => candidate.kind === 'localVisit' && candidate.sourceOccurrenceId === main,
+      );
+    if (decision?.kind !== 'localVisit') throw new Error('N lost its side visits');
+    const visits = decision.visitOrder;
+    return applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, main, 'sideRooms'),
+      occurrenceIds: [visits[1]!, ...visits.slice(1)],
+    });
+  }
+
+  function figLeafSkip(project: ProjectDocument, biome: typeof nBiome, occurrenceId: OccurrenceId) {
+    return applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: createEncounterPhaseAddress(biome, { kind: 'occurrence', occurrenceId }, 'Encounter'),
+      value: true,
+    });
+  }
+
+  const pCombat = createEncounterPhaseAddress(
+    pBiome,
+    { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
+    'Combat',
+  );
+
+  /** An Aetos wave the fight cannot field: its outcome, read when the fight ends, blocks. */
+  function aetosWaveUnavailable() {
+    return applyProjectCommand(loadSurfaceNOPProject(), catalog, {
+      kind: 'ReplaceAetosWave',
+      phase: pCombat,
+      value: 3,
+    });
+  }
+
+  /** The Gorgon condition met with no Gorgon Amulet held: its outcome blocks. */
+  function gorgonConditionUnavailable() {
+    return applyProjectCommand(loadSurfaceNOPProject(), catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase: pCombat,
+      value: true,
+    });
+  }
+
+  function partialWheel() {
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
+    const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel,
+      storeKey: 'MetaProgress',
+    });
+    // The second offer is still unset as the wheel is offered.
+    return applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 2,
+    });
+  }
+
+  /** F's first room turns its Bones into an Artificer item whose reward is unset. */
+  function artificerWithoutReward() {
+    const source = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    return applyProjectCommand(
+      createFConversionFrontierProject('MetaCurrencyDrop').project,
+      catalog,
+      {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: createAcquisitionRoleAddress(source, 'self'),
+        value: { kind: 'artificer' },
+      },
+    );
+  }
+
+  /** O's third Ship phase offers a Boon on Wheel 2 whose trait offer is unset. */
+  function wheel2BoonWithoutTraits() {
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel,
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    return applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+      encounterCount: 3,
+    });
+  }
+
+  function lockedExitTaken() {
+    const g = goldenGBiome;
+    const host = createOccurrenceId('golden-g-b1-e1');
+    const locked = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
+      kind: 'ReplaceLockedExit',
+      occurrence: createOccurrenceAddress(g, host),
+      exitKey: 'exit2',
+      locked: true,
+    });
+    return applyProjectCommand(locked, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(g, { kind: 'occurrence', occurrenceId: host }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+  }
+
+  /** O's Trial with its due Hermes Shrine delivery not placed. */
+  function shrineDeliveryUnplaced() {
+    const project = loadSurfaceNOHermesShrineDeliveryCheckpoint();
+    const trial = createOccurrenceId('surface-o-devotion');
+    const delivery = project.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === trial)
+      ?.roomActions.order.find(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.siteKey === 'hermesShrineDelivery',
+      );
+    if (delivery === undefined) throw new Error('O Trial lost its Shrine delivery');
+    return applyProjectCommand(project, catalog, {
+      kind: 'UnplaceGeneratedDelivery',
+      action: createRoomActionAddress(oBiome, trial, roomActionKey(delivery)),
+    });
+  }
+
+  /** A Chaos room whose reward is taken as Time Piece, leaving its door store unavailable. */
+  function chaosTimePiece() {
+    let project = underworldCheckpointArtifacts['natural-chaos-unresolved-trial'].load();
+    const opening = createOccurrenceId('fixture-chaos-opening');
+    const target = createOccurrenceId('interaction-chaos-target');
+    const commands: readonly Parameters<typeof applyProjectCommand>[2][] = [
+      {
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      },
+      {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(
+          createIncomingRewardAddress(goldenFBiome, opening),
+          'source',
+        ),
+        value: {
+          kind: 'traits',
+          giverKey: 'Apollo',
+          options: [
+            { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+            { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+            { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+        },
+      },
+      {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(goldenFBiome, source(opening)),
+        storeKey: 'MetaProgress',
+      },
+      {
+        kind: 'CreateTarget',
+        target: createTargetAddress(goldenFBiome, source(opening), 'exit1'),
+        occurrenceId: target,
+        gameName: 'F_Combat01',
+      },
+      {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(goldenFBiome, target),
+        value: { rewardType: 'MaxHealthDrop' },
+      },
+      {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'GoldifyKeepsake',
+      },
+      {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: createAcquisitionRoleAddress(
+          createIncomingRewardAddress(goldenFBiome, createOccurrenceId('fixture-chaos-room')),
+          'self',
+        ),
+        value: { kind: 'timePiece' },
+      },
+    ];
+    for (const command of commands) project = applyProjectCommand(project, catalog, command);
+    return project;
+  }
+
+  const fPostboss = createOccurrenceId('golden-f-preboss-shop:postboss');
+  const wellPurchaseRow = roomActionKey({
+    kind: 'purchaseStygianWellOffer',
+    generationKey: 'initial:secondLeft',
+  });
+
+  /** F's Postboss buys a Fateful Twist whose result is not set. */
+  function unsetWellTwist() {
+    const owner = createOccurrenceAddress(goldenFBiome, fPostboss);
+    let project = loadUnderworldFGProject();
+    for (const [slotKey, itemKey] of [
+      ['healing', 'ArmorBoostStore'],
+      ['secondLeft', 'RandomStoreItem'],
+      ['secondRight', 'TemporaryBoonRarityTrait'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: owner,
+        slotKey,
+        itemKey,
+      });
+    return applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: owner,
+      generationKey: 'initial:secondLeft',
+      purchased: true,
+    });
+  }
+
+  /** F's Postboss rack takes the Jeweled Pom without its equip result. */
+  function rackWithoutEquipResult() {
+    return applyProjectCommand(loadUnderworldFGCheckpoint(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(
+        createOccurrenceAddress(goldenFBiome, fPostboss),
+      ),
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
+    });
+  }
+
+  /** F's Postboss sells its Pool's left slot, whose trait is cleared. */
+  function poolSaleWithoutTrait() {
+    return applyProjectCommand(createUnderworldFPoolCheckpoint(), catalog, {
+      kind: 'ReplacePurgingPoolSlot',
+      occurrence: createOccurrenceAddress(goldenFBiome, fPostboss),
+      slotKey: 'left',
+      traitKey: null,
+    });
+  }
+  const poolSaleRow = roomActionKey({ kind: 'sellPurgingPoolTrait', slotKey: 'left' });
+
+  /** F's Postboss Travel Deal restock pinned to an item its first purchase's roll still shows. */
+  function duplicateWellRefill() {
+    return applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+      kind: 'ReplaceStygianWellTravelDealRefill',
+      occurrence: createOccurrenceAddress(goldenFBiome, fPostboss),
+      itemKey: 'TemporaryBoonRarityTrait',
+    });
+  }
+
+  /** F's Postboss Travel Deal restocks a Fateful Twist whose result is not set. */
+  function unsetRefillTwist() {
+    return applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+      kind: 'ReplaceStygianWellTravelDealRefill',
+      occurrence: createOccurrenceAddress(goldenFBiome, fPostboss),
+      itemKey: 'RandomStoreItem',
+    });
+  }
+  const refillPurchaseRow = roomActionKey({
+    kind: 'purchaseStygianWellOffer',
+    generationKey: 'travelDealRefill',
+  });
+
+  /** F's Postboss moves `reference` ahead of its fountain, which opens the doors. */
+  function beforeFountain(reference: RoomActionReference) {
+    return applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(goldenFBiome, fPostboss, roomActionKey(reference)),
+      toIndex: 0,
+    });
+  }
+  const wellPurchase: RoomActionReference = {
+    kind: 'purchaseStygianWellOffer',
+    generationKey: 'initial:secondLeft',
+  };
+
+  /** F's Postboss fountain used with a Phial and no rarity target. */
+  function fountainWithoutRarityTarget() {
+    return applyProjectCommand(loadUnderworldTwistScyllaCheckpoint(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'FountainRarityKeepsake',
+    });
+  }
+
+  const cases: readonly (readonly [
+    string,
+    () => ProjectDocument,
+    string,
+    {
+      readonly room: string;
+      readonly kind: string;
+      readonly at: 'entry' | 'before';
+      readonly entry: string;
+    },
+  ])[] = [
+    [
+      'Overview: past Room entered, its entry effects reached',
+      () =>
+        applyProjectCommand(surfaceEncounterShowcaseProject(), catalog, {
+          kind: 'ReplaceShopOffer',
+          offer: createShopOfferAddress(pBiome, prebossShop, 'Boon'),
+          value: {
+            rewardType: 'RandomLoot',
+            payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
+          },
+        }),
+      'P',
+      { room: prebossShop, kind: 'overview', at: 'before', entry: 'cleanup' },
+    ],
+    [
+      'a Timeline row: the first row of the blocking product',
+      failingQShopRefill,
+      'Q',
+      {
+        room: qOccurrenceIds.preboss,
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey(qRefillRow),
+      },
+    ],
+    [
+      'an unplaced required pickup: where the walk stopped, at its spawn after the encounter',
+      () => withRoomActions(loadUnderworldFGCheckpoint(), 'F', 'golden-f-b1-e1', () => false),
+      'F',
+      { room: 'golden-f-b1-e1', kind: 'timeline', at: 'before', entry: 'cleanup' },
+    ],
+    [
+      'an unplaced Fields cage: the walk stops before that cage starts',
+      () =>
+        withRoomActions(
+          applyProjectCommand(createGoldenFGHIProject(), catalog, {
+            kind: 'ReplaceFieldsCageOutcome',
+            decision: createExitDecisionAddress(
+              goldenHBiome,
+              source(createOccurrenceId('golden-h-intro')),
+            ),
+            cageOutcome: 'max',
+          }),
+          'H',
+          'golden-h-combat02',
+          (reference) => reference.kind !== 'completeFieldsCage' || reference.phaseKey !== 'Cage03',
+        ),
+      'H',
+      {
+        room: 'golden-h-combat02',
+        kind: 'timeline',
+        at: 'before',
+        entry: 'encounterStart:Cage03',
+      },
+    ],
+    [
+      "an invalid door offer: the source room's doors opening, reached",
+      () =>
+        applyProjectCommand(loadUnderworldFGCheckpoint(), catalog, {
+          kind: 'ReplaceIncomingReward',
+          reward: createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-b1-e1')),
+          value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+        }),
+      'F',
+      { room: 'golden-f-start', kind: 'timeline', at: 'entry', entry: 'cleanup' },
+    ],
+    [
+      'a phase-start contact: its own entry, reached (Fig Leaf)',
+      () =>
+        figLeafSkip(
+          loadUnderworldFigLeafCheckpoint(),
+          goldenFBiome,
+          createOccurrenceId('golden-f-b3-e1'),
+        ),
+      'F',
+      {
+        room: 'golden-f-b3-e1',
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterStart:Encounter',
+      },
+    ],
+    [
+      'a Hub side room phase-start contact (Fig Leaf)',
+      () =>
+        figLeafSkip(
+          applyProjectCommand(loadSurfaceNProject(), catalog, {
+            kind: 'ReplaceStartingKeepsake',
+            selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+            keepsakeKey: 'SkipEncounterKeepsake',
+          }),
+          nBiome,
+          nLocalOccurrenceId('combat02', 'sideDoor1'),
+        ),
+      'N',
+      {
+        room: nLocalOccurrenceId('combat02', 'sideDoor1'),
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterStart:Encounter',
+      },
+    ],
+    [
+      "an outcome contact (Aetos): the fight's outcome, reached, not its start",
+      aetosWaveUnavailable,
+      'P',
+      {
+        room: pOccurrenceId('P_Combat03', 1, 1),
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterOutcome:Combat',
+      },
+    ],
+    [
+      "an outcome contact (the Gorgon condition): the fight's outcome, reached",
+      gorgonConditionUnavailable,
+      'P',
+      {
+        room: pOccurrenceId('P_Combat03', 1, 1),
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterOutcome:Combat',
+      },
+    ],
+    [
+      'Boss defeated: reached, blocked on its due Judgment',
+      () =>
+        applyProjectCommand(loadSurfaceNOProject(), catalog, {
+          kind: 'ReplaceManualArcanaSelection',
+          route: createRouteAddress('Surface'),
+          arcanaKeys: ['CastCount'],
+        }),
+      'N',
+      {
+        room: 'surface-n-preboss:boss',
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'bossDefeated:Encounter',
+      },
+    ],
+    [
+      "an encounter end's due outcome: that end, reached (Steady Growth, Hub main room)",
+      loadSurfaceNSteadyGrowthFrontierCheckpoint,
+      'N',
+      {
+        room: 'surface-n-combat11',
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterEnd:Encounter',
+      },
+    ],
+    [
+      "a Ship wheel offer: its next phase, reached; the wheel's later choice row is not",
+      partialWheel,
+      'O',
+      { room: oOccurrenceIds.combat07, kind: 'timeline', at: 'entry', entry: 'nextPhase' },
+    ],
+    [
+      // The replacement's row comes later; the walk stops inside the source's settlement.
+      "an Artificer replacement judged as its source converts: the source's pickup row",
+      artificerWithoutReward,
+      'F',
+      {
+        room: goldenFOccurrenceId(1, 1),
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({
+          kind: 'interactIncomingReward',
+          producerPoint: 'roomRewardPickup',
+          acquisitionRole: 'self',
+        }),
+      },
+    ],
+    [
+      "a Ship wheel pickup before its encounter's deferred end effects: the pickup row, reached",
+      wheel2BoonWithoutTraits,
+      'O',
+      {
+        room: oOccurrenceIds.combat07,
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({ kind: 'interactWheelReward', wheelKey: 'wheel2' }),
+      },
+    ],
+    [
+      'exit work after the room committed (a locked door taken)',
+      lockedExitTaken,
+      'G',
+      { room: 'golden-g-b1-e1', kind: 'exit', at: 'before', entry: 'end' },
+    ],
+    [
+      'exit work as a restored room departs again (a repeated side visit)',
+      repeatedSideVisit,
+      'N',
+      { room: 'surface-n-combat05', kind: 'exit', at: 'before', entry: 'end' },
+    ],
+    [
+      "an encounter end's due Shrine delivery not placed: that end, reached",
+      shrineDeliveryUnplaced,
+      'O',
+      {
+        room: 'surface-o-devotion',
+        kind: 'timeline',
+        at: 'entry',
+        entry: 'encounterEnd:Encounter',
+      },
+    ],
+    [
+      "the doors' store unavailable at generation: the doors opening, reached (Chaos)",
+      chaosTimePiece,
+      'F',
+      { room: 'fixture-chaos-room', kind: 'timeline', at: 'entry', entry: 'cleanup' },
+    ],
+    [
+      'a Well Twist result unset: its purchase row',
+      unsetWellTwist,
+      'F',
+      { room: fPostboss, kind: 'timeline', at: 'entry', entry: wellPurchaseRow },
+    ],
+    [
+      "a Postboss rack's equip result unset: the rack row",
+      rackWithoutEquipResult,
+      'F',
+      {
+        room: fPostboss,
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({ kind: 'interactKeepsakeRack' }),
+      },
+    ],
+    [
+      "a Pool sale's trait unset: the sale row whose own contact blocks",
+      poolSaleWithoutTrait,
+      'F',
+      { room: fPostboss, kind: 'timeline', at: 'entry', entry: poolSaleRow },
+    ],
+    [
+      'a Nemesis pickup row past an encounter end without end effects',
+      loadNemesisPomSeaStarCheckpoint,
+      'F',
+      {
+        room: 'golden-f-b5-e1',
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({
+          kind: 'interactAcquisitionEntry',
+          siteKey: 'nemesisGenerated:Encounter',
+          entryKey: 'result',
+        }),
+      },
+    ],
+    [
+      'a Well restock judged at the first purchase: that purchase, not its later refill row',
+      duplicateWellRefill,
+      'F',
+      { room: fPostboss, kind: 'timeline', at: 'entry', entry: wellPurchaseRow },
+    ],
+    [
+      'a Postboss Well purchase ranked before the fountain: the purchase row',
+      () => beforeFountain(wellPurchase),
+      'F',
+      { room: fPostboss, kind: 'timeline', at: 'entry', entry: wellPurchaseRow },
+    ],
+    [
+      "a Postboss fountain's rarity outcome unset: the fountain row",
+      fountainWithoutRarityTarget,
+      'F',
+      {
+        room: fPostboss,
+        kind: 'timeline',
+        at: 'entry',
+        entry: roomActionKey({ kind: 'useFountain' }),
+      },
+    ],
+  ];
+
+  it.each(cases)('%s', (_name, build, biomeKey, expected) => {
+    expect(stopAt(biomeEvaluation(build(), biomeKey))).toEqual(expected);
+  });
+
+  it("keeps a phase's outcome support where its outcome blocks", () => {
+    const aetos = simulateProjectAssembly(catalog, aetosWaveUnavailable());
+    expect(aetos.evaluation.issue).toMatchObject({ owner: createAetosPhaseAddress(pCombat) });
+    expect(encounterPhaseSequenceStatusForProjectEvaluationAssembly(aetos, pCombat)).toMatchObject({
+      execution: 'normal',
+      aetos: { selectedWave: 3, reason: 'wave' },
+    });
+    const gorgon = simulateProjectAssembly(catalog, gorgonConditionUnavailable());
+    expect(gorgon.evaluation.issue).toMatchObject({ owner: createGorgonPhaseAddress(pCombat) });
+    expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(gorgon, pCombat)).toMatchObject({
+      supported: false,
+    });
+  });
+
+  it('stops at a Postboss Well purchase the required fountain must precede', () => {
+    const evaluation = biomeEvaluation(beforeFountain(wellPurchase), 'F');
+    // Using the fountain unlocks the exits; only then is the Well usable.
+    expect(evaluation.findings).toEqual([
+      {
+        code: 'roomActionOrderUnavailable',
+        phase: 'encounterResolution',
+        origin: createRoomActionAddress(goldenFBiome, fPostboss, wellPurchaseRow),
+        evidence: {
+          reason: 'requiredFirst',
+          detail: `must follow ${roomActionKey({ kind: 'useFountain' })}, a required action of an earlier window`,
+          requiredAction: roomActionKey({ kind: 'useFountain' }),
+        },
+      },
+    ]);
+    expect(evaluation.coverage.roomTimeline?.blockingRowKeys).toEqual([wellPurchaseRow]);
+  });
+
+  it('runs a Postboss Keepsake Rack used before the fountain', () => {
+    const project = beforeFountain({ kind: 'interactKeepsakeRack' });
+    const biome = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
+    expect(biome?.findings ?? []).toEqual([]);
+    expect(biome?.coverage.kind).toBe('complete');
+  });
+
+  it('marks no row for a Well restock judged at the first purchase', () => {
+    const evaluation = biomeEvaluation(duplicateWellRefill(), 'F');
+    expect(evaluation.findings.map((finding) => [finding.code, finding.evidence])).toEqual([
+      ['stygianWellTravelDealRefillUnavailable', { reason: 'refillDuplicate' }],
+    ]);
+    expect(evaluation.coverage.roomTimeline?.blockingRowKeys).toEqual([]);
+  });
+
+  it.each([
+    ['a Well Twist', unsetWellTwist, [wellPurchaseRow]],
+    // A refill's Twist is judged at the refill purchase, not the purchase that restocks it.
+    ['a Travel Deal refill Twist', unsetRefillTwist, [refillPurchaseRow]],
+    [
+      'a rack equip result',
+      rackWithoutEquipResult,
+      [roomActionKey({ kind: 'interactKeepsakeRack' })],
+    ],
+    ['a Pool sale', poolSaleWithoutTrait, [poolSaleRow]],
+    [
+      'a fountain rarity outcome',
+      fountainWithoutRarityTarget,
+      [roomActionKey({ kind: 'useFountain' })],
+    ],
+  ] as const)('marks the row that settles %s, where the walk stops', (_name, build, rows) => {
+    const evaluation = biomeEvaluation(build(), 'F');
+    expect(evaluation.coverage.roomTimeline?.blockingRowKeys).toEqual(rows);
+    expect(stopAt(evaluation)?.entry).toBe(rows[0]);
+  });
+
+  it("defers a Ship wheel encounter's end effects past its pickup, where the walk stops", () => {
+    const evaluation = biomeEvaluation(wheel2BoonWithoutTraits(), 'O');
+    const combat2 = evaluation.history.events.filter(
+      (event) =>
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === oOccurrenceIds.combat07 &&
+        'phaseKey' in event &&
+        event.phaseKey === 'Combat2',
+    );
+    expect(combat2.find((event) => event.kind === 'encounterCompleted')).toMatchObject({
+      endEffects: 'deferred',
+    });
+    // The pickup is reached; the encounter end it precedes is not passed.
+    expect(combat2.some((event) => event.kind === 'encounterEndEffectsApplied')).toBe(false);
+  });
+
+  it('claims a reached action only at or after the position the walk reached it', () => {
+    const room = createOccurrenceAddress(goldenFBiome, createOccurrenceId('reached-at'));
+    const reached = [
+      { room, actionKey: 'first', sequence: 10, boundary: 'before' as const },
+      // A later row of the same stretch, reached at its own later event.
+      { room, actionKey: 'second', sequence: 12, boundary: 'before' as const },
+      // A row with no event of its own settles with the next one.
+      { room, actionKey: 'silent', sequence: 14, boundary: 'after' as const },
+    ];
+    const at = (sequence: number, boundary: 'before' | 'at' | 'after') =>
+      ({ kind: 'history', sequence, boundary }) as const;
+    const claimed = (position: ReturnType<typeof at>) =>
+      ['first', 'second', 'silent', 'unreached'].filter((actionKey) =>
+        roomActionReachedAt(reached, room, actionKey, position),
+      );
+    expect(claimed(at(10, 'at'))).toEqual(['first']);
+    expect(claimed(at(10, 'before'))).toEqual(['first']);
+    expect(claimed(at(12, 'at'))).toEqual(['first', 'second']);
+    expect(claimed(at(14, 'at'))).toEqual(['first', 'second']);
+    expect(claimed(at(14, 'after'))).toEqual(['first', 'second', 'silent']);
+    // At the same sequence, a row is reached at a boundary no earlier than its own.
+    expect(claimed(at(11, 'after'))).toEqual(['first']);
+    expect(claimed(at(12, 'before'))).toEqual(['first', 'second']);
+    expect(claimed(at(15, 'before'))).toEqual(['first', 'second', 'silent']);
+    // The walk is at a row while the contact lies inside its own events.
+    const spanning = [
+      { room, actionKey: 'pickup', sequence: 20, through: 21, boundary: 'before' as const },
+    ];
+    expect(roomActionAtPosition(spanning, room, at(21, 'at'))).toBe('pickup');
+    expect(roomActionAtPosition(spanning, room, at(22, 'at'))).toBeUndefined();
+    // A row with no event of its own spans nothing.
+    expect(roomActionAtPosition(reached, room, at(14, 'at'))).toBeUndefined();
+    expect(roomActionAtPosition(reached, room, at(14, 'after'))).toBeUndefined();
+    expect(
+      roomActionReachedAt(
+        reached,
+        createOccurrenceAddress(goldenFBiome, createOccurrenceId('another-room')),
+        'first',
+        at(20, 'at'),
+      ),
+    ).toBe(false);
+  });
+
+  it('names the row at a position only when its own span alone holds it', () => {
+    const room = createOccurrenceAddress(goldenFBiome, createOccurrenceId('reached-at'));
+    const at = (sequence: number) => ({ kind: 'history', sequence, boundary: 'at' }) as const;
+    // Two pickups of one producer point share its events; a later row overlaps their end.
+    const reached = [
+      { room, actionKey: 'self', sequence: 20, through: 22, boundary: 'before' as const },
+      { room, actionKey: 'source', sequence: 20, through: 22, boundary: 'before' as const },
+      { room, actionKey: 'wide', sequence: 22, through: 24, boundary: 'before' as const },
+    ];
+    expect(roomActionAtPosition(reached, room, at(21))).toBeUndefined();
+    expect(roomActionAtPosition(reached, room, at(22))).toBeUndefined();
+    expect(roomActionAtPosition(reached, room, at(23))).toBe('wide');
+    expect(roomActionAtPosition(reached.slice(0, 1), room, at(21))).toBe('self');
+    // The same row reached twice is still one row.
+    expect(roomActionAtPosition([reached[2]!, reached[2]!], room, at(24))).toBe('wide');
+  });
+
+  it('publishes no stop for a settled route', () => {
+    for (const biome of simulateProject(catalog, loadUnderworldFGCheckpoint()).route?.biomes ?? [])
+      expect('roomStop' in biome.coverage).toBe(false);
   });
 });

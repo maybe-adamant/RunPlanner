@@ -195,6 +195,7 @@ function materializeStart(
   return materializeAuthoredRoom({
     catalog,
     biome,
+    topology,
     routePosition,
     room,
     occurrence,
@@ -247,6 +248,7 @@ function fixedRoomSuccessor(
   const target = materializeAuthoredRoom({
     catalog,
     biome,
+    topology,
     routePosition,
     room,
     occurrence,
@@ -586,7 +588,7 @@ export function materializeBiomePrefix(
           layout.progression,
           authoredHub,
           topology.decisions.filter((candidate) => candidate.kind === 'localVisit'),
-          occurrences,
+          topology,
           loadout,
         );
         decisions.push(hub);
@@ -897,7 +899,7 @@ export function materializeBiome(
           layout.progression,
           authoredHub,
           topology.decisions.filter((candidate) => candidate.kind === 'localVisit'),
-          occurrences,
+          topology,
           loadout,
         );
         decisions.push(hub);

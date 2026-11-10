@@ -124,17 +124,22 @@ describe('Room Add area', () => {
         )
         .map((proposal) => proposal.toIndex ?? -1),
     );
+    const authoredOrder = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'N')!
+        .topology!.occurrences.find(
+          (candidate) => candidate.occurrenceId === nOccurrenceIds.opening,
+        )!
+        .roomActions.order.map((reference) => JSON.stringify(reference));
+    const before = authoredOrder();
     await view.user.click(within(spawnedUnder()).getByRole('button', { name: 'Gold' }));
-    const order = view.application.store
-      .getState()
-      .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'N')!
-      .topology!.occurrences.find((candidate) => candidate.occurrenceId === nOccurrenceIds.opening)!
-      .roomActions.order;
-    expect(
-      order.findIndex(
-        (reference) => JSON.stringify(reference) === JSON.stringify(pickup.reference),
-      ),
-    ).toBe(lastLegal);
+    const order = authoredOrder();
+    // The edit also removes the room's stale rows, which shifts the index.
+    const removedBefore = before
+      .slice(0, lastLegal)
+      .filter((reference) => !order.includes(reference)).length;
+    expect(order.indexOf(JSON.stringify(pickup.reference))).toBe(lastLegal - removedBefore);
     expect(timelineRow(pickup.label)).toBeTruthy();
   });
 

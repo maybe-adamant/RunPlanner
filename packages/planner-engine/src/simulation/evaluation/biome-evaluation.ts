@@ -3,6 +3,7 @@ import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createOccurrenceAddress,
+  createHubRunStateCheckpointAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type BiomeAddress,
@@ -128,12 +129,12 @@ interface BiomeGenerationAssembly {
 function structurallyEligibleRunStateOwners(
   prefix: MaterializedBiomePrefix,
 ): readonly RunStateOwner[] {
-  // Canonical decisions are the outer biome chronology. A Hub remains one
-  // decision regardless of how many visits and local rooms it contains.
-  const owners: RunStateOwner[] = prefix.decisions.map((decision) => decision.origin);
-  if (prefix.frontier?.kind === 'hubBoard' || prefix.frontier?.kind === 'exitDecision') {
-    owners.push(prefix.frontier.origin);
-  }
+  // Canonical decisions are the outer biome chronology. A Hub's Run State is
+  // its entry checkpoint, never its board's generation contact.
+  const owners: RunStateOwner[] = prefix.decisions.flatMap((decision) =>
+    decision.kind === 'hub' ? [] : [decision.origin],
+  );
+  if (prefix.frontier?.kind === 'exitDecision') owners.push(prefix.frontier.origin);
   const enteredRooms: CanonicalAuthoredRoom[] = [];
   const appendRoom = (room: CanonicalAuthoredRoom): void => {
     if (!room.entered) return;
@@ -152,6 +153,7 @@ function structurallyEligibleRunStateOwners(
       for (const additional of decision.additional) appendRoom(additional.room);
       continue;
     }
+    owners.push(createHubRunStateCheckpointAddress(decision.room.origin));
     for (const visit of decision.visits) {
       appendRoom(visit.target.room);
       for (const local of visit.enteredLocalRooms) appendRoom(local);
@@ -287,8 +289,11 @@ function generation(
 
 function roomTimelineCoverage(
   evaluation: ProgressiveBiomeEvaluation,
-): Pick<PrefixBiomeEvaluationCoverage, 'roomTimeline'> {
-  return evaluation.roomTimeline === undefined ? {} : { roomTimeline: evaluation.roomTimeline };
+): Pick<PrefixBiomeEvaluationCoverage, 'roomTimeline' | 'roomStop'> {
+  return {
+    ...(evaluation.roomTimeline === undefined ? {} : { roomTimeline: evaluation.roomTimeline }),
+    ...(evaluation.roomStop === undefined ? {} : { roomStop: evaluation.roomStop }),
+  };
 }
 
 export function materializedBiomePrefixCoveragePoint(
@@ -804,6 +809,7 @@ export function evaluateBiomeAssembly(
       roomGeneration: roomGeneration.validation,
       findingRegions: selectedFindingRegions,
       rewardsThrough: rewards.through,
+      reachedActions: composed.reachedActions,
     }),
   );
   if (progressive === null) {

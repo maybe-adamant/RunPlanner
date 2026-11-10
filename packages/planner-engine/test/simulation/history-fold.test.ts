@@ -94,6 +94,7 @@ function canonicalEvents(): readonly HistoryEvent[] {
       operationIndex: 4,
       phaseKey: 'Encounter',
       execution: 'normal',
+      endEffects: 'applied',
       figLeafSkipOwner: false,
     },
     { kind: 'outgoingGenerationCheckpoint', origin, operationIndex: 5 },

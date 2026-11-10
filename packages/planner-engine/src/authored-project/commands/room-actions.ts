@@ -89,7 +89,7 @@ export function applyRoomActionCommand(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: RoomActionCommand,
+  command: Exclude<RoomActionCommand, { readonly kind: 'ResetRoomActionsAfter' }>,
 ): ProjectDocument {
   if (command.kind === 'PurchaseShopTravelDealRefill')
     return purchaseShopTravelDealRefill(document, catalog, located, command);

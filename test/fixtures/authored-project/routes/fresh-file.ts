@@ -552,6 +552,16 @@ function freshFileRouteFrontierStart(): ProjectDocument {
   // H: the bridge is entered as a Shop, forcing MiniBoss02 after it.
   recast('golden-h-bridge01', 'H_Bridge01', 'golden-g-b5-e1');
   recast('golden-h-combat05', 'H_MiniBoss02', 'golden-h-miniboss01');
+  // H_MiniBoss02 has one door, so its Preboss takes over the Shop door alone.
+  const prebossDoors = decision(h, 'golden-h-combat05');
+  const lostDoors = new Set(
+    prebossDoors.normal.targets.slice(1).map((target: RawJson) => target.occurrenceId),
+  );
+  prebossDoors.normal.targets = prebossDoors.normal.targets.slice(0, 1);
+  prebossDoors.selection = { kind: 'derived' };
+  h.topology.occurrences = h.topology.occurrences.filter(
+    (candidate: RawJson) => !lostDoors.has(candidate.occurrenceId),
+  );
   decision(h, 'golden-h-combat09').selection = { kind: 'normal', exitKey: 'exit2' };
   decision(h, 'golden-h-miniboss01').source.occurrenceId = 'golden-h-bridge01';
   // I: no Story and the fresh I_PreBoss01.

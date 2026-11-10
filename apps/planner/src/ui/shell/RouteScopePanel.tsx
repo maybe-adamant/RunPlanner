@@ -33,7 +33,7 @@ export function RouteScopePanel({
   const planEnd = workspaceRoute.planEnd;
   const routeExtent =
     planEnd !== undefined && planEnd.unreached !== true
-      ? `Ends in ${planEnd.biomeLabel}`
+      ? `Ends after ${planEnd.place.text}`
       : lastConfiguredBiome === undefined
         ? 'No biomes'
         : `Through ${lastConfiguredBiome}`;

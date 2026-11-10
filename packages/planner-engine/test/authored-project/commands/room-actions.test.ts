@@ -409,6 +409,7 @@ describe('room-action commands', () => {
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
       catalog,
       biome: goldenFBiome,
+      topology: project.route.biomes[0]!.topology!,
       occurrence: eventOccurrence,
     });
     expect(domain.contributions).toContainEqual(
@@ -498,6 +499,7 @@ describe('room-action commands', () => {
         routePosition: ordinaryPositionFor(catalog, biome),
         catalog,
         biome,
+        topology: (candidate === reprieve ? authored : reversed).route.biomes[0]!.topology!,
         occurrence: candidate,
       });
       const roster = assembleRoomActionRoster({
@@ -533,6 +535,7 @@ describe('room-action commands', () => {
       activeRoomActionReferences(
         catalog,
         goldenHBiome,
+        createGoldenFGHProject().route.biomes.find((plan) => plan.biomeKey === 'H')!.topology!,
         echo,
         ordinaryPositionFor(catalog, goldenHBiome),
       ),
@@ -602,6 +605,7 @@ describe('room-action commands', () => {
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
+      topology: authored.route.biomes[0]!.topology!,
       occurrence: hostOccurrence,
     });
     const roster = assembleRoomActionRoster({
@@ -1012,6 +1016,7 @@ describe('room-action commands', () => {
       routePosition: ordinaryPositionFor(catalog, goldenHBiome),
       catalog,
       biome: goldenHBiome,
+      topology: dormant.route.biomes.find((plan) => plan.biomeKey === 'H')!.topology!,
       occurrence: fields(dormant),
     });
     expect(domain.contributions).toContainEqual(
@@ -1037,6 +1042,7 @@ describe('room-action commands', () => {
         routePosition: ordinaryPositionFor(catalog, goldenHBiome),
         catalog,
         biome: goldenHBiome,
+        topology: deactivated.route.biomes.find((plan) => plan.biomeKey === 'H')!.topology!,
         occurrence: fields(deactivated),
       }).contributions,
     ).not.toContainEqual(expect.objectContaining({ kind: 'action', reference: replacement }));
@@ -1460,6 +1466,7 @@ describe('room-action commands', () => {
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
+        topology: project.route.biomes.find((candidate) => candidate.biomeKey === 'F')!.topology!,
         occurrence: finalOccurrence,
       }).contributions,
     ).toContainEqual(
@@ -1528,7 +1535,7 @@ describe('room-action commands', () => {
       bought('initial:secondLeft'),
     ]);
     expect(() => applyProjectCommand(project, catalog, { ...secondRight, index: 0 })).toThrow(
-      /index 0 is not a legal position .* crosses a fixed lifecycle window/,
+      /index 0 is not a legal position .* a required action of an earlier window/,
     );
     // The refill restocks only after the first purchase.
     expect(objectCommandInsertionIndexes(project, catalog, refill)).toEqual([3]);

@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import type { EncounterOutcomeChoice } from '@run-planner/engine/simulation';
 import type {
   AuthoredEncounterCustomization,
   SemanticAddress,
@@ -654,11 +655,7 @@ function EncounterEventGroup({
   );
 }
 
-/**
- * What is settled as a phase starts, on its banner's line: the Fig Leaf skip and
- * Gorgon condition toggles and the Aetos wave; none renders nothing. A retained
- * condition its skipped phase cannot use stays shown and clearable, marked quiet.
- */
+/** What is settled as a phase starts, on its event's line: the Fig Leaf skip, or nothing. */
 export function EncounterStartControls({
   interactions,
   phase,
@@ -688,7 +685,31 @@ export function EncounterStartControls({
         )}
       />
     );
-  const gorgon = phase.gorgonCondition;
+  return (
+    <EncounterEventGroup label={`${phase.identityLabel} start`}>
+      {[figLeafControl]}
+    </EncounterEventGroup>
+  );
+}
+
+/**
+ * How a phase's fight ended, on its outcome's line: the Aetos wave and Gorgon condition,
+ * the kill race, or how answering Nemesis ended her trade or contest; only the choices the
+ * outcome hosts render. A retained condition its skipped phase cannot use stays shown and
+ * clearable, marked quiet.
+ */
+export function EncounterOutcomeControls({
+  choices,
+  interactions,
+  phase,
+}: {
+  readonly choices: ReadonlySet<EncounterOutcomeChoice>;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly phase: WorkspaceEncounterPhase;
+}) {
+  const findingTarget = useFindingTarget();
+  const executeIntent = useCommandIntent();
+  const gorgon = choices.has('gorgonCondition') ? phase.gorgonCondition : undefined;
   const gorgonInteraction =
     gorgon === undefined
       ? undefined
@@ -713,7 +734,7 @@ export function EncounterStartControls({
         )}
       />
     );
-  const aetos = phase.aetos;
+  const aetos = choices.has('aetos') ? phase.aetos : undefined;
   const aetosInteraction =
     aetos === undefined
       ? undefined
@@ -787,26 +808,7 @@ export function EncounterStartControls({
             </span>
           );
         })();
-  return (
-    <EncounterEventGroup label={`${phase.identityLabel} start`}>
-      {[aetosControl, gorgonControl, figLeafControl]}
-    </EncounterEventGroup>
-  );
-}
-
-/**
- * What a finished phase settled: its kill-race outcome, or how answering
- * Nemesis ended her trade or contest; none renders nothing.
- */
-export function EncounterEndControls({
-  interactions,
-  phase,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly phase: WorkspaceEncounterPhase;
-}) {
-  const executeIntent = useCommandIntent();
-  const nemesisBet = phase.nemesisBet;
+  const nemesisBet = choices.has('nemesisBet') ? phase.nemesisBet : undefined;
   const nemesisBetInteraction =
     nemesisBet === undefined
       ? undefined
@@ -826,7 +828,7 @@ export function EncounterEndControls({
       />
     );
   const nemesisEvent =
-    phase.nemesisEvent === undefined
+    phase.nemesisEvent === undefined || !choices.has('nemesisEvent')
       ? undefined
       : interactions.nemesisEvents.get(workspaceInteractionKey(phase.nemesisEvent.owner));
   const nemesisEventControl =
@@ -834,8 +836,8 @@ export function EncounterEndControls({
       <NemesisEventOutcomeControl interaction={nemesisEvent} key="nemesisEvent" />
     );
   return (
-    <EncounterEventGroup label={`${phase.identityLabel} end`}>
-      {[nemesisBetControl, nemesisEventControl]}
+    <EncounterEventGroup label={`${phase.identityLabel} outcome choices`}>
+      {[aetosControl, gorgonControl, nemesisBetControl, nemesisEventControl]}
     </EncounterEventGroup>
   );
 }

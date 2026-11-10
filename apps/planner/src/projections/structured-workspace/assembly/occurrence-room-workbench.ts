@@ -14,6 +14,7 @@ import type {
   WorkspaceRoomActions,
   WorkspaceRoomLifecycleBoundary,
   WorkspaceRoomLifecycleTimelineEntry,
+  WorkspaceTimelineWait,
 } from '../contracts/timeline';
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceRoomTab } from '../contracts/navigation';
@@ -53,6 +54,7 @@ function shipWorkbenchPresentation(
       case 'roomEntered':
         return 0;
       case 'encounterStart':
+      case 'encounterOutcome':
       case 'encounterEnd':
         return phaseIndexForKey(boundary.phaseKey);
       case 'bossDefeated':
@@ -106,6 +108,9 @@ function shipWorkbenchPresentation(
   const phaseTimelineEntries = roomLocal.phases.map(
     () => [] as WorkspaceRoomLifecycleTimelineEntry[],
   );
+  const phaseNotReached = roomLocal.phases.map(
+    () => [] as NonNullable<WorkspaceRoomActions['timeline']['notReached']>[number][],
+  );
   const phaseCheckpointEntries = roomLocal.phases.map(
     () => [] as WorkspaceRoomActions['checkpoints'][number][],
   );
@@ -139,14 +144,21 @@ function shipWorkbenchPresentation(
       phaseRows[phaseIndex]!.push(row);
       lastPhaseIndex = phaseIndex;
     }
+    for (const entry of roomActions.timeline.notReached ?? []) {
+      const row = entry.kind === 'action' ? actionByKey.get(entry.actionKey) : undefined;
+      const phaseIndex =
+        entry.phaseKey !== undefined
+          ? phaseIndexForKey(entry.phaseKey)
+          : row === undefined
+            ? roomLocal.phases.length - 1
+            : phaseIndexForWindow(row.window);
+      phaseNotReached[phaseIndex < 0 ? roomLocal.phases.length - 1 : phaseIndex]!.push(entry);
+    }
     for (const checkpoint of roomActions.checkpoints) {
       if (checkpoint.key === 'exitUsable') continue;
       const matchingBoundary = roomActions.timeline.entries.find(
         (entry) =>
-          entry.kind === 'boundary' &&
-          (checkpointKeyForBoundary(entry.boundary) === checkpoint.key ||
-            (entry.bossDefeated !== undefined &&
-              checkpointKeyForBoundary(entry.bossDefeated) === checkpoint.key)),
+          entry.kind === 'boundary' && checkpointKeyForBoundary(entry.boundary) === checkpoint.key,
       );
       const phaseIndex =
         matchingBoundary?.kind === 'boundary'
@@ -172,7 +184,20 @@ function shipWorkbenchPresentation(
       repairRows.push(row);
     }
   }
+  // A phase the stopped walk has not reached waits on the last phase it did reach.
+  const stopped = roomActions?.timeline.notReached !== undefined;
+  const waitsOn = (index: number): WorkspaceTimelineWait | undefined => {
+    if (roomActions?.timeline.waitsOn !== undefined) return roomActions.timeline.waitsOn;
+    if (!stopped || phaseTimelineEntries[index]!.length > 0) return undefined;
+    const reached = phaseTimelineEntries.findLastIndex(
+      (entries, earlier) => earlier < index && entries.length > 0,
+    );
+    return reached < 0
+      ? undefined
+      : Object.freeze({ kind: 'phase' as const, phaseLabel: roomLocal.phases[reached]!.label });
+  };
   const phases: WorkspaceShipPhasePresentation[] = roomLocal.phases.map((phase, index) => {
+    const phaseWaitsOn = waitsOn(index);
     const encounter = encounterPhases.find((candidate) => candidate.address.phaseKey === phase.key);
     const wheel = wheelForNextPhase(index);
     return Object.freeze({
@@ -184,6 +209,10 @@ function shipWorkbenchPresentation(
       key: phase.key,
       label: phase.label,
       timeline: Object.freeze(phaseTimelineEntries[index]!),
+      ...(roomActions?.timeline.notReached === undefined
+        ? {}
+        : { notReached: Object.freeze(phaseNotReached[index]!) }),
+      ...(phaseWaitsOn === undefined ? {} : { waitsOn: phaseWaitsOn }),
       optionalRows: Object.freeze(phaseOptionalRows[index]!),
       ...(index !== roomLocal.phases.length - 1 || roomActions?.objectEntries === undefined
         ? {}

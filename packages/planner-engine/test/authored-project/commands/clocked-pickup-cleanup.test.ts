@@ -79,9 +79,13 @@ describe('clocked pickup placement cleanup', () => {
       .topology!.occurrences.find((candidate) => candidate.occurrenceId === oldHost.occurrenceId)!;
     expect(host.acquisitionSites?.roomExit?.pickupEntries?.[reference.entryKey]).toBeUndefined();
     expect(
-      activeRoomActionReferences(catalog, biome, host, ordinaryPositionFor(catalog, biome)).map(
-        roomActionKey,
-      ),
+      activeRoomActionReferences(
+        catalog,
+        biome,
+        removed.route.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)!.topology!,
+        host,
+        ordinaryPositionFor(catalog, biome),
+      ).map(roomActionKey),
     ).not.toContain(roomActionKey(placed.reference));
   });
 
@@ -115,7 +119,13 @@ describe('clocked pickup placement cleanup', () => {
       )!;
     expect(host.acquisitionSites?.roomExit?.pickupEntries?.[reference.entryKey]).toBeUndefined();
     expect(
-      activeRoomActionReferences(catalog, biome, host, ordinaryPositionFor(catalog, biome)),
+      activeRoomActionReferences(
+        catalog,
+        biome,
+        removed.route.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)!.topology!,
+        host,
+        ordinaryPositionFor(catalog, biome),
+      ),
     ).not.toContainEqual(reference);
     const assembly = simulateProjectAssembly(catalog, removed);
     const site = createAcquisitionSiteAddress(
@@ -156,9 +166,14 @@ describe('clocked pickup placement cleanup', () => {
         occurrence.acquisitionSites?.roomExit?.pickupEntries?.[reference.entryKey],
       );
       expect(
-        activeRoomActionReferences(catalog, biome, host, ordinaryPositionFor(catalog, biome)).map(
-          roomActionKey,
-        ),
+        activeRoomActionReferences(
+          catalog,
+          biome,
+          removed.route.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)!
+            .topology!,
+          host,
+          ordinaryPositionFor(catalog, biome),
+        ).map(roomActionKey),
       ).not.toContain(roomActionKey(reference));
     }
   });

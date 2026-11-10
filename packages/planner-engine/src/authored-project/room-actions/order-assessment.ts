@@ -9,6 +9,7 @@ import type {
 } from './domain';
 import {
   roomLifecycleWindowOrdinal,
+  roomLifecycleWindowResolves,
   type RoomActionWindow,
   type RoomLifecycleStructure,
 } from './lifecycle-structure';
@@ -35,11 +36,24 @@ export type RoomActionOrderIssue =
       readonly window: RoomActionWindow;
       readonly precedingAction: RoomActionReference;
       readonly precedingWindow: RoomActionWindow;
+    }
+  /**
+   * A row ordered before a ranked required action of an earlier window: that
+   * action's deadline passes before the row's window opens, so the walk stops here.
+   */
+  | {
+      readonly kind: 'requiredFirst';
+      readonly reference: RoomActionReference;
+      readonly detail: string;
+      readonly window: RoomActionWindow;
+      readonly requiredAction: RoomActionReference;
+      readonly requiredWindow: RoomActionWindow;
     };
 
+/** A placement's blockers: the prefix's dependency, window and required-first issues. */
 export type RoomActionPlacementBlocker = Extract<
   RoomActionOrderIssue,
-  { kind: 'dependency' | 'window' }
+  { kind: 'dependency' | 'window' | 'requiredFirst' }
 >;
 
 /** The structural facts one occurrence's action order is judged against. */
@@ -118,13 +132,19 @@ export function terminalRoomActionKey(
     : undefined;
 }
 
-/** Every structural issue of one authored order: stale, missing required, dependency and window. */
-export function assessRoomActionOrder(
+/**
+ * The stale, dependency and window issues of the rows at or before `through`,
+ * row issues first: a row is judged by the rows before it and by where the
+ * order places the actions its checkpoints wait on.
+ */
+function rowAndWindowIssues(
   order: readonly RoomActionReference[],
   context: RoomActionOrderContext,
-): readonly RoomActionOrderIssue[] {
+  through: number,
+): { readonly rows: RoomActionOrderIssue[]; readonly windows: RoomActionOrderIssue[] } {
   const { active, checkpoints, lifecycleStructure, windowOrdinals } = context;
-  const issues: RoomActionOrderIssue[] = [];
+  const rows: RoomActionOrderIssue[] = [];
+  const windows: RoomActionOrderIssue[] = [];
   const keys = order.map(keyOf);
   const indexes = new Map(keys.map((key, index) => [key, index]));
   const latestIndex = (requiredKeys: readonly string[]) =>
@@ -145,18 +165,21 @@ export function assessRoomActionOrder(
     afterIndexes.set(checkpointKey, index);
     return index;
   };
-  order.forEach((reference, ownIndex) => {
+  let left: RoomActionContribution | undefined;
+  let leftOrdinal = 0;
+  for (let ownIndex = 0; ownIndex <= through && ownIndex < order.length; ownIndex += 1) {
+    const reference = order[ownIndex]!;
     const entry = active.get(keys[ownIndex]!);
     if (entry === undefined) {
-      issues.push(frozen({ kind: 'stale', reference }));
-      return;
+      rows.push(frozen({ kind: 'stale', reference }));
+      continue;
     }
     for (const dependency of entry.dependencies) {
       if (dependency.kind === 'afterAction') {
         const dependencyKey = keyOf(dependency.action);
         const dependencyIndex = indexes.get(dependencyKey);
         if (dependencyIndex !== undefined && ownIndex > dependencyIndex) continue;
-        issues.push(
+        rows.push(
           frozen({
             kind: 'dependency',
             reference,
@@ -168,7 +191,7 @@ export function assessRoomActionOrder(
       }
       const checkpoint = checkpoints.get(dependency.checkpointKey);
       if (checkpoint === undefined) {
-        issues.push(
+        rows.push(
           frozen({
             kind: 'dependency',
             reference,
@@ -190,7 +213,7 @@ export function assessRoomActionOrder(
             ownIndex >= checkpointAfterIndex(dependency.checkpointKey)
           : ownRank <= checkpointWindowRank;
       if (!valid) {
-        issues.push(
+        rows.push(
           frozen({
             kind: 'dependency',
             reference,
@@ -200,68 +223,128 @@ export function assessRoomActionOrder(
         );
       }
     }
-  });
-  for (const key of context.requiredKeys) {
-    if (!indexes.has(key)) {
-      issues.push(frozen({ kind: 'unrankedRequired', reference: active.get(key)!.reference }));
-    }
-  }
-  let left: RoomActionContribution | undefined;
-  let leftOrdinal = 0;
-  keys.forEach((key) => {
-    const right = active.get(key);
-    if (right === undefined || right.windowFollowsOrder === true) return;
-    const rightOrdinal = windowOrdinals.get(key)!;
-    if (left !== undefined && leftOrdinal > rightOrdinal) {
-      issues.push(
+    if (entry.windowFollowsOrder === true) continue;
+    const ordinal = windowOrdinals.get(keys[ownIndex]!)!;
+    if (left !== undefined && leftOrdinal > ordinal) {
+      windows.push(
         frozen({
           kind: 'window',
-          reference: right.reference,
+          reference: entry.reference,
           detail: 'crosses a fixed lifecycle window',
-          window: right.window,
+          window: entry.window,
           precedingAction: left.reference,
           precedingWindow: left.window,
         }),
       );
     }
-    left = right;
-    leftOrdinal = rightOrdinal;
-  });
-  return frozen(issues);
+    left = entry;
+    leftOrdinal = ordinal;
+  }
+  return { rows, windows };
 }
 
-/** The dependency and window issues of a proposed order, as insert and move proposals carry them. */
-export function roomActionPlacementBlockers(
+/**
+ * Every structural issue of one authored order: stale, missing required,
+ * dependency, window and required-first.
+ */
+export function assessRoomActionOrder(
   order: readonly RoomActionReference[],
   context: RoomActionOrderContext,
-): readonly RoomActionPlacementBlocker[] {
-  return frozen(
-    assessRoomActionOrder(order, context).filter(
-      (issue): issue is RoomActionPlacementBlocker =>
-        issue.kind === 'dependency' || issue.kind === 'window',
-    ),
-  );
+): readonly RoomActionOrderIssue[] {
+  const { rows, windows } = rowAndWindowIssues(order, context, order.length - 1);
+  const ranked = new Set(order.map(keyOf));
+  const unranked = context.requiredKeys
+    .filter((key) => !ranked.has(key))
+    .map((key) =>
+      frozen({ kind: 'unrankedRequired' as const, reference: context.active.get(key)!.reference }),
+    );
+  const deadlines = requiredDeadlinesAfter(order, context);
+  const requiredFirst = order.flatMap((reference, index) => {
+    const issue = requiredFirstIssue(reference, deadlines[index], context);
+    return issue === undefined ? [] : [issue];
+  });
+  return frozen([...rows, ...unranked, ...windows, ...requiredFirst]);
 }
 
-/** No insertion or move may put more actions after the terminal action than now follow it. */
-export function keepsTerminalActionLast(
-  before: readonly RoomActionReference[],
-  after: readonly RoomActionReference[],
-  terminalActionKey: string | undefined,
-): boolean {
-  if (terminalActionKey === undefined) return true;
-  const following = (order: readonly RoomActionReference[]) => {
-    const index = order.findIndex((reference) => roomActionKey(reference) === terminalActionKey);
-    return index < 0 ? 0 : order.length - index - 1;
-  };
-  return following(after) <= following(before);
+interface RequiredDeadline {
+  readonly entry: RoomActionContribution;
+  readonly ordinal: number;
 }
 
-/** A proposed order, judged by window, dependencies, checkpoints and the terminal action. */
+/**
+ * For each row, the ranked required action ordered after it whose window
+ * closes first (the earliest such row on a tie). An action whose window names
+ * a phase the room does not play has no deadline here; its placement is its
+ * own finding.
+ */
+function requiredDeadlinesAfter(
+  order: readonly RoomActionReference[],
+  context: RoomActionOrderContext,
+): readonly (RequiredDeadline | undefined)[] {
+  const deadlines: (RequiredDeadline | undefined)[] = new Array(order.length);
+  let earliest: RequiredDeadline | undefined;
+  for (let index = order.length - 1; index >= 0; index -= 1) {
+    deadlines[index] = earliest;
+    const key = keyOf(order[index]!);
+    const entry = context.active.get(key);
+    if (
+      entry?.participation !== 'required' ||
+      entry.windowFollowsOrder === true ||
+      !roomLifecycleWindowResolves(context.lifecycleStructure, entry.window)
+    )
+      continue;
+    const ordinal = context.windowOrdinals.get(key)!;
+    if (earliest === undefined || ordinal <= earliest.ordinal) earliest = { entry, ordinal };
+  }
+  return deadlines;
+}
+
+/**
+ * A ranked required action's window closes at its deadline, so a row whose
+ * window is later than that of a required action ordered after it is not
+ * reached: the required action must come first.
+ */
+function requiredFirstIssue(
+  reference: RoomActionReference,
+  deadline: RequiredDeadline | undefined,
+  context: RoomActionOrderContext,
+): Extract<RoomActionOrderIssue, { kind: 'requiredFirst' }> | undefined {
+  const key = keyOf(reference);
+  const entry = context.active.get(key);
+  if (entry === undefined || deadline === undefined || entry.windowFollowsOrder === true)
+    return undefined;
+  if (context.windowOrdinals.get(key)! <= deadline.ordinal) return undefined;
+  const required = deadline.entry;
+  return frozen({
+    kind: 'requiredFirst',
+    reference: entry.reference,
+    detail: `must follow ${keyOf(required.reference)}, a required action of an earlier window`,
+    window: entry.window,
+    requiredAction: required.reference,
+    requiredWindow: required.window,
+  });
+}
+
+/** Each row at or before `lastIndex` that a required action ordered after it must precede. */
+function requiredFirstBlockers(
+  order: readonly RoomActionReference[],
+  lastIndex: number,
+  context: RoomActionOrderContext,
+): RoomActionPlacementBlocker[] {
+  const deadline = requiredDeadlinesAfter(order, context)[lastIndex];
+  if (deadline === undefined) return [];
+  return order.slice(0, lastIndex + 1).flatMap((reference) => {
+    const issue = requiredFirstIssue(reference, deadline, context);
+    return issue === undefined ? [] : [issue];
+  });
+}
+
+/** A proposed order, judged as the walk reaches its last placed action. */
 export interface RoomActionPlacementAssessment {
   readonly order: readonly RoomActionReference[];
+  /** Dependency and window issues of the placed actions and every row before them. */
   readonly blockers: readonly RoomActionPlacementBlocker[];
-  /** The proposed order puts an action after the terminal one. */
+  /** A left switch press at or before a placed action ends the room before an action after it. */
   readonly followsTerminal: boolean;
   readonly structurallyAuthorable: boolean;
 }
@@ -271,16 +354,35 @@ export interface RoomActionInsertionAssessment extends RoomActionPlacementAssess
   readonly toIndex: number;
 }
 
-/** Judges the order that results from placing actions into `before`. */
+/**
+ * Judges actions placed through `order[lastIndex]` by their prefix, as the
+ * walk reaches them: each placed action and every row before it must keep its
+ * window, dependencies and checkpoints, follow every ranked required action of
+ * an earlier window, and none may follow a left switch press. Other rows after
+ * the placed actions take no part; an issue the placement gives them is theirs
+ * when the walk reaches them.
+ */
 export function assessRoomActionPlacement(
-  before: readonly RoomActionReference[],
-  after: readonly RoomActionReference[],
+  order: readonly RoomActionReference[],
+  lastIndex: number,
   context: RoomActionOrderContext,
 ): RoomActionPlacementAssessment {
-  const blockers = roomActionPlacementBlockers(after, context);
-  const followsTerminal = !keepsTerminalActionLast(before, after, context.terminalActionKey);
+  const { rows, windows } = rowAndWindowIssues(order, context, lastIndex);
+  const blockers: readonly RoomActionPlacementBlocker[] = frozen([
+    ...[...rows, ...windows].filter(
+      (issue): issue is Extract<RoomActionOrderIssue, { kind: 'dependency' | 'window' }> =>
+        issue.kind === 'dependency' || issue.kind === 'window',
+    ),
+    ...requiredFirstBlockers(order, lastIndex, context),
+  ]);
+  const terminalIndex =
+    context.terminalActionKey === undefined
+      ? -1
+      : order.findIndex((reference) => keyOf(reference) === context.terminalActionKey);
+  const followsTerminal =
+    terminalIndex >= 0 && terminalIndex <= lastIndex && terminalIndex < order.length - 1;
   return frozen({
-    order: frozen([...after]),
+    order: frozen([...order]),
     blockers,
     followsTerminal,
     structurallyAuthorable: blockers.length === 0 && !followsTerminal,
@@ -295,7 +397,20 @@ export function assessRoomActionInsertion(
 ): RoomActionInsertionAssessment {
   const next = [...order];
   next.splice(toIndex, 0, reference);
-  return frozen({ toIndex, ...assessRoomActionPlacement(order, next, context) });
+  return frozen({ toIndex, ...assessRoomActionPlacement(next, toIndex, context) });
+}
+
+/** One move and the order it yields, judged like an insertion at `toIndex`. */
+export function assessRoomActionMove(
+  order: readonly RoomActionReference[],
+  fromIndex: number,
+  toIndex: number,
+  context: RoomActionOrderContext,
+): RoomActionPlacementAssessment {
+  const next = [...order];
+  const [reference] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, reference!);
+  return assessRoomActionPlacement(next, toIndex, context);
 }
 
 /** The contract error for an index whose placement is not structurally authorable. */

@@ -270,8 +270,8 @@ remains persisted when a user switches away from its owning option, so a later
 switch can restore it.
 
 Judgment stores one canonical distinct Arcana-card set on the exact automatic
-Boss occurrence's `bossDefeated` phase for each authored biome. It is dormant
-unless Judgment is active at that phase. This is a room-local authored outcome,
+Boss occurrence's Boss defeated point for each authored biome. It is dormant
+unless Judgment is active at that point. This is a room-local authored outcome,
 not a synthetic reward or topology edge.
 
 ### Keepsake Authorship
@@ -481,13 +481,35 @@ one-creation-per-source policy is declaration-owned.
 
 `CreateBatch` and `CreateTarget` create ordinary shape progressively. Target
 creation validates the source's current declaration-owned exit key. A source
-room replacement may retain structurally represented targets whose keys the
-new room no longer supplies; they are context-invalid rather than silently
-deleted. The codec accepts only normal exit keys present in the biome's
-authored declarations (or the one fixed Hub exit key), never an arbitrary
-string as a repair placeholder. `ReconcileBatchExitCapacity` is the explicit
-topology-removal repair: it removes unavailable targets and their downstream
-subtree, then normalizes selection from the retained keys.
+room replacement leaves the outgoing batch to
+[exit-capacity settlement](#exit-capacity). The codec accepts only normal exit
+keys present in the biome's authored declarations (or the one fixed Hub exit
+key), never an arbitrary string as a repair placeholder, so an older file or a
+selected door can still hold a target whose key its source no longer supplies;
+that target is context-invalid, never published.
+
+### Exit capacity
+
+A generated batch's doors follow its source room's declared exits. Every edit
+settles them in every biome, in the same edit and Undo step, as the
+[policy for rows whose context is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
+does for room actions:
+
+- an unselected target at a door its source no longer declares is removed
+  with its downstream subtree, and the selection is normalized from the
+  retained targets (a lone retained door with no additional exit becomes
+  derived);
+- a takeover batch narrower than its source gains a default Preboss offer at
+  each missing door when its Preboss fills the source's doors; the offer's
+  free reward stays unset, so its finding asks for it;
+- a selected target at an undeclared door stays, invalid with its finding:
+  which door the run takes is the owner's route decision, and choosing
+  another door lets the lost one go;
+- an ordinary batch narrower than its source keeps its missing doors as
+  missing targets.
+
+Removals are announced, by source room, when the edit addresses another room.
+An installed route keeps the doors it was authored with.
 
 ### Empty decision envelopes
 
@@ -537,25 +559,26 @@ for every declared normal exit and create the whole shape, selection and
 downstream cleanup atomically in declaration order. They reconcile existing
 targets by physical exit key, not a supplied occurrence-ID order: a retained
 key keeps its occurrence ID, and a caller may not move an existing target ID to
-another physical door. Individual takeover targets are not room-replaceable or
-capacity-repairable, and a single takeover target is never edited in
-isolation.
+another physical door. Individual takeover targets are not room-replaceable,
+and a single takeover target is never edited in isolation.
 
-A source replacement, Anomaly revert, or decode can leave a takeover batch
-wider or narrower than its source's declared doors. The prior targets remain
-structurally represented until `ReconcileBatchExitCapacity` repairs the whole
-batch. The repair is minimal: surviving targets keep their occurrence, Shop
-purchases, completion chain, and boss-door store. A missing declared door gains
-a default Preboss offer whose occurrence ID the engine derives as
+A source replacement, Anomaly revert, or older file can leave a takeover batch
+wider or narrower than its source's declared doors;
+[exit-capacity settlement](#exit-capacity) matches the whole batch to them.
+The match is minimal: surviving targets keep their occurrence, Shop
+purchases, completion chain, and boss-door store. A missing declared door
+gains a default Preboss offer whose occurrence ID the engine derives as
 `<source occurrence ID>:<exit key>`, so a door removed and added again keeps
-its identity. An undeclared door is removed with its downstream topology. A
-width-one result with no additional exits is derived; otherwise a surviving
-selected door stays selected (a derived width-one selection becomes explicit
-`exit1`) and a removed one becomes unresolved; a newly selected door gains its
-completion chain. Every automatic narrowing of a takeover batch, such as an
-Anomaly switch, uses the same removal. A `none`-policy Preboss fills a single
-door only, so its batch has no repair when the source declares more; the
-out-of-depth source carries its own `targetRoomUnavailable` finding.
+its identity. An unselected undeclared door is removed with its downstream
+topology; a selected one stays with its finding. A width-one result with no
+additional exits is derived; a surviving selected door stays selected (a
+derived width-one selection becomes explicit `exit1`). Every automatic
+narrowing of a takeover batch by a command, such as an Anomaly switch,
+removes every undeclared door, a selected one included, which becomes
+unresolved; a newly selected door gains its completion chain. A
+`none`-policy Preboss fills a single door only, so its batch gains no door
+when the source declares more; the out-of-depth source carries its own
+`targetRoomUnavailable` finding.
 
 Selecting a Preboss creates and enters its fixed completion occurrences through
 the topology links. There is no persisted completion flag, entry mode, or
@@ -800,6 +823,15 @@ undo step. A retained result that becomes inactive remains authored for repair
 but has no active child action. The persisted entry is ordinary
 `AuthoredRewardState`, so no reward-copy tree or second timeline is needed.
 
+A Nemesis random event's site holds her offer as its one `result` entry: the
+item she gives or trades, the trait trade's fixed Triple Gold, and for a
+damage contest the planned success item, kept whatever the contest's result.
+What spawns derives from the outcome: the offer for her free item, an
+accepted trade or a won contest, nothing for a declined trade, and the fixed
+Consolation prize for a lost contest, which therefore needs no offer.
+Consolation is never a contest's offer: a lost contest whose file stores it
+there reads as no success item chosen yet.
+
 ### Shop and pickup commands
 
 `ClearShopOffer` empties one declared inventory slot, removing its
@@ -878,9 +910,30 @@ canonical index or at any other index the
 placement commands `PlaceHermesShrineDelivery`, `PlaceClockedTraitPickup` and
 `PlaceEchoGoldPickup` take the same optional index for a pickup they newly
 place; absent, it lands at the command's default, and an index for a pickup
-already placed is refused. Dormant and stale rows likewise remain
-authored until an explicit owning command removes them; reactivation of the
-same key reuses its retained position rather than adding a duplicate.
+already placed is refused. Rows of a room the run does not enter remain
+authored untouched, and reactivation of the same key reuses its retained
+position rather than adding a duplicate. Stale, source-gone and invalid rows follow
+[rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
+
+The **Reset from here** command takes one occurrence's actions back to a point:
+it names an ordered action by its key, or none for the room's entry, and
+removes every row after it, stale rows included, each through the command
+that owns that row's removal (a Shop, Well or Shrine purchase is
+un-purchased, the Contract pedestal uncollected, a cross-room delivery
+unplaced, any other row removed), in one edit and one Undo step. Rows that
+cannot leave the order stay in their relative order after the point: active
+required rows, which automatic placement keeps, and the Postboss keepsake rack.
+A removal never depends on its item still resolving. No other room's actions,
+and no door pick, encounter setting, Ephyra visit order or Hub action, change,
+except that removing a Shrine purchase retracts that purchase's deliveries
+placed in later rooms, as a manual un-purchase does. A reset is a clean slate
+for the Postboss rack too: from a point before the rack it clears the rack's
+keepsake choice back to keeping the held keepsake, through the rack's own
+command, while the rack row stays; a reset after the rack leaves the choice
+alone. An anchor that is not an ordered action is refused, and a reset that
+would remove no row and clear no choice leaves the document unchanged. A Timeline
+banner is not an address: the engine's reset query maps each Timeline entry
+to its command, a banner to the ranked actions before it.
 
 ### Room layout and positions
 
@@ -1073,15 +1126,18 @@ declaration-owned child rather than a rendered position.
 
 Commands are semantic immutable transitions. Every successful proposal passes
 through the project decoder before publication. A structural failure reports
-its semantic owner and never leaves partial topology. Commands are the only
+its semantic owner and never leaves partial topology. Commands, with the
+[exit capacity](#exit-capacity) edit settlement applies, are the only
 topology-removal authority; they reject partial takeover shape, duplicate
 target keys, incompatible declarations, impossible selection states, and edits
 to a dead leaf with downstream state.
 
-Ordinary and detour commands share command-owned exit-capacity reconciliation:
-target pruning, descendant removal, selection retention, and selected-entry
-state reconciliation form one atomic transition. Structural source identity
-is separate from public semantic-address serialization.
+Ordinary and detour commands that move or narrow a continuation (reanchoring,
+an Anomaly switch, a Chaos map change) share the exit-capacity reconciliation
+that edit settlement applies to every other edit: target pruning, descendant
+removal, selection retention, and selected-entry state reconciliation form one
+atomic transition. Structural source identity is separate from public
+semantic-address serialization.
 
 `applyProjectCommand(document, catalog, command)` accepts every transition that
 is structurally representable. Command handlers may enforce exact semantic

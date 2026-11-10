@@ -278,6 +278,7 @@ describe('authored-project Shop occurrence commands', () => {
       activeRoomActionReferences(
         catalog,
         nBiome,
+        project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!,
         occurrence()!,
         ordinaryPositionFor(catalog, nBiome),
       ).filter(
@@ -502,6 +503,7 @@ describe('authored-project Shop occurrence commands', () => {
       activeRoomActionReferences(
         catalog,
         nBiome,
+        project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!,
         room(project),
         ordinaryPositionFor(catalog, nBiome),
       ).filter((value) => roomActionKey(value) === roomActionKey(reference)),

@@ -570,6 +570,10 @@ export interface WorkspaceShipPhasePresentation {
   readonly label: string;
   /** Engine-ordered lifecycle entries owned by this phase, including automatic effects. */
   readonly timeline: readonly WorkspaceRoomLifecycleTimelineEntry[];
+  /** This phase's authored rows past the room's stop, waiting until the walk reaches them. */
+  readonly notReached?: WorkspaceRoomActions['timeline']['notReached'];
+  /** Where the walk stops before this phase: its room's Overview, or an earlier phase. */
+  readonly waitsOn?: import('./contracts/timeline').WorkspaceTimelineWait;
   /** Active optional actions owned by this phase but not yet inserted. */
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
   /** The room objects' entries, on the last phase, where a new action is appended. */
@@ -665,6 +669,8 @@ export interface WorkspaceRoomSummary {
   /** Active pool-backed encounter phases in declaration/lifecycle order. */
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
   readonly entered: boolean;
+  /** The walk stops before entering the room: its content waits until the walk enters it. */
+  readonly notReached?: true;
   readonly gameName: string;
   readonly kind: RoomDeclaration['kind'];
   readonly label: string;
@@ -716,12 +722,10 @@ export interface WorkspaceRoomSummary {
     readonly currentPlacement?: {
       readonly address: import('@run-planner/engine/authored-project').OccurrenceAddress;
       readonly biomeKey: string;
-      /** Its biome and Location; the Location is unknown while the plan does not reach it. */
-      readonly locationLabel: string;
+      /** The placement room as references name it. */
+      readonly place: import('@planner/projections/placeName').PlaceName;
       /** The placement room's run depth on entry, where it is reached. */
       readonly runDepth?: number;
-      /** The room's name, where its Location is unknown. */
-      readonly roomLabel?: string;
     };
   }[];
   readonly roomPicker?: WorkspaceRoomPickerControl;

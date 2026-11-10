@@ -34,7 +34,7 @@ import {
   requireTopology,
   type LocatedBiome,
 } from '../contract';
-import type { RouteDetourCommand, TopologyCommand } from '../types';
+import type { ProjectCommand, RouteDetourCommand, TopologyCommand } from '../types';
 import { reconcileNormalTargetEntryStates } from '../selection-state';
 import {
   sourceFromAddress,
@@ -92,7 +92,7 @@ function completionChainForSelection(
   located: LocatedBiome,
   topology: BiomeTopology,
   prebossOccurrenceId: OccurrenceId,
-  command: TopologyCommand | RouteDetourCommand,
+  command: ProjectCommand | RouteDetourCommand,
 ): BiomeTopology {
   const preboss = topology.occurrences.find(
     (occurrence) => occurrence.occurrenceId === prebossOccurrenceId,
@@ -270,7 +270,7 @@ export function reconcileCompletionChain(
   topology: BiomeTopology,
   previousPrebossOccurrenceId: OccurrenceId | undefined,
   nextPrebossOccurrenceId: OccurrenceId | undefined,
-  command: TopologyCommand | RouteDetourCommand,
+  command: ProjectCommand | RouteDetourCommand,
 ): BiomeTopology {
   if (previousPrebossOccurrenceId === nextPrebossOccurrenceId) {
     if (nextPrebossOccurrenceId === undefined) return topology;
@@ -391,7 +391,7 @@ export function replaceTakeoverBatch(
   )
     failCommand(command, 'normal-door batch does not exist');
   if (existing !== undefined && batchTakesOverNormalDoors(catalog, topology, existing))
-    failCommand(command, 'a takeover batch repairs through ReconcileBatchExitCapacity');
+    failCommand(command, 'a takeover batch settles its doors with its source');
   const room = requireRoom(catalog, command.gameName, located.layout.biomeKey, command);
   if (room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors')
     failCommand(command, `${room.gameName} is not a takeover Preboss declaration`);
@@ -530,7 +530,7 @@ export function replaceTakeoverBatch(
   );
 }
 
-/** A takeover door appended by exit repair; a door removed and re-added reuses it. */
+/** A takeover door appended for a widened source; a door removed and re-added reuses it. */
 function takeoverTargetOccurrenceId(
   sourceOccurrenceId: OccurrenceId,
   exitKey: string,
@@ -539,10 +539,11 @@ function takeoverTargetOccurrenceId(
 }
 
 /**
- * `removeUndeclared` drops doors the source no longer declares;
- * `matchDeclared` also appends a default Preboss offer for each missing door.
+ * `removeUndeclared` drops every door the source no longer declares; `settle`
+ * keeps the selected one, which stays the owner's route decision, and appends a
+ * default Preboss offer for each missing door the Preboss fills.
  */
-export type TakeoverExitReconciliation = 'removeUndeclared' | 'matchDeclared';
+export type TakeoverExitReconciliation = 'removeUndeclared' | 'settle';
 
 /**
  * Brings a takeover batch to its source's declared doors. Surviving doors keep
@@ -556,7 +557,7 @@ export function reconcileTakeoverBatchExits(
   topology: BiomeTopology,
   decision: ExitDecision,
   reconciliation: TakeoverExitReconciliation,
-  command: TopologyCommand | RouteDetourCommand,
+  command: ProjectCommand | RouteDetourCommand,
 ): BiomeTopology {
   const source = decision.source;
   if (source.kind !== 'occurrence') {
@@ -567,23 +568,22 @@ export function reconcileTakeoverBatchExits(
     failCommand(command, 'normal-door batch is not a takeover batch');
   }
   const declared = exitKeysForTopologySource(catalog, located, topology, source, command);
-  const declaredKeys = new Set(declared);
+  const previousSelected = selectedExitTarget(decision);
+  const keptExitKeys = new Set(
+    reconciliation === 'settle' && previousSelected !== undefined
+      ? [...declared, previousSelected.exitKey]
+      : declared,
+  );
   const removedIds = new Set(
     decision.normal.targets
-      .filter((target) => !declaredKeys.has(target.exitKey))
+      .filter((target) => !keptExitKeys.has(target.exitKey))
       .map((target) => target.occurrenceId),
   );
   const authoredKeys = new Set(decision.normal.targets.map((target) => target.exitKey));
   const missing =
-    reconciliation === 'matchDeclared'
+    reconciliation === 'settle' && takeoverPrebossFillsDeclaredExits(room, declared.length)
       ? declared.filter((exitKey) => !authoredKeys.has(exitKey))
       : [];
-  if (
-    reconciliation === 'matchDeclared' &&
-    !takeoverPrebossFillsDeclaredExits(room, declared.length)
-  ) {
-    failCommand(command, `${room.gameName} cannot fill remaining normal exits`);
-  }
   if (removedIds.size === 0 && missing.length === 0) return topology;
 
   const withoutRemoved =
@@ -605,17 +605,19 @@ export function reconcileTakeoverBatchExits(
     return Object.freeze({ exitKey, occurrenceId });
   });
   // Declared exits are contiguous exit1..N, so a survivor keeps its index and
-  // therefore its Shop or free-offer role.
-  const targets = Object.freeze(
-    declared.flatMap((exitKey) => {
+  // therefore its Shop or free-offer role; a kept undeclared door lies past them.
+  const targets = Object.freeze([
+    ...declared.flatMap((exitKey) => {
       const target =
         decision.normal.targets.find((candidate) => candidate.exitKey === exitKey) ??
         appended.find((candidate) => candidate.exitKey === exitKey);
       return target === undefined ? [] : [target];
     }),
-  );
+    ...decision.normal.targets.filter(
+      (target) => !declared.includes(target.exitKey) && !removedIds.has(target.occurrenceId),
+    ),
+  ]);
 
-  const previousSelected = selectedExitTarget(decision);
   const survivingSelected = targets.find(
     (target) => target.occurrenceId === previousSelected?.occurrenceId,
   );

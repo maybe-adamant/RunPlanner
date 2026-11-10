@@ -16,6 +16,7 @@ import {
   type BiomeAddress,
 } from '../../authored-project/addresses';
 import type {
+  BiomeTopology,
   HubDecision,
   LocalVisitDecision,
   OccurrenceId,
@@ -60,11 +61,10 @@ function requireRoom(catalog: Catalog, gameName: string): RoomDeclaration {
   return room;
 }
 
-function requireOccurrence(
-  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
-  occurrenceId: OccurrenceId,
-): RoomOccurrence {
-  const occurrence = occurrences.get(occurrenceId);
+function requireOccurrence(topology: BiomeTopology, occurrenceId: OccurrenceId): RoomOccurrence {
+  const occurrence = topology.occurrences.find(
+    (candidate) => candidate.occurrenceId === occurrenceId,
+  );
   if (occurrence === undefined) fail(`trusted Hub topology lost occurrence ${occurrenceId}`);
   return occurrence;
 }
@@ -148,9 +148,9 @@ function authoredRoomReference(room: CanonicalAuthoredRoom): CanonicalRoomRefere
 function hubSourceReference(
   biome: BiomeAddress,
   decision: HubDecision,
-  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  topology: BiomeTopology,
 ): CanonicalRoomReference {
-  const occurrence = requireOccurrence(occurrences, decision.source.occurrenceId);
+  const occurrence = requireOccurrence(topology, decision.source.occurrenceId);
   return Object.freeze({
     origin: createOccurrenceAddress(biome, occurrence.occurrenceId),
     occurrenceId: occurrence.occurrenceId,
@@ -165,7 +165,7 @@ function materializeLocalSlots(
   occurrence: RoomOccurrence,
   room: RoomDeclaration,
   localDecision: LocalVisitDecision | undefined,
-  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  topology: BiomeTopology,
   loadout: RouteWeaponAspectLoadout,
 ): readonly CanonicalLocalVisitRoom[] {
   const descriptor = room.localChildren[0];
@@ -184,7 +184,7 @@ function materializeLocalSlots(
     descriptor.slots.map((slot): CanonicalLocalVisitRoom => {
       const target = localDecision.targetsBySlot[slot.slotKey];
       if (target === undefined) fail(`${room.gameName} is missing side room ${slot.slotKey}`);
-      const authored = requireOccurrence(occurrences, target.occurrenceId);
+      const authored = requireOccurrence(topology, target.occurrenceId);
       const sideRoom = requireRoom(catalog, slot.roomGameName);
       if (sideRoom.mode.kind !== 'authored' || sideRoom.mode.templateKey !== 'EphyraSideRoom') {
         fail(`${sideRoom.gameName} is not an Ephyra side room`);
@@ -193,6 +193,7 @@ function materializeLocalSlots(
       const materialized = materializeAuthoredRoom({
         catalog,
         biome,
+        topology,
         routePosition,
         room: sideRoom,
         occurrence: authored,
@@ -228,7 +229,7 @@ function materializeBoard(
   routePosition: ResolvedRoutePosition,
   descriptor: HubDecisionDescriptor,
   decision: HubDecision,
-  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  topology: BiomeTopology,
   room: CanonicalHubRoom,
   loadout: RouteWeaponAspectLoadout,
 ): CanonicalHubBoard {
@@ -242,7 +243,7 @@ function materializeBoard(
       descriptor.slots.flatMap((slot): readonly CanonicalHubTarget[] => {
         const target = bySlot.get(slot.slotKey);
         if (target === undefined) return [];
-        const occurrence = requireOccurrence(occurrences, target.occurrenceId);
+        const occurrence = requireOccurrence(topology, target.occurrenceId);
         const declaration = requireRoom(catalog, occurrence.gameName);
         return [
           Object.freeze({
@@ -253,6 +254,7 @@ function materializeBoard(
             room: materializeAuthoredRoom({
               catalog,
               biome,
+              topology,
               routePosition,
               room: declaration,
               occurrence,
@@ -276,7 +278,7 @@ function materializeVisits(
   descriptor: HubDecisionDescriptor,
   decision: HubDecision,
   localDecisions: readonly LocalVisitDecision[],
-  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  topology: BiomeTopology,
   board: CanonicalHubBoard,
   loadout: RouteWeaponAspectLoadout,
 ): readonly CanonicalHubVisit[] {
@@ -285,7 +287,7 @@ function materializeVisits(
     hubVisitSlotKeys(decision).map((slotKey, index): CanonicalHubVisit => {
       const target = targets.get(slotKey);
       if (target === undefined) fail(`Hub visit ${index + 1} lost open slot ${slotKey}`);
-      const occurrence = requireOccurrence(occurrences, target.room.occurrenceId);
+      const occurrence = requireOccurrence(topology, target.room.occurrenceId);
       const declaration = requireRoom(catalog, occurrence.gameName);
       const localDecision = localDecisions.find(
         (candidate) => candidate.sourceOccurrenceId === occurrence.occurrenceId,
@@ -297,7 +299,7 @@ function materializeVisits(
         occurrence,
         declaration,
         localDecision,
-        occurrences,
+        topology,
         loadout,
       );
       const enteredLocalRooms = Object.freeze(
@@ -370,7 +372,7 @@ export function materializeHubDecision(
   descriptor: HubDecisionDescriptor,
   authored: HubDecision,
   localDecisions: readonly LocalVisitDecision[],
-  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  topology: BiomeTopology,
   loadout: RouteWeaponAspectLoadout,
 ): CanonicalHubDecision {
   if (loadout.weaponKey?.length === 0 || loadout.aspectKey?.length === 0) {
@@ -405,7 +407,7 @@ export function materializeHubDecision(
     routePosition,
     descriptor,
     decision,
-    occurrences,
+    topology,
     room,
     loadout,
   );
@@ -432,7 +434,7 @@ export function materializeHubDecision(
   return Object.freeze({
     kind: 'hub',
     origin: createHubDecisionAddress(biome, descriptor.hubKey),
-    source: hubSourceReference(biome, decision, occurrences),
+    source: hubSourceReference(biome, decision, topology),
     room,
     board,
     rerolls,
@@ -454,7 +456,7 @@ export function materializeHubDecision(
       descriptor,
       decision,
       localDecisions,
-      occurrences,
+      topology,
       board,
       loadout,
     ),

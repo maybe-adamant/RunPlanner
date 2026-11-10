@@ -54,7 +54,6 @@ export interface OutgoingGenerationInputs {
   readonly sourceViews: ProgressiveRoomHistoryViews | undefined;
   readonly declaration: RoomDeclaration | undefined;
   readonly batch: CanonicalBatch | undefined;
-  readonly hubDecisionOwner: RunStateOwner | undefined;
   readonly frontierOwner: RunStateOwner | undefined;
   readonly emptyOutgoing: boolean;
   readonly hubTakeover: boolean;
@@ -99,7 +98,6 @@ export function applyOutgoingGenerationTransition(
     sourceViews,
     declaration,
     batch,
-    hubDecisionOwner,
     frontierOwner,
     emptyOutgoing,
     hubTakeover,
@@ -166,7 +164,7 @@ export function applyOutgoingGenerationTransition(
         settleSite({ onlyEntry: { siteKey, entryKey: '' } });
   }
 
-  const checkpointOwner = hubDecisionOwner ?? batch?.origin ?? frontierOwner;
+  const checkpointOwner = batch?.origin ?? frontierOwner;
   const checkpointView = sourceViews.preOutgoing;
   const runStateCheckpoint =
     checkpointOwner === undefined || checkpointView === undefined

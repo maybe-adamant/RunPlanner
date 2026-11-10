@@ -43,10 +43,18 @@ export interface GalleryCase {
   readonly roomTab?: string;
   /** A room case opens its Timeline with the door editor expanded. */
   readonly doorsExpanded?: true;
+  /** A room case opens its Not reached yet rows. */
+  readonly notReachedExpanded?: true;
   /** A room case opens the Optional actions picker of this name on its Timeline. */
   readonly openPicker?: string;
   /** An Overview case opens its Overview picker of this accessible name. */
   readonly openOverviewPicker?: string;
+  /** The case opens its biome as the biome's tab does, not its target. */
+  readonly opensBiome?: true;
+  /** The case shows the editor header's finding pill above the biome. */
+  readonly findingPill?: true;
+  /** One edit made once the case opens, as the editor dispatches it, so its announcement shows. */
+  readonly edit?: GalleryStep;
 }
 
 export function room(biomeKey: string, occurrenceId: string): GalleryTarget {

@@ -2,6 +2,7 @@ import {
   semanticAddressKey,
   type ExitDecisionAddress,
   type HubDecisionAddress,
+  type HubRunStateCheckpointAddress,
   type RoomRunStateCheckpointAddress,
 } from '../../authored-project/addresses';
 import type { BiomeLayout, Catalog, TraitElement } from '../../catalog-schema';
@@ -46,7 +47,17 @@ import { exactRewardStoreContents } from '../start-installation/projection';
 import type { StartRewardStores } from '../start-installation/model';
 
 export type RunStateOwner =
-  ExitDecisionAddress | HubDecisionAddress | RoomRunStateCheckpointAddress;
+  | ExitDecisionAddress
+  | HubDecisionAddress
+  | RoomRunStateCheckpointAddress
+  | HubRunStateCheckpointAddress;
+
+/** A room's own lifecycle checkpoint (a room's or the Hub's), as against a generation contact. */
+export function isRoomLifecycleOwner(
+  owner: RunStateOwner,
+): owner is RoomRunStateCheckpointAddress | HubRunStateCheckpointAddress {
+  return owner.kind === 'roomRunStateCheckpoint' || owner.kind === 'hubRunStateCheckpoint';
+}
 
 export interface DecisionGodPoolState {
   readonly acquiredSourceKeys: readonly string[];
@@ -617,10 +628,9 @@ export function createRunState(context: RunStateContext): RunStateSnapshot {
     owner: context.owner,
     historySequence: state.reached.historyView.sequence,
     biomeKey: state.reached.routePosition.biomeKey,
-    checkpoint:
-      context.owner.kind === 'roomRunStateCheckpoint'
-        ? context.owner.checkpoint.kind
-        : 'beforeTargetGeneration',
+    checkpoint: isRoomLifecycleOwner(context.owner)
+      ? context.owner.checkpoint.kind
+      : 'beforeTargetGeneration',
     godPool: projected.godPool,
     traits: projected.traits,
     counters: projected.counters,

@@ -21,6 +21,7 @@ import {
 import type { WorkspaceBiomeSemanticAssembly } from '../assembly/biome-semantic-assembly';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 import type {
+  WorkspaceAuthoringFrontier,
   WorkspaceBiome,
   WorkspaceHubDecisionNode,
   WorkspaceHubRailEntry,
@@ -130,13 +131,18 @@ function isDecisionBatchNode(node: WorkspaceNode): node is WorkspaceDecisionBatc
 function railRoomSummary(node: WorkspaceNode): WorkspaceRoomSummary | undefined {
   if (node.kind === 'occurrenceWorkbench') return node.room;
   if (!isDecisionBatchNode(node)) return undefined;
-  if (node.selectedContinuation !== undefined) return node.selectedContinuation.door.room;
-  const selectedTargets = node.targets.filter((target) => target.selected);
-  return selectedTargets.length === 1 ? selectedTargets[0]?.room : undefined;
+  return selectedContinuationDoor(node)?.room;
 }
 
 function railRoomOccurrenceId(node: WorkspaceNode): OccurrenceId | undefined {
   return railRoomSummary(node)?.occurrenceId;
+}
+
+/** A stop whose room the walk has not entered: the rail dims it. */
+function railNotReached(room: { readonly notReached?: true } | undefined): {
+  readonly notReached?: true;
+} {
+  return room?.notReached === true ? { notReached: true } : {};
 }
 
 /**
@@ -339,11 +345,13 @@ function roomRailPresentation(
   });
 }
 
+/** The selected room shows on the rail whether or not its sibling doors are ready. */
 function selectedTargetRailPresentation(
   catalog: Catalog,
   node: BatchWithContinuations,
 ): WorkspaceRailSelectedTarget | undefined {
-  const door = node.selectedContinuation?.door;
+  if (node.source.kind === 'hubDecision') return undefined;
+  const door = selectedContinuationDoor(node);
   if (door === undefined) return undefined;
   return roomRailPresentation(catalog, door.room, door);
 }
@@ -351,11 +359,7 @@ function selectedTargetRailPresentation(
 function railFocusMarkerForNode(node: WorkspaceNode, marker: WorkspaceMarker): WorkspaceMarker {
   if (node.kind === 'occurrenceWorkbench') return node.room.marker;
   if (!isDecisionBatchNode(node)) return marker;
-  if (node.selectedContinuation !== undefined) return node.selectedContinuation.marker;
-  const selectedTargets = node.targets.filter((target) => target.selected);
-  return selectedTargets.length === 1 && selectedTargets[0] !== undefined
-    ? selectedTargets[0].room.marker
-    : marker;
+  return selectedContinuationDoor(node)?.room.marker ?? marker;
 }
 
 /**
@@ -432,6 +436,7 @@ function projectHubRailEntry(
                 ...(sidePlanEnd === undefined ? {} : { planEnd: sidePlanEnd }),
                 label: `Side ${slot.enteredOrdinal ?? 1}`,
                 ...railRunDepth(sideNode.room),
+                ...railNotReached(sideNode.room),
                 marker: sideNode.room.marker,
                 node: sideNode,
                 room: (() => {
@@ -460,6 +465,7 @@ function projectHubRailEntry(
         ...(visitPlanEnd === undefined ? {} : { planEnd: visitPlanEnd }),
         label: `Visit ${visit.visitIndex}`,
         ...railRunDepth(workbench.room),
+        ...railNotReached(workbench.room),
         marker: workbench.room.marker,
         node: workbench,
         room: roomRailPresentation(catalog, workbench.room, visit.door),
@@ -482,6 +488,8 @@ function projectHubRailEntry(
     kind: 'hubGroup' as const,
     key: node.key,
     marker: node.marker,
+    ...railNotReached(node),
+    ...(node.runDepth === undefined ? {} : { runDepth: node.runDepth }),
     node,
     roomIcon: candidateRoomIcon(catalog, node.owner.biomeKey, hubDeclaration),
     visits: Object.freeze(visits),
@@ -601,6 +609,23 @@ export function presentWorkspaceBiome(
             (selectedRoom === undefined ? 0 : roomFindingCount(selectedRoom));
     return withRailFindingCount(base, ownCount + (hostedDoorFindingCount.get(base.focusKey) ?? 0));
   };
+  // The next step continues from a room, or starts the biome: it waits where they do.
+  const frontierNotReached = (
+    railStep: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'start' | 'exitDecision' }>,
+  ): boolean => {
+    if (railStep.kind === 'start') return semantic.notReached === true;
+    // The rail shows no step continuing a Hub; its board does.
+    const source = railStep.owner.source;
+    return (
+      source.kind === 'occurrence' &&
+      structuralNodes.some(
+        (node) =>
+          node.kind === 'occurrenceWorkbench' &&
+          node.room.occurrenceId === source.occurrenceId &&
+          node.room.notReached === true,
+      )
+    );
+  };
   let decisionIndex = 0;
   const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry => {
     if (node.kind === 'hubDecision')
@@ -628,6 +653,7 @@ export function presentWorkspaceBiome(
         ...(planEnd === undefined ? {} : { planEnd }),
         ...(selectedTarget === undefined ? {} : { selectedTarget }),
         ...railRunDepth(railRoomSummary(node)),
+        ...railNotReached(railRoomSummary(node)),
       });
     }
     const presentation = nodeRailPresentation(node, undefined, node.key === entry?.key);
@@ -662,6 +688,7 @@ export function presentWorkspaceBiome(
       label: presentation.label,
       ...(mainReward === undefined ? {} : { mainReward }),
       ...railRunDepth(railRoomSummary(node)),
+      ...railNotReached(railRoomSummary(node)),
       ...(node.kind !== 'occurrenceWorkbench' || selectedTarget !== undefined
         ? {}
         : {
@@ -685,6 +712,7 @@ export function presentWorkspaceBiome(
             frontier: railFrontier,
             key: `frontier:${railFrontier.marker.focusKey}`,
             marker: railFrontier.marker,
+            ...(frontierNotReached(railFrontier) ? { notReached: true as const } : {}),
           }),
         ]),
   ]);
@@ -805,6 +833,7 @@ export function presentWorkspaceBiome(
             ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
             ...(entry.runDepth === undefined ? {} : { runDepth: entry.runDepth }),
+            ...railNotReached(entry),
           });
         case 'mixedBatch':
           return Object.freeze({
@@ -817,6 +846,7 @@ export function presentWorkspaceBiome(
             ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
             ...(entry.runDepth === undefined ? {} : { runDepth: entry.runDepth }),
+            ...railNotReached(entry),
           });
         case 'takeoverBatch':
           return Object.freeze({
@@ -830,6 +860,7 @@ export function presentWorkspaceBiome(
             ...(entry.planEnd === undefined ? {} : { planEnd: entry.planEnd }),
             ...(entry.runDepth === undefined ? {} : { runDepth: entry.runDepth }),
             ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
+            ...railNotReached(entry),
           });
         case 'occurrenceWorkbench':
         case 'hubDecision':
@@ -877,6 +908,7 @@ export function presentWorkspaceBiome(
     label: semantic.label,
     marker: semantic.marker,
     nodes,
+    ...(semantic.notReached === undefined ? {} : { notReached: semantic.notReached }),
     occurrenceStages,
     owner: semantic.biome,
     ...(semantic.planEnd === undefined ? {} : { planEnd: semantic.planEnd }),

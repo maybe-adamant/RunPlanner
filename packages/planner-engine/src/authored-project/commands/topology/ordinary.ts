@@ -60,7 +60,7 @@ import {
   createStartTopology,
   defaultOccurrence,
 } from '../../topology/construction';
-import { reconcileCompletionChain, reconcileTakeoverBatchExits } from './takeover';
+import { reconcileCompletionChain } from './takeover';
 import { replaceWithHubDecision } from './hub';
 import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
 
@@ -885,26 +885,4 @@ export function clearTopology(
   );
   if (topology === null && replacement === null) return document;
   return withBiome(document, located, { ...located.plan, topology: replacement });
-}
-
-export function reconcileBatchExitCapacity(
-  document: ProjectDocument,
-  catalog: Catalog,
-  located: LocatedBiome,
-  command: Extract<TopologyCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>,
-): ProjectDocument {
-  const topology = requireTopology(located.plan, command);
-  const decision = exitDecisionForSource(topology, command.decision.source);
-  if (decision?.normal.kind !== 'batch') failCommand(command, 'normal-door batch does not exist');
-  const reconciled = batchTakesOverNormalDoors(catalog, topology, decision)
-    ? reconcileTakeoverBatchExits(catalog, located, topology, decision, 'matchDeclared', command)
-    : reconcileExitDecisionToDeclaredCapacity(
-        catalog,
-        located,
-        topology,
-        decision,
-        'prune',
-        command,
-      );
-  return reconciled === topology ? document : updateTopology(document, located, reconciled);
 }

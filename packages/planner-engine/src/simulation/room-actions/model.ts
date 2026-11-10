@@ -10,7 +10,10 @@ import type {
   RoomActionDependency,
   RoomActionParticipation,
 } from '../../authored-project/room-actions/domain';
-import type { RoomActionOrderIssue } from '../../authored-project/room-actions/order-assessment';
+import type {
+  RoomActionOrderIssue,
+  RoomActionPlacementBlocker,
+} from '../../authored-project/room-actions/order-assessment';
 import type { PlannerTimelineFacts } from '../timeline-facts';
 
 export type {
@@ -63,7 +66,7 @@ export interface RoomActionProposal {
    * first retained action with a later window, after its dependencies.
    */
   readonly canonical?: true;
-  readonly blockers: readonly Extract<RoomActionRosterIssue, { kind: 'dependency' | 'window' }>[];
+  readonly blockers: readonly RoomActionPlacementBlocker[];
 }
 
 export interface RoomActionCheckpoint {

@@ -144,6 +144,8 @@ export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddr
 export interface ProgressiveBiomeSelectedProducts {
   /** The complete history assembled before the block is located. */
   readonly history: BiomeHistoryPrefix;
+  /** The room actions the lifecycle walk reached, placed in that history. */
+  readonly reachedActions: readonly import('../history/model').ReachedHistoryRoomAction[];
   /** Generation validation already evaluated against that complete history. */
   readonly roomGeneration: BiomeGenerationValidation;
   readonly rewards: BiomeRewardSimulation;
@@ -541,9 +543,8 @@ function locateStructuralOwner(
           }),
     });
   }
-  // Retained Pool sales are occurrence-owned Postboss actions. They remain
-  // repairable at their room even when their slot was cleared and therefore
-  // no longer has an active contribution.
+  // A Postboss action, such as a Pool sale whose slot was cleared, is
+  // repairable at its fixed-linked room.
   const automaticRoomAction = address.kind === 'roomAction' ? address : undefined;
   const automaticFixedRoomIndex =
     automaticRoomAction === undefined
@@ -716,12 +717,15 @@ function locateStructuralOwner(
   });
 }
 
-/** Whether a Timeline action row is the one that settles this owner. */
-export function roomActionOwns(
-  action: CanonicalAuthoredRoom['roomActionRoster']['rows'][number],
-  address: SemanticAddress,
-): boolean {
+type RoomActionRow = CanonicalAuthoredRoom['roomActionRoster']['rows'][number];
+
+/**
+ * Whether a Timeline action row is one that settles this owner: the row itself,
+ * the acquisition or reward it settles, or a room-local owner it settles.
+ */
+export function roomActionOwns(action: RoomActionRow, address: SemanticAddress): boolean {
   if (address.kind === 'roomAction') return action.key === address.actionKey;
+  if (roomLocalOwnerSettledBy(action, address)) return true;
   const owner = semanticAddressKey(action.owner);
   const role = acquisitionRoleAncestor(address);
   const reward = rewardOwnerAddress(address);
@@ -730,6 +734,61 @@ export function roomActionOwns(
     (role !== undefined && owner === semanticAddressKey(role)) ||
     (reward !== undefined && owner === semanticAddressKey(reward))
   );
+}
+
+/**
+ * The room-local owners a row settles: the Keepsake Rack its selection and equip
+ * result, a fountain use its rarity outcome, a Well purchase its Fateful Twist (a
+ * refill's too, judged at the refill purchase) and its initial or rolled item, and a
+ * Shrine purchase its initial item. A Travel Deal refill item is judged at the earlier
+ * purchase that restocks it, and a Pool list as the fountain opens it or by its own
+ * sale, so no row settles them here.
+ */
+function roomLocalOwnerSettledBy(action: RoomActionRow, address: SemanticAddress): boolean {
+  const reference = action.reference;
+  const room = occurrenceOwnerAddress(action.owner);
+  const inRoom = (occurrence: SemanticAddress | undefined) =>
+    room !== undefined &&
+    occurrence !== undefined &&
+    semanticAddressKey(room) === semanticAddressKey(occurrence);
+  switch (address.kind) {
+    case 'fountainRarityOutcome':
+      return address.action.kind === 'roomAction' && roomActionOwns(action, address.action);
+    case 'keepsakeSelection':
+      return (
+        address.owner !== 'routeStart' &&
+        reference.kind === 'interactKeepsakeRack' &&
+        inRoom(address.owner)
+      );
+    case 'keepsakeEquipResult':
+      return (
+        address.selection.kind === 'keepsakeSelection' &&
+        roomLocalOwnerSettledBy(action, address.selection)
+      );
+    case 'roomFeature': {
+      if (!inRoom(occurrenceOwnerAddress(address))) return false;
+      const target = address.target;
+      switch (target.kind) {
+        case 'stygianWellOffer':
+        case 'stygianWellTwist':
+          return (
+            (target.kind === 'stygianWellTwist' || target.generationKey !== 'travelDealRefill') &&
+            reference.kind === 'purchaseStygianWellOffer' &&
+            reference.generationKey === target.generationKey
+          );
+        case 'hermesShrineOffer':
+          return (
+            target.generationKey !== 'travelDealRefill' &&
+            reference.kind === 'purchaseHermesShrineOffer' &&
+            reference.generationKey === target.generationKey
+          );
+        default:
+          return false;
+      }
+    }
+    default:
+      return false;
+  }
 }
 
 /** Shared finding/edit locator over materialization's existing timeline and Hub phases. */
@@ -774,12 +833,11 @@ export function locateOwner(
   let entryIndex = room.roomLifecycleTimeline.entries.findIndex((entry) => {
     if (entry.kind === 'action') return roomActionOwns(entry.action, address);
     if (entry.kind === 'automaticEffect') return same(entry.address, address);
-    // Fig Leaf, Aetos and the Gorgon condition settle when their phase starts.
+    // Fig Leaf settles when its phase starts; Aetos and the Gorgon condition at its outcome.
     return (
-      entry.boundary.kind === 'encounterStart' &&
-      (address.kind === 'figLeafPhase' ||
-        address.kind === 'aetosPhase' ||
-        address.kind === 'gorgonPhase') &&
+      ((entry.boundary.kind === 'encounterStart' && address.kind === 'figLeafPhase') ||
+        (entry.boundary.kind === 'encounterOutcome' &&
+          (address.kind === 'aetosPhase' || address.kind === 'gorgonPhase'))) &&
       entry.boundary.phaseKey === address.encounter.phaseKey
     );
   });

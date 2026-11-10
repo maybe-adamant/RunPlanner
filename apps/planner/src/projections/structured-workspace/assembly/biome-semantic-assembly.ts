@@ -116,6 +116,8 @@ export interface WorkspaceBiomeSemanticAssembly {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly nodes: readonly WorkspaceNode[];
+  /** The walk stops in an earlier biome, before this one starts. */
+  readonly notReached?: true;
   readonly occurrenceInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceOccurrenceInteractionRequirement
@@ -435,24 +437,6 @@ function attachHubVisitPlanEnds(
   });
 }
 
-/** Hub visits return to their Timeline. */
-function attachHubRoomPresentation(nodes: WorkspaceNode[]): void {
-  for (const hub of nodes) {
-    if (hub.kind !== 'hubDecision') continue;
-    for (const visit of hub.visits) {
-      if (visit.room === undefined) continue;
-      const index = nodes.findIndex(
-        (node) =>
-          node.kind === 'occurrenceWorkbench' &&
-          node.room.occurrenceId === visit.room!.occurrenceId,
-      );
-      const room = nodes[index];
-      if (room?.kind === 'occurrenceWorkbench')
-        nodes[index] = Object.freeze({ ...room, hubTimeline: visit.marker });
-    }
-  }
-}
-
 function enrichFrontierPredecessor(
   frontier: WorkspaceAuthoringFrontierSeed | null,
   structuralNodes: readonly WorkspaceNode[],
@@ -589,8 +573,14 @@ export function assembleWorkspaceBiomeSemantics(
     const blockingRowKeys = source.blockingRowKeys(
       createOccurrenceAddress(biome, request.occurrence.occurrenceId),
     );
+    const roomStop = source.roomStop(
+      createOccurrenceAddress(biome, request.occurrence.occurrenceId),
+    );
     const bossDoorRewardStore = bossDoorRewardStoreControl(request.occurrence.occurrenceId);
     const assembly = assembleWorkspaceOccurrence({
+      notReached: !source.walkReached(
+        createOccurrenceAddress(biome, request.occurrence.occurrenceId),
+      ),
       planEnd: assembleRoomPlanEnd({
         room: createOccurrenceAddress(biome, request.occurrence.occurrenceId),
         relation: source.planEndRelation(request.occurrence.occurrenceId),
@@ -640,12 +630,14 @@ export function assembleWorkspaceBiomeSemantics(
       roomAnchorSlots: source.roomAnchorSlots,
       roomLayout: source.roomLayout,
       spawnedLoot: source.spawnedLoot,
+      encounterOutcomes: source.encounterOutcomes,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       transcendentEmbryoOutcomes: source.transcendentEmbryoOutcomes,
       fountainRarityOutcome: source.fountainRarityOutcome,
       ...(fountainRarityAssessment === undefined ? {} : { fountainRarityAssessment }),
       isActiveTraitOffer: source.isActiveTraitOffer,
       ...(blockingRowKeys === undefined ? {} : { blockingRowKeys }),
+      ...(roomStop === undefined ? {} : { roomStop }),
       judgmentArcanaCapability,
       figurineArcanaCapability,
       keepsakeEquipResultSupported,
@@ -793,7 +785,6 @@ export function assembleWorkspaceBiomeSemantics(
     projectAuthoredExitDecision(decision);
   }
   attachHubVisitPlanEnds(nodes, source.planEndRelation);
-  attachHubRoomPresentation(nodes);
   if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision') {
     markerDestinations.setHubTab([frontier.marker], 'timeline');
   }
@@ -1131,6 +1122,7 @@ export function assembleWorkspaceBiomeSemantics(
     label: catalog.biomes.byKey[plan.biomeKey]?.label ?? plan.biomeKey,
     marker: biomeMarker,
     nodes: completedNodes,
+    ...(source.walkStopsBefore ? { notReached: true as const } : {}),
     occurrenceInteractionRequirements,
     occurrenceOutgoing,
     ...(biomePlanEnd === undefined ? {} : { planEnd: biomePlanEnd }),

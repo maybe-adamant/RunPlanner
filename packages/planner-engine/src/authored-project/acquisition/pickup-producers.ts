@@ -5,6 +5,7 @@ import {
   type RoomDeclaration,
 } from '../../catalog-schema';
 import type {
+  AuthoredNemesisRandomEventOutcome,
   AuthoredRewardState,
   ProjectDocument,
   RoomActionReference,
@@ -54,6 +55,7 @@ import { routeStartIncomingReward } from '../room-state/starting-reward';
 import { routeErisHost } from '../route-profile';
 import {
   createSelectedPickupEntries,
+  createUnresolvedPickupRewardState,
   materializeGorgonAthenaOffer,
   optionIndex,
   TRAIT_OPTION_KEYS,
@@ -782,6 +784,55 @@ function erisPickupProducers(
   ]);
 }
 
+/**
+ * The pickup her result settles. The site holds the authored offer; a failed
+ * contest drops the fixed Consolation prize instead, leaving the offer dormant.
+ */
+export function nemesisResultPickup(
+  catalog: Catalog,
+  outcome: AuthoredNemesisRandomEventOutcome,
+  offer: AuthoredRewardState | null | undefined,
+  routeKey: string,
+): AuthoredRewardState | null {
+  if (outcome.kind !== 'damageContest' || outcome.result === 'success') return offer ?? null;
+  const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
+  if (policy === undefined) return null;
+  return createUnresolvedPickupRewardState(
+    catalog,
+    Object.freeze({ rewardType: policy.damageContest.failureResultRewardType }),
+    'NemesisEventPickup',
+    routeKey,
+  );
+}
+
+/**
+ * The occurrence's sites with each Nemesis event's result entry holding the
+ * pickup her outcome settles; unchanged where every entry already does.
+ */
+export function sitesWithNemesisResultPickups(
+  catalog: Catalog,
+  occurrence: RoomOccurrence,
+  routeKey: string,
+): RoomOccurrence['acquisitionSites'] {
+  let sites: Record<string, import('../model').AuthoredAcquisitionSiteState> | undefined;
+  for (const [phaseKey, outcome] of Object.entries(
+    occurrence.encounters.nemesisRandomEventByPhase ?? {},
+  )) {
+    if (outcome === null || outcome === undefined) continue;
+    const siteKey = nemesisGeneratedPickupSiteKey(phaseKey);
+    const site = occurrence.acquisitionSites?.[siteKey];
+    const offer = site?.pickupEntries?.result;
+    const result = nemesisResultPickup(catalog, outcome, offer, routeKey);
+    if (result === (offer ?? null)) continue;
+    sites ??= { ...(occurrence.acquisitionSites ?? {}) };
+    sites[siteKey] = Object.freeze({
+      ...site,
+      pickupEntries: Object.freeze({ ...(site?.pickupEntries ?? {}), result }),
+    });
+  }
+  return sites === undefined ? occurrence.acquisitionSites : Object.freeze(sites);
+}
+
 function nemesisPickupProducers(
   catalog: Catalog,
   biome: BiomeAddress,
@@ -792,9 +843,13 @@ function nemesisPickupProducers(
   return Object.entries(occurrence.encounters.nemesisRandomEventByPhase ?? {}).flatMap(
     ([phaseKey, outcome]) => {
       if (outcome === undefined || outcome === null) return [];
-      const result =
+      const result = nemesisResultPickup(
+        catalog,
+        outcome,
         occurrence.acquisitionSites?.[nemesisGeneratedPickupSiteKey(phaseKey)]?.pickupEntries
-          ?.result;
+          ?.result,
+        biome.routeKey,
+      );
       const declined = 'response' in outcome && outcome.response === 'decline';
       const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
       if (policy === undefined) return [];
@@ -838,7 +893,6 @@ function nemesisPickupProducers(
               );
             })() &&
             !declined &&
-            result !== undefined &&
             result !== null &&
             actions.has(roomActionKey({ kind: 'interactEncounter', phaseKey })),
           siteKey: nemesisGeneratedPickupSiteKey(phaseKey),

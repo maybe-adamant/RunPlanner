@@ -33,6 +33,7 @@ interface OperationContext extends ExecutionContext {
 
 interface ExecutionState {
   readonly events: readonly RoomLifecycleEvent[];
+  readonly reachedActions?: readonly import('./model').ReachedRoomAction[];
   readonly blockedAt?: import('../../authored-project/addresses').RoomActionSemanticAddress;
   /**
    * Wheel rerolls ranked before their wheel's use. The wheel's offers spawn as
@@ -266,16 +267,20 @@ const lifecycleEffectRegistry = Object.freeze({
       execution: context.figLeafSkipped === true ? 'skippedByFigLeaf' : 'normal',
       figLeafSkipOwner: context.figLeafSkipOwner === true,
     } as const;
+    const endEffects = !encounterAllowsEndEffects(phase)
+      ? 'none'
+      : deferShipEncounterEndEffects(context, phase)
+        ? 'deferred'
+        : 'applied';
     const completed =
       context.input.lifecycleProfileKey === 'BossRoom'
         ? appendEvent(
             appendEvent(state, context, { ...completion, kind: 'bossDefeated' }),
             context,
-            completion,
+            { ...completion, endEffects },
           )
-        : appendEvent(state, context, completion);
-    if (!encounterAllowsEndEffects(phase) || deferShipEncounterEndEffects(context, phase))
-      return completed;
+        : appendEvent(state, context, { ...completion, endEffects });
+    if (endEffects !== 'applied') return completed;
     return appendEncounterEndEffects(context, completed);
   },
   recordRequiredObjectCompletions: (context, state) => {
@@ -626,15 +631,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     row.reference.kind === 'interactEncounter' &&
     figLeafSkipsPhase(context, row.reference.phaseKey);
   const rankedRows = roster.rows
-    // A retained Pool sale must reach its declared lifecycle point even when
-    // its slot was later cleared. Reward simulation owns the precise stale
-    // finding and deliberately leaves the authored action intact.
-    .filter(
-      (row) =>
-        row.rank !== null &&
-        !skippedInteraction(row) &&
-        (!row.stale || row.reference.kind === 'sellPurgingPoolTrait'),
-    )
+    .filter((row) => row.rank !== null && !skippedInteraction(row) && !row.stale)
     .sort((left, right) => left.rank! - right.rank!);
   let cursor = 0;
   let shrineScheduled = false;
@@ -672,8 +669,35 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     );
   };
 
-  const blockAt = (state: ExecutionState, row: RoomActionRow): ExecutionState =>
-    Object.freeze({
+  /**
+   * Records a ranked row as reached once its own step ran: at its first own
+   * event, or with the next event the walk emits when it emitted none.
+   */
+  const reach = (
+    before: ExecutionState,
+    after: ExecutionState,
+    row: RoomActionRow,
+  ): ExecutionState =>
+    row.rank === null
+      ? after
+      : Object.freeze({
+          ...after,
+          reachedActions: Object.freeze([
+            ...(after.reachedActions ?? []),
+            Object.freeze({
+              actionKey: row.key,
+              sequence: before.events.length + 1,
+              ...(after.events.length > before.events.length
+                ? { through: after.events.length }
+                : {}),
+            }),
+          ]),
+        });
+
+  // The walk stops at a ranked row it reached; an unranked one has no position.
+  const blockAt = (initial: ExecutionState, row: RoomActionRow): ExecutionState => {
+    const state = reach(initial, initial, row);
+    return Object.freeze({
       ...state,
       blockedAt:
         origin.kind === 'occurrence'
@@ -684,6 +708,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
             )
           : (row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress),
     });
+  };
 
   const firstMissingRequired = (predicate: (row: RoomActionRow) => boolean) =>
     roster.rows.find(
@@ -845,7 +870,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       if (row.key === targetKey) return state;
       if (!row.executable) return blockAt(state, row);
       if (roomLifecycleWindowOrdinal(lifecycleStructure, row.window) > targetWindowRank) break;
-      state = playerAction(row, operationIndex, state);
+      state = reach(state, playerAction(row, operationIndex, state), row);
       cursor += 1;
     }
     return state;
@@ -870,7 +895,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     if (state.blockedAt !== undefined) return state;
     const row = rankedRows[cursor];
     if (row?.key !== key || !row.executable) return blockAt(state, row ?? target);
-    if (emitPlayerAction) state = playerAction(row, operationIndex, state);
+    state = reach(state, emitPlayerAction ? playerAction(row, operationIndex, state) : state, row);
     cursor += 1;
     return state;
   };
@@ -890,7 +915,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       );
       if (missingEarlier !== undefined) return blockAt(state, missingEarlier);
       if (!row.executable) return blockAt(state, row);
-      state = playerAction(row, operationIndex, state);
+      state = reach(state, playerAction(row, operationIndex, state), row);
       cursor += 1;
     }
     return state;
@@ -1086,10 +1111,12 @@ export function executeRoomLifecycle(
     input.roomActionRoster === undefined ? undefined : createRoomActionSchedule(context);
   let state: ExecutionState = Object.freeze({ events: Object.freeze([]) });
   for (const [operationIndex, operation] of context.profile.operations.entries()) {
+    const reachedBefore = state.reachedActions?.length ?? 0;
     if (schedule !== undefined) {
       state = schedule.beforeOperation(operation, operationIndex, state);
       if (state.blockedAt !== undefined) break;
     }
+    const eventsBefore = state.events.length;
     state = operationDispatchRegistry[operation.kind](
       operation,
       context,
@@ -1097,6 +1124,37 @@ export function executeRoomLifecycle(
       state,
       schedule,
     );
+    // An incoming reward pickup settles with its producer point's events; rows the walk
+    // reached before it keep their own.
+    if (operation.kind === 'advanceProducer' && state.events.length > eventsBefore) {
+      const pickups = new Set(
+        (context.producerRewardLifecycle?.acquisitionLifecycle ?? []).flatMap((binding) =>
+          binding.lifecyclePoint === operation.point
+            ? [
+                roomActionKey({
+                  kind: 'interactIncomingReward',
+                  producerPoint: binding.lifecyclePoint,
+                  acquisitionRole: binding.role,
+                }),
+              ]
+            : [],
+        ),
+      );
+      state = Object.freeze({
+        ...state,
+        reachedActions: Object.freeze(
+          (state.reachedActions ?? []).map((action, index) =>
+            index < reachedBefore || !pickups.has(action.actionKey)
+              ? action
+              : Object.freeze({
+                  actionKey: action.actionKey,
+                  sequence: eventsBefore + 1,
+                  through: state.events.length,
+                }),
+          ),
+        ),
+      });
+    }
     if (state.blockedAt !== undefined) break;
     if (schedule !== undefined) {
       state = schedule.afterOperation(operation, operationIndex, state);
@@ -1108,6 +1166,7 @@ export function executeRoomLifecycle(
     lifecycleProfileKey: context.profile.key,
     encounterEnvelopeKey: context.input.encounterEnvelopeKey,
     events: state.events,
+    reachedActions: state.reachedActions ?? Object.freeze([]),
     ...(state.blockedAt === undefined ? {} : { blockedAt: state.blockedAt }),
   });
 }

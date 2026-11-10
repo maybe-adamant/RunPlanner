@@ -83,10 +83,8 @@ function validateNemesisInteraction(
         failCommand(command, 'trait trade must produce fixed Triple Gold');
       return;
     case 'damageContest':
-      if (command.value.result === 'failure') {
-        if (rewardType !== policy.damageContest.failureResultRewardType)
-          failCommand(command, 'contest failure must produce fixed Consolation');
-      } else if (
+      // The offer is the planned success item, whatever the result.
+      if (
         !(policy.damageContest.successResultRewardTypes as readonly string[]).includes(rewardType)
       )
         failCommand(command, 'contest success result is outside its declared pool');
@@ -126,8 +124,6 @@ function fixedNemesisReward(
   if (policy === undefined) return null;
   if (outcome.kind === 'traitTrade')
     return Object.freeze({ rewardType: policy.traitTrade.fixedResultRewardType });
-  if (outcome.kind === 'damageContest' && outcome.result === 'failure')
-    return Object.freeze({ rewardType: policy.damageContest.failureResultRewardType });
   return null;
 }
 
@@ -331,9 +327,9 @@ function nemesisInteractionReward(
     return fixedNemesisReward(catalog, defaultNemesisOutcome(command.family));
   const fixed = fixedNemesisReward(catalog, command.value);
   if (fixed !== null) return fixed;
+  // Consolation is what a failed contest spawns, never its offer: it leaves the offer unset.
   if (
     command.value.kind === 'damageContest' &&
-    command.value.result === 'success' &&
     command.value.reward?.rewardType ===
       catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent?.damageContest
         .failureResultRewardType
@@ -346,6 +342,7 @@ function hasActiveNemesisPickup(
   outcome: AuthoredNemesisRandomEventOutcome,
   reward: import('../../../reward-kernel/model').ResolvedRewardOffer | null,
 ): boolean {
+  if (outcome.kind === 'damageContest' && outcome.result === 'failure') return true;
   return reward !== null && !('response' in outcome && outcome.response === 'decline');
 }
 

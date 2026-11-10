@@ -4,13 +4,26 @@ import { Provider } from 'react-redux';
 import { catalog } from '@run-planner/hades2-catalog';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
-import { projectFindingLabels } from '@planner/projections/evaluationProjection';
-import { semanticOwnerFocused, semanticOwnerOpened } from '@planner/state/editorSessionSlice';
-import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
-import { selectPresentProject, useAppSelector } from '@planner/state/store';
+import { projectFindingLabels, walkStopOpening } from '@planner/projections/evaluationProjection';
+import {
+  findingSelected,
+  semanticOwnerFocused,
+  semanticOwnerOpened,
+} from '@planner/state/editorSessionSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+} from '@planner/state/projectWorkspaceSlice';
+import {
+  selectPresentProject,
+  selectProjectEvaluation,
+  useAppSelector,
+} from '@planner/state/store';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import { PomResolutionDialog } from '@planner/ui/editor/rewards/PomResolutionEditor';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
+import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
+import { RemovedActionsNotice } from '@planner/ui/feedback/RemovedActionsNotice';
 import { buildGalleryProject, galleryTargetOwner, type GalleryCase } from './galleryCase';
 
 type CaseView = 'timeline' | 'overview';
@@ -23,6 +36,19 @@ function openCaseApplication(entry: GalleryCase, view: CaseView): PlannerApplica
   const project = buildGalleryProject(entry);
   const application = createApplication();
   application.store.dispatch(authoredProjectReplaced(project));
+  if (entry.edit !== undefined)
+    application.store.dispatch(
+      authoredProjectCommandDispatched(
+        typeof entry.edit === 'function' ? entry.edit(project) : entry.edit,
+      ),
+    );
+  if (entry.opensBiome === true) {
+    // As the biome's tab opens it: on the walk's stop when the biome holds it.
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const stop = walkStopOpening(workspace?.walkStop, entry.target.biomeKey);
+    if (stop !== undefined) application.store.dispatch(findingSelected(stop));
+    return application;
+  }
   if (view === 'overview') {
     application.store.dispatch(semanticOwnerFocused(galleryTargetOwner(project, entry.target)));
     return application;
@@ -48,28 +74,51 @@ function CaseWorkspace({
 }) {
   const workspace = useAppSelector(application.selectStructuredWorkspace);
   const project = useAppSelector(selectPresentProject);
+  const activePanel = useAppSelector((state) => state.editorSession.activePanel);
+  const evaluation = useAppSelector(selectProjectEvaluation);
   const levelResolutionTarget = useAppSelector(
     (state) => state.editorSession.levelResolutionDialogTarget ?? null,
   );
+  const roomActionLabel = workspace?.roomActionLabel;
   const labels = useMemo(
-    () => (project === undefined ? undefined : projectFindingLabels(catalog, project)),
-    [project],
+    () =>
+      project === undefined
+        ? undefined
+        : {
+            ...projectFindingLabels(catalog, project),
+            ...(roomActionLabel === undefined ? {} : { roomAction: roomActionLabel }),
+          },
+    [project, roomActionLabel],
   );
   if (workspace === undefined) throw new Error('the project has no workspace projection');
-  const biome = workspace.route.biomes.find(
-    (candidate) => candidate.biomeKey === entry.target.biomeKey,
-  );
-  if (biome === undefined) throw new Error(`the route has no biome ${entry.target.biomeKey}`);
+  // A link to another biome opens it, as the editor's panel does.
+  const biomeKey = activePanel.kind === 'biome' ? activePanel.biomeKey : entry.target.biomeKey;
+  const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  if (biome === undefined) throw new Error(`the route has no biome ${biomeKey}`);
+  const issue = evaluation?.route.issue;
   return (
     <FindingTargetScope
       authoringReadiness={workspace.authoringReadiness}
       findings={workspace.findingsByRepairTarget}
       {...(labels === undefined ? {} : { labels })}
+      walkStop={workspace.walkStop}
     >
       {/* The editor's own frame, so container widths match the app at the same viewport. */}
       <div className="editor-workspace" data-navigation-pinned="true">
         <div className="panel-navigation-column" aria-hidden />
         <div className="editor-panel">
+          {entry.findingPill !== true || issue === undefined ? null : (
+            <ProjectFindings
+              catalog={catalog}
+              focusByOwner={workspace.focusByOwner}
+              issue={issue}
+              {...(labels === undefined ? {} : { labels })}
+              route={workspace.route}
+            />
+          )}
+          {activePanel.kind === 'loadout' ? (
+            <p data-gallery-panel="loadout">Loadout panel</p>
+          ) : null}
           <div className="editor-panel-content" data-editor-layout="biome">
             <BiomeWorkspace
               biome={biome}
@@ -80,6 +129,9 @@ function CaseWorkspace({
           </div>
         </div>
       </div>
+      {entry.edit === undefined ? null : (
+        <RemovedActionsNotice catalog={catalog} workspace={workspace} />
+      )}
       {/* A Pom choice opens as the app opens it, so a chip that opens one can be seen. */}
       {levelResolutionTarget === null ? null : (
         <PomResolutionDialog
@@ -162,6 +214,23 @@ function OpenedCase({
         '.timeline-banner-toggle[aria-controls$="-doors-detail"][aria-expanded="false"]',
       )
       ?.click();
+  }, [entry, view]);
+  // A case showing the waiting rows opens them as a user would.
+  useEffect(() => {
+    if (view !== 'timeline' || entry.notReachedExpanded !== true) return;
+    const timer = window.setInterval(() => {
+      const toggle = frame.current?.querySelector<HTMLButtonElement>(
+        '.room-action-not-reached-toggle[aria-expanded="false"]',
+      );
+      if (toggle === null || toggle === undefined) return;
+      window.clearInterval(timer);
+      toggle.click();
+    }, 50);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
   }, [entry, view]);
   // A case showing an Optional actions list opens its picker once it is enabled, as a user would.
   const pickerOpened = useRef(false);

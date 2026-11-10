@@ -15,7 +15,7 @@ import { sourceOfferPointStoreKey } from '../../batchState';
 import { declaredPhysicalExitKeys } from '../../topology/query';
 import { sameExitDecisionSource } from '../../topology/source-identity';
 import { failCommand, requireOccurrence, withBiome, type LocatedBiome } from '../contract';
-import type { RouteDetourCommand, TopologyCommand } from '../types';
+import type { ProjectCommand, RouteDetourCommand, TopologyCommand } from '../types';
 
 export function sourceFromAddress(source: ExitDecisionSourceAddress): ExitDecisionSource {
   return source.kind === 'occurrence'
@@ -28,7 +28,7 @@ export function exitKeysForTopologySource(
   located: LocatedBiome,
   topology: BiomeTopology,
   source: ExitDecisionSource,
-  command: TopologyCommand | RouteDetourCommand,
+  command: ProjectCommand | RouteDetourCommand,
 ): readonly string[] {
   const declared = declaredPhysicalExitKeys(catalog, located.layout, topology, source);
   if (declared === undefined) {
@@ -129,7 +129,7 @@ export function appendOccurrence(
 export function expectedPrebossRole(
   room: RoomDeclaration,
   index: number,
-  command: TopologyCommand | RouteDetourCommand,
+  command: ProjectCommand | RouteDetourCommand,
 ): RoomOccurrenceRole {
   if (room.kind !== 'Preboss' || room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors') {
     failCommand(command, `${room.gameName} is not a takeover Preboss declaration`);

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceId,
+  createRoomActionAddress,
   roomActionKey,
+  type AuthoredNemesisRandomEventOutcome,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -10,6 +16,12 @@ import {
   loadSurfaceScheduledLifecycleCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadUnderworldFGHCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+  replaceNemesisRandomEventInteraction,
+} from '@run-planner/test-fixtures/underworld';
 import {
   nOccurrenceIds,
   oOccurrenceIds,
@@ -198,6 +210,87 @@ function galleryRoom(id: string, biomeKey: string, occurrenceId: string) {
   return roomOf(buildGalleryProject(entry), biomeKey, createOccurrenceId(occurrenceId));
 }
 
+describe('outcome-dependent loot', () => {
+  const occurrenceId = goldenFOccurrenceId(5, 1);
+  const phase = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId },
+    'Encounter',
+  );
+  /** Nemesis answered, her optional result placed right after her. */
+  function answered(value: AuthoredNemesisRandomEventOutcome, rewardType: string) {
+    const project = replaceNemesisRandomEventInteraction(
+      applyProjectCommand(createGoldenFGHIProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'NemesisRandomEvent',
+      }),
+      createNemesisRandomEventAddress(phase),
+      value,
+      { rewardType },
+    );
+    const reference = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    };
+    const order =
+      project.route.biomes[0]?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === occurrenceId,
+      )?.roomActions.order ?? [];
+    return roomOf(
+      applyProjectCommand(project, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(goldenFBiome, occurrenceId, roomActionKey(reference)),
+        reference,
+        index:
+          order.findIndex(
+            (candidate) =>
+              candidate.kind === 'interactEncounter' && candidate.phaseKey === 'Encounter',
+          ) + 1,
+      }),
+      'F',
+      occurrenceId,
+    ).roomActions!;
+  }
+
+  /** The event's stretch of the Timeline, from her encounter's start to its end. */
+  const eventSequence = (actions: ReturnType<typeof answered>) => {
+    const all = sequence(actions.timeline.entries);
+    return all.slice(
+      all.indexOf('encounterStart:Encounter'),
+      all.indexOf('encounterEnd:Encounter') + 1,
+    );
+  };
+
+  it('announces a Nemesis contest’s result after her outcome', () => {
+    const actions = answered(
+      { kind: 'damageContest', result: 'failure' },
+      'RoomRewardConsolationPrize',
+    );
+    expect(eventSequence(actions)).toEqual([
+      'encounterStart:Encounter',
+      'action interactEncounter',
+      'encounterOutcome:Encounter',
+      'spawned encounterOutcome:Encounter',
+      'encounterEnd:Encounter',
+    ]);
+    expect(actions.actionSpawns ?? []).toEqual([]);
+  });
+
+  it('keeps a Nemesis free item under her row, with no outcome to announce', () => {
+    const actions = answered({ kind: 'freeItem' }, 'HealDrop');
+    expect(eventSequence(actions)).toEqual([
+      'encounterStart:Encounter',
+      'action interactEncounter',
+      'encounterEnd:Encounter',
+    ]);
+    expect(actions.actionSpawns?.map((spawn) => JSON.parse(spawn.sourceActionKey)[0])).toEqual([
+      'interactEncounter',
+    ]);
+  });
+});
+
 describe('converted and copied loot', () => {
   it('lists the Artificer’s new reward under the transform', () => {
     const actions = galleryRoom(
@@ -232,11 +325,11 @@ describe('converted and copied loot', () => {
         }),
       }),
     ]);
-    expect(
-      (actions.actionSpawns ?? []).flatMap((spawn) =>
-        spawn.groups.flatMap((group) => (group.source === undefined ? [] : [group.source.name])),
-      ),
-    ).toEqual(['Nemesis']);
+    // Her accepted trade's result spawns at her outcome, not under her row.
+    expect(actions.actionSpawns ?? []).toEqual([]);
+    expect(grouped(notice(actions.timeline.entries, 'encounterOutcome:Encounter').groups)).toEqual([
+      `[Nemesis]: ${original.labelParts?.name ?? original.label}`,
+    ]);
   });
 
   it('lists a rushed Shrine item under the purchase that rushes it', () => {

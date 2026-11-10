@@ -359,6 +359,20 @@ export interface CanonicalBiomeHistory {
   readonly afterTransition: HistoryStateView;
 }
 
+/**
+ * A ranked room action the lifecycle walk reached, settled or stopped at,
+ * placed in biome history: from its own first event at `sequence` through its
+ * last at `through`, or, when it has none, after the event it settles with (the
+ * room's next one, or its last when nothing followed).
+ */
+export interface ReachedHistoryRoomAction {
+  readonly room: import('../lifecycle/model').RoomHistoryOrigin;
+  readonly actionKey: string;
+  readonly sequence: number;
+  readonly boundary: 'before' | 'after';
+  readonly through?: number;
+}
+
 export interface BiomeHistoryPrefix {
   readonly routeKey: string;
   readonly biomeKey: string;

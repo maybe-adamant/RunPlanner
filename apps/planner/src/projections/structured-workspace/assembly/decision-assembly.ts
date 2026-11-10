@@ -11,7 +11,6 @@ import {
   takeoverPrebossGameNames,
   normalDecisionProgressionForLayout,
   hubTerminalTakeoverForSource,
-  takeoverBatchExitRepairAvailable,
   selectedExitTarget,
   semanticAddressKey,
   type DeclaredPhysicalExit,
@@ -60,7 +59,6 @@ import { workspaceDeclaredPhysicalExits } from './topology-presentation';
 import { projectWorkspaceDoorContract } from './door-contract';
 import { assembleRoomRerolls } from './reroll-assembly';
 import type {
-  WorkspaceBatchRepairIntent,
   WorkspaceBatchRewardPool,
   WorkspaceDoorNote,
   WorkspaceEffectiveRewardPool,
@@ -172,43 +170,6 @@ function redirectDecisionFocus(
   if (node.source.kind === 'hubDecision') return;
   // The source room's Timeline hosts the doors; its assembly names the row.
   markerDestinations.redirect(workspaceDecisionOwnedMarkers(node), node.key);
-}
-
-/**
- * Ordinary doors repair only when one is unavailable; a takeover batch repairs
- * whenever the engine can match it to its source's declared doors, and that
- * repair carries the batch's finding mark. Declared exits and authored targets
- * are both exit1-prefixes, so a takeover is only ever too wide or too narrow;
- * any unavailable door makes the repair a removal.
- */
-function batchExitCapacityRepairIntent(
-  input: WorkspaceDecisionAssemblyBaseInput,
-  decision: AuthoredBatchDecision,
-  owner: ExitDecisionAddress,
-  kind: 'ordinaryBatch' | 'takeoverBatch' | 'mixedBatch',
-  targets: readonly WorkspacePhysicalTarget[],
-): WorkspaceBatchRepairIntent | undefined {
-  const unavailable = targets.some((target) => target.physicalState === 'unavailable');
-  const command = Object.freeze({ kind: 'ReconcileBatchExitCapacity' as const, decision: owner });
-  const focus = Object.freeze({ owner, timing: 'before' as const });
-  if (kind !== 'takeoverBatch') {
-    return unavailable
-      ? Object.freeze({ command, effect: 'removeUnavailable' as const, focus })
-      : undefined;
-  }
-  const topology = input.source.plan.topology;
-  if (
-    topology === null ||
-    !takeoverBatchExitRepairAvailable(input.catalog, input.source.layout, topology, decision)
-  ) {
-    return undefined;
-  }
-  return Object.freeze({
-    command,
-    effect: unavailable ? ('removeUnavailable' as const) : ('addMissing' as const),
-    focus,
-    markOwner: owner,
-  });
 }
 
 function missingTargetsForPhysicalExits(
@@ -394,10 +355,15 @@ function rewardPoolForBatch(
 function fieldsDoorNotes(fields: WorkspaceFieldsBatchContext): readonly WorkspaceDoorNote[] {
   return fields.cageTargetCount === 0
     ? [
-        Object.freeze({ target: 'batch', text: 'No room here uses the cage count' }),
-        Object.freeze({ target: 'batch', text: 'Max still affects later Fields rolls' }),
+        Object.freeze({ target: 'cageCount', text: 'No room here uses the cage count' }),
+        Object.freeze({ target: 'doorRoll', text: 'Max still affects later Fields rolls' }),
       ]
-    : [Object.freeze({ target: 'batch', text: 'Cage rewards appear bottom to top on the door' })];
+    : [
+        Object.freeze({
+          target: 'rewardColumn',
+          text: 'Cage rewards appear bottom to top on the door',
+        }),
+      ];
 }
 
 function missingTargetPrerequisite(
@@ -949,7 +915,6 @@ function assembleBatchDecision(
     targets,
     visibleMissingTargets,
   );
-  const repairIntent = batchExitCapacityRepairIntent(input, decision, owner, kind, targets);
   const fieldsCageOutcome = fieldsBatchOwnsOutcome
     ? input.markerDestinations.marker(owner)
     : undefined;
@@ -1116,7 +1081,6 @@ function assembleBatchDecision(
     notes,
     owner,
     persistence: input.persistence,
-    ...(repairIntent === undefined ? {} : { repairIntent }),
     ...(rerolls.rerolls === undefined ? {} : { rerolls: rerolls.rerolls }),
     ...(rerolls.doorSteps === undefined ? {} : { doorSteps: rerolls.doorSteps }),
     ...(rewardPool === undefined ? {} : { rewardPool }),
@@ -1173,12 +1137,6 @@ function assembleBatchDecision(
             targetInteraction: 'replaceable' as const,
           });
   redirectDecisionFocus(input.markerDestinations, batch);
-  // A takeover's missing doors have no row; their door-set repair carries the mark.
-  if (batch.repairIntent?.markOwner !== undefined) {
-    for (const missing of batch.missingTargets) {
-      input.markerDestinations.redirectTo(missing.marker, batch.marker, batch.key, batch.marker);
-    }
-  }
   // An impossible Anomaly is repaired by restoring its remembered room; navigation stays on the door.
   if (batch.source.kind !== 'hubDecision') {
     for (const target of batch.targets) {

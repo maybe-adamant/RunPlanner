@@ -112,6 +112,7 @@ describe('Aromatic Phial authored fountain result', () => {
         !activeRoomActionReferences(
           catalog,
           goldenFBiome,
+          topology!,
           candidate,
           ordinaryPositionFor(catalog, goldenFBiome),
         ).some((reference) => reference.kind === 'useFountain'),

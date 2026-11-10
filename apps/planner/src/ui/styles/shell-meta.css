@@ -214,3 +214,31 @@
   color: var(--muted);
   font-size: 0.76rem;
 }
+
+/* An edit's removals in other rooms float above the editor until dismissed. */
+.removed-actions-notice {
+  position: fixed;
+  z-index: 50;
+  bottom: 28px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(640px, calc(100vw - 32px));
+  padding: 10px 10px 10px 16px;
+  border: 1px solid color-mix(in srgb, var(--attention) 50%, var(--surface));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--attention) 8%, var(--surface));
+  box-shadow: 0 16px 44px rgb(0 0 0 / 45%);
+  font-size: 0.9rem;
+  transform: translateX(-50%);
+}
+
+.removed-actions-rooms {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

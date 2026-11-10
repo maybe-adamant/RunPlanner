@@ -748,6 +748,113 @@ describe('single-room lifecycle execution', () => {
     );
   });
 
+  it('stops at a later-window row ranked before a required action of an earlier window', () => {
+    const reward = {
+      kind: 'interactIncomingReward' as const,
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source' as const,
+    };
+    const purchase = {
+      kind: 'purchaseStygianWellOffer' as const,
+      generationKey: 'initial:secondLeft' as const,
+    };
+    const collect = { kind: 'collectRequiredReward' as const };
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        roomActionRoster: actionRoster(
+          origin,
+          [reward, purchase, collect],
+          [
+            {
+              reference: reward,
+              participation: 'required',
+              window: { kind: 'standard', phase: 'afterCombat' },
+              dependencies: [],
+            },
+            {
+              reference: purchase,
+              participation: 'optional',
+              window: { kind: 'postOutgoing' },
+              dependencies: [],
+            },
+            {
+              reference: collect,
+              participation: 'required',
+              window: { kind: 'standard', phase: 'afterCombat' },
+              dependencies: [],
+            },
+          ],
+        ),
+      }),
+    );
+
+    // The required pickup's deadline passes before the purchase's window opens:
+    // the purchase is not reached, so nothing is bought.
+    expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(purchase));
+    expect(fragment.events.some((event) => event.kind === 'wellPurchase')).toBe(false);
+    expect(fragment.events.some((event) => event.kind === 'producerRoleAdvanced')).toBe(true);
+    // The reward settles with its producer point's events; the walk stops at the
+    // purchase, which emits nothing, past every event.
+    const rewardReached = fragment.reachedActions[0]!;
+    expect(fragment.events[rewardReached.sequence - 1]?.kind).toBe('producerPointReached');
+    expect(fragment.events[rewardReached.through! - 1]?.kind).toBe('producerRoleAdvanced');
+    expect(fragment.reachedActions).toEqual([
+      {
+        actionKey: roomActionKey(reward),
+        sequence: rewardReached.sequence,
+        through: rewardReached.through,
+      },
+      { actionKey: roomActionKey(purchase), sequence: fragment.events.length + 1 },
+    ]);
+    expect(fragment.events.find((event) => event.kind === 'encounterCompleted')).toMatchObject({
+      endEffects: 'applied',
+    });
+  });
+
+  it("keeps an earlier same-window row's own events apart from the pickup it precedes", () => {
+    const fountain = { kind: 'useFountain' as const };
+    const reward = {
+      kind: 'interactIncomingReward' as const,
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source' as const,
+    };
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        roomActionRoster: actionRoster(
+          origin,
+          [fountain, reward],
+          [
+            {
+              reference: fountain,
+              participation: 'optional',
+              window: { kind: 'standard', phase: 'afterCombat' },
+              dependencies: [],
+            },
+            {
+              reference: reward,
+              participation: 'required',
+              window: { kind: 'standard', phase: 'afterCombat' },
+              dependencies: [],
+            },
+          ],
+        ),
+      }),
+    );
+
+    expect(fragment.blockedAt).toBeUndefined();
+    const reached = new Map(fragment.reachedActions.map((action) => [action.actionKey, action]));
+    const used = reached.get(roomActionKey(fountain))!;
+    const pickup = reached.get(roomActionKey(reward))!;
+    // The fountain spans its own use; the pickup only its producer point's events.
+    expect(fragment.events[used.sequence - 1]?.kind).toBe('fountainUsed');
+    expect(used.through).toBe(used.sequence);
+    expect(fragment.events[pickup.sequence - 1]?.kind).toBe('producerPointReached');
+    expect(fragment.events[pickup.through! - 1]?.kind).toBe('producerRoleAdvanced');
+    expect(pickup.sequence).toBeGreaterThan(used.through!);
+  });
+
   it('advances the standard producer role before outgoing generation and commit effects', () => {
     const fragment = executeRoomLifecycle(catalog, input());
 
@@ -1001,6 +1108,15 @@ describe('single-room lifecycle execution', () => {
     );
 
     expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(pickup1));
+    // A wheel phase's end effects wait for its post-combat actions.
+    expect(
+      fragment.events.flatMap((event) =>
+        event.kind === 'encounterCompleted' ? [[event.phaseKey, event.endEffects]] : [],
+      ),
+    ).toEqual([
+      ['Intro', 'applied'],
+      ['Combat1', 'deferred'],
+    ]);
     expect(
       fragment.events
         .filter((event) => event.kind === 'offerPointMaterialized')

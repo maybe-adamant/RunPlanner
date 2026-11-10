@@ -1270,12 +1270,6 @@ describe('authored-project commands and topology', () => {
     expect(() =>
       applyProjectCommand(project, catalog, { kind: 'RemoveExitDecision', decision: handoff }),
     ).toThrow(ProjectCommandContractError);
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'ReconcileBatchExitCapacity',
-        decision: handoff,
-      }),
-    ).toThrow(ProjectCommandContractError);
     project = applyProjectCommand(project, catalog, { kind: 'RemoveHubDecision', hub });
     const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     expect(topology?.fixedRoomLinks).toEqual([]);
@@ -1838,7 +1832,7 @@ describe('authored-project commands and topology', () => {
     });
   });
 
-  it('retains overflow targets until explicit ordinary exit-capacity repair', () => {
+  it('retains overflow targets a source replacement leaves for edit settlement', () => {
     let project = applyProjectCommand(fProject(), catalog, {
       kind: 'CreateStart',
       biome: fBiome,
@@ -1885,7 +1879,6 @@ describe('authored-project commands and topology', () => {
         gameName: 'F_Combat01',
       });
     }
-    const withTargets = project;
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(fBiome, createOccurrenceId('capacity-source')),
@@ -1899,48 +1892,6 @@ describe('authored-project commands and topology', () => {
           decision.source.occurrenceId === 'capacity-source',
       ),
     ).toMatchObject({ normal: { targets: [{ exitKey: 'exit1' }, { exitKey: 'exit2' }] } });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReconcileBatchExitCapacity',
-      decision: sourceDecision,
-    });
-    expect(
-      fTopology(project).decisions.find(
-        (decision) =>
-          decision.kind === 'exit' &&
-          decision.source.kind === 'occurrence' &&
-          decision.source.occurrenceId === 'capacity-source',
-      ),
-    ).toMatchObject({ normal: { targets: [{ exitKey: 'exit1' }] } });
-
-    // The explicit repair removes an unavailable selected door rather than moving it.
-    let selected = applyProjectCommand(withTargets, catalog, {
-      kind: 'SetExitSelection',
-      selection: createExitSelectionAddress(fBiome, sourceDecision.source),
-      value: { kind: 'normal', exitKey: 'exit2' },
-    });
-    selected = applyProjectCommand(selected, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(fBiome, createOccurrenceId('capacity-source')),
-      gameName: 'F_Combat01',
-    });
-    selected = applyProjectCommand(selected, catalog, {
-      kind: 'ReconcileBatchExitCapacity',
-      decision: sourceDecision,
-    });
-    expect(
-      fTopology(selected).decisions.find(
-        (decision) =>
-          decision.kind === 'exit' &&
-          decision.source.kind === 'occurrence' &&
-          decision.source.occurrenceId === 'capacity-source',
-      ),
-    ).toMatchObject({
-      normal: { targets: [{ exitKey: 'exit1', occurrenceId: 'capacity-exit1' }] },
-      selection: { kind: 'derived' },
-    });
-    expect(
-      fTopology(selected).occurrences.map((occurrence) => occurrence.occurrenceId),
-    ).not.toContain('capacity-exit2');
   });
 
   it.each(['exit1', 'exit2'] as const)(

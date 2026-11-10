@@ -112,6 +112,7 @@ function projectItem(
     key: semanticAddressKey(item.owner),
     actionKey,
     label,
+    ...(item.reward === undefined ? {} : { reward: item.reward }),
     hint: itemHint(item, place === undefined ? label : `${label} · ${place.label}`, placement),
     participation: item.participation,
     ...(place === undefined ? {} : { place }),
@@ -233,12 +234,10 @@ function momentAnchor(
       return first(entered);
     case 'encounterStart':
       return first(['after', boundaryAt('encounterStart', phase)], entered);
-    case 'duringEncounter':
+    case 'encounterOutcome':
       return first(
-        ['before', boundaryAt('bossDefeated', phase)],
+        ['after', boundaryAt('encounterOutcome', phase)],
         ['before', boundaryAt('encounterEnd', phase)],
-        ['after', boundaryAt('encounterStart', phase)],
-        entered,
       );
     case 'encounterEnd':
       return first(

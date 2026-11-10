@@ -285,6 +285,8 @@ export interface WorkspaceSpawnedItem {
   /** The collect action's Timeline row. */
   readonly actionKey: string;
   readonly label: string;
+  /** What it spawns as, which its chip shows; absent while its reward is not chosen. */
+  readonly reward?: import('@run-planner/engine/simulation').SpawnedLootReward;
   /** What using its chip does, said on hover. */
   readonly hint: string;
   readonly participation: 'required' | 'optional';
@@ -339,15 +341,16 @@ export interface WorkspaceActionSpawn {
 export type WorkspaceRoomLifecycleBoundary =
   | { readonly kind: 'roomEntered'; readonly key: 'roomEntered' }
   | { readonly kind: 'encounterStart'; readonly key: string; readonly phaseKey: string }
+  | { readonly kind: 'encounterOutcome'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'bossDefeated'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'nextPhase'; readonly key: string; readonly wheelKey: string }
   | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
 
 /**
- * The encounter controls of one phase banner. Its start hosts the identity and what
- * is settled as the encounter starts (Fig Leaf, Aetos, Gorgon); its end hosts what the
- * finished encounter settled (the kill race, an Anomaly's capture point).
+ * The encounter controls of one phase event. Its start hosts the identity and the Fig Leaf
+ * skip; its outcome hosts how the fight ended (Aetos, the Gorgon condition, the Nemesis bet
+ * or event result, an Anomaly cleared).
  */
 export type WorkspaceEncounterBannerSupplement =
   | {
@@ -360,11 +363,10 @@ export type WorkspaceEncounterBannerSupplement =
       readonly identityLabel?: string;
     }
   | {
-      readonly kind: 'encounterEnd';
-      /** Present when the phase has a kill-race outcome. */
-      readonly phase?: WorkspaceEncounterPhase;
-      /** The Anomaly's capture-point outcome, decided before its reward. */
-      readonly anomalyCleared?: true;
+      readonly kind: 'encounterOutcome';
+      readonly phase: WorkspaceEncounterPhase;
+      /** The engine's choices this outcome hosts, in the room's choice order. */
+      readonly choices: readonly import('@run-planner/engine/simulation').EncounterOutcomeChoice[];
     };
 
 export type WorkspaceRoomLifecycleTimelineEntry =
@@ -384,14 +386,6 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly supplement?: WorkspaceEncounterBannerSupplement;
       /** Read-only identity of the cage assigned to this encounter cycle. */
       readonly fieldsCage?: WorkspaceFieldsCageLabel;
-      /**
-       * The boss defeat this encounter end follows directly, read as one banner;
-       * its own content leads the banner's.
-       */
-      readonly bossDefeated?: Extract<
-        WorkspaceRoomLifecycleBoundary,
-        { readonly kind: 'bossDefeated' }
-      >;
     }
   | {
       readonly kind: 'action';
@@ -424,6 +418,20 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       /** Lists locked loot as it becomes takeable rather than as it spawns. */
       readonly unlocks?: true;
       readonly groups: readonly WorkspaceSpawnGroup[];
+    };
+
+/**
+ * One authored entry past a room's stop: a row, an automatic effect's target, or the authored
+ * encounter events (Fig Leaf, an outcome's choices) of a banner not reached yet.
+ */
+export type WorkspaceNotReachedEntry =
+  | Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'action' | 'automaticEffect' }>
+  | {
+      readonly kind: 'events';
+      readonly key: string;
+      readonly label: string;
+      readonly phaseKey: string;
+      readonly supplement: WorkspaceEncounterBannerSupplement;
     };
 
 /** The settled target's rarity before and after one timed growth; equal when nothing promoted. */
@@ -554,9 +562,24 @@ export interface WorkspaceFieldsCageOrderControl {
   readonly unavailableReason?: string;
 }
 
+/** Where the walk stops before a Timeline starts: its room's Overview, or an earlier phase. */
+export type WorkspaceTimelineWait =
+  { readonly kind: 'overview' } | { readonly kind: 'phase'; readonly phaseLabel: string };
+
 export interface WorkspaceRoomLifecycleTimeline {
   readonly fieldsCageOrder?: WorkspaceFieldsCageOrderControl;
+  /** Up to the room's stop when the walk stops here: its doors and exit are then unreached. */
   readonly entries: readonly WorkspaceRoomLifecycleTimelineEntry[];
+  /**
+   * Present when the room's walk stops in this room: the authored rows past the stop, in
+   * Timeline order and without their phase banners, until the walk reaches them. Empty when
+   * the walk stops in the Overview: the whole Timeline then waits, its rows unshown.
+   */
+  readonly notReached?: readonly WorkspaceNotReachedEntry[];
+  /** Where the walk stops before this Timeline starts: its room's Overview. */
+  readonly waitsOn?: WorkspaceTimelineWait;
+  /** The walk stops in this room before its doors: their picks and Leave row wait. */
+  readonly doorsWait?: true;
   readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
   /** Checkpoints represented by lifecycle boundary rows rather than duplicate list items. */
   readonly suppressedCheckpointKeys: readonly string[];

@@ -129,17 +129,6 @@ export type WorkspaceMissingTargetAuthoring =
   | { readonly kind: 'awaitingBatchRewardStore' }
   | { readonly kind: 'awaitingFieldsCageOutcome' };
 
-/**
- * `effect` says whether the repair removes unavailable doors or adds missing
- * ones. `markOwner` is present when the repair carries the batch's finding mark.
- */
-export type WorkspaceBatchRepairIntent = WorkspaceCommandIntent<
-  Extract<ProjectCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>
-> & {
-  readonly effect: 'removeUnavailable' | 'addMissing';
-  readonly markOwner?: ExitDecisionAddress;
-};
-
 export interface WorkspaceMissingPhysicalTarget {
   readonly authoring: WorkspaceMissingTargetAuthoring;
   readonly exitKey: string;
@@ -174,12 +163,12 @@ export interface WorkspaceEffectiveRewardPool {
 }
 
 /**
- * A fact beside the doors, with the value it explains: the carried pool, the
- * pool the selected exit counts, or the batch as a whole.
+ * A fact beside the doors, with the word or value it explains: the carried pool, the pool
+ * the selected exit counts, the hidden return door's name, the door table's Reward column,
+ * or a Fields batch's cage count or door roll.
  */
 export interface WorkspaceDoorNote {
-  /** `hiddenDoor` explains a room's hidden return door; `batch` the doors as a whole. */
-  readonly target: 'pool' | 'effective' | 'hiddenDoor' | 'batch';
+  readonly target: 'pool' | 'effective' | 'hiddenDoor' | 'rewardColumn' | 'cageCount' | 'doorRoll';
   readonly text: string;
 }
 
@@ -205,7 +194,6 @@ interface WorkspaceBatchNodeBase {
   readonly notes: readonly WorkspaceDoorNote[];
   readonly owner: ExitDecisionAddress;
   readonly persistence: 'authored' | 'uncommitted';
-  readonly repairIntent?: WorkspaceBatchRepairIntent;
   /** Present wherever the batch carries a pool: an editable picker or a ship-decided value. */
   readonly rewardPool?: WorkspaceBatchRewardPool;
   readonly rewardStore?: WorkspaceMarker;
@@ -486,6 +474,10 @@ export interface WorkspaceHubStay {
 export interface WorkspaceHubDecisionNode {
   readonly authoring: 'authored';
   readonly kind: 'hubDecision';
+  /** The walk stops before entering the Hub: its board waits until the walk enters it. */
+  readonly notReached?: true;
+  /** The run's room depth on first entering the Hub; absent while it is not reached. */
+  readonly runDepth?: number;
   readonly key: string;
   readonly hubKey: string;
   /** The static Hub terminal declaration used by the optional board reference. */
@@ -547,8 +539,8 @@ export interface WorkspaceRoomPlanEnd {
 /** Where the route's plan ends, for the Route panel's summary and its repair. */
 export interface WorkspaceRoutePlanEnd {
   readonly biomeKey: string;
-  readonly biomeLabel: string;
-  readonly roomLabel: string;
+  /** The end room as references name it. */
+  readonly place: import('@planner/projections/placeName').PlaceName;
   /** The end room, opened from the summary. */
   readonly room: OccurrenceAddress;
   /** The end names a room off its biome's selected path. */
@@ -578,8 +570,6 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   readonly railMarker?: WorkspaceMarker;
   readonly railVisibility?: 'inspectorOnly';
   readonly room: WorkspaceRoomSummary;
-  /** Stable Hub Timeline destination for visited rooms and the fountain's room host. */
-  readonly hubTimeline?: WorkspaceMarker;
   /**
    * Where leaving this room returns: a Hub visit's main room to its Hub, after
    * that visit; a side room to the main room it opened from.
@@ -733,6 +723,8 @@ export interface WorkspaceOccurrenceStage {
 
 export interface WorkspaceHubVisitRailEntry {
   readonly key: string;
+  /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
+  readonly notReached?: true;
   /** The run's room depth on entering the visited room; absent while it is not reached. */
   readonly runDepth?: number;
   readonly planEnd?: WorkspacePlanEndRelation;
@@ -749,6 +741,8 @@ export interface WorkspaceHubVisitRailEntry {
 
 export interface WorkspaceHubSideVisitRailEntry {
   readonly key: string;
+  /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
+  readonly notReached?: true;
   /** The run's room depth on entering the side room; absent while it is not reached. */
   readonly runDepth?: number;
   readonly planEnd?: WorkspacePlanEndRelation;
@@ -764,6 +758,10 @@ export interface WorkspaceHubSideVisitRailEntry {
 export interface WorkspaceHubRailEntry {
   readonly kind: 'hubGroup';
   readonly key: string;
+  /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
+  readonly notReached?: true;
+  /** The run's room depth on first entering the Hub; absent while it is not reached. */
+  readonly runDepth?: number;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceHubDecisionNode;
   readonly roomIcon: WorkspaceRoomIcon;
@@ -831,6 +829,8 @@ export interface WorkspaceDecisionRailEntry {
   readonly roomNumber?: never;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode;
+  /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
+  readonly notReached?: true;
   /** The selected room's place against the plan end. */
   readonly planEnd?: WorkspacePlanEndRelation;
   readonly selectedTarget?: WorkspaceRailSelectedTarget;
@@ -856,6 +856,8 @@ export interface WorkspaceStageRailEntry {
   readonly runDepth?: number;
   readonly marker: WorkspaceMarker;
   readonly node: Exclude<WorkspaceNode, WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode>;
+  /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
+  readonly notReached?: true;
   /** The stage room's place against the plan end. */
   readonly planEnd?: WorkspacePlanEndRelation;
   /** A Preboss takeover exposes the door it continues through; a shop stage, its shop. */
@@ -874,6 +876,8 @@ export type WorkspaceRailEntry =
       >;
       readonly key: string;
       readonly marker: WorkspaceMarker;
+      /** The walk stops before the room this step continues from, or before the biome. */
+      readonly notReached?: true;
     };
 
 export interface WorkspaceBiome {
@@ -894,6 +898,8 @@ export interface WorkspaceBiome {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly nodes: readonly WorkspaceNode[];
+  /** The walk stops in an earlier biome, before this one starts. */
+  readonly notReached?: true;
   readonly occurrenceStages: readonly WorkspaceOccurrenceStage[];
   readonly owner: BiomeAddress;
   /** `end`: the plan ends in this biome; `pastEnd`: the biome follows that end. */
@@ -997,15 +1003,13 @@ export interface WorkspaceRoute {
     readonly element?: 'Fire' | 'Air' | 'Earth' | 'Water';
     readonly placement?: {
       readonly biomeKey: string;
-      /** Its biome and Location; the Location is unknown while the plan does not reach it. */
-      readonly locationLabel: string;
+      /** The placement room as references name it. */
+      readonly place: import('@planner/projections/placeName').PlaceName;
       readonly occurrenceId: OccurrenceId;
       /** The placement room lies past the plan end, so the placement is inactive. */
       readonly pastPlanEnd?: true;
       /** The placement room's run depth on entry, where it is reached. */
       readonly runDepth?: number;
-      /** The room's name, where its Location is unknown. */
-      readonly roomLabel?: string;
     };
   }[];
   readonly routeKey: string;
@@ -1029,8 +1033,12 @@ export interface StructuredWorkspaceProjection {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly marker: WorkspaceMarker;
   readonly runStateLaunchers: ReadonlyMap<string, WorkspaceRunStateLauncher>;
+  /** A Timeline row's label, in the projected room holding the owner. */
+  readonly roomActionLabel: (owner: SemanticAddress, actionKey: string) => string | undefined;
   readonly route: WorkspaceRoute;
   readonly status: WorkspaceStatus;
+  /** Where the walk stops, with the way there; absent when nothing stops it. */
+  readonly walkStop?: import('@planner/projections/evaluationProjection').WalkStop;
 }
 
 export interface StructuredWorkspaceProjectionService {

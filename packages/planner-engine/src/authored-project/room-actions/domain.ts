@@ -46,7 +46,12 @@ import {
   INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
 } from '../infernal-contract-pedestal';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
-import type { AuthoredRewardState, RoomActionReference, RoomOccurrence } from '../model';
+import type {
+  AuthoredRewardState,
+  BiomeTopology,
+  RoomActionReference,
+  RoomOccurrence,
+} from '../model';
 import {
   encounterEnvelopeSlots,
   encounterAuthoringProfileForKey,
@@ -878,6 +883,8 @@ function checkpoints(
 export function assembleRoomActionDomain(options: {
   readonly catalog: Catalog;
   readonly biome: BiomeAddress;
+  /** The biome topology holding the occurrence, with the doors and cages its rerolls name. */
+  readonly topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>;
   readonly occurrence: RoomOccurrence;
   readonly routePosition: ResolvedRoutePosition;
   readonly lifecycleProfileKey?: string;
@@ -909,6 +916,7 @@ export function assembleRoomActionDomain(options: {
   const structuralReferences = activeRoomActionReferences(
     options.catalog,
     options.biome,
+    options.topology,
     options.occurrence,
     options.routePosition,
     {

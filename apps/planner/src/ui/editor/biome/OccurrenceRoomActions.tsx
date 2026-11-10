@@ -1,6 +1,8 @@
 import { FeatureRollEntry, FeatureRollSlots } from './commerce/FeatureRollInteract';
+import { StopNotice } from './StopNotice';
 import { ArtworkChip } from '../rewards/TimelineChip';
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import type { EncounterOutcomeChoice } from '@run-planner/engine/simulation';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import {
   requireWorkspaceInteraction,
@@ -11,9 +13,11 @@ import {
   type WorkspaceRoomActions,
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomLifecycleTimelineEntry,
+  type WorkspaceNotReachedEntry,
   type WorkspaceShipPhasePresentation,
 } from '@planner/projections/structured-workspace';
 import {
+  findingRevealEvent,
   useFindingAnchor,
   useFindingMark,
   type FindingMarkProps,
@@ -126,7 +130,7 @@ function WorkbenchAddArea({
   objectRows,
   optionalRows,
 }: {
-  /** The room's Doors object and batch notes, where this list hosts the doors. */
+  /** The room's Doors object, where this list hosts the doors. */
   readonly doors?: TimelineDoors | undefined;
   /** Further object entries this list hosts, such as a Ship phase's Wheel. */
   readonly extraObjects?: readonly ReactNode[];
@@ -297,12 +301,77 @@ function WorkbenchAddArea({
     .map((entry) => entry.node);
   return (
     <RoomAddArea
-      footer={doors?.notes}
       groups={[...groups.entries()]
         .filter(([, entry]) => entry.object === undefined)
         .map(([key, entry]) => toGroup(key, entry))}
       objects={objectNodes}
     />
+  );
+}
+
+/**
+ * The engine lists outcome choices only for an entered room. Unentered, every outcome
+ * control its phase carries shows, so a retained value stays clearable; Anomaly cleared
+ * belongs to the room's entry and waits for it.
+ */
+const unenteredOutcomeChoices = (
+  Object.entries({
+    aetos: true,
+    gorgonCondition: true,
+    nemesisBet: true,
+    nemesisEvent: true,
+    anomalyCleared: false,
+  } satisfies Record<EncounterOutcomeChoice, boolean>) as [EncounterOutcomeChoice, boolean][]
+).flatMap(([choice, shown]) => (shown ? [choice] : []));
+
+/**
+ * Authored rows past the room's stop, dimmed in Timeline order until the walk reaches them;
+ * collapsed and inert until opened. Navigation to a control in it opens it.
+ */
+function NotReachedGroup({
+  children,
+  count,
+}: {
+  readonly children: ReactNode;
+  readonly count: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
+  const listRef = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const list = listRef.current;
+    if (list === null) return undefined;
+    // Opens at once, so the landing control can take focus in the same navigation.
+    const reveal = () => {
+      list.removeAttribute('inert');
+      setExpanded(true);
+    };
+    list.addEventListener(findingRevealEvent, reveal);
+    return () => list.removeEventListener(findingRevealEvent, reveal);
+  }, []);
+  return (
+    <section aria-label="Not reached yet" className="room-action-not-reached">
+      <div className="local-reward-heading">
+        <h5>
+          <button
+            aria-controls={listId}
+            aria-expanded={expanded}
+            className="room-action-not-reached-toggle"
+            onClick={() => setExpanded((open) => !open)}
+            type="button"
+          >
+            <span aria-hidden="true" className="timeline-banner-toggle-caret">
+              {expanded ? '▾' : '▸'}
+            </span>
+            Not reached yet
+            <span className="room-action-not-reached-count">{count}</span>
+          </button>
+        </h5>
+      </div>
+      <ol className="room-action-list" id={listId} inert={!expanded} ref={listRef}>
+        {children}
+      </ol>
+    </section>
   );
 }
 
@@ -393,8 +462,18 @@ export function RoomActionsWorkbench({
                   }),
               }),
         };
-  const doorsTail = (hasDoorsOpenRow: boolean): ReactNode =>
-    roomDoors === undefined ? null : (
+  // A room whose walk stops in it has not reached its doors, unless it stops at their opening,
+  // which keeps its doors and Leave row to repair; a saved end keeps its last row.
+  const doorsWait = actions?.timeline.doorsWait === true;
+  const doorsTail = (timeline: readonly WorkspaceRoomLifecycleTimelineEntry[]): ReactNode => {
+    const hasDoorsOpenRow = timeline.some(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+    );
+    return roomDoors === undefined ? null : doorsWait ? (
+      roomDoors.endsPlan === true ? (
+        roomDoors.leave
+      ) : null
+    ) : (
       <>
         {hasDoorsOpenRow || roomDoors.doorsOpenRow === false ? null : (
           <DoorsOpenBanner doors={roomDoors} />
@@ -402,6 +481,7 @@ export function RoomActionsWorkbench({
         {roomDoors.leave}
       </>
     );
+  };
   if (actions === undefined && mode.kind === 'roomTimeline') {
     if ((encounterPhases === undefined || idPrefix === undefined) && roomDoors === undefined)
       return null;
@@ -412,19 +492,22 @@ export function RoomActionsWorkbench({
           .map((phase) => (
             <Fragment key={workspaceInteractionKey(phase.address)}>
               {renderEncounterControls?.({ kind: 'encounterStart', phase })}
-              {renderEncounterControls?.({ kind: 'encounterEnd', phase })}
+              {renderEncounterControls?.({
+                kind: 'encounterOutcome',
+                phase,
+                choices: unenteredOutcomeChoices,
+              })}
             </Fragment>
           ))}
         {roomDoors === undefined ? null : (
           <>
             <div className="room-timeline-main">
               <ol aria-label="Room timeline" className="room-action-list">
-                {doorsTail(false)}
+                {doorsTail([])}
               </ol>
             </div>
-            {/* Its notes and Doors object stay beside the doors without any room actions. */}
+            {/* Its Doors object stays beside the doors without any room actions. */}
             <RoomAddArea
-              footer={roomDoors.notes}
               groups={[]}
               objects={roomDoors.object === undefined ? [] : [roomDoors.object]}
             />
@@ -510,7 +593,11 @@ export function RoomActionsWorkbench({
       if (entry.kind === 'boundary') {
         if (entry.boundary.kind === 'encounterStart' || entry.boundary.kind === 'roomEntered')
           phase = count++;
-        else if (entry.boundary.kind !== 'encounterEnd' && entry.boundary.kind !== 'bossDefeated')
+        else if (
+          entry.boundary.kind !== 'encounterOutcome' &&
+          entry.boundary.kind !== 'encounterEnd' &&
+          entry.boundary.kind !== 'bossDefeated'
+        )
           phase = undefined;
         if (phase !== undefined) phaseByKey.set(entry.boundary.key, phase);
       } else if (entry.kind === 'action' && phase !== undefined) {
@@ -529,13 +616,9 @@ export function RoomActionsWorkbench({
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>,
   ) => {
     const content = renderBoundaryContent?.(entry.boundary);
-    // A folded boss defeat's content leads its encounter end's.
-    const defeatContent =
-      entry.bossDefeated === undefined ? undefined : renderBoundaryContent?.(entry.bossDefeated);
     const boundary = entry.boundary;
-    const doorsOpen = boundary.kind === 'cleanup' ? roomDoors : undefined;
+    const doorsOpen = boundary.kind === 'cleanup' && !doorsWait ? roomDoors : undefined;
     const modifiers = [
-      defeatContent?.editors,
       renderSupplement(entry.supplement),
       content?.editors,
       doorsOpen === undefined ? undefined : <DoorsOpenControls doors={doorsOpen} />,
@@ -583,7 +666,6 @@ export function RoomActionsWorkbench({
               }
             : {})}
         />
-        {defeatContent?.rows}
         {content?.rows}
         {doorsOpen?.expanded === true && doorsOpen.detail !== undefined ? (
           <DoorsOpenDetailRow id={doorsOpen.detailId}>{doorsOpen.detail}</DoorsOpenDetailRow>
@@ -622,8 +704,6 @@ export function RoomActionsWorkbench({
     if (opensBefore < 0) return [...timeline, 'wheelOpen'];
     return [...timeline.slice(0, opensBefore), 'wheelOpen', ...timeline.slice(opensBefore)];
   };
-  const opensDoors = (timeline: readonly WorkspaceRoomLifecycleTimelineEntry[]): boolean =>
-    timeline.some((entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup');
   const renderRow = (
     row: WorkspaceRoomActions['rows'][number],
     checkpoints: WorkspaceRoomActions['checkpoints'] = actions?.checkpoints ?? [],
@@ -631,6 +711,8 @@ export function RoomActionsWorkbench({
       WorkspaceRoomLifecycleTimelineEntry,
       { readonly kind: 'action' }
     >['supplement'],
+    // A row past the stop is not reordered until the walk reaches it.
+    waiting = false,
   ) => {
     if (actions === undefined) return null;
     const nemesisInteraction =
@@ -789,7 +871,7 @@ export function RoomActionsWorkbench({
           tabIndex={-1}
           kind="action"
           handle={
-            row.rank !== null ? (
+            row.rank !== null && !waiting ? (
               <TimelineReorderHandle
                 findingMark={findingMark(row.address, 'move')}
                 item={{
@@ -1048,6 +1130,55 @@ export function RoomActionsWorkbench({
       },
     };
   };
+  const renderAutomaticEffect = (
+    entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'automaticEffect' }>,
+  ): ReactNode[] => {
+    if (entry.effect === 'steadyGrowth') {
+      const control = actions?.steadyGrowth?.find(
+        (candidate) =>
+          workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
+      );
+      return control === undefined
+        ? []
+        : [
+            <SteadyGrowthEffectRow
+              control={control}
+              interactions={interactions}
+              key={workspaceInteractionKey(control.address)}
+            />,
+          ];
+    }
+    const control = actions?.transcendentEmbryo?.find(
+      (candidate) =>
+        workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
+    );
+    return control === undefined
+      ? []
+      : [
+          <TranscendentEmbryoEffectRow
+            control={control}
+            interactions={interactions}
+            key={workspaceInteractionKey(control.address)}
+          />,
+        ];
+  };
+  // Past the stop: each authored row, and the authored encounter events of an unreached banner.
+  const renderNotReached = (entry: WorkspaceNotReachedEntry): ReactNode[] => {
+    if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);
+    if (entry.kind === 'events')
+      return [
+        <TimelineRow
+          editors={renderSupplement(entry.supplement)}
+          key={entry.key}
+          kind="action"
+          label={<strong>{entry.label}</strong>}
+        />,
+      ];
+    const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
+    return row === undefined
+      ? []
+      : [<Fragment key={entry.actionKey}>{renderRow(row, [], entry.supplement, true)}</Fragment>];
+  };
   if (mode.kind !== 'roomTimeline') {
     return (
       <section aria-label="Ship combat structure" className="ship-combat-editor">
@@ -1093,38 +1224,7 @@ export function RoomActionsWorkbench({
                   ];
                 if (entry.kind === 'boundary') return [renderBoundary(entry)];
                 if (entry.kind === 'spawned') return [renderSpawned(entry)];
-                if (entry.kind === 'automaticEffect') {
-                  if (entry.effect === 'steadyGrowth') {
-                    const control = actions?.steadyGrowth?.find(
-                      (candidate) =>
-                        workspaceInteractionKey(candidate.address) ===
-                        workspaceInteractionKey(entry.address),
-                    );
-                    return control === undefined
-                      ? []
-                      : [
-                          <SteadyGrowthEffectRow
-                            control={control}
-                            interactions={interactions}
-                            key={workspaceInteractionKey(control.address)}
-                          />,
-                        ];
-                  }
-                  const control = actions?.transcendentEmbryo?.find(
-                    (candidate) =>
-                      workspaceInteractionKey(candidate.address) ===
-                      workspaceInteractionKey(entry.address),
-                  );
-                  return control === undefined
-                    ? []
-                    : [
-                        <TranscendentEmbryoEffectRow
-                          control={control}
-                          interactions={interactions}
-                          key={workspaceInteractionKey(control.address)}
-                        />,
-                      ];
-                }
+                if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);
                 if (entry.presentation !== 'row') return [];
                 const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
                 return row === undefined
@@ -1148,9 +1248,10 @@ export function RoomActionsWorkbench({
                   key={phase.key}
                 >
                   <div className="room-timeline-main">
-                    {phase.actionRows.length === 0 &&
-                    phase.checkpoints.length === 0 &&
-                    phase.timeline.length === 0 ? null : (
+                    {phase.waitsOn !== undefined ||
+                    (phase.actionRows.length === 0 &&
+                      phase.checkpoints.length === 0 &&
+                      phase.timeline.length === 0) ? null : (
                       <ol aria-label={`${phase.label} timeline`} className="room-action-list">
                         {checkpointRows(0, phase.checkpoints)}
                         {phaseTimelineWithWheel(phase.timeline).flatMap(renderPhaseTimelineEntry)}
@@ -1161,8 +1262,23 @@ export function RoomActionsWorkbench({
                             label={<strong>{checkpoint.label}</strong>}
                           />
                         ))}
-                        {doorsTail(opensDoors(phase.timeline))}
+                        {doorsTail(phase.timeline)}
                       </ol>
+                    )}
+                    {phase.waitsOn === undefined ? null : (
+                      <>
+                        <StopNotice at={phase.waitsOn} />
+                        {doorsTail([]) === null ? null : (
+                          <ol aria-label={`${phase.label} timeline`} className="room-action-list">
+                            {doorsTail([])}
+                          </ol>
+                        )}
+                      </>
+                    )}
+                    {phase.notReached === undefined || phase.notReached.length === 0 ? null : (
+                      <NotReachedGroup count={phase.notReached.length}>
+                        {phase.notReached.flatMap(renderNotReached)}
+                      </NotReachedGroup>
                     )}
                     {phase.unplacedRows.length === 0 ? null : (
                       <section aria-label="Required actions" className="room-action-optional-pool">
@@ -1220,47 +1336,19 @@ export function RoomActionsWorkbench({
   }
   if (actions === undefined) return null;
   const actionByKey = new Map(actions.rows.map((row) => [row.key, row]));
-  const timelineRows = actions.timeline.entries.flatMap((entry) => {
+  const renderTimelineEntry = (entry: WorkspaceRoomLifecycleTimelineEntry): ReactNode[] => {
     if (entry.kind === 'boundary') {
       return [renderBoundary(entry)];
     }
     if (entry.kind === 'spawned') return [renderSpawned(entry)];
-    if (entry.kind === 'automaticEffect') {
-      if (entry.effect === 'steadyGrowth') {
-        const control = actions.steadyGrowth?.find(
-          (candidate) =>
-            workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
-        );
-        return control === undefined
-          ? []
-          : [
-              <SteadyGrowthEffectRow
-                control={control}
-                interactions={interactions}
-                key={workspaceInteractionKey(control.address)}
-              />,
-            ];
-      }
-      const control = actions.transcendentEmbryo?.find(
-        (candidate) =>
-          workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
-      );
-      return control === undefined
-        ? []
-        : [
-            <TranscendentEmbryoEffectRow
-              control={control}
-              interactions={interactions}
-              key={workspaceInteractionKey(control.address)}
-            />,
-          ];
-    }
+    if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);
     if (entry.presentation !== 'row') return [];
     const row = actionByKey.get(entry.actionKey);
     return row === undefined
       ? []
       : [<Fragment key={entry.actionKey}>{renderRow(row, [], entry.supplement)}</Fragment>];
-  });
+  };
+  const timelineRows = actions.timeline.entries.flatMap(renderTimelineEntry);
   return (
     <section
       aria-label="Room Timeline"
@@ -1280,11 +1368,27 @@ export function RoomActionsWorkbench({
             interaction={interaction}
           />
         )}
-        <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
-          {timelineRows}
-          {rankedRows.length === 0 ? checkpointRows(0) : null}
-          {doorsTail(opensDoors(actions.timeline.entries))}
-        </ol>
+        {actions.timeline.waitsOn === undefined ? (
+          <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
+            {timelineRows}
+            {rankedRows.length === 0 ? checkpointRows(0) : null}
+            {doorsTail(actions.timeline.entries)}
+          </ol>
+        ) : (
+          <>
+            <StopNotice at={actions.timeline.waitsOn} />
+            {doorsTail([]) === null ? null : (
+              <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
+                {doorsTail([])}
+              </ol>
+            )}
+          </>
+        )}
+        {(actions.timeline.notReached?.length ?? 0) === 0 ? null : (
+          <NotReachedGroup count={actions.timeline.notReached?.length ?? 0}>
+            {(actions.timeline.notReached ?? []).flatMap(renderNotReached)}
+          </NotReachedGroup>
+        )}
         {children}
         {actions.repairRows.length === 0 ? null : (
           <section aria-label="Timeline repairs" className="room-action-repairs">

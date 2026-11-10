@@ -197,6 +197,7 @@ function activeDomains(
         assembleRoomActionDomain({
           catalog,
           biome,
+          topology: plan.topology,
           occurrence,
           routePosition,
           ...roomActionDomainContext(
@@ -537,28 +538,28 @@ export function roomActionDomainForOccurrence(
     document.route.routeKey === biome.routeKey
       ? document.route.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)
       : undefined;
-  const occurrence = plan?.topology?.occurrences.find(
+  const topology = plan?.topology ?? undefined;
+  const occurrence = topology?.occurrences.find(
     (candidate) => candidate.occurrenceId === occurrenceId,
   );
-  return occurrence === undefined
-    ? undefined
-    : frozen({
+  if (plan === undefined || topology === undefined || occurrence === undefined) return undefined;
+  const routePosition = resolveRoutePosition(catalog, document.route, biome.biomeKey);
+  return frozen({
+    occurrence,
+    domain: assembleRoomActionDomain({
+      catalog,
+      biome,
+      topology,
+      occurrence,
+      routePosition,
+      ...roomActionDomainContext(
+        catalog,
+        routePosition,
+        plan,
+        topology,
         occurrence,
-        domain: assembleRoomActionDomain({
-          catalog,
-          biome,
-          occurrence,
-          routePosition: resolveRoutePosition(catalog, document.route, biome.biomeKey),
-          ...(plan?.topology === null || plan?.topology === undefined
-            ? {}
-            : roomActionDomainContext(
-                catalog,
-                resolveRoutePosition(catalog, document.route, biome.biomeKey),
-                plan,
-                plan.topology,
-                occurrence,
-                document.route.loadout,
-              )),
-        }),
-      });
+        document.route.loadout,
+      ),
+    }),
+  });
 }

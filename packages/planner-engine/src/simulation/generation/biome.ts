@@ -178,6 +178,29 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
       return room?.prebossBatchPolicy?.kind === 'takeOverNormalDoors';
     });
     if (takeover) {
+      const takeoverOwner = requireSource(rooms, batch.parent.origin);
+      const takeoverOwnerHistory = history.rooms.find(
+        (room) => semanticAddressKey(room.origin) === semanticAddressKey(takeoverOwner.origin),
+      );
+      if (takeoverOwnerHistory?.preOutgoing === undefined) {
+        // A missing reward leaf or required chronology action can stop the
+        // source before outgoing generation without invalidating the already
+        // authored takeover shape.
+        continue;
+      }
+      // A door its source room does not have never opens, selected or not.
+      for (const target of batch.targets) {
+        if (target.exit.kind !== 'unavailable') continue;
+        addFinding(
+          finding('targetRoomUnavailable', target.origin, {
+            sourceGameName: takeoverOwner.gameName,
+            selectedGameName: target.room.gameName,
+            exitIndex: target.exit.index,
+            exclusionReasons: ['physicalExitUnavailable'],
+          }),
+          batch.origin,
+        );
+      }
       if (batch.selectedExitKey === null) {
         // Appearance creates the atomic takeover target set before a player
         // chooses one door. Until that selection exists it is a physical
@@ -189,16 +212,6 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
         throw new BiomeRoomGenerationContractError(
           `${semanticAddressKey(batch.origin)} takeover batch has no target`,
         );
-      }
-      const takeoverOwner = requireSource(rooms, batch.parent.origin);
-      const takeoverOwnerHistory = history.rooms.find(
-        (room) => semanticAddressKey(room.origin) === semanticAddressKey(takeoverOwner.origin),
-      );
-      if (takeoverOwnerHistory?.preOutgoing === undefined) {
-        // A missing reward leaf or required chronology action can stop the
-        // source before outgoing generation without invalidating the already
-        // authored takeover shape.
-        continue;
       }
       const support = evaluateTakeoverPrebossBatchCandidate(
         catalog,

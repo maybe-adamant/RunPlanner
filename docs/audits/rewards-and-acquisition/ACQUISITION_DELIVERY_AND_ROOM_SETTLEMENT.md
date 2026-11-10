@@ -559,8 +559,10 @@ do not own another order.
 Under the planner's current sufficient-resource, no-restock baseline, a Shop
 keeps its purchased state as the authoring source for immediate offers.
 Membership in the occurrence's `roomActions.order` is the sole purchased fact
-and chronological authority. Room Actions renders only participating offers
-plus stale repair rows; Overview holds only the inventory. No
+and chronological authority. Room Actions renders only participating offers,
+since an edit that orphans a purchase row removes it
+([rows whose context or source is gone](../../design/ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone));
+Overview holds only the inventory. No
 Shop-private or acquisition-site order and no discarded replay remains beside
 that chronology.
 

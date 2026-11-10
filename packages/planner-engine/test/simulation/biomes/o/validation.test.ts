@@ -298,6 +298,7 @@ describe('selected O validation', () => {
       routePosition: ordinaryPositionFor(catalog, oBiome),
       catalog,
       biome: oBiome,
+      topology: project.route.biomes.find((plan) => plan.biomeKey === 'O')!.topology!,
       occurrence: authoredOccurrence,
     });
     expect(
@@ -351,22 +352,25 @@ describe('selected O validation', () => {
       roomActionKey(wheel2Choice),
     );
     expect(invalid.route.issue).toMatchObject({ owner, kind: 'invalid' });
-    expect(invalid.route.issue?.reasons).toEqual(
-      invalidRoom.roomActionRoster.issues.flatMap((issue) =>
-        (roomActionKey(issue.reference) === roomActionKey(wheel2Choice) ||
-          (issue.kind === 'window' &&
-            roomActionKey(issue.precedingAction) === roomActionKey(wheel2Choice))) &&
-        (issue.kind === 'dependency' || issue.kind === 'window')
-          ? [
-              expect.objectContaining({
-                code: 'roomActionOrderUnavailable',
-                origin: owner,
-                evidence: expect.objectContaining({ reason: issue.kind, detail: issue.detail }),
-              }),
-            ]
-          : [],
-      ),
-    );
+    // Wheel 1's required choice ordered after it stops the walk at the Wheel 2 choice.
+    expect(invalid.route.issue?.reasons).toEqual([
+      expect.objectContaining({
+        code: 'roomActionOrderUnavailable',
+        origin: owner,
+        evidence: expect.objectContaining({
+          reason: 'dependency',
+          detail: 'afterCheckpoint nextPhaseUsable:wheel1',
+        }),
+      }),
+      expect.objectContaining({
+        code: 'roomActionOrderUnavailable',
+        origin: owner,
+        evidence: expect.objectContaining({
+          reason: 'requiredFirst',
+          requiredAction: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
+        }),
+      }),
+    ]);
     expect(invalid.findings.some((finding) => finding.code === 'roomActionPlacementRequired')).toBe(
       false,
     );

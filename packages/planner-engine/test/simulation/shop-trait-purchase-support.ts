@@ -63,6 +63,9 @@ import {
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { matureGodHistoryRecords } from '../support/god-history';
+
+/** A lone room materialized outside a route: no doors lead from it. */
+const LONE_ROOM = { decisions: [], occurrences: [] } as const;
 export {
   catalog,
   acquisitionSiteStorageKey,
@@ -667,6 +670,7 @@ export function echoGoldShop(
     routePosition: ordinaryPositionFor(catalog, roomBiome),
     catalog,
     biome: roomBiome,
+    topology: LONE_ROOM,
     room,
     occurrence,
     role: room.gameName === 'I_PreBoss02' ? 'prebossShop' : 'ordinary',

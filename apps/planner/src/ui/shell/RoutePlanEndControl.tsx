@@ -4,6 +4,7 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
+import { hintProps } from '@planner/ui/controls/hint';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
@@ -28,8 +29,8 @@ export function RoutePlanEndControl({
         role="group"
         {...findingTarget(route.marker.address)}
       >
-        <span className="route-plan-end-room">
-          After {planEnd.roomLabel} · {planEnd.biomeLabel}
+        <span className="route-plan-end-room" {...hintProps(planEnd.place.hint)}>
+          After {planEnd.place.text}
         </span>
         <button
           className="quiet-action action-compact"

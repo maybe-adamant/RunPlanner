@@ -132,11 +132,31 @@ export interface RoomTimelineCoverage {
   readonly blockingRowKeys: readonly string[];
 }
 
+/**
+ * Where the walk stopped inside the room it blocks in. Entries of the room's
+ * lifecycle Timeline before `entryIndex` are reached and every entry after it
+ * is not; `at` says whether the entry at `entryIndex` was reached. An Overview
+ * stop is past entry only, and an exit stop is past every entry.
+ */
+export interface RoomStopCoverage {
+  readonly room: OccurrenceAddress;
+  readonly kind: 'overview' | 'timeline' | 'exit';
+  /** Index in the room's `roomLifecycleTimeline.entries`, at most its length. */
+  readonly entryIndex: number;
+  /**
+   * `entry`: the walk reached that entry and blocks on its own contact (a blocking
+   * row, the doors opening, a phase start, Boss defeated, an encounter end's due
+   * outcome or delivery, a wheel's offers). `before`: it stopped before reaching it.
+   */
+  readonly at: 'entry' | 'before';
+}
+
 export interface PrefixBiomeEvaluationCoverage {
   readonly kind: 'prefix';
   readonly through: BiomeEvaluationPoint;
   readonly blockedAt?: SemanticAddress;
   readonly roomTimeline?: RoomTimelineCoverage;
+  readonly roomStop?: RoomStopCoverage;
 }
 
 export interface CompleteBiomeEvaluationCoverage {

@@ -1,38 +1,35 @@
 import { routeRoomDeclaration, type OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
+import { placeName, type PlaceName } from '@planner/projections/placeName';
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import type { WorkspaceBiomeSource } from '../source-index';
 
-/** A room named by where the run reaches it: its biome and Location. */
-export interface WorkspaceRoomLocationLabel {
-  /** Its biome and Location; the Location is unknown while the plan does not reach it. */
-  readonly locationLabel: string;
+/** A room as references from elsewhere name it, by where the run reaches it. */
+export interface WorkspaceRoomPlace {
+  readonly place: PlaceName;
   /** The room's run depth on entry, where it is reached. */
   readonly runDepth?: number;
-  /** The room's name, where its Location is unknown. */
-  readonly roomLabel?: string;
 }
 
 /**
- * The game calls a room's place in the run its Location; an unreached room has
- * none yet and is named instead.
+ * A room named from elsewhere: by its Location where the plan reaches it, else by its own
+ * name; a room the plan does not hold at all, by its biome's name (its key when the catalog
+ * declares no such biome).
  */
-export function roomLocationLabel(
+export function roomPlace(
   catalog: Catalog,
   room: OccurrenceAddress,
   roomLocation: WorkspaceBiomeSource['roomLocation'] | undefined,
-): WorkspaceRoomLocationLabel {
+): WorkspaceRoomPlace {
   const location = roomLocation?.(room);
   const runDepth = location?.runDepth;
-  const biomeLabel = catalog.biomes.byKey[room.biomeKey]?.label ?? room.biomeKey;
-  const roomLabel =
-    runDepth !== undefined || location === undefined
-      ? undefined
+  const name =
+    location === undefined
+      ? (catalog.biomes.byKey[room.biomeKey]?.label ?? room.biomeKey)
       : routeRoomDeclaration(requireWorkspaceRoom(catalog, location.gameName), room.routeKey).label;
   return Object.freeze({
-    locationLabel: `${biomeLabel} · Location ${runDepth ?? '?'}`,
+    place: placeName(name, runDepth),
     ...(runDepth === undefined ? {} : { runDepth }),
-    ...(roomLabel === undefined ? {} : { roomLabel }),
   });
 }

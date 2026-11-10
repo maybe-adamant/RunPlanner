@@ -47,6 +47,8 @@ import {
   createEchoReplayUnresolvedHammerProject,
   createHammerBridgeRouteProject,
   createFPoolSaleClearedProject,
+  createFWellDuplicateRefillProject,
+  createOShipWheelPickupBeforeDeferredEndEffectsProject,
   freshFileHFieldsIssueSteps,
 } from './corpus-support';
 
@@ -116,6 +118,7 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
     entry('underworld/hammerBridgeRoute', createHammerBridgeRouteProject),
     entry('underworld/fPoolSaleCleared', createFPoolSaleClearedProject),
     entry('underworld/echoReplayUnresolvedHammer', createEchoReplayUnresolvedHammerProject),
+    entry('underworld/fWellDuplicateRefill', createFWellDuplicateRefillProject),
     entry('surface/loadSurfaceNOPQProject', loadSurfaceNOPQProject),
     entry('surface/surfaceAnvilProject', surfaceAnvilProject),
     entry('surface/createSurfaceNOHermesShrineDeliveryCheckpoint', () =>
@@ -137,6 +140,10 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
     ),
     entry('surface/surfaceOrdinaryHexPathProject', surfaceOrdinaryHexPathProject),
     entry('surface/surfaceSeleneHexPathProject', surfaceSeleneHexPathProject),
+    entry(
+      'surface/oShipWheelPickupBeforeDeferredEndEffects',
+      createOShipWheelPickupBeforeDeferredEndEffectsProject,
+    ),
     entry('fresh-file/createFreshFileRouteProject', createFreshFileRouteProject),
     entry('fresh-file/createFreshFileFProject', createFreshFileFProject),
     entry('fresh-file/createFreshFileFirstSequence', () => createFreshFileFirstSequence()),

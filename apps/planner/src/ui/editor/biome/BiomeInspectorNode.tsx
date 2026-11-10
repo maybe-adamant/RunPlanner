@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react';
 import type { SemanticAddress } from '@run-planner/engine/authored-project';
-import { useAppDispatch } from '@planner/state/store';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 
 import {
   type WorkspaceAuthoringFrontier,
@@ -14,7 +12,7 @@ import {
   type WorkspaceRoomPlanEnd,
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
-import { BatchDoorsDetail, BatchDoorsRepair, DoorNotes, DoorRowsHeader } from './DecisionWorkbench';
+import { BatchDoorsDetail, BatchDoorsRepair, DoorRowsHeader } from './DecisionWorkbench';
 import { DoorRows } from './DoorRows';
 import {
   batchDoorChips,
@@ -26,7 +24,7 @@ import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { PhantomExitDoor } from './PhantomExitDoor';
 import { BossDoorRewardPoolRow } from './OccurrenceDirectRoomWorkbench';
-import { useDoorNotes, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
+import { doorNotesByTarget, type DoorNoteFor } from './doorNotes';
 
 /** The hidden door's chip on the Doors open row. */
 const hiddenDoorChip = 'hidden';
@@ -71,7 +69,7 @@ interface BiomeInspectorNodeProps {
   readonly pastPlanEnd?: boolean;
 }
 
-/** The notes beside a room's doors: its batch's, its hidden door's or its boss door's. */
+/** The notes on a room's doors: its batch's, its hidden door's or its boss door's. */
 function doorNoteSource(
   node: OccurrenceNode,
   batch: BatchNode | undefined,
@@ -84,12 +82,10 @@ function doorNoteSource(
 }
 
 interface RoomDoorsInput {
-  readonly activeNote: DoorNoteTarget | undefined;
   readonly batch: BatchNode | undefined;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
+  readonly noteFor: DoorNoteFor;
   readonly node: OccurrenceNode;
-  readonly notes: ReactNode;
   readonly outgoing: WorkspaceOccurrenceStageOutgoing | undefined;
   readonly planEnd: WorkspaceRoomPlanEnd | undefined;
 }
@@ -140,12 +136,10 @@ function hubRoomLeaves(
  * ends the plan there.
  */
 function roomTimelineDoors({
-  activeNote,
   batch,
   interactions,
-  markFor,
+  noteFor,
   node,
-  notes,
   outgoing,
   planEnd,
 }: RoomDoorsInput): TimelineDoorsContent | undefined {
@@ -171,16 +165,6 @@ function roomTimelineDoors({
   };
   // Past the plan end the doors are dormant; only the row that moves the end here stays.
   if (relation === 'pastEnd') return endOnlyRow();
-  // The hidden door has a chip; a note on the doors as a whole has no row.
-  const noteHighlight =
-    activeNote === undefined
-      ? {}
-      : {
-          activeNote: {
-            ...(activeNote === 'hiddenDoor' ? { chip: hiddenDoorChip } : {}),
-            ownRow: activeNote !== 'batch',
-          },
-        };
   const ended = relation === 'end';
   const leaveRow = (value: ReactNode, status?: string, anchorOwner?: SemanticAddress) => (
     <LeaveRow
@@ -201,14 +185,13 @@ function roomTimelineDoors({
       ? {}
       : {
           ...(store.kind === 'editor' ? { findingOwners: [store.address] } : {}),
-          ...noteHighlight,
           detail: (
             <section aria-label="Door details" className="door-workbench timeline-doors-detail">
               <div className="door-batch">
                 <BossDoorRewardPoolRow
                   idPrefix={idPrefix}
                   interactions={interactions}
-                  markFor={markFor}
+                  noteFor={noteFor}
                   store={store}
                 />
               </div>
@@ -235,7 +218,6 @@ function roomTimelineDoors({
   );
   if (batch !== undefined) {
     return {
-      ...noteHighlight,
       summary: { chips: batchDoorChips(batch, lockedAsOpened) },
       findingOwners: [...batchDoorFindingOwners(batch), ...unlockOwners],
       ...(lockedDoors === undefined
@@ -247,9 +229,9 @@ function roomTimelineDoors({
         <BatchDoorsDetail
           interactions={interactions}
           lockedDoors={lockedDoors}
-          markFor={markFor}
+          noteFor={noteFor}
           node={batch}
-          {...(batch.persistence === 'authored' || batch.repairIntent !== undefined
+          {...(batch.persistence === 'authored'
             ? { repair: <BatchDoorsRepair interactions={interactions} node={batch} /> }
             : {})}
         />
@@ -264,7 +246,6 @@ function roomTimelineDoors({
         batchDoorsStatus(batch),
         batch.selection.address,
       ),
-      notes,
       ...(batch.rerolls === undefined ? {} : { rerolls: batch.rerolls }),
       ...(batch.doorSteps === undefined ? {} : { steps: batch.doorSteps }),
       ...(batch.rerolls === undefined && unlocks.options === undefined
@@ -292,7 +273,7 @@ function roomTimelineDoors({
       const unreached = outgoing.kind === 'blockedOrUnentered' && outgoing.unentered;
       if (store === undefined) return endOnlyRow(unreached);
       const leave = endPicker([], unreached);
-      return { ...storeDetail, ...(leave === undefined ? {} : { leave }), notes };
+      return { ...storeDetail, ...(leave === undefined ? {} : { leave }) };
     }
     case 'authoredDecision':
       throw new BiomeWorkspaceContractError(
@@ -310,7 +291,6 @@ function roomTimelineDoors({
         ...(phantom === undefined
           ? {}
           : {
-              ...noteHighlight,
               summary: {
                 chips: [
                   {
@@ -336,7 +316,7 @@ function roomTimelineDoors({
                       control={phantom}
                       idPrefix={idPrefix}
                       interactions={interactions}
-                      mark={markFor('hiddenDoor')}
+                      note={noteFor('hiddenDoor')}
                     />
                   </DoorRows>
                 </section>
@@ -361,7 +341,6 @@ function roomTimelineDoors({
                 const leave = endPicker();
                 return leave === undefined ? {} : { leave };
               })()),
-        notes,
       };
     }
     case 'fixedRoom': {
@@ -400,7 +379,6 @@ function roomTimelineDoors({
             planEnd={planEnd}
           />,
         ),
-        notes,
       };
     }
   }
@@ -431,51 +409,25 @@ function OccurrenceInspector({
   readonly defaultToDoors?: boolean;
   readonly node: OccurrenceNode;
 }) {
-  const dispatch = useAppDispatch();
   const planEnd = node.planEnd;
   const batch =
     outgoingDecision ??
     (outgoing?.kind === 'frontier' ? outgoing.frontier.provisionalBatch : undefined);
-  // A note opens its doors the way navigation does: through the owner they repair.
-  const doorNotes = useDoorNotes(doorNoteSource(node, batch, outgoing), (target) => {
-    const owner =
-      outgoingDecision !== undefined
-        ? outgoingDecision.owner
-        : target === 'hiddenDoor'
-          ? node.room.phantomExit?.address
-          : undefined;
-    if (owner !== undefined) return { kind: 'owner', owner };
-    // A reported boss pool has no owner of its own: its note opens the fixed exit's doors.
-    return (target === 'pool' || target === 'effective') && outgoing?.kind === 'fixedRoom'
-      ? { kind: 'doors', room: node.room.address }
-      : undefined;
-  });
-  const doors = roomTimelineDoors({
-    activeNote: doorNotes.active,
+  const roomDoors = roomTimelineDoors({
     batch,
     interactions,
-    markFor: doorNotes.markFor,
+    noteFor: doorNotesByTarget(doorNoteSource(node, batch, outgoing)),
     node,
-    notes: <DoorNotes items={doorNotes.items} />,
     outgoing,
     planEnd,
   });
+  const doors =
+    roomDoors === undefined || planEnd?.relation !== 'end'
+      ? roomDoors
+      : { ...roomDoors, endsPlan: true as const };
   return (
     <OccurrenceWorkbench
       {...(planEnd?.relation === undefined ? {} : { planEndRelation: planEnd.relation })}
-      headerActions={
-        <>
-          {node.hubTimeline === undefined ? null : (
-            <button
-              type="button"
-              className="primary-action action-compact"
-              onClick={() => dispatch(semanticOwnerFocused(node.hubTimeline!.address))}
-            >
-              ← Hub Timeline
-            </button>
-          )}
-        </>
-      }
       entryIdentity={
         <>
           {biomeSettings}
@@ -512,7 +464,7 @@ export function BiomeInspectorNode(props: BiomeInspectorNodeProps) {
     case 'mixedBatch':
     case 'takeoverBatch':
       return props.sourceOccurrence === undefined ? (
-        <BatchDoorsDetail interactions={props.interactions} markFor={() => undefined} node={node} />
+        <BatchDoorsDetail interactions={props.interactions} noteFor={() => undefined} node={node} />
       ) : (
         <OccurrenceInspector {...props} defaultToDoors node={props.sourceOccurrence} />
       );

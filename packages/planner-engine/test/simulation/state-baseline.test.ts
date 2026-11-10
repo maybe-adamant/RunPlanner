@@ -24,6 +24,7 @@ const baseline = {
   },
   Surface: {
     branches: [1, 1, 1, 1],
+    // N's Hub publishes its entry snapshot, never one before its board.
     snapshots: [33, 31, 33, 25],
     offers: [7, 3, 3, 2],
     owners: 15,

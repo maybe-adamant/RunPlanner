@@ -1555,7 +1555,9 @@ describe('OccurrenceRoomActions', () => {
 
     const icarus = rowFor('Talk to Icarus');
     const moveIcarus = within(icarus).getByRole('button', { name: 'Reorder Talk to Icarus' });
-    expect(within(combatOne).queryByText('Choose Combat 2 wheel')).toBeNull();
+    // Combat 2's wheel offer is unset, so the walk stops at Combat 1's Next phase ready and
+    // the Combat 2 wheel choice it blocks stands at that stop as its repair.
+    expect(within(combatOne).getByText('Choose Combat 2 wheel')).toBeTruthy();
     const icarusRow = projected.room.roomActions!.rows.find(
       (row) => row.key === icarus.dataset.roomActionKey,
     )!;

@@ -37,6 +37,7 @@ import {
   authoredProjectRedoRequested,
   authoredProjectReplaced,
   authoredProjectUndoRequested,
+  removedActionsAnnouncementDismissed,
 } from '@planner/state/projectWorkspaceSlice';
 import {
   createPlannerStore,
@@ -48,6 +49,7 @@ import {
 } from '@planner/state/store';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
+  createEchoGoldIAnvilDuplicateProject,
   createCompleteFGProject,
   createGoldenFGHProject,
   goldenFBiome,
@@ -58,6 +60,12 @@ import {
 import { nBiome, nLocalOccurrenceId, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNShrineSideRoomDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  echoDuplicateKey,
+  echoShop,
+  echoShopRows,
+  swapEchoAway,
+} from '@planner-test/support/removed-actions';
 
 function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>
@@ -994,5 +1002,38 @@ describe('several commands as one history step', () => {
     }
     expect(store.getState().projectWorkspace.settlementFault).toEqual(first);
     expect(projectHistory(store).past).toHaveLength(1);
+  });
+
+  it('keeps an edit’s removals in other rooms until dismissed, Undo or the next publication', () => {
+    const { store } = createStore();
+    store.dispatch(authoredProjectReplaced(createEchoGoldIAnvilDuplicateProject()));
+    expect(echoShopRows(presentProject(store))).toContain(echoDuplicateKey);
+    store.dispatch(authoredProjectCommandDispatched(swapEchoAway));
+    expect(echoShopRows(presentProject(store))).not.toContain(echoDuplicateKey);
+    expect(store.getState().projectWorkspace.removedStaleActions).toEqual([
+      {
+        occurrence: echoShop,
+        actions: [
+          {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'roomExit',
+            entryKey: 'echoDoubleShopReward',
+          },
+        ],
+      },
+    ]);
+    // Undo and Redo publish without announcing.
+    store.dispatch(authoredProjectUndoRequested());
+    expect(echoShopRows(presentProject(store))).toContain(echoDuplicateKey);
+    expect(store.getState().projectWorkspace.removedStaleActions).toBeUndefined();
+    store.dispatch(authoredProjectRedoRequested());
+    expect(store.getState().projectWorkspace.removedStaleActions).toBeUndefined();
+    store.dispatch(authoredProjectUndoRequested());
+    store.dispatch(authoredProjectCommandsDispatched([swapEchoAway]));
+    expect(store.getState().projectWorkspace.removedStaleActions).toHaveLength(1);
+    const history = projectHistory(store);
+    store.dispatch(removedActionsAnnouncementDismissed());
+    expect(store.getState().projectWorkspace.removedStaleActions).toBeUndefined();
+    expect(projectHistory(store)).toBe(history);
   });
 });

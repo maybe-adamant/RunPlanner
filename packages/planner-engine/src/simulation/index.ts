@@ -344,6 +344,12 @@ export {
   type GoldRoomAvailability,
   type GoldUnavailableReason,
 } from './evaluation/gold-query';
+export { roomActionResetsForProjectEvaluationAssembly } from './evaluation/room-action-reset';
+export {
+  encounterOutcomesForProjectEvaluationAssembly,
+  type EncounterOutcome,
+  type EncounterOutcomeChoice,
+} from './evaluation/encounter-outcome';
 export {
   spawnedLootForProjectEvaluationAssembly,
   type ActionSpawn,
@@ -353,6 +359,7 @@ export {
   type SpawnMomentKind,
   type SpawnedLootItem,
   type SpawnedLootPlacement,
+  type SpawnedLootReward,
   type SpawnedLootSource,
 } from './evaluation/spawned-loot';
 export { GoldLedgerContractError } from './commerce/gold/ledger';
@@ -461,6 +468,7 @@ export { assessmentRepairOwner, findingsAddedSince } from './finding-regions';
 export {
   settleProjectEdit,
   type ProjectEditSettlement,
+  type RemovedStaleRoomActions,
   type SettlementFault,
 } from './edit-settlement';
 export type { RequirementEvaluationEvidence } from '../requirements/evidence';

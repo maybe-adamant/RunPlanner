@@ -7,9 +7,12 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceId,
   createRoomActionAddress,
   roomActionKey,
+  type AuthoredNemesisRandomEventOutcome,
 } from '@run-planner/engine/authored-project';
 import type { WorkspaceOccurrenceWorkbenchNode } from '@planner/projections/structured-workspace';
 import {
@@ -20,6 +23,14 @@ import {
   loadNemesisPomSeaStarCheckpoint,
   loadUnderworldFGHCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+  replaceNemesisRandomEventInteraction,
+} from '@run-planner/test-fixtures/underworld';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { renderOccurrenceWorkbench, workspaceBiome } from '@planner-test/support/biome-workbench';
 import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
@@ -104,7 +115,8 @@ describe('spawn notice items', () => {
 describe('converted and copied loot', () => {
   it('focuses a Sea Star copy’s collect from its chip on the copied pickup’s row', async () => {
     const view = renderOccurrenceWorkbench(
-      loadNemesisPomSeaStarCheckpoint(),
+      // Its Pom chosen, the walk collects it and Sea Star copies it.
+      authorLegalPomResolutions(loadNemesisPomSeaStarCheckpoint()),
       'Underworld',
       'F',
       occurrenceById('golden-f-b5-e1'),
@@ -200,7 +212,8 @@ describe('source badges', () => {
 
   it('marks a Sea Star copy’s collect with Sea Star, not the copy chip', () => {
     const view = renderOccurrenceWorkbench(
-      loadNemesisPomSeaStarCheckpoint(),
+      // Its Pom chosen, the walk collects it and Sea Star copies it.
+      authorLegalPomResolutions(loadNemesisPomSeaStarCheckpoint()),
       'Underworld',
       'F',
       occurrenceById('golden-f-b5-e1'),
@@ -220,6 +233,47 @@ describe('source badges', () => {
       name: /^Sea Star copy of /,
     });
     expect(sourceBadge(copyChip)).toBeUndefined();
+  });
+});
+
+describe('Nemesis results', () => {
+  const room = goldenFOccurrenceId(5, 1);
+  const phase = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId: room },
+    'Encounter',
+  );
+
+  /** Every spawn chip's item icon and source badge. */
+  function renderedChips(value: AuthoredNemesisRandomEventOutcome, rewardType: string) {
+    const project = replaceNemesisRandomEventInteraction(
+      applyProjectCommand(createGoldenFGHIProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'NemesisRandomEvent',
+      }),
+      createNemesisRandomEventAddress(phase),
+      value,
+      { rewardType },
+    );
+    renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(room));
+    openRoomTab('Room Timeline');
+    return [...document.querySelectorAll<HTMLElement>('[data-spawned-loot] button')].map((chip) => [
+      chip.querySelector('img:not(.corner-badge)')?.getAttribute('src'),
+      sourceBadge(chip),
+    ]);
+  }
+
+  const nemesis = pickupSourceBadgeIcon({ kind: 'nemesisEvent' });
+
+  it.each([
+    [{ kind: 'damageContest', result: 'success' }, 'MaxHealthDrop', 'MaxHealthDrop'],
+    [{ kind: 'damageContest', result: 'failure' }, 'MaxHealthDrop', 'RoomRewardConsolationPrize'],
+    [{ kind: 'damageTrade', response: 'accept' }, 'RoomMoneyDrop', 'RoomMoneyDrop'],
+    [{ kind: 'freeItem' }, 'ArmorBoost', 'ArmorBoost'],
+  ] as const)('shows the item %j spawns with the Nemesis badge', (value, offered, spawned) => {
+    expect(nemesis).toBeDefined();
+    expect(renderedChips(value, offered)).toEqual([[rewardIcon(spawned), nemesis]]);
   });
 });
 

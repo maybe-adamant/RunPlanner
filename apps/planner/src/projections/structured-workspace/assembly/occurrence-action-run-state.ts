@@ -2,7 +2,11 @@ import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceShipPhasePresentation,
 } from '../contract';
-import { type RoomRunStateCheckpointAddress } from '@run-planner/engine/authored-project';
+import type {
+  HubRunStateCheckpointAddress,
+  RoomRunStateCheckpointAddress,
+} from '@run-planner/engine/authored-project';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
   WorkspaceOccurrenceActionsInput,
   WorkspaceOccurrenceActionAssembly,
@@ -34,9 +38,15 @@ export function roomTabForPhase(roomLocal: WorkspaceRoomLocal, phaseKey: string)
   }
 }
 
-export function runStateLauncher(
-  input: WorkspaceOccurrenceActionsInput,
-  owner: RoomRunStateCheckpointAddress,
+type RunStateLookup<Owner> = (
+  owner: Owner,
+) => ReturnType<WorkspaceOccurrenceActionsInput['runState']>;
+
+export function runStateLauncher<
+  Owner extends RoomRunStateCheckpointAddress | HubRunStateCheckpointAddress,
+>(
+  input: { readonly catalog: Catalog; readonly runState: RunStateLookup<Owner> },
+  owner: Owner,
   title: string,
   momentLead: string,
 ): WorkspaceRunStateLauncher | undefined {
@@ -50,6 +60,17 @@ export function runStateLauncher(
         title,
       })
     : Object.freeze({ availability: 'unavailable' as const, owner, title });
+}
+
+/** A room's (or the Hub's) Run State on entry, before its first action. */
+export function roomEnteredRunStateLauncher<
+  Owner extends RoomRunStateCheckpointAddress | HubRunStateCheckpointAddress,
+>(
+  input: { readonly catalog: Catalog; readonly runState: RunStateLookup<Owner> },
+  owner: Owner,
+  roomLabel: string,
+): WorkspaceRunStateLauncher | undefined {
+  return runStateLauncher(input, owner, `the first action in ${roomLabel}`, `Before ${roomLabel}`);
 }
 
 export function assembleOccurrenceRunState(

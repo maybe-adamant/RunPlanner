@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { hintOf } from '@planner-test/support/hints';
 import { catalog } from '@run-planner/hades2-catalog';
 import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
@@ -106,12 +107,14 @@ function renderProjectedBiome(application: PlannerApplication, biome: WorkspaceB
   const workspace = workspaceProjection(application);
   return render(
     <Provider store={application.store}>
-      <BiomeWorkspace
-        biome={biome}
-        focusByOwner={workspace.focusByOwner}
-        interactions={workspace.interactions}
-        runStateLaunchers={workspace.runStateLaunchers}
-      />
+      <FindingTargetScope findings={workspace.findingsByRepairTarget} walkStop={workspace.walkStop}>
+        <BiomeWorkspace
+          biome={biome}
+          focusByOwner={workspace.focusByOwner}
+          interactions={workspace.interactions}
+          runStateLaunchers={workspace.runStateLaunchers}
+        />
+      </FindingTargetScope>
     </Provider>,
   );
 }
@@ -802,7 +805,8 @@ describe('BiomeWorkspace', () => {
 
     await user.click(launcher);
     const sheet = screen.getByRole('region', { name: /State before/ });
-    expect(within(sheet).getByRole('heading', { level: 2 }).textContent).toMatch(/ · Erebus$/);
+    // A moment inside its room names the room alone.
+    expect(within(sheet).getByRole('heading', { level: 2 }).textContent).toBe('Before Postboss');
     const tabs = ['Overview', 'Effects', 'Keepsakes', 'Arcana', 'Fear', 'More Info'];
     expect(
       within(sheet)
@@ -951,7 +955,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
   });
 
-  it('keeps a later Dream entry choice in its biome inspector behind prior readiness', () => {
+  it('waits a later Dream entry choice behind an earlier biome', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'later-dream-entry-ui',
       routeKey: 'Dream',
@@ -959,10 +963,10 @@ describe('BiomeWorkspace', () => {
       configuredBiomeCount: 2,
     });
     renderWorkspace(project, 'Dream', 'F');
+    // An earlier biome stops the walk: this one waits, its start unshown.
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const picker = within(inspector).getByRole('button', { name: 'Starting room' });
-    expect(picker).toHaveProperty('disabled', true);
-    expect(picker.dataset.authoringLocked).toBe('true');
+    expect(within(inspector).queryByRole('button', { name: 'Starting room' })).toBeNull();
+    expect(inspector.querySelector('article[data-not-reached]')).not.toBeNull();
   });
 
   it('renders Ephyra primary rewards on fixed stages, decision selections, and authored Hub visits', async () => {
@@ -1005,6 +1009,10 @@ describe('BiomeWorkspace', () => {
     expect(railButtonForMarker(view.container, firstVisit.marker.focusKey).textContent).toContain(
       firstVisit.room.reward.label,
     );
+    // The Hub's circle carries its Location, like a room's.
+    expect(
+      view.container.querySelector<HTMLElement>('[data-kind="hubDecision"]')?.dataset.step,
+    ).toBe('3');
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     expect(hintOf(screen.getByRole('button', { name: 'Visit 1 room' }))).toContain(
@@ -1322,7 +1330,22 @@ describe('BiomeWorkspace', () => {
   });
 
   it('keeps the stop opening the source room selected when its next physical target takes focus', async () => {
-    const { owner, project, start } = fTwoDoorBatchProject();
+    // The last ordinary room is reached, its doors re-created without a room picked.
+    const room = goldenFOccurrenceId(9, 1);
+    const owner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: room,
+    });
+    let project = applyProjectCommand(authorLegalTraitOffers(createCompleteFGProject()), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: owner,
+    });
+    project = applyProjectCommand(project, catalog, { decision: owner, kind: 'CreateBatch' });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, owner.source),
+      storeKey: 'RunProgress',
+    });
     const view = renderWorkspace(project, 'Underworld', 'F');
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
 
@@ -1336,11 +1359,14 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       createTargetAddress(goldenFBiome, owner.source, 'exit1'),
     );
-    // Decision 2's doors are edited on Combat 03's Timeline, which Decision 1 opens.
+    // The room's doors are edited on its Timeline, which the decision before it opens.
     const structure = screen.getByRole('region', { name: /route structure$/ });
     expect(selectedRailMarkerKeys(structure)).toEqual([
       semanticAddressKey(
-        createExitDecisionAddress(goldenFBiome, { kind: 'occurrence', occurrenceId: start }),
+        createExitDecisionAddress(goldenFBiome, {
+          kind: 'occurrence',
+          occurrenceId: goldenFOccurrenceId(8, 1),
+        }),
       ),
     ]);
   });
@@ -1532,7 +1558,7 @@ describe('BiomeWorkspace', () => {
     await waitFor(() => expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy());
   });
 
-  it('keeps the terminal Hub candidate visible when an invalid PreHub reward blocks evaluation', async () => {
+  it('waits the terminal Hub candidate past an invalid PreHub reward', () => {
     const preHubReward = createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub);
     const invalidPrefix = applyProjectCommand(loadSurfaceNEntryFrontierResolvedProject(), catalog, {
       kind: 'ReplaceIncomingReward',
@@ -1560,11 +1586,10 @@ describe('BiomeWorkspace', () => {
     );
     expect(terminal?.kind === 'ordinaryBatch' ? terminal.targets : []).toHaveLength(0);
 
+    // The Pre-Hub is past the stop: its doors, Hub candidate included, wait unshown.
     act(() => view.application.store.dispatch(semanticOwnerFocused(terminalOwner)));
-    const picker = await screen.findByRole('button', { name: 'Door 1 room' });
-    await view.user.click(picker);
-    const action = await screen.findByText('Ephyra Hub');
-    expect(action.closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Door 1 room' })).toBeNull();
+    expect(document.querySelector('article[data-not-reached]')).not.toBeNull();
     expect(
       workspaceBiome(view.application, 'Surface', 'N').nodes.some(
         (node) => node.kind === 'hubDecision',
@@ -1769,9 +1794,9 @@ describe('BiomeWorkspace', () => {
     expect(
       screen
         .getAllByRole('region')
-        .find((region) => region.getAttribute('aria-label')?.startsWith('Ephyra Hub at '))
+        .find((region) => region.getAttribute('aria-label')?.startsWith('Hub at '))
         ?.getAttribute('aria-label'),
-    ).toBe('Ephyra Hub at Visit 3');
+    ).toBe('Hub at Visit 3');
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(before);
   });
 
@@ -1807,7 +1832,7 @@ describe('BiomeWorkspace', () => {
     );
   });
 
-  it('keeps the Hub-owned Preboss readable but locked while the Hub is incomplete', async () => {
+  it('waits the Hub-owned Preboss while the Hub is incomplete', () => {
     const complete = loadSurfaceNProject();
     const incomplete = applyProjectCommand(complete, catalog, {
       kind: 'ReplaceHubActionOrder',
@@ -1831,9 +1856,11 @@ describe('BiomeWorkspace', () => {
           semanticOwnerFocused(createOccurrenceAddress(nBiome, nOccurrenceIds.preboss)),
         ),
       );
+      // Past the Hub's stop the Preboss shows none of its content.
       const control = offerControl();
-      if (control === undefined) throw new Error('Preboss Shop offer control is not rendered');
-      expect(control.dataset.authoringLocked === 'true').toBe(locked);
+      expect(control === undefined).toBe(locked);
+      expect(document.querySelector('article[data-not-reached]') !== null).toBe(locked);
+      if (!locked) expect(control?.dataset.authoringLocked).toBeUndefined();
       cleanup();
     }
   });
@@ -1926,14 +1953,20 @@ describe('BiomeWorkspace', () => {
     expect(Array.from(structure.querySelectorAll('[data-workspace-node][aria-current]'))).toEqual([
       railDecision,
     ]);
+    // Its room lies past the stop: only the link back to the Intro's doors shows.
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    await view.user.click(within(inspector).getByRole('tab', { name: 'Room Timeline' }));
+    expect(within(inspector).queryByRole('tab')).toBeNull();
+    await view.user.click(stopLink(inspector));
+    expect(selectedRailMarkerKeys(structure)).toEqual([introKey]);
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
     expandDoors(inspector);
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
     expect(doorWorkbench(inspector)).not.toBeNull();
   });
 
-  it('focuses retained downstream room rewards inside their occurrence workbench', () => {
+  it("waits retained downstream room rewards past the walk's stop", () => {
     const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
@@ -1955,9 +1988,10 @@ describe('BiomeWorkspace', () => {
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(reward.marker.address)));
 
+    // Retained past the walk's stop, the room shows only that it is not reached.
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(roomWorkbench(inspector)).not.toBeNull();
-    expect(doorWorkbench(inspector)).not.toBeNull();
+    expect(inspector.querySelector('article[data-not-reached]')).not.toBeNull();
+    expect(doorWorkbench(inspector)).toBeNull();
   });
 
   it('focuses a fixed Story reward on its owning predecessor door', async () => {
@@ -2122,10 +2156,8 @@ describe('boss-door reward pool in the Doors open row', () => {
     expect(within(section).queryByRole('button', { name: 'Reward Pool' })).toBeNull();
     expect(within(section).getByText('Major Reward')).toBeTruthy();
     expect(
-      within(within(section).getByRole('complementary', { name: 'Notes' })).getByText(
-        'Fixed for this boss',
-      ),
-    ).toBeTruthy();
+      within(section).getByRole('group', { name: 'Major Reward' }).getAttribute('aria-description'),
+    ).toBe('Fixed for this boss');
     expect(within(section).getByRole('listitem', { name: 'Leave room' })).toBeTruthy();
   });
 
@@ -2136,10 +2168,15 @@ describe('boss-door reward pool in the Doors open row', () => {
       'None',
     );
     expect(
-      within(within(section).getByRole('complementary', { name: 'Notes' })).getByText(
-        'Ignored for this boss',
-      ),
-    ).toBeTruthy();
+      within(section).getByRole('group', { name: 'None' }).getAttribute('aria-description'),
+    ).toBe('Ignored for this boss');
     expect(within(section).getByRole('listitem', { name: 'Leave room' })).toBeTruthy();
   });
 });
+
+/** The stop notice's link to where the plan stops. */
+function stopLink(scope: ParentNode): HTMLButtonElement {
+  const link = scope.querySelector<HTMLButtonElement>('[data-stop-notice] button');
+  if (link === null) throw new Error('no stop notice link');
+  return link;
+}

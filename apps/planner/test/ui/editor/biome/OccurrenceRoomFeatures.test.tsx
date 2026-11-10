@@ -39,6 +39,7 @@ import {
   decisionContainingOccurrence,
   expectBefore,
   occurrenceById,
+  openNotReached,
   openRoomTab,
   reachedAnomalyProject,
 } from '@planner-test/support/occurrence-workbench';
@@ -68,7 +69,7 @@ async function chooseNemesisEvent(
 }
 
 describe('OccurrenceRoomFeatures', () => {
-  it('disables Nemesis detail pickers while the event context is unreached', async () => {
+  it('hides Nemesis detail pickers while the room waits on its Overview', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
     const reached = renderOccurrenceWorkbench(
       loadNemesisFieldsCheckpoint(),
@@ -91,9 +92,9 @@ describe('OccurrenceRoomFeatures', () => {
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    const waiting = screen.getByRole('button', { name: 'Reward' }) as HTMLButtonElement;
-    expect(waiting.disabled).toBe(true);
-    expect(hintOf(waiting)).toBe('Waits on an earlier choice.');
+    // The room stops in its Overview: its Timeline, the event's row included, waits unshown.
+    expect(document.querySelector('[data-stop-notice="overview"]')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Reward' })).toBeNull();
   });
 
   it('splits Anomaly room outcome from door map and revert controls as exact commands', async () => {
@@ -154,7 +155,7 @@ describe('OccurrenceRoomFeatures', () => {
     ]);
   });
 
-  it('decides the Anomaly outcome at its Timeline encounter end, before its reward pickup', async () => {
+  it('decides the Anomaly outcome at its Encounter outcome, before its end and reward pickup', async () => {
     const { occurrenceId, project } = reachedAnomalyProject();
     const application = createApplication();
     const dispatch = vi.spyOn(application.store, 'dispatch');
@@ -175,11 +176,11 @@ describe('OccurrenceRoomFeatures', () => {
       .getAllByRole('listitem')
       .find((row) => row.getAttribute('data-room-action-key')?.includes('interactIncomingReward'));
     if (pickup === undefined) throw new Error('cleared Anomaly lost its reward pickup');
-    expectBefore(encounterEnd, cleared);
-    expectBefore(cleared, pickup);
-    // The outcome is an Encounter ended event: it sits among that banner's controls.
+    expectBefore(cleared, encounterEnd);
+    expectBefore(encounterEnd, pickup);
+    // The capture point is how the fight ended: it sits among its outcome's controls.
     expect(cleared.closest('.timeline-banner-modifiers')).not.toBeNull();
-    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Encounter ended'));
+    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Encounter outcome'));
 
     await view.user.click(cleared);
     await view.user.click(await screen.findByRole('option', { name: 'Not cleared' }));
@@ -466,8 +467,8 @@ describe('OccurrenceRoomFeatures', () => {
     const family = screen.getByRole('button', { name: 'Nemesis event type' });
     await waitFor(() => expect(family.contains(document.activeElement)).toBe(true));
     openRoomTab('Room Timeline');
-    const hint = screen.getByText('Choose a Nemesis event.');
-    expect(hint.closest('.control-placeholder')).toBeTruthy();
+    // Its event type unchosen, the room stops in its Overview.
+    expect(document.querySelector('[data-stop-notice="overview"]')).not.toBeNull();
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Free item');
     openRoomTab('Room Timeline');
@@ -521,10 +522,12 @@ describe('OccurrenceRoomFeatures', () => {
     freeAction = nemesisAction();
     expect(within(freeAction).getByText('hits you to get')).toBeTruthy();
     expect(within(freeAction).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    // Her unchosen reward stops the walk at her row; the trade's outcome waits past it.
+    openNotReached();
     expect(screen.getByRole('button', { name: /^Nemesis outcome/ }).textContent).toBe('Declined');
   });
 
-  it('switches the contest result between a selectable reward and fixed consolation', async () => {
+  it('keeps the contest offer through its result; a failed contest spawns Consolation', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -545,15 +548,13 @@ describe('OccurrenceRoomFeatures', () => {
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Damage contest');
     openRoomTab('Room Timeline');
-    const sentence = screen.getByText('to get').closest<HTMLElement>('[data-room-action-key]')!;
+    const sentence = () =>
+      screen.getByText('to get').closest<HTMLElement>('[data-room-action-key]')!;
     const result = () => screen.getByRole('button', { name: /^Nemesis outcome/ });
     const choose = async (label: string) => {
       await view.user.click(result());
       await view.user.click(await screen.findByRole('option', { name: label }));
     };
-    expect(result().textContent).toBe('Failed');
-    expect(within(sentence).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
-    expect(within(sentence).getByRole('img', { name: 'Red Onion' })).toBeTruthy();
     const authoredOccurrence = () =>
       view.application.store
         .getState()
@@ -561,22 +562,43 @@ describe('OccurrenceRoomFeatures', () => {
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
     const reward = () =>
       authoredOccurrence()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result;
-    expect(reward()?.offer.rewardType).toBe('RoomRewardConsolationPrize');
+
+    // A new contest has lost, with no success item planned; she still drops Consolation.
+    expect(result().textContent).toBe('Failed');
+    expect(within(sentence()).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
+    expect(reward() ?? null).toBeNull();
+    await view.user.click(within(sentence()).getByRole('button', { name: 'Reward' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
+    await waitFor(() => expect(reward()?.offer.rewardType).toBe('MaxHealthDrop'));
 
     await choose('Succeeded');
-    await waitFor(() => expect(reward()).toBeNull());
-    expect(within(sentence).getByRole('button', { name: 'Reward' })).toBeTruthy();
-    expect(authoredOccurrence()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
-      kind: 'damageContest',
-      result: 'success',
-    });
-    await view.user.click(screen.getByRole('button', { name: 'Reward' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
+    await waitFor(() =>
+      expect(authoredOccurrence()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
+        kind: 'damageContest',
+        result: 'success',
+      }),
+    );
     expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
 
     await choose('Failed');
-    await waitFor(() => expect(reward()?.offer.rewardType).toBe('RoomRewardConsolationPrize'));
-    expect(screen.queryByRole('button', { name: 'Reward' })).toBeNull();
+    await waitFor(() => expect(result().textContent).toBe('Failed'));
+    expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
+    expect(within(sentence()).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    // Her Consolation is collected, never the planned item.
+    const chip = document.querySelector<HTMLElement>('[data-spawned-loot="moment"] button')!;
+    await view.user.click(chip);
+    const collect = await waitFor(() => {
+      const row = document.querySelector<HTMLElement>(
+        `[data-room-action-key="${CSS.escape(
+          JSON.stringify(['interactAcquisitionEntry', 'nemesisGenerated:Encounter', 'result']),
+        )}"]`,
+      );
+      expect(row).not.toBeNull();
+      return row!;
+    });
+    expect(within(collect).getByRole('img', { name: 'Red Onion' })).toBeTruthy();
+    expect(within(collect).queryByRole('img', { name: 'Max Health' })).toBeNull();
+    expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
   });
 
   it('keeps an unreached Well domain visible as unassessed', async () => {

@@ -5,7 +5,12 @@ import {
   createPreparedProjectCandidateSession,
   type ProjectCandidateSession,
 } from '../candidates/session';
-import { RerollPoolRefusal, settleProjectEdit, type SettlementFault } from '../edit-settlement';
+import {
+  RerollPoolRefusal,
+  settleProjectEdit,
+  type RemovedStaleRoomActions,
+  type SettlementFault,
+} from '../edit-settlement';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
 import { findingsAddedSince } from '../finding-regions';
@@ -33,6 +38,8 @@ export type AuthoringOutcome =
       readonly assembly: ProjectEvaluationAssembly;
       /** An engine contract failure beside the settled assembly, kept as settlement returned it. */
       readonly fault?: SettlementFault;
+      /** Rows the edit left with no context, removed with it. */
+      readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
     }
   | { readonly kind: 'refused'; readonly refusal: AuthoringRefusal };
 
@@ -103,6 +110,9 @@ export function createAuthoringSession(
         kind: 'applied',
         assembly,
         ...(settled.fault === undefined ? {} : { fault: settled.fault }),
+        ...(settled.removedStaleActions === undefined
+          ? {}
+          : { removedStaleActions: settled.removedStaleActions }),
       });
     },
     restore: (next: ProjectEvaluationAssembly) => {

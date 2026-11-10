@@ -53,6 +53,9 @@ import {
   surfaceTravelDealRefillAnvilResult,
 } from '@run-planner/test-fixtures/surface';
 
+/** A lone room materialized outside a route: no doors lead from it. */
+const LONE_ROOM = { decisions: [], occurrences: [] } as const;
+
 const biome = createBiomeAddress('Underworld', 'F');
 const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' } as const;
 
@@ -482,6 +485,7 @@ function settle(options: {
         : roomGameName === 'I_PreBoss02'
           ? createBiomeAddress('Underworld', 'I')
           : biome,
+    topology: LONE_ROOM,
     room: declaration,
     occurrence,
     role: 'prebossShop',

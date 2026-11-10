@@ -66,9 +66,10 @@ describe('PhantomExitDoor', () => {
     expect(
       within(door).queryByText(/^(Automatic|No reward)$/, { selector: '.fixed-value-chip-text' }),
     ).toBeNull();
-    // A side room's notes explain the hidden door, linked from its name.
-    expect(screen.getByRole('complementary', { name: 'Notes' })).toBeTruthy();
-    expect(door.querySelector('[aria-describedby]')).not.toBeNull();
+    // A side room's note explains the hidden door, a hint on its name.
+    expect(
+      within(door).getByRole('group', { name: 'Hidden' }).getAttribute('aria-description'),
+    ).toBeTruthy();
     expect(within(door).getByRole('button', { name: 'Choose' })).toBeTruthy();
     expect(within(door).queryByRole('button', { name: 'Reward' })).toBeNull();
   });

@@ -27,7 +27,7 @@ export interface EncounterStartedTransition {
   readonly findings: readonly LifecycleFinding[];
 }
 
-/** Applies the reward spawn and Fig Leaf half of encounter start; Gorgon settles separately. */
+/** Applies the reward spawn and Fig Leaf at encounter start; Gorgon settles at the outcome. */
 export function applyEncounterStartedTransition(
   catalog: Catalog,
   snapshot: { readonly entryRoom?: { readonly origin: SemanticAddress } },
@@ -35,7 +35,7 @@ export function applyEncounterStartedTransition(
   room: CanonicalAuthoredRoom | undefined,
   branch: RewardBranchState | undefined,
 ): EncounterStartedTransition {
-  // The reward is spawned before this encounter's own start effects (Fig Leaf, Gorgon).
+  // The reward is spawned before this encounter's own start effect (Fig Leaf).
   let next =
     room === undefined || branch === undefined
       ? branch

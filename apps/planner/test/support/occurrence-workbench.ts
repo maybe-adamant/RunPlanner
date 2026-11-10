@@ -79,6 +79,15 @@ export function openRoomTab(name: string): void {
   fireEvent.click(screen.getByRole('tab', { name }));
 }
 
+/** Opens the Timeline's collapsed Not reached yet rows, as a user would. */
+export function openNotReached(): void {
+  const toggle = within(screen.getByRole('region', { name: 'Not reached yet' })).getByRole(
+    'button',
+    { name: /Not reached yet/ },
+  );
+  if (toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle);
+}
+
 /**
  * Picks one action from a room object's Timeline entry (World Shop, Hermes
  * Shrine, Pedestal, Stygian Well…); the Room Timeline tab must be open.

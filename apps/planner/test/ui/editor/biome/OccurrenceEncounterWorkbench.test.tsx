@@ -84,6 +84,7 @@ import {
   occurrenceEncounterSelections,
   occurrenceRoomActionOrder,
   occurrenceState,
+  openNotReached,
   openRoomTab,
   pickRoomObjectAction,
   selectedNarcissusPickupSite,
@@ -287,11 +288,10 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       );
     });
-    expect(aetos().textContent).toBe('Wave 2');
-    // A retained wave whose phase context is not yet reached can still be cleared.
-    await pick('No');
-    expect(aetosWave()).toBeUndefined();
+    // The new encounter stops the walk in the Overview: the Timeline, wave and all, waits.
+    expect(document.querySelector('[data-stop-notice="overview"]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: /^Aetos appearance: / })).toBeNull();
+    expect(aetosWave()).toBe(2);
   });
 
   it('authors a Nemesis combat outcome in Events and undoes it', async () => {
@@ -1198,7 +1198,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(condition.disabled).toBe(false);
     expect(condition.getAttribute('aria-pressed')).toBe('false');
     expect(
-      within(screen.getByRole('group', { name: / start$/ })).getByRole('button', {
+      within(screen.getByRole('group', { name: / outcome choices$/ })).getByRole('button', {
         name: 'No Death Defiance',
       }),
     ).toBe(condition);
@@ -1257,6 +1257,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(condition.getAttribute('aria-pressed')).toBe('true');
     expect(condition.disabled).toBe(false);
     // The Combat phase starts before the blocked Athena offer: its reached Gorgon support is unsupported.
+    openNotReached();
     expect(screen.getByRole('button', { name: 'Edit Trait · Divine Dash' })).toBeTruthy();
     await view.user.click(condition);
     await waitFor(() => {
@@ -1399,14 +1400,16 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    // The skip and the retained condition both sit on the start banner.
+    // Both wait past the stop, the skip on the start, the condition on the fight's outcome.
+    openNotReached();
     const start = screen.getByRole('group', { name: / start$/ });
     const skip = within(start).getByRole('button', {
       name: 'Fig Leaf skip',
     }) as HTMLButtonElement;
     expect(skip.getAttribute('aria-pressed')).toBe('true');
     expect(skip.disabled).toBe(false);
-    const condition = within(start).getByRole('button', {
+    const outcome = screen.getByRole('group', { name: / outcome choices$/ });
+    const condition = within(outcome).getByRole('button', {
       name: 'No Death Defiance',
     }) as HTMLButtonElement;
     expect(condition.getAttribute('aria-pressed')).toBe('true');
@@ -2094,12 +2097,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() => expect(count.dataset.candidateState).toBe('impossible'));
     await view.user.keyboard('{Escape}');
     openRoomTab('Combat 2 Timeline');
-    // The Timeline banner names the phase read-only; its identity is authored in Overview.
-    const start = screen.getByLabelText('Encounter started');
-    expect(start.querySelector('.timeline-banner-identity')?.getAttribute('aria-label')).toMatch(
-      /^Encounter started: Combat 2 · /,
-    );
-    expect(within(start).queryByRole('button', { name: 'Encounter' })).toBeNull();
+    // The room stops at its Overview, so the phase's banner waits until it is repaired there.
+    expect(screen.queryByLabelText('Encounter started')).toBeNull();
     openRoomTab('Room Overview');
     const phase = screen.getByLabelText('Combat 2 encounter phase');
     const phaseAddress = createEncounterPhaseAddress(
@@ -2445,14 +2444,15 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       ),
     );
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Inactive Actions' })).toBeTruthy());
-    openRoomTab('Inactive Actions');
-    const repairs = screen.getByLabelText('Ship action repairs');
-    expect(within(repairs).getByText('Choose Combat 2 wheel')).toBeTruthy();
-    const rewardRow = { name: /^Reorder Collect .+ · Combat 2 reward/ };
-    expect(within(repairs).getByRole('button', rewardRow)).toBeTruthy();
-    expect(screen.getAllByText('Choose Combat 2 wheel')).toHaveLength(1);
-    expect(screen.getAllByRole('button', rewardRow)).toHaveLength(1);
+    // The edit that orphans the Combat 2 wheel rows removes them; the wheel's configuration stays.
+    await waitFor(() =>
+      expect(screen.queryByRole('tab', { name: 'Combat 2 Timeline' })).toBeNull(),
+    );
+    expect(screen.queryByRole('tab', { name: 'Inactive Actions' })).toBeNull();
+    expect(screen.queryByText('Choose Combat 2 wheel')).toBeNull();
+    expect(shipWheel2(view.application.store.getState().projectWorkspace.history!.present)).toEqual(
+      shipWheel2(project),
+    );
 
     act(() =>
       view.application.store.dispatch(
@@ -2981,21 +2981,21 @@ describe('OccurrenceEncounterWorkbench', () => {
         name: /^Remove Buy .* from timeline$/,
       }),
     );
-    // Without its source purchase the retained refill purchase loses its line and keeps removal.
+    // Without its source purchase the refill purchase goes with it; its item and choices stay.
     expect(screen.queryByRole('listitem', { name: 'Restock' })).toBeNull();
+    expect(() => purchase()).toThrow();
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
       restoredChild,
     );
-    await view.user.click(
-      within(purchase()).getByRole('button', { name: /^Remove .* from timeline$/ }),
-    );
-    expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
-    act(() => {
-      view.application.store.dispatch(authoredProjectUndoRequested());
+    expect(room().state.kind === 'shop' ? room().state : undefined).toMatchObject({
+      shop: { travelDealRefill: { optionKey: 'BlindBoxLoot' } },
     });
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
+    // Undo brings both purchases back as one edit.
+    expect(timelineRow('Buy Mystery Boon · Travel Deal Offer')).toBeTruthy();
+    expect(timelineRow('Buy Apollo')).toBeTruthy();
     expect(hintOf(within(line()).getByRole('button', { name: 'Travel Deal Item' }))).toContain(
       'Mystery Boon',
     );

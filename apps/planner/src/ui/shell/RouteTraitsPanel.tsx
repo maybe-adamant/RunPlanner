@@ -3,6 +3,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import type { RouteTraitOfferProjection } from '@planner/projections/rewards/traitProjection';
+import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
@@ -43,7 +44,7 @@ export function RouteTraitsPanel({
                   <div>
                     <strong>{row.selectedTraitLabel}</strong>
                     <span className="route-trait-meta">
-                      {row.biomeKey} · {row.locationLabel} ·{' '}
+                      <span {...hintProps(row.place.hint)}>{row.place.text}</span> ·{' '}
                       <ArtworkIcon
                         className="artwork-label-icon-small"
                         source={traitGiverArtwork[row.giverKey] ?? undefined}

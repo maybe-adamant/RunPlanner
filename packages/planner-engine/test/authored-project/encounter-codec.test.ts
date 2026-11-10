@@ -9,13 +9,16 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createIncomingRewardAddress,
+  createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
+  roomActionKey,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
@@ -160,6 +163,82 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
       expect(() => decodeProjectDocument(document, catalog)).toThrow('Nemesis');
     }
   });
+  it('reads a failed contest storing Consolation as no success item chosen yet', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const contest = (result: 'success' | 'failure') =>
+      replaceNemesisRandomEventInteraction(
+        applyProjectCommand(createCompleteFGProject(), catalog, {
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'NemesisRandomEvent',
+        }),
+        createNemesisRandomEventAddress(phase),
+        { kind: 'damageContest', result },
+        { rewardType: 'MaxHealthDrop' },
+      );
+    const site = (document: ProjectDocument) =>
+      document.route.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
+      )!.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result;
+    // A failed contest keeps its planned success item; its Consolation is collected.
+    const reference = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    };
+    const unplaced = contest('failure');
+    const order = unplaced.route.biomes[0]!.topology!.occurrences.find(
+      (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
+    )!.roomActions.order;
+    const failed = applyProjectCommand(unplaced, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        goldenFOccurrenceId(5, 1),
+        roomActionKey(reference),
+      ),
+      reference,
+      index:
+        order.findIndex(
+          (candidate) =>
+            candidate.kind === 'interactEncounter' && candidate.phaseKey === 'Encounter',
+        ) + 1,
+    });
+    expect(site(decodeProjectDocument(encoded(failed), catalog))?.offer).toEqual({
+      rewardType: 'MaxHealthDrop',
+    });
+    // Earlier saves stored the Consolation it drops in the offer's place.
+    const earlier = encoded(failed);
+    const result = (
+      (occurrence(earlier, 'F', goldenFOccurrenceId(5, 1)).acquisitionSites as JsonRecord)[
+        'nemesisGenerated:Encounter'
+      ] as JsonRecord
+    ).pickupEntries as JsonRecord;
+    ((result.result as JsonRecord).offer as JsonRecord).rewardType = 'RoomRewardConsolationPrize';
+    const read = decodeProjectDocument(earlier, catalog);
+    expect(site(read)).toBeNull();
+    expect(
+      read.route.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
+      )!.roomActions.order,
+    ).toContainEqual(reference);
+    expect(simulateProject(catalog, read).findings).toEqual([]);
+    // A won contest never held Consolation as its offer.
+    const won = encoded(contest('success'));
+    const wonResult = (
+      (occurrence(won, 'F', goldenFOccurrenceId(5, 1)).acquisitionSites as JsonRecord)[
+        'nemesisGenerated:Encounter'
+      ] as JsonRecord
+    ).pickupEntries as JsonRecord;
+    ((wonResult.result as JsonRecord).offer as JsonRecord).rewardType =
+      'RoomRewardConsolationPrize';
+    expect(() => decodeProjectDocument(won, catalog)).toThrow('Nemesis');
+  });
+
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = loadSurfaceNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);

@@ -140,11 +140,19 @@ function lifecycleBlockFindings(
         : semanticAddressKey(candidate.owner) === semanticAddressKey(blockedAt),
     );
     if (row === undefined || row.stale) continue;
-    // A window crossing blocks at whichever of its two actions execution reaches first.
-    const reasons = room.roomActionRoster.issues.flatMap((issue): SemanticFinding[] =>
+    const issues = room.roomActionRoster.issues;
+    // A required action of an earlier window ordered after the row stops the walk at the
+    // row; that crossing is the row's one reason, not also a window issue of the later action.
+    const requiredFirst = issues.some(
+      (issue) => issue.kind === 'requiredFirst' && roomActionKey(issue.reference) === row.key,
+    );
+    // Otherwise a window crossing blocks at whichever of its two actions execution reaches first.
+    const reasons = issues.flatMap((issue): SemanticFinding[] =>
       (roomActionKey(issue.reference) === row.key ||
-        (issue.kind === 'window' && roomActionKey(issue.precedingAction) === row.key)) &&
-      (issue.kind === 'dependency' || issue.kind === 'window')
+        (issue.kind === 'window' &&
+          !requiredFirst &&
+          roomActionKey(issue.precedingAction) === row.key)) &&
+      (issue.kind === 'dependency' || issue.kind === 'window' || issue.kind === 'requiredFirst')
         ? [
             Object.freeze({
               code: 'roomActionOrderUnavailable',
@@ -158,7 +166,9 @@ function lifecycleBlockFindings(
                       dependencyKind: issue.dependency.kind,
                       checkpointUnavailable: issue.checkpointUnavailable === true,
                     }
-                  : {}),
+                  : issue.kind === 'requiredFirst'
+                    ? { requiredAction: roomActionKey(issue.requiredAction) }
+                    : {}),
               }),
             }),
           ]
@@ -188,6 +198,7 @@ interface ProgressiveProducts {
   readonly candidateArtifacts: BiomeCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
   readonly rewardsThrough: ProgressiveBiomeSelectedProducts['rewardsThrough'];
+  readonly reachedActions: ProgressiveBiomeSelectedProducts['reachedActions'];
 }
 
 function generation(
@@ -383,6 +394,7 @@ function products(
       ...rewards.findingRegions,
     ]),
     rewardsThrough: rewards.through,
+    reachedActions: composed.reachedActions,
   });
 }
 
@@ -505,6 +517,7 @@ export function evaluateProgressiveBiomeAssembly(
         candidateArtifacts: evaluated.candidateArtifacts,
         findingRegions: evaluated.findingRegions,
         rewardsThrough: evaluated.rewardsThrough,
+        reachedActions: evaluated.reachedActions,
       }),
       unsupported,
     );

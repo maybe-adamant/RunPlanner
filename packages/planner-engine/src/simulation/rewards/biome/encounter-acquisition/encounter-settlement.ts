@@ -846,8 +846,11 @@ export function applyEncounterSettlementTransition(inputs: {
           .result;
       const rewardType = result?.offer.rewardType;
       const familyMissing = outcome === null || outcome === undefined;
+      // A failed contest drops its fixed Consolation; its success offer stays dormant.
+      const contestFailed = outcome?.kind === 'damageContest' && outcome.result === 'failure';
       const interactionMissing =
         !familyMissing &&
+        !contestFailed &&
         (rewardType === undefined || (outcome.kind === 'traitTrade' && outcome.traitKey === null));
       const legal =
         !familyMissing &&
@@ -862,9 +865,10 @@ export function applyEncounterSettlementTransition(inputs: {
               case 'damageTrade':
                 return assessment.damageTradeRewardTypes.includes(rewardType as never);
               case 'damageContest':
-                return outcome.result === 'success'
-                  ? assessment.damageContestSuccessRewardTypes.includes(rewardType as never)
-                  : policy.damageContest.failureResultRewardType === rewardType;
+                return (
+                  contestFailed ||
+                  assessment.damageContestSuccessRewardTypes.includes(rewardType as never)
+                );
               case 'traitTrade':
                 return (
                   rewardType === policy.traitTrade.fixedResultRewardType &&

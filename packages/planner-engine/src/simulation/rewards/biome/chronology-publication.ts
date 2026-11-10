@@ -28,7 +28,7 @@ import {
 } from '../../candidates/trait-offer/capability';
 import type { TraitOfferCandidateContext } from '../../traits';
 import { BiomeRewardSimulationContractError } from './biome-contract';
-import { publishRunStateThroughCoverage } from '../run-state';
+import { isRoomLifecycleOwner, publishRunStateThroughCoverage } from '../run-state';
 import { createRoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';
 import { selectedTraitOfferProducts } from './selected-trait-products';
 import { createRerollSurfaceCandidateArtifacts } from './reroll-surfaces';
@@ -152,8 +152,8 @@ export function publishChronology(
   const levelCandidateContexts = new Map(traitProducts.levelCandidateContexts);
   const discoveredRunStateSnapshots = Object.freeze(
     [...accumulation.runStateSnapshots].sort((left, right) => {
-      const leftRoom = left.owner.kind === 'roomRunStateCheckpoint';
-      const rightRoom = right.owner.kind === 'roomRunStateCheckpoint';
+      const leftRoom = isRoomLifecycleOwner(left.owner);
+      const rightRoom = isRoomLifecycleOwner(right.owner);
       return leftRoom === rightRoom ? 0 : leftRoom ? 1 : -1;
     }),
   );

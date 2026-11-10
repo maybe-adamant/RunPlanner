@@ -266,6 +266,8 @@ describe('Stygian Well workbench', () => {
       expect(
         bought.compareDocumentPosition(picker) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
+      // The unset Twist stops the walk at its purchase row, which stays reached to repair it.
+      expect(picker.closest('section[aria-label="Not reached yet"]')).toBeNull();
       await view.user.click(picker);
       const result = screen
         .getAllByRole('option')
@@ -274,8 +276,9 @@ describe('Stygian Well workbench', () => {
         throw new Error('Twist result missing');
       const resultLabel = result.textContent;
       await view.user.click(result);
-      expect(hintOf(picker)).toContain(resultLabel);
-      await view.user.click(picker);
+      const settled = screen.getByRole('button', { name: `${label} Twist result` });
+      expect(hintOf(settled)).toContain(resultLabel);
+      await view.user.click(settled);
       expect(
         screen.getByRole('option', { name: resultLabel }).getAttribute('data-selected-value'),
       ).toBe('true');

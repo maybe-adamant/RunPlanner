@@ -1194,8 +1194,10 @@
   white-space: nowrap;
 }
 
-/* A pickup's origin is told on hover and focus. */
-.timeline-row-origin {
+/* A pickup's origin, or a note on a word or value, is told on hover and focus. */
+.timeline-row-origin,
+.noted-text,
+.noted-text .fixed-value-chip-text {
   cursor: help;
   text-decoration: underline dotted rgb(180 175 187 / 55%);
   text-underline-offset: 3px;
@@ -1789,9 +1791,20 @@
 
 /* Pools are grouped by a light heading, not another box. */
 .room-action-optional-pool,
-.room-action-repairs {
+.room-action-repairs,
+.room-action-not-reached {
   display: grid;
   gap: 6px;
+}
+
+/* Rows past the room's stop wait, dimmed, without the chronology's spine or ticks. */
+.room-action-not-reached > .room-action-list {
+  opacity: 0.55;
+}
+
+.room-action-not-reached > .room-action-list::before,
+.room-action-not-reached > .room-action-list > .timeline-row::before {
+  display: none;
 }
 
 /* Unplaced pools sit outside the chronology, so their lists draw no spine or ticks. */
@@ -1800,12 +1813,22 @@
   display: none;
 }
 
-:is(.room-action-optional-pool, .room-action-repairs, .ship-action-repairs)
+:is(
+    .room-action-optional-pool,
+    .room-action-repairs,
+    .room-action-not-reached,
+    .ship-action-repairs
+  )
   > .local-reward-heading {
   padding-inline: var(--timeline-title-x) 0;
 }
 
-:is(.room-action-optional-pool, .room-action-repairs, .ship-action-repairs)
+:is(
+    .room-action-optional-pool,
+    .room-action-repairs,
+    .room-action-not-reached,
+    .ship-action-repairs
+  )
   > .local-reward-heading
   :is(h4, h5) {
   color: #aaa7af;
@@ -2164,16 +2187,19 @@
 /* The Add area and Timeline repairs share the timeline's width and its content edge. */
 .room-actions-workbench > .room-add,
 .room-actions-workbench .room-action-repairs,
+.room-actions-workbench .room-action-not-reached,
 .ship-phase > .room-add {
   width: var(--timeline-working-width, min(60rem, 100%));
   padding-left: var(--timeline-title-x);
 }
 
-.room-actions-workbench .room-action-repairs {
+.room-actions-workbench :is(.room-action-repairs, .room-action-not-reached) {
   padding-left: 0;
 }
 
-.room-actions-workbench .room-action-repairs > .local-reward-heading {
+.room-actions-workbench
+  :is(.room-action-repairs, .room-action-not-reached)
+  > .local-reward-heading {
   padding-left: var(--timeline-title-x);
 }
 
@@ -3534,6 +3560,15 @@ span.hub-board-status-line {
   aspect-ratio: 16 / 9;
 }
 
+/*
+ * Beside the controls, the sticky map takes the column's width and the window's height
+ * below the editor header, whichever binds first, so it stays whole while the controls scroll.
+ */
+.room-map-columns > .room-map-column > .room-map-viewport > .room-map-canvas {
+  max-width: max(26rem, calc((100 * var(--app-vh) - 18rem) * 16 / 9));
+  margin-inline: auto;
+}
+
 .room-map-column > .room-map-viewport > .room-map-canvas > .room-map-scroll {
   position: absolute;
   inset: 0;
@@ -3541,6 +3576,12 @@ span.hub-board-status-line {
   min-height: 0;
 }
 
+/*
+ * Stacked, the map takes the room panel's full width above the controls, so a growing
+ * Timeline never pushes it down, and scrolls away with them: where the controls would fall
+ * below a Timeline row, and on a window taller than wide, where the room panel's height
+ * gives the map more room than a column beside them.
+ */
 @container room-map-workbench (max-width: 56rem) {
   .room-map-columns {
     grid-template-columns: minmax(0, 1fr);
@@ -3548,5 +3589,77 @@ span.hub-board-status-line {
 
   .room-map-column {
     position: static;
+    order: -1;
   }
+
+  .room-map-columns > .room-map-column > .room-map-viewport > .room-map-canvas {
+    max-width: none;
+  }
+}
+
+@media (orientation: portrait) {
+  .room-map-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .room-map-column {
+    position: static;
+    order: -1;
+  }
+
+  .room-map-columns > .room-map-column > .room-map-viewport > .room-map-canvas {
+    max-width: none;
+  }
+}
+
+/* The Not reached yet heading opens its waiting rows. */
+.room-action-not-reached-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.room-action-not-reached-count {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* Where the plan stops, in one plain line, with the link there. */
+.stop-notice {
+  margin: 0;
+  padding: 8px var(--timeline-title-x, 8px);
+  color: var(--muted);
+}
+
+/* A room or Hub past the stop shows the notice alone under its title. */
+.room-not-reached .stop-notice {
+  padding: 12px 16px;
+}
+
+.stop-notice-link {
+  padding: 0;
+  border: 0;
+  color: var(--selection-accent);
+  background: none;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.stop-notice-link:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+/* A collapsed waiting list is inert until opened. */
+.room-action-not-reached > .room-action-list[inert] {
+  block-size: 0;
+  overflow: hidden;
 }

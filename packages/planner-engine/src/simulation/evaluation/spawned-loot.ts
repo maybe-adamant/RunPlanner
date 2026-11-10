@@ -1,4 +1,5 @@
 import {
+  createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -7,6 +8,7 @@ import {
   semanticAddressKey,
   type AcquisitionEntryAddress,
   type OccurrenceAddress,
+  type TraitOfferOwnerAddress,
   type RoomActionAddress,
   type SemanticAddress,
 } from '../../authored-project/addresses';
@@ -28,11 +30,13 @@ import {
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../../authored-project/shop';
 import type { Catalog } from '../../catalog-schema';
+import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import { candidateBiome, candidateBiomeRooms } from '../candidates/evaluated-biome';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { RoomActionParticipation, RoomActionRow } from '../room-actions';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import {
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
@@ -41,15 +45,16 @@ import {
 /**
  * When the game spawns loot on its own: on entry (an Opening or Devotion
  * reward, Fields cages and optionals), the fourth-biome Preboss delivery
- * flush, an encounter's start (H minibosses) or mid-combat (Arachne's
- * cocoon), its end, and in an O phase the deliveries and drops after its
+ * flush, an encounter's start (H minibosses), its outcome (what a Nemesis
+ * trade or contest result gives), its end (Arachne's cocoon fight ends as the
+ * reward cocoon breaks), and in an O phase the deliveries and drops after its
  * wheel reward.
  */
 export type SpawnMomentKind =
   | 'roomEntered'
   | 'deliveryFlush'
   | 'encounterStart'
-  | 'duringEncounter'
+  | 'encounterOutcome'
   | 'encounterEnd'
   | 'afterEncounterReward';
 
@@ -79,9 +84,22 @@ export type SpawnedLootPlacement =
   /** `command` places it; absent when no placement is authorable now. */
   | { readonly kind: 'unplaced'; readonly command?: ProjectCommand };
 
+/**
+ * What an item spawns as: its reward offer; the concrete pickup where that
+ * differs from the offer (one role of a reward that spawns per role, such as
+ * a Trial's chosen or spurned boon, or a forfeited reward's Red Onion); or a
+ * Boss's forced drop.
+ */
+export type SpawnedLootReward =
+  | { readonly kind: 'offer'; readonly offer: ResolvedRewardOffer }
+  | { readonly kind: 'pickup'; readonly gameName: string }
+  | { readonly kind: 'requiredDrop'; readonly consumableKey: string };
+
 export interface SpawnedLootItem {
   /** The reward owner the collect action acquires: a role, local reward, wheel offer or entry. */
   readonly owner: SemanticAddress;
+  /** What it spawns as; absent while its reward is not chosen. */
+  readonly reward?: SpawnedLootReward;
   /** The action that collects it. */
   readonly reference: RoomActionReference;
   readonly source: SpawnedLootSource;
@@ -236,6 +254,95 @@ function rowResolvesLevel(room: CanonicalAuthoredRoom, reference: RoomActionRefe
   }
 }
 
+/** The offer a collect row acquires, as the room's settled products hold it. */
+function rowOffer(
+  room: CanonicalAuthoredRoom,
+  reference: RoomActionReference,
+): ResolvedRewardOffer | undefined {
+  switch (reference.kind) {
+    case 'interactIncomingReward':
+      return room.incomingReward?.offer;
+    case 'interactLocalReward':
+      return [...(room.localRewards ?? []), ...(room.fieldsOptionalRewards ?? [])].find(
+        (reward) => reward.groupKey === reference.groupKey && reward.slotKey === reference.slotKey,
+      )?.offer;
+    case 'interactWheelReward':
+      return room.rewardWheels
+        ?.find((wheel) => wheel.wheelKey === reference.wheelKey)
+        ?.offers.find((offer) => offer.picked)?.offer;
+    case 'interactAcquisitionEntry':
+      return (
+        room.acquisitionSites[reference.siteKey]?.entries[reference.entryKey]?.offer ??
+        fixedPickupOffer(room, reference.siteKey, reference.entryKey)
+      );
+    default:
+      return undefined;
+  }
+}
+
+/** A producer pickup whose reward type its source fixes, before its entry is authored. */
+function fixedPickupOffer(
+  room: CanonicalAuthoredRoom,
+  siteKey: string,
+  entryKey: string,
+): ResolvedRewardOffer | undefined {
+  const rewardType = room.pickupProducers
+    ?.find((producer) => producer.siteKey === siteKey)
+    ?.pickups.find((pickup) => pickup.key === entryKey)?.rewardType;
+  return rewardType === undefined ? undefined : Object.freeze({ rewardType });
+}
+
+const REWARD_OWNER_KINDS: ReadonlySet<string> = new Set([
+  'incomingReward',
+  'localReward',
+  'rewardWheelOffer',
+  'shopOffer',
+  'infernalContractPedestal',
+  'acquisitionEntry',
+]);
+
+/**
+ * What an item spawns as: a forfeited reward's realized pickup, one role's
+ * pickup of a reward that spawns per role, else the offer itself.
+ */
+function spawnedReward(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  owner: SemanticAddress,
+  reference: RoomActionReference,
+  offer: ResolvedRewardOffer | undefined,
+): SpawnedLootReward | undefined {
+  if (offer === undefined) return undefined;
+  const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  const roleKeys =
+    owner.kind === 'acquisitionRole'
+      ? [owner.acquisitionRole]
+      : 'acquisitionRole' in reference && typeof reference.acquisitionRole === 'string'
+        ? [reference.acquisitionRole]
+        : (declaration?.acquisitionRoles.values.map((role) => role.key) ?? []);
+  const rewardOwner = owner.kind === 'acquisitionRole' ? owner.owner : owner;
+  if (REWARD_OWNER_KINDS.has(rewardOwner.kind))
+    for (const roleKey of roleKeys) {
+      const realized = acquisitionConversionCandidateForProjectEvaluationAssembly(
+        assembly,
+        createAcquisitionRoleAddress(rewardOwner as TraitOfferOwnerAddress, roleKey),
+      )?.realizedAcquisition;
+      if (realized !== undefined)
+        return Object.freeze({ kind: 'pickup' as const, gameName: realized.acquisition.gameName });
+    }
+  const role =
+    declaration !== undefined && declaration.acquisitionRoles.values.length > 1
+      ? declaration.acquisitionRoles.byKey[roleKeys[0] ?? '']
+      : undefined;
+  if (role?.resolution.kind === 'payloadSource') {
+    const gameName = (offer.payload as Readonly<Record<string, unknown>> | undefined)?.[
+      role.resolution.field
+    ];
+    if (typeof gameName === 'string') return Object.freeze({ kind: 'pickup' as const, gameName });
+  }
+  return Object.freeze({ kind: 'offer' as const, offer });
+}
+
 /**
  * The collect action for an unranked active row: a required row's canonical
  * insertion, otherwise its latest legal one.
@@ -267,12 +374,50 @@ function insertion(
 }
 
 /**
+ * How far the walk went through a room's Timeline: every entry of a room it
+ * walked through, none of a room its assessed history does not reach, and in
+ * the room it stopped in, the entries before its stop. An entry at an `entry`
+ * stop is blocking: the walk reached it and blocks on its own contact there.
+ */
+interface RoomWalk {
+  readonly entry: (entryIndex: number) => 'settled' | 'blocking' | 'unreached';
+}
+
+function roomWalk(assembly: ProjectEvaluationAssembly, occurrence: OccurrenceAddress): RoomWalk {
+  const all: RoomWalk = { entry: () => 'settled' };
+  const biome = assembly.evaluation.route.biomes.find(
+    (candidate) => candidate.biomeKey === occurrence.biomeKey,
+  );
+  if (biome === undefined || biome.coverage.kind !== 'prefix') return all;
+  const key = semanticAddressKey(occurrence);
+  if (
+    'history' in biome &&
+    !biome.history.rooms.some((room) => semanticAddressKey(room.origin) === key)
+  )
+    return { entry: () => 'unreached' };
+  const stop = biome.coverage.roomStop;
+  if (stop === undefined || semanticAddressKey(stop.room) !== key) return all;
+  return {
+    entry: (entryIndex) =>
+      entryIndex < stop.entryIndex
+        ? 'settled'
+        : entryIndex === stop.entryIndex && stop.at === 'entry'
+          ? 'blocking'
+          : 'unreached',
+  };
+}
+
+/**
  * The loot the game spawns in one entered room, grouped by the
  * moment it appears or the action whose settlement spawns it. Items are what
  * spawned, from the active action domain and the reached due contacts, placed
- * or not; undefined for a room the evaluated biome does not enter. Reached
- * contacts publish what falls due, so a room past the assessment stop lists only
- * its structural spawns.
+ * or not; undefined for a room the evaluated biome does not enter. Only what
+ * the walk produced is published: a moment's items once the walk reaches its
+ * Timeline boundary, all together even while it blocks there (how each item
+ * resolves is its own row's question), an outcome's once that outcome has
+ * settled, since it decides what spawns, and an action's spawn once the walk
+ * settled that action. Nothing past the room's stop and nothing from a source
+ * action still unresolved at it is listed.
  */
 export function spawnedLootForProjectEvaluationAssembly(
   catalog: Catalog,
@@ -297,8 +442,18 @@ export function spawnedLootForProjectEvaluationAssembly(
     const action = actionAddress(row.reference);
     const command = row.rank === null ? insertion(room, row, action) : undefined;
     const needsChoice = row.rank === null && rowResolvesLevel(room, row.reference);
+    const reward =
+      row.reference.kind === 'collectRequiredReward'
+        ? room.requiredReward === undefined
+          ? undefined
+          : frozen({
+              kind: 'requiredDrop' as const,
+              consumableKey: room.requiredReward.consumableKey,
+            })
+        : spawnedReward(catalog, assembly, row.owner, row.reference, rowOffer(room, row.reference));
     return frozen({
       owner: row.owner,
+      ...(reward === undefined ? {} : { reward }),
       reference: row.reference,
       source: frozen(source),
       participation: row.participation,
@@ -355,8 +510,20 @@ export function spawnedLootForProjectEvaluationAssembly(
         row.reference.siteKey === entry.site.pointKey &&
         row.reference.entryKey === entry.entryKey,
     );
+    const authored = room.acquisitionSites[entry.site.pointKey]?.entries[entry.entryKey];
+    const singleType = capability.rewardTypes?.length === 1 ? capability.rewardTypes[0] : undefined;
+    const reward = spawnedReward(
+      catalog,
+      assembly,
+      entry,
+      reference,
+      authored?.offer ??
+        capability.fixedReward?.offer ??
+        (singleType === undefined ? undefined : frozen({ rewardType: singleType })),
+    );
     return frozen({
       owner: entry,
+      ...(reward === undefined ? {} : { reward }),
       reference: placed?.reference ?? reference,
       source: frozen({ kind: 'generated' as const, family }),
       participation: placed?.participation ?? participation,
@@ -397,15 +564,77 @@ export function spawnedLootForProjectEvaluationAssembly(
   const startSpawnPhase = phaseKeys.find(
     (phaseKey) => phaseDefinition(phaseKey)?.createsIncomingRewardAtStart === true,
   );
-  const combatSpawnPhase = phaseKeys.find(
-    (phaseKey) => phaseDefinition(phaseKey)?.createsIncomingRewardInCombat === true,
-  );
+
+  const walk = roomWalk(assembly, occurrence);
+  const entries = room.roomLifecycleTimeline.entries;
+  type EntryState = ReturnType<RoomWalk['entry']>;
+  /** A boundary the room lacks stands at its last entry. */
+  const boundaryState = (kind: string, phaseKey?: string): EntryState => {
+    const index = entries.findIndex(
+      (entry) =>
+        entry.kind === 'boundary' &&
+        entry.boundary.kind === kind &&
+        (phaseKey === undefined ||
+          ('phaseKey' in entry.boundary && entry.boundary.phaseKey === phaseKey)),
+    );
+    return walk.entry(index >= 0 ? index : entries.length - 1);
+  };
+  /** An action the walk never ranks never runs, so it settles nothing. */
+  const actionSettled = (reference: RoomActionReference): boolean => {
+    const key = roomActionKey(reference);
+    const index = entries.findIndex((entry) => entry.kind === 'action' && entry.action.key === key);
+    return index >= 0 && walk.entry(index) === 'settled';
+  };
+  const encounterEndState = (phaseKey: string): EntryState =>
+    entries.some(
+      (entry) =>
+        entry.kind === 'boundary' &&
+        entry.boundary.kind === 'encounterEnd' &&
+        entry.boundary.phaseKey === phaseKey,
+    )
+      ? boundaryState('encounterEnd', phaseKey)
+      : boundaryState('bossDefeated', phaseKey);
+  const momentState = (kind: SpawnMomentKind, phaseKey: string | undefined): EntryState => {
+    switch (kind) {
+      case 'roomEntered':
+      case 'deliveryFlush':
+        return boundaryState('roomEntered');
+      case 'encounterStart':
+        return phaseKey === undefined
+          ? boundaryState('roomEntered')
+          : boundaryState('encounterStart', phaseKey);
+      // The outcome decides what spawns, so it spawns once the outcome has settled.
+      case 'encounterOutcome':
+        return phaseKey !== undefined && boundaryState('encounterOutcome', phaseKey) === 'settled'
+          ? 'settled'
+          : 'unreached';
+      case 'encounterEnd':
+        return phaseKey === undefined
+          ? walk.entry(entries.length - 1)
+          : encounterEndState(phaseKey);
+      case 'afterEncounterReward': {
+        const end =
+          phaseKey === undefined ? walk.entry(entries.length - 1) : encounterEndState(phaseKey);
+        // A Ship wheel's end effects spawn only once its reward is collected.
+        const wheelKey = structure.phases.find(
+          (phase) => phase.phaseKey === phaseKey,
+        )?.rewardWheelKey;
+        const collected =
+          wheelKey !== undefined &&
+          actionSettled(frozen({ kind: 'interactWheelReward' as const, wheelKey }));
+        return collected ? end : 'unreached';
+      }
+    }
+  };
+  /** Everything a moment spawns spawns together once the walk reaches it. */
+  const reached = (state: EntryState): boolean => state !== 'unreached';
 
   const moments = new Map<string, { kind: SpawnMomentKind; phaseKey?: string }>();
   const momentItems = new Map<string, SpawnedLootItem[]>();
   const momentKey = (kind: SpawnMomentKind, phaseKey?: string) =>
     phaseKey === undefined ? kind : `${kind}:${phaseKey}`;
   const add = (kind: SpawnMomentKind, phaseKey: string | undefined, item: SpawnedLootItem) => {
+    if (!reached(momentState(kind, phaseKey))) return;
     const key = momentKey(kind, phaseKey);
     if (!moments.has(key)) moments.set(key, phaseKey === undefined ? { kind } : { kind, phaseKey });
     const items = momentItems.get(key) ?? [];
@@ -437,8 +666,6 @@ export function spawnedLootForProjectEvaluationAssembly(
             startSpawnPhase,
             fromRow(row, roomReward, unlockKey(startSpawnPhase)),
           );
-        else if (combatSpawnPhase !== undefined)
-          add('duringEncounter', combatSpawnPhase, fromRow(row, roomReward));
         else if (lastPhaseKey !== undefined)
           add('encounterEnd', lastPhaseKey, fromRow(row, roomReward));
         else add('roomEntered', undefined, fromRow(row, roomReward));
@@ -557,11 +784,26 @@ export function spawnedLootForProjectEvaluationAssembly(
   // Generated pickups an encounter's end or a source action spawns.
   const actionSpawns = new Map<string, { source: RoomActionReference; items: SpawnedLootItem[] }>();
   const addActionSpawn = (source: RoomActionReference, item: SpawnedLootItem) => {
+    if (!actionSettled(source)) return;
     const key = roomActionKey(source);
     const spawn = actionSpawns.get(key) ?? { source, items: [] };
     spawn.items.push(item);
     actionSpawns.set(key, spawn);
   };
+  /**
+   * The phase whose outcome decides a source action's spawn: a Nemesis trade's
+   * result exists only once accepted and a contest's follows its result, while
+   * her free item is given whatever happens.
+   */
+  const decidingOutcome = (
+    family: AcquisitionEntrySourceFamily,
+    source: RoomActionReference,
+  ): string | undefined =>
+    family.kind === 'nemesisEvent' &&
+    source.kind === 'interactEncounter' &&
+    room.encounters.nemesisRandomEventByPhase?.[source.phaseKey]?.kind !== 'freeItem'
+      ? source.phaseKey
+      : undefined;
   for (const row of liveRows) {
     const reference = row.reference;
     const family = row.sourceFamily;
@@ -587,8 +829,12 @@ export function spawnedLootForProjectEvaluationAssembly(
         const source = row.dependencies.find(
           (dependency) => dependency.kind === 'afterAction' && dependency.authoringOnly !== true,
         );
-        if (source?.kind === 'afterAction' && rowByKey.has(roomActionKey(source.action)))
-          addActionSpawn(source.action, fromRow(row, { kind: 'generated', family }));
+        if (source?.kind !== 'afterAction' || !rowByKey.has(roomActionKey(source.action))) break;
+        const item = fromRow(row, { kind: 'generated', family });
+        const outcomePhaseKey = decidingOutcome(family, source.action);
+        // A spawn an encounter outcome decides is announced after that outcome.
+        if (outcomePhaseKey === undefined) addActionSpawn(source.action, item);
+        else if (actionSettled(source.action)) add('encounterOutcome', outcomePhaseKey, item);
         break;
       }
       case 'hermesShrineDelivery': {
@@ -657,13 +903,14 @@ export function spawnedLootForProjectEvaluationAssembly(
   for (const phaseKey of phaseKeys)
     chronology.push(
       momentKey('encounterStart', phaseKey),
-      momentKey('duringEncounter', phaseKey),
+      momentKey('encounterOutcome', phaseKey),
       momentKey('encounterEnd', phaseKey),
       momentKey('afterEncounterReward', phaseKey),
     );
   const unknown = [...moments.keys()].filter((key) => !chronology.includes(key));
   const spawnOrder = [...chronology, ...unknown].flatMap((key) => momentItems.get(key) ?? []);
   const unlocks = phaseKeys.flatMap((phaseKey) => {
+    if (!reached(encounterEndState(phaseKey))) return [];
     const key = unlockKey(phaseKey);
     const items = spawnOrder.filter((item) => item.lockedUntil === key);
     return items.length === 0

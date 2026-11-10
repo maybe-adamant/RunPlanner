@@ -20,7 +20,7 @@ import type {
 } from '../model';
 import type { BiomeOwnedProjectCommand, ProjectCommand, RouteDetourCommand } from './types';
 
-type CommandContractSubject = ProjectCommand | RouteDetourCommand;
+export type CommandContractSubject = ProjectCommand | RouteDetourCommand;
 
 export class ProjectCommandContractError extends Error {
   readonly commandKind: CommandContractSubject['kind'];
@@ -92,7 +92,6 @@ function commandContractAddress(
     case 'InitializeExitDecision':
     case 'CreateTakeoverBatch':
     case 'ReplaceWithTakeoverBatch':
-    case 'ReconcileBatchExitCapacity':
     case 'RemoveExitDecision':
     case 'ReplaceWithHubDecision':
       return command.decision;
@@ -193,6 +192,7 @@ function commandContractAddress(
     case 'ReplaceShopPurchaseParticipation':
       return command.offer;
     case 'PurchaseShopTravelDealRefill':
+    case 'ResetRoomActionsAfter':
       return command.occurrence;
     case 'ReplaceIncomingReward':
       return command.reward;
@@ -448,11 +448,35 @@ export function locateBiome(
   if (plan === undefined) failCommand(command, `missing biome ${address.biomeKey}`);
   const layout = catalog.biomeLayouts.byKey[address.biomeKey];
   if (layout === undefined) failCommand(command, `catalog has no layout for ${address.biomeKey}`);
+  return located(document, catalog, biomeIndex, plan, layout);
+}
+
+/** A configured biome of the document's route by key, for work that no single command addresses. */
+export function locateConfiguredBiome(
+  document: ProjectDocument,
+  catalog: Catalog,
+  biomeKey: string,
+): LocatedBiome | undefined {
+  const biomeIndex = document.route.biomes.findIndex((biome) => biome.biomeKey === biomeKey);
+  const plan = document.route.biomes[biomeIndex];
+  const layout = catalog.biomeLayouts.byKey[biomeKey];
+  return plan === undefined || layout === undefined
+    ? undefined
+    : located(document, catalog, biomeIndex, plan, layout);
+}
+
+function located(
+  document: ProjectDocument,
+  catalog: Catalog,
+  biomeIndex: number,
+  plan: AuthoredBiomePlan,
+  layout: BiomeLayout,
+): LocatedBiome {
   return {
-    routeKey: route.routeKey,
-    routePosition: resolveRoutePosition(catalog, route, plan.biomeKey),
+    routeKey: document.route.routeKey,
+    routePosition: resolveRoutePosition(catalog, document.route, plan.biomeKey),
     biomeIndex,
-    loadout: route.loadout,
+    loadout: document.route.loadout,
     plan,
     layout,
   };

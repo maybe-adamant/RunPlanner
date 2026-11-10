@@ -2,7 +2,6 @@ import {
   createOccurrenceAddress,
   createBiomeAddress,
   createRouteAddress,
-  routeRoomDeclaration,
   type AuthoredRoutePlan,
   type OccurrenceAddress,
 } from '@run-planner/engine/authored-project';
@@ -15,7 +14,8 @@ import type {
   WorkspaceRoomPlanEnd,
   WorkspaceRoutePlanEnd,
 } from '../contracts/structure';
-import { requireWorkspaceRoom } from './catalog-room';
+import { roomPlace } from '../presentation/room-location';
+import type { WorkspaceBiomeSource } from '../source-index';
 
 const unknownAvailability: WorkspacePlanEndAvailability = Object.freeze({
   available: false,
@@ -53,27 +53,21 @@ export function projectRoutePlanEnd(
   catalog: Catalog,
   route: AuthoredRoutePlan,
   evaluation: ProjectRouteEvaluation | undefined,
+  roomLocation: WorkspaceBiomeSource['roomLocation'],
 ): WorkspaceRoutePlanEnd | undefined {
   const end = route.planEnd;
   if (end === undefined) return undefined;
-  const occurrence = route.biomes
-    .find((biome) => biome.biomeKey === end.biomeKey)
-    ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === end.occurrenceId);
+  const room = createOccurrenceAddress(
+    createBiomeAddress(route.routeKey, end.biomeKey),
+    end.occurrenceId,
+  );
   const unreached = (evaluation?.findings ?? []).some(
     (finding) => finding.code === 'planEndUnreached',
   );
   return Object.freeze({
     biomeKey: end.biomeKey,
-    biomeLabel: catalog.biomes.byKey[end.biomeKey]?.label ?? end.biomeKey,
-    roomLabel:
-      occurrence === undefined
-        ? end.occurrenceId
-        : routeRoomDeclaration(requireWorkspaceRoom(catalog, occurrence.gameName), route.routeKey)
-            .label,
-    room: createOccurrenceAddress(
-      createBiomeAddress(route.routeKey, end.biomeKey),
-      end.occurrenceId,
-    ),
+    place: roomPlace(catalog, room, roomLocation).place,
+    room,
     ...(unreached ? { unreached: true as const } : {}),
     removeIntent: Object.freeze({
       command: Object.freeze({

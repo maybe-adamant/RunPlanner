@@ -20,6 +20,7 @@ import {
   replaceTestShopOfferActions,
   hubVisitActions,
   purchaseTestHermesShrineOffer,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 import {
   loadUnderworldFGHICheckpoint,
@@ -1279,7 +1280,7 @@ describe('engine-owned F/G execution semantic product', () => {
       },
     });
     const forcedTargetId = createOccurrenceId('golden-h-combat05');
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
       gameName: 'H_MiniBoss02',
@@ -1402,7 +1403,7 @@ describe('engine-owned F/G execution semantic product', () => {
         rarificationActions: [],
       },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
       gameName: 'H_MiniBoss02',

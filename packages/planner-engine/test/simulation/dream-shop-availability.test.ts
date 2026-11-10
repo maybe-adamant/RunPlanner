@@ -140,6 +140,7 @@ function dreamIShopContact(
   const room = materializeAuthoredRoom({
     catalog,
     biome: dreamI,
+    topology: plan!.topology!,
     routePosition: resolveRoutePosition(catalog, project.route!, 'I'),
     room: declaration,
     occurrence,

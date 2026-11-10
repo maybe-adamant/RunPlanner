@@ -15,10 +15,9 @@ import {
 } from '../../authored-project/room-actions/lifecycle-structure';
 import {
   assessRoomActionInsertion,
+  assessRoomActionMove,
   assessRoomActionOrder,
-  keepsTerminalActionLast,
   roomActionOrderContext,
-  roomActionPlacementBlockers,
 } from '../../authored-project/room-actions/order-assessment';
 import type {
   RoomActionCheckpoint,
@@ -63,21 +62,11 @@ export function assembleRoomActionRoster(options: {
   const issues = assessRoomActionOrder(options.order, context);
   const issueKeys = new Set(
     issues
-      .filter(
-        (issue) =>
-          issue.kind !== 'unrankedRequired' &&
-          !(issue.kind === 'stale' && issue.reference.kind === 'sellPurgingPoolTrait'),
-      )
+      .filter((issue) => issue.kind !== 'unrankedRequired')
       .map((issue) => roomActionKey(issue.reference)),
   );
   const rows: RoomActionRow[] = options.order.map((reference, index) => {
     const entry = active.get(roomActionKey(reference));
-    // A cleared Pool slot retains its sale in chronological authoring. It has
-    // no active contribution, but must still reach post-outgoing simulation so
-    // that the exact stale-sale finding is emitted instead of silently
-    // dropping the action.
-    const retainedPurgingPoolSale =
-      entry === undefined && reference.kind === 'sellPurgingPoolTrait';
     const sourceFamily =
       entry === undefined
         ? options.retainedSourceFamilies?.get(roomActionKey(reference))
@@ -93,18 +82,12 @@ export function assembleRoomActionRoster(options: {
           roomActionKey(reference),
         ),
       participation: entry?.participation ?? 'optional',
-      window:
-        entry?.window ??
-        (retainedPurgingPoolSale
-          ? frozen({ kind: 'postOutgoing' })
-          : frozen({ kind: 'standard', phase: 'afterCombat' })),
+      window: entry?.window ?? frozen({ kind: 'standard', phase: 'afterCombat' }),
       dependencies: entry?.dependencies ?? frozen([]),
       ...(sourceFamily === undefined ? {} : { sourceFamily }),
       rank: index + 1,
       stale: entry === undefined,
-      executable:
-        (entry !== undefined || retainedPurgingPoolSale) &&
-        !issueKeys.has(roomActionKey(reference)),
+      executable: entry !== undefined && !issueKeys.has(roomActionKey(reference)),
     });
   });
   for (const action of actions) {
@@ -212,11 +195,8 @@ export function assembleRoomActionRoster(options: {
     if (!active.has(roomActionKey(reference))) continue;
     for (let toIndex = 0; toIndex < options.order.length; toIndex += 1) {
       if (fromIndex === toIndex) continue;
-      const order = [...options.order];
-      order.splice(fromIndex, 1);
-      order.splice(toIndex, 0, reference);
-      if (!keepsTerminalActionLast(options.order, order, options.terminalActionKey)) continue;
-      const blockers = roomActionPlacementBlockers(order, context);
+      const assessment = assessRoomActionMove(options.order, fromIndex, toIndex, context);
+      if (assessment.followsTerminal) continue;
       proposals.push(
         frozen({
           kind: 'move',
@@ -224,9 +204,9 @@ export function assembleRoomActionRoster(options: {
           fromIndex,
           toIndex,
           anchorIndex: toIndex < fromIndex ? toIndex : toIndex + 1,
-          order: frozen(order),
-          structurallyAuthorable: blockers.length === 0,
-          blockers,
+          order: assessment.order,
+          structurallyAuthorable: assessment.structurallyAuthorable,
+          blockers: assessment.blockers,
         }),
       );
     }

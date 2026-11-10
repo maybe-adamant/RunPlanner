@@ -3,7 +3,6 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
-  type WorkspaceBatchRepairIntent,
   type WorkspaceEffectiveRewardPool,
   type WorkspaceInteractionCatalog,
   type WorkspaceLockedDoors,
@@ -30,8 +29,7 @@ import {
 } from '@planner/ui/feedback/useFindingTarget';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
-import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { useId, type ReactNode } from 'react';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RoomFeatureMapLegend, RoomFeatureMapPoints } from './room-map/RoomMapPoints';
 import { useRoomMapLinks, type RoomMapHighlight } from './room-map/roomMapHighlight';
@@ -47,6 +45,7 @@ import {
   RerolledRewardRepairs,
 } from './DoorRewardEditor';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
+import { NotedText } from '@planner/ui/controls/NotedText';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
@@ -54,7 +53,7 @@ import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
 import { doorChipMapLink, type DoorChip } from './doorSummary';
 import { DoorRows } from './DoorRows';
-import { type DoorNoteItem, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
+import type { DoorNoteFor } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
@@ -225,6 +224,7 @@ export function FixedExitRow({
 export function DoorRowsHeader({
   action,
   identity = 'Door',
+  rewardNote,
   room = 'Room',
   select,
 }: {
@@ -235,13 +235,26 @@ export function DoorRowsHeader({
   readonly room?: string;
   /** Names the selection column where it is not a pick between exits. */
   readonly select?: ReactNode;
+  /** A note on the Reward column, on its header. */
+  readonly rewardNote?: string | undefined;
 } = {}) {
   return (
-    <div {...(action === undefined ? { 'aria-hidden': true } : {})} className="door-rows-header">
+    <div
+      {...(action === undefined && rewardNote === undefined ? { 'aria-hidden': true } : {})}
+      className="door-rows-header"
+    >
       <span aria-hidden="true">{select}</span>
       <span aria-hidden="true">{identity}</span>
       <span aria-hidden="true">{room}</span>
-      <span aria-hidden="true">Reward</span>
+      {rewardNote === undefined ? (
+        <span aria-hidden="true">Reward</span>
+      ) : (
+        <span>
+          <NotedText label="Reward" note={rewardNote}>
+            Reward
+          </NotedText>
+        </span>
+      )}
       <span className="door-rows-header-action">{action}</span>
     </div>
   );
@@ -284,38 +297,6 @@ function DoorRowWaiting({ children }: { readonly children: string }) {
     <span aria-live="polite" className="door-row-waiting">
       {children}
     </span>
-  );
-}
-
-/** The repair's projected effect names and styles it; a projected mark owner carries the batch's mark. */
-function ExactRepairAction({
-  intent,
-  label,
-  onFocusedUse,
-}: {
-  readonly intent: WorkspaceBatchRepairIntent | undefined;
-  readonly label: string;
-  /** The repair removes its own button, so a focused use hands focus on. */
-  readonly onFocusedUse: () => void;
-}) {
-  const findingTarget = useFindingTarget();
-  const executeIntent = useCommandIntent();
-  if (intent === undefined) return null;
-  return (
-    <button
-      {...(intent.markOwner === undefined ? {} : findingTarget(intent.markOwner))}
-      className="text-action"
-      data-attention=""
-      data-command={intent.command.kind}
-      data-tone="danger"
-      onClick={(event) => {
-        if (document.activeElement === event.currentTarget) onFocusedUse();
-        executeIntent(intent);
-      }}
-      type="button"
-    >
-      {label}
-    </button>
   );
 }
 
@@ -596,67 +577,25 @@ function AdditionalExitRow({
   );
 }
 
-/**
- * A value a note explains: its footnote symbol follows it, it is named by its
- * label and value and described by the note, and hovering or focusing either
- * highlights both.
- */
-export function NoteMarked({
-  children,
-  labelledBy,
-  mark,
-}: {
-  readonly children: ReactNode;
-  /** The ids of the value's label and of its text, which together name it. */
-  readonly labelledBy: string;
-  readonly mark: DoorNoteMark | undefined;
-}) {
-  if (mark === undefined) return children;
-  return (
-    <span
-      aria-describedby={mark.noteId}
-      aria-labelledby={labelledBy}
-      className="door-note-marked"
-      data-note-active={mark.active || undefined}
-      onBlur={() => mark.setActive(false)}
-      onFocus={() => mark.setActive(true)}
-      onMouseEnter={() => mark.setActive(true)}
-      onMouseLeave={() => mark.setActive(false)}
-      data-door-note-focus={mark.focusKey}
-      role="group"
-      tabIndex={0}
-    >
-      {children}
-      {mark.symbol === undefined ? null : (
-        <sup aria-hidden="true" className="door-note-symbol">
-          {mark.symbol}
-        </sup>
-      )}
-    </span>
-  );
-}
-
 /** The pool line: the batch's pool, then what the selected exit counts where that differs. */
 export function RewardPoolLine({
   effective,
-  effectiveMark,
+  effectiveNote,
   fixedLabel,
   label,
   picker,
-  poolMark,
+  poolNote,
 }: {
   readonly effective?: WorkspaceEffectiveRewardPool | undefined;
-  readonly effectiveMark?: DoorNoteMark | undefined;
+  readonly effectiveNote?: string | undefined;
   /** A pool decided elsewhere, shown as a plain value. */
   readonly fixedLabel?: string | undefined;
   readonly label: string;
   readonly picker?: ReactNode;
-  readonly poolMark?: DoorNoteMark | undefined;
+  readonly poolNote?: string | undefined;
 }) {
   const labelId = useId();
-  const valueId = useId();
   const effectiveLabelId = useId();
-  const effectiveValueId = useId();
   return (
     <div className="door-pool-line">
       {picker ?? (
@@ -665,9 +604,9 @@ export function RewardPoolLine({
             {label}
           </span>
           {fixedLabel === undefined ? null : (
-            <NoteMarked labelledBy={`${labelId} ${valueId}`} mark={poolMark}>
-              <FixedValueChip label={fixedLabel} textId={valueId} />
-            </NoteMarked>
+            <NotedText label={fixedLabel} note={poolNote}>
+              <FixedValueChip label={fixedLabel} />
+            </NotedText>
           )}
         </span>
       )}
@@ -682,69 +621,24 @@ export function RewardPoolLine({
           <span className="visually-hidden" id={effectiveLabelId}>
             Effective Pool
           </span>
-          <NoteMarked labelledBy={`${effectiveLabelId} ${effectiveValueId}`} mark={effectiveMark}>
-            <span aria-labelledby={effectiveLabelId} role="status">
-              <FixedValueChip label={effective.label} textId={effectiveValueId} />
-            </span>
-          </NoteMarked>
+          <span aria-labelledby={effectiveLabelId} role="status">
+            <NotedText label={effective.label} note={effectiveNote}>
+              <FixedValueChip label={effective.label} />
+            </NotedText>
+          </span>
         </span>
       )}
     </div>
   );
 }
 
-/** The doors tab's side column of batch facts; absent when there are none. */
-export function DoorNotes({ items }: { readonly items: readonly DoorNoteItem[] }) {
-  const titleId = useId();
-  if (items.length === 0) return null;
-  return (
-    <aside aria-labelledby={titleId} className="door-notes">
-      <h4 className="door-notes-title" id={titleId}>
-        Notes
-      </h4>
-      <ul>
-        {items.map(({ key, mark, open, text }) =>
-          mark === undefined ? (
-            <li key={key}>{text}</li>
-          ) : (
-            <li
-              aria-labelledby={mark.noteId}
-              data-note-active={mark.active || undefined}
-              data-note-opens={open === undefined ? undefined : true}
-              key={key}
-              onBlur={() => mark.setActive(false)}
-              onClick={open}
-              onFocus={() => mark.setActive(true)}
-              onKeyDown={(event) => {
-                if (open === undefined || event.key !== 'Enter') return;
-                event.preventDefault();
-                open();
-              }}
-              onMouseEnter={() => mark.setActive(true)}
-              onMouseLeave={() => mark.setActive(false)}
-              tabIndex={0}
-            >
-              {mark.symbol === undefined ? null : (
-                <span aria-hidden="true" className="door-note-symbol">
-                  {mark.symbol}
-                </span>
-              )}
-              <span id={mark.noteId}>{text}</span>
-            </li>
-          ),
-        )}
-      </ul>
-    </aside>
-  );
-}
-
 function BatchSettings({
   interactions,
-  markFor,
+  noteFor,
   node,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
+  readonly noteFor: DoorNoteFor;
   readonly node: BatchNode;
 }) {
   const executeIntent = useCommandIntent();
@@ -767,9 +661,9 @@ function BatchSettings({
       {node.rewardPool === undefined ? null : (
         <RewardPoolLine
           effective={node.rewardPool.effective}
-          effectiveMark={markFor('effective')}
+          effectiveNote={noteFor('effective')}
           fixedLabel={node.rewardPool.inherited?.label}
-          poolMark={markFor('pool')}
+          poolNote={noteFor('pool')}
           label={node.rewardStoreLabel ?? 'Reward Pool'}
           picker={
             store === undefined ? undefined : (
@@ -791,6 +685,7 @@ function BatchSettings({
               id={`${node.key}-fields-roll`}
               interaction={fields}
               label="Fields door roll"
+              labelNote={noteFor('doorRoll')}
               onReplace={(cageOutcome) => executeIntent(fields.intentFor(cageOutcome))}
               placeholder="Select roll"
             />
@@ -799,7 +694,11 @@ function BatchSettings({
             <>
               <dl className="fields-batch-summary">
                 <div>
-                  <dt>Cages per combat room</dt>
+                  <dt>
+                    <NotedText label="Cages per combat room" note={noteFor('cageCount')}>
+                      Cages per combat room
+                    </NotedText>
+                  </dt>
                   <dd>{node.fields.doorCageRewardCount}</dd>
                 </div>
                 <div>
@@ -819,7 +718,7 @@ function BatchSettings({
   );
 }
 
-/** The doors' repair where one applies, otherwise their removal. */
+/** The doors' removal. */
 export function BatchDoorsRepair({
   interactions,
   node,
@@ -834,16 +733,8 @@ export function BatchDoorsRepair({
           workspaceInteractionKey(node.owner),
         )
       : undefined;
-  // A repair removes its own button, so a keyboard use hands focus to the doors.
-  const doorsId = semanticOwnerControlElementId(node.owner);
-  const refocusDoors = useRef(false);
-  useEffect(() => {
-    if (!refocusDoors.current || node.repairIntent !== undefined) return;
-    refocusDoors.current = false;
-    document.getElementById(doorsId)?.focus();
-  });
   const executeIntent = useCommandIntent();
-  return node.repairIntent === undefined ? (
+  return (
     <button
       className="text-action"
       data-tone="danger"
@@ -854,25 +745,14 @@ export function BatchDoorsRepair({
     >
       Reset Doors
     </button>
-  ) : (
-    <ExactRepairAction
-      intent={node.repairIntent}
-      label={node.kind === 'takeoverBatch' ? 'Fix Preboss' : 'Fix Doors'}
-      onFocusedUse={() => {
-        refocusDoors.current = true;
-      }}
-    />
   );
 }
 
 /** The doors' compact state on the Doors open row; each chip names its door on hover. */
 export function DoorChips({
-  activeKey,
   chips,
   label = 'Door summary',
 }: {
-  /** The chip of the door whose note is hovered or focused. */
-  readonly activeKey?: string | undefined;
   readonly chips: readonly DoorChip[];
   /** The list's name: a room's doors, or a Ship wheel's offers. */
   readonly label?: string | undefined;
@@ -888,7 +768,6 @@ export function DoorChips({
           aria-label={doorChipName(chip)}
           className="timeline-door-chip"
           data-missing={chip.missing}
-          data-note-active={chip.key === activeKey || undefined}
           data-unavailable={chip.unavailable || undefined}
           key={chip.key}
           role="listitem"
@@ -1040,14 +919,14 @@ function DoorLockToggle({
 export function BatchDoorsDetail({
   interactions,
   lockedDoors,
-  markFor,
+  noteFor,
   node,
   repair,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   /** The room's lockable doors, each toggled on its row. */
   readonly lockedDoors?: WorkspaceLockedDoors | undefined;
-  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
+  readonly noteFor: DoorNoteFor;
   readonly node: BatchNode;
   /** The doors' repair or removal, where it sits under the doors. */
   readonly repair?: ReactNode;
@@ -1056,8 +935,6 @@ export function BatchDoorsDetail({
   // Where the doors lie past the plan end every door row is read-only together;
   // the end room's own doors still open inside the plan.
   const locked = useAuthoringLocked(node.owner);
-  // A note about the doors as a whole opens onto them.
-  const batchNote = markFor('batch');
   const lockFor = (exitKey: string, index: number) => {
     const door = lockedDoors?.doors.find((candidate) => candidate.exitKey === exitKey);
     return lockedDoors === undefined || door === undefined ? undefined : (
@@ -1075,16 +952,18 @@ export function BatchDoorsDetail({
       className="biome-batch-workbench door-workbench timeline-doors-detail"
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}
-      {...(node.repairIntent?.markOwner === undefined ? findingAnchor(node.owner) : {})}
-      data-door-note-focus={batchNote?.focusKey}
+      {...findingAnchor(node.owner)}
       tabIndex={-1}
     >
       <div className="door-body" data-authoring-locked={locked || undefined} inert={locked}>
         <div className="door-batch">
-          <BatchSettings interactions={interactions} markFor={markFor} node={node} />
+          <BatchSettings interactions={interactions} noteFor={noteFor} node={node} />
         </div>
         <DoorRows ariaLabel="Door rows" role="group">
-          <DoorRowsHeader {...(repair === undefined ? {} : { action: repair })} />
+          <DoorRowsHeader
+            {...(repair === undefined ? {} : { action: repair })}
+            rewardNote={noteFor('rewardColumn')}
+          />
           {node.targets.map((target) => (
             <TargetRow
               interactions={interactions}
@@ -1152,7 +1031,7 @@ function ExitFrontier({
   return (
     <BatchDoorsDetail
       interactions={interactions}
-      markFor={() => undefined}
+      noteFor={() => undefined}
       node={frontier.provisionalBatch}
     />
   );
