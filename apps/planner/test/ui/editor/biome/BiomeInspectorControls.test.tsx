@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
-import { goToStopLabel } from '@planner/projections/walkStopCopy';
 import { hintOf } from '@planner-test/support/hints';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -226,7 +225,7 @@ describe('Biome inspector controls', () => {
     ).toBeNull();
     expect(within(inspector).queryByRole('tab')).toBeNull();
     expect(inspector.querySelector('article[data-not-reached]')).not.toBeNull();
-    expect(within(inspector).getByRole('button', { name: goToStopLabel })).toBeTruthy();
+    expect(stopLink(inspector)).toBeTruthy();
   });
 
   it('edits entry identity in Overview only and undoes exactly', async () => {
@@ -927,3 +926,10 @@ describe('Biome inspector controls', () => {
     );
   });
 });
+
+/** The stop notice's link to where the plan stops. */
+function stopLink(scope: ParentNode): HTMLButtonElement {
+  const link = scope.querySelector<HTMLButtonElement>('[data-stop-notice] button');
+  if (link === null) throw new Error('no stop notice link');
+  return link;
+}

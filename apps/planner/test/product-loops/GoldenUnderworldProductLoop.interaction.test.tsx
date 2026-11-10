@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import { goToStopLabel } from '@planner/projections/walkStopCopy';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
@@ -694,7 +693,7 @@ describe('underworld product loop', () => {
     expect(screen.queryByRole('tab', { name: 'Room Timeline' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Door 1 room' })).toBeNull();
     const before = currentProject(application);
-    await view.user.click(screen.getByRole('button', { name: goToStopLabel }));
+    await view.user.click(stopLink(document.body));
     expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'F',
@@ -1075,3 +1074,10 @@ describe('underworld product loop', () => {
     });
   });
 });
+
+/** The stop notice's link to where the plan stops. */
+function stopLink(scope: ParentNode): HTMLButtonElement {
+  const link = scope.querySelector<HTMLButtonElement>('[data-stop-notice] button');
+  if (link === null) throw new Error('no stop notice link');
+  return link;
+}

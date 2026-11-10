@@ -908,7 +908,7 @@ export function BiomeWorkspace({
               </div>
             </header>
             {walkStop === undefined ? null : (
-              <StopNotice at={{ kind: 'past', place: walkStop.place, biomeKey: biome.biomeKey }} />
+              <StopNotice at={{ kind: 'past', place: walkStop.place }} />
             )}
           </article>
         ) : subject === undefined ? (

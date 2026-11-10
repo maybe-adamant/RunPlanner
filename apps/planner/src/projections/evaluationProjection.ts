@@ -1675,6 +1675,7 @@ export type FindingLocation =
       readonly kind: 'step';
       readonly biomeKey: string;
       readonly biomeLabel: string;
+      readonly depth?: number;
       readonly label: string;
     }
   | {
@@ -1726,7 +1727,13 @@ function railStopLocation(
       label: entry.node.room.label,
     });
   // A stop without a room yet keeps its title.
-  return Object.freeze({ kind: 'step', biomeKey, biomeLabel, label: entry.label });
+  return Object.freeze({
+    kind: 'step',
+    biomeKey,
+    biomeLabel,
+    ...(entry.runDepth === undefined ? {} : { depth: entry.runDepth }),
+    label: entry.label,
+  });
 }
 
 /** Where a finding is: the place its repair destination opens. */

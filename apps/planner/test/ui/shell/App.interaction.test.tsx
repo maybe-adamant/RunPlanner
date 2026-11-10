@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import { goToStopLabel } from '@planner/projections/walkStopCopy';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
@@ -484,7 +483,11 @@ describe('About build identity', () => {
 
 /** Route-start choices live on the Loadout panel; the workspace opens on Route. */
 const openLoadout = (user: ReturnType<typeof renderPlannerForInteraction>['user']) =>
-  user.click(screen.getByRole('button', { name: 'Loadout' }));
+  user.click(
+    within(screen.getByRole('navigation', { name: /panels$/ })).getByRole('button', {
+      name: 'Loadout',
+    }),
+  );
 
 describe('planner history interaction', () => {
   it('keeps the one route repair in the header on every panel and navigates to its owner', async () => {
@@ -676,7 +679,11 @@ describe('planner history interaction', () => {
     expect(screen.queryByRole('navigation', { name: 'Planner sections' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Project history' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'About' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Loadout' })).toBeTruthy();
+    expect(
+      within(screen.getByRole('navigation', { name: /panels$/ })).getByRole('button', {
+        name: 'Loadout',
+      }),
+    ).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Home' }));
     await user.click(screen.getByRole('button', { name: 'About' }));
@@ -793,7 +800,10 @@ describe('planner history interaction', () => {
         name: 'Erebus',
       }),
     );
-    const loadout = screen.getByRole('button', { name: 'Loadout' });
+    const loadout = within(screen.getByRole('navigation', { name: /panels$/ })).getByRole(
+      'button',
+      { name: 'Loadout' },
+    );
     expect(loadout.getAttribute('aria-current')).toBeNull();
     expect(
       document
@@ -831,10 +841,12 @@ describe('planner history interaction', () => {
     // The opening lies past the walk's stop: only the way to the loadout repair shows.
     expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
     const before = application.store.getState().projectWorkspace.history;
-    await user.click(screen.getByRole('button', { name: goToStopLabel }));
-    expect(screen.getByRole('button', { name: 'Loadout' }).getAttribute('aria-current')).toBe(
-      'page',
-    );
+    await user.click(stopLink(document.body));
+    expect(
+      within(screen.getByRole('navigation', { name: /panels$/ }))
+        .getByRole('button', { name: 'Loadout' })
+        .getAttribute('aria-current'),
+    ).toBe('page');
     expect(application.store.getState().projectWorkspace.history).toBe(before);
   });
 
@@ -972,7 +984,9 @@ describe('planner history interaction', () => {
     });
     expect(tartarus.getAttribute('aria-current')).toBe('page');
 
-    const route = screen.getByRole('button', { name: 'Loadout' });
+    const route = within(screen.getByRole('navigation', { name: /panels$/ })).getByRole('button', {
+      name: 'Loadout',
+    });
     route.focus();
     await user.keyboard(' ');
     expect(application.store.getState().editorSession.activePanel).toEqual({
@@ -2771,3 +2785,10 @@ describe('route loadout interaction', () => {
     );
   });
 });
+
+/** The stop notice's link to where the plan stops. */
+function stopLink(scope: ParentNode): HTMLButtonElement {
+  const link = scope.querySelector<HTMLButtonElement>('[data-stop-notice] button');
+  if (link === null) throw new Error('no stop notice link');
+  return link;
+}

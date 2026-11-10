@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
-import { goToStopLabel } from '@planner/projections/walkStopCopy';
 import { hintOf } from '@planner-test/support/hints';
 import { catalog } from '@run-planner/hades2-catalog';
 import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
@@ -1952,7 +1951,7 @@ describe('BiomeWorkspace', () => {
     // Its room lies past the stop: only the link back to the Intro's doors shows.
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(within(inspector).queryByRole('tab')).toBeNull();
-    await view.user.click(within(inspector).getByRole('button', { name: goToStopLabel }));
+    await view.user.click(stopLink(inspector));
     expect(selectedRailMarkerKeys(structure)).toEqual([introKey]);
     expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
@@ -2173,3 +2172,10 @@ describe('boss-door reward pool in the Doors open row', () => {
     expect(within(section).getByRole('listitem', { name: 'Leave room' })).toBeTruthy();
   });
 });
+
+/** The stop notice's link to where the plan stops. */
+function stopLink(scope: ParentNode): HTMLButtonElement {
+  const link = scope.querySelector<HTMLButtonElement>('[data-stop-notice] button');
+  if (link === null) throw new Error('no stop notice link');
+  return link;
+}
