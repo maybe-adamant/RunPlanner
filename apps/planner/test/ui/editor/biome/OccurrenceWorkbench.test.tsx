@@ -497,7 +497,7 @@ describe('OccurrenceWorkbench', () => {
     );
     const sideRow = screen.getByRole('article', { name: 'Side Room 03 door' });
     // A closed door has no reward editor.
-    expect(within(sideRow).getByText('Door closed')).toBeTruthy();
+    expect(within(sideRow).getByRole('img', { name: 'Door closed' })).toBeTruthy();
     expect(within(sideRow).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
