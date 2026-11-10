@@ -97,6 +97,11 @@ A consumer asks the engine what is possible; it never decides it.
   chance that balance covers the price, and each room's gains (estimated enemy,
   urn and Medea gold among them, each named by the room action that paid it
   where one did), spending and balances (unavailable past coverage).
+- What a consumer may place in a room comes from the
+  [live product](ROOM_LIFECYCLE_MODEL.md#live-at-a-point): the pickups and
+  object actions live at each gap through the walk's frontier, each with the
+  command that places it there. Draft places a room's required rows from it,
+  taking a required action's canonical restore where one is offered.
 - Hypothetical questions are engine-owned queries; the consumer supplies only
   its choice policy or its observation:
   - **Carrier-child completion** authors every selected-outcome child an offer

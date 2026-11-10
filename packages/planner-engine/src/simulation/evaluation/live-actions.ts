@@ -60,11 +60,14 @@ export type LiveObjectKind =
   | 'doorRerolls';
 
 /**
- * A choice the command still needs before it applies. The choice's values are
- * not part of this product: a blank Travel Deal item's are read where the
- * room's reached actions end, not at the gap. The indices a command accepts do
- * not depend on the value chosen, since the action it places and its order
- * constraints are the same for every value.
+ * A choice the placed action needs. A blank Travel Deal item is a value the
+ * purchase command takes, so it must be chosen before the command applies;
+ * its values are not part of this product but are read where the room's
+ * reached actions end, not at the gap. A level resolution (a Pom's level) is
+ * not part of the command: it applies as is, and the choice is then the
+ * placed row's own finding. The indices a command accepts do not depend on
+ * the value chosen, since the action it places and its order constraints are
+ * the same for every value.
  */
 export type LiveActionChoice = 'levelResolution' | 'travelDealItem';
 
@@ -80,7 +83,7 @@ export type LiveAction =
   | {
       readonly kind: 'place';
       readonly reference: RoomActionReference;
-      /** Applies as is, its index set to this gap; with `needsChoice`, once the choice is added. */
+      /** Its index set to this gap; applies as is, except a Travel Deal item needing its value. */
       readonly command: ProjectCommand;
       /** The required action's default restore position. */
       readonly canonical?: true;
