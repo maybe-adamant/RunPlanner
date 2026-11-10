@@ -1,5 +1,6 @@
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   purchaseTestHermesShrineOffer,
   testHermesShrinePurchaseAction,
 } from '@run-planner/test-fixtures/shared';
@@ -446,11 +447,14 @@ describe('structured workspace actions assembly', () => {
         phase,
         encounterKey: 'NemesisRandomEvent',
       });
-      const project = replaceNemesisRandomEventInteraction(
-        selected,
-        createNemesisRandomEventAddress(phase),
-        value,
-        reward,
+      // Nemesis is met before her pickup is live.
+      const project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(
+          selected,
+          createNemesisRandomEventAddress(phase),
+          value,
+          reward,
+        ),
       );
       const reference = {
         kind: 'interactAcquisitionEntry' as const,
@@ -488,7 +492,7 @@ describe('structured workspace actions assembly', () => {
     },
   );
 
-  it('places a contest Pom as a required row rather than an optional pickup', () => {
+  it('collects a contest Pom as a required row rather than an optional pickup', () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -513,7 +517,10 @@ describe('structured workspace actions assembly', () => {
     const actions = assemble(project, 'Underworld', 'F', occurrenceId).assembly.node.room
       .roomActions;
     expect(actions?.optionalRows.some((row) => row.key === key)).toBe(false);
-    expect(actions?.rows.find((row) => row.key === key)).toMatchObject({
+    const placed = assemble(collectTestRequiredItems(project), 'Underworld', 'F', occurrenceId)
+      .assembly.node.room.roomActions;
+    expect(placed?.optionalRows.some((row) => row.key === key)).toBe(false);
+    expect(placed?.rows.find((row) => row.key === key)).toMatchObject({
       label: 'Collect Pom',
       participation: 'required',
     });
@@ -898,6 +905,7 @@ describe('structured workspace actions assembly', () => {
       entry: replayEntry,
       value: { rewardType: 'HeraUpgrade' },
     });
+    project = collectTestRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitSelection',
       trait: echoOwner,
@@ -1645,6 +1653,7 @@ describe('shop-like purchase rows', () => {
         selectedOptionKey: 'option1',
       },
     });
+    project = collectTestRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceHermesShrineTravelDealRefill',
       occurrence: shrineOwner,
