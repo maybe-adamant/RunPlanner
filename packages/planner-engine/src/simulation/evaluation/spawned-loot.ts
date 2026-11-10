@@ -48,7 +48,7 @@ import {
  * flush, an encounter's start (H minibosses), its outcome (what a Nemesis
  * trade or contest result gives), its end (Arachne's cocoon fight ends as the
  * reward cocoon breaks), and in an O phase the deliveries and drops after its
- * wheel reward.
+ * wheel reward, or, before a later wheel, as that wheel opens.
  */
 export type SpawnMomentKind =
   | 'roomEntered'
@@ -56,7 +56,8 @@ export type SpawnMomentKind =
   | 'encounterStart'
   | 'encounterOutcome'
   | 'encounterEnd'
-  | 'afterEncounterReward';
+  | 'afterEncounterReward'
+  | 'wheelsOpen';
 
 /** What spawned one item. */
 export type SpawnedLootSource =
@@ -119,6 +120,8 @@ export interface SpawnMoment {
   readonly key: string;
   readonly kind: SpawnMomentKind;
   readonly phaseKey?: string;
+  /** The wheel a `wheelsOpen` moment opens with. */
+  readonly wheelKey?: string;
   /** In the game's spawn order. */
   readonly items: readonly SpawnedLootItem[];
 }
@@ -594,6 +597,15 @@ export function spawnedLootForProjectEvaluationAssembly(
     )
       ? boundaryState('encounterEnd', phaseKey)
       : boundaryState('bossDefeated', phaseKey);
+  /** The wheel that opens right after this phase's end, when one does. */
+  const nextWheelKey = (phaseKey: string): string | undefined => {
+    const index = structure.phases.findIndex((phase) => phase.phaseKey === phaseKey);
+    const wheelKey = index < 0 ? undefined : structure.phases[index + 1]?.rewardWheelKey;
+    return wheelKey !== undefined &&
+      structure.points.some((point) => point.kind === 'wheelsOpen' && point.wheelKey === wheelKey)
+      ? wheelKey
+      : undefined;
+  };
   const momentState = (kind: SpawnMomentKind, phaseKey: string | undefined): EntryState => {
     switch (kind) {
       case 'roomEntered':
@@ -612,6 +624,17 @@ export function spawnedLootForProjectEvaluationAssembly(
         return phaseKey === undefined
           ? walk.entry(entries.length - 1)
           : encounterEndState(phaseKey);
+      // What a phase's end effects spawn appears with the next wheel's roll.
+      case 'wheelsOpen': {
+        const wheelKey = phaseKey === undefined ? undefined : nextWheelKey(phaseKey);
+        const index = entries.findIndex(
+          (entry) =>
+            entry.kind === 'boundary' &&
+            entry.boundary.kind === 'wheelsOpen' &&
+            entry.boundary.wheelKey === wheelKey,
+        );
+        return index < 0 ? 'unreached' : walk.entry(index);
+      }
       case 'afterEncounterReward': {
         const end =
           phaseKey === undefined ? walk.entry(entries.length - 1) : encounterEndState(phaseKey);
@@ -629,23 +652,41 @@ export function spawnedLootForProjectEvaluationAssembly(
   /** Everything a moment spawns spawns together once the walk reaches it. */
   const reached = (state: EntryState): boolean => state !== 'unreached';
 
-  const moments = new Map<string, { kind: SpawnMomentKind; phaseKey?: string }>();
+  const moments = new Map<
+    string,
+    { kind: SpawnMomentKind; phaseKey?: string; wheelKey?: string }
+  >();
   const momentItems = new Map<string, SpawnedLootItem[]>();
   const momentKey = (kind: SpawnMomentKind, phaseKey?: string) =>
     phaseKey === undefined ? kind : `${kind}:${phaseKey}`;
   const add = (kind: SpawnMomentKind, phaseKey: string | undefined, item: SpawnedLootItem) => {
     if (!reached(momentState(kind, phaseKey))) return;
     const key = momentKey(kind, phaseKey);
-    if (!moments.has(key)) moments.set(key, phaseKey === undefined ? { kind } : { kind, phaseKey });
+    const wheelKey =
+      kind === 'wheelsOpen' && phaseKey !== undefined ? nextWheelKey(phaseKey) : undefined;
+    if (!moments.has(key))
+      moments.set(
+        key,
+        phaseKey === undefined
+          ? { kind }
+          : wheelKey === undefined
+            ? { kind, phaseKey }
+            : { kind, phaseKey, wheelKey },
+      );
     const items = momentItems.get(key) ?? [];
     items.push(item);
     momentItems.set(key, items);
   };
-  /** A phase's end: its reward first, then what its end effects spawn. */
+  /**
+   * A phase's end: its reward first, then what its end effects spawn, which a
+   * later wheel's roll shows; the native setup opens it right after them.
+   */
   const endEffectsMoment = (phaseKey: string): SpawnMomentKind =>
-    structure.phases.find((phase) => phase.phaseKey === phaseKey)?.rewardWheelKey !== undefined
-      ? 'afterEncounterReward'
-      : 'encounterEnd';
+    nextWheelKey(phaseKey) !== undefined
+      ? 'wheelsOpen'
+      : structure.phases.find((phase) => phase.phaseKey === phaseKey)?.rewardWheelKey !== undefined
+        ? 'afterEncounterReward'
+        : 'encounterEnd';
 
   const unlockKey = (phaseKey: string) => momentKey('encounterEnd', phaseKey);
   const beforeCombat = (row: RoomActionRow) =>
@@ -906,6 +947,7 @@ export function spawnedLootForProjectEvaluationAssembly(
       momentKey('encounterOutcome', phaseKey),
       momentKey('encounterEnd', phaseKey),
       momentKey('afterEncounterReward', phaseKey),
+      momentKey('wheelsOpen', phaseKey),
     );
   const unknown = [...moments.keys()].filter((key) => !chronology.includes(key));
   const spawnOrder = [...chronology, ...unknown].flatMap((key) => momentItems.get(key) ?? []);

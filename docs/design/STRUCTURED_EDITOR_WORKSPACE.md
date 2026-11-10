@@ -703,14 +703,15 @@ ShipCombat is the deliberate fourth shape. Its tabs are Room Overview, then one
 Timeline per phase named by the phase: Intro, Combat 1, and Combat 2 when it is
 structurally active. Overview owns encounter count, every phase's encounter
 and room features. Each phase tab holds its encounter banners and their events
-and its post-combat actions. A phase a wheel follows then opens that wheel as
-**Next phase ready**, like Doors open: its offers' chips and the wheel's editor
-(pool and offer count, then its offers as first drawn). Wheel-offer rerolls
-follow as press rows, added from the phase's **Wheel** object, and the phase
-ends with **Select wheel**, which picks the offer by its name and shows its
-reward as it stands; a one-offer wheel has nothing to pick. Next phase becomes
-ready only after the phase's own actions, so nothing but offer rerolls sits
-between. The last phase keeps Doors open and Leave room, since a Ship room
+and its post-combat actions. A phase a wheel follows then opens that wheel at
+**Wheels open**, like Doors open: its offers' chips and the wheel's editor
+(pool and offer count, then its offers as first drawn). The pickups the phase's
+end spawned and the wheel-offer rerolls, press rows added from the phase's
+**Wheel** object, follow in their authored order, and the phase ends with
+**Select wheel** at the choice's place, which picks the offer by its
+name and shows its reward as it stands; a one-offer wheel has nothing to pick.
+While the walk stops before the choice, Select wheel stands at the last wheel
+banner reached. The last phase keeps Doors open and Leave room, since a Ship room
 leaves through ordinary doors.
 The groups are views over one interaction and one authored order: global ranks,
 proposals, pointer drag, keyboard moves, and Undo are unchanged. The application

@@ -22,7 +22,9 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  clockedTraitGeneratedPickupEntryKey,
   echoLastRewardPickupEntryKey,
+  hermesShrineDeliveryEntryKey,
   encodeProjectDocument,
   roomActionKey,
   roomActionDomainForOccurrence,
@@ -36,6 +38,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
+  assembleRoomActionRoster,
   createPreparedProjectCandidateSession,
   composeBiomeHistory,
   createArcanaFearState,
@@ -361,6 +364,58 @@ function ordinaryBatches(snapshot: ReturnType<typeof materialize>) {
       decision.kind === 'batch' &&
       !decision.targets.some((target) => target.room.gameName === 'H_PreBoss01'),
   );
+}
+
+/**
+ * golden-h-combat02's action domain with pickup entries placed as placement
+ * leaves them; Underworld has no Shrine and no clocked drop, so none can be
+ * placed by command.
+ */
+function fieldsDomainWithPlacedEntries(
+  occurrenceId: OccurrenceId,
+  entries: readonly Extract<RoomActionReference, { readonly kind: 'interactAcquisitionEntry' }>[],
+) {
+  const project = createGoldenFGHProject();
+  const sites = (occurrence: RoomOccurrence) => {
+    const next: Record<string, { pickupEntries: Record<string, null> }> = {};
+    for (const entry of entries) {
+      const existing = next[entry.siteKey]?.pickupEntries ?? {};
+      next[entry.siteKey] = { pickupEntries: { ...existing, [entry.entryKey]: null } };
+    }
+    return { ...occurrence.acquisitionSites, ...next };
+  };
+  const context = roomActionDomainForOccurrence(
+    {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((plan) =>
+          plan.biomeKey !== 'H' || plan.topology === null || plan.topology === undefined
+            ? plan
+            : {
+                ...plan,
+                topology: {
+                  ...plan.topology,
+                  occurrences: plan.topology.occurrences.map((occurrence) =>
+                    occurrence.occurrenceId !== occurrenceId
+                      ? occurrence
+                      : {
+                          ...occurrence,
+                          acquisitionSites: sites(occurrence),
+                          roomActions: { order: [...occurrence.roomActions.order, ...entries] },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    } as ProjectDocument,
+    catalog,
+    biome,
+    occurrenceId,
+  );
+  if (context === undefined) throw new Error('Fields action domain missing');
+  return context;
 }
 
 function replaceFieldsActions(
@@ -1251,6 +1306,222 @@ describe('H Fields materialization', () => {
     }
     if (expectedPosition === 'after')
       expect(acquisition!.historySequence).toBeGreaterThan(cage2Complete.sequence);
+  });
+
+  it.each([
+    ['before its cage reward', 'beforeReward', true],
+    ['after its cage reward', 'afterReward', true],
+    ['between the cages', 'betweenCages', true],
+    ['after a later cage', 'afterLaterCage', true],
+    ['before its own cage completion', 'beforeCage', false],
+  ] as const)('orders a delivery a cage fight matured %s', (_label, position, authorable) => {
+    // A cage fight's end effects spawn it while the cage reward is still caged.
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const context = roomActionDomainForOccurrence(
+      createGoldenFGHProject(),
+      catalog,
+      biome,
+      occurrenceId,
+    );
+    if (context === undefined) throw new Error('Fields action domain missing');
+    const base = context.occurrence.roomActions.order;
+    const cages = base.flatMap((reference) =>
+      reference.kind === 'completeFieldsCage' ? [reference] : [],
+    );
+    const [first, second] = cages;
+    if (first === undefined || second === undefined)
+      throw new Error('Fields fixture lost its two active cages');
+    const reward = base.find(
+      (reference) =>
+        reference.kind === 'interactLocalReward' &&
+        reference.groupKey === 'cages' &&
+        context.domain.contributions.some(
+          (entry) =>
+            entry.kind === 'action' &&
+            roomActionKey(entry.reference) === roomActionKey(reference) &&
+            entry.dependencies.some(
+              (dependency) =>
+                dependency.kind === 'afterAction' &&
+                roomActionKey(dependency.action) === roomActionKey(first),
+            ),
+        ),
+    )!;
+    const delivery = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(
+        createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'N'),
+          createOccurrenceId('n-fields-shrine-source'),
+        ),
+        'initial:first',
+      ),
+      encounterPhaseKey: first.phaseKey,
+    });
+    const withDelivery = fieldsDomainWithPlacedEntries(occurrenceId, [delivery]);
+    const contribution = withDelivery.domain.contributions.find(
+      (entry) =>
+        entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(delivery),
+    );
+    expect(contribution).toMatchObject({
+      participation: 'required',
+      window: { kind: 'fields', phaseKey: first.phaseKey },
+      dependencies: [{ kind: 'afterAction', action: first }],
+    });
+    const order = base.filter(
+      (reference) =>
+        roomActionKey(reference) !== roomActionKey(reward) &&
+        roomActionKey(reference) !== roomActionKey(first) &&
+        roomActionKey(reference) !== roomActionKey(second),
+    );
+    const placed = {
+      beforeCage: [delivery, first, reward, second],
+      beforeReward: [first, delivery, reward, second],
+      afterReward: [first, reward, delivery, second],
+      betweenCages: [first, reward, delivery, second],
+      afterLaterCage: [first, reward, second, delivery],
+    }[position];
+    const roster = assembleRoomActionRoster({
+      owner: createOccurrenceAddress(biome, occurrenceId),
+      order: [...placed, ...order],
+      contributions: withDelivery.domain.contributions,
+      lifecycleStructure: withDelivery.domain.lifecycleStructure,
+    });
+    const deliveryIssues = roster.issues.filter(
+      (issue) =>
+        issue.kind !== 'unrankedRequired' &&
+        roomActionKey(issue.reference) === roomActionKey(delivery),
+    );
+    if (authorable) expect(deliveryIssues).toEqual([]);
+    else
+      expect(deliveryIssues).toContainEqual(
+        expect.objectContaining({
+          kind: 'dependency',
+          dependency: { kind: 'afterAction', action: first },
+        }),
+      );
+  });
+
+  describe('a cage-end pickup', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const delivery = (phaseKey: string) =>
+      Object.freeze({
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'hermesShrineDelivery',
+        entryKey: hermesShrineDeliveryEntryKey(
+          createOccurrenceAddress(
+            createBiomeAddress('Underworld', 'N'),
+            createOccurrenceId('n-fields-shrine-source'),
+          ),
+          'initial:first',
+        ),
+        encounterPhaseKey: phaseKey,
+      });
+    const firstCage = (which: 'first' | 'last' = 'first') => {
+      const context = roomActionDomainForOccurrence(
+        createGoldenFGHProject(),
+        catalog,
+        biome,
+        occurrenceId,
+      )!;
+      const cages = context.occurrence.roomActions.order.filter(
+        (reference) => reference.kind === 'completeFieldsCage',
+      );
+      const cage = which === 'first' ? cages[0] : cages.at(-1);
+      if (cage?.kind !== 'completeFieldsCage') throw new Error('Fields fixture lost its cages');
+      return { base: context.occurrence.roomActions.order, cage };
+    };
+    const unlock = Object.freeze({ kind: 'unlockExit' as const, exitKey: 'exit1' });
+    /** The domain with a door press after the doors open, as a locked door's contributes. */
+    const withPress = (
+      domain: ReturnType<typeof fieldsDomainWithPlacedEntries>['domain'],
+    ): typeof domain => ({
+      ...domain,
+      contributions: [
+        ...domain.contributions,
+        {
+          kind: 'action',
+          reference: unlock,
+          owner: createOccurrenceAddress(biome, occurrenceId),
+          participation: 'optional',
+          window: { kind: 'postOutgoing' },
+          dependencies: [{ kind: 'afterCheckpoint', checkpointKey: 'exitUsable' }],
+        },
+      ],
+    });
+    const issuesOf = (
+      domain: ReturnType<typeof withPress>,
+      order: readonly RoomActionReference[],
+    ) =>
+      assembleRoomActionRoster({
+        owner: createOccurrenceAddress(biome, occurrenceId),
+        order,
+        contributions: domain.contributions,
+        lifecycleStructure: domain.lifecycleStructure,
+      }).issues.filter((issue) => issue.kind !== 'unrankedRequired');
+
+    it.each(['first', 'last'] as const)(
+      'schedules a missing delivery of the %s cage into its slot, before a press after the doors open',
+      (which) => {
+        const { base, cage } = firstCage(which);
+        const placed = delivery(cage.phaseKey);
+        const domain = withPress(fieldsDomainWithPlacedEntries(occurrenceId, [placed]).domain);
+        const scheduled = scheduleRequiredRoomActions({
+          catalog,
+          domain,
+          order: [...base, unlock],
+          requiredKeys: new Set([roomActionKey(placed)]),
+        });
+        // Clear, collect: the delivery follows its cage's reward and precedes the next cage.
+        const reward = base[base.indexOf(cage) + 1]!;
+        expect(scheduled.indexOf(placed)).toBe(scheduled.indexOf(reward) + 1);
+        expect(scheduled.at(-1)).toBe(unlock);
+        expect(issuesOf(domain, scheduled)).toEqual([]);
+      },
+    );
+
+    it('refuses a delivery after a press that follows the doors opening', () => {
+      const { base, cage } = firstCage();
+      const placed = delivery(cage.phaseKey);
+      const domain = withPress(fieldsDomainWithPlacedEntries(occurrenceId, [placed]).domain);
+      expect(issuesOf(domain, [...base, unlock, placed])).toContainEqual(
+        expect.objectContaining({ kind: 'window', reference: placed, precedingAction: unlock }),
+      );
+    });
+
+    it('keeps the encounter-end window for a delivery due at a phase with no cage', () => {
+      const placed = delivery('Passive');
+      const contribution = fieldsDomainWithPlacedEntries(occurrenceId, [
+        placed,
+      ]).domain.contributions.find(
+        (entry) =>
+          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(placed),
+      );
+      expect(contribution).toMatchObject({
+        window: { kind: 'encounterEnd', phaseKey: 'Passive' },
+        dependencies: [],
+      });
+    });
+
+    it('gives a clocked drop its cage window too', () => {
+      const { cage } = firstCage();
+      const drop = Object.freeze({
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'roomExit',
+        entryKey: clockedTraitGeneratedPickupEntryKey('fields-clocked-trait', 'drop1'),
+        encounterPhaseKey: cage.phaseKey,
+      });
+      const contribution = fieldsDomainWithPlacedEntries(occurrenceId, [
+        drop,
+      ]).domain.contributions.find(
+        (entry) =>
+          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(drop),
+      );
+      expect(contribution).toMatchObject({
+        window: { kind: 'fields', phaseKey: cage.phaseKey },
+        dependencies: [{ kind: 'afterAction', action: cage }],
+      });
+    });
   });
 
   it('routes an interacted optional Time Piece disposition through shared settlement', () => {

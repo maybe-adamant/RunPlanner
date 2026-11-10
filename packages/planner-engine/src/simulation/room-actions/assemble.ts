@@ -228,37 +228,23 @@ export function assembleRoomActionRoster(options: {
         afterRank:
           entry.checkpointKey === 'outgoingGeneration'
             ? lastRequiredRank
-            : entry.checkpointKey.startsWith('nextPhaseUsable:')
-              ? (() => {
-                  const wheelKey = entry.checkpointKey.slice('nextPhaseUsable:'.length);
-                  return rows.reduce(
-                    (rank, row) =>
-                      row.rank !== null &&
-                      row.participation === 'required' &&
-                      row.window.kind === 'shipPostCombat' &&
-                      row.window.wheelKey === wheelKey
-                        ? Math.max(rank, row.rank)
-                        : rank,
-                    0,
-                  );
-                })()
-              : entry.checkpointKey === 'exitUsable'
-                ? rows.reduce(
-                    (rank, row) =>
-                      row.rank !== null && row.participation === 'required'
-                        ? Math.max(rank, row.rank)
-                        : rank,
-                    0,
-                  )
-                : rows.reduce(
-                    (rank, row) =>
-                      row.rank !== null &&
-                      roomLifecycleWindowOrdinal(options.lifecycleStructure, row.window) <=
-                        roomLifecycleWindowOrdinal(options.lifecycleStructure, entry.window)
-                        ? Math.max(rank, row.rank)
-                        : rank,
-                    0,
-                  ),
+            : entry.checkpointKey === 'exitUsable'
+              ? rows.reduce(
+                  (rank, row) =>
+                    row.rank !== null && row.participation === 'required'
+                      ? Math.max(rank, row.rank)
+                      : rank,
+                  0,
+                )
+              : rows.reduce(
+                  (rank, row) =>
+                    row.rank !== null &&
+                    roomLifecycleWindowOrdinal(options.lifecycleStructure, row.window) <=
+                      roomLifecycleWindowOrdinal(options.lifecycleStructure, entry.window)
+                      ? Math.max(rank, row.rank)
+                      : rank,
+                  0,
+                ),
       }),
     );
   const activeByKey = new Map(

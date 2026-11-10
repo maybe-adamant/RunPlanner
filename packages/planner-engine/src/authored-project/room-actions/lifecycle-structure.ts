@@ -19,6 +19,8 @@ export type RoomActionWindow =
   | { readonly kind: 'postOutgoing' }
   | { readonly kind: 'fields'; readonly phaseKey?: string }
   | { readonly kind: 'shipPreCombat'; readonly wheelKey: string }
+  /** Open from the wheel's roll at Wheels open until its choice: a wheel offer reroll. */
+  | { readonly kind: 'shipWheelsOpen'; readonly wheelKey: string }
   | { readonly kind: 'shipPostCombat'; readonly wheelKey: string };
 
 export interface RoomLifecycleStructurePhase {
@@ -40,11 +42,16 @@ export type RoomLifecycleStructurePoint =
   | { readonly kind: 'encounterOutcome'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'bossDefeated'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
+  /**
+   * The next wheels' offers roll as the next encounter sets up, right after the
+   * previous phase's end effects; the wheel choice waits on later required pickups.
+   */
+  | { readonly kind: 'wheelsOpen'; readonly key: string; readonly wheelKey: string }
+  /** Internal: the wheel's choice is possible once the end-effect pickups are taken. */
   | {
       readonly kind: 'nextPhase';
       readonly key: string;
       readonly wheelKey: string;
-      readonly previousWheelKey?: string;
     }
   | { readonly kind: 'outgoingGeneration'; readonly key: 'outgoingGeneration' }
   | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
@@ -200,13 +207,16 @@ export function assembleRoomLifecycleStructure(options: {
   ];
   phases.forEach((phase, index) => {
     if (phase.rewardWheelKey !== undefined && index > 0) {
-      const previousWheelKey = phases[index - 1]?.rewardWheelKey;
       points.push(
+        frozen({
+          kind: 'wheelsOpen',
+          key: `wheelsOpen:${phase.rewardWheelKey}`,
+          wheelKey: phase.rewardWheelKey,
+        }),
         frozen({
           kind: 'nextPhase',
           key: `nextPhase:${phase.rewardWheelKey}`,
           wheelKey: phase.rewardWheelKey,
-          ...(previousWheelKey === undefined ? {} : { previousWheelKey }),
         }),
       );
     }
@@ -271,6 +281,7 @@ export function scopeRoomLifecycleStructure(
       case 'bossDefeated':
       case 'encounterEnd':
         return active.has(point.phaseKey);
+      case 'wheelsOpen':
       case 'nextPhase':
         return activeWheelKeys.has(point.wheelKey);
       case 'roomEntered':
@@ -320,7 +331,25 @@ export function roomLifecycleWindowOrdinal(
       return window.phase === 'beforeCombat'
         ? beforePoint((point) => point.kind === 'encounterStart')
         : lastAfterPoint((point) => point.kind === 'encounterEnd');
-    case 'encounterEnd':
+    case 'encounterEnd': {
+      // A Ship phase's end-effect pickups follow the next wheels opening, or, after
+      // the final phase, its wheel reward.
+      if (structure.profileKey === 'ShipCombatRoom') {
+        const phaseIndex = structure.phases.findIndex(
+          (phase) => phase.phaseKey === window.phaseKey,
+        );
+        const nextWheelKey = structure.phases[phaseIndex + 1]?.rewardWheelKey;
+        if (
+          phaseIndex >= 0 &&
+          nextWheelKey !== undefined &&
+          structure.points.some(
+            (point) => point.kind === 'wheelsOpen' && point.wheelKey === nextWheelKey,
+          )
+        )
+          return afterPoint(
+            (point) => point.kind === 'wheelsOpen' && point.wheelKey === nextWheelKey,
+          );
+      }
       return (
         afterPoint((point) => point.kind === 'encounterEnd' && point.phaseKey === window.phaseKey) +
         (structure.profileKey === 'ShipCombatRoom' &&
@@ -330,6 +359,7 @@ export function roomLifecycleWindowOrdinal(
           ? 1
           : 0)
       );
+    }
     case 'fields':
       return 1;
     case 'shipPreCombat':
@@ -345,6 +375,15 @@ export function roomLifecycleWindowOrdinal(
                   phase.phaseKey === point.phaseKey && phase.rewardWheelKey === window.wheelKey,
               ),
           );
+    case 'shipWheelsOpen':
+      return structure.points.some(
+        (point) => point.kind === 'wheelsOpen' && point.wheelKey === window.wheelKey,
+      )
+        ? afterPoint((point) => point.kind === 'wheelsOpen' && point.wheelKey === window.wheelKey)
+        : roomLifecycleWindowOrdinal(structure, {
+            kind: 'shipPreCombat',
+            wheelKey: window.wheelKey,
+          });
     case 'shipPostCombat':
       return afterPoint(
         (point) =>
@@ -376,6 +415,7 @@ export function roomLifecycleWindowResolves(
         (point) => point.kind === 'encounterEnd' && point.phaseKey === window.phaseKey,
       );
     case 'shipPreCombat':
+    case 'shipWheelsOpen':
     case 'shipPostCombat':
       return structure.phases.some((phase) => phase.rewardWheelKey === window.wheelKey);
     case 'standard':

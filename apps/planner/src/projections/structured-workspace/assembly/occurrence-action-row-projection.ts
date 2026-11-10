@@ -243,8 +243,6 @@ function roomActionsForOccurrence(
     );
   const checkpointLabel = (key: string): string => {
     if (key.startsWith('combat:')) return `${phaseLabel(key.slice('combat:'.length))} complete`;
-    if (key.startsWith('nextPhaseUsable:'))
-      return `${wheelPhaseLabel(key.slice('nextPhaseUsable:'.length))} is ready to advance`;
     if (key === 'outgoingGeneration') return 'the next rooms are generated';
     if (key === 'exitUsable') return 'the doors can be used';
     return roster.checkpoints.find((entry) => entry.checkpointKey === key)?.label ?? key;
@@ -255,14 +253,24 @@ function roomActionsForOccurrence(
     switch (window.kind) {
       case 'standard':
         return window.phase === 'beforeCombat' ? 'before combat' : 'after combat';
-      case 'encounterEnd':
-        return `after ${phaseLabel(window.phaseKey)} ends`;
+      case 'encounterEnd': {
+        // In a Ship room a phase's end-effect pickups are due before the next wheel's choice.
+        const phases = roster.lifecycleStructure.phases;
+        const wheelKey =
+          phases[phases.findIndex((phase) => phase.phaseKey === window.phaseKey) + 1]
+            ?.rewardWheelKey;
+        return wheelKey === undefined || roster.lifecycleStructure.profileKey !== 'ShipCombatRoom'
+          ? `after ${phaseLabel(window.phaseKey)} ends`
+          : `after ${phaseLabel(window.phaseKey)} ends, before choosing the ${wheelPhaseLabel(wheelKey)} wheel`;
+      }
       case 'postOutgoing':
         return 'after the next rooms are generated';
       case 'fields':
         return 'during the Fields room';
       case 'shipPreCombat':
         return `before ${wheelPhaseLabel(window.wheelKey)}`;
+      case 'shipWheelsOpen':
+        return `before choosing the ${wheelPhaseLabel(window.wheelKey)} wheel`;
       case 'shipPostCombat':
         return `after ${wheelPhaseLabel(window.wheelKey)}`;
     }

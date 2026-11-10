@@ -2206,9 +2206,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBeTruthy();
     // The wheel chosen after the Intro opens on the Intro Timeline, then is taken.
     const intro = screen.getByLabelText('Intro ship phase');
-    const wheelOpen = within(intro).getByLabelText('Next phase ready');
+    const wheelOpen = within(intro).getByLabelText('Wheels open');
     const selectWheel = within(intro).getByRole('listitem', { name: 'Select wheel' });
     expect(within(intro).getByLabelText('Combat 1 reward')).toBeTruthy();
+    expect(within(intro).queryByLabelText('Next phase ready')).toBeNull();
     expect(
       wheelOpen.compareDocumentPosition(selectWheel) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
@@ -2235,6 +2236,25 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     openRoomTab('Intro Timeline');
     expect(screen.getByLabelText('Combat 1 reward')).toBeTruthy();
+  });
+
+  it('keeps one Select wheel beside the opened wheel while its choice has no place', () => {
+    const choose = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' };
+    // The choice ordered after its own reward is invalid, so it is no Timeline anchor.
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(oBiome, oOccurrenceIds.combat04, roomActionKey(choose)),
+      toIndex: 1,
+    });
+    renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(oOccurrenceIds.combat04));
+    openRoomTab('Intro Timeline');
+    const intro = screen.getByLabelText('Intro ship phase');
+    const selectWheel = within(intro).getAllByRole('listitem', { name: 'Select wheel' });
+    expect(selectWheel).toHaveLength(1);
+    expect(
+      within(intro).getByLabelText('Wheels open').compareDocumentPosition(selectWheel[0]!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
   });
 
   it('marks a forfeited Ship wheel pick on its wheel offer and collects the onion on its row', () => {

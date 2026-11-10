@@ -116,7 +116,7 @@ export function DoorsOpenBanner({
   label = 'Doors open',
 }: {
   readonly doors: TimelineDoors;
-  /** A Ship phase's wheel opens as Next phase ready. */
+  /** A Ship phase's wheel opens as Wheels open. */
   readonly label?: string;
 }) {
   return (

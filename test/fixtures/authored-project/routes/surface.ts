@@ -408,7 +408,7 @@ function authorOrdinaryShrine(
 }
 
 /** Places each due delivery at the host and phase the engine derives, in route order. */
-function placeDueHermesShrineDeliveries(project: ProjectDocument): ProjectDocument {
+export function placeDueHermesShrineDeliveries(project: ProjectDocument): ProjectDocument {
   let next = project;
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const assembly = simulateProjectAssembly(catalog, next);

@@ -865,9 +865,8 @@ function roomStop(
         return phaseEvent('bossDefeated', boundary.phaseKey, event);
       case 'encounterEnd':
         return phaseEvent('encounterEndEffectsApplied', boundary.phaseKey, event);
-      case 'nextPhase':
-        // A wheel's offers materialize as its next phase gets ready.
-        return event.kind === 'offerPointMaterialized';
+      case 'wheelsOpen':
+        return event.kind === 'offerPointMaterialized' && event.offerPoint === boundary.wheelKey;
       case 'cleanup':
         return false;
     }
@@ -882,6 +881,7 @@ function roomStop(
       case 'encounterStart':
       case 'encounterOutcome':
       case 'bossDefeated':
+      case 'wheelsOpen':
         return passed.some((event) => boundaryEvent(index, event));
       case 'encounterEnd': {
         if (passed.some((event) => boundaryEvent(index, event))) return true;
@@ -895,16 +895,6 @@ function roomStop(
           completed?.endEffects === 'none' &&
           passed.some((event) => event.sequence > completed.sequence)
         );
-      }
-      case 'nextPhase': {
-        // The next phase is ready once its encounter starts.
-        const start = entries.findIndex(
-          (candidate, candidateIndex) =>
-            candidateIndex > index &&
-            candidate.kind === 'boundary' &&
-            candidate.boundary.kind === 'encounterStart',
-        );
-        return start >= 0 && boundaryPassed(start);
       }
       case 'cleanup':
         return generation >= 0

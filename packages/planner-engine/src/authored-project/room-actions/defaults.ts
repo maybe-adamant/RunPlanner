@@ -54,7 +54,12 @@ function score(
 ): number {
   const reference = action.reference;
   if (action.window.kind !== 'fields') {
-    return roomLifecycleWindowOrdinal(domain.lifecycleStructure, action.window) * 100;
+    const ordinal = roomLifecycleWindowOrdinal(domain.lifecycleStructure, action.window);
+    // Fields rows score from their cage order below; a later window follows all of them.
+    return domain.lifecycleStructure.profileKey === 'FieldsCombatRoom' &&
+      ordinal > roomLifecycleWindowOrdinal(domain.lifecycleStructure, { kind: 'fields' })
+      ? 10000 + ordinal * 100
+      : ordinal * 100;
   }
   const phaseOrder = fieldsPhaseOrder(catalog, domain, order);
   if (reference.kind === 'interactEncounter' || reference.kind === 'interactGorgon') {
@@ -69,6 +74,11 @@ function score(
     const ordinal = phaseOrder.indexOf(action.window.phaseKey ?? '');
     if (ordinal < 0) throw new Error(`${domain.declaration.gameName} cage reward has no phase`);
     return 2150 + ordinal * 200;
+  }
+  // A cage end's delivery or clocked drop is collected with its cage, after the reward.
+  if (reference.kind === 'interactAcquisitionEntry' && action.window.phaseKey !== undefined) {
+    const ordinal = phaseOrder.indexOf(action.window.phaseKey);
+    if (ordinal >= 0) return 2175 + ordinal * 200;
   }
   return 8000;
 }
