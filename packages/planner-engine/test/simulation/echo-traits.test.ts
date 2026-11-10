@@ -42,7 +42,8 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import {
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   editTestRoomActionOrder,
   settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
@@ -205,11 +206,11 @@ function bridgeRoom(project: ReturnType<typeof createGoldenFGHProject>) {
 }
 
 function completeGoldenFGHProject() {
-  return authorLegalTraitOffers(createGoldenFGHProject());
+  return authorTestTraitsAndRequiredItems(createGoldenFGHProject());
 }
 
 function selectGoldenBridge(project = completeGoldenFGHProject()) {
-  const selected = authorLegalTraitOffers(
+  const selected = authorTestTraitsAndRequiredItems(
     applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenHBiome, {
@@ -284,7 +285,7 @@ function makeBridgeOutgoingEligible(project: ReturnType<typeof completeGoldenFGH
     occurrence: createOccurrenceAddress(goldenHBiome, targetId),
     gameName: 'H_MiniBoss02',
   });
-  return authorLegalTraitOffers(
+  return authorTestTraitsAndRequiredItems(
     applyProjectCommand(replaced, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(goldenHBiome, targetId),
@@ -2285,6 +2286,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
         },
       ],
     });
+    // A placed required row is removable; its item is then live again.
     expect(
       materializedBridge.roomActionRoster.proposals.some(
         (proposal) =>
@@ -2292,7 +2294,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
           proposal.reference.kind === 'interactAcquisitionEntry' &&
           proposal.reference.entryKey === echoReplayEntryKey,
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('replays the latest consumable source at Echo without regenerating the room exit', () => {
@@ -2599,7 +2601,23 @@ describe('Echo Gate C Reward Reward Reward', () => {
       siteKey,
       entryKey: 'quickBuckGold',
     };
-    // Taking the replayed Quick Buck takes its gold right after the replay.
+    // The owner takes the replayed Quick Buck's gold right after the replay. The walk
+    // stops earlier (Cage 2's Hermes repeats Cage 1's), so the row is authored directly.
+    const replayAt = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!
+      .roomActions.order.findIndex(
+        (candidate) =>
+          candidate.kind === 'interactAcquisitionEntry' &&
+          candidate.entryKey === echoReplayEntryKey,
+      );
+    if (replayAt < 0) throw new Error('Echo replay row is missing');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(reference)),
+      reference,
+      index: replayAt + 1,
+    });
     const bridgeOrder = project
       .route!.biomes.find((biome) => biome.biomeKey === 'H')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!.roomActions
@@ -2776,7 +2794,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
   });
 
   it('authors the Path screen of a Talent Drop copy through its first replay edit', () => {
-    const project = createEchoTalentDropReplayProject();
+    const project = collectTestRequiredItems(createEchoTalentDropReplayProject());
     const replayEntry = echoReplayEntry();
     const screen = createAcquisitionRoleAddress(replayEntry, 'self');
     expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([
@@ -2807,7 +2825,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
   });
 
   it('replaces a stale replayed Path selection when the last reward changes', () => {
-    const project = createEchoTalentDropReplayProject();
+    const project = collectTestRequiredItems(createEchoTalentDropReplayProject());
     const replayEntry = echoReplayEntry();
     const screen = createAcquisitionRoleAddress(replayEntry, 'self');
     const authored = makeBridgeOutgoingEligible(
