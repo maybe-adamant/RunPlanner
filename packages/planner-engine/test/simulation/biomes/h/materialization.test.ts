@@ -23,6 +23,7 @@ import {
   createTargetAddress,
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
+  hermesShrineDeliveryEntryKey,
   encodeProjectDocument,
   roomActionKey,
   roomActionDomainForOccurrence,
@@ -36,6 +37,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
+  assembleRoomActionRoster,
   createPreparedProjectCandidateSession,
   composeBiomeHistory,
   createArcanaFearState,
@@ -1251,6 +1253,136 @@ describe('H Fields materialization', () => {
     }
     if (expectedPosition === 'after')
       expect(acquisition!.historySequence).toBeGreaterThan(cage2Complete.sequence);
+  });
+
+  it.each([
+    ['before its cage reward', 'beforeReward', true],
+    ['after its cage reward', 'afterReward', true],
+    ['between the cages', 'betweenCages', true],
+    ['after a later cage', 'afterLaterCage', true],
+    ['before its own cage completion', 'beforeCage', false],
+  ] as const)('orders a delivery a cage fight matured %s', (_label, position, authorable) => {
+    // A cage fight's end effects spawn it while the cage reward is still caged.
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const context = roomActionDomainForOccurrence(
+      createGoldenFGHProject(),
+      catalog,
+      biome,
+      occurrenceId,
+    );
+    if (context === undefined) throw new Error('Fields action domain missing');
+    const base = context.occurrence.roomActions.order;
+    const cages = base.flatMap((reference) =>
+      reference.kind === 'completeFieldsCage' ? [reference] : [],
+    );
+    const [first, second] = cages;
+    if (first === undefined || second === undefined)
+      throw new Error('Fields fixture lost its two active cages');
+    const reward = base.find(
+      (reference) =>
+        reference.kind === 'interactLocalReward' &&
+        reference.groupKey === 'cages' &&
+        context.domain.contributions.some(
+          (entry) =>
+            entry.kind === 'action' &&
+            roomActionKey(entry.reference) === roomActionKey(reference) &&
+            entry.dependencies.some(
+              (dependency) =>
+                dependency.kind === 'afterAction' &&
+                roomActionKey(dependency.action) === roomActionKey(first),
+            ),
+        ),
+    )!;
+    const delivery = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(
+        createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'N'),
+          createOccurrenceId('n-fields-shrine-source'),
+        ),
+        'initial:first',
+      ),
+      encounterPhaseKey: first.phaseKey,
+    });
+    // Underworld has no Shrine, so the room holds the placed entry the way placement leaves it.
+    const project = createGoldenFGHProject();
+    const withDelivery = roomActionDomainForOccurrence(
+      {
+        ...project,
+        route: {
+          ...project.route,
+          biomes: project.route.biomes.map((plan) =>
+            plan.biomeKey !== 'H' || plan.topology === null || plan.topology === undefined
+              ? plan
+              : {
+                  ...plan,
+                  topology: {
+                    ...plan.topology,
+                    occurrences: plan.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId !== occurrenceId
+                        ? occurrence
+                        : {
+                            ...occurrence,
+                            acquisitionSites: {
+                              ...occurrence.acquisitionSites,
+                              hermesShrineDelivery: {
+                                pickupEntries: { [delivery.entryKey]: null },
+                              },
+                            },
+                            roomActions: { order: [...occurrence.roomActions.order, delivery] },
+                          },
+                    ),
+                  },
+                },
+          ),
+        },
+      },
+      catalog,
+      biome,
+      occurrenceId,
+    )!;
+    const contribution = withDelivery.domain.contributions.find(
+      (entry) =>
+        entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(delivery),
+    );
+    expect(contribution).toMatchObject({
+      participation: 'required',
+      window: { kind: 'fields', phaseKey: first.phaseKey },
+      dependencies: [{ kind: 'afterAction', action: first }],
+    });
+    const order = base.filter(
+      (reference) =>
+        roomActionKey(reference) !== roomActionKey(reward) &&
+        roomActionKey(reference) !== roomActionKey(first) &&
+        roomActionKey(reference) !== roomActionKey(second),
+    );
+    const placed = {
+      beforeCage: [delivery, first, reward, second],
+      beforeReward: [first, delivery, reward, second],
+      afterReward: [first, reward, delivery, second],
+      betweenCages: [first, reward, delivery, second],
+      afterLaterCage: [first, reward, second, delivery],
+    }[position];
+    const roster = assembleRoomActionRoster({
+      owner: createOccurrenceAddress(biome, occurrenceId),
+      order: [...placed, ...order],
+      contributions: withDelivery.domain.contributions,
+      lifecycleStructure: withDelivery.domain.lifecycleStructure,
+    });
+    const deliveryIssues = roster.issues.filter(
+      (issue) =>
+        issue.kind !== 'unrankedRequired' &&
+        roomActionKey(issue.reference) === roomActionKey(delivery),
+    );
+    if (authorable) expect(deliveryIssues).toEqual([]);
+    else
+      expect(deliveryIssues).toContainEqual(
+        expect.objectContaining({
+          kind: 'dependency',
+          dependency: { kind: 'afterAction', action: first },
+        }),
+      );
   });
 
   it('routes an interacted optional Time Piece disposition through shared settlement', () => {

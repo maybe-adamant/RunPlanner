@@ -571,7 +571,11 @@ describe('single-room lifecycle execution', () => {
     },
   );
 
-  it('drains a Fields delivery after its exact cage end effects', () => {
+  it.each([
+    ['before its cage reward', 1],
+    ['after its cage reward', 2],
+    ['after the next cage', 4],
+  ] as const)('drains a Fields delivery after its cage end effects, %s', (_label, index) => {
     const fieldsOrigin = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'H'),
       createOccurrenceId('h-exact-shrine-delivery-phase'),
@@ -580,46 +584,112 @@ describe('single-room lifecycle execution', () => {
       createBiomeAddress('Surface', 'N'),
       createOccurrenceId('n-fields-shrine-source'),
     );
+    const cage = (phaseKey: string) =>
+      Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey });
+    const reward = (slotKey: string) =>
+      Object.freeze({ kind: 'interactLocalReward' as const, groupKey: 'cages', slotKey });
     const delivery = Object.freeze({
       kind: 'interactAcquisitionEntry' as const,
       siteKey: 'hermesShrineDelivery',
       entryKey: hermesShrineDeliveryEntryKey(source, 'initial:first'),
       encounterPhaseKey: 'Cage01',
     });
+    const order: RoomActionReference[] = [
+      cage('Cage01'),
+      reward('cage1'),
+      cage('Cage02'),
+      reward('cage2'),
+    ];
+    order.splice(index, 0, delivery);
+    const after = (phaseKey: string) => [{ kind: 'afterAction' as const, action: cage(phaseKey) }];
     const roster = actionRoster(
       fieldsOrigin,
-      [delivery],
+      order,
       [
+        {
+          reference: cage('Cage01'),
+          participation: 'required',
+          window: { kind: 'fields' },
+          dependencies: [],
+        },
+        {
+          reference: cage('Cage02'),
+          participation: 'required',
+          window: { kind: 'fields' },
+          dependencies: [],
+        },
+        {
+          reference: reward('cage1'),
+          participation: 'required',
+          window: { kind: 'fields', phaseKey: 'Cage01' },
+          dependencies: after('Cage01'),
+        },
+        {
+          reference: reward('cage2'),
+          participation: 'required',
+          window: { kind: 'fields', phaseKey: 'Cage02' },
+          dependencies: after('Cage02'),
+        },
         {
           reference: delivery,
           participation: 'required',
-          window: { kind: 'encounterEnd', phaseKey: 'Cage01' },
-          dependencies: [],
+          window: { kind: 'fields', phaseKey: 'Cage01' },
+          dependencies: after('Cage01'),
         },
       ],
       'FieldsCombatRoom',
-      ['Passive', 'Cage01'],
+      ['Passive', 'Cage01', 'Cage02'],
     );
+    expect(roster.valid).toBe(true);
     const fragment = executeRoomLifecycle(
       catalog,
       inputWithoutProducer({
         origin: fieldsOrigin,
         lifecycleProfileKey: 'FieldsCombatRoom',
         encounterEnvelopeKey: 'FieldsEncounter',
-        encounterPhases: phases('FieldsEncounter', ['GeneratedH_Passive', 'GeneratedH']),
+        encounterPhases: phases('FieldsEncounter', [
+          'GeneratedH_Passive',
+          'GeneratedH',
+          'GeneratedH',
+        ]),
         roomActionRoster: roster,
       }),
     );
-    const endEffects = fragment.events.findIndex(
-      (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === 'Cage01',
-    );
-    const deliveryReached = fragment.events.findIndex(
-      (event) => event.kind === 'acquisitionPointReached' && event.entryKey === delivery.entryKey,
-    );
-    const committed = fragment.events.findIndex((event) => event.kind === 'roomCommitted');
     expect(fragment.blockedAt).toBeUndefined();
-    expect(deliveryReached).toBeGreaterThan(endEffects);
-    expect(deliveryReached).toBeLessThan(committed);
+    // The walk takes the rows in authored order, each after the cage end that spawned it.
+    expect(
+      fragment.events.flatMap((event) =>
+        event.kind === 'encounterEndEffectsApplied' && event.phaseKey !== 'Passive'
+          ? [`end ${event.phaseKey}`]
+          : event.kind === 'acquisitionPointReached'
+            ? [event.entryKey === delivery.entryKey ? 'delivery' : event.point]
+            : [],
+      ),
+    ).toEqual(
+      [
+        [
+          'end Cage01',
+          'delivery',
+          'localReward:cages:cage1',
+          'end Cage02',
+          'localReward:cages:cage2',
+        ],
+        [
+          'end Cage01',
+          'localReward:cages:cage1',
+          'delivery',
+          'end Cage02',
+          'localReward:cages:cage2',
+        ],
+        [
+          'end Cage01',
+          'localReward:cages:cage1',
+          'end Cage02',
+          'localReward:cages:cage2',
+          'delivery',
+        ],
+      ][index === 1 ? 0 : index === 2 ? 1 : 2],
+    );
   });
 
   it('emits the derived Boss-defeated seam before completion and end effects', () => {

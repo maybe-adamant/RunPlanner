@@ -744,30 +744,57 @@ function baseContribution(
         reference.entryKey,
         producer,
       );
+      // A cage fight's end effects spawn its pickups while the cage reward is still caged;
+      // like that reward, they are taken any time after the cage, even past later cages.
+      const cageEndPhaseKey =
+        lifecycleProfileKey === 'FieldsCombatRoom' &&
+        reference.encounterPhaseKey !== undefined &&
+        (clockedTraitPickup !== undefined ||
+          (hermesDelivery !== undefined && !sameRoomShrineDelivery)) &&
+        encounterEnvelopeSlots(catalog, declaration, occurrence.gameName).some(
+          (phase) =>
+            phase.key === reference.encounterPhaseKey &&
+            phase.rewardAttachment?.kind === 'localReward',
+        )
+          ? reference.encounterPhaseKey
+          : undefined;
       const action = contribution(
         biome,
         occurrence,
         reference,
         required ? 'required' : 'optional',
-        clockedTraitPickup !== undefined && reference.encounterPhaseKey !== undefined
-          ? frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey })
-          : hermesDelivery !== undefined
-            ? sameRoomShrineDelivery
-              ? frozen({ kind: 'postOutgoing' })
-              : reference.encounterPhaseKey === undefined && finalPrebossHost
-                ? // A flushed delivery is a required object that gates the exit.
-                  frozen({ kind: 'standard', phase: 'afterCombat' })
-                : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
-            : producer?.placement === 'roomExit' ||
-                producer?.sourceAction?.kind === 'interactChallengeSwitch' ||
-                (producer?.source.kind === 'traitOffer' &&
-                  producer.source.owner.kind === 'shopOffer') ||
-                reference.siteKey === 'roomExit'
-              ? occurrence.state.kind === 'shop'
-                ? shopPurchaseWindow(catalog, lifecycleProfileKey)
-                : frozen({ kind: 'postOutgoing' })
-              : frozen({ kind: 'standard', phase: 'afterCombat' }),
+        cageEndPhaseKey !== undefined
+          ? frozen({ kind: 'fields', phaseKey: cageEndPhaseKey })
+          : clockedTraitPickup !== undefined && reference.encounterPhaseKey !== undefined
+            ? frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey })
+            : hermesDelivery !== undefined
+              ? sameRoomShrineDelivery
+                ? frozen({ kind: 'postOutgoing' })
+                : reference.encounterPhaseKey === undefined && finalPrebossHost
+                  ? // A flushed delivery is a required object that gates the exit.
+                    frozen({ kind: 'standard', phase: 'afterCombat' })
+                  : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
+              : producer?.placement === 'roomExit' ||
+                  producer?.sourceAction?.kind === 'interactChallengeSwitch' ||
+                  (producer?.source.kind === 'traitOffer' &&
+                    producer.source.owner.kind === 'shopOffer') ||
+                  reference.siteKey === 'roomExit'
+                ? occurrence.state.kind === 'shop'
+                  ? shopPurchaseWindow(catalog, lifecycleProfileKey)
+                  : frozen({ kind: 'postOutgoing' })
+                : frozen({ kind: 'standard', phase: 'afterCombat' }),
         [
+          ...(cageEndPhaseKey === undefined
+            ? []
+            : [
+                frozen({
+                  kind: 'afterAction' as const,
+                  action: frozen({
+                    kind: 'completeFieldsCage' as const,
+                    phaseKey: cageEndPhaseKey,
+                  }),
+                }),
+              ]),
           ...travelDealDependencies(occurrence, reference),
           ...hermesShrinePurchaseDependencies(
             occurrence,

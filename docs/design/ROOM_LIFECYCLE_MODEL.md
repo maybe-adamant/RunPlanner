@@ -703,7 +703,9 @@ an encounter's end spawns its due Hermes deliveries in purchase order, then
 matured clock drops such as Supply Chain's, then Heracles's bounty; in a Ship
 phase a wheel follows they appear at that wheel's Wheels open, after the phase's
 reward and NPC are resolved, and after the final phase they follow the wheel
-reward as a separate moment. Fields cage and
+reward as a separate moment. A Fields cage's
+end effects spawn their pickups beside its still-caged reward, both taken any
+time after that cage. Fields cage and
 optional rewards spawn on entry, each cage marked by the phase that frees it,
 and the fourth-biome Preboss flush delivers on entry. Loot spawned before it
 can be taken is locked until an unlock frees it: a Fields cage's reward at its

@@ -230,6 +230,14 @@ the final cage. A phase-produced required contact that declares
 own encounter and before whichever cage is authored next. This barrier follows
 authored cage execution order, not `Cage01`/`Cage02` declaration order.
 
+A cage fight's end effects spawn what matured there, such as a countdown Shrine
+delivery or a clocked drop, while its cage reward is still caged: the
+activation runs `StartEncounter`, whose `EndEncounterEffects` spawns them,
+before it makes the reward usable (`EncounterLogic.lua:2924-2956`). A delivery
+is a required object, but it carries no `BlockFieldsEncounterStart`, so it is
+taken any time after its cage: before or after that cage's reward, between
+cages or after later ones, and before the doors, which wait on it.
+
 After the final cage, every remaining required cage, NPC, and dependent
 acquisition action must resolve before exit use. **Cleanup · Doors open** begins
 at that exact readiness boundary. Eligible optional rewards and Artificer
