@@ -139,6 +139,12 @@ export function nextRequiredPlacement(
  * the room stands. Like edit settlement it is total: a settlement fault stops
  * it, and an offered placement that is refused, changes nothing or comes back
  * again is reported as a fault beside the last settled assembly.
+ *
+ * Known limits: `complete` can be reported while a caged required pickup
+ * still waits on an unplaced optional unlock, which is never placed here; and
+ * an unplaced contact (the Gorgon, Nemesis, an encounter's NPC) still blocks
+ * the walk at once, unlike a cage or wheel choice, so rows of its window
+ * ranked after it are not reached until it is placed.
  */
 export function collectRequiredItems(options: CollectRequiredOptions): CollectedRequiredItems {
   const { catalog, occurrence, evaluate } = options;

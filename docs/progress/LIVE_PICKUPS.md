@@ -87,10 +87,14 @@ You either interact with pickups or active objects.
   the Gold Gold Gold duplicate's order leniency; C3 the
   run import's half of B; C4 (delivered, awaiting review) Collect all
   required: an engine-internal settlement composition beside edit
-  settlement (`collectRequiredItems`, one room), no export until step D or
-  the Draft and import redesign consume it; engine tests reach it through
-  the `collectTestRequiredItems` test support. It moved an unplaced cage's or
-  wheel choice's due point after the rows of its window ranked before it.
+  settlement (`collectRequiredItems`, one room); engine tests reach it
+  through the `collectTestRequiredItems` test support. Its export lands with
+  its first production consumer, whichever comes first: the Draft and import
+  seam slice (S1), through `./simulation` and an
+  `AuthoringSession.collectRequired`, or the planner's button in D. It moved
+  an unplaced cage's or wheel choice's due point after the executable rows of
+  its window the walk reaches before it, unless a required action of an
+  earlier window is missing.
   Equivalence and Draft corpus lanes before and after; separate and
   revertible. Expected Draft output changes, from the stripped-room witness:
   - a room reward placed at the frontier, before the required drop
