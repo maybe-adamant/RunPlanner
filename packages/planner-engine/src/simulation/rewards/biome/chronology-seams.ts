@@ -1249,7 +1249,6 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
             source.origin.routeKey,
           ),
     batch: prepared.batchesByParent.get(ownerKey),
-    hubDecisionOwner: context.hubDecisionOwnerBySource.get(ownerKey),
     frontierOwner,
     emptyOutgoing: prepared.lifecycle.emptyOutgoingOwnerKeys.has(ownerKey),
     hubTakeover: context.hubTakeoverSources.has(ownerKey),

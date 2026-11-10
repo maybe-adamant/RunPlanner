@@ -1,11 +1,7 @@
 import type { RoomDeparture } from '../../room-layout/derivation';
 import type { Catalog } from '../../../catalog-schema';
 import type { EncounterEntryVowRanks } from '../../arcana-fear';
-import type {
-  HubDecisionAddress,
-  OccurrenceAddress,
-  TargetAddress,
-} from '../../../authored-project/addresses';
+import type { OccurrenceAddress, TargetAddress } from '../../../authored-project/addresses';
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import type {
@@ -59,7 +55,6 @@ export interface ChronologyWalkContext {
   readonly hubTakeoverSources: ReadonlySet<string>;
   /** Hub visit targets and entered local rooms that restore to an existing parent. */
   readonly hubRestoringSources: ReadonlySet<string>;
-  readonly hubDecisionOwnerBySource: ReadonlyMap<string, HubDecisionAddress>;
   /** The source of a prefix's blank exit-decision frontier. */
   readonly frontierSource: string | undefined;
   readonly chaosGateSourceOccurrenceIds: ReadonlySet<string>;

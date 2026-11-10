@@ -129,12 +129,12 @@ interface BiomeGenerationAssembly {
 function structurallyEligibleRunStateOwners(
   prefix: MaterializedBiomePrefix,
 ): readonly RunStateOwner[] {
-  // Canonical decisions are the outer biome chronology. A Hub remains one
-  // decision regardless of how many visits and local rooms it contains.
-  const owners: RunStateOwner[] = prefix.decisions.map((decision) => decision.origin);
-  if (prefix.frontier?.kind === 'hubBoard' || prefix.frontier?.kind === 'exitDecision') {
-    owners.push(prefix.frontier.origin);
-  }
+  // Canonical decisions are the outer biome chronology. A Hub's Run State is
+  // its entry checkpoint, never its board's generation contact.
+  const owners: RunStateOwner[] = prefix.decisions.flatMap((decision) =>
+    decision.kind === 'hub' ? [] : [decision.origin],
+  );
+  if (prefix.frontier?.kind === 'exitDecision') owners.push(prefix.frontier.origin);
   const enteredRooms: CanonicalAuthoredRoom[] = [];
   const appendRoom = (room: CanonicalAuthoredRoom): void => {
     if (!room.entered) return;

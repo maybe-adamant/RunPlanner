@@ -187,10 +187,10 @@ the first blocking value and unavailable afterward; the workspace applies no
 second canonical or finding-order cut. The
 [sheet](APPLICATION_SHELL.md#run-state-sheet) presents the snapshot.
 
-Only two decision-generation launchers remain public: the `HubDecisionAddress`
-before the Hub board is generated and the Hub-sourced `ExitDecisionAddress`
-before Preboss generation. Ordinary occurrence-sourced decisions do not retain
-a `beforeTargetGeneration` launcher on their door rows. Room-local lifecycle
+Only one decision-generation launcher remains public: the Hub-sourced
+`ExitDecisionAddress` before Preboss generation. The Hub's own launcher is its
+entry checkpoint, and ordinary occurrence-sourced decisions do not retain a
+`beforeTargetGeneration` launcher on their door rows. Room-local lifecycle
 launchers keep their exact engine owners while the application projects one
 consistent utility slot at the top of each tab panel. Ordinary/H/Shop Overview
 and Timeline reuse the same Room-entered launcher. O Overview and Intro Timeline

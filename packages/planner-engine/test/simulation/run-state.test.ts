@@ -849,20 +849,26 @@ describe('decision run-state snapshots', () => {
     expect(biome.rewards.frontier?.state.bags.HubRewards).toBeUndefined();
   });
 
-  it('publishes every outer N decision while excluding Hub visits', () => {
+  it('publishes every outer N exit decision and the Hub only at its entry', () => {
     const evaluation = simulateProject(catalog, loadSurfaceNProject());
     const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
       throw new Error('N did not evaluate validly');
     }
     const decisions = decisionSnapshots(biome.rewards.runStateSnapshots);
-    expect(decisions).toHaveLength(3);
+    expect(decisions).toHaveLength(2);
     expect(decisions.map((snapshot) => snapshot.owner)).toEqual(
-      biome.snapshot.decisions.map((decision) => decision.origin),
+      biome.snapshot.decisions
+        .filter((decision) => decision.kind !== 'hub')
+        .map((decision) => decision.origin),
     );
-    const [beforePreHub, beforeHub, beforePreboss] = decisions;
+    expect(
+      biome.rewards.runStateSnapshots.filter(
+        (snapshot) => snapshot.owner.kind === 'hubRunStateCheckpoint',
+      ),
+    ).toHaveLength(1);
+    const [beforePreHub, beforePreboss] = decisions;
     expect(beforePreHub?.owner.kind).toBe('exitDecision');
-    expect(beforeHub?.owner.kind).toBe('hubDecision');
     expect(beforePreboss?.owner.kind).toBe('exitDecision');
     if (beforePreboss?.owner.kind !== 'exitDecision') throw new Error('missing Preboss snapshot');
     expect(beforePreboss.owner.source).toEqual({ kind: 'hubDecision', decisionKey: 'hub' });
@@ -890,8 +896,8 @@ describe('decision run-state snapshots', () => {
       throw new Error('N frontier did not publish rewards');
     }
     const decisions = decisionSnapshots(biome.rewards.runStateSnapshots);
-    expect(decisions).toHaveLength(3);
-    const beforePreboss = decisions[2];
+    expect(decisions).toHaveLength(2);
+    const beforePreboss = decisions[1];
     expect(beforePreboss?.owner).toMatchObject({
       kind: 'exitDecision',
       source: { kind: 'hubDecision', decisionKey: 'hub' },
@@ -902,7 +908,7 @@ describe('decision run-state snapshots', () => {
           availability.owner.kind !== 'roomRunStateCheckpoint' &&
           availability.owner.kind !== 'hubRunStateCheckpoint',
       ),
-    ).toHaveLength(3);
+    ).toHaveLength(2);
     expect(biome.rewards.runStateAvailability).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ owner: beforePreboss?.owner, availability: 'available' }),
