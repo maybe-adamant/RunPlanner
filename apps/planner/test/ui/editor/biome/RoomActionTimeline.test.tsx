@@ -61,7 +61,6 @@ import {
 import {
   authorLegalTraitOffers,
   authorTestTraitsAndRequiredItems,
-  collectTestRequiredItems,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';

@@ -32,7 +32,6 @@ import type {
   WorkspaceOrdinaryBatchNode,
 } from '@planner/projections/structured-workspace';
 import {
-  authorLegalTraitOffers,
   authorTestTraitsAndRequiredItems,
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
