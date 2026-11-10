@@ -34,8 +34,9 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   purchaseTestHermesShrineOffer,
+  scheduleTestRequiredRoomActions,
 } from '@run-planner/test-fixtures/shared';
 import {
   authorSurfaceWorldShop,
@@ -127,13 +128,17 @@ describe('selected O validation', () => {
       occurrence,
       encounterCount: 3,
     });
-    const expanded = expandedHistory.present;
-    const expandedOrder = expanded.route.biomes
-      .find((plan) => plan.biomeKey === 'O')
-      ?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
-      )?.roomActions.order;
+    const orderOf = (project: ProjectDocument) =>
+      project.route.biomes
+        .find((plan) => plan.biomeKey === 'O')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
+        )?.roomActions.order;
     expect(expandedHistory.past).toHaveLength(1);
+    // The new phase's cohort is required of the owner; the command places none of it.
+    expect(orderOf(expandedHistory.present)).toEqual(beforeOrder);
+    const expanded = scheduleTestRequiredRoomActions(expandedHistory.present, catalog, oBiome);
+    const expandedOrder = orderOf(expanded);
     expect(expandedOrder).toEqual([
       ...beforeOrder,
       { kind: 'chooseRewardWheel', wheelKey: 'wheel2' },
@@ -169,21 +174,20 @@ describe('selected O validation', () => {
       occurrence,
       encounterCount: 3,
     });
-    const restoredOrder = restored.route.biomes
-      .find((plan) => plan.biomeKey === 'O')
-      ?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
-      )?.roomActions.order;
-    expect(restoredOrder).toEqual(expandedOrder);
+    expect(orderOf(restored)).toEqual(expandedOrder);
   });
 
   it('adds a newly required contact without repairing an unrelated retained Ship timing error', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
-      kind: 'ReplaceShipEncounterCount',
-      occurrence,
-      encounterCount: 3,
-    });
+    let project = scheduleTestRequiredRoomActions(
+      applyProjectCommand(loadSurfaceNOProject(), catalog, {
+        kind: 'ReplaceShipEncounterCount',
+        occurrence,
+        encounterCount: 3,
+      }),
+      catalog,
+      oBiome,
+    );
     const wheel2Choice = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' };
     project = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
@@ -203,12 +207,23 @@ describe('selected O validation', () => {
     });
     const after = materializedORoom(project, oOccurrenceIds.combat07);
     const contact = { kind: 'interactEncounter' as const, phaseKey: 'Combat2' };
+    // The contact is required of the owner; the order, timing error included, is untouched.
+    expect(after.roomActions.order).toEqual(retainedOrder);
     expect(
-      after.roomActions.order.filter(
-        (reference) => roomActionKey(reference) !== roomActionKey(contact),
-      ),
-    ).toEqual(retainedOrder);
-    expect(after.roomActions.order).toContainEqual(contact);
+      assembleRoomActionDomain({
+        routePosition: ordinaryPositionFor(catalog, oBiome),
+        catalog,
+        biome: oBiome,
+        topology: project.route.biomes.find((plan) => plan.biomeKey === 'O')!.topology!,
+        occurrence: project.route.biomes
+          .find((plan) => plan.biomeKey === 'O')!
+          .topology!.occurrences.find(
+            (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
+          )!,
+      }).contributions,
+    ).toContainEqual(
+      expect.objectContaining({ kind: 'action', participation: 'required', reference: contact }),
+    );
     expect(after.roomActionRoster.issues).toContainEqual(
       expect.objectContaining({ kind: 'window' }),
     );
@@ -280,7 +295,8 @@ describe('selected O validation', () => {
       occurrence,
       encounterCount: 3,
     });
-    const { biome } = evaluateValidO(authorLegalTraitOffers(project));
+    project = authorTestTraitsAndRequiredItems(project);
+    const { biome } = evaluateValidO(project);
     const sourceDecision = biome.snapshot.decisions.find(
       (decision) =>
         decision.kind === 'batch' &&
@@ -400,7 +416,7 @@ describe('selected O validation', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    const { biome } = evaluateValidO(authorLegalTraitOffers(project));
+    const { biome } = evaluateValidO(authorTestTraitsAndRequiredItems(project));
     const decisions = biome.snapshot.decisions.filter((decision) => decision.kind === 'batch');
     const sourceDecision = decisions.find(
       (decision) =>
@@ -456,7 +472,9 @@ describe('selected O validation', () => {
       phase,
       encounterKey: 'IcarusCombatO',
     });
-    withThree = authorLegalTraitOffers(withThree);
+    withThree = authorTestTraitsAndRequiredItems(
+      scheduleTestRequiredRoomActions(withThree, catalog, oBiome),
+    );
 
     const withTwo = applyProjectCommand(withThree, catalog, {
       kind: 'ReplaceShipEncounterCount',
@@ -527,7 +545,7 @@ describe('selected O validation', () => {
       occurrence,
       encounterCount: 3,
     });
-    const evaluated = evaluateO(authorLegalTraitOffers(project)).biome;
+    const evaluated = evaluateO(authorTestTraitsAndRequiredItems(project)).biome;
 
     expect(evaluated.rewards.findings).toContainEqual(
       expect.objectContaining({
@@ -564,7 +582,7 @@ describe('selected O validation', () => {
       'wheel1',
       'offer1',
     );
-    project = authorLegalTraitOffers(
+    project = authorTestTraitsAndRequiredItems(
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceRewardWheelOffer',
         offer: wheelOffer,
@@ -719,7 +737,7 @@ describe('selected O validation', () => {
       'offer1',
     );
     const { biome } = evaluateValidO(
-      authorLegalTraitOffers(
+      authorTestTraitsAndRequiredItems(
         applyProjectCommand(wheel2DeliveryProject(), catalog, {
           kind: 'ReplaceRewardWheelOffer',
           offer: wheelOffer,
@@ -742,7 +760,7 @@ describe('selected O validation', () => {
 
   it('stops at a missing wheel reward before the delivery an unplaced next choice waits on', () => {
     const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
-    const valid = authorLegalTraitOffers(
+    const valid = authorTestTraitsAndRequiredItems(
       applyProjectCommand(wheel2DeliveryProject(), catalog, {
         kind: 'ReplaceRewardWheelOffer',
         offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
@@ -816,11 +834,13 @@ describe('selected O validation', () => {
 
   it('rerolls a wheel from Wheels open, each roll seeing the pickups ranked before it', () => {
     const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
-    const project = applyProjectCommand(wheel2DeliveryProject({ rerolls: true }), catalog, {
-      kind: 'ReplaceRewardWheelOffer',
-      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
-      value: { rewardType: 'MaxHealthDrop' },
-    });
+    const project = authorTestTraitsAndRequiredItems(
+      applyProjectCommand(wheel2DeliveryProject({ rerolls: true }), catalog, {
+        kind: 'ReplaceRewardWheelOffer',
+        offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
+        value: { rewardType: 'MaxHealthDrop' },
+      }),
+    );
     const order = () =>
       project.route.biomes
         .find((candidate) => candidate.biomeKey === 'O')!
@@ -833,7 +853,7 @@ describe('selected O validation', () => {
         reference.siteKey === 'hermesShrineDelivery',
     );
     const reroll = (index: number, rewardType: string) =>
-      authorLegalTraitOffers(
+      authorTestTraitsAndRequiredItems(
         applyProjectCommand(project, catalog, {
           kind: 'InsertReroll',
           occurrence: ship,
@@ -960,7 +980,7 @@ describe('selected O validation', () => {
       });
     }
 
-    const { biome } = evaluateValidO(authorLegalTraitOffers(project));
+    const { biome } = evaluateValidO(authorTestTraitsAndRequiredItems(project));
     expect(biome.snapshot.decisions.at(-1)).toMatchObject({
       kind: 'batch',
       rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
@@ -1050,7 +1070,7 @@ describe('selected O validation', () => {
   });
 
   it('retains only the blocked Devotion role capability before its after-combat sibling', () => {
-    const base = authorLegalTraitOffers(loadSurfaceNOProject());
+    const base = authorTestTraitsAndRequiredItems(loadSurfaceNOProject());
     const baseO = evaluateValidO(base).biome;
     const owner = createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion);
     const selected = baseO.rewards.selectedTraitOffers.filter(
@@ -1520,7 +1540,7 @@ describe('selected O validation', () => {
       occurrence: shipOwner,
       encounterCount: 3,
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const route = project.route;
     if (route === undefined) throw new Error('O fixture has no Surface route');
     const replacementWeapon = catalog.weapons.values.find(
@@ -1616,7 +1636,7 @@ describe('selected O validation', () => {
         payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
       },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     expect(simulateProject(catalog, project).status).toBe('valid');
 
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
