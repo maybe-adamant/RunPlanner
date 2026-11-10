@@ -21,6 +21,7 @@ import {
 } from './model';
 import { structurallyActiveOccurrenceIds } from './topology/query';
 import { roomActionKey } from './room-actions/key';
+import { reconcileGeneratedPickupProducerState } from './acquisition/pickup-producers';
 import { createUnresolvedAcquisitionRewardState } from './traits/state';
 
 const GENERATION_KEYS = [
@@ -430,6 +431,44 @@ export function retractMissingHermesShrineDeliveryActions(
     }
   }
   return reconciled;
+}
+
+/**
+ * Drops a delivery's retained item at one host, with the generated pickup
+ * sites its choices owned: the delivery now comes due elsewhere as a new item.
+ */
+export function discardRetainedHermesShrineDelivery(
+  catalog: Catalog,
+  document: ProjectDocument,
+  entryKey: string,
+  host: OccurrenceAddress,
+): ProjectDocument {
+  const discarded = mapOccurrences(document, (routeKey, biomeKey, occurrence) => {
+    const site = occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY];
+    if (
+      !occurrenceMatchesAddress(routeKey, biomeKey, occurrence, host) ||
+      site?.pickupEntries?.[entryKey] === undefined
+    )
+      return occurrence;
+    const pickupEntries = { ...site.pickupEntries };
+    delete pickupEntries[entryKey];
+    const acquisitionSites = { ...occurrence.acquisitionSites };
+    if (Object.keys(pickupEntries).length === 0)
+      delete acquisitionSites[HERMES_SHRINE_DELIVERY_SITE_KEY];
+    else
+      acquisitionSites[HERMES_SHRINE_DELIVERY_SITE_KEY] = Object.freeze({
+        ...site,
+        pickupEntries: Object.freeze(pickupEntries),
+      });
+    const { acquisitionSites: _sites, ...rest } = occurrence;
+    void _sites;
+    return Object.freeze(
+      Object.keys(acquisitionSites).length === 0
+        ? rest
+        : { ...rest, acquisitionSites: Object.freeze(acquisitionSites) },
+    );
+  });
+  return reconcileGeneratedPickupProducerState(document, discarded, catalog);
 }
 
 /**

@@ -33,6 +33,7 @@ import type {
 import { roomActionKey } from '../authored-project/room-actions/state';
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import {
+  discardRetainedHermesShrineDelivery,
   HERMES_SHRINE_DELIVERY_SITE_KEY,
   hermesShrineDeliverySourceAddress,
   isSameRoomDelivery,
@@ -548,6 +549,43 @@ function sourcedElsewhere(owner: OccurrenceAddress, reference: RoomActionReferen
   );
 }
 
+/**
+ * Delivery items an edit left behind: a payload retained, unplaced, at a host
+ * while the walk has its delivery due at another. That delivery arrives there
+ * as a new item, so the old one has no owner left.
+ */
+function strandedDeliveryPayloads(
+  assembly: ProjectEvaluationAssembly,
+  artifacts: CandidateArtifacts,
+): { owner: OccurrenceAddress; entryKey: string }[] {
+  const rooms = occurrences(assembly.project);
+  const dueHosts = new Map<string, string>();
+  for (const { owner } of rooms) {
+    const site = createAcquisitionSiteAddress(owner, HERMES_SHRINE_DELIVERY_SITE_KEY);
+    for (const { address, capability } of artifacts
+      .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
+      ?.derivedAcquisitionEntries.entriesAt(site) ?? [])
+      if (capability.kind === 'hermesShrineDelivery')
+        dueHosts.set(address.entryKey, semanticAddressKey(owner));
+  }
+  const stranded: { owner: OccurrenceAddress; entryKey: string }[] = [];
+  for (const { owner, occurrence } of rooms) {
+    const entries = occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY]?.pickupEntries;
+    for (const entryKey of Object.keys(entries ?? {})) {
+      const dueHost = dueHosts.get(entryKey);
+      if (dueHost === undefined || dueHost === semanticAddressKey(owner)) continue;
+      const placed = occurrence.roomActions.order.some(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.siteKey === HERMES_SHRINE_DELIVERY_SITE_KEY &&
+          reference.entryKey === entryKey,
+      );
+      if (!placed) stranded.push({ owner, entryKey });
+    }
+  }
+  return stranded;
+}
+
 /** Such rows a structural command took out of the rooms that remain. */
 function sourcedRowsTaken(before: ProjectDocument, after: ProjectDocument) {
   const taken: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
@@ -864,6 +902,20 @@ function settleProject(options: {
     const artifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
     // An installed route keeps exactly the rows it was authored with.
     if (command?.kind === 'ReplaceRoute') return settled(assembly);
+    const stranded = strandedDeliveryPayloads(assembly, artifacts);
+    if (stranded.length > 0) {
+      for (const { owner, entryKey } of stranded) {
+        const address = createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(owner, HERMES_SHRINE_DELIVERY_SITE_KEY),
+          entryKey,
+        );
+        const fault = consume(`stranded:${semanticAddressKey(address)}`, address);
+        if (fault !== undefined) return settled(assembly, fault);
+        project = discardRetainedHermesShrineDelivery(catalog, project, entryKey, owner);
+      }
+      assembly = evaluate(project);
+      continue;
+    }
     // A row with no context or source has nothing to repair: the edit that orphans it removes it.
     const stale = [
       ...staleRowsToRemove(before, beforeRosters, assembly, upgrade),

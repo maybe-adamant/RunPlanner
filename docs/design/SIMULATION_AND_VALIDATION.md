@@ -102,7 +102,9 @@ before assembly and returns the final project and its exact assembly.
   and lie live until the owner places their pickup, and an unplaced required
   one stops the walk at its deadline with its placement finding.
 - A delivery the edit proves displaced (valid before, invalid now) is
-  unplaced and lies live again at its reached due contact. A displaced clocked
+  unplaced and lies live again at its reached due contact. A delivery item
+  retained at a host while the walk has it due at another is removed: it
+  arrives there as a new item. A displaced clocked
   pickup is removed only when its trait is no longer held; one whose held trait
   now matures elsewhere stays with its finding. Deliveries and clocked pickups
   are keyed by their source, so no inherited choice is reset for being newly

@@ -225,7 +225,8 @@ Draft or the run import depend on that C2 changes.
   pickups are live. A consumer places them like any required row.
 - **Rescheduled delivery.** `PlaceHermesShrineDelivery` reuses a retained
   payload only from the host it places at; a payload retained at another host
-  is dropped and the delivery arrives with its default reward.
+  is dropped and the delivery arrives with its default reward; settlement
+  removes a retained item whose delivery the walk has due at another host.
 - **Keepsake rack.** An optional ordinary row: `InsertRoomAction` and
   `RemoveRoomAction` accept `interactKeepsakeRack` (removal clears the
   choice); the codec allows at most one rack row; `ReplacePostbossKeepsake`

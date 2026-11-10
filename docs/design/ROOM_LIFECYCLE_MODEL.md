@@ -1087,8 +1087,8 @@ cause: rush, countdown or flush); the frontier, placement assessment, due
 spawn, edit settlement, authored domain and execution assembly all read that
 obligation rather than recomputing the due contact. A delivery that comes due
 at another host than the one holding its retained item is a new item: it
-arrives with no choices, and the earlier item's choices and outcomes (a
-Mystery Boon's pick, a Quick Buck offer) go with it. Due again at the same
+arrives with no choices, and the earlier item, with its choices and outcomes
+(a Mystery Boon's pick, a Quick Buck offer), goes in the same edit. Due again at the same
 host, it is the same item and keeps them. A Hub side-room source is
 ordinary for scheduling, but cannot advance an older pending delivery; later
 qualifying main Hub visits can advance or host it. Fixed Boss occurrences are
