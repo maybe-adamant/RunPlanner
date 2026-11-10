@@ -479,9 +479,11 @@ indices and the command's own default, and refuses any other with a contract
 error; a generic optional insertion, such as a challenge switch press or a
 locked door press, still accepts any index and reports a bad position as a
 finding. A rushed Shrine item's optional pickup moves with its purchase,
-directly after it, since the item spawns as the Shrine closes. An engine
-authoring query publishes each purchase command's authorable indices, judged
-the same way.
+directly after it, since the item spawns as the Shrine closes. A purchase and
+a generated pickup's placement share one rule: the command places its action
+by default, then moves it to the chosen index, judged by that index's prefix.
+An engine authoring query publishes each such command's authorable indices by
+the same rule.
 
 Defaults are anchored differently. When a command newly activates required
 actions, or restores one without a chosen position, the engine extends the
@@ -762,25 +764,20 @@ An item's legal actions at a gap are what the engine already authorizes
 there; nothing is evaluated again. They are the row standing at the gap, the
 [roster's](#roster) authorable insertion of an unplaced row (a required
 action's canonical restore marked) and authorable move of a later row to the
-gap, an object's new purchase through its feature command at an index that
-command accepts, and a derived pickup's placement (a due delivery, a matured
-drop, Gold Gold Gold's duplicate) at an index its command accepts. A command
-that still needs a choice, a Pom level or a blank Travel Deal item, says so.
-A required item carries its deadline: the last gap of the whole order at which
-it has a legal action.
+gap, and an object's new purchase or a derived pickup's placement (a due
+delivery, a matured drop, Gold Gold Gold's duplicate) at an index its
+command accepts, judged by the one rule every positioned command shares. A
+command that still needs a choice, a Pom level or a blank Travel Deal item,
+says so; the indices it accepts do not depend on the value chosen. A required
+item carries its deadline: the last gap of the whole order at which it may
+stand, from the same placements its offered actions come from.
 
 Each item keeps the classification its owner gives it today: a Boss's forced
 drop, a countdown delivery and Gold Gold Gold's duplicate are pickups with
 their spawned-loot source, while an NPC contact and a Fields cage's
 completion are actions on objects. An object's new purchases are read where
 the room's reached actions end, which is the same set at every gap, since an
-item bought earlier is a row; a room stopped in its Overview offers none. A
-new reroll, a Pool sale of a slot not yet chosen and a rack keepsake are not
-offered, as each needs its own choice first; their rows are. While a required
-pickup is unplaced, the walk stops at the event or source action that spawns
-it, so the pickup may not be live where it could go: a deferred Ship wheel's
-reward, an Artificer's replacement, a Nemesis trade's result, a delivery due
-after a wheel reward, a Fields cage reward.
+item bought earlier is a row; a room stopped in its Overview offers none.
 
 ## Canonical Lifecycle Profiles
 

@@ -10,11 +10,7 @@ import {
   type RoomActionAddress,
   type SemanticAddress,
 } from '../../authored-project/addresses';
-import { ProjectCommandContractError } from '../../authored-project/commands/contract';
-import {
-  applyProjectCommand,
-  positionedCommandInsertionIndexes,
-} from '../../authored-project/commands/dispatch';
+import { positionedCommandInsertionIndexes } from '../../authored-project/commands/dispatch';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { PositionedCommand } from '../../authored-project/commands/chosen-index';
 import {
@@ -28,12 +24,7 @@ import { roomActionKey } from '../../authored-project/room-actions/key';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../authored-project/shop';
 import type { Catalog } from '../../catalog-schema';
 import type { CanonicalAuthoredRoom } from '../materialization';
-import type {
-  RoomActionParticipation,
-  RoomActionProposal,
-  RoomActionRow,
-  RoomActionWindow,
-} from '../room-actions';
+import type { RoomActionParticipation, RoomActionRow, RoomActionWindow } from '../room-actions';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import { roomObjectInteractionsForProjectEvaluationAssembly } from './project-evaluation-assembly';
 import {
@@ -68,7 +59,13 @@ export type LiveObjectKind =
   /** Door and cage reroll presses. */
   | 'doorRerolls';
 
-/** A choice the command still needs before it applies. */
+/**
+ * A choice the command still needs before it applies. The choice's values are
+ * not part of this product: a blank Travel Deal item's are read where the
+ * room's reached actions end, not at the gap. The indices a command accepts do
+ * not depend on the value chosen, since the action it places and its order
+ * constraints are the same for every value.
+ */
 export type LiveActionChoice = 'levelResolution' | 'travelDealItem';
 
 /** One thing that can be done to an item at a gap. */
@@ -334,7 +331,7 @@ function objectPurchases(
   const refill = shop?.travelDealRefill;
   if (refill !== undefined) {
     if (refill.rewardType !== null) positioned('worldShop', refill.command);
-    // A blank item is stocked by the purchase; any stockable value judges its positions.
+    // A blank item is stocked by the purchase; its positions do not depend on the value.
     else if (refill.values[0] !== undefined)
       positioned('worldShop', refill.command, 'travelDealItem', {
         ...refill.command,
@@ -356,7 +353,7 @@ function objectPurchases(
   for (const { offer, candidate } of shrineItems)
     for (const command of [offer.buy, offer.rush]) {
       if (offer.rewardType !== null) positioned('hermesShrine', command);
-      // A blank refill is stocked by the purchase; any stockable reward judges its positions.
+      // A blank refill is stocked by the purchase; its positions do not depend on the reward.
       else if (candidate !== undefined)
         positioned('hermesShrine', command, 'travelDealItem', {
           ...command,
@@ -406,30 +403,7 @@ function objectPurchases(
   return frozen(purchases);
 }
 
-/**
- * Every index at which a placement command not yet a row may stand: its own
- * index when it takes one, judged by the command itself.
- */
-function commandIndexes(
-  catalog: Catalog,
-  assembly: ProjectEvaluationAssembly,
-  command: ProjectCommand,
-  orderLength: number,
-): ReadonlySet<number> {
-  const indexes = new Set<number>();
-  if (!('index' in command) && !placementTakesIndex(command)) return indexes;
-  for (let index = 0; index <= orderLength; index += 1) {
-    try {
-      applyProjectCommand(assembly.project, catalog, { ...command, index } as ProjectCommand);
-      indexes.add(index);
-    } catch (error) {
-      if (!(error instanceof ProjectCommandContractError)) throw error;
-    }
-  }
-  return indexes;
-}
-
-function placementTakesIndex(command: ProjectCommand): boolean {
+function isPositioned(command: ProjectCommand): command is PositionedCommand {
   return (
     command.kind === 'PlaceHermesShrineDelivery' ||
     command.kind === 'PlaceClockedTraitPickup' ||
@@ -488,67 +462,71 @@ export function liveActionsForProjectEvaluationAssembly(
   const frontier =
     stop === undefined || stop.kind === 'exit' ? orderLength : lastGapOfEntry(stop.entryIndex);
 
-  // Legal actions from the roster, by action key and gap.
-  const proposalGaps = new Map<string, Map<number, RoomActionProposal>>();
-  const addProposal = (gap: number, proposal: RoomActionProposal) => {
-    const key = roomActionKey(proposal.reference);
-    const byGap = proposalGaps.get(key) ?? new Map<number, RoomActionProposal>();
-    byGap.set(gap, proposal);
-    proposalGaps.set(key, byGap);
+  /**
+   * Every gap of the whole order at which a row may stand, with the action
+   * that puts it there: its own gap, and the roster's authorable insertions
+   * and moves. The one authority for a row's offered actions and its deadline.
+   */
+  const rowGaps = new Map<string, Map<number, LiveAction>>();
+  const addRowGap = (key: string, gap: number, action: LiveAction) => {
+    const byGap = rowGaps.get(key) ?? new Map<number, LiveAction>();
+    byGap.set(gap, action);
+    rowGaps.set(key, byGap);
   };
-  for (const proposal of roster.proposals) {
-    if (!proposal.structurallyAuthorable) continue;
-    if (proposal.kind === 'insert' && proposal.toIndex !== undefined)
-      addProposal(proposal.toIndex, proposal);
-    else if (proposal.kind === 'move' && proposal.anchorIndex !== undefined)
-      addProposal(proposal.anchorIndex, proposal);
-  }
-  const rowAction = (row: RoomActionRow, gap: number): LiveAction | undefined => {
-    if (row.rank !== null && row.rank - 1 === gap)
-      return frozen({
-        kind: 'placed' as const,
-        reference: row.reference,
-        action: actionAddress(row.reference),
-      });
-    const proposal = proposalGaps.get(row.key)?.get(gap);
-    if (proposal === undefined) return undefined;
-    if (proposal.kind === 'move' && row.rank !== null && row.rank - 1 > gap)
-      return frozen({
-        kind: 'move' as const,
-        reference: row.reference,
-        action: actionAddress(row.reference),
-        fromIndex: row.rank - 1,
-        command: frozen({
-          kind: 'MoveRoomAction' as const,
-          action: actionAddress(row.reference),
-          toIndex: proposal.toIndex!,
-        }),
-      });
-    if (proposal.kind === 'insert' && row.rank === null)
-      return frozen({
-        kind: 'place' as const,
-        reference: row.reference,
-        command: frozen({
-          kind: 'InsertRoomAction' as const,
-          action: actionAddress(row.reference),
+  for (const row of liveRows)
+    if (row.rank !== null)
+      addRowGap(
+        row.key,
+        row.rank - 1,
+        frozen({
+          kind: 'placed' as const,
           reference: row.reference,
-          index: gap,
+          action: actionAddress(row.reference),
         }),
-        ...(proposal.canonical === true ? { canonical: true as const } : {}),
-      });
-    return undefined;
-  };
-  /** The last gap of the whole order at which a legal action exists. */
+      );
+  for (const proposal of roster.proposals) {
+    if (!proposal.structurallyAuthorable || proposal.toIndex === undefined) continue;
+    const row = rowByKey.get(roomActionKey(proposal.reference));
+    if (row === undefined) continue;
+    const action = actionAddress(row.reference);
+    if (proposal.kind === 'insert' && row.rank === null)
+      addRowGap(
+        row.key,
+        proposal.toIndex,
+        frozen({
+          kind: 'place' as const,
+          reference: row.reference,
+          command: frozen({
+            kind: 'InsertRoomAction' as const,
+            action,
+            reference: row.reference,
+            index: proposal.toIndex,
+          }),
+          ...(proposal.canonical === true ? { canonical: true as const } : {}),
+        }),
+      );
+    else if (proposal.kind === 'move' && row.rank !== null && proposal.anchorIndex !== undefined)
+      addRowGap(
+        row.key,
+        proposal.anchorIndex,
+        frozen({
+          kind: 'move' as const,
+          reference: row.reference,
+          action,
+          fromIndex: row.rank - 1,
+          command: frozen({ kind: 'MoveRoomAction' as const, action, toIndex: proposal.toIndex }),
+        }),
+      );
+  }
+  /** A row's action at a gap; a row placed before the gap is done there and has none. */
+  const rowAction = (row: RoomActionRow, gap: number): LiveAction | undefined =>
+    row.rank !== null && row.rank - 1 < gap ? undefined : rowGaps.get(row.key)?.get(gap);
+  /** For a required row, the last gap of the whole order at which it may stand. */
   const rowDeadline = (row: RoomActionRow): number | undefined => {
-    if (row.participation !== 'required') return undefined;
-    let last: number | undefined;
-    for (let gap = 0; gap <= orderLength; gap += 1)
-      if (
-        (row.rank !== null && row.rank - 1 === gap) ||
-        proposalGaps.get(row.key)?.has(gap) === true
-      )
-        last = gap;
-    return last;
+    const gaps = rowGaps.get(row.key);
+    return row.participation !== 'required' || gaps === undefined
+      ? undefined
+      : Math.max(...gaps.keys());
   };
 
   // Pickups, from the spawned loot, each with the gap it spawned at.
@@ -608,7 +586,10 @@ export function liveActionsForProjectEvaluationAssembly(
     } else if (item.placement.kind === 'unplaced' && item.placement.command !== undefined) {
       const command = item.placement.command;
       const indexes =
-        derivedIndexes.get(key) ?? commandIndexes(catalog, assembly, command, orderLength);
+        derivedIndexes.get(key) ??
+        (isPositioned(command)
+          ? new Set(positionedCommandInsertionIndexes(assembly.project, catalog, command))
+          : new Set<number>());
       derivedIndexes.set(key, indexes);
       if (indexes.has(gap))
         actions.push(

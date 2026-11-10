@@ -30,11 +30,12 @@ You either interact with pickups or active objects.
 - **A.** The live-at-k product, a pure addition. Delivered: the
   [Live at a point](../design/ROOM_LIFECYCLE_MODEL.md#live-at-a-point) query,
   composed from the spawned loot, the room's published stop, the roster's
-  proposals and the feature and placement commands' accepted indices; no
-  evaluation work, equivalence unchanged. Its witnesses (golden Underworld and
-  Surface checkpoints) stand every reached row live at its own gap, offer each
-  row of a sampled room at its gap after a reset to just before it, and accept
-  every frontier action into the walk. Provisional classifications, current
+  proposals and the positioned commands' accepted indices (purchases and
+  derived placements share one rule); no evaluation work, equivalence
+  unchanged. Its witnesses (golden Underworld and Surface checkpoints) stand
+  every reached row live at its own gap and, for sampled rooms at every gap
+  through the frontier, find the offered placements and moves equal to those
+  the walk takes there. Provisional classifications, current
   engine ownership, for the owner to confirm or change (classification, not
   structure):
   - Boss forced drop: a pickup (spawned-loot `requiredDrop`), required.
@@ -48,12 +49,23 @@ You either interact with pickups or active objects.
   - W8 rekey: settlement-time only; the product is read-only and carries
     nothing about it.
 
-  Open for C: while a required pickup is unplaced, today's walk stops at the
-  event or source that spawns it, so it is not placeable from the frontier
-  (deferred Ship wheel reward, Artificer replacement, Nemesis trade result, a
-  delivery after a wheel reward, a Fields cage reward); the witness pins these
-  twelve cases. Not offered yet: new rerolls, a Pool sale of an unchosen slot,
-  a rack keepsake.
+  Open items, temporary limits of today's walk and scope:
+  - While a required pickup is unplaced, the walk stops at the event or source
+    action that spawns it, so the pickup may not be live where it could go: a
+    deferred Ship wheel's reward (its encounter end waits on it), an
+    Artificer's replacement, a Nemesis trade's result, a delivery due after a
+    wheel reward, a Fields cage reward (the stop rewinds to room entry), and a
+    Boss room's reward after its forced drop (the stop rewinds before the
+    drop's row). The witness pins these by room and kind; C's walk change
+    should turn each into an offer at its own gap and empty the pin.
+  - Not offered: a new door, cage, wheel, Well or Pool reroll, a Pool sale of a
+    slot not yet chosen and a rack keepsake, each needing its own choice
+    first; their rows are. Owner to decide whether the live row offers them
+    (with the choice still to make) or they stay on their objects.
+  - A choice's values (a blank Travel Deal item) are read where the room's
+    reached actions end, not at the gap; the indices are value-independent.
+  - Not exported: the query lands on the `simulation` entry with its first
+    consumer in B or D.
 
 - **B.** Draft and the run import author pickups from it, placing what they
   relied on being inserted.
