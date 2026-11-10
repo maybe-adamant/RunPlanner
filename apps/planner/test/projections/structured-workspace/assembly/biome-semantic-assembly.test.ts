@@ -30,7 +30,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { requireTraits } from '@run-planner/test-fixtures/shared';
+import { collectTestRequiredItems, requireTraits } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHIProject,
@@ -733,6 +733,7 @@ describe('structured workspace biome semantic assembly', () => {
         selectedOptionKey: 'option1',
       },
     });
+    project = collectTestRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       decision: openingDecision,
       kind: 'CreateBatch',

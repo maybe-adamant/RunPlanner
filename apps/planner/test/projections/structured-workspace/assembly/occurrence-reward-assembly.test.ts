@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { reachedPOutdoorIcarusFixture } from '@run-planner/test-fixtures/surface';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  collectTestRequiredItems,
+} from '@run-planner/test-fixtures/shared';
 import {
   assemble,
   applyProjectCommand,
@@ -464,6 +467,7 @@ describe('structured workspace reward assembly', () => {
         selectedOptionKey: 'option1',
       },
     });
+    project = collectTestRequiredItems(project);
     const candidate = assemble(
       project,
       'Underworld',
@@ -474,7 +478,9 @@ describe('structured workspace reward assembly', () => {
       (option) => option.offer.rewardType === 'Boon',
     );
     if (replacement === undefined) throw new Error('Boon Artificer replacement is missing');
-    project = authorTestArtificerReplacement(project, catalog, fixture.acquisition, replacement);
+    project = collectTestRequiredItems(
+      authorTestArtificerReplacement(project, catalog, fixture.acquisition, replacement),
+    );
 
     const rows =
       assemble(project, 'Underworld', 'F', occurrenceId).assembly.node.room.roomActions?.rows ?? [];

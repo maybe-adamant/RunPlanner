@@ -1,5 +1,5 @@
 import { createEncounterPhaseAddress } from '@run-planner/engine/authored-project';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 import { surfaceShrineTravelDealProject } from '@run-planner/test-fixtures/surface';
 import { describe, expect, it } from 'vitest';
 import {
@@ -50,7 +50,7 @@ describe('occurrence room workbench', () => {
 
   it('routes trait and reward children to the phase that renders their action', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
-    const project = authorLegalTraitOffers(
+    const project = authorTestTraitsAndRequiredItems(
       applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
         kind: 'SelectEncounter',
         phase: createEncounterPhaseAddress(oBiome, occurrence, 'Combat1'),
