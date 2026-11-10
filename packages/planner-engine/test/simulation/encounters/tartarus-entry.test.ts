@@ -23,7 +23,7 @@ import {
 import { resolveEncounterAuthoringProfile } from '../../../src/simulation/encounters/resolve';
 import { assembleExecutionProduct, compileExecutionPlan } from '../../../src/execution-plan';
 import { createGoldenFGHIProject, goldenIBiome } from '@run-planner/test-fixtures/underworld';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 
 describe('Tartarus reached first-combat identity', () => {
@@ -271,7 +271,7 @@ describe('Tartarus reached first-combat identity', () => {
           });
         }
       }
-      project = authorLegalTraitOffers(project);
+      project = authorTestTraitsAndRequiredItems(project);
       const evaluation = simulateProjectAssembly(catalog, project).evaluation.route.biomes.find(
         (entry) => entry.biomeKey === 'I',
       )!;
