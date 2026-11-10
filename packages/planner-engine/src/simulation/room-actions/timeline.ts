@@ -318,6 +318,21 @@ export function assembleRoomLifecycleTimeline(
     return undefined;
   };
 
+  /**
+   * Where the fight an unplaced cage or wheel choice starts would start: after
+   * the executable ranked rows of its window the walk takes before it, up to
+   * the first row of a later window or one it cannot take.
+   */
+  const unplacedStartRank = (start: RoomActionReference): number => {
+    const window = roster.rows.find((row) => row.key === roomActionKey(start))?.window;
+    if (window === undefined) return 0;
+    const ordinal = roomLifecycleWindowOrdinal(structure, window);
+    const later = rankedRows.findIndex(
+      (row) => !row.executable || roomLifecycleWindowOrdinal(structure, row.window) > ordinal,
+    );
+    return (later < 0 ? rankedRows.at(-1) : rankedRows[later - 1])?.rank ?? 0;
+  };
+
   const desiredBoundary = (
     point: VisibleRoomLifecycleStructurePoint,
   ): RoomLifecycleBoundaryEntry => {
@@ -347,6 +362,13 @@ export function assembleRoomLifecycleTimeline(
                 (row) => row.window.kind === 'standard' && row.window.phase === 'beforeCombat',
               )
             : undefined;
+        const start = cage?.kind === 'completeFieldsCage' ? cage : choose;
+        const unplacedStart =
+          start !== undefined && actionRank(roster, start) === undefined
+            ? unplacedStartRank(start)
+            : undefined;
+        if (unplacedStart !== undefined && unplacedStart > 0)
+          return boundaryEntry(point, unplacedStart, 'after');
         const rank =
           cage !== undefined
             ? (actionRank(roster, cage) ?? 0)

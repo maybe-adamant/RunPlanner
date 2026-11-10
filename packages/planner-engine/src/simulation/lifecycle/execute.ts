@@ -915,7 +915,23 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     const key = roomActionKey(reference);
     const target = roster.rows.find((row) => row.key === key && !row.stale);
     if (target === undefined) return initial;
-    if (target.rank === null) return blockAt(initial, target);
+    if (target.rank === null) {
+      if (reference.kind !== 'completeFieldsCage' && reference.kind !== 'chooseRewardWheel')
+        return blockAt(initial, target);
+      // An unplaced action that starts a fight (a cage, a wheel's choice) is due
+      // once the executable rows of its window ranked before it are taken, such
+      // as the earlier cage's reward or a delivery the wheels opening spawned.
+      const ordinal = roomLifecycleWindowOrdinal(lifecycleStructure, target.window);
+      let state = initial;
+      while (cursor < rankedRows.length) {
+        const row = rankedRows[cursor]!;
+        if (!row.executable || roomLifecycleWindowOrdinal(lifecycleStructure, row.window) > ordinal)
+          break;
+        state = reach(state, playerAction(row, operationIndex, state), row);
+        cursor += 1;
+      }
+      return blockAt(state, target);
+    }
     let state = consumeGenericBefore(
       key,
       roomLifecycleWindowOrdinal(lifecycleStructure, target.window),

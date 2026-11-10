@@ -774,7 +774,10 @@ pickups those end effects spawn are due at the next wheel's choice, after its
 Wheels open has rolled the offers; after the final phase, before Doors open. A
 pickup taken before combat (an Opening reward, Devotion's choice) and an
 action that starts a fight (a cage's completion, a wheel's choice) lead to
-that fight, so the fight waits on them.
+that fight, so the fight waits on them. An unplaced cage or wheel choice is
+due after the rows of its window ranked before it, such as the earlier cage's
+reward or a delivery its wheels opening spawned, so playing forward clears
+and collects a Fields room cage by cage.
 
 Two kinds of item are live at a gap, and nothing else:
 
