@@ -196,11 +196,16 @@ it.each([true, false])(
     );
     expect(row?.placementAssessment?.kind).toBe('valid');
     expect(row?.rewardPayload).toBeDefined();
-    expect(
-      projected.workspace.interactions.roomActions
-        .get(semanticAddressKey(host))
-        ?.proposals.some((proposal) => proposal.kind === 'unplace'),
-    ).toBe(false);
+    // A valid delivery can still be unplaced, leaving its item to pick up again.
+    const interaction = projected.workspace.interactions.roomActions.get(semanticAddressKey(host));
+    const unplace = interaction?.proposals.find(
+      (proposal) => proposal.kind === 'unplace' && roomActionKey(proposal.reference) === row?.key,
+    );
+    expect(unplace).toBeDefined();
+    expect(interaction?.intentFor(unplace!.key).command).toEqual({
+      kind: 'UnplaceGeneratedDelivery',
+      action: row?.address,
+    });
   },
 );
 
@@ -310,7 +315,7 @@ it('distinguishes two uncovered retained deliveries and binds the selected repai
   ).toBeUndefined();
 });
 
-it('keeps one stale-phase repair row and restores its due phase atomically', () => {
+it('keeps one stale-phase repair row and offers its due phase once unplaced', () => {
   let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
   const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
   project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondLeft', {
@@ -382,10 +387,33 @@ it('keeps one stale-phase repair row and restores its due phase atomically', () 
       row.reference.kind === 'interactAcquisitionEntry' &&
       row.reference.entryKey === command.entry.entryKey,
   );
+  // Unplaced, the delivery is live again at its due phase, with its finding.
   expect(restoredRows).toHaveLength(1);
-  expect(restoredRows[0]!.rank).not.toBeNull();
-  expect(restoredRows[0]!.placement).toBeUndefined();
+  expect(restoredRows[0]!.rank).toBeNull();
+  expect(restoredRows[0]!.placement?.command).toEqual(command);
   expect(restoredRows[0]!.reference).toMatchObject({
     encounterPhaseKey: command.encounterPhaseKey,
   });
+  expect(settled.evaluation.findings).toContainEqual(
+    expect.objectContaining({
+      code: 'hermesShrineDeliveryPlacementRequired',
+      evidence: expect.objectContaining({ encounterPhaseKey: command.encounterPhaseKey }),
+    }),
+  );
+  const placed = projectStructuredWorkspaceFixture(
+    applyProjectCommand(settled.project, catalog, command),
+  )
+    .workspace.route.biomes.flatMap((biome) => biome.nodes)
+    .find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === host.occurrenceId,
+    );
+  if (placed?.kind !== 'occurrenceWorkbench') throw new Error('Placed host missing');
+  const placedRows = placed.room.roomActions!.rows.filter(
+    (row) =>
+      row.reference.kind === 'interactAcquisitionEntry' &&
+      row.reference.entryKey === command.entry.entryKey,
+  );
+  expect(placedRows).toHaveLength(1);
+  expect(placedRows[0]!.rank).not.toBeNull();
+  expect(placedRows[0]!.placementAssessment?.kind).toBe('valid');
 });
