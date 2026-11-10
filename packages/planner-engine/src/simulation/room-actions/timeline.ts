@@ -318,19 +318,37 @@ export function assembleRoomLifecycleTimeline(
     return undefined;
   };
 
+  // The slot of the last boundary placed; boundaries follow the structure's order.
+  let precedingSlot = 0;
+
   /**
    * Where the fight an unplaced cage or wheel choice starts would start: after
-   * the executable ranked rows of its window the walk takes before it, up to
-   * the first row of a later window or one it cannot take.
+   * the executable rows of its window the walk reaches before it, from the
+   * last boundary placed, up to the first row of a later window or one it
+   * cannot take. Undefined while a required action of an earlier window is
+   * missing, since the walk stops there first.
    */
-  const unplacedStartRank = (start: RoomActionReference): number => {
+  const unplacedStartRank = (start: RoomActionReference, fromSlot: number): number | undefined => {
     const window = roster.rows.find((row) => row.key === roomActionKey(start))?.window;
-    if (window === undefined) return 0;
+    if (window === undefined) return undefined;
     const ordinal = roomLifecycleWindowOrdinal(structure, window);
-    const later = rankedRows.findIndex(
-      (row) => !row.executable || roomLifecycleWindowOrdinal(structure, row.window) > ordinal,
-    );
-    return (later < 0 ? rankedRows.at(-1) : rankedRows[later - 1])?.rank ?? 0;
+    if (
+      roster.rows.some(
+        (row) =>
+          row.rank === null &&
+          row.participation === 'required' &&
+          !row.stale &&
+          roomLifecycleWindowOrdinal(structure, row.window) < ordinal,
+      )
+    )
+      return undefined;
+    let rank: number | undefined;
+    for (const row of rankedRows) {
+      if (row.rank! <= fromSlot) continue;
+      if (!row.executable || roomLifecycleWindowOrdinal(structure, row.window) > ordinal) break;
+      rank = row.rank!;
+    }
+    return rank;
   };
 
   const desiredBoundary = (
@@ -365,10 +383,9 @@ export function assembleRoomLifecycleTimeline(
         const start = cage?.kind === 'completeFieldsCage' ? cage : choose;
         const unplacedStart =
           start !== undefined && actionRank(roster, start) === undefined
-            ? unplacedStartRank(start)
+            ? unplacedStartRank(start, precedingSlot)
             : undefined;
-        if (unplacedStart !== undefined && unplacedStart > 0)
-          return boundaryEntry(point, unplacedStart, 'after');
+        if (unplacedStart !== undefined) return boundaryEntry(point, unplacedStart, 'after');
         const rank =
           cage !== undefined
             ? (actionRank(roster, cage) ?? 0)
@@ -460,7 +477,6 @@ export function assembleRoomLifecycleTimeline(
     }
   };
 
-  let precedingSlot = 0;
   const boundaryEntries = structure.points
     .filter(
       (point): point is VisibleRoomLifecycleStructurePoint =>

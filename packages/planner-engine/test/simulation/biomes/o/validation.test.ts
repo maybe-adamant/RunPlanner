@@ -45,6 +45,10 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { reachedFrontier } from '../../../support/reward-frontier';
+import {
+  candidateBiome,
+  candidateBiomeRooms,
+} from '../../../../src/simulation/candidates/evaluated-biome';
 
 function evaluateO(project = loadSurfaceNOProject()) {
   const evaluation = simulateProject(catalog, project);
@@ -734,6 +738,80 @@ describe('selected O validation', () => {
       'start Combat2',
       'end Combat2',
     ]);
+  });
+
+  it('stops at a missing wheel reward before the delivery an unplaced next choice waits on', () => {
+    const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
+    const valid = authorLegalTraitOffers(
+      applyProjectCommand(wheel2DeliveryProject(), catalog, {
+        kind: 'ReplaceRewardWheelOffer',
+        offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
+        value: { rewardType: 'HermesUpgrade' },
+      }),
+    );
+    const reward = { kind: 'interactWheelReward', wheelKey: 'wheel1' } as const;
+    const project = {
+      ...valid,
+      route: {
+        ...valid.route,
+        biomes: valid.route.biomes.map((plan) =>
+          plan.biomeKey !== 'O' || plan.topology === null
+            ? plan
+            : {
+                ...plan,
+                topology: {
+                  ...plan.topology,
+                  occurrences: plan.topology.occurrences.map((occurrence) =>
+                    occurrence.occurrenceId !== oOccurrenceIds.combat02
+                      ? occurrence
+                      : {
+                          ...occurrence,
+                          roomActions: {
+                            order: occurrence.roomActions.order.filter(
+                              (reference) =>
+                                roomActionKey(reference) !== roomActionKey(reward) &&
+                                !(
+                                  reference.kind === 'chooseRewardWheel' &&
+                                  reference.wheelKey === 'wheel2'
+                                ),
+                            ),
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.issue?.reasons[0]).toMatchObject({
+      code: 'roomActionPlacementRequired',
+      origin: createRoomActionAddress(oBiome, oOccurrenceIds.combat02, roomActionKey(reward)),
+    });
+    const biome = assembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O')!;
+    if (!('history' in biome)) throw new Error('O lost its history');
+    expect(combat02Events(biome as ReturnType<typeof evaluateO>['biome'])).not.toContain(
+      'delivery',
+    );
+
+    // The Timeline starts wheel 2's fight where the walk would, not after the delivery.
+    const evaluated = candidateBiome(assembly.evaluation, 'Surface', 'O')!;
+    const room = candidateBiomeRooms(evaluated).find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(ship),
+    )!;
+    const entries = room.roomLifecycleTimeline.entries;
+    const deliveryEntry = entries.findIndex(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.action.reference.kind === 'interactAcquisitionEntry' &&
+        entry.action.reference.siteKey === 'hermesShrineDelivery',
+    );
+    const combat2Start = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStart:Combat2',
+    );
+    expect(deliveryEntry).toBeGreaterThanOrEqual(0);
+    expect(combat2Start).toBeGreaterThanOrEqual(0);
+    expect(combat2Start).toBeLessThan(deliveryEntry);
   });
 
   it('rerolls a wheel from Wheels open, each roll seeing the pickups ranked before it', () => {

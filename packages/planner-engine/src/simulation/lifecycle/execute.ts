@@ -919,9 +919,14 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       if (reference.kind !== 'completeFieldsCage' && reference.kind !== 'chooseRewardWheel')
         return blockAt(initial, target);
       // An unplaced action that starts a fight (a cage, a wheel's choice) is due
-      // once the executable rows of its window ranked before it are taken, such
-      // as the earlier cage's reward or a delivery the wheels opening spawned.
+      // once the executable rows of its window the walk reaches before it are
+      // taken, such as the earlier cage's reward or a delivery the wheels opening
+      // spawned; a required action of an earlier window missing comes first.
       const ordinal = roomLifecycleWindowOrdinal(lifecycleStructure, target.window);
+      const missingEarlier = firstMissingRequired(
+        (row) => roomLifecycleWindowOrdinal(lifecycleStructure, row.window) < ordinal,
+      );
+      if (missingEarlier !== undefined) return blockAt(initial, missingEarlier);
       let state = initial;
       while (cursor < rankedRows.length) {
         const row = rankedRows[cursor]!;
