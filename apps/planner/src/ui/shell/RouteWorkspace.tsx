@@ -106,13 +106,18 @@ export function RouteWorkspace({
       `${workspaceRoute.routeKey} feedback omitted configured biome ${displayedBiomeKey}`,
     );
   }
-  const npcIndex = projectRouteNpcIndex(catalog, routeEvaluation, workspace.focusByOwner);
+  const npcIndex = projectRouteNpcIndex(
+    catalog,
+    routeEvaluation,
+    workspace.focusByOwner,
+    workspaceRoute,
+  );
   const traitRows = projectRouteTraitOffers(
     catalog,
-    project,
     projectEvaluation,
-    workspaceRoute.routeKey,
     interactions,
+    workspace.focusByOwner,
+    workspaceRoute,
   );
   const shrineRows = projectRouteHermesShrineIndex(workspaceRoute);
   const wellRows = projectRouteStygianWellIndex(workspaceRoute);

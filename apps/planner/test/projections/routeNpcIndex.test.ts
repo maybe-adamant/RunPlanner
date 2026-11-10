@@ -127,7 +127,12 @@ describe('route NPC index projection', () => {
     const project = selectEncounter(createCompleteFGProject(), fArtemisPhase, 'ArtemisCombatF');
     const fixture = routeIndexFixture(project);
     try {
-      const index = projectRouteNpcIndex(catalog, fixture.route, fixture.workspace.focusByOwner);
+      const index = projectRouteNpcIndex(
+        catalog,
+        fixture.route,
+        fixture.workspace.focusByOwner,
+        fixture.workspace.route,
+      );
 
       expect(index.groups).toEqual([
         {
@@ -136,7 +141,7 @@ describe('route NPC index projection', () => {
             expect.objectContaining({
               encounterKey: 'ArtemisCombatF',
               label: 'Artemis combat',
-              locationLabel: 'Erebus · Encounter',
+              place: { text: 'Location 6', hint: 'Combat 06' },
               phase: fArtemisPhase,
             }),
           ],
@@ -153,7 +158,12 @@ describe('route NPC index projection', () => {
     const fixture = routeIndexFixture(project);
     try {
       expect(
-        projectRouteNpcIndex(catalog, fixture.route, fixture.workspace.focusByOwner).groups,
+        projectRouteNpcIndex(
+          catalog,
+          fixture.route,
+          fixture.workspace.focusByOwner,
+          fixture.workspace.route,
+        ).groups,
       ).toEqual([
         {
           presentationKey: 'Nemesis',
@@ -161,7 +171,7 @@ describe('route NPC index projection', () => {
             expect.objectContaining({
               encounterKey: 'NemesisCombatF',
               label: 'Nemesis combat',
-              locationLabel: 'Erebus · Encounter',
+              place: { text: 'Location 6', hint: 'Combat 06' },
               phase: fNemesisPhase,
             }),
           ],
@@ -176,7 +186,12 @@ describe('route NPC index projection', () => {
     const fixture = routeIndexFixture(loadNemesisTraitTradeCheckpoint());
     try {
       expect(
-        projectRouteNpcIndex(catalog, fixture.route, fixture.workspace.focusByOwner).groups,
+        projectRouteNpcIndex(
+          catalog,
+          fixture.route,
+          fixture.workspace.focusByOwner,
+          fixture.workspace.route,
+        ).groups,
       ).toEqual([
         {
           presentationKey: 'Nemesis',
@@ -184,7 +199,7 @@ describe('route NPC index projection', () => {
             expect.objectContaining({
               encounterKey: 'NemesisRandomEvent',
               label: 'Nemesis event',
-              locationLabel: 'Erebus · Encounter',
+              place: { text: 'Location 6', hint: 'Combat 06' },
               phase: fNemesisPhase,
             }),
           ],
@@ -201,7 +216,12 @@ describe('route NPC index projection', () => {
     project = selectEncounter(project, fArtemisPhase, 'ArtemisCombatF');
     const fixture = routeIndexFixture(project);
     try {
-      const index = projectRouteNpcIndex(catalog, fixture.route, fixture.workspace.focusByOwner);
+      const index = projectRouteNpcIndex(
+        catalog,
+        fixture.route,
+        fixture.workspace.focusByOwner,
+        fixture.workspace.route,
+      );
 
       expect(index.groups).toHaveLength(1);
       expect(index.groups[0]?.entries.map((entry) => entry.encounterKey)).toEqual([
@@ -224,9 +244,9 @@ describe('route NPC index projection', () => {
       const ownerKey = semanticAddressKey(fArtemisPhase);
       const missing = new Map(fixture.workspace.focusByOwner);
       missing.delete(ownerKey);
-      expect(() => projectRouteNpcIndex(catalog, fixture.route, missing)).toThrow(
-        RouteNpcIndexProjectionContractError,
-      );
+      expect(() =>
+        projectRouteNpcIndex(catalog, fixture.route, missing, fixture.workspace.route),
+      ).toThrow(RouteNpcIndexProjectionContractError);
 
       const destination = fixture.workspace.focusByOwner.get(ownerKey);
       if (destination === undefined) throw new Error('Artemis fixture has no phase destination');
@@ -243,9 +263,9 @@ describe('route NPC index projection', () => {
           ),
         }),
       );
-      expect(() => projectRouteNpcIndex(catalog, fixture.route, misrouted)).toThrow(
-        RouteNpcIndexProjectionContractError,
-      );
+      expect(() =>
+        projectRouteNpcIndex(catalog, fixture.route, misrouted, fixture.workspace.route),
+      ).toThrow(RouteNpcIndexProjectionContractError);
     } finally {
       fixture.application.dispose();
     }
@@ -315,7 +335,12 @@ describe('route NPC index projection', () => {
           routeKey: 'Underworld',
         }),
       );
-      const localIndex = projectRouteNpcIndex(catalog, routeWithLocalRecord, localFocus);
+      const localIndex = projectRouteNpcIndex(
+        catalog,
+        routeWithLocalRecord,
+        localFocus,
+        fixture.workspace.route,
+      );
       expect(localIndex.groups[0]?.entries.map((entry) => entry.phase)).toContainEqual(localPhase);
 
       const metadataFreeCatalog = withoutArtemisPresentationMetadata();
@@ -341,8 +366,12 @@ describe('route NPC index projection', () => {
         latestHistory(standardRoute).ledgers.encounterRecords,
       );
       expect(
-        projectRouteNpcIndex(metadataFreeCatalog, metadataFreeRoute, fixture.workspace.focusByOwner)
-          .groups,
+        projectRouteNpcIndex(
+          metadataFreeCatalog,
+          metadataFreeRoute,
+          fixture.workspace.focusByOwner,
+          fixture.workspace.route,
+        ).groups,
       ).toEqual([]);
     } finally {
       fixture.application.dispose();

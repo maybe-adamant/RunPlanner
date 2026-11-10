@@ -5,6 +5,7 @@ import {
   stopNoticeLink,
   type StopNoticeAt,
 } from '@planner/projections/walkStopCopy';
+import { hintProps } from '@planner/ui/controls/hint';
 import { useWalkStop } from '@planner/ui/feedback/useFindingTarget';
 
 /**
@@ -21,15 +22,16 @@ export function StopNotice({ at }: { readonly at: StopNoticeAt }) {
     <p className="stop-notice" data-stop-notice={at.kind}>
       {stopNoticeLead}{' '}
       {walkStop === undefined ? (
-        place
+        <span {...hintProps(place.hint)}>{place.text}</span>
       ) : (
         <button
           className="stop-notice-link"
           disabled={drafting}
           onClick={() => dispatch(findingSelected(walkStop.selection))}
           type="button"
+          {...hintProps(place.hint)}
         >
-          {place}
+          {place.text}
         </button>
       )}
     </p>

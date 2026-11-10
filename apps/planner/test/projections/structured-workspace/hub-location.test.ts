@@ -55,7 +55,10 @@ describe('the Hub location', () => {
     // The plan waits on the Hub's next visit: the stop is the Hub, at its Location.
     const place = workspace.walkStop?.place;
     expect(place).toEqual({ kind: 'hub', biomeKey: 'N', biomeLabel: 'Ephyra', depth: 3 });
-    expect(stopNoticeLink({ kind: 'past', place: place! })).toBe('Location 3');
+    expect(stopNoticeLink({ kind: 'past', place: place! })).toEqual({
+      text: 'Location 3',
+      hint: 'Hub',
+    });
   });
 
   it('keeps the number while the plan ends inside the Hub and drops it when the plan ends before', () => {
@@ -76,6 +79,6 @@ describe('the Hub location', () => {
         kind: 'past',
         place: { kind: 'hub', biomeKey: 'N', biomeLabel: 'Ephyra' },
       }),
-    ).toBe('Hub');
+    ).toEqual({ text: 'Hub' });
   });
 });

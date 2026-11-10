@@ -551,8 +551,8 @@ export interface WorkspaceRoomPlanEnd {
 /** Where the route's plan ends, for the Route panel's summary and its repair. */
 export interface WorkspaceRoutePlanEnd {
   readonly biomeKey: string;
-  readonly biomeLabel: string;
-  readonly roomLabel: string;
+  /** The end room as references name it. */
+  readonly place: import('@planner/projections/placeName').PlaceName;
   /** The end room, opened from the summary. */
   readonly room: OccurrenceAddress;
   /** The end names a room off its biome's selected path. */
@@ -1015,15 +1015,13 @@ export interface WorkspaceRoute {
     readonly element?: 'Fire' | 'Air' | 'Earth' | 'Water';
     readonly placement?: {
       readonly biomeKey: string;
-      /** Its biome and Location; the Location is unknown while the plan does not reach it. */
-      readonly locationLabel: string;
+      /** The placement room as references name it. */
+      readonly place: import('@planner/projections/placeName').PlaceName;
       readonly occurrenceId: OccurrenceId;
       /** The placement room lies past the plan end, so the placement is inactive. */
       readonly pastPlanEnd?: true;
       /** The placement room's run depth on entry, where it is reached. */
       readonly runDepth?: number;
-      /** The room's name, where its Location is unknown. */
-      readonly roomLabel?: string;
     };
   }[];
   readonly routeKey: string;

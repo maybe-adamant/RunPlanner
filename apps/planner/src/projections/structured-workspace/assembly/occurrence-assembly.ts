@@ -60,7 +60,7 @@ import {
   occurrenceRoomIcon,
   sharedRoomIconNumber,
 } from '../presentation/room-icon';
-import { roomLocationLabel } from '../presentation/room-location';
+import { roomPlace } from '../presentation/room-location';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceBossDoorRewardStoreControl,
@@ -993,7 +993,7 @@ export function assembleWorkspaceOccurrence(
                       return Object.freeze({
                         address: placementAddress,
                         biomeKey: placement.biomeKey,
-                        ...roomLocationLabel(input.catalog, placementAddress, input.roomLocation),
+                        ...roomPlace(input.catalog, placementAddress, input.roomLocation),
                       });
                     })()
                   : undefined;

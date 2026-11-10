@@ -51,13 +51,13 @@ function historySize(application: PlannerApplication): number {
 function shownMap(): HTMLElement {
   const [map, ...others] = screen
     .getAllByRole('region')
-    .filter((region) => region.getAttribute('aria-label')?.startsWith('Ephyra Hub at '));
+    .filter((region) => region.getAttribute('aria-label')?.startsWith('Hub at '));
   if (map === undefined || others.length > 0) throw new Error('expected one Hub Timeline map');
   return map;
 }
 
 function shownStay(): string {
-  return shownMap().getAttribute('aria-label')!.slice('Ephyra Hub at '.length);
+  return shownMap().getAttribute('aria-label')!.slice('Hub at '.length);
 }
 
 /** The shown stay's doors, by accessible name. */

@@ -155,7 +155,7 @@ function lines(sections: readonly WorkspaceRunStateSection[]) {
 describe('Run State presentation', () => {
   it('names the moment, and returns every tab with empty sections dropped', () => {
     const state = present();
-    expect(state.moment).toBe('Before Combat 12 · Oceanus');
+    expect(state.moment).toBe('Before Combat 12');
     expect(state.loadout).toEqual([]);
     expect(state.overview).toEqual([]);
     expect(state.effects).toEqual([]);

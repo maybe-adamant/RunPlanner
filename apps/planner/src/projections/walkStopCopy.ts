@@ -1,4 +1,5 @@
 import type { FindingLocation } from './evaluationProjection';
+import { locationName, placeName, type PlaceName } from './placeName';
 
 /** A rail stop past the walk's stop, in its accessible status. */
 export const notReachedLabel = 'Not reached';
@@ -15,34 +16,15 @@ export type StopNoticeAt =
 /** The stop notice's words before its link. */
 export const stopNoticeLead = 'Plan stopped at';
 
-/** The stop notice's link: the place the plan stops, by the location number the rail shows. */
-export function stopNoticeLink(at: StopNoticeAt): string {
+/** The stop notice's link: the place the plan stops, as every reference names it. */
+export function stopNoticeLink(at: StopNoticeAt): PlaceName {
   switch (at.kind) {
     case 'overview':
-      return 'Overview';
+      return placeName('Overview', undefined);
     case 'phase':
-      return `${at.phaseLabel} timeline`;
-    case 'past': {
-      const place = at.place;
-      switch (place.kind) {
-        case 'route':
-        case 'loadout':
-        case 'project':
-          return 'Loadout';
-        case 'room':
-        case 'step':
-          return place.depth === undefined
-            ? place.kind === 'room'
-              ? place.room.label
-              : place.label
-            : `Location ${place.depth}`;
-        // A Hub the walk never entered has no number; nor has a biome's unchosen start.
-        case 'hub':
-          return place.depth === undefined ? 'Hub' : `Location ${place.depth}`;
-        case 'biome':
-          return place.biomeLabel;
-      }
-    }
+      return placeName(`${at.phaseLabel} timeline`, undefined);
+    case 'past':
+      return locationName(at.place);
   }
 }
 

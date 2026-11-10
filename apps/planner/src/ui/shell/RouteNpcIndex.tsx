@@ -3,7 +3,9 @@ import {
   type EncounterPhaseAddress,
 } from '@run-planner/engine/authored-project';
 
+import { placeNameLabel } from '@planner/projections/placeName';
 import type { RouteNpcIndex as RouteNpcIndexProjection } from '@planner/projections/routeNpcIndex';
+import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
 
@@ -47,13 +49,15 @@ export function RouteNpcIndex({
                 {group.entries.map((entry) => (
                   <li key={`${semanticAddressKey(entry.phase)}:${entry.sequence}`}>
                     <button
-                      aria-label={`Inspect ${entry.label} in ${entry.locationLabel}`}
+                      aria-label={`Inspect ${entry.label} in ${placeNameLabel(entry.place)}`}
                       className="semantic-focus-link route-npc-index-entry"
                       onClick={() => onNavigate(entry.phase)}
                       type="button"
                     >
                       <span>{entry.label}</span>
-                      <span className="route-npc-index-location">{entry.locationLabel}</span>
+                      <span className="route-npc-index-location" {...hintProps(entry.place.hint)}>
+                        {entry.place.text}
+                      </span>
                     </button>
                   </li>
                 ))}

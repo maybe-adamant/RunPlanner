@@ -209,10 +209,10 @@ describe('route trait projection', () => {
     const workspace = structuredWorkspace.project(assembly);
     const rows = projectRouteTraitOffers(
       catalog,
-      source,
       modifiedEvaluation,
-      'Underworld',
       workspace.interactions,
+      workspace.focusByOwner,
+      workspace.route,
     );
     const firstKey = semanticAddressKey(firstTrace.address);
     const secondKey = semanticAddressKey(secondTrace.address);
@@ -253,88 +253,24 @@ describe('route trait projection', () => {
     );
   });
 
-  it('resolves duplicate occurrence IDs within the owning biome', () => {
+  it('names each offer by its room Location, the room on hover', () => {
     const source = createGoldenFGHIProject();
     const assembly = simulateProjectAssembly(catalog, source);
-    const routeEvaluation = assembly.evaluation.route;
-    const gEvaluation = routeEvaluation?.biomes.find((biome) => biome.biomeKey === 'G');
-    const trace =
-      gEvaluation !== undefined && 'rewards' in gEvaluation
-        ? gEvaluation.rewards.selectedTraitOffers.find(
-            (candidate) =>
-              candidate.address.biomeKey === 'G' && 'occurrenceId' in candidate.address.owner,
-          )
-        : undefined;
-    if (trace === undefined || !('occurrenceId' in trace.address.owner)) {
-      throw new Error('G trait trace with an occurrence owner is missing');
-    }
-    const traceAddress = trace.address.owner;
-    if (!('biomeKey' in traceAddress) || !('occurrenceId' in traceAddress)) {
-      throw new Error('G trait trace address is not occurrence-owned');
-    }
-    const sourceRoute = source.route;
-    const fBiome = sourceRoute?.biomes.find((biome) => biome.biomeKey === 'F');
-    const fOccurrence = fBiome?.topology?.occurrences[0];
-    if (sourceRoute === undefined || fBiome === undefined || fOccurrence === undefined) {
-      throw new Error('F occurrence fixture is missing');
-    }
-
-    // Occurrence IDs are biome-scoped. Make the F occurrence collide with the
-    // G owner so a route-wide scan would return the wrong game name.
-    const project = Object.freeze({
-      ...source,
-      route: Object.freeze({
-        ...source.route,
-        biomes: Object.freeze(
-          source.route.biomes.map((biome) =>
-            biome.biomeKey !== 'F' || biome.topology === null
-              ? biome
-              : Object.freeze({
-                  ...biome,
-                  topology: Object.freeze({
-                    ...biome.topology,
-                    occurrences: Object.freeze([
-                      Object.freeze({
-                        ...fOccurrence,
-                        occurrenceId: traceAddress.occurrenceId,
-                      }),
-                      ...biome.topology.occurrences.slice(1),
-                    ]),
-                  }),
-                }),
-          ),
-        ),
-      }),
-    });
     const workspace = structuredWorkspace.project(assembly);
     const rows = projectRouteTraitOffers(
       catalog,
-      project,
       assembly.evaluation,
-      'Underworld',
       workspace.interactions,
+      workspace.focusByOwner,
+      workspace.route,
     );
-    const row = rows.find(
-      (candidate) =>
-        candidate.biomeKey === 'G' &&
-        (candidate.address.owner.kind === 'encounterPhase'
-          ? candidate.address.owner.owner.occurrenceId
-          : candidate.address.owner.kind === 'gorgonPhase'
-            ? candidate.address.owner.encounter.owner.occurrenceId
-            : candidate.address.owner.kind === 'acquisitionEntry'
-              ? candidate.address.owner.site.owner.kind === 'occurrence' &&
-                candidate.address.owner.site.owner.occurrenceId
-              : candidate.address.owner.occurrenceId) === traceAddress.occurrenceId,
-    );
-    if (row === undefined) throw new Error('G trait row is missing');
-    expect(row.biomeKey).toBe('G');
-    expect(row.locationLabel).toBe(
-      sourceRoute.biomes
-        .find((biome) => biome.biomeKey === 'G')
-        ?.topology?.occurrences.find(
-          (occurrence) => occurrence.occurrenceId === traceAddress.occurrenceId,
-        )?.gameName,
-    );
+    expect(rows.length).toBeGreaterThan(0);
+    const gameNames = new Set(catalog.rooms.values.map((room) => room.gameName));
+    for (const row of rows) {
+      expect(row.place.text).toMatch(/^Location \d+$/);
+      expect(row.place.hint).toBeTypeOf('string');
+      expect(gameNames.has(row.place.hint!)).toBe(false);
+    }
   });
 
   it('presents row eligibility separately from whole-offer composition findings', () => {

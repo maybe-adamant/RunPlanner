@@ -184,7 +184,8 @@ it('opens an N Steady Growth cycle that lands in O at its O room timeline row', 
     kind: 'biome',
     biomeKey: 'O',
   });
-  expect(label).toMatch(new RegExp(`^${catalog.biomes.byKey.O!.label}`));
+  // The landing room is named by its Location; its biome shows on the open panel.
+  expect(label).toMatch(/^Location \d+ · /);
   expect(feedback.biomes.get('O')?.findingCount).toBe(1);
   expect(feedback.biomes.get('N')?.findingCount).toBe(0);
   const row = document
