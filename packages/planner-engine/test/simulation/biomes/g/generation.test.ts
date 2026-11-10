@@ -30,7 +30,7 @@ import {
   goldenGOccurrenceId,
   goldenGStartId,
 } from '@run-planner/test-fixtures/underworld';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 
 function completeG(project = createCompleteFGProject()) {
   const result = simulateProject(catalog, project);
@@ -104,7 +104,7 @@ describe('G generation and takeover', () => {
       }),
       storeKey: 'RunProgress',
     });
-    const result = simulateProject(catalog, authorLegalTraitOffers(project));
+    const result = simulateProject(catalog, authorTestTraitsAndRequiredItems(project));
     const g = result.route?.biomes.find((biome) => biome.biomeKey === 'G');
 
     expect(result.findings).toEqual([]);

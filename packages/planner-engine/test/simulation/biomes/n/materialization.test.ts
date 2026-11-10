@@ -17,6 +17,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { materializeBiomePrefix, simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 
 import {
   loadSurfaceNEntryFrontierProject,
@@ -107,6 +108,8 @@ describe('canonical N Hub materialization', () => {
       kind: 'CreateBatch',
       decision: openingDecision,
     });
+    // The owner picks up the opening Boon.
+    project = collectTestRequiredItems(project);
 
     const authoredOpening = project.route.biomes
       .find((plan) => plan.biomeKey === 'N')

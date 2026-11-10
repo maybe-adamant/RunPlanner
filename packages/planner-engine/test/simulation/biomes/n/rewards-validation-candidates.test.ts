@@ -40,7 +40,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   replaceTestShopOfferActions,
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   authorTestArtificerReplacement,
   hubVisitActions,
 } from '@run-planner/test-fixtures/shared';
@@ -59,7 +59,7 @@ import {
 import { reachedFrontier } from '../../../support/reward-frontier';
 
 function completeN(project = loadSurfaceNProject()) {
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   const evaluation = simulateProject(catalog, project);
   const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
   if (biome?.authoring !== 'complete') throw new Error('N fixture did not complete');
@@ -498,7 +498,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       });
     }
 
-    const { biome } = validN(authorLegalTraitOffers(project));
+    const { biome } = validN(authorTestTraitsAndRequiredItems(project));
     const acquiredSources = new Set(
       biome.rewards.frontier?.events.flatMap((event) =>
         event.kind === 'concreteAcquisition' &&

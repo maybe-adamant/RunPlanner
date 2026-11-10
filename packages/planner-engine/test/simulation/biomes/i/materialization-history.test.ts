@@ -31,6 +31,7 @@ import {
   type HistoryStateView,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
@@ -200,7 +201,7 @@ function completeProject(nonGoalOffer?: IncomingRewardValue): ProjectDocument {
     [{ occurrenceId: occurrence('entered-preboss'), gameName: 'I_PreBoss02' }],
     1,
   );
-  return project;
+  return scheduleTestRequiredRoomActions(project, catalog, biome);
 }
 
 function projectWithPickedStory(): ProjectDocument {
@@ -225,11 +226,15 @@ function projectWithPickedStory(): ProjectDocument {
   project = appendBatch(project, combat05, [{ occurrenceId: combat06, gameName: 'I_Combat06' }], 1);
   project = appendBatch(project, combat06, [{ occurrenceId: combat07, gameName: 'I_Combat07' }], 1);
   project = appendBatch(project, combat07, [{ occurrenceId: combat08, gameName: 'I_Combat08' }], 1);
-  return appendBatch(
-    project,
-    combat08,
-    [{ occurrenceId: occurrence('picked-story-preboss'), gameName: 'I_PreBoss02' }],
-    1,
+  return scheduleTestRequiredRoomActions(
+    appendBatch(
+      project,
+      combat08,
+      [{ occurrenceId: occurrence('picked-story-preboss'), gameName: 'I_PreBoss02' }],
+      1,
+    ),
+    catalog,
+    biome,
   );
 }
 
@@ -257,14 +262,18 @@ function projectWithExhaustedLimitDomain(): ProjectDocument {
     selection: createExitSelectionAddress(biome, { kind: 'occurrence', occurrenceId: combat15 }),
     value: { kind: 'normal', exitKey: 'exit2' },
   });
-  return appendBatch(
-    project,
-    combat18,
-    [
-      { occurrenceId: occurrence('exhausted-preboss'), gameName: 'I_PreBoss02' },
-      { occurrenceId: occurrence('exhausted-combat21'), gameName: 'I_Combat21' },
-    ],
-    2,
+  return scheduleTestRequiredRoomActions(
+    appendBatch(
+      project,
+      combat18,
+      [
+        { occurrenceId: occurrence('exhausted-preboss'), gameName: 'I_PreBoss02' },
+        { occurrenceId: occurrence('exhausted-combat21'), gameName: 'I_Combat21' },
+      ],
+      2,
+    ),
+    catalog,
+    biome,
   );
 }
 

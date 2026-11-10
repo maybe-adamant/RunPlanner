@@ -57,8 +57,9 @@ import { catalog } from '@run-planner/hades2-catalog';
 
 import {
   authorTestArtificerReplacement,
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   replaceTestRoomActionOrder,
+  scheduleTestRequiredRoomActions,
 } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHStartId } from '@run-planner/test-fixtures/underworld';
 import { initializeTestRewardBranchForRoute } from '../../../support/arcana-fear';
@@ -691,7 +692,7 @@ describe('H Fields materialization', () => {
     ]) {
       project = authorFieldsSpatialLayout(project, occurrenceId);
     }
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry: createAcquisitionEntryAddress(
@@ -866,7 +867,7 @@ describe('H Fields materialization', () => {
           value,
         });
       const evaluated = evaluateWithOlympianContactSeed(
-        authorLegalTraitOffers(project),
+        authorTestTraitsAndRequiredItems(project),
         'ForceZeusBoonKeepsake',
       );
       return evaluated.findings
@@ -902,7 +903,14 @@ describe('H Fields materialization', () => {
 
   it('defaults each cage pickup after its encounter and before the next cage', () => {
     const occurrenceId = createOccurrenceId('h-materialized-combat02');
-    const project = completeProject();
+    const unplaced = completeProject();
+    // Creating the rooms places nothing; the canonical schedule places each cage's rows.
+    expect(
+      plan(unplaced).topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === occurrenceId,
+      )?.roomActions.order,
+    ).toEqual([]);
+    const project = scheduleTestRequiredRoomActions(unplaced, catalog, biome);
     const authored = plan(project).topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === occurrenceId,
     );
@@ -966,6 +974,7 @@ describe('H Fields materialization', () => {
       phase: createEncounterPhaseAddress(biome, occurrence, 'Cage01'),
       value: true,
     });
+    project = scheduleTestRequiredRoomActions(project, catalog, biome);
     const authored = plan(project).topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrenceId,
     );
@@ -1023,6 +1032,7 @@ describe('H Fields materialization', () => {
       }),
       cageOutcome: 'max',
     });
+    project = scheduleTestRequiredRoomActions(project, catalog, biome);
     const occurrences = plan(project).topology?.occurrences;
     expect(
       occurrences?.find((occurrence) => occurrence.occurrenceId === selectedId)?.roomActions.order,
@@ -1625,7 +1635,9 @@ describe('H Fields materialization', () => {
       route: createRouteAddress('Underworld'),
       arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
     });
-    project = authorLegalTraitOffers(project);
+    // The third cage's rows take the canonical schedule.
+    project = scheduleTestRequiredRoomActions(project, catalog, biome);
+    project = authorTestTraitsAndRequiredItems(project);
     for (const [index, slotKey] of sources.entries()) {
       const owner = createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', slotKey);
       project = applyProjectCommand(project, catalog, {
@@ -1709,7 +1721,7 @@ describe('H Fields materialization', () => {
       ...replacementReferences,
       ...order,
     ]);
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const simulation = simulateProject(catalog, project);
     const evaluated = simulation.route.biomes.find((candidate) => candidate.biomeKey === 'H');
     expect(evaluated?.authoring).toBe('complete');
@@ -1752,6 +1764,8 @@ describe('H Fields materialization', () => {
       createAcquisitionRoleAddress(cage, 'self'),
       replacement,
     );
+    // The owner places the replacement's pickup.
+    project = scheduleTestRequiredRoomActions(project, catalog, biome);
     const occurrence = plan(project).topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === occurrenceId,
     );
