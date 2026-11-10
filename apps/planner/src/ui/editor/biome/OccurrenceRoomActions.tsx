@@ -2,6 +2,7 @@ import { FeatureRollEntry, FeatureRollSlots } from './commerce/FeatureRollIntera
 import { StopNotice } from './StopNotice';
 import { ArtworkChip } from '../rewards/TimelineChip';
 import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import type { EncounterOutcomeChoice } from '@run-planner/engine/simulation';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import {
   requireWorkspaceInteraction,
@@ -309,6 +310,21 @@ function WorkbenchAddArea({
 }
 
 /**
+ * The engine lists outcome choices only for an entered room. Unentered, every outcome
+ * control its phase carries shows, so a retained value stays clearable; Anomaly cleared
+ * belongs to the room's entry and waits for it.
+ */
+const unenteredOutcomeChoices = (
+  Object.entries({
+    aetos: true,
+    gorgonCondition: true,
+    nemesisBet: true,
+    nemesisEvent: true,
+    anomalyCleared: false,
+  } satisfies Record<EncounterOutcomeChoice, boolean>) as [EncounterOutcomeChoice, boolean][]
+).flatMap(([choice, shown]) => (shown ? [choice] : []));
+
+/**
  * Authored rows past the room's stop, dimmed in Timeline order until the walk reaches them;
  * collapsed and inert until opened. Navigation to a control in it opens it.
  */
@@ -479,7 +495,7 @@ export function RoomActionsWorkbench({
               {renderEncounterControls?.({
                 kind: 'encounterOutcome',
                 phase,
-                choices: ['aetos', 'gorgonCondition', 'nemesisBet', 'nemesisEvent'],
+                choices: unenteredOutcomeChoices,
               })}
             </Fragment>
           ))}
