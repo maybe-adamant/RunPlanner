@@ -788,6 +788,19 @@ describe('selected O validation', () => {
     expect(spent.rewards.findings).toContainEqual(
       expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: press }),
     );
+
+    // Before wheel 1's choice, wheel 2 has not rolled: the walk stops at the press, whose
+    // one ordering finding names the earlier window's required choice.
+    const early = simulateProject(catalog, reroll(0, 'MaxManaDrop'));
+    expect(early.route.issue?.reasons).toEqual([
+      expect.objectContaining({
+        code: 'roomActionOrderUnavailable',
+        evidence: expect.objectContaining({
+          reason: 'requiredFirst',
+          requiredAction: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
+        }),
+      }),
+    ]);
   });
 
   it('preserves a non-Ship terminal base store through the Preboss takeover and fixed completion chain', () => {

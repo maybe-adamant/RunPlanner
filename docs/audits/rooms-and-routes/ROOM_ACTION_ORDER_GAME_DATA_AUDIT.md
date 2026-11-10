@@ -457,11 +457,11 @@ entry order remain their existing topology authorities.
 
 The three representative biome shapes are therefore:
 
-| Biome | Chronology scope                    | Fixed boundaries                                                            | Freely ordered region                                                        | Boundary the model must preserve                                                       |
-| ----- | ----------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| H     | one entered Fields room             | Passive entry plus an ordinal Start/End pair for each active chosen cage    | unlocked cage rewards, optionals, NPCs, source transformations, replacements | no interaction during a modeled wave; blocking contacts precede the next authored cage |
-| O     | one entered ShipCombat room         | Intro, wheel choice, matching combat, required-object wait, then next phase | objects produced by the same completed phase                                 | no action crosses into an earlier/later ShipCombat window                              |
-| N     | one entered main or side occurrence | that occurrence's own lifecycle                                             | its local reward/NPC/acquisition actions                                     | Hub visits, side entry, and restoration remain topology between chronologies           |
+| Biome | Chronology scope                    | Fixed boundaries                                                                                              | Freely ordered region                                                                                     | Boundary the model must preserve                                                       |
+| ----- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| H     | one entered Fields room             | Passive entry plus an ordinal Start/End pair for each active chosen cage                                      | unlocked cage rewards, optionals, NPCs, source transformations, replacements                              | no interaction during a modeled wave; blocking contacts precede the next authored cage |
+| O     | one entered ShipCombat room         | Intro, then per wheel: Wheels open, required-object wait, wheel choice, matching combat, required-object wait | objects produced by the same completed phase; after Wheels open, the end-effect pickups and wheel rerolls | no action crosses into an earlier/later ShipCombat window                              |
+| N     | one entered main or side occurrence | that occurrence's own lifecycle                                                                               | its local reward/NPC/acquisition actions                                                                  | Hub visits, side entry, and restoration remain topology between chronologies           |
 
 ### Boss completion, Judgment, and effect-neutral rewards
 
@@ -786,9 +786,11 @@ freezes the outgoing batch there. Optional actions before that boundary affect
 the batch; later ones do not. The user does not add, remove, or arbitrarily
 move the checkpoint.
 
-O adds repeated fixed barriers to this rule. Wheel selection precedes its
-matching combat; the resulting reward and phase NPC follow combat; every
-required object must clear before the next phase begins. N adds the inverse
+O adds repeated fixed barriers to this rule. The next wheel opens right after
+a phase's end effects; the pickups those effects spawn and the wheel's rerolls
+follow it in any order, and every required object must clear before the wheel
+can be chosen. Wheel selection precedes its matching combat, and the resulting
+reward and phase NPC follow combat. N adds the inverse
 boundary: moving from Hub to a main room or from a main room to a side room is
 topology between occurrence-local chronologies, not an authorable row within
 one chronology.
