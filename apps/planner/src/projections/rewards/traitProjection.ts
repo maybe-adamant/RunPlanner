@@ -1,7 +1,6 @@
 import {
   semanticAddressKey,
   type AuthoredTraitOffer,
-  type ProjectDocument,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -21,12 +20,18 @@ import type {
 } from '../candidates/candidateProjection';
 import { candidateSupport } from '../candidates/candidateProjection';
 import {
+  findingLocation,
   formatFindingExplanation,
   presentTraitCandidateFinding,
   presentTraitOfferGenerationFinding,
   type TraitOfferGenerationFacts,
 } from '../evaluationProjection';
-import type { WorkspaceInteractionCatalog } from '../structured-workspace';
+import { locationName, type PlaceName } from '../placeName';
+import type {
+  WorkspaceInspectorDestination,
+  WorkspaceInteractionCatalog,
+  WorkspaceRoute,
+} from '../structured-workspace';
 
 export interface TraitOfferOptionFeedback {
   readonly legal: boolean;
@@ -309,7 +314,8 @@ export interface RouteTraitOfferProjection {
   readonly biomeKey: string;
   readonly giverKey: string;
   readonly giverLabel: string;
-  readonly locationLabel: string;
+  /** The offer's room as references name it. */
+  readonly place: PlaceName;
   readonly selectedTraitKey: string;
   readonly selectedTraitLabel: string;
   readonly rarity?: string;
@@ -317,50 +323,6 @@ export interface RouteTraitOfferProjection {
   readonly invalid: boolean;
   readonly findingCount: number;
   readonly interactionKey: string;
-}
-
-function ownerLocation(
-  project: ProjectDocument,
-  owner: {
-    readonly kind: string;
-    readonly routeKey: string;
-    readonly biomeKey: string;
-    readonly occurrenceId: string;
-  },
-): string {
-  const route = project.route.routeKey === owner.routeKey ? project.route : undefined;
-  const biome = route?.biomes.find((candidate) => candidate.biomeKey === owner.biomeKey);
-  const occurrence = biome?.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === owner.occurrenceId,
-  );
-  return occurrence?.gameName ?? owner.kind;
-}
-
-function ownerLocationForAddress(
-  project: ProjectDocument,
-  owner: SelectedTraitOfferAssessment['address']['owner'],
-): string {
-  if (owner.kind === 'encounterPhase') {
-    return ownerLocation(project, {
-      routeKey: owner.routeKey,
-      biomeKey: owner.biomeKey,
-      kind: 'occurrence',
-      occurrenceId: owner.owner.occurrenceId,
-    });
-  }
-  if (owner.kind === 'gorgonPhase') {
-    return ownerLocation(project, {
-      routeKey: owner.encounter.routeKey,
-      biomeKey: owner.encounter.biomeKey,
-      kind: 'occurrence',
-      occurrenceId: owner.encounter.owner.occurrenceId,
-    });
-  }
-  if (owner.kind === 'acquisitionEntry') {
-    if (owner.site.owner.kind !== 'occurrence') return 'Acquisition';
-    return ownerLocation(project, owner.site.owner);
-  }
-  return ownerLocation(project, owner);
 }
 
 function findingKey(finding: {
@@ -433,12 +395,13 @@ function chronologicalTraitTraces(
 
 export function projectRouteTraitOffers(
   catalog: Catalog,
-  project: ProjectDocument,
   evaluation: ProjectEvaluation,
-  routeKey: string,
   interactions: WorkspaceInteractionCatalog,
+  focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>,
+  workspaceRoute: WorkspaceRoute,
 ): readonly RouteTraitOfferProjection[] {
-  const route = evaluation.route.routeKey === routeKey ? evaluation.route : undefined;
+  const route =
+    evaluation.route.routeKey === workspaceRoute.routeKey ? evaluation.route : undefined;
   if (route === undefined) return Object.freeze([]);
   const rows: RouteTraitOfferProjection[] = [];
   for (const trace of chronologicalTraitTraces(route)) {
@@ -466,7 +429,9 @@ export function projectRouteTraitOffers(
         biomeKey: address.biomeKey,
         giverKey: giver.key,
         giverLabel: giver.label,
-        locationLabel: ownerLocationForAddress(project, trace.address.owner),
+        place: locationName(
+          findingLocation(catalog, address, focusByOwner.get(key), workspaceRoute),
+        ),
         selectedTraitKey: trait.key,
         selectedTraitLabel: trait.label,
         ...(option.rarity === undefined ? {} : { rarity: option.rarity }),

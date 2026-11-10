@@ -62,7 +62,7 @@ import { assembleWorkspaceBiomeSemantics } from './assembly/biome-semantic-assem
 import { requireWorkspaceRoom } from './assembly/catalog-room';
 import { projectRoutePlanEnd } from './assembly/plan-end-assembly';
 import { presentWorkspaceBiome } from './presentation/biome-presentation';
-import { roomLocationLabel } from './presentation/room-location';
+import { roomPlace } from './presentation/room-location';
 import { registerWorkspaceFindingDestinations } from './navigation/finding-routing';
 import { walkStopOf } from '@planner/projections/evaluationProjection';
 import {
@@ -757,7 +757,12 @@ export function createStructuredWorkspaceProjection(
             : [],
         ),
       ]);
-      const routePlanEnd = projectRoutePlanEnd(catalog, authoredRoute, routeSource.evaluation);
+      const routePlanEnd = projectRoutePlanEnd(
+        catalog,
+        authoredRoute,
+        routeSource.evaluation,
+        routeSource.roomLocation,
+      );
       const route = Object.freeze({
         runModifiers: bindRunModifiers(catalog, project, evaluation, devBuild),
         ...(fixedLoadout ? {} : { startingReward }),
@@ -804,7 +809,7 @@ export function createStructuredWorkspaceProjection(
                       ?.planEndRelation(placement.occurrenceId) === 'pastEnd'
                       ? { pastPlanEnd: true as const }
                       : {}),
-                    ...roomLocationLabel(catalog, placementAddress, routeSource.roomLocation),
+                    ...roomPlace(catalog, placementAddress, routeSource.roomLocation),
                   });
             const placementRoom =
               placementAddress === undefined

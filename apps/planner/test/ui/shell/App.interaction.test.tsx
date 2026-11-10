@@ -1004,7 +1004,7 @@ describe('planner history interaction', () => {
     await view.user.click(screen.getByRole('button', { name: 'NPCs' }));
     const historyBeforeNavigation = application.store.getState().projectWorkspace.history!;
     const npcEntry = screen.getByRole('button', {
-      name: 'Inspect Artemis combat in Erebus · Encounter',
+      name: 'Inspect Artemis combat in Location 6 · Combat 06',
     });
     npcEntry.focus();
     await view.user.keyboard('{Enter}');

@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react';
 import type { SemanticAddress } from '@run-planner/engine/authored-project';
-import { useAppDispatch } from '@planner/state/store';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 
 import {
   type WorkspaceAuthoringFrontier,
@@ -431,7 +429,6 @@ function OccurrenceInspector({
   readonly defaultToDoors?: boolean;
   readonly node: OccurrenceNode;
 }) {
-  const dispatch = useAppDispatch();
   const planEnd = node.planEnd;
   const batch =
     outgoingDecision ??
@@ -467,19 +464,6 @@ function OccurrenceInspector({
   return (
     <OccurrenceWorkbench
       {...(planEnd?.relation === undefined ? {} : { planEndRelation: planEnd.relation })}
-      headerActions={
-        <>
-          {node.hubTimeline === undefined ? null : (
-            <button
-              type="button"
-              className="primary-action action-compact"
-              onClick={() => dispatch(semanticOwnerFocused(node.hubTimeline!.address))}
-            >
-              ← Hub Timeline
-            </button>
-          )}
-        </>
-      }
       entryIdentity={
         <>
           {biomeSettings}

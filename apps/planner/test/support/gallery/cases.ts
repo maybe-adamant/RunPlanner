@@ -8,6 +8,7 @@ import {
   createHubDecisionAddress,
   createIncomingRewardAddress,
   createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -513,6 +514,26 @@ export const galleryCases: readonly GalleryCase[] = [
     label: 'Ephyra main room: side doors in Spawns, a Leave room picker per side visit',
     shows: ['side-door spawns', 'side-visit Leave rows', 'side-room returns'],
     project: loadSurfaceNOPQCheckpoint,
+    target: room('N', 'surface-n-combat05'),
+  },
+  {
+    id: 'side-door-closed',
+    overview: true,
+    label: 'Ephyra main room with one side door closed',
+    shows: ['closed side door in Spawns'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [
+      {
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(
+          createBiomeAddress('Surface', 'N'),
+          createOccurrenceId('surface-n-combat05'),
+          'sideRooms',
+          'sideDoor3',
+        ),
+        generation: 'notGenerated',
+      },
+    ],
     target: room('N', 'surface-n-combat05'),
   },
   {

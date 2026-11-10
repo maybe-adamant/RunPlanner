@@ -92,7 +92,8 @@ function useRailFold(
       : autoFolded
         ? 'Hide rooms'
         : 'Pin rooms';
-  const toggleGlyph = !folded ? '⇤' : !open ? '☰' : autoFolded ? '⇤' : '⇥';
+  // Too narrow to pin, the rail only opens and closes: no pin glyph.
+  const toggleGlyph = !folded ? '⇤' : !open || autoFolded ? '☰' : '⇥';
   return { folded, open, setOpen, toggle, toggleGlyph, toggleLabel };
 }
 

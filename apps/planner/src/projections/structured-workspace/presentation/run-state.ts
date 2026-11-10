@@ -809,7 +809,8 @@ export function presentRunState(
   momentLead: string,
 ): WorkspaceRunStatePresentation {
   return Object.freeze({
-    moment: `${momentLead} · ${biomeLabel(catalog, snapshot.biomeKey)}`,
+    // A moment inside its place names the room alone.
+    moment: momentLead,
     loadout: loadoutRows(catalog, snapshot),
     maxStats: maxStatsPresentation(catalog, snapshot.maxStats),
     armor: armorPresentation(catalog, snapshot.armor),

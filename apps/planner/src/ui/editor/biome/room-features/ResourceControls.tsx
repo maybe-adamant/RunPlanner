@@ -5,6 +5,7 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
+import { placeNameLabel } from '@planner/projections/placeName';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
@@ -68,10 +69,7 @@ function ResourceToggle({
         ? {}
         : {
             badge: elsewhere.runDepth?.toString() ?? '?',
-            detail:
-              elsewhere.roomLabel === undefined
-                ? elsewhere.locationLabel
-                : `${elsewhere.locationLabel} · ${elsewhere.roomLabel}`,
+            detail: placeNameLabel(elsewhere.place),
             opensDialog: { open: confirming },
           })}
     />
@@ -105,12 +103,7 @@ function ResourceToggle({
           >
             <p className="resource-move-message">
               {shortName} is placed in{' '}
-              {elsewhere.roomLabel === undefined ? (
-                elsewhere.locationLabel
-              ) : (
-                <span {...hintProps(elsewhere.roomLabel)}>{elsewhere.locationLabel}</span>
-              )}
-              .
+              <span {...hintProps(elsewhere.place.hint)}>{elsewhere.place.text}</span>.
             </p>
             <div className="resource-move-actions">
               <button

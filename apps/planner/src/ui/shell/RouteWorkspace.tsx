@@ -106,13 +106,18 @@ export function RouteWorkspace({
       `${workspaceRoute.routeKey} feedback omitted configured biome ${displayedBiomeKey}`,
     );
   }
-  const npcIndex = projectRouteNpcIndex(catalog, routeEvaluation, workspace.focusByOwner);
+  const npcIndex = projectRouteNpcIndex(
+    catalog,
+    routeEvaluation,
+    workspace.focusByOwner,
+    workspaceRoute,
+  );
   const traitRows = projectRouteTraitOffers(
     catalog,
-    project,
     projectEvaluation,
-    workspaceRoute.routeKey,
     interactions,
+    workspace.focusByOwner,
+    workspaceRoute,
   );
   const shrineRows = projectRouteHermesShrineIndex(workspaceRoute);
   const wellRows = projectRouteStygianWellIndex(workspaceRoute);
@@ -247,7 +252,8 @@ export function RouteWorkspace({
           }}
           type="button"
         >
-          {pinned ? '⇤' : !navigationOpen ? '☰' : navigationAutoFolded ? '⇤' : '⇥'}
+          {/* Too narrow to pin, the list only opens and closes: no pin glyph. */}
+          {pinned ? '⇤' : !navigationOpen || navigationAutoFolded ? '☰' : '⇥'}
         </button>
         <nav className="panel-navigation" aria-label={`${navigation.label} panels`}>
           {/* Panels stay put while a draft runs. */}

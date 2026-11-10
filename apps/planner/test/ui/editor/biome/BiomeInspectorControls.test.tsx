@@ -404,7 +404,7 @@ describe('Biome inspector controls', () => {
     );
   });
 
-  it('names a placement the plan does not reach by its room, its Location unknown', async () => {
+  it('names a placement the plan does not reach by its room', async () => {
     const project = applyProjectCommand(loadSurfaceNResourcesProject(), catalog, {
       kind: 'ReplacePlanEnd',
       route: createRouteAddress('Surface'),
@@ -422,22 +422,18 @@ describe('Biome inspector controls', () => {
     )?.currentPlacement;
     if (unreached === undefined) throw new Error('resource placed past the plan end is missing');
     expect(unreached.runDepth).toBeUndefined();
-    expect(unreached.locationLabel).toContain('Location ?');
-    expect(unreached.roomLabel).toBeTypeOf('string');
-    expect(unreached.locationLabel).not.toContain(unreached.roomLabel!);
+    expect(unreached.place.text).not.toMatch(/Location|Ephyra/);
+    expect(unreached.place.hint).toBeUndefined();
     // The route's Resources index names the placement as the marker does.
     const indexed = workspaceProjection(view.application).route.resources.find(
       (resource) =>
         resource.placement?.biomeKey === unreached.biomeKey &&
         resource.placement.occurrenceId === unreached.address.occurrenceId,
     )?.placement;
-    expect(indexed).toMatchObject({
-      locationLabel: unreached.locationLabel,
-      roomLabel: unreached.roomLabel,
-    });
+    expect(indexed?.place).toEqual(unreached.place);
   });
 
-  it('names a reached placement in the route Resources index by its biome and Location', () => {
+  it('names a reached placement in the route Resources index by its Location', () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
     const placed = workspaceProjection(view.application).route.resources.flatMap((resource) =>
       resource.placement === undefined ? [] : [resource.placement],
@@ -445,8 +441,8 @@ describe('Biome inspector controls', () => {
     expect(placed.length).toBeGreaterThan(0);
     for (const placement of placed) {
       expect(placement.runDepth).toBeTypeOf('number');
-      expect(placement.locationLabel).toBe(`Ephyra · Location ${placement.runDepth}`);
-      expect(placement.roomLabel).toBeUndefined();
+      expect(placement.place.text).toBe(`Location ${placement.runDepth}`);
+      expect(placement.place.hint).toBeTypeOf('string');
     }
   });
 
@@ -486,11 +482,9 @@ describe('Biome inspector controls', () => {
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
     // A placement is named by its Location, the number its rail shows.
     expect(moved.currentPlacement.biomeKey).toBe('N');
-    expect(moved.currentPlacement.locationLabel).toContain(
-      `Location ${moved.currentPlacement.runDepth}`,
-    );
+    expect(moved.currentPlacement.place.text).toBe(`Location ${moved.currentPlacement.runDepth}`);
     expect(toggle.getAttribute('data-hint')).toBe(
-      `Collect ${moved.element} · ${moved.currentPlacement.locationLabel}`,
+      `Collect ${moved.element} · ${moved.currentPlacement.place.text} · ${moved.currentPlacement.place.hint}`,
     );
 
     const historyBeforeMove = view.application.store.getState().projectWorkspace.history!;

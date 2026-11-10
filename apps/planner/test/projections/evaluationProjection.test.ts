@@ -484,7 +484,7 @@ describe('evaluation presentation', () => {
     const hRoom = createOccurrenceId('fields-room');
     const nRoom = createOccurrenceId('ephyra-room');
 
-    expect(findingDestinationLabel(catalog, createProjectAddress())).toBe('Project');
+    expect(findingDestinationLabel(catalog, createProjectAddress())).toBe('Loadout');
     expect(findingDestinationLabel(catalog, createBiomeFieldAddress(biome, 'field'))).toBe(
       'Erebus',
     );

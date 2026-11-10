@@ -25,6 +25,7 @@ import {
   rosterIssueTitles,
   type EncounterIssueNames,
 } from './encounterIssueCopy';
+import { locationName, placeNameLabel } from './placeName';
 
 import type { FindingSelection } from '@planner/state/editorSessionSlice';
 
@@ -1659,7 +1660,7 @@ type WorkspaceRoomIconProduct = import('./structured-workspace').WorkspaceRoomIc
 
 /** Where a finding is: its place in words, and the room there in the rail's short form. */
 export interface FindingDestination {
-  /** The place up to its room, such as "Oceanus · Location 15". */
+  /** The place as references name it, such as "Location 15". */
   readonly place: string;
   /** The room there, as the folded rail shows it: its icon and number. */
   readonly room?: {
@@ -1667,7 +1668,7 @@ export interface FindingDestination {
     readonly number?: string;
     readonly label: string;
   };
-  /** The whole location in words, the room named in full. */
+  /** The place in words with its own name, as its hover reads it. */
   readonly label: string;
 }
 
@@ -1831,38 +1832,14 @@ export function findingLocation(
       });
 }
 
-function plainDestination(label: string): FindingDestination {
-  return Object.freeze({ place: label, label });
-}
-
 /** A finding's place in words, as the finding pill names it. */
 function destinationOf(location: FindingLocation): FindingDestination {
-  switch (location.kind) {
-    case 'route':
-      return plainDestination('Route');
-    case 'loadout':
-      return plainDestination('Loadout');
-    case 'project':
-      return plainDestination('Project');
-    case 'biome':
-      return plainDestination(location.biomeLabel);
-    case 'hub':
-      return plainDestination(`${location.biomeLabel} · Hub`);
-    case 'step':
-      return plainDestination(`${location.biomeLabel} · ${location.label}`);
-    case 'room': {
-      // The game calls a room's place in the run its Location.
-      const place =
-        location.depth === undefined
-          ? location.biomeLabel
-          : `${location.biomeLabel} · Location ${location.depth}`;
-      return Object.freeze({
-        place,
-        room: location.room,
-        label: `${place} · ${location.room.label}`,
-      });
-    }
-  }
+  const name = locationName(location);
+  return Object.freeze({
+    place: name.text,
+    ...(location.kind === 'room' ? { room: location.room } : {}),
+    label: placeNameLabel(name),
+  });
 }
 
 export function findingDestination(

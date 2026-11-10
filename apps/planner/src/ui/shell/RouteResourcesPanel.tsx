@@ -51,13 +51,10 @@ export function RouteResourcesPanel({ route }: { readonly route: WorkspaceRoute 
                     />
                   )}
                 </span>
-                <span
-                  className="route-trait-meta"
-                  {...(placement?.roomLabel === undefined ? {} : hintProps(placement.roomLabel))}
-                >
+                <span className="route-trait-meta" {...hintProps(placement?.place.hint)}>
                   {placement === undefined
                     ? 'No selected success'
-                    : `${placement.locationLabel}${placement.pastPlanEnd === true ? ' · Past the plan end' : ''}`}
+                    : `${placement.place.text}${placement.pastPlanEnd === true ? ' · Past the plan end' : ''}`}
                 </span>
               </div>
               {placement === undefined ? null : (

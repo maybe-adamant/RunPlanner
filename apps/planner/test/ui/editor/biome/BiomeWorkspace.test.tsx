@@ -805,7 +805,8 @@ describe('BiomeWorkspace', () => {
 
     await user.click(launcher);
     const sheet = screen.getByRole('region', { name: /State before/ });
-    expect(within(sheet).getByRole('heading', { level: 2 }).textContent).toMatch(/ · Erebus$/);
+    // A moment inside its room names the room alone.
+    expect(within(sheet).getByRole('heading', { level: 2 }).textContent).toBe('Before Postboss');
     const tabs = ['Overview', 'Effects', 'Keepsakes', 'Arcana', 'Fear', 'More Info'];
     expect(
       within(sheet)
@@ -1793,9 +1794,9 @@ describe('BiomeWorkspace', () => {
     expect(
       screen
         .getAllByRole('region')
-        .find((region) => region.getAttribute('aria-label')?.startsWith('Ephyra Hub at '))
+        .find((region) => region.getAttribute('aria-label')?.startsWith('Hub at '))
         ?.getAttribute('aria-label'),
-    ).toBe('Ephyra Hub at Visit 3');
+    ).toBe('Hub at Visit 3');
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(before);
   });
 
