@@ -6,6 +6,8 @@ import {
   createBiomeAddress,
   createEchoKeepsakeReplayAddress,
   createHubDecisionAddress,
+  createHubRoomAddress,
+  createHubRunStateCheckpointAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
@@ -41,6 +43,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import type { WorkspaceBiome } from '@planner/projections/structured-workspace/contracts/structure';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
+import { presentRunState } from '@planner/projections/structured-workspace/presentation/run-state';
 import { presentWorkspaceBiome } from '@planner/projections/structured-workspace/presentation/biome-presentation';
 import { assembleWorkspaceBiomeSemantics } from '@planner/projections/structured-workspace/assembly/biome-semantic-assembly';
 import {
@@ -181,8 +184,19 @@ describe('structured workspace biome presentation', () => {
       (decision) => decision.source.kind === 'hubDecision' && decision.source.decisionKey === 'hub',
     );
     if (handoff === undefined) throw new Error('N Hub handoff owner missing');
+    // The Hub's Run State is its on-entry snapshot, at the run's third room.
+    const hubEntry = createHubRunStateCheckpointAddress(createHubRoomAddress(source.biome, 'hub'));
+    const entered = source.runState(hubEntry);
+    if (entered?.availability !== 'available') throw new Error('N Hub entry Run State missing');
+    expect(entered.snapshot.counters.runDepthCache).toBe(3);
+    expect(launchers[0]).toEqual({
+      availability: 'available',
+      owner: hubEntry,
+      state: presentRunState(catalog, entered.snapshot, 'Before Ephyra Hub'),
+      title: 'Hub',
+    });
     expect(launchers.map((launcher) => semanticAddressKey(launcher.owner))).toEqual([
-      semanticAddressKey(createHubDecisionAddress(source.biome, 'hub')),
+      semanticAddressKey(hubEntry),
       semanticAddressKey(createExitDecisionAddress(source.biome, handoff.source)),
     ]);
     const preboss = biome.nodes.find(

@@ -18,7 +18,7 @@ import type {
   WorkspaceSteadyGrowthControl,
   WorkspaceTranscendentEmbryoControl,
 } from '../contracts/timeline';
-import { runStateLauncher } from './occurrence-action-run-state';
+import { roomEnteredRunStateLauncher, runStateLauncher } from './occurrence-action-run-state';
 import { nemesisFamilyLabel } from '../interactions/occurrence-interaction-binding';
 import type { WorkspaceOccurrenceActionsInput } from './occurrence-action-row-projection';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
@@ -194,11 +194,10 @@ function projectRoomLifecycleTimeline(
         requireRoom(input.catalog, input.occurrence.gameName),
         input.biome.routeKey,
       ).label;
-      return runStateLauncher(
+      return roomEnteredRunStateLauncher(
         input,
         createRoomRunStateCheckpointAddress(occurrence, { kind: 'roomEntered' }),
-        `the first action in ${roomLabel}`,
-        `Before ${roomLabel}`,
+        roomLabel,
       );
     }
     if (boundary.kind === 'encounterStart' && roomLocal.kind === 'ship') {
