@@ -16,6 +16,7 @@ import type { Catalog, RoomDeclaration } from '../../../catalog-schema';
 import {
   activeSelectedPickupProducers,
   echoLastRewardPickupEntryKeys,
+  sitesWithNemesisResultPickups,
 } from '../../../authored-project/acquisition/pickup-producers';
 import { acquisitionSiteFromStorageKey } from '../../../authored-project/acquisition/artificer';
 import { seaStarDuplicateSourceIsActive } from '../../../authored-project/acquisition/sea-star';
@@ -182,6 +183,11 @@ export function materializeAuthoredRoom(
           routeStartIncoming ?? undefined,
         ))) ||
     activePickupEntries.has(`${siteKey}\u0000${key}`);
+  // Each Nemesis event's site settles the pickup her outcome spawns, not the
+  // authored offer it holds (a failed contest spawns Consolation).
+  const nemesisResultSites =
+    sitesWithNemesisResultPickups(context.catalog, context.occurrence, context.biome.routeKey) ??
+    {};
   // Anomaly and the Nemesis event are both evaluated acquisition dispositions:
   // the authored incoming draw remains intact, but its lifecycle producer is
   // disabled while the selected encounter owns the room's required contact.
@@ -306,7 +312,7 @@ export function materializeAuthoredRoom(
       : { stygianWellExtendedDirectPurchaseItemKeys }),
     acquisitionSites: Object.freeze(
       Object.fromEntries(
-        Object.entries(context.occurrence.acquisitionSites ?? {}).flatMap(([siteKey, site]) => {
+        Object.entries(nemesisResultSites).flatMap(([siteKey, site]) => {
           const entries = Object.freeze(
             Object.fromEntries(
               Object.entries(site.pickupEntries ?? {}).filter(([key]) =>

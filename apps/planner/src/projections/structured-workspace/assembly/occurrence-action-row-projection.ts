@@ -10,6 +10,7 @@ import {
   createShopOfferAddress,
   roomActionKey,
   semanticAddressKey,
+  sitesWithNemesisResultPickups,
   stygianWellGenerationItemKey,
   stygianWellGenerationTwistResultKey,
   type EncounterPhaseAddress,
@@ -457,6 +458,16 @@ function roomActionsForOccurrence(
       : Object.freeze({ ...control, ...children });
   };
   const purchaseRowProducts = shopPurchaseRowProducts(input, roomLocal, features);
+  // A Nemesis result's collect names what her outcome spawns, not her offer.
+  const pickupSites = sitesWithNemesisResultPickups(
+    input.catalog,
+    input.occurrence,
+    input.biome.routeKey,
+  );
+  const labelOccurrence =
+    pickupSites === input.occurrence.acquisitionSites || pickupSites === undefined
+      ? input.occurrence
+      : Object.freeze({ ...input.occurrence, acquisitionSites: pickupSites });
   const projectedRows = Object.freeze(
     presentedRows.map((row) => {
       const address = createRoomActionAddress(input.biome, input.occurrence.occurrenceId, row.key);
@@ -593,7 +604,7 @@ function roomActionsForOccurrence(
         roomLocal,
         encounterPhases,
         resolvedRewardControl,
-        input.occurrence,
+        labelOccurrence,
         input.occurrence.purgingPool?.traitKeyBySlot,
         sourceFamily,
         input.rerollTargetLabel,

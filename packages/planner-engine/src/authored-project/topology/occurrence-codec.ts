@@ -12,8 +12,10 @@ import {
   HERMES_SHRINE_DELAYS,
   type HermesShrineDelay,
   type HermesShrineState,
+  type AuthoredRewardState,
   type PurgingPoolState,
   type RoomActionState,
+  type RoomEncounterState,
   type RoomOccurrence,
 } from '../model';
 import { createDefaultRoomActionState, roomActionKey } from '../room-actions/state';
@@ -810,7 +812,7 @@ export function decodeRoomOccurrence(input: {
     routePosition.ordinal,
     routeStartIncoming ?? undefined,
   );
-  const acquisitionSites = rawOccurrence.hasAcquisitionSites
+  const decodedAcquisitionSites = rawOccurrence.hasAcquisitionSites
     ? decodeAcquisitionSites(
         rawOccurrence.acquisitionSites,
         {
@@ -826,12 +828,13 @@ export function decodeRoomOccurrence(input: {
         state.kind === 'shop' ? state.shop?.profileKey : undefined,
       )
     : undefined;
+  const nemesisPolicy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
+  const acquisitionSites = readContestOffers(decodedAcquisitionSites, encounters, nemesisPolicy);
   const producerSiteKeys = new Set(
     pickupProducers
       .filter((producer) => producerOwnedSiteKey(producer.siteKey))
       .map((producer) => producer.siteKey),
   );
-  const nemesisPolicy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
   for (const [phaseKey, outcome] of Object.entries(encounters.nemesisRandomEventByPhase ?? {})) {
     const sitePath = `${rawOccurrence.path}.acquisitionSites.${nemesisGeneratedPickupSiteKey(phaseKey)}.pickupEntries.result`;
     const result =
@@ -859,11 +862,9 @@ export function decodeRoomOccurrence(input: {
               )
             : outcome.kind === 'traitTrade'
               ? rewardType === nemesisPolicy.traitTrade.fixedResultRewardType
-              : outcome.result === 'failure'
-                ? rewardType === nemesisPolicy.damageContest.failureResultRewardType
-                : (
-                    nemesisPolicy.damageContest.successResultRewardTypes as readonly string[]
-                  ).includes(rewardType);
+              : (
+                  nemesisPolicy.damageContest.successResultRewardTypes as readonly string[]
+                ).includes(rewardType);
     if (!valid)
       failProjectDocument(
         sitePath,
@@ -1229,4 +1230,37 @@ export function decodeRoomOccurrence(input: {
       );
   }
   return decodedOccurrence;
+}
+
+/**
+ * A contest's site holds its planned success item. Consolation is what a
+ * failed contest spawns, never that offer, so a failed contest storing it
+ * reads as no offer chosen yet.
+ */
+type DecodedAcquisitionSites = Readonly<
+  Record<string, { readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>> }>
+>;
+
+function readContestOffers(
+  sites: DecodedAcquisitionSites | undefined,
+  encounters: RoomEncounterState,
+  policy: Catalog['encounterDefinitions']['byKey'][string]['nemesisRandomEvent'],
+): DecodedAcquisitionSites | undefined {
+  if (sites === undefined || policy === undefined) return sites;
+  let read: Record<string, DecodedAcquisitionSites[string]> | undefined;
+  for (const [phaseKey, outcome] of Object.entries(encounters.nemesisRandomEventByPhase ?? {})) {
+    if (outcome?.kind !== 'damageContest' || outcome.result !== 'failure') continue;
+    const siteKey = nemesisGeneratedPickupSiteKey(phaseKey);
+    const site = sites[siteKey];
+    if (
+      site?.pickupEntries?.result?.offer.rewardType !== policy.damageContest.failureResultRewardType
+    )
+      continue;
+    read ??= { ...sites };
+    read[siteKey] = Object.freeze({
+      ...site,
+      pickupEntries: Object.freeze({ ...site.pickupEntries, result: null }),
+    });
+  }
+  return read === undefined ? sites : Object.freeze(read);
 }

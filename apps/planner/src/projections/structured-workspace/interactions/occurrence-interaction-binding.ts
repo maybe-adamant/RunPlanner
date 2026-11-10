@@ -253,13 +253,11 @@ function projectNemesisEventDomain(
         }),
       });
     case 'damageContest':
-      return value.result === 'failure'
-        ? Object.freeze({})
-        : Object.freeze({
-            rewardPicker: rewardPicker(
-              nemesisValues(support, (branch) => branch.damageContestSuccessRewardTypes),
-            ),
-          });
+      return Object.freeze({
+        rewardPicker: rewardPicker(
+          nemesisValues(support, (branch) => branch.damageContestSuccessRewardTypes),
+        ),
+      });
   }
 }
 
@@ -663,12 +661,11 @@ export function bindOccurrenceLocalInteractions(
                 ...(() => {
                   const policy =
                     catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
+                  // A contest's offer is its planned success item, whatever the result.
                   const rewardType =
                     event.value?.kind === 'traitTrade'
                       ? policy?.traitTrade.fixedResultRewardType
-                      : event.value?.kind === 'damageContest' && event.value.result === 'failure'
-                        ? policy?.damageContest.failureResultRewardType
-                        : undefined;
+                      : undefined;
                   return rewardType === undefined
                     ? {}
                     : {

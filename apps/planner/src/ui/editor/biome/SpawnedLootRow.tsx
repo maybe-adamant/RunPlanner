@@ -8,15 +8,15 @@ import type {
   WorkspaceSpawnSource,
   WorkspaceSpawnedItem,
 } from '@planner/projections/structured-workspace';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
-import { sourceFamilyIcon } from '@planner/ui/artwork/roomArtwork';
+import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
+import { roomActionIcon, sourceFamilyIcon } from '@planner/ui/artwork/roomArtwork';
+import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggleLock } from '@planner/ui/controls/IconToggle';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { useAppSelector } from '@planner/state/store';
-import { roomActionItemIcon } from './roomActionItemIcon';
 import { TimelineRow } from './TimelineRow';
 
 function actionRowElement(from: HTMLElement, actionKey: string): HTMLElement | null {
@@ -56,6 +56,20 @@ function useAnnouncement(): readonly [string, (message: string) => void] {
     [],
   );
   return [announcement, announce];
+}
+
+/** The item it spawns as, drawn from the engine's product rather than its row's label. */
+function spawnedRewardIcon(
+  reward: NonNullable<WorkspaceSpawnedItem['reward']>,
+): ArtworkSource | undefined {
+  switch (reward.kind) {
+    case 'offer':
+      return offerIcon(reward.offer);
+    case 'pickup':
+      return rewardIcon(reward.gameName);
+    case 'requiredDrop':
+      return rewardIcon(reward.consumableKey);
+  }
 }
 
 function SpawnedItemChip({
@@ -149,9 +163,16 @@ function SpawnedItemChip({
         source={
           copy !== undefined
             ? sourceFamilyIcon(copy.family)
-            : row === undefined
-              ? undefined
-              : (roomActionItemIcon(row) ?? sourceFamilyIcon(row.sourceFamily))
+            : item.reward !== undefined
+              ? spawnedRewardIcon(item.reward)
+              : row === undefined
+                ? undefined
+                : (roomActionIcon(
+                    row.reference,
+                    row.address.biomeKey,
+                    row.sourceFamily,
+                    row.challengeSwitchKind,
+                  ) ?? sourceFamilyIcon(row.sourceFamily))
         }
       />
       {copy === undefined ? null : (

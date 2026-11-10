@@ -698,8 +698,10 @@ Gold Gold Gold duplicate, a Nemesis free item, Eris's gift, a challenge switch's
 the Artificer's replacement under the converted pickup, Sea Star's copy under
 the pickup it copies, a rushed Shrine item under its purchase in the Shrine's
 own room) is listed under that source action instead. Each item carries its reward owner,
-source, participation and placement: its ranked action, or the command that
-places it. Items come from the active action domain and the reached due
+what it spawns as (its reward, which for a Nemesis result is the one her
+outcome spawns, or the concrete pickup where that differs: one role of a
+reward that spawns per role, a forfeited reward's Red Onion), source,
+participation and placement: its ranked action, or the command that places it. Items come from the active action domain and the reached due
 contacts rather than the authored order, so an unplaced item still appears.
 Only loot the walk produced is listed, and spawning is kept apart from
 resolving. Everything a moment spawns spawns together once the walk reaches

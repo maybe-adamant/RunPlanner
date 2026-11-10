@@ -214,6 +214,7 @@ function nemesisFamilyCases(): readonly GalleryCase[] {
     id: string,
     label: string,
     value: AuthoredNemesisRandomEventOutcome,
+    rewardType: string,
   ): GalleryCase => ({
     id,
     label,
@@ -222,28 +223,41 @@ function nemesisFamilyCases(): readonly GalleryCase[] {
     commands: [
       { kind: 'SelectEncounter', phase: nemesisPhase, encounterKey: 'NemesisRandomEvent' },
       { kind: 'SelectNemesisRandomEventFamily', event, family: value.kind },
-      { kind: 'ReplaceNemesisRandomEventInteraction', event, value: { ...value, reward: null } },
+      {
+        kind: 'ReplaceNemesisRandomEventInteraction',
+        event,
+        value: { ...value, reward: { rewardType } },
+      },
     ],
     target: room('F', 'golden-f-b5-e1'),
   });
   return [
-    entry('nemesis-free-item', 'Nemesis free item', { kind: 'freeItem' }),
-    entry('nemesis-gold-trade', 'Nemesis gold trade, declined', {
-      kind: 'goldTrade',
-      response: 'decline',
-    }),
-    entry('nemesis-damage-trade', 'Nemesis damage trade', {
-      kind: 'damageTrade',
-      response: 'accept',
-    }),
-    entry('nemesis-damage-contest', 'Nemesis damage contest', {
-      kind: 'damageContest',
-      result: 'success',
-    }),
-    entry('nemesis-damage-contest-failed', 'Nemesis damage contest, failed', {
-      kind: 'damageContest',
-      result: 'failure',
-    }),
+    entry('nemesis-free-item', 'Nemesis free item', { kind: 'freeItem' }, 'ArmorBoost'),
+    entry(
+      'nemesis-gold-trade',
+      'Nemesis gold trade, declined',
+      { kind: 'goldTrade', response: 'decline' },
+      'MaxHealthDropBig',
+    ),
+    entry(
+      'nemesis-damage-trade',
+      'Nemesis damage trade',
+      { kind: 'damageTrade', response: 'accept' },
+      'RoomMoneyDrop',
+    ),
+    entry(
+      'nemesis-damage-contest',
+      'Nemesis damage contest',
+      { kind: 'damageContest', result: 'success' },
+      'MaxHealthDrop',
+    ),
+    // Losing keeps the planned item; she drops Consolation instead.
+    entry(
+      'nemesis-damage-contest-failed',
+      'Nemesis damage contest, failed',
+      { kind: 'damageContest', result: 'failure' },
+      'MaxHealthDrop',
+    ),
   ];
 }
 

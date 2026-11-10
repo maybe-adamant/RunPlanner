@@ -529,7 +529,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(screen.getByRole('button', { name: /^Nemesis outcome/ }).textContent).toBe('Declined');
   });
 
-  it('switches the contest result between a selectable reward and fixed consolation', async () => {
+  it('keeps the contest offer through its result; a failed contest spawns Consolation', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -550,15 +550,13 @@ describe('OccurrenceRoomFeatures', () => {
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Damage contest');
     openRoomTab('Room Timeline');
-    const sentence = screen.getByText('to get').closest<HTMLElement>('[data-room-action-key]')!;
+    const sentence = () =>
+      screen.getByText('to get').closest<HTMLElement>('[data-room-action-key]')!;
     const result = () => screen.getByRole('button', { name: /^Nemesis outcome/ });
     const choose = async (label: string) => {
       await view.user.click(result());
       await view.user.click(await screen.findByRole('option', { name: label }));
     };
-    expect(result().textContent).toBe('Failed');
-    expect(within(sentence).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
-    expect(within(sentence).getByRole('img', { name: 'Red Onion' })).toBeTruthy();
     const authoredOccurrence = () =>
       view.application.store
         .getState()
@@ -566,22 +564,43 @@ describe('OccurrenceRoomFeatures', () => {
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
     const reward = () =>
       authoredOccurrence()?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result;
-    expect(reward()?.offer.rewardType).toBe('RoomRewardConsolationPrize');
+
+    // A new contest has lost, with no success item planned; she still drops Consolation.
+    expect(result().textContent).toBe('Failed');
+    expect(within(sentence()).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
+    expect(reward() ?? null).toBeNull();
+    await view.user.click(within(sentence()).getByRole('button', { name: 'Reward' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
+    await waitFor(() => expect(reward()?.offer.rewardType).toBe('MaxHealthDrop'));
 
     await choose('Succeeded');
-    await waitFor(() => expect(reward()).toBeNull());
-    expect(within(sentence).getByRole('button', { name: 'Reward' })).toBeTruthy();
-    expect(authoredOccurrence()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
-      kind: 'damageContest',
-      result: 'success',
-    });
-    await view.user.click(screen.getByRole('button', { name: 'Reward' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
+    await waitFor(() =>
+      expect(authoredOccurrence()?.encounters.nemesisRandomEventByPhase?.Encounter).toEqual({
+        kind: 'damageContest',
+        result: 'success',
+      }),
+    );
     expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
 
     await choose('Failed');
-    await waitFor(() => expect(reward()?.offer.rewardType).toBe('RoomRewardConsolationPrize'));
-    expect(screen.queryByRole('button', { name: 'Reward' })).toBeNull();
+    await waitFor(() => expect(result().textContent).toBe('Failed'));
+    expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
+    expect(within(sentence()).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    // Her Consolation is collected, never the planned item.
+    const chip = document.querySelector<HTMLElement>('[data-spawned-loot="moment"] button')!;
+    await view.user.click(chip);
+    const collect = await waitFor(() => {
+      const row = document.querySelector<HTMLElement>(
+        `[data-room-action-key="${CSS.escape(
+          JSON.stringify(['interactAcquisitionEntry', 'nemesisGenerated:Encounter', 'result']),
+        )}"]`,
+      );
+      expect(row).not.toBeNull();
+      return row!;
+    });
+    expect(within(collect).getByRole('img', { name: 'Red Onion' })).toBeTruthy();
+    expect(within(collect).queryByRole('img', { name: 'Max Health' })).toBeNull();
+    expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
   });
 
   it('keeps an unreached Well domain visible as unassessed', async () => {

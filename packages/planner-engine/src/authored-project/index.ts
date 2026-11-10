@@ -294,6 +294,7 @@ export {
   clockedTraitGeneratedPickupEntryKey,
   parseClockedTraitGeneratedPickupEntryKey,
   nemesisGeneratedPickupSiteKey,
+  sitesWithNemesisResultPickups,
   HERACLES_BOUNTY_ENTRY_KEY,
   heraclesBountySiteKey,
   parseHeraclesBountySiteKey,
