@@ -31,11 +31,6 @@ import type {
   RoomOccurrence,
 } from '../authored-project/model';
 import { roomActionKey } from '../authored-project/room-actions/state';
-import { roomActionDomainForOccurrence } from '../authored-project/room-actions/defaults';
-import {
-  assessRoomActionMove,
-  roomActionOrderContextForOccurrence,
-} from '../authored-project/room-actions/order-assessment';
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import {
   HERMES_SHRINE_DELIVERY_SITE_KEY,
@@ -567,125 +562,6 @@ function sourcedRowsTaken(before: ProjectDocument, after: ProjectDocument) {
   return taken;
 }
 
-/** The room's action keys as its producers contribute them: a reward's roles in declared order. */
-function declaredActionKeys(
-  catalog: Catalog,
-  project: ProjectDocument,
-  owner: OccurrenceAddress,
-): readonly string[] {
-  return (
-    roomActionDomainForOccurrence(
-      project,
-      catalog,
-      createBiomeAddress(owner.routeKey, owner.biomeKey),
-      owner.occurrenceId,
-    )?.domain.contributions ?? []
-  ).flatMap((entry) => (entry.kind === 'action' ? [roomActionKey(entry.reference)] : []));
-}
-
-/**
- * Incoming-reward pickups an edit gives new roles: in each entered room, its
- * stale pickup rows, in their former reward's declared role order, paired
- * with the pickup roles the edit newly placed, in the new reward's. A paired
- * row takes the new role's place, so a changed reward keeps its pickup where
- * it was.
- */
-function incomingRewardRekeys(
-  catalog: Catalog,
-  before: ProjectDocument,
-  assembly: ProjectEvaluationAssembly,
-  rekeyed: ReadonlySet<string>,
-) {
-  const rekeys: {
-    owner: OccurrenceAddress;
-    stale: RoomActionReference;
-    role: RoomActionReference;
-  }[] = [];
-  for (const { owner, rows } of enteredRosters(assembly).values()) {
-    const current = occurrenceAt(assembly.project, owner);
-    const previous = occurrenceAt(before, owner);
-    if (current === undefined || previous === undefined) continue;
-    const known = new Set(previous.roomActions.order.map(roomActionKey));
-    // The old reward's roles in its declared order, its main pickup first.
-    const formerlyDeclared = declaredActionKeys(catalog, before, owner);
-    const declaredRank = (reference: RoomActionReference) => {
-      const index = formerlyDeclared.indexOf(roomActionKey(reference));
-      return index < 0 ? formerlyDeclared.length : index;
-    };
-    const stale = current.roomActions.order
-      .filter(
-        (reference) =>
-          reference.kind === 'interactIncomingReward' &&
-          rows.get(roomActionKey(reference))?.stale === true,
-      )
-      .map((reference, index) => ({ reference, index }))
-      .sort(
-        (left, right) =>
-          declaredRank(left.reference) - declaredRank(right.reference) || left.index - right.index,
-      )
-      .map(({ reference }) => reference);
-    if (stale.length === 0) continue;
-    const placed = current.roomActions.order.filter(
-      (reference) =>
-        reference.kind === 'interactIncomingReward' &&
-        rows.get(roomActionKey(reference))?.stale === false &&
-        !known.has(roomActionKey(reference)) &&
-        !rekeyed.has(`${semanticAddressKey(owner)}|${roomActionKey(reference)}`),
-    );
-    if (placed.length === 0) continue;
-    const declared = declaredActionKeys(catalog, assembly.project, owner);
-    const roles = [...placed].sort(
-      (left, right) =>
-        declared.indexOf(roomActionKey(left)) - declared.indexOf(roomActionKey(right)),
-    );
-    for (let index = 0; index < Math.min(stale.length, roles.length); index += 1)
-      rekeys.push({ owner, stale: stale[index]!, role: roles[index]! });
-  }
-  return rekeys;
-}
-
-/**
- * Takes a stale pickup out and moves its new role into its place, when the
- * roster allows that position; otherwise the role keeps its default place.
- */
-function rekeyIncomingRewardPickup(
-  catalog: Catalog,
-  project: ProjectDocument,
-  owner: OccurrenceAddress,
-  stale: RoomActionReference,
-  role: RoomActionReference,
-): ProjectDocument {
-  const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
-  const staleIndex = (occurrenceAt(project, owner)?.roomActions.order ?? []).findIndex(
-    (reference) => roomActionKey(reference) === roomActionKey(stale),
-  );
-  const removed = applyProjectCommand(project, catalog, {
-    kind: 'RemoveRoomAction',
-    action: createRoomActionAddress(biome, owner.occurrenceId, roomActionKey(stale)),
-  });
-  const located = roomActionDomainForOccurrence(removed, catalog, biome, owner.occurrenceId);
-  if (located === undefined) return removed;
-  const order = located.occurrence.roomActions.order;
-  const roleIndex = order.findIndex(
-    (reference) => roomActionKey(reference) === roomActionKey(role),
-  );
-  const toIndex = roleIndex < staleIndex ? staleIndex - 1 : staleIndex;
-  if (roleIndex < 0 || toIndex === roleIndex) return removed;
-  const assessment = assessRoomActionMove(
-    order,
-    roleIndex,
-    toIndex,
-    roomActionOrderContextForOccurrence(located.domain, located.occurrence),
-  );
-  return assessment.structurallyAuthorable
-    ? applyProjectCommand(removed, catalog, {
-        kind: 'MoveRoomAction',
-        action: createRoomActionAddress(biome, owner.occurrenceId, roomActionKey(role)),
-        toIndex,
-      })
-    : removed;
-}
-
 /** The fixed reroll pool refusing a new spend; known only once the edit is evaluated. */
 export class RerollPoolRefusal extends ProjectCommandContractError {}
 
@@ -779,7 +655,6 @@ function settleProject(options: {
   let project = options.project;
   const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
   const beforeRosters = enteredRosters(before);
-  const rekeyed = new Set<string>();
   // A removal in the room the edit addresses shows on the Timeline being edited; any other is announced.
   const room = command === undefined ? undefined : addressedRoom(projectCommandAddress(command));
   const silentRoom = room === undefined ? undefined : semanticAddressKey(room);
@@ -989,33 +864,6 @@ function settleProject(options: {
     const artifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
     // An installed route keeps exactly the rows it was authored with.
     if (command?.kind === 'ReplaceRoute') return settled(assembly);
-    const rekeys = incomingRewardRekeys(catalog, before.project, assembly, rekeyed);
-    if (rekeys.length > 0) {
-      for (const { owner, stale, role } of rekeys) {
-        // Each new role takes one row's place, once.
-        rekeyed.add(`${semanticAddressKey(owner)}|${roomActionKey(role)}`);
-        const address = createRoomActionAddress(
-          createBiomeAddress(owner.routeKey, owner.biomeKey),
-          owner.occurrenceId,
-          roomActionKey(stale),
-        );
-        const fault = consume(`rekey:${semanticAddressKey(address)}`, address);
-        if (fault !== undefined) return settled(assembly, fault);
-        try {
-          project = rekeyIncomingRewardPickup(catalog, project, owner, stale, role);
-        } catch (error) {
-          // The roster and the room-action commands disagree: an engine defect.
-          if (error instanceof ProjectCommandContractError)
-            return settled(
-              assembly,
-              Object.freeze({ key: `rekey:${roomActionKey(stale)}`, owner: address }),
-            );
-          throw error;
-        }
-      }
-      assembly = evaluate(project);
-      continue;
-    }
     // A row with no context or source has nothing to repair: the edit that orphans it removes it.
     const stale = [
       ...staleRowsToRemove(before, beforeRosters, assembly, upgrade),
