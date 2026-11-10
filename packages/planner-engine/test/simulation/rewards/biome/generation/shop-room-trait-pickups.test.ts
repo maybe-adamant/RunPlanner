@@ -95,18 +95,22 @@ function shopWithProducer(shop: Shop, producer: (typeof producers)[number]) {
       rarificationActions: [],
     },
   });
-  const taken = project;
-  // Taking the trait takes its drops; the placements below start without them.
+  // Taking the trait spawns its drops; the placements below start without them.
   const siteKey = traitGeneratedPickupSiteKey(trait, 'option1');
-  for (const [entryKey] of producer.drops)
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(
-        biome,
-        id,
-        roomActionKey({ kind: 'interactAcquisitionEntry', siteKey, entryKey }),
-      ),
+  // The owner picks up every drop right after the purchase that spawned them.
+  const boonAt = shopOccurrence(project, shop).roomActions.order.findIndex(
+    (reference) => reference.kind === 'interactShopOffer' && reference.offerKey === 'Boon',
+  );
+  if (boonAt < 0) throw new Error('the Boon purchase is missing');
+  const taken = producer.drops.reduce((document, [entryKey], offset) => {
+    const reference = { kind: 'interactAcquisitionEntry' as const, siteKey, entryKey };
+    return applyProjectCommand(document, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(biome, id, roomActionKey(reference)),
+      reference,
+      index: boonAt + 1 + offset,
     });
+  }, project);
   const pickup = {
     kind: 'interactAcquisitionEntry' as const,
     siteKey,
