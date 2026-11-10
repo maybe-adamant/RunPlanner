@@ -3558,6 +3558,15 @@ span.hub-board-status-line {
   aspect-ratio: 16 / 9;
 }
 
+/*
+ * Beside the controls, the sticky map takes the column's width and the window's height
+ * below the editor header, whichever binds first, so it stays whole while the controls scroll.
+ */
+.room-map-columns > .room-map-column > .room-map-viewport > .room-map-canvas {
+  max-width: max(26rem, calc((100 * var(--app-vh) - 18rem) * 16 / 9));
+  margin-inline: auto;
+}
+
 .room-map-column > .room-map-viewport > .room-map-canvas > .room-map-scroll {
   position: absolute;
   inset: 0;
@@ -3565,6 +3574,11 @@ span.hub-board-status-line {
   min-height: 0;
 }
 
+/*
+ * Stacked, the map takes the room panel's full width below the controls: where the
+ * controls would fall below a Timeline row, and on a window taller than wide, where the
+ * height below the controls gives the map more room than a column beside them.
+ */
 @container room-map-workbench (max-width: 56rem) {
   .room-map-columns {
     grid-template-columns: minmax(0, 1fr);
@@ -3572,6 +3586,24 @@ span.hub-board-status-line {
 
   .room-map-column {
     position: static;
+  }
+
+  .room-map-columns > .room-map-column > .room-map-viewport > .room-map-canvas {
+    max-width: none;
+  }
+}
+
+@media (orientation: portrait) {
+  .room-map-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .room-map-column {
+    position: static;
+  }
+
+  .room-map-columns > .room-map-column > .room-map-viewport > .room-map-canvas {
+    max-width: none;
   }
 }
 
