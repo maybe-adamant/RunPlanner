@@ -31,6 +31,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { placeTestLivePickupsAtSite } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 import {
@@ -87,6 +88,9 @@ function withSwitch(
       nectarDropped: false,
       ...options.outcome,
     } as ProjectCommand);
+  // The owner picks up what the claim drops.
+  if (options.used === true)
+    next = placeTestLivePickupsAtSite(next, createOccurrenceAddress(biome, id), 'challengeSwitch');
   return next;
 }
 
