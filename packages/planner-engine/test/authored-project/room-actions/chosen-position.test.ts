@@ -290,7 +290,7 @@ describe('placing actions at a chosen index', () => {
     ).toEqual([]);
   });
 
-  it('moves a rushed Shrine purchase before or after the refill trigger with its pickup', () => {
+  it('places a rushed Shrine purchase before or after the refill trigger without its pickup', () => {
     const project = loadSurfaceShrineTravelDealCheckpoint();
     const postboss = 'surface-n-preboss:postboss';
     const source = createOccurrenceAddress(
@@ -316,19 +316,16 @@ describe('placing actions at a chosen index', () => {
     const placed = (index: number) =>
       order(applyProjectCommand(project, catalog, { ...command, index }), postboss);
     const purchase = { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft' };
-    const pickup = { kind: 'interactAcquisitionEntry', siteKey: 'hermesShrineDelivery' };
     // Before the trigger it becomes the first rush; the refill still follows it.
     expect(placed(2)).toEqual([
       ...before.slice(0, 2),
       expect.objectContaining(purchase),
-      expect.objectContaining(pickup),
       ...before.slice(2),
     ]);
     // After the refill's purchase it changes nothing about the trigger.
     expect(placed(4)).toEqual([
       ...before.slice(0, 4),
       expect.objectContaining(purchase),
-      expect.objectContaining(pickup),
       before[4],
     ]);
   });

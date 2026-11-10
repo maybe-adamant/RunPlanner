@@ -16,6 +16,8 @@ import {
   resolveEntryDeclaration,
   resolveEntryRoom,
   routeStartIncomingReward,
+  createRoomActionAddress,
+  roomActionKey,
 } from '@run-planner/engine/authored-project';
 import { selectedPickupProducers } from '../../../src/authored-project/acquisition/pickup-producers';
 
@@ -209,12 +211,25 @@ describe('contextual entry resolution', () => {
       producerPoint: 'roomRewardPickup',
       acquisitionRole: 'source',
     });
-    expect(occurrence.roomActions.order).toContainEqual(producer.sourceAction);
+    // The drops' site is reconciled with the offer; its source pickup is the owner's to place.
+    expect(occurrence.roomActions.order).toEqual([]);
     expect(occurrence.acquisitionSites?.[producer.siteKey]?.pickupEntries).toHaveProperty(
       'smallGold',
     );
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
+    );
+    const placed = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(biome, occurrenceId, roomActionKey(producer.sourceAction)),
+      reference: producer.sourceAction,
+      index: 0,
+    });
+    expect(placed.route.biomes[0]?.topology?.occurrences[0]?.roomActions.order).toEqual([
+      producer.sourceAction,
+    ]);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(placed)), catalog)).toEqual(
+      placed,
     );
   });
 });
