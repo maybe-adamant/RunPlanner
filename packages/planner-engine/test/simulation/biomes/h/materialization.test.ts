@@ -935,8 +935,11 @@ describe('H Fields materialization', () => {
     ).toEqual([
       'roomEntered',
       'encounterStart:Cage01',
+      // A cage fight can host the Gorgon condition at its outcome.
+      'encounterOutcome:Cage01',
       'encounterEnd:Cage01',
       'encounterStart:Cage02',
+      'encounterOutcome:Cage02',
       'encounterEnd:Cage02',
       'cleanup',
     ]);

@@ -280,7 +280,7 @@ export function evaluateEncounterCandidatesInternal(
   const privateEntries = new Map(entries);
   for (const event of historyEvents) {
     if (
-      event.kind !== 'encounterStarted' ||
+      event.kind !== 'encounterCompleted' ||
       event.aetos === undefined ||
       event.origin.kind !== 'occurrence'
     )

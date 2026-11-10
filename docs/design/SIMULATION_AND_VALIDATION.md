@@ -401,7 +401,7 @@ past it: it claims no entry the walk did not pass.
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------- |
 | Overview                                                                                                                                        | The entry after **Room entered**: entry and its entry effects are reached, nothing the Timeline settles is | Before  |
 | A Timeline row                                                                                                                                  | The first row of the blocking product the walk reached by the contact                                      | At      |
-| A contact with its own entry (a Fig Leaf, Aetos or Gorgon phase start)                                                                          | That entry                                                                                                 | At      |
+| A contact with its own entry (a Fig Leaf at its phase start; Aetos or the Gorgon condition at its fight's **Encounter outcome**)                | That entry                                                                                                 | At      |
 | A door's generation or offer, or the store the doors draw from                                                                                  | **Doors open**                                                                                             | At      |
 | A boundary's own contact: Boss defeated's Judgment, an encounter end's due outcome or Shrine delivery, a wheel's offers at **Next phase ready** | That boundary                                                                                              | At      |
 | Any other Timeline contact, such as an unplaced required action                                                                                 | The entry after the last boundary the walk passed before the contact                                       | Before  |
@@ -432,9 +432,10 @@ A Hub board or its Handoff and a block at the biome start have no room stop.
 Encounter support follows the same cut. Every phase of a room prepared through
 the cut keeps its identity, composition, generation and roster support, since
 those read only the room's preparation and entry state. A phase that started
-before the cut keeps its status and Fig Leaf and Gorgon support; a phase
-blocked at its own start by a Fig Leaf, Aetos or Gorgon finding keeps its
-status without execution and its Fig Leaf support.
+before the cut keeps its status and Fig Leaf support, and its Aetos and Gorgon
+support once the walk reached its outcome, including an outcome blocked by an
+Aetos or Gorgon finding; a phase blocked at its own start by a Fig Leaf
+finding keeps its status without execution and its Fig Leaf support.
 
 ### Generated-batch retention
 
@@ -817,7 +818,9 @@ Encounter identity, composition and
 [introduction](ENCOUNTER_PREPARATION.md#enemy-introductions) findings stop
 assessment at the room's Overview; the Fresh File introduction finding on the
 exact phase of a retained enemy withholds execution. Fig Leaf, Aetos and Gorgon findings have
-their own phase-child owners and stop assessment where the phase starts.
+their own phase-child owners: a Fig Leaf finding stops assessment where the phase starts, an
+Aetos or Gorgon finding at the fight's [Encounter outcome](ROOM_LIFECYCLE_MODEL.md#encounter-outcome),
+so its control stands reached.
 
 Reroll findings belong to the press, the roll or the screen that made the
 spend: an unavailable target, reward or roll at its press or roll action, an

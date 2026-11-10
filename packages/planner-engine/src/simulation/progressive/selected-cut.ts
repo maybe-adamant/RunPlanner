@@ -852,6 +852,15 @@ function roomStop(
         return event.kind === 'roomEntered';
       case 'encounterStart':
         return phaseEvent('encounterStarted', boundary.phaseKey, event);
+      case 'encounterOutcome':
+        // A fight's outcome settles at its completion; a Nemesis event's as answering her ends it.
+        return room.roomLifecycleTimeline.structure.phases.some(
+          (phase) => phase.phaseKey === boundary.phaseKey && phase.endsOnInteraction === true,
+        )
+          ? event.kind === 'encounterInteractionReached' &&
+              event.interaction === 'encounter' &&
+              event.phaseKey === boundary.phaseKey
+          : phaseEvent('encounterCompleted', boundary.phaseKey, event);
       case 'bossDefeated':
         return phaseEvent('bossDefeated', boundary.phaseKey, event);
       case 'encounterEnd':
@@ -871,6 +880,7 @@ function roomStop(
       case 'roomEntered':
         return true;
       case 'encounterStart':
+      case 'encounterOutcome':
       case 'bossDefeated':
         return passed.some((event) => boundaryEvent(index, event));
       case 'encounterEnd': {
@@ -1085,13 +1095,23 @@ function encountersThrough(
       ),
     );
   const prepared = (origin: EncounterPhaseAddress) => rooms.has(room(origin));
-  const startedAt = (origin: EncounterPhaseAddress) =>
-    selectedHistory.events.find(
-      (event) =>
-        event.kind === 'encounterStarted' &&
-        key(event.origin) === room(origin) &&
-        event.phaseKey === origin.phaseKey,
-    )?.sequence;
+  const phaseEventAt =
+    (kind: 'encounterStarted' | 'encounterCompleted') => (origin: EncounterPhaseAddress) =>
+      selectedHistory.events.find(
+        (event) =>
+          event.kind === kind &&
+          key(event.origin) === room(origin) &&
+          event.phaseKey === origin.phaseKey,
+      )?.sequence;
+  const startedAt = phaseEventAt('encounterStarted');
+  // A phase's outcome (Aetos, the Gorgon condition) is reached at its completion, or blocks on it.
+  const completedAt = phaseEventAt('encounterCompleted');
+  const outcomeReached = (origin: EncounterPhaseAddress) => {
+    const completed = completedAt(origin);
+    return (
+      completed !== undefined && (completed <= block.through || completed === block.cut.sequence)
+    );
+  };
   const figLeaf = new Set(
     rewards.simulation.figLeafPhaseCandidates.map((candidate) => key(candidate.origin)),
   );
@@ -1118,13 +1138,15 @@ function encountersThrough(
       if (!prepared(origin)) return undefined;
       const status = selected.statusAt(origin);
       const started = startedAt(origin);
-      if (status?.kind !== 'active' || (started !== undefined && started <= block.through))
-        return status;
+      if (status?.kind !== 'active') return status;
+      if (started !== undefined && started <= block.through) {
+        if (status.aetos === undefined || outcomeReached(origin)) return status;
+        const { aetos: _unreached, ...rest } = status;
+        void _unreached;
+        return Object.freeze(rest);
+      }
       return Object.freeze({
         kind: 'active' as const,
-        ...(status.aetos === undefined || started !== block.cut.sequence
-          ? {}
-          : { aetos: status.aetos }),
         ...(status.encounterDefinitionKey === undefined
           ? {}
           : { encounterDefinitionKey: status.encounterDefinitionKey }),
@@ -1132,13 +1154,9 @@ function encountersThrough(
     },
     figLeafAt: (origin: EncounterPhaseAddress) =>
       figLeaf.has(key(origin)) ? selected.figLeafAt(origin) : undefined,
-    // A phase blocked at its own start keeps its Fig Leaf support, not its Gorgon support.
-    gorgonAt: (origin: EncounterPhaseAddress) => {
-      const started = startedAt(origin);
-      return gorgon.has(key(origin)) && started !== undefined && started <= block.through
-        ? selected.gorgonAt(origin)
-        : undefined;
-    },
+    // A phase blocked at its own start keeps its Fig Leaf support; at its outcome, its Gorgon support.
+    gorgonAt: (origin: EncounterPhaseAddress) =>
+      gorgon.has(key(origin)) && outcomeReached(origin) ? selected.gorgonAt(origin) : undefined,
     nemesisAt: (origin: NemesisRandomEventAddress) => nemesis.get(key(origin)),
   });
 }

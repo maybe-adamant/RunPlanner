@@ -513,7 +513,7 @@ rebuild per completed upgrade screen in the room, and deferred regeneration at
 open after any of the three invalidating operations. The
 [Trait Offers](../../design/TRAIT_OFFERS.md#generation-time-context) owns
 the engine rule. The H miniboss reward is anchored at its encounter's start,
-before that encounter's own start effects (Fig Leaf, Gorgon), because both H
+before that encounter's own start effect (Fig Leaf), because both H
 miniboss encounters declare that they create the room reward before combat
 (`EncounterData_MiniBoss.lua:266,337`).
 

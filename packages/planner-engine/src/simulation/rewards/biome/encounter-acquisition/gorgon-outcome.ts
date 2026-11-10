@@ -24,7 +24,7 @@ import { mapReached, type RewardBranchState } from '../../branch-primitives';
 import type { GorgonPhaseCandidateSupport } from '../../model';
 import type { LifecycleFinding } from '../lifecycle-transitions/types';
 
-export interface GorgonStartedTransition {
+export interface GorgonOutcomeTransition {
   readonly branch: RewardBranchState | undefined;
   readonly candidate:
     { readonly key: string; readonly value: GorgonPhaseCandidateSupport } | undefined;
@@ -64,15 +64,21 @@ export function resolveGorgonCandidateRarity(inputs: {
   );
 }
 
-/** Evaluates the additive Gorgon appearance after Fig Leaf has settled. */
-export function applyGorgonStartedTransition(inputs: {
+/**
+ * Evaluates the additive Gorgon condition at the fight's outcome, its
+ * completion; a Fig Leaf skip, settled at the start, leaves it ineligible.
+ */
+export function applyGorgonOutcomeTransition(inputs: {
   readonly catalog: Catalog;
-  readonly event: Extract<HistoryEvent, { readonly kind: 'encounterStarted' }>;
+  readonly event: Pick<
+    Extract<HistoryEvent, { readonly kind: 'encounterCompleted' }>,
+    'origin' | 'phaseKey' | 'sequence' | 'execution'
+  > & { readonly encounterKey: string };
   readonly room: CanonicalAuthoredRoom | undefined;
   readonly view: ProgressiveRoomHistoryViews | undefined;
   readonly branch: RewardBranchState | undefined;
   readonly evaluationBlocked: boolean;
-}): GorgonStartedTransition {
+}): GorgonOutcomeTransition {
   const { catalog, event, room, view } = inputs;
   const phase = room?.encounterPhases.find((candidate) => candidate.slotKey === event.phaseKey);
   const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];

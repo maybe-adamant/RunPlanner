@@ -420,17 +420,20 @@ function projectRoomLifecycleTimeline(
   for (const entry of timeline.entries) {
     if (entry.kind === 'boundary' && foldedDefeatKeys.has(entry.boundary.key)) continue;
     if (entry.kind === 'boundary') {
-      const bossDefeated = foldedDefeats.get(entry.boundary.key);
-      const runState = launcherForBoundary(entry.boundary);
-      const startedCage = cageLabelByBoundaryKey.get(entry.boundary.key);
-      const endCage = endedCage(entry.boundary);
-      const supplement = supplementForBoundary(entry.boundary);
+      const boundary = entry.boundary;
+      // The Encounter outcome is not presented yet; its choices stay on the start and end banners.
+      if (boundary.kind === 'encounterOutcome') continue;
+      const bossDefeated = foldedDefeats.get(boundary.key);
+      const runState = launcherForBoundary(boundary);
+      const startedCage = cageLabelByBoundaryKey.get(boundary.key);
+      const endCage = endedCage(boundary);
+      const supplement = supplementForBoundary(boundary);
       entries.push(
         Object.freeze({
           kind: 'boundary' as const,
-          boundary: entry.boundary,
-          label: lifecycleBoundaryLabel(entry.boundary),
-          checkpointKey: lifecycleBoundaryCheckpointKey(entry.boundary),
+          boundary: boundary,
+          label: lifecycleBoundaryLabel(boundary),
+          checkpointKey: lifecycleBoundaryCheckpointKey(boundary),
           dropIndex: Math.max(0, entry.rank - (entry.placement === 'before' ? 1 : 0)),
           placement: entry.placement,
           rank: entry.rank,
@@ -540,7 +543,12 @@ function projectRoomLifecycleTimeline(
               : { unavailableReason: 'Restore missing cage actions before changing their order.' }),
           }),
         }),
-    boundaries: Object.freeze([...timeline.boundaries]),
+    boundaries: Object.freeze(
+      timeline.boundaries.filter(
+        (boundary): boundary is WorkspaceRoomLifecycleBoundary =>
+          boundary.kind !== 'encounterOutcome',
+      ),
+    ),
     entries: Object.freeze(entries),
     suppressedCheckpointKeys: Object.freeze([
       'exitUsable',

@@ -182,7 +182,7 @@ export interface ChronologyWalkState {
   >;
   /** Shrine-keyed Travel Deal refill domain, captured at the first rush made with the trait. */
   readonly hermesShrineTravelDealRefills: ReadonlyMap<string, RealizedHermesShrineTravelDealRefill>;
-  /** Gorgon phases keyed `occurrence::phase`, shared by encounter start and settlement. */
+  /** Gorgon phases keyed `occurrence::phase`, shared by the outcome and settlement. */
   readonly eligibleGorgonPhases: ReadonlySet<string>;
   readonly blockedGorgonPhases: ReadonlySet<string>;
   readonly gorgonEvaluationBlocked: boolean;

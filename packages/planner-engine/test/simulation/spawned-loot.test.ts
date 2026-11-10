@@ -18,6 +18,7 @@ import {
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
+  encounterOutcomesForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
   type RoomSpawnedLoot,
   type SpawnedLootItem,
@@ -266,10 +267,22 @@ describe('spawned loot', () => {
     ]);
   });
 
-  it('spawns Arachne’s reward during her cocoon fight', () => {
-    expect(
-      moments(loot(loadUnderworldArachneCocoonsCheckpoint(), 'F', 'golden-f-b5-e1').spawned),
-    ).toEqual([['duringEncounter:Encounter', ['roomReward required #1']]]);
+  it('spawns Arachne’s reward as breaking its cocoon ends her fight', () => {
+    // The cocoons stand from entry with the reward hidden: nothing spawns or locks before.
+    const { assembly, spawned } = loot(
+      loadUnderworldArachneCocoonsCheckpoint(),
+      'F',
+      'golden-f-b5-e1',
+    );
+    expect(moments(spawned)).toEqual([['encounterEnd:Encounter', ['roomReward required #1']]]);
+    expect(unlocks(spawned)).toEqual([]);
+    // An ordinary fight: nothing about how it ended is a choice, and the walk passes through.
+    expect(encounterOutcomesForProjectEvaluationAssembly(catalog, assembly, spawned.owner)).toEqual(
+      [],
+    );
+    const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
+    const stop = f?.coverage.kind === 'prefix' ? f.coverage.roomStop : undefined;
+    expect(stop?.room.occurrenceId).not.toBe('golden-f-b5-e1');
   });
 
   it('spawns an H miniboss reward caged at its encounter start, freed at its end', () => {

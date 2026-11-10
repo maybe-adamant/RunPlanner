@@ -27,7 +27,7 @@ describe('Aetos biome execution directive', () => {
     const olympus = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     if (olympus?.authoring !== 'complete' || olympus.validity !== 'valid')
       throw new Error('Aetos fixture must be complete-valid');
-    const entry = olympus.history.ledgers.encounterStarts.find(
+    const entry = olympus.history.ledgers.encounterCompletions.find(
       (event) => event.aetosWave !== undefined,
     );
     expect(entry).toMatchObject({ aetosWave: 2, slotKey: 'Combat' });

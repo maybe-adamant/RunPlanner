@@ -566,8 +566,6 @@ export interface EncounterDefinition {
   readonly suppressesIncomingReward?: boolean;
   /** The encounter spawns the room reward before its combat rather than after it. */
   readonly createsIncomingRewardAtStart?: boolean;
-  /** The encounter spawns the room reward during its combat, when one chosen enemy dies. */
-  readonly createsIncomingRewardInCombat?: boolean;
   /**
    * A kill-contest bet on the encounter's end: the bet is the held gold up to
    * `maxBet`; a win pays it times the money multiplier, a loss takes it.

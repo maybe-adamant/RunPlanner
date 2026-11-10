@@ -287,11 +287,36 @@ The Nemesis random event is the exception: Nemesis is a required room object
 that keeps the exits locked until answering her resolves the event (a trade's
 choice, the free item, or the contest's timer), so her interaction ends that
 encounter. Its phase has Encounter and Encounter ended boundaries, the
-interaction inside them and the event's result pickup after the end. In Fields
+interaction inside them, its [outcome](#encounter-outcome) right after the
+interaction, and the event's result pickup after the end. In Fields
 the Passive event orders among the cages by its interaction, each boundary
 directly around it. The boundaries only shape the Timeline and window
 positions: no encounter start or completion is executed for a Fields Passive
 event, and its history is unchanged.
+
+### Encounter outcome
+
+Each fight has three events. **Encounter started** holds only what belongs
+at its start: Fig Leaf, which the game rolls before enemies spawn; a skip
+short-circuits the fight, so no outcome follows. **Encounter outcome** holds
+how the fight ended: the Aetos wave, the Gorgon condition, the Nemesis bet,
+the Nemesis event's result and Anomaly cleared. **Encounter ended** is a pure
+event announcing what spawns from the outcome; each spawned item settles on
+its own row. In a Boss room, **Boss defeated** is the outcome, with Judgment
+and Crystal Figurine.
+
+The outcome is the walk's encounter completion (for a Nemesis event, the
+interaction that ends it), published as a lifecycle structure point and
+Timeline boundary between the phase's start and end wherever the phase could
+host a choice or the room authors one; it changes no plan wire. The walk
+reads each choice there: the Aetos wave is assessed against the biome's
+earlier completed fights and the Gorgon condition against the state at the
+completion, both ineligible after a Fig Leaf skip. An unset or invalid choice
+therefore stops the walk at the outcome, never at the start. At most two
+choices share one outcome (Aetos and the Gorgon condition); a Nemesis, Anomaly
+or Boss outcome stands alone. An engine query publishes, per entered room,
+each outcome that hosts an eligible choice or an authored value (which never
+vanishes); a skipped fight's outcome hosts only such authored values.
 
 **Automatic outcomes.** Fixed automatic outcomes (Steady Growth, Transcendent
 Embryo, Judgment, Crystal Figurine) settle at their seam and are never
@@ -333,11 +358,13 @@ the optional Combat 2 plays), P's two phases, Fields Passive and cages, NPC
 encounters and introductions; the Nemesis random-event family is part of that
 identity. The Timeline keeps each phase read-only at its start and end, the
 order it controls (Fields cage order, Ship phase seams and wheel picks) and the
-events decided in the encounter: Fig Leaf (including P's pre-combat cascade,
-which suppresses execution without changing the recorded identity), Gorgon,
-Aetos, NPC trait offers, the Nemesis response, the Anomaly capture-point
-outcome (which decides whether the room reward spawns) and encounter-end
-checkpoints. Fig Leaf, Aetos and Gorgon keep their own phase-child addresses.
+events decided in the encounter: Fig Leaf at its start (including P's
+pre-combat cascade, which suppresses execution without changing the recorded
+identity), NPC trait offers, the Nemesis response, the
+[outcome](#encounter-outcome) choices (Gorgon, Aetos, the Nemesis bet or
+event result, and the Anomaly capture-point outcome, which decides whether the
+room reward spawns) and encounter-end checkpoints. Fig Leaf, Aetos and Gorgon
+keep their own phase-child addresses.
 
 The editor presents the stages as Room Overview and Room Timeline, whose Doors
 open row and last row present the exit stage. These are transient views over unchanged semantic owners, not persisted
@@ -572,8 +599,10 @@ projects over a long edit history.
 
 The engine constructs one closed lifecycle structure from the resolved profile
 and its active declaration-owned phase scope. Its ordered points are the rigid
-room skeleton: `roomEntered`, each exact `encounterStart` then `encounterEnd`,
-Ship `nextPhase` seams, internal outgoing generation, and final `cleanup`. The
+room skeleton: `roomEntered`, each exact `encounterStart`, its
+`encounterOutcome` where the phase can host one (a Boss room's `bossDefeated`
+instead), then `encounterEnd`, Ship `nextPhase` seams, internal outgoing
+generation, and final `cleanup`. The
 same frozen structure is carried by the roster and consumed by required-action
 scheduling, lifecycle execution, checkpoint assembly, and the room timeline.
 None of those consumers may reconstruct phase membership or boundary order
@@ -637,9 +666,12 @@ An engine-owned read-only query publishes, for each entered room, the loot
 the game spawns on its own, grouped by the moment it appears, each moment
 keyed by its kind and phase and listing its items in spawn order. The room
 reward spawns at the encounter's end; on entry for a role taken before combat
-(an Opening reward, Devotion's choice) or a room without combat; at the start
-of an encounter that spawns it first (the H minibosses); and during an
-encounter whose chosen enemy carries it (Arachne's cocoon). A Boss's forced
+(an Opening reward, Devotion's choice) or a room without combat; and at the
+start of an encounter that spawns it first (the H minibosses). Arachne's
+cocoons stand from entry with the reward hidden, neither spawned nor locked:
+breaking the reward cocoon spawns it and ends her encounter
+(`EncounterEventsArachneCombat` waits for `ArachneRewardFound`), so it is an
+ordinary encounter-end spawn, and collecting it opens the doors. A Boss's forced
 drop and a Ship wheel's reward spawn at their phase's end. After the reward,
 an encounter's end spawns its due Hermes deliveries in purchase order, then
 matured clock drops such as Supply Chain's, then Heracles's bounty; in a Ship
@@ -969,8 +1001,9 @@ through a door still locked blocks at the room's exit.
 
 The fixed Boss occurrence has the `BossRoom` lifecycle. Its player-facing
 timeline is `Room entered -> Encounter -> Boss defeated -> Encounter ended
--> Doors open`. `Boss defeated` is an exact lifecycle seam before generic
-encounter-end effects. When Judgment is active, it is one engine-owned fixed
+-> Doors open`. `Boss defeated` is the Boss room's
+[Encounter outcome](#encounter-outcome), an exact lifecycle seam before
+generic encounter-end effects. When Judgment is active, it is one engine-owned fixed
 effect at that seam, not a Room Action or persisted ordering value. The
 occurrence-plus-phase Judgment Arcana address owns the editor, candidate
 frontier, finding, and semantic command. Encounter ended remains the later seam
@@ -1297,8 +1330,8 @@ state to their sequence.
 | Biome start                                             | The Echo keepsake replay transition, before the first event.                                                                                                                                                      |
 | Room prepared                                           | Opens the room's reward lifecycle; Fields optional reward counts; a Preboss first captures its received start state.                                                                                              |
 | Room entered                                            | Room entry with The Centaur's cycle, Shrine and Well assessments, the room-entry Run State capture; halts for a delivery placement.                                                                               |
-| Encounter started                                       | Fig Leaf and Gorgon start; the Ship pre-encounter Run State capture.                                                                                                                                              |
-| Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions.                                                                                                             |
+| Encounter started                                       | Fig Leaf; the Ship pre-encounter Run State capture.                                                                                                                                                               |
+| Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions; the Gorgon condition is read at completion.                                                                 |
 | Encounter ended                                         | End effects; halts when a Shrine delivery needs placement.                                                                                                                                                        |
 | Offer point materialized, acquired; role advanced       | Offer materialization and reached-offer settlement.                                                                                                                                                               |
 | Acquisition point reached                               | Acquisition settlement and Purging Pool sale nodes.                                                                                                                                                               |

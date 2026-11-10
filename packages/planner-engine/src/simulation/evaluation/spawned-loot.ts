@@ -41,17 +41,12 @@ import {
 /**
  * When the game spawns loot on its own: on entry (an Opening or Devotion
  * reward, Fields cages and optionals), the fourth-biome Preboss delivery
- * flush, an encounter's start (H minibosses) or mid-combat (Arachne's
- * cocoon), its end, and in an O phase the deliveries and drops after its
- * wheel reward.
+ * flush, an encounter's start (H minibosses), its end (Arachne's cocoon fight
+ * ends as the reward cocoon breaks), and in an O phase the deliveries and
+ * drops after its wheel reward.
  */
 export type SpawnMomentKind =
-  | 'roomEntered'
-  | 'deliveryFlush'
-  | 'encounterStart'
-  | 'duringEncounter'
-  | 'encounterEnd'
-  | 'afterEncounterReward';
+  'roomEntered' | 'deliveryFlush' | 'encounterStart' | 'encounterEnd' | 'afterEncounterReward';
 
 /** What spawned one item. */
 export type SpawnedLootSource =
@@ -434,9 +429,6 @@ export function spawnedLootForProjectEvaluationAssembly(
   const startSpawnPhase = phaseKeys.find(
     (phaseKey) => phaseDefinition(phaseKey)?.createsIncomingRewardAtStart === true,
   );
-  const combatSpawnPhase = phaseKeys.find(
-    (phaseKey) => phaseDefinition(phaseKey)?.createsIncomingRewardInCombat === true,
-  );
 
   const walk = roomWalk(assembly, occurrence);
   const entries = room.roomLifecycleTimeline.entries;
@@ -473,7 +465,6 @@ export function spawnedLootForProjectEvaluationAssembly(
       case 'deliveryFlush':
         return boundaryState('roomEntered');
       case 'encounterStart':
-      case 'duringEncounter':
         return phaseKey === undefined
           ? boundaryState('roomEntered')
           : boundaryState('encounterStart', phaseKey);
@@ -535,8 +526,6 @@ export function spawnedLootForProjectEvaluationAssembly(
             startSpawnPhase,
             fromRow(row, roomReward, unlockKey(startSpawnPhase)),
           );
-        else if (combatSpawnPhase !== undefined)
-          add('duringEncounter', combatSpawnPhase, fromRow(row, roomReward));
         else if (lastPhaseKey !== undefined)
           add('encounterEnd', lastPhaseKey, fromRow(row, roomReward));
         else add('roomEntered', undefined, fromRow(row, roomReward));
@@ -756,7 +745,6 @@ export function spawnedLootForProjectEvaluationAssembly(
   for (const phaseKey of phaseKeys)
     chronology.push(
       momentKey('encounterStart', phaseKey),
-      momentKey('duringEncounter', phaseKey),
       momentKey('encounterEnd', phaseKey),
       momentKey('afterEncounterReward', phaseKey),
     );

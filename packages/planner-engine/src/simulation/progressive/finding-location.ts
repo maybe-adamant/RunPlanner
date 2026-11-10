@@ -833,12 +833,11 @@ export function locateOwner(
   let entryIndex = room.roomLifecycleTimeline.entries.findIndex((entry) => {
     if (entry.kind === 'action') return roomActionOwns(entry.action, address);
     if (entry.kind === 'automaticEffect') return same(entry.address, address);
-    // Fig Leaf, Aetos and the Gorgon condition settle when their phase starts.
+    // Fig Leaf settles when its phase starts; Aetos and the Gorgon condition at its outcome.
     return (
-      entry.boundary.kind === 'encounterStart' &&
-      (address.kind === 'figLeafPhase' ||
-        address.kind === 'aetosPhase' ||
-        address.kind === 'gorgonPhase') &&
+      ((entry.boundary.kind === 'encounterStart' && address.kind === 'figLeafPhase') ||
+        (entry.boundary.kind === 'encounterOutcome' &&
+          (address.kind === 'aetosPhase' || address.kind === 'gorgonPhase'))) &&
       entry.boundary.phaseKey === address.encounter.phaseKey
     );
   });
