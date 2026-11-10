@@ -362,6 +362,11 @@ export {
   type SpawnedLootReward,
   type SpawnedLootSource,
 } from './evaluation/spawned-loot';
+export {
+  liveActionsForProjectEvaluationAssembly,
+  type LiveAction,
+  type RoomLiveActions,
+} from './evaluation/live-actions';
 export { GoldLedgerContractError } from './commerce/gold/ledger';
 export type {
   GoldBalance,

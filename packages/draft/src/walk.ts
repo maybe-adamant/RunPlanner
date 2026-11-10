@@ -28,6 +28,7 @@ import {
   type HubAction,
   type HubDecision,
   type HubDecisionAddress,
+  type OccurrenceAddress,
   type OccurrenceId,
   type ProjectCommand,
   type ProjectDocument,
@@ -60,6 +61,9 @@ import {
   type RewardOfferExclusionReason,
   prepareRouteStartTraitRequirements,
   routeResourceAuthoring,
+  liveActionsForProjectEvaluationAssembly,
+  type LiveAction,
+  type RoomLiveActions,
 } from '@run-planner/engine/simulation';
 import { latestRunState } from './report';
 import {
@@ -118,6 +122,52 @@ function rewardOfferResult(evaluation: ProjectCandidateEvaluation) {
     default:
       return undefined;
   }
+}
+
+/** The room an origin lies in: its own occurrence, or the one hosting its acquisition site. */
+function originRoom(origin: SemanticAddress): OccurrenceAddress | undefined {
+  if (origin.kind === 'acquisitionEntry') return originRoom(origin.site.owner);
+  if (!('occurrenceId' in origin)) return undefined;
+  return createOccurrenceAddress(
+    createBiomeAddress(origin.routeKey, origin.biomeKey),
+    origin.occurrenceId,
+  );
+}
+
+type LivePlacement = Extract<LiveAction, { readonly kind: 'place' }>;
+
+/**
+ * The first required item live at the walk's frontier, in the engine's item order, that the
+ * product offers a place command for, never one already placed by this repair: its canonical
+ * restore wherever the product offers it, otherwise its placement at the frontier.
+ */
+function requiredPlacement(
+  live: RoomLiveActions,
+  placed: ReadonlySet<string>,
+): LivePlacement | undefined {
+  const offered = live.gaps.flatMap((gap) => gap.items.flatMap((item) => item.actions));
+  for (const item of live.gaps[live.frontier]?.items ?? []) {
+    const actions: readonly LiveAction[] =
+      item.kind === 'pickup'
+        ? item.participation === 'required'
+          ? item.actions
+          : []
+        : item.actions.filter((action) => action.participation === 'required');
+    for (const action of actions) {
+      // A choice the placed row still needs (a Pom's level) is its own finding once placed.
+      if (action.kind !== 'place' || action.needsChoice === 'travelDealItem') continue;
+      const key = roomActionKey(action.reference);
+      if (placed.has(key)) continue;
+      const canonical = offered.find(
+        (candidate): candidate is LivePlacement =>
+          candidate.kind === 'place' &&
+          candidate.canonical === true &&
+          roomActionKey(candidate.reference) === key,
+      );
+      return canonical ?? action;
+    }
+  }
+  return undefined;
 }
 
 /** A Shop door beside a door to a new god with queued traits. */
@@ -582,6 +632,8 @@ export class DraftWalk {
       case 'traitOfferMissing':
         return origin.kind === 'traitOffer' && this.traitOffers.author(origin);
       case 'roomActionPlacementRequired':
+      case 'hermesShrineDeliveryPlacementRequired':
+      case 'echoGoldPickupPlacementRequired':
         return this.placeRequiredActions(origin);
       case 'fountainRarityResultMissing':
       case 'fountainRarityResultUnavailable':
@@ -1526,17 +1578,47 @@ export class DraftWalk {
 
   // --- Other owners --------------------------------------------------------
 
+  /**
+   * Places what the origin's room still requires where the walk stands, each by the command the
+   * engine's live product offers for it: its canonical restore when offered, otherwise at the
+   * frontier. Places one at a time until nothing required is placeable there or an edit is
+   * refused; optional pickups and purchases stay the walk's own choices.
+   */
   private placeRequiredActions(origin: SemanticAddress): boolean {
-    if (!('biomeKey' in origin) || !('occurrenceId' in origin)) return false;
     if (origin.kind === 'incomingReward') {
       const state = this.occurrence(origin.biomeKey, origin.occurrenceId)?.state;
-      // An unauthored reward owns no actions yet; authoring it schedules them.
+      // An unauthored reward owns no actions yet; its own finding places them once authored.
       if (state !== undefined && 'reward' in state && state.reward === null)
         return this.authorReward(origin, false);
     }
-    const occurrenceId = origin.occurrenceId as OccurrenceId;
-    const biome = createBiomeAddress(origin.routeKey, origin.biomeKey);
-    const located = roomActionDomainForOccurrence(this.project, this.catalog, biome, occurrenceId);
+    const room = originRoom(origin);
+    if (room === undefined) return false;
+    const placed = new Set<string>();
+    let changed = false;
+    for (;;) {
+      const live = liveActionsForProjectEvaluationAssembly(this.catalog, this.assembly, room);
+      const placement = live === undefined ? undefined : requiredPlacement(live, placed);
+      if (placement === undefined) break;
+      placed.add(roomActionKey(placement.reference));
+      if (!this.apply(placement.command)) return changed;
+      changed = true;
+    }
+    return changed || this.placeUnofferedRequiredActions(room);
+  }
+
+  /**
+   * Inserts each required action of the room missing from its order at its canonical default.
+   * Only when the live product offers none: the walk stops a deferred Ship wheel's encounter
+   * end while its reward is unplaced, before that reward spawns, so it is never live.
+   */
+  private placeUnofferedRequiredActions(room: OccurrenceAddress): boolean {
+    const biome = createBiomeAddress(room.routeKey, room.biomeKey);
+    const located = roomActionDomainForOccurrence(
+      this.project,
+      this.catalog,
+      biome,
+      room.occurrenceId,
+    );
     if (located === undefined) return false;
     const authored = new Set(located.occurrence.roomActions.order.map(roomActionKey));
     const missing = located.domain.contributions.flatMap((entry) =>
@@ -1552,7 +1634,7 @@ export class DraftWalk {
         this.project,
         this.catalog,
         biome,
-        occurrenceId,
+        room.occurrenceId,
       );
       if (current === undefined) break;
       const scheduled = scheduleRequiredRoomActions({
@@ -1567,7 +1649,7 @@ export class DraftWalk {
       changed =
         this.apply({
           kind: 'InsertRoomAction',
-          action: createRoomActionAddress(biome, occurrenceId, roomActionKey(reference)),
+          action: createRoomActionAddress(biome, room.occurrenceId, roomActionKey(reference)),
           reference,
           index: Math.max(index, 0),
         }) || changed;

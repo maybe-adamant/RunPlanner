@@ -1,7 +1,8 @@
 # Part 2: live pickups
 
 Status: framing settled by the owner (2026-11-10); step A delivered on
-`live-pickups`, awaiting review; B to D not started. Temporary
+`live-pickups`; B's Draft half delivered, awaiting review; the run import's
+half waits on an owner decision; C and D not started. Temporary
 plan; delete at delivery after promoting durable results. Follows the
 progressive room Timeline and spawned-loot notices, both delivered.
 
@@ -70,11 +71,24 @@ You either interact with pickups or active objects.
     owner to settle.
   - A choice's values (a blank Travel Deal item) are read where the room's
     reached actions end, not at the gap; the indices are value-independent.
-  - Not exported: the query lands on the `simulation` entry with its first
-    consumer in B or D.
+  - Exported on the `simulation` entry with Draft, its first consumer.
 
 - **B.** Draft and the run import author pickups from it, placing what they
   relied on being inserted.
+  - Draft: a room's placement finding (required action, Hermes delivery, Gold
+    Gold Gold duplicate) places, one at a time, each required pickup or object
+    action live at the room's frontier by its offered command, the canonical
+    restore when offered anywhere through the frontier, otherwise at the
+    frontier. A required row the product does not offer at all falls back to
+    the canonical schedule; witnessed only for a deferred Ship wheel's reward,
+    pinned by the Draft witness for C to remove with that open item. Against
+    the old schedule, 105 of 110 stripped golden rooms restore identically;
+    the rest place at the frontier where the canonical index lies past it (a
+    Boss room's reward before its forced drop) or complete every Fields cage
+    before collecting the rewards. A stripped Hermes delivery lands at the
+    frontier rather than settlement's due contact.
+  - Run import: waits on the owner (canonical position vs. a "place all
+    required here" engine helper).
 - **C.** Remove automatic placement (change 1). If placements are derived,
   fold any old-plan materialization into the unreleased schema 103.
   Equivalence and Draft corpus lanes before and after; separate and
