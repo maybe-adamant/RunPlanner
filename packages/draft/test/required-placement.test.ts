@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -7,6 +8,7 @@ import {
   createOccurrenceId,
   roomActionKey,
   type OccurrenceAddress,
+  type ProjectCommand,
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
@@ -20,6 +22,19 @@ import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtu
 import { oBiome } from '@run-planner/test-fixtures/surface';
 import type { DraftSpec } from '../src';
 import { startDraftWalk } from './support/draft-walk';
+
+/**
+ * The golden witness's tally. Rooms whose walk stops inside the room or chooses a new encounter
+ * resolve their placement finding but are not checked row by row.
+ */
+const PINNED_COUNTS = {
+  rooms: 107,
+  restored: 95,
+  stoppedInRoom: 1,
+  encounterChosen: 11,
+  livePlacements: 124,
+  fallbackPlacements: 7,
+};
 
 const PLACEMENT_FINDINGS: ReadonlySet<string> = new Set([
   'roomActionPlacementRequired',
@@ -126,10 +141,42 @@ function isRoomPlacement(assembly: ProjectEvaluationAssembly, room: OccurrenceAd
   );
 }
 
+/** The commands a walk places room actions with. */
+const PLACEMENT_COMMANDS: ReadonlySet<string> = new Set([
+  'InsertRoomAction',
+  'PlaceHermesShrineDelivery',
+  'PlaceEchoGoldPickup',
+  'PlaceClockedTraitPickup',
+]);
+
+/** A placement the walk settled, and whether the room's live product offered that command. */
+interface SettledPlacement {
+  readonly command: ProjectCommand;
+  readonly offered: boolean;
+}
+
+/** Whether the room's live product, read where the command applies, offers exactly it. */
+function offeredByLiveProduct(
+  assembly: ProjectEvaluationAssembly,
+  room: OccurrenceAddress,
+  command: ProjectCommand,
+): boolean {
+  const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, room);
+  return (
+    live?.gaps.some((gap) =>
+      gap.items.some((item) =>
+        item.actions.some(
+          (action) => action.kind === 'place' && isDeepStrictEqual(action.command, command),
+        ),
+      ),
+    ) ?? false
+  );
+}
+
 /**
- * Walks from the room's stripped plan while its first issue is the room's placement finding.
- * Edit settlement places only the required actions an edit newly activates, so the stripped
- * rows come back only through the walk's own placement.
+ * Walks from the room's stripped plan while its first issue is the room's placement finding,
+ * recording each placement it settles. Edit settlement places only the required actions an
+ * edit newly activates, so the stripped rows come back only through the walk's own placement.
  */
 function restore(
   project: ProjectDocument,
@@ -137,31 +184,65 @@ function restore(
   room: OccurrenceAddress,
   stripped: ProjectEvaluationAssembly,
 ) {
-  const walk = startDraftWalk(project, spec, 1, { from: stripped });
+  const placements: SettledPlacement[] = [];
+  const walk = startDraftWalk(project, spec, 1, {
+    from: stripped,
+    observe: (session) => ({
+      ...session,
+      apply: (command, admission) => {
+        const offered =
+          PLACEMENT_COMMANDS.has(command.kind) &&
+          offeredByLiveProduct(session.current(), room, command);
+        const outcome = session.apply(command, admission);
+        if (outcome.kind === 'applied' && PLACEMENT_COMMANDS.has(command.kind))
+          placements.push({ command, offered });
+        return outcome;
+      },
+    }),
+  });
   while (isRoomPlacement(walk.assembly, room)) {
     const steps = walk.steps;
     walk.runBiome(biomeIndex, steps + 1);
     if (walk.steps === steps) break;
   }
-  return walk;
+  return { walk, placements };
 }
 
-const golden = checkpointRegistry.filter(
-  ({ entry }) => entry.route === 'Underworld' || entry.route === 'Surface',
-);
-/** Rooms an earlier checkpoint already witnessed. */
-const witnessed = new Set<string>();
+/** The fallback's one pinned row: a deferred Ship wheel's reward, never live while unplaced. */
+function isPinnedFallback(placement: SettledPlacement): boolean {
+  return (
+    placement.command.kind === 'InsertRoomAction' &&
+    placement.command.reference.kind === 'interactWheelReward'
+  );
+}
 
 describe('Draft places what a room requires from the live product', () => {
-  it.each(golden.map((checkpoint) => [checkpoint.entry.id, checkpoint] as const))(
-    '%s: restores the stripped required rows of each room not yet witnessed',
-    (id, { load }) => {
+  it('restores the stripped required rows of every golden room, each by an offered command', () => {
+    const golden = checkpointRegistry.filter(
+      ({ entry }) => entry.route === 'Underworld' || entry.route === 'Surface',
+    );
+    const seen = new Set<string>();
+    const failures: string[] = [];
+    const counts = {
+      rooms: 0,
+      restored: 0,
+      stoppedInRoom: 0,
+      encounterChosen: 0,
+      livePlacements: 0,
+      fallbackPlacements: 0,
+    };
+    for (const { entry, load } of golden) {
       const project = load();
+      const fresh = project.route.biomes.some((biome) =>
+        (biome.topology?.occurrences ?? []).some(
+          (occurrence) => !seen.has(occurrence.occurrenceId),
+        ),
+      );
+      if (!fresh) continue;
       const assembly = simulateProjectAssembly(catalog, project);
-      const failures: string[] = [];
       for (const [biomeIndex, biome] of project.route.biomes.entries())
         for (const occurrence of biome.topology?.occurrences ?? []) {
-          if (witnessed.has(occurrence.occurrenceId)) continue;
+          if (seen.has(occurrence.occurrenceId)) continue;
           const room = createOccurrenceAddress(
             createBiomeAddress(project.route.routeKey, biome.biomeKey),
             occurrence.occurrenceId,
@@ -180,31 +261,39 @@ describe('Draft places what a room requires from the live product', () => {
           );
           // An earlier finding of the checkpoint stands before the room's placement.
           if (!isRoomPlacement(stripped, room)) continue;
-          witnessed.add(occurrence.occurrenceId);
-          const walk = restore(project, biomeIndex, room, stripped);
+          seen.add(occurrence.occurrenceId);
+          counts.rooms += 1;
+          const name = `${entry.id} ${occurrence.occurrenceId}`;
+          const { walk, placements } = restore(project, biomeIndex, room, stripped);
+          for (const placement of placements) {
+            if (placement.offered) counts.livePlacements += 1;
+            else if (isPinnedFallback(placement)) counts.fallbackPlacements += 1;
+            else failures.push(`${name}: unoffered ${JSON.stringify(placement.command)}`);
+          }
           const issue = walk.assembly.evaluation.issue?.reasons[0];
           if (isRoomPlacement(walk.assembly, room)) {
-            failures.push(`${occurrence.occurrenceId}: still ${issue?.code}`);
+            failures.push(`${name}: still ${issue?.code}`);
             continue;
           }
-          // A later row of a room the walk stops in waits for that stop's own repair, and an
-          // encounter the walk chose may no longer require the stripped contact.
+          // A later row of a room the walk stops in waits for that stop's own repair.
           const live = liveActionsForProjectEvaluationAssembly(catalog, walk.assembly, room);
-          if (
-            (issue !== undefined && live?.frontier !== roomOrder(walk.project, room).length) ||
-            walk.appliedCommands.some((command) => command.kind === 'SelectEncounter')
-          )
+          if (issue !== undefined && live?.frontier !== roomOrder(walk.project, room).length) {
+            counts.stoppedInRoom += 1;
             continue;
-          const restored = new Set(roomOrder(walk.project, room).map(roomActionKey));
+          }
+          // An encounter the walk chose may no longer require the stripped contact.
+          if (walk.appliedCommands.some((command) => command.kind === 'SelectEncounter')) {
+            counts.encounterChosen += 1;
+            continue;
+          }
+          const restored = new Set(roomActionKeys(walk.project, room));
           const missing = [...required].filter((key) => !restored.has(key));
-          if (missing.length > 0) failures.push(`${occurrence.occurrenceId}: missing ${missing}`);
+          if (missing.length > 0) failures.push(`${name}: missing ${missing}`);
+          else counts.restored += 1;
         }
-      expect(failures, id).toEqual([]);
-    },
-  );
-
-  it('witnessed the golden rooms', () => {
-    expect(witnessed.size).toBeGreaterThan(90);
+    }
+    expect(failures).toEqual([]);
+    expect(counts).toEqual(PINNED_COUNTS);
   });
 
   it('places a deferred Ship wheel reward the live product does not offer yet', () => {
@@ -227,10 +316,18 @@ describe('Draft places what a room requires from the live product', () => {
       gap.items.flatMap((item) => item.actions.map((action) => roomActionKey(action.reference))),
     );
     expect(offered).not.toContain(roomActionKey(reward));
-    const walk = restore(project, project.route.itineraryBiomeKeys.indexOf('O'), room, stripped);
-    expect(walk.appliedCommands).toContainEqual(
-      expect.objectContaining({ kind: 'InsertRoomAction', reference: reward }),
+    const { walk, placements } = restore(
+      project,
+      project.route.itineraryBiomeKeys.indexOf('O'),
+      room,
+      stripped,
     );
+    expect(placements).toEqual([
+      {
+        command: expect.objectContaining({ kind: 'InsertRoomAction', reference: reward }),
+        offered: false,
+      },
+    ]);
     expect(isRoomPlacement(walk.assembly, room)).toBe(false);
     expect(roomActionKeys(walk.project, room)).toEqual(
       kept(order, roomActionKeys(walk.project, room)),
@@ -261,9 +358,15 @@ describe('Draft places what a room requires from the live product', () => {
     expect(stripped.evaluation.issue?.reasons[0]?.code).toBe(
       'hermesShrineDeliveryPlacementRequired',
     );
-    const walk = restore(project, project.route.itineraryBiomeKeys.indexOf('P'), pCombat, stripped);
-    expect(walk.appliedCommands).toEqual([
-      expect.objectContaining({ kind: 'PlaceHermesShrineDelivery' }),
+    const { walk, placements } = restore(
+      project,
+      project.route.itineraryBiomeKeys.indexOf('P'),
+      pCombat,
+      stripped,
+    );
+    expect(walk.appliedCommands).toHaveLength(1);
+    expect(placements).toEqual([
+      { command: expect.objectContaining({ kind: 'PlaceHermesShrineDelivery' }), offered: true },
     ]);
     expect(isRoomPlacement(walk.assembly, pCombat)).toBe(false);
     // The frontier's placement, where the walk stands, rather than settlement's due contact.

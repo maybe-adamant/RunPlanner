@@ -11,7 +11,7 @@ import { createDraftRng } from '../../src/rng';
 import { draftGodSchedule, type DraftGodSchedule } from '../../src/schedule';
 import { draftBasketTraitKeys, draftLoadoutProject } from '../../src/spec';
 import { DraftWalk } from '../../src/walk';
-import { createAuthoringSession } from '@run-planner/engine/authoring';
+import { createAuthoringSession, type AuthoringSession } from '@run-planner/engine/authoring';
 import { DraftSteering } from '../../src/steering';
 import { createDraftPrerequisites } from '../../src/prerequisites';
 import { draftWorld } from '../../src/world';
@@ -37,6 +37,8 @@ export function startDraftWalk(
   options: {
     readonly from?: ProjectEvaluationAssembly;
     readonly scheduleSeed?: number;
+    /** Wraps the walk's authoring session, to observe the commands it settles. */
+    readonly observe?: (session: AuthoringSession) => AuthoringSession;
   } = {},
 ): DraftWalk {
   const route = base.route;
@@ -53,7 +55,7 @@ export function startDraftWalk(
     simulateProjectAssembly(catalog, draftLoadoutProject(catalog, base, spec.loadout));
   return new DraftWalk(
     catalog,
-    createAuthoringSession(catalog, start),
+    (options.observe ?? ((session) => session))(createAuthoringSession(catalog, start)),
     spec,
     createDraftRng(seed),
     schedule,
