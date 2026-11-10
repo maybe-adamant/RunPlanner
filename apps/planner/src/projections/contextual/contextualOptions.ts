@@ -716,12 +716,12 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'hermesShrineDeliveryPlacementRequired':
       return {
         kind: 'acquisition',
-        message: 'Restore this missing Shrine delivery at its due room.',
+        message: 'Collect this Shrine delivery in its due room.',
       };
     case 'echoGoldPickupPlacementRequired':
       return {
         kind: 'acquisition',
-        message: 'Restore this missing Gold Gold Gold pickup on the Timeline.',
+        message: 'Collect this Gold Gold Gold pickup on the Timeline.',
       };
     case 'roomActionOrderUnavailable':
     case 'roomActionPlacementRequired':

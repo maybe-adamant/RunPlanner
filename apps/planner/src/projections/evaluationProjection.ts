@@ -526,16 +526,16 @@ export const findingCopy = {
     title: 'Shrine offer unavailable',
   },
   hermesShrineDeliveryPlacementRequired: {
-    title: 'Restore Shrine delivery',
+    title: 'Collect Shrine delivery',
   },
   echoGoldPickupPlacementRequired: {
-    title: 'Restore Gold Gold Gold pickup',
+    title: 'Collect Gold Gold Gold pickup before leaving',
   },
   roomActionOrderUnavailable: {
     title: 'Action out of order',
   },
   roomActionPlacementRequired: {
-    title: 'Restore required action',
+    title: 'Required action not taken',
   },
   hermesShrineTravelDealRefillMissing: {
     title: 'Choose Travel Deal offer',
@@ -899,6 +899,64 @@ function requiredFirstLabel(
   return actionKey === undefined ? undefined : labels?.roomAction?.(finding.origin, actionKey);
 }
 
+/** A Timeline row's label as the act it names, for "before …": Choose X wheel → choosing the X wheel. */
+const DEADLINE_ACTS: Readonly<Record<string, string>> = {
+  Choose: 'choosing the',
+  Clear: 'clearing',
+  Collect: 'collecting',
+  Use: 'using',
+};
+
+function deadlineAct(label: string): string {
+  const [verb, ...rest] = label.split(' ');
+  const act = verb === undefined ? undefined : DEADLINE_ACTS[verb];
+  return act === undefined || rest.length === 0 ? label : `${act} ${rest.join(' ')}`;
+}
+
+/** When an unplaced required item falls due, as the walk stopped on it. */
+function requiredDeadlineCopy(
+  finding: SemanticFinding,
+  labels: FindingLabels | undefined,
+): string | undefined {
+  switch (evidenceString(finding.evidence.deadline)) {
+    case 'doorsOpen':
+      return 'before the doors open';
+    case 'leave':
+      return 'before leaving';
+    case 'encounter':
+      return 'before the fight';
+    case 'phaseEnd':
+      return 'before this phase ends';
+    case 'action': {
+      const actionKey = evidenceString(finding.evidence.deadlineAction);
+      const action =
+        actionKey === undefined ? undefined : labels?.roomAction?.(finding.origin, actionKey);
+      return action === undefined ? undefined : `before ${deadlineAct(action)}`;
+    }
+    default:
+      return undefined;
+  }
+}
+
+/** A required item left unplaced, named by its own row and when it falls due. */
+function requiredPlacementTitle(
+  finding: SemanticFinding,
+  labels: FindingLabels | undefined,
+): string | undefined {
+  const origin = finding.origin;
+  const what =
+    finding.code === 'hermesShrineDeliveryPlacementRequired'
+      ? 'Collect Shrine delivery'
+      : finding.code === 'echoGoldPickupPlacementRequired'
+        ? 'Collect Gold Gold Gold pickup'
+        : origin.kind === 'roomAction'
+          ? labels?.roomAction?.(origin, origin.actionKey)
+          : undefined;
+  if (what === undefined) return undefined;
+  const deadline = requiredDeadlineCopy(finding, labels);
+  return deadline === undefined ? what : `${what} ${deadline}`;
+}
+
 function evidenceString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
@@ -1137,6 +1195,14 @@ export function presentFinding(
       return Object.freeze({ title: 'Supply Chain pickup cannot occur here' });
     }
   }
+  if (
+    finding.code === 'roomActionPlacementRequired' ||
+    finding.code === 'hermesShrineDeliveryPlacementRequired' ||
+    finding.code === 'echoGoldPickupPlacementRequired'
+  ) {
+    const title = requiredPlacementTitle(finding, labels);
+    if (title !== undefined) return Object.freeze({ title: fittingTitle([title]) });
+  }
   if (finding.code === 'roomActionOrderUnavailable') {
     if (finding.evidence.reason === 'requiredFirst')
       return Object.freeze({
@@ -1241,7 +1307,7 @@ const countedTitles: Partial<Record<FindingCode, (count: number) => string>> = {
   targetMissing: (n) => `Choose ${n} rooms`,
   traitOfferMissing: (n) => `Choose ${n} trait offers`,
   roomActionOrderUnavailable: (n) => `${n} actions out of order`,
-  roomActionPlacementRequired: (n) => `Restore ${n} required actions`,
+  roomActionPlacementRequired: (n) => `${n} required actions not taken`,
   purgingPoolTraitMissing: (n) => `Choose ${n} Pool of Purging traits`,
   hermesShrineInventoryMissing: (n) => `Choose ${n} Shrine offers`,
   stygianWellMissing: (n) => `Choose ${n} Well offers`,
