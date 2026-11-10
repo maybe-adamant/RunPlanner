@@ -1597,21 +1597,28 @@ export class DraftWalk {
     let changed = false;
     for (;;) {
       const live = liveActionsForProjectEvaluationAssembly(this.catalog, this.assembly, room);
-      const placement = live === undefined ? undefined : requiredPlacement(live, placed);
-      if (placement === undefined) break;
+      if (live === undefined) return changed;
+      const placement = requiredPlacement(live, placed);
+      if (placement === undefined) return changed || this.placeUnofferedRequiredActions(room, live);
       placed.add(roomActionKey(placement.reference));
+      // A refused placement is the walk's dead end here, never a reason to place it elsewhere.
       if (!this.apply(placement.command)) return changed;
       changed = true;
     }
-    return changed || this.placeUnofferedRequiredActions(room);
   }
 
   /**
-   * Inserts each required action of the room missing from its order at its canonical default.
-   * Only when the live product offers none: the walk stops a deferred Ship wheel's encounter
-   * end while its reward is unplaced, before that reward spawns, so it is never live.
+   * Inserts at its canonical default each required action of the room that is missing from its
+   * order and that no action of the live product names at any gap. Only a deferred Ship wheel's
+   * reward is such a row today: the walk stops at its encounter end while it is unplaced, before
+   * it spawns, so it is never live.
    */
-  private placeUnofferedRequiredActions(room: OccurrenceAddress): boolean {
+  private placeUnofferedRequiredActions(room: OccurrenceAddress, live: RoomLiveActions): boolean {
+    const offered = new Set(
+      live.gaps.flatMap((gap) =>
+        gap.items.flatMap((item) => item.actions.map((action) => roomActionKey(action.reference))),
+      ),
+    );
     const biome = createBiomeAddress(room.routeKey, room.biomeKey);
     const located = roomActionDomainForOccurrence(
       this.project,
@@ -1624,7 +1631,8 @@ export class DraftWalk {
     const missing = located.domain.contributions.flatMap((entry) =>
       entry.kind === 'action' &&
       entry.participation === 'required' &&
-      !authored.has(roomActionKey(entry.reference))
+      !authored.has(roomActionKey(entry.reference)) &&
+      !offered.has(roomActionKey(entry.reference))
         ? [entry.reference]
         : [],
     );
