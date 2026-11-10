@@ -575,10 +575,13 @@ Never removed:
 The **Reset from here** command is the explicit exception: it removes rows
 after a point at the owner's request, silently in its own room.
 
-Older files, temporarily: a loaded document keeps the stale rows it holds
-until an edit changes their room, which then removes them, and keeps a row
-whose source was already gone with its finding. Both asymmetries end at the
-next major schema revision, whose upgrade cleans older files once.
+A plan saved before schema 103 is settled once when it is opened, as this
+procedure would have left it: every row the walk reaches is judged as though
+it had just lost what it lacks, and every batch's doors settle. Rows the
+procedure keeps invalid stay with their findings, and rows the walk does not
+reach or of rooms the run does not enter stay untouched. Every removal is
+announced, and one Undo restores the plan as saved. A stale row a plan still
+holds, such as one that Undo restores, goes at the next edit of its room.
 
 A batch's door is classified the same way: its context is its source room's
 declared exit, and the rooms behind a removed door go with it

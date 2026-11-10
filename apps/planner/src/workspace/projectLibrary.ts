@@ -3,6 +3,7 @@ import {
   createProjectAddress,
   createProjectHistory,
   encodeProjectDocument,
+  publishProjectHistoryEdit,
   reidentifyProjectHistory,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -12,6 +13,7 @@ import {
   LOADABLE_PROJECT_SCHEMAS,
   loadProjectDocument,
   type ProjectMigrationProvenance,
+  type ProjectUpgrade,
 } from '../persistence/projectDocumentLoader';
 import {
   EMPTY_LIBRARY_SESSION,
@@ -101,6 +103,8 @@ export interface FiledPlan {
   readonly key: string;
   readonly project: ProjectDocument;
   readonly migrationProvenance: readonly ProjectMigrationProvenance[];
+  /** What settling a plan saved before schema 103 changed, opened one Undo away. */
+  readonly upgrade?: ProjectUpgrade;
   /** The stored file is in an older schema, so its first write rewrites the original. */
   readonly olderOnDisk: boolean;
 }
@@ -287,8 +291,15 @@ export function createProjectLibraryOperations(
     entry: ProjectLibraryEntry,
     project: ProjectDocument,
     migrationProvenance: readonly ProjectMigrationProvenance[] = [],
+    upgrade?: ProjectUpgrade,
   ): FiledPlan =>
-    Object.freeze({ key: entry.key, project, migrationProvenance, olderOnDisk: false });
+    Object.freeze({
+      key: entry.key,
+      project,
+      migrationProvenance,
+      ...(upgrade === undefined ? {} : { upgrade }),
+      olderOnDisk: false,
+    });
   const heldIdentities = async (): Promise<ReadonlySet<string>> =>
     new Set(
       (await adapter.list()).entries
@@ -388,11 +399,12 @@ export function createProjectLibraryOperations(
   };
 
   const read = async (key: string): Promise<FiledPlan> => {
-    const { project, migrationProvenance } = load(await adapter.read(key), key);
+    const { project, migrationProvenance, upgrade } = load(await adapter.read(key), key);
     return Object.freeze({
       key,
       project,
       migrationProvenance,
+      ...(upgrade === undefined ? {} : { upgrade }),
       olderOnDisk: migrationProvenance.length > 0,
     });
   };
@@ -403,22 +415,32 @@ export function createProjectLibraryOperations(
     importOptions: ImportFileOptions = {},
   ): Promise<FiledPlan> => {
     const loaded = load(file.json, file.fileName, importOptions.legacyName);
-    const { migrationProvenance } = loaded;
-    const project =
+    const { migrationProvenance, upgrade } = loaded;
+    const named = (document: ProjectDocument) =>
       importOptions.name === undefined
-        ? loaded.project
-        : applyProjectCommand(loaded.project, catalog, {
+        ? document
+        : applyProjectCommand(document, catalog, {
             kind: 'RenameProject',
             project: createProjectAddress(),
             name: importOptions.name,
           });
+    // The plan as saved, which Undo restores, takes the same name and identity as its copy.
+    const history =
+      upgrade === undefined
+        ? createProjectHistory(named(loaded.project))
+        : publishProjectHistoryEdit(
+            createProjectHistory(named(upgrade.before)),
+            named(loaded.project),
+          );
     const fresh =
-      importOptions.newIdentity === true || (await heldIdentities()).has(project.projectId);
-    const copy = fresh ? reidentified(project) : project;
+      importOptions.newIdentity === true || (await heldIdentities()).has(history.present.projectId);
+    const copied = fresh ? reidentifyProjectHistory(history, mintProjectId()) : history;
+    const copy = copied.present;
     return filed(
       await adapter.create(encodeProjectDocument(copy), importOptions.folder ?? ''),
       copy,
       migrationProvenance,
+      upgrade === undefined ? undefined : Object.freeze({ ...upgrade, before: copied.past[0]! }),
     );
   };
 

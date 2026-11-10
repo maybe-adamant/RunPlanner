@@ -146,8 +146,12 @@ sequenceDiagram
   App->>App: publish to history
 ```
 
-Loading and projection remain read-only, and Undo/Redo restore the settled
-snapshots.
+The upgrade settlement settles a plan saved before schema 103 the same way,
+once when it is opened and with no command: every row the walk reaches is
+judged as though it had just lost what it lacks, every batch's doors settle,
+every removal is announced, and nothing the policy keeps is removed. Loading a
+current plan and projection remain read-only, and Undo/Redo restore the
+settled snapshots.
 
 Evaluation rebuilds synchronously for a new authored snapshot. Application
 caching may reuse a complete assembly for the identical immutable project,

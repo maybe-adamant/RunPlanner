@@ -31,6 +31,23 @@ npm run test:schema:migrate
 
 ## History
 
+Schema 103 changes no saved shape: it marks the plans saved after the settlement
+rules for [rows whose context or source is gone](../docs/design/ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
+and [exit capacity](../docs/design/AUTHORED_PROJECT_MODEL.md#exit-capacity)
+covered every edit. The migration only changes the version and accepts schema
+102 through its final revision 1. A plan saved before 103 is then settled once,
+by the application on opening and by the offline tool before writing: stale
+room-action rows go; a Gold Gold Gold duplicate whose Echo is gone, a matured
+trait drop whose trait the run no longer takes, a countdown Hermes delivery
+whose purchase is gone and a door or cage reroll whose cage no longer plays
+go; an unselected door its source room no longer has goes with the rooms
+behind it, and a takeover batch gains the Preboss doors it lacks. A Travel
+Deal refill without Travel Deal and a taken door its room lost stay with their
+findings, and rows of rooms the walk does not reach stay untouched. A due
+delivery the plan lacks is placed, as any edit places it. The application
+announces the removals and opens the plan one Undo ahead of it as saved. The
+plan wire's schema pair becomes 103.0.
+
 Revision 102.1 gives every unset position a meaning: a rolled flip, an entry
 the game picks among ties, an anchor object's anchor, a Fields cage, optional
 reward or Nemesis point and a Chaos gate's spawn point each take a stable

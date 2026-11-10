@@ -5,6 +5,11 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { RemovedStaleRoomActions, SettlementFault } from '@run-planner/engine/simulation';
+import {
+  OUTPUT_SCHEMA_VERSION as UPGRADE_SETTLEMENT_SCHEMA_VERSION,
+  settleUpgradedProject,
+} from './project-102-to-103.js';
 import { PROJECT_TRANSITION_STEPS } from './project-transitions.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
@@ -45,9 +50,22 @@ export interface ProjectMigrationProvenance {
   readonly targetSchemaVersion: number;
 }
 
+/**
+ * What settling a plan saved before schema 103 changed: the plan as saved, read at the current
+ * schema, which one Undo restores, and the removals to announce.
+ */
+export interface ProjectUpgrade {
+  readonly before: ProjectDocument;
+  readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
+  readonly fault?: SettlementFault;
+}
+
 export interface LoadedProjectDocument {
   readonly migrationProvenance: readonly ProjectMigrationProvenance[];
+  /** The plan to open: settled once when it was saved before schema 103. */
   readonly project: ProjectDocument;
+  /** Present when that settlement changed the plan or faulted. */
+  readonly upgrade?: ProjectUpgrade;
 }
 
 /** The registered transitions, each opening against the catalog the document loads under. */
@@ -117,9 +135,27 @@ export function loadProjectDocument(
   if (migratedJson === undefined) {
     throw new Error('Project migration result must be JSON serializable.');
   }
+  const before = parseProjectDocument(migratedJson, catalog);
+  if (envelope.schemaVersion >= UPGRADE_SETTLEMENT_SCHEMA_VERSION) {
+    return Object.freeze({ migrationProvenance: migrated.migrationProvenance, project: before });
+  }
+  // A plan saved under the earlier settlement rules is settled once, as they now would.
+  const settled = settleUpgradedProject(before, catalog);
+  const project = settled.assembly.project;
   return Object.freeze({
     migrationProvenance: migrated.migrationProvenance,
-    project: parseProjectDocument(migratedJson, catalog),
+    project,
+    ...(project === before && settled.fault === undefined
+      ? {}
+      : {
+          upgrade: Object.freeze({
+            before,
+            ...(settled.removedStaleActions === undefined
+              ? {}
+              : { removedStaleActions: settled.removedStaleActions }),
+            ...(settled.fault === undefined ? {} : { fault: settled.fault }),
+          }),
+        }),
   });
 }
 

@@ -10,7 +10,14 @@ import { runnerImport } from 'vite';
 
 // The transitions and the catalog they open against, as the application loader runs them.
 const {
-  module: { PROJECT_TRANSITION_STEPS, catalog },
+  module: {
+    PROJECT_TRANSITION_STEPS,
+    UPGRADE_SETTLEMENT_SCHEMA_VERSION,
+    catalog,
+    encodeProjectDocument,
+    parseProjectDocument,
+    settleUpgradedProject,
+  },
 } = await runnerImport(fileURLToPath(new URL('./current-schema.js', import.meta.url)), {
   configFile: false,
   logLevel: 'silent',
@@ -56,8 +63,9 @@ export function outputPath(inputPath, schemaVersion = CURRENT_SCHEMA_VERSION) {
 
 /**
  * Migrates a document from its own `schemaVersion` to `target` (the current schema by
- * default), applying each transition in order against the current catalog. `context.name`
- * names the plan when the chain crosses schema 98.
+ * default), applying each transition in order against the current catalog; a plan saved before
+ * schema 103 and migrated to the current schema is settled once. `context.name` names the plan when the chain
+ * crosses schema 98.
  */
 export function migrateProjectDocumentTo(
   document,
@@ -77,6 +85,19 @@ export function migrateProjectDocumentTo(
     if (transition.source < source) continue;
     if (transition.target > target) break;
     migrated = transition.migrate(migrated, { ...context, catalog });
+  }
+  // A plan saved before schema 103 is settled once at the current schema, as the application
+  // settles it on opening; a document strict decoding rejects is left for it to reject.
+  if (source < UPGRADE_SETTLEMENT_SCHEMA_VERSION && target === CURRENT_SCHEMA_VERSION) {
+    let project;
+    try {
+      project = parseProjectDocument(JSON.stringify(migrated), catalog);
+    } catch {
+      return migrated;
+    }
+    migrated = JSON.parse(
+      encodeProjectDocument(settleUpgradedProject(project, catalog).assembly.project),
+    );
   }
   return migrated;
 }
