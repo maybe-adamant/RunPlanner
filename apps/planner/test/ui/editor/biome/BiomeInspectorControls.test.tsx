@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
+import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
+import { goToStopLabel } from '@planner/projections/walkStopCopy';
 import { hintOf } from '@planner-test/support/hints';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -79,12 +81,14 @@ function renderProjectedBiome(application: PlannerApplication, biome: WorkspaceB
   const workspace = workspaceProjection(application);
   return render(
     <Provider store={application.store}>
-      <BiomeWorkspace
-        biome={biome}
-        focusByOwner={workspace.focusByOwner}
-        interactions={workspace.interactions}
-        runStateLaunchers={workspace.runStateLaunchers}
-      />
+      <FindingTargetScope findings={workspace.findingsByRepairTarget} walkStop={workspace.walkStop}>
+        <BiomeWorkspace
+          biome={biome}
+          focusByOwner={workspace.focusByOwner}
+          interactions={workspace.interactions}
+          runStateLaunchers={workspace.runStateLaunchers}
+        />
+      </FindingTargetScope>
     </Provider>,
   );
 }
@@ -221,10 +225,8 @@ describe('Biome inspector controls', () => {
       within(inspector).queryByRole('region', { name: 'Start room configuration' }),
     ).toBeNull();
     expect(within(inspector).queryByRole('tab')).toBeNull();
-    expect(within(inspector).getByText('Room not reached')).toBeTruthy();
-    expect(
-      within(inspector).getByRole('button', { name: 'Go to where the plan stops' }),
-    ).toBeTruthy();
+    expect(inspector.querySelector('article[data-not-reached]')).not.toBeNull();
+    expect(within(inspector).getByRole('button', { name: goToStopLabel })).toBeTruthy();
   });
 
   it('edits entry identity in Overview only and undoes exactly', async () => {

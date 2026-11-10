@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
+import { goToStopLabel } from '@planner/projections/walkStopCopy';
 import { hintOf } from '@planner-test/support/hints';
 import { catalog } from '@run-planner/hades2-catalog';
 import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
@@ -106,12 +108,14 @@ function renderProjectedBiome(application: PlannerApplication, biome: WorkspaceB
   const workspace = workspaceProjection(application);
   return render(
     <Provider store={application.store}>
-      <BiomeWorkspace
-        biome={biome}
-        focusByOwner={workspace.focusByOwner}
-        interactions={workspace.interactions}
-        runStateLaunchers={workspace.runStateLaunchers}
-      />
+      <FindingTargetScope findings={workspace.findingsByRepairTarget} walkStop={workspace.walkStop}>
+        <BiomeWorkspace
+          biome={biome}
+          focusByOwner={workspace.focusByOwner}
+          interactions={workspace.interactions}
+          runStateLaunchers={workspace.runStateLaunchers}
+        />
+      </FindingTargetScope>
     </Provider>,
   );
 }
@@ -962,7 +966,7 @@ describe('BiomeWorkspace', () => {
     // An earlier biome stops the walk: this one waits, its start unshown.
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(within(inspector).queryByRole('button', { name: 'Starting room' })).toBeNull();
-    expect(within(inspector).getByText('Room not reached')).toBeTruthy();
+    expect(inspector.querySelector('article[data-not-reached]')).not.toBeNull();
   });
 
   it('renders Ephyra primary rewards on fixed stages, decision selections, and authored Hub visits', async () => {
@@ -1581,7 +1585,7 @@ describe('BiomeWorkspace', () => {
     // The Pre-Hub is past the stop: its doors, Hub candidate included, wait unshown.
     act(() => view.application.store.dispatch(semanticOwnerFocused(terminalOwner)));
     expect(screen.queryByRole('button', { name: 'Door 1 room' })).toBeNull();
-    expect(screen.getByText('Room not reached')).toBeTruthy();
+    expect(document.querySelector('article[data-not-reached]')).not.toBeNull();
     expect(
       workspaceBiome(view.application, 'Surface', 'N').nodes.some(
         (node) => node.kind === 'hubDecision',
@@ -1851,7 +1855,7 @@ describe('BiomeWorkspace', () => {
       // Past the Hub's stop the Preboss shows none of its content.
       const control = offerControl();
       expect(control === undefined).toBe(locked);
-      expect(screen.queryByText('Room not reached') !== null).toBe(locked);
+      expect(document.querySelector('article[data-not-reached]') !== null).toBe(locked);
       if (!locked) expect(control?.dataset.authoringLocked).toBeUndefined();
       cleanup();
     }
@@ -1948,9 +1952,7 @@ describe('BiomeWorkspace', () => {
     // Its room lies past the stop: only the link back to the Intro's doors shows.
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(within(inspector).queryByRole('tab')).toBeNull();
-    await view.user.click(
-      within(inspector).getByRole('button', { name: 'Go to where the plan stops' }),
-    );
+    await view.user.click(within(inspector).getByRole('button', { name: goToStopLabel }));
     expect(selectedRailMarkerKeys(structure)).toEqual([introKey]);
     expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
@@ -1984,7 +1986,7 @@ describe('BiomeWorkspace', () => {
 
     // Retained past the walk's stop, the room shows only that it is not reached.
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(within(inspector).getByText('Room not reached')).toBeTruthy();
+    expect(inspector.querySelector('article[data-not-reached]')).not.toBeNull();
     expect(doorWorkbench(inspector)).toBeNull();
   });
 

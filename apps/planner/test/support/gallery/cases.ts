@@ -71,6 +71,7 @@ import {
 import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
 import {
   createGoldenFGHIProject,
+  createUnderworldFWellCheckpoint,
   loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
@@ -1796,6 +1797,110 @@ export const galleryCases: readonly GalleryCase[] = [
     project: loadSurfaceNOPQCheckpoint,
     commands: [unofferableRarity('N', 'surface-n-combat05', 'self')],
     target: room('N', 'surface-n-combat05'),
+  },
+  // Opening a biome holding the walk's stop lands on the stop, as its repair link does.
+  {
+    id: 'stop-notice-open-biome-overview',
+    opensBiome: true,
+    label: 'Biome opened with a stop in a room Overview',
+    shows: ['opens on the stop'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceRoomLayout',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b1-e1'),
+        layout: { flipped: false },
+      }),
+    ],
+    target: room('F', 'golden-f-b1-e1'),
+  },
+  {
+    id: 'stop-notice-open-biome-row',
+    opensBiome: true,
+    findingPill: true,
+    label: 'Biome opened with a stop at a Timeline row',
+    shows: ['opens on the stop'],
+    project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
+    commands: [unofferableRarity('O', 'surface-o-devotion', 'spurnedSource')],
+    target: room('O', 'surface-o-devotion'),
+  },
+  {
+    id: 'stop-notice-past-hub',
+    overview: true,
+    label: 'Past the stop: the Hub',
+    shows: ['Hub not reached', 'link to the stop'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [unofferableRarity('N', 'surface-n-prehub', 'source')],
+    target: hub('N'),
+  },
+  {
+    id: 'stop-notice-loadout',
+    label: 'Past the stop: a room while the Loadout stops the plan',
+    shows: ['room not reached', 'link to the Loadout'],
+    findingPill: true,
+    project: createGoldenFGHIProject,
+    commands: [
+      {
+        kind: 'ReplaceStartingKeepsake',
+        keepsakeKey: 'HadesAndPersephoneKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      },
+    ],
+    target: room('F', 'golden-f-b1-e1'),
+  },
+  {
+    id: 'stop-notice-required-first',
+    findingPill: true,
+    label: 'A Well purchase ordered before the Postboss fountain',
+    shows: ['must come first finding', 'stop at a row'],
+    project: () => createUnderworldFWellCheckpoint(false),
+    commands: [
+      (project) => {
+        const postboss = 'golden-f-preboss-shop:postboss';
+        const purchase = project.route.biomes
+          .find((biome) => biome.biomeKey === 'F')
+          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === postboss)
+          ?.roomActions.order.find((reference) => reference.kind === 'purchaseStygianWellOffer');
+        if (purchase === undefined) throw new Error('missing Well purchase');
+        return {
+          kind: 'MoveRoomAction',
+          action: createRoomActionAddress(
+            createBiomeAddress('Underworld', 'F'),
+            createOccurrenceId(postboss),
+            roomActionKey(purchase),
+          ),
+          toIndex: 0,
+        };
+      },
+    ],
+    target: room('F', 'golden-f-preboss-shop:postboss'),
+  },
+  {
+    id: 'stop-notice-required-first-pickup',
+    findingPill: true,
+    label: 'A Well purchase ordered before the room reward pickup',
+    shows: ['must come first finding', 'stop at a row'],
+    project: () => underworldCheckpointArtifacts['underworld-f-trait-order-checks'].load(),
+    commands: [
+      (project) => {
+        const occurrenceId = '8bf76f54-d35c-44dc-a243-4e3d1f37300c';
+        const purchase = project.route.biomes
+          .find((biome) => biome.biomeKey === 'F')
+          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+          ?.roomActions.order.find((reference) => reference.kind === 'purchaseStygianWellOffer');
+        if (purchase === undefined) throw new Error('missing Well purchase');
+        return {
+          kind: 'MoveRoomAction',
+          action: createRoomActionAddress(
+            createBiomeAddress('Underworld', 'F'),
+            createOccurrenceId(occurrenceId),
+            roomActionKey(purchase),
+          ),
+          toIndex: 0,
+        };
+      },
+    ],
+    target: room('F', '8bf76f54-d35c-44dc-a243-4e3d1f37300c'),
   },
   // Past the walk's stop: rooms stay on the rail, dimmed, and show only that they are not reached.
   ...(

@@ -655,25 +655,24 @@ describe('timeline finding guidance', () => {
     });
   });
 
-  it('names the required action a row must follow', () => {
-    const requiredFirst = (requiredAction: string): SemanticFinding => ({
+  it('names the required action a row must follow by its row in the room', () => {
+    const requiredAction = roomActionKey({ kind: 'useFountain' });
+    const requiredFirst: SemanticFinding = {
       ...finding('requiredFirst'),
       evidence: { reason: 'requiredFirst', requiredAction },
-    });
-    expect(presentFinding(requiredFirst(roomActionKey({ kind: 'useFountain' })))).toEqual({
-      title: 'Use Fountain must come first',
-    });
+    };
+    const rows = new Map([[requiredAction, 'Use Fountain of Restoration']]);
     expect(
-      presentFinding(
-        requiredFirst(
-          roomActionKey({
-            kind: 'interactIncomingReward',
-            producerPoint: 'roomRewardPickup',
-            acquisitionRole: 'self',
-          }),
-        ),
-      ).title,
-    ).toBe('A required pickup must come first');
+      presentFinding(requiredFirst, {
+        ...catalogFindingLabels(catalog),
+        roomAction: (owner, actionKey) =>
+          semanticAddressKey(owner) === semanticAddressKey(requiredFirst.origin)
+            ? rows.get(actionKey)
+            : undefined,
+      }).title,
+    ).toBe('Use Fountain of Restoration must come first');
+    // Without the room's projected rows the title stays neutral.
+    expect(presentFinding(requiredFirst).title).toBe('A required action must come first');
   });
 
   it.each([

@@ -572,8 +572,8 @@ export interface WorkspaceShipPhasePresentation {
   readonly timeline: readonly WorkspaceRoomLifecycleTimelineEntry[];
   /** This phase's authored rows past the room's stop, waiting until the walk reaches them. */
   readonly notReached?: WorkspaceRoomActions['timeline']['notReached'];
-  /** What to fix first while the walk stops before this phase, such as an earlier phase. */
-  readonly waitsOn?: string;
+  /** Where the walk stops before this phase: its room's Overview, or an earlier phase. */
+  readonly waitsOn?: import('./contracts/timeline').WorkspaceTimelineWait;
   /** Active optional actions owned by this phase but not yet inserted. */
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
   /** The room objects' entries, on the last phase, where a new action is appended. */

@@ -1045,8 +1045,12 @@ export interface StructuredWorkspaceProjection {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly marker: WorkspaceMarker;
   readonly runStateLaunchers: ReadonlyMap<string, WorkspaceRunStateLauncher>;
+  /** A Timeline row's label, in the projected room holding the owner. */
+  readonly roomActionLabel: (owner: SemanticAddress, actionKey: string) => string | undefined;
   readonly route: WorkspaceRoute;
   readonly status: WorkspaceStatus;
+  /** Where the walk stops, with the way there; absent when nothing stops it. */
+  readonly walkStop?: import('@planner/projections/evaluationProjection').WalkStop;
 }
 
 export interface StructuredWorkspaceProjectionService {

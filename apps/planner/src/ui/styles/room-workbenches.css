@@ -3593,28 +3593,19 @@ span.hub-board-status-line {
   font-weight: 400;
 }
 
-/* A Timeline that waits on an earlier repair says so in one plain line. */
-.room-timeline-waits-on {
+/* Where the plan stops, in one plain line, with the link there. */
+.stop-notice {
   margin: 0;
   padding: 8px var(--timeline-title-x, 8px);
   color: var(--muted);
 }
 
-/* A room past the walk's stop shows only that it is not reached and the way to the stop. */
-.room-not-reached-body {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 16px;
+/* A room or Hub past the stop shows the notice alone under its title. */
+.room-not-reached .stop-notice {
   padding: 12px 16px;
-  color: var(--muted);
 }
 
-.room-not-reached-body p {
-  margin: 0;
-}
-
-.room-not-reached-link {
+.stop-notice-link {
   padding: 0;
   border: 0;
   color: var(--selection-accent);
@@ -3625,7 +3616,7 @@ span.hub-board-status-line {
   cursor: pointer;
 }
 
-.room-not-reached-link:disabled {
+.stop-notice-link:disabled {
   color: var(--muted);
   cursor: default;
 }

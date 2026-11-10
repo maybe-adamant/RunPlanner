@@ -289,7 +289,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       );
     });
     // The new encounter stops the walk in the Overview: the Timeline, wave and all, waits.
-    expect(screen.getByText('Fix the Overview first.')).toBeTruthy();
+    expect(document.querySelector('[data-stop-notice="overview"]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: /^Aetos appearance: / })).toBeNull();
     expect(aetosWave()).toBe(2);
   });

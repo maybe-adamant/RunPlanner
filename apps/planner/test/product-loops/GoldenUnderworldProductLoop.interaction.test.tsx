@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { goToStopLabel } from '@planner/projections/walkStopCopy';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
@@ -693,7 +694,7 @@ describe('underworld product loop', () => {
     expect(screen.queryByRole('tab', { name: 'Room Timeline' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Door 1 room' })).toBeNull();
     const before = currentProject(application);
-    await view.user.click(screen.getByRole('button', { name: 'Go to where the plan stops' }));
+    await view.user.click(screen.getByRole('button', { name: goToStopLabel }));
     expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'F',

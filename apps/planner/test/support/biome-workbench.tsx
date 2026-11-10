@@ -66,7 +66,11 @@ function ProjectedHarness({ application, biomeKey, renderBiome, routeKey }: Proj
     <FindingTargetScope
       authoringReadiness={workspace.authoringReadiness}
       findings={workspace.findingsByRepairTarget}
-      labels={projectFindingLabels(catalog, project)}
+      labels={{
+        ...projectFindingLabels(catalog, project),
+        roomAction: workspace.roomActionLabel,
+      }}
+      walkStop={workspace.walkStop}
     >
       {renderBiome(biome, workspace)}
       {traitDialogTarget === null ? null : (

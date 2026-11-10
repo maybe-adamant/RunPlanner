@@ -1,4 +1,5 @@
 import { FeatureRollEntry, FeatureRollSlots } from './commerce/FeatureRollInteract';
+import { StopNotice } from './StopNotice';
 import { ArtworkChip } from '../rewards/TimelineChip';
 import { Fragment, useId, useState, type ReactNode } from 'react';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
@@ -352,11 +353,6 @@ function NotReachedGroup({
       </ol>
     </section>
   );
-}
-
-/** The one line of a Timeline that waits on an earlier part of the plan. */
-function TimelineWaitsOn({ label }: { readonly label: string }) {
-  return <p className="room-timeline-waits-on">Fix {label} first.</p>;
 }
 
 export function RoomActionsWorkbench({
@@ -1252,7 +1248,7 @@ export function RoomActionsWorkbench({
                     )}
                     {phase.waitsOn === undefined ? null : (
                       <>
-                        <TimelineWaitsOn label={phase.waitsOn} />
+                        <StopNotice at={phase.waitsOn} />
                         {doorsTail([]) === null ? null : (
                           <ol aria-label={`${phase.label} timeline`} className="room-action-list">
                             {doorsTail([])}
@@ -1361,7 +1357,7 @@ export function RoomActionsWorkbench({
           </ol>
         ) : (
           <>
-            <TimelineWaitsOn label={actions.timeline.waitsOn} />
+            <StopNotice at={actions.timeline.waitsOn} />
             {doorsTail([]) === null ? null : (
               <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
                 {doorsTail([])}

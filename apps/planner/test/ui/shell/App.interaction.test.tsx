@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { goToStopLabel } from '@planner/projections/walkStopCopy';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
@@ -830,11 +831,32 @@ describe('planner history interaction', () => {
     // The opening lies past the walk's stop: only the way to the loadout repair shows.
     expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
     const before = application.store.getState().projectWorkspace.history;
-    await user.click(screen.getByRole('button', { name: 'Go to where the plan stops' }));
+    await user.click(screen.getByRole('button', { name: goToStopLabel }));
     expect(screen.getByRole('button', { name: 'Loadout' }).getAttribute('aria-current')).toBe(
       'page',
     );
     expect(application.store.getState().projectWorkspace.history).toBe(before);
+  });
+
+  it('opens a biome holding the walk stop on that stop', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: 'Erebus',
+      }),
+    );
+    await openLoadout(user);
+    await user.click(screen.getByRole('button', { name: 'Starting reward' }));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Hammer'));
+    await user.click(screen.getByRole('button', { name: 'Erebus' }));
+    await user.click(screen.getByRole('button', { name: 'Starting room' }));
+    await user.click(within(screen.getByRole('listbox')).getAllByRole('option')[0]!);
+    const issue = application.store.getState().projectWorkspace.assembly?.evaluation.route.issue;
+    expect(issue?.owner).toMatchObject({ biomeKey: 'F' });
+    await openLoadout(user);
+    await user.click(screen.getByRole('button', { name: 'Erebus' }));
+    // The same landing as the repair link: the stop's own finding selected.
+    expect(application.store.getState().editorSession.selectedFinding?.key).toBe(issue?.regionKey);
   });
 
   it('supports Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, and Ctrl+Y', async () => {

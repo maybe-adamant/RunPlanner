@@ -442,13 +442,17 @@ reordered until the walk reaches them, and can still be deleted.
 The walk's stop is the frontier at every level: before it, everything is
 shown and editable; at it, the stopping item is shown with its controls so it
 can be repaired; past it, authored content stays saved but is not shown or
-editable. A room stopped in its Overview shows, in place of its Timeline, one
-line saying to fix the Overview first, with no Not reached yet group; a Ship
-phase the walk has not reached says which earlier phase to fix first. A room
-past the stop (later on the rail, in this biome or a later one) stays on the
-rail, dimmed, and opening it shows only that it is not reached, with the
-blocking finding's own repair link to where the walk stopped; its content
-returns as soon as the walk reaches it.
+editable. Opening a biome that holds the stop lands on it, where the blocking
+finding's repair link lands; without a stop the biome opens on its usual
+default. Whatever waits on the stop shows one stop notice: one sentence naming
+where the plan stops and the blocking finding's own repair link there. A room
+stopped in its Overview shows it in place of its Timeline, with no Not reached
+yet group; a Ship phase the walk has not reached shows it naming the earlier
+phase. A room or Hub past the stop (later on the rail, in this biome or a later
+one) stays on the rail, dimmed, and opening it shows only its title and the
+notice, which names the stopping room (its biome too when that is another) or
+the place holding the stop when that is no room, such as the Hub, the biome
+start or the Loadout; its content returns as soon as the walk reaches it.
 
 Every Room Timeline row has one anatomy: its reorder handle, the icon of the
 object or NPC it uses (badged with the inventory slot it buys from, and marked

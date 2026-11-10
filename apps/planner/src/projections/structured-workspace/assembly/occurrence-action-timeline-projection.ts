@@ -112,7 +112,7 @@ export function splitAtRoomStop(
       readonly reached: readonly WorkspaceRoomLifecycleTimelineEntry[];
       readonly notReached: readonly NotReachedEntry[];
       /** Present when the walk stops before the Timeline starts. */
-      readonly waitsOn?: string;
+      readonly waitsOn?: { readonly kind: 'overview' };
       readonly doorsWait?: true;
     }
   | undefined {
@@ -163,7 +163,9 @@ export function splitAtRoomStop(
       }),
     ),
     // A room stopped in its Overview has entered, but its Timeline waits on that repair.
-    ...(roomStop.kind === 'overview' ? { waitsOn: 'the Overview' } : {}),
+    ...(roomStop.kind === 'overview'
+      ? { waitsOn: Object.freeze({ kind: 'overview' as const }) }
+      : {}),
     // Only a stop at the doors opening itself keeps the doors, to repair them there.
     ...(roomStop.at === 'entry' &&
     stopEntry?.kind === 'boundary' &&

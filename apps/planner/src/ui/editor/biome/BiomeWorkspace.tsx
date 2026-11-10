@@ -34,8 +34,9 @@ import { BiomeInspectorNode } from './BiomeInspectorNode';
 import { roomKindIcon } from './roomIcon';
 import { RoomNumberIcon } from './RoomNumberIcon';
 import { planEndHereLabel } from './planEndCopy';
-import { notReachedLabel } from './notReachedCopy';
-import { RoomNotReached } from './RoomNotReached';
+import { notReachedLabel } from '@planner/projections/walkStopCopy';
+import { useWalkStop } from '@planner/ui/feedback/useFindingTarget';
+import { StopNotice } from './StopNotice';
 
 interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
@@ -688,6 +689,7 @@ export function BiomeWorkspace({
   railPinPreference,
 }: BiomeWorkspaceProps) {
   const runStateTarget = useAppSelector((state) => state.editorSession.runStateTarget);
+  const walkStop = useWalkStop();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const focusPresentation = useAppSelector((state) => state.editorSession.focusPresentation);
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
@@ -896,7 +898,19 @@ export function BiomeWorkspace({
           <EchoKeepsakeReplayControl biome={biome} interactions={interactions} />
         </div>
         {notReachedTitle !== undefined ? (
-          <RoomNotReached focusByOwner={focusByOwner} title={notReachedTitle} />
+          <article
+            className="room-card biome-occurrence-workbench room-not-reached"
+            data-not-reached
+          >
+            <header className="room-head-card">
+              <div className="room-head-identity">
+                <h3 className="room-title-name">{notReachedTitle}</h3>
+              </div>
+            </header>
+            {walkStop === undefined ? null : (
+              <StopNotice at={{ kind: 'past', place: walkStop.place, biomeKey: biome.biomeKey }} />
+            )}
+          </article>
         ) : subject === undefined ? (
           <p className="fixed-room-state">Choose the first room to start this biome.</p>
         ) : subject.kind === 'frontier' && sourceOccurrence === undefined ? (

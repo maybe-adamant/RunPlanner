@@ -12,6 +12,7 @@ import {
   presentFinding,
   semanticFindingKey,
   type FindingLabels,
+  type WalkStop,
 } from '@planner/projections/evaluationProjection';
 import { findingScreenTab, type ScreenTab } from '@planner/projections/rewards/screenRerollTabs';
 import { useAppSelector } from '@planner/state/store';
@@ -29,6 +30,8 @@ interface TargetFeedback {
   readonly dialog?: true;
   /** Names catalog entries in finding copy. */
   readonly labels?: FindingLabels;
+  /** Where the walk stops, for the notices that lead there. */
+  readonly walkStop?: WalkStop;
 }
 const emptyFindings: StructuredWorkspaceProjection['findingsByRepairTarget'] = new Map();
 const feedback = createContext<TargetFeedback>({
@@ -45,11 +48,13 @@ export function FindingTargetScope({
   children,
   findings,
   labels,
+  walkStop,
 }: {
   readonly authoringReadiness?: StructuredWorkspaceProjection['authoringReadiness'];
   readonly children: ReactNode;
   readonly findings: StructuredWorkspaceProjection['findingsByRepairTarget'] | undefined;
   readonly labels?: FindingLabels;
+  readonly walkStop?: WalkStop | undefined;
 }) {
   const selected = useAppSelector((state) => state.editorSession.selectedFinding);
   const focused = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
@@ -66,10 +71,17 @@ export function FindingTargetScope({
       focusKey: focused == null ? undefined : semanticAddressKey(focused),
       revision,
       ...(labels === undefined ? {} : { labels }),
+      ...(walkStop === undefined ? {} : { walkStop }),
     }),
-    [authoringReadiness, findings, selected, focused, revision, issueKey, labels],
+    [authoringReadiness, findings, selected, focused, revision, issueKey, labels, walkStop],
   );
   return <feedback.Provider value={value}>{children}</feedback.Provider>;
+}
+
+/** Where the walk stops, as the enclosing scope publishes it. */
+// eslint-disable-next-line react-refresh/only-export-components -- Reads the same feedback boundary.
+export function useWalkStop(): WalkStop | undefined {
+  return useContext(feedback).walkStop;
 }
 
 /** An open dialog's own marks: its controls read these findings instead of the outer ones. */

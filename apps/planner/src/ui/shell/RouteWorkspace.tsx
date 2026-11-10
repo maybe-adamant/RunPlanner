@@ -9,7 +9,10 @@ import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
+import {
+  walkStopOpening,
+  type RouteFeedbackPresentation,
+} from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import { projectRouteNpcIndex } from '@planner/projections/routeNpcIndex';
 import {
@@ -17,7 +20,11 @@ import {
   projectRouteStygianWellIndex,
 } from '@planner/projections/routeRoomFeatureIndex';
 import { projectRouteTraitOffers } from '@planner/projections/rewards/traitProjection';
-import { routePanelSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
+import {
+  findingSelected,
+  routePanelSelected,
+  semanticOwnerNavigated,
+} from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import type {
   StructuredWorkspaceProjection,
@@ -314,14 +321,20 @@ export function RouteWorkspace({
                   data-feedback-context={biomeFeedback.context}
                   data-projection-source={biomeProjection.source}
                   key={biomeProjection.biomeKey}
-                  onClick={() =>
+                  onClick={() => {
+                    // A biome holding the walk's stop opens on it, where its repair link lands.
+                    const stop = drafting
+                      ? undefined
+                      : walkStopOpening(workspace.walkStop, biomeProjection.biomeKey);
                     dispatch(
-                      routePanelSelected({
-                        routeKey: workspaceRoute.routeKey,
-                        panel: { kind: 'biome', biomeKey: biomeProjection.biomeKey },
-                      }),
-                    )
-                  }
+                      stop === undefined
+                        ? routePanelSelected({
+                            routeKey: workspaceRoute.routeKey,
+                            panel: { kind: 'biome', biomeKey: biomeProjection.biomeKey },
+                          })
+                        : findingSelected(stop),
+                    );
+                  }}
                   type="button"
                 >
                   <span className="panel-navigation-biome">

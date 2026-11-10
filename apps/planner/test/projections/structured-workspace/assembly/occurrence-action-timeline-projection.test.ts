@@ -447,7 +447,7 @@ describe('a room whose walk stops in it', () => {
   it('waits on its Overview when its Overview blocks, its saved rows unshown', () => {
     const timeline = galleryTimeline('progressive-stop-at-entry', 'golden-f-b1-e1');
     expect(shape(timeline.entries)).toEqual(['roomEntered']);
-    expect(timeline.waitsOn).toBe('the Overview');
+    expect(timeline.waitsOn).toEqual({ kind: 'overview' });
     expect(timeline.notReached).toEqual([]);
   });
 
@@ -547,7 +547,7 @@ describe('a room whose walk stops in it', () => {
     if (workbench.kind !== 'ship') throw new Error('Not a Ship room');
     expect(workbench.phases.map((phase) => [phase.label, phase.waitsOn])).toEqual([
       ['Intro', undefined],
-      ['Combat 1', 'Intro'],
+      ['Combat 1', { kind: 'phase', phaseLabel: 'Intro' }],
     ]);
   });
 

@@ -22,6 +22,7 @@ import {
   type SemanticAddress,
   type FountainRarityOutcomeAddress,
 } from '@run-planner/engine/authored-project';
+import { requiredFirstTitle } from '@planner/projections/walkStopCopy';
 import type { WorkspaceDerivedAcquisitionEntry } from './occurrence-reward-assembly';
 import { observedChallengeSwitchKind } from './challenge-switch-assembly';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -364,7 +365,7 @@ function roomActionsForOccurrence(
       const movedPreceding = roomActionKey(blocker.precedingAction) === proposedKey;
       explanation = `${movedPreceding ? actionLabel(blocker.precedingAction) : label} belongs ${windowLabel(movedPreceding ? blocker.precedingWindow : blocker.window)}.`;
     } else if (blocker.kind === 'requiredFirst') {
-      explanation = `${actionLabel(blocker.requiredAction)} must come first.`;
+      explanation = `${requiredFirstTitle(actionLabel(blocker.requiredAction))}.`;
     } else if (blocker.dependency.kind === 'afterAction') {
       const prerequisite = blocker.dependency.action;
       const movingDependent = roomActionKey(blocker.reference) === proposedKey;

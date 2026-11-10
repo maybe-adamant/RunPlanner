@@ -49,6 +49,10 @@ export interface GalleryCase {
   readonly openPicker?: string;
   /** An Overview case opens its Overview picker of this accessible name. */
   readonly openOverviewPicker?: string;
+  /** The case opens its biome as the biome's tab does, not its target. */
+  readonly opensBiome?: true;
+  /** The case shows the editor header's finding pill above the biome. */
+  readonly findingPill?: true;
 }
 
 export function room(biomeKey: string, occurrenceId: string): GalleryTarget {

@@ -93,7 +93,7 @@ describe('OccurrenceRoomFeatures', () => {
     renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     // The room stops in its Overview: its Timeline, the event's row included, waits unshown.
-    expect(screen.getByText('Fix the Overview first.')).toBeTruthy();
+    expect(document.querySelector('[data-stop-notice="overview"]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: 'Reward' })).toBeNull();
   });
 
@@ -468,7 +468,7 @@ describe('OccurrenceRoomFeatures', () => {
     await waitFor(() => expect(family.contains(document.activeElement)).toBe(true));
     openRoomTab('Room Timeline');
     // Its event type unchosen, the room stops in its Overview.
-    expect(screen.getByText('Fix the Overview first.')).toBeTruthy();
+    expect(document.querySelector('[data-stop-notice="overview"]')).not.toBeNull();
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Free item');
     openRoomTab('Room Timeline');

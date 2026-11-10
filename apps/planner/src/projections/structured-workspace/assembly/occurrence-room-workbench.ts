@@ -14,6 +14,7 @@ import type {
   WorkspaceRoomActions,
   WorkspaceRoomLifecycleBoundary,
   WorkspaceRoomLifecycleTimelineEntry,
+  WorkspaceTimelineWait,
 } from '../contracts/timeline';
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceRoomTab } from '../contracts/navigation';
@@ -185,13 +186,15 @@ function shipWorkbenchPresentation(
   }
   // A phase the stopped walk has not reached waits on the last phase it did reach.
   const stopped = roomActions?.timeline.notReached !== undefined;
-  const waitsOn = (index: number): string | undefined => {
+  const waitsOn = (index: number): WorkspaceTimelineWait | undefined => {
     if (roomActions?.timeline.waitsOn !== undefined) return roomActions.timeline.waitsOn;
     if (!stopped || phaseTimelineEntries[index]!.length > 0) return undefined;
     const reached = phaseTimelineEntries.findLastIndex(
       (entries, earlier) => earlier < index && entries.length > 0,
     );
-    return reached < 0 ? undefined : roomLocal.phases[reached]!.label;
+    return reached < 0
+      ? undefined
+      : Object.freeze({ kind: 'phase' as const, phaseLabel: roomLocal.phases[reached]!.label });
   };
   const phases: WorkspaceShipPhasePresentation[] = roomLocal.phases.map((phase, index) => {
     const phaseWaitsOn = waitsOn(index);

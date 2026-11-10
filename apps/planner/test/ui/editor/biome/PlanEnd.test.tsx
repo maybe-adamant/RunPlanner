@@ -215,7 +215,7 @@ describe('plan end in the biome workspace', () => {
       'F',
     );
     openRoom(application, createOccurrenceAddress(goldenFBiome, createOccurrenceId(offPath)));
-    expect(within(roomCard()).getByText('Room not reached')).toBeTruthy();
+    expect(roomCard().hasAttribute('data-not-reached')).toBe(true);
     expect(screen.queryByRole('tab', { name: 'Room Timeline' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'End plan here' })).toBeNull();
   });

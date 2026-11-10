@@ -562,6 +562,10 @@ export interface WorkspaceFieldsCageOrderControl {
   readonly unavailableReason?: string;
 }
 
+/** Where the walk stops before a Timeline starts: its room's Overview, or an earlier phase. */
+export type WorkspaceTimelineWait =
+  { readonly kind: 'overview' } | { readonly kind: 'phase'; readonly phaseLabel: string };
+
 export interface WorkspaceRoomLifecycleTimeline {
   readonly fieldsCageOrder?: WorkspaceFieldsCageOrderControl;
   /** Up to the room's stop when the walk stops here: its doors and exit are then unreached. */
@@ -572,8 +576,8 @@ export interface WorkspaceRoomLifecycleTimeline {
    * the walk stops in the Overview: the whole Timeline then waits, its rows unshown.
    */
   readonly notReached?: readonly WorkspaceNotReachedEntry[];
-  /** What to fix first when the walk stops before this Timeline starts, such as its Overview. */
-  readonly waitsOn?: string;
+  /** Where the walk stops before this Timeline starts: its room's Overview. */
+  readonly waitsOn?: WorkspaceTimelineWait;
   /** The walk stops in this room before its doors: their picks and Leave row wait. */
   readonly doorsWait?: true;
   readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
