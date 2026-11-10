@@ -458,7 +458,9 @@ export function createProjectLibraryOperations(
       await adapter.create(encodeProjectDocument(copy), importOptions.folder ?? ''),
       copy,
       migrationProvenance,
-      upgrade === undefined ? undefined : Object.freeze({ ...upgrade, before: copied.past[0]! }),
+      upgrade === undefined
+        ? undefined // A settlement that only faulted changed nothing, so the copy is the plan as saved.
+        : Object.freeze({ ...upgrade, before: copied.past[0] ?? copy }),
     );
   };
 

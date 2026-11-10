@@ -4,6 +4,8 @@ import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { describe, expect, it, vi } from 'vitest';
 
 import { loadProjectDocument } from '@planner/persistence/projectDocumentLoader';
+import { createProjectLibraryOperations } from '@planner/workspace/projectLibrary';
+import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 
 // The seam: the upgrade settlement throws as an engine defect would.
 vi.mock('@planner/persistence/project-102-to-103.js', async (importOriginal) => ({
@@ -26,5 +28,26 @@ describe('a plan saved before schema 103 whose settlement throws', () => {
       before: loaded.project,
       fault: { key: 'upgradeSettlement:settlement defect', owner: createProjectAddress() },
     });
+  });
+
+  it('imports as a copy whose plan as saved is the copy itself', async () => {
+    const saved = createGoldenFGHProject();
+    const json = JSON.stringify({
+      ...JSON.parse(encodeProjectDocument(saved)),
+      schemaVersion: 102,
+    });
+    const library = createMemoryProjectLibrary();
+    const operations = createProjectLibraryOperations({
+      adapter: library.adapter,
+      catalog,
+      mintProjectId: () => 'minted',
+    });
+    const filed = await operations.importFile(
+      { fileName: 'old.runplanner.json', json },
+      { newIdentity: true },
+    );
+    expect(filed.project).toEqual({ ...saved, projectId: 'minted' });
+    expect(filed.upgrade?.before).toBe(filed.project);
+    expect(filed.upgrade?.fault?.key).toBe('upgradeSettlement:settlement defect');
   });
 });
