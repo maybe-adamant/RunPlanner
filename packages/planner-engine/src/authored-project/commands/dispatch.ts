@@ -39,7 +39,7 @@ import { applyRoomLayoutCommand } from './occurrence/room-layout';
 import { retractMissingHermesShrineDeliveryActions } from '../hermes-shrine-delivery';
 import { planEndExists } from '../plan-end';
 import { reconcileLeftChallengeSwitchPresses } from './challenge-switch-press';
-import { chosenIndexesFor, type PositionedObjectCommand } from './chosen-index';
+import { chosenIndexesFor, type PositionedCommand } from './chosen-index';
 
 /** Topology owns occurrence lifetime. A route-owned resource singleton retains
  * through room replacement, but is removed atomically when its exact target is
@@ -500,22 +500,23 @@ export type {
 } from './types';
 
 /**
- * Every index an object command may place its new action at, ascending: the
- * order its actions leave behind, judged structurally as the command judges
- * a chosen index. Empty when the command places no new action or cannot
- * apply without an index (an item already bought, a blank Travel Deal item
- * given no value).
+ * Every index a positioned command (an object purchase or a derived pickup's
+ * placement) may place its new action at, ascending: the order its actions
+ * leave behind, judged structurally as the command judges a chosen index.
+ * Empty when the command places no new action or cannot apply without an
+ * index (an item already bought or a pickup already placed, a blank Travel
+ * Deal item given no value).
  */
-export function objectCommandInsertionIndexes(
+export function positionedCommandInsertionIndexes(
   document: ProjectDocument,
   catalog: Catalog,
-  command: PositionedObjectCommand,
+  command: PositionedCommand,
 ): readonly number[] {
   const { index: _index, ...withoutIndex } = command;
   void _index;
   let placed: ProjectDocument;
   try {
-    placed = applyUnchecked(document, catalog, withoutIndex as PositionedObjectCommand);
+    placed = applyUnchecked(document, catalog, withoutIndex as PositionedCommand);
   } catch (error) {
     if (error instanceof ProjectCommandContractError) return Object.freeze([]);
     throw error;

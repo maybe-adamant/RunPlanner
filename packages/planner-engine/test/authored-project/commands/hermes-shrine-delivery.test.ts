@@ -18,7 +18,7 @@ import {
   createOccurrenceId,
   createProjectHistory,
   createRoomActionAddress,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
   decodeProjectDocument,
   defaultHermesShrineDeliveryReward,
   encodeProjectDocument,
@@ -276,8 +276,12 @@ describe('Hermes Shrine delivery placement', () => {
       entryKey: hermesShrineDeliveryEntryKey(source, 'initial:secondRight'),
     };
     // After the wheel, among the Shrine's purchases; the default is the end.
-    expect(objectCommandInsertionIndexes(project, catalog, purchase(false))).toEqual([2, 3, 4, 5]);
-    expect(objectCommandInsertionIndexes(project, catalog, purchase(true))).toEqual([2, 3, 4, 5]);
+    expect(positionedCommandInsertionIndexes(project, catalog, purchase(false))).toEqual([
+      2, 3, 4, 5,
+    ]);
+    expect(positionedCommandInsertionIndexes(project, catalog, purchase(true))).toEqual([
+      2, 3, 4, 5,
+    ]);
     expect(order(applyProjectCommand(project, catalog, purchase(false)))).toEqual([
       ...before,
       bought(false),

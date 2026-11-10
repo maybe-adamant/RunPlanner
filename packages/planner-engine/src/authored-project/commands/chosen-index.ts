@@ -1,5 +1,10 @@
 import type { Catalog } from '../../catalog-schema';
-import { createBiomeAddress, createOccurrenceAddress, type OccurrenceAddress } from '../addresses';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  type AcquisitionSiteAddress,
+  type OccurrenceAddress,
+} from '../addresses';
 import { hermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import type { ProjectDocument } from '../model';
 import {
@@ -12,8 +17,11 @@ import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import { failCommand } from './contract';
 import type { ProjectCommand } from './types';
 
-/** Object interactions that place their actions at a default position or a chosen index. */
-export type PositionedObjectCommand = Extract<
+/**
+ * Commands that place a new action at a default position or a chosen index:
+ * object purchases and the placement of a derived pickup.
+ */
+export type PositionedCommand = Extract<
   ProjectCommand,
   {
     readonly kind:
@@ -21,30 +29,66 @@ export type PositionedObjectCommand = Extract<
       | 'PurchaseShopTravelDealRefill'
       | 'SetStygianWellPurchase'
       | 'SetHermesShrinePurchase'
-      | 'PurchaseHermesShrineOffer';
+      | 'PurchaseHermesShrineOffer'
+      | 'PlaceHermesShrineDelivery'
+      | 'PlaceClockedTraitPickup'
+      | 'PlaceEchoGoldPickup';
   }
 >;
 
-function commandOccurrence(command: PositionedObjectCommand): OccurrenceAddress {
-  return command.kind === 'ReplaceShopPurchaseParticipation'
-    ? createOccurrenceAddress(
+function commandOccurrence(command: PositionedCommand): OccurrenceAddress {
+  switch (command.kind) {
+    case 'ReplaceShopPurchaseParticipation':
+      return createOccurrenceAddress(
         createBiomeAddress(command.offer.routeKey, command.offer.biomeKey),
         command.offer.occurrenceId,
-      )
-    : command.occurrence;
+      );
+    case 'PlaceHermesShrineDelivery':
+    case 'PlaceClockedTraitPickup':
+      return siteOccurrence(command.entry.site);
+    case 'PlaceEchoGoldPickup':
+      return siteOccurrence(command.site);
+    default:
+      return command.occurrence;
+  }
+}
+
+function siteOccurrence(site: AcquisitionSiteAddress): OccurrenceAddress {
+  if (site.owner.kind !== 'occurrence')
+    throw new Error(`${site.pointKey} is not an occurrence's acquisition site`);
+  return createOccurrenceAddress(
+    createBiomeAddress(site.routeKey, site.biomeKey),
+    site.owner.occurrenceId,
+  );
 }
 
 /**
  * The actions the command placed, in the order they move together: the
  * purchase, then a rushed Shrine item's pickup when the rush placed one.
  */
-function placedActions(
-  placed: ProjectDocument,
-  command: PositionedObjectCommand,
-): PlacedRoomActions {
+function placedActions(placed: ProjectDocument, command: PositionedCommand): PlacedRoomActions {
   const occurrence = commandOccurrence(command);
   let keys: string[];
   switch (command.kind) {
+    case 'PlaceHermesShrineDelivery':
+    case 'PlaceClockedTraitPickup':
+      keys = [
+        roomActionKey({
+          kind: 'interactAcquisitionEntry',
+          siteKey: command.entry.site.pointKey,
+          entryKey: command.entry.entryKey,
+        }),
+      ];
+      break;
+    case 'PlaceEchoGoldPickup':
+      keys = [
+        roomActionKey({
+          kind: 'interactAcquisitionEntry',
+          siteKey: command.site.pointKey,
+          entryKey: command.entryKey,
+        }),
+      ];
+      break;
     case 'ReplaceShopPurchaseParticipation':
       keys = [roomActionKey({ kind: 'interactShopOffer', offerKey: command.offer.offerKey })];
       break;
@@ -102,7 +146,7 @@ function placedActions(
 export function withChosenIndex(
   placed: ProjectDocument,
   catalog: Catalog,
-  command: PositionedObjectCommand,
+  command: PositionedCommand,
 ): ProjectDocument {
   if (command.index === undefined) return placed;
   const result = placeRoomActionsAtChosenIndex(
@@ -123,7 +167,7 @@ export function chosenIndexesFor(
   before: ProjectDocument,
   placed: ProjectDocument,
   catalog: Catalog,
-  command: PositionedObjectCommand,
+  command: PositionedCommand,
 ): readonly number[] {
   const actions = placedActions(placed, command);
   const host = before.route.biomes

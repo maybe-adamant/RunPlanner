@@ -13,10 +13,10 @@ import {
 import { ProjectCommandContractError } from '../../authored-project/commands/contract';
 import {
   applyProjectCommand,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
 } from '../../authored-project/commands/dispatch';
 import type { ProjectCommand } from '../../authored-project/commands/types';
-import type { PositionedObjectCommand } from '../../authored-project/commands/chosen-index';
+import type { PositionedCommand } from '../../authored-project/commands/chosen-index';
 import {
   INITIAL_ROLL_KEY,
   STYGIAN_WELL_SLOT_KEYS,
@@ -241,7 +241,7 @@ function objectOf(
 }
 
 /** The room action a feature purchase command places first. */
-function purchaseReference(command: PositionedObjectCommand): RoomActionReference {
+function purchaseReference(command: PositionedCommand): RoomActionReference {
   switch (command.kind) {
     case 'ReplaceShopPurchaseParticipation':
       return frozen({ kind: 'interactShopOffer', offerKey: command.offer.offerKey });
@@ -264,6 +264,22 @@ function purchaseReference(command: PositionedObjectCommand): RoomActionReferenc
         kind: 'purchaseHermesShrineOffer',
         generationKey: command.generationKey,
         rushed: command.rushed,
+      });
+    case 'PlaceHermesShrineDelivery':
+    case 'PlaceClockedTraitPickup':
+      return frozen({
+        kind: 'interactAcquisitionEntry',
+        siteKey: command.entry.site.pointKey,
+        entryKey: command.entry.entryKey,
+        ...(command.encounterPhaseKey === undefined
+          ? {}
+          : { encounterPhaseKey: command.encounterPhaseKey }),
+      });
+    case 'PlaceEchoGoldPickup':
+      return frozen({
+        kind: 'interactAcquisitionEntry',
+        siteKey: command.site.pointKey,
+        entryKey: command.entryKey,
       });
   }
 }
@@ -295,11 +311,11 @@ function objectPurchases(
   const purchases: ObjectPurchase[] = [];
   const positioned = (
     object: LiveObjectKind,
-    command: PositionedObjectCommand,
+    command: PositionedCommand,
     needsChoice?: LiveActionChoice,
-    probe: PositionedObjectCommand = command,
+    probe: PositionedCommand = command,
   ) => {
-    const indexes = objectCommandInsertionIndexes(document, catalog, probe);
+    const indexes = positionedCommandInsertionIndexes(document, catalog, probe);
     if (indexes.length === 0) return;
     purchases.push(
       frozen({

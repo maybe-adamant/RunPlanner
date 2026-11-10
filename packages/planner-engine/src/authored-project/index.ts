@@ -358,14 +358,14 @@ export {
 } from './feature-rolls';
 export {
   applyProjectCommand,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
   projectCommandAddress,
   projectCommandAuthoringAddresses,
   type AcquisitionOutcomeCommand,
   type ProjectCommand,
   ProjectCommandContractError,
 } from './commands/dispatch';
-export type { PositionedObjectCommand } from './commands/chosen-index';
+export type { PositionedCommand } from './commands/chosen-index';
 export { authoredTraitOfferAt } from './commands/trait-offer';
 export {
   forcedChaosOccurrenceKeys,

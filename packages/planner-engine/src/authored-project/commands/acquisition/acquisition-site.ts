@@ -1,5 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
-import type { ProjectDocument, RoomActionReference, RoomOccurrence } from '../../model';
+import type { ProjectDocument } from '../../model';
 import {
   INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
   infernalContractPedestalProfile,
@@ -44,35 +44,9 @@ import {
   scheduleRequiredRoomActions,
 } from '../../room-actions/defaults';
 import { roomActionKey } from '../../room-actions/state';
-import type { RoomActionDomain } from '../../room-actions/domain';
-import {
-  roomActionInsertionRefusal,
-  roomActionOrderContextForOccurrence,
-} from '../../room-actions/order-assessment';
+import { withChosenIndex } from '../chosen-index';
 import { roomLifecycleWindowOrdinal } from '../../room-actions/lifecycle-structure';
 import { resolveRoutePosition } from '../../route-context';
-
-/**
- * The index a newly placed pickup takes: the command's chosen one when it is
- * structurally legal for the host's order, else today's default placement.
- */
-function placementIndex(
-  command: AcquisitionSiteCommand & { readonly index?: number },
-  domain: RoomActionDomain,
-  host: RoomOccurrence,
-  reference: RoomActionReference,
-  defaultIndex: number,
-): number {
-  if (command.index === undefined || command.index === defaultIndex) return defaultIndex;
-  const refusal = roomActionInsertionRefusal(
-    host.roomActions.order,
-    reference,
-    command.index,
-    roomActionOrderContextForOccurrence(domain, host),
-  );
-  if (refusal !== undefined) failCommand(command, refusal);
-  return command.index;
-}
 
 function refuseIndexWhenPlaced(command: AcquisitionSiteCommand & { readonly index?: number }) {
   if (command.index !== undefined)
@@ -234,27 +208,21 @@ export function applyAcquisitionSiteCommand(
       );
     });
     const nextOrder = [...host.roomActions.order];
-    nextOrder.splice(
-      placementIndex(
-        command,
-        domain,
-        host,
-        reference,
-        insertionIndex < 0 ? nextOrder.length : insertionIndex,
+    nextOrder.splice(insertionIndex < 0 ? nextOrder.length : insertionIndex, 0, reference);
+    return withChosenIndex(
+      updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(
+          topology,
+          Object.freeze({
+            ...nextHostWithoutActions,
+            roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
+          }),
+        ),
       ),
-      0,
-      reference,
-    );
-    return updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        topology,
-        Object.freeze({
-          ...nextHostWithoutActions,
-          roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
-        }),
-      ),
+      catalog,
+      command,
     );
   }
   if (command.kind === 'PlaceHermesShrineDelivery') {
@@ -391,21 +359,21 @@ export function applyAcquisitionSiteCommand(
     if (canonicalIndex < 0)
       failCommand(command, 'delivery has no canonical room-action insertion point');
     const nextOrder = [...host.roomActions.order];
-    nextOrder.splice(
-      placementIndex(command, provisionalDomain, host, deliveryReference, canonicalIndex),
-      0,
-      deliveryReference,
-    );
-    const updated = updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        topology,
-        Object.freeze({
-          ...nextHostWithoutActions,
-          roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
-        }),
+    nextOrder.splice(canonicalIndex, 0, deliveryReference);
+    const updated = withChosenIndex(
+      updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(
+          topology,
+          Object.freeze({
+            ...nextHostWithoutActions,
+            roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
+          }),
+        ),
       ),
+      catalog,
+      command,
     );
     return removeHermesShrineDeliveryFromOtherHosts(updated, command.entry.entryKey, site.owner);
   }
@@ -452,33 +420,11 @@ export function applyAcquisitionSiteCommand(
         }),
       }),
     });
-    const appendedDocument = updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(topology, appended),
-    );
-    if (placed || command.index === undefined || command.index === order.length)
-      return appendedDocument;
-    const domain = roomActionDomainForOccurrence(
-      appendedDocument,
+    // The duplicate appends where the room's actions end unless an index is chosen.
+    return withChosenIndex(
+      updateOccurrenceTopology(document, located, replaceOccurrence(topology, appended)),
       catalog,
-      createBiomeAddress(command.site.routeKey, command.site.biomeKey),
-      occurrence.occurrenceId,
-    )?.domain;
-    if (domain === undefined) failCommand(command, 'has no room-action domain');
-    const index = placementIndex(command, domain, occurrence, reference, order.length);
-    return updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        topology,
-        Object.freeze({
-          ...appended,
-          roomActions: Object.freeze({
-            order: Object.freeze(order.toSpliced(index, 0, reference)),
-          }),
-        }),
-      ),
+      command,
     );
   }
   if (command.kind === 'ReplaceAcquisitionEntryOffer') {

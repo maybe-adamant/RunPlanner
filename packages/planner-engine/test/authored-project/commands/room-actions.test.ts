@@ -5,7 +5,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
   assembleRoomActionDomain,
   activeRoomActionReferences,
   authoredAcquisitionSources,
@@ -1527,7 +1527,7 @@ describe('room-action commands', () => {
     expect(order(project)).toEqual([fountain, rack, bought('initial:secondLeft')]);
     const secondRight = { ...refill, generationKey: 'initial:secondRight' as const };
     // Anywhere after the fountain unlocks the Well; the default is the end.
-    expect(objectCommandInsertionIndexes(project, catalog, secondRight)).toEqual([1, 2, 3]);
+    expect(positionedCommandInsertionIndexes(project, catalog, secondRight)).toEqual([1, 2, 3]);
     expect(order(applyProjectCommand(project, catalog, { ...secondRight, index: 1 }))).toEqual([
       fountain,
       bought('initial:secondRight'),
@@ -1538,12 +1538,12 @@ describe('room-action commands', () => {
       /index 0 is not a legal position .* a required action of an earlier window/,
     );
     // The refill restocks only after the first purchase.
-    expect(objectCommandInsertionIndexes(project, catalog, refill)).toEqual([3]);
+    expect(positionedCommandInsertionIndexes(project, catalog, refill)).toEqual([3]);
     expect(() => applyProjectCommand(project, catalog, { ...refill, index: 2 })).toThrow(
       /must follow/,
     );
     const placed = applyProjectCommand(project, catalog, secondRight);
-    expect(objectCommandInsertionIndexes(placed, catalog, secondRight)).toEqual([]);
+    expect(positionedCommandInsertionIndexes(placed, catalog, secondRight)).toEqual([]);
     expect(() => applyProjectCommand(placed, catalog, { ...secondRight, index: 1 })).toThrow(
       'an index places only a new purchase',
     );

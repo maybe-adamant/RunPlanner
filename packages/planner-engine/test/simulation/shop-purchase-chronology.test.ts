@@ -36,7 +36,7 @@ import type { TraitOfferEvent } from './shop-trait-purchase-support';
 import {
   applyProjectCommand,
   createAcquisitionRoleAddress,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
 } from '@run-planner/engine/authored-project';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
@@ -622,7 +622,9 @@ describe('Gold Gold Gold Shop pickups', () => {
       buy('Minor'),
     );
     expect(order(bought)).toEqual([purchase('Boon'), purchase('Minor')]);
-    expect(objectCommandInsertionIndexes(bought, catalog, buy('MajorNonBoon'))).toEqual([0, 1, 2]);
+    expect(positionedCommandInsertionIndexes(bought, catalog, buy('MajorNonBoon'))).toEqual([
+      0, 1, 2,
+    ]);
     expect(order(applyProjectCommand(bought, catalog, buy('MajorNonBoon', 1)))).toEqual([
       purchase('Boon'),
       purchase('MajorNonBoon'),

@@ -5,7 +5,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
-  objectCommandInsertionIndexes,
+  positionedCommandInsertionIndexes,
   activeRoomActionReferences,
   createProjectHistory,
   createAcquisitionEntryAddress,
@@ -430,7 +430,7 @@ describe('authored-project Shop occurrence commands', () => {
       });
     const before = room(withPurchases).roomActions.order;
     // Bought after the first purchase, whose Travel Deal stocks it, up to the end.
-    expect(objectCommandInsertionIndexes(withPurchases, catalog, purchase)).toEqual([1, 2, 3]);
+    expect(positionedCommandInsertionIndexes(withPurchases, catalog, purchase)).toEqual([1, 2, 3]);
     expect(
       room(applyProjectCommand(withPurchases, catalog, { ...purchase, index: 1 })).roomActions
         .order,
