@@ -27,7 +27,8 @@ export interface ExitCapacityUpgradeSubject {
   readonly decision: ExitDecisionAddress;
 }
 
-export type CommandContractSubject = ProjectCommand | RouteDetourCommand | ExitCapacityUpgradeSubject;
+export type CommandContractSubject =
+  ProjectCommand | RouteDetourCommand | ExitCapacityUpgradeSubject;
 
 export class ProjectCommandContractError extends Error {
   readonly commandKind: CommandContractSubject['kind'];
