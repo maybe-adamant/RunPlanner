@@ -732,6 +732,56 @@ assessed history does not reach lists nothing. A Supply Chain Pom Slice spawns
 once its boon is taken and its encounter ends.
 A Travel Deal refill is a purchase, not spawned loot.
 
+### Live at a point
+
+An engine-owned read-only query publishes, for each entered room the walk
+reaches, what is live at each gap of its action order, from the room's entry
+through the walk's frontier. A gap is the stretch of the Timeline between two
+ranked rows, and the gaps around a stale row share one stretch. The frontier
+is the gap the walk stands at, where the next action goes: the last gap before
+the room's published stop, or after the last row of a room the walk passes.
+Nothing past the frontier is live, since the walk has not reached it. The
+live row is this product at the frontier, and a Timeline gap's controls are
+the same product at that gap.
+
+Two kinds of item are live at a gap, and nothing else:
+
+- **Loose pickups**: the [spawned loot](#spawned-loot), each live from the gap
+  it spawned in (its moment's boundary, or the gap after the action whose
+  settlement spawned it) through the gap of the row that collects it. A
+  pickup not yet spawned or already collected is absent. Each keeps its reward
+  owner, source and participation, with the collect row's window, the gap it
+  spawned in and, while still caged, the unlock that frees it.
+- **Active objects**: a World Shop, the Contract pedestal, a Hermes Shrine, a
+  Stygian Well, a Pool of Purging, the fountain, the keepsake rack, Eris, an
+  encounter's required contact, the Gorgon, a Fields cage's completion, a Ship
+  wheel, a challenge switch, locked doors and door or cage rerolls, each live
+  where it has a legal action.
+
+An item's legal actions at a gap are what the engine already authorizes
+there; nothing is evaluated again. They are the row standing at the gap, the
+[roster's](#roster) authorable insertion of an unplaced row (a required
+action's canonical restore marked) and authorable move of a later row to the
+gap, an object's new purchase through its feature command at an index that
+command accepts, and a derived pickup's placement (a due delivery, a matured
+drop, Gold Gold Gold's duplicate) at an index its command accepts. A command
+that still needs a choice, a Pom level or a blank Travel Deal item, says so.
+A required item carries its deadline: the last gap of the whole order at which
+it has a legal action.
+
+Each item keeps the classification its owner gives it today: a Boss's forced
+drop, a countdown delivery and Gold Gold Gold's duplicate are pickups with
+their spawned-loot source, while an NPC contact and a Fields cage's
+completion are actions on objects. An object's new purchases are read where
+the room's reached actions end, which is the same set at every gap, since an
+item bought earlier is a row; a room stopped in its Overview offers none. A
+new reroll, a Pool sale of a slot not yet chosen and a rack keepsake are not
+offered, as each needs its own choice first; their rows are. While a required
+pickup is unplaced, the walk stops at the event or source action that spawns
+it, so the pickup may not be live where it could go: a deferred Ship wheel's
+reward, an Artificer's replacement, a Nemesis trade's result, a delivery due
+after a wheel reward, a Fields cage reward.
+
 ## Canonical Lifecycle Profiles
 
 ### Standard Reward Room

@@ -1,6 +1,7 @@
 # Part 2: live pickups
 
-Status: framing settled by the owner (2026-11-10); not started. Temporary
+Status: framing settled by the owner (2026-11-10); step A delivered on
+`live-pickups`, awaiting review; B to D not started. Temporary
 plan; delete at delivery after promoting durable results. Follows the
 progressive room Timeline and spawned-loot notices, both delivered.
 
@@ -26,7 +27,34 @@ You either interact with pickups or active objects.
 
 ## Order
 
-- **A.** The live-at-k product, a pure addition.
+- **A.** The live-at-k product, a pure addition. Delivered: the
+  [Live at a point](../design/ROOM_LIFECYCLE_MODEL.md#live-at-a-point) query,
+  composed from the spawned loot, the room's published stop, the roster's
+  proposals and the feature and placement commands' accepted indices; no
+  evaluation work, equivalence unchanged. Its witnesses (golden Underworld and
+  Surface checkpoints) stand every reached row live at its own gap, offer each
+  row of a sampled room at its gap after a reset to just before it, and accept
+  every frontier action into the walk. Provisional classifications, current
+  engine ownership, for the owner to confirm or change (classification, not
+  structure):
+  - Boss forced drop: a pickup (spawned-loot `requiredDrop`), required.
+  - NPC and encounter contacts (Nemesis, Gorgon, Eris, field NPCs): actions on
+    objects, required; what they drop is a pickup.
+  - `completeFieldsCage`: an action on a `fieldsCage` object, required; the
+    cage's reward is a caged pickup.
+  - Hermes deliveries and Gold Gold Gold's duplicate: pickups at their derived
+    host, placed by `PlaceHermesShrineDelivery` / `PlaceEchoGoldPickup` at any
+    index the command accepts; required as the engine says today.
+  - W8 rekey: settlement-time only; the product is read-only and carries
+    nothing about it.
+
+  Open for C: while a required pickup is unplaced, today's walk stops at the
+  event or source that spawns it, so it is not placeable from the frontier
+  (deferred Ship wheel reward, Artificer replacement, Nemesis trade result, a
+  delivery after a wheel reward, a Fields cage reward); the witness pins these
+  twelve cases. Not offered yet: new rerolls, a Pool sale of an unchosen slot,
+  a rack keepsake.
+
 - **B.** Draft and the run import author pickups from it, placing what they
   relied on being inserted.
 - **C.** Remove automatic placement (change 1). If placements are derived,

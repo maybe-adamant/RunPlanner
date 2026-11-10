@@ -33,8 +33,12 @@ import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import { candidateBiome, candidateBiomeRooms } from '../candidates/evaluated-biome';
 import type { CanonicalAuthoredRoom } from '../materialization';
-import type { RoomActionParticipation, RoomActionRow } from '../room-actions';
-import type { ProjectEvaluationAssembly } from './evaluation-products';
+import type {
+  RoomActionParticipation,
+  RoomActionRow,
+  RoomLifecycleTimelineEntry,
+} from '../room-actions';
+import type { ProjectEvaluationAssembly, RoomStopCoverage } from './evaluation-products';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
@@ -154,7 +158,7 @@ function frozen<T>(value: T): T {
   return Object.freeze(value);
 }
 
-function authoredRoom(
+export function authoredRoom(
   assembly: ProjectEvaluationAssembly,
   occurrence: OccurrenceAddress,
 ): CanonicalAuthoredRoom | undefined {
@@ -379,11 +383,18 @@ function insertion(
  * the room it stopped in, the entries before its stop. An entry at an `entry`
  * stop is blocking: the walk reached it and blocks on its own contact there.
  */
-interface RoomWalk {
+export interface RoomWalk {
   readonly entry: (entryIndex: number) => 'settled' | 'blocking' | 'unreached';
+  /** The walk never entered the room's Timeline: its assessed history does not reach the room. */
+  readonly unreached?: true;
+  /** Where the walk stopped, in the room it stopped in. */
+  readonly stop?: RoomStopCoverage;
 }
 
-function roomWalk(assembly: ProjectEvaluationAssembly, occurrence: OccurrenceAddress): RoomWalk {
+export function roomWalk(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: OccurrenceAddress,
+): RoomWalk {
   const all: RoomWalk = { entry: () => 'settled' };
   const biome = assembly.evaluation.route.biomes.find(
     (candidate) => candidate.biomeKey === occurrence.biomeKey,
@@ -394,10 +405,11 @@ function roomWalk(assembly: ProjectEvaluationAssembly, occurrence: OccurrenceAdd
     'history' in biome &&
     !biome.history.rooms.some((room) => semanticAddressKey(room.origin) === key)
   )
-    return { entry: () => 'unreached' };
+    return { entry: () => 'unreached', unreached: true };
   const stop = biome.coverage.roomStop;
   if (stop === undefined || semanticAddressKey(stop.room) !== key) return all;
   return {
+    stop,
     entry: (entryIndex) =>
       entryIndex < stop.entryIndex
         ? 'settled'
@@ -405,6 +417,50 @@ function roomWalk(assembly: ProjectEvaluationAssembly, occurrence: OccurrenceAdd
           ? 'blocking'
           : 'unreached',
   };
+}
+
+/**
+ * The Timeline entry at which a moment's loot spawns: its boundary, an
+ * encounter's end standing at Boss defeated in a Boss room; a boundary the
+ * room lacks stands at its last entry.
+ */
+export function spawnMomentEntryIndex(
+  entries: readonly RoomLifecycleTimelineEntry[],
+  kind: SpawnMomentKind,
+  phaseKey: string | undefined,
+): number {
+  const boundary = (boundaryKind: string, boundaryPhaseKey?: string): number => {
+    const index = entries.findIndex(
+      (entry) =>
+        entry.kind === 'boundary' &&
+        entry.boundary.kind === boundaryKind &&
+        (boundaryPhaseKey === undefined ||
+          ('phaseKey' in entry.boundary && entry.boundary.phaseKey === boundaryPhaseKey)),
+    );
+    return index >= 0 ? index : entries.length - 1;
+  };
+  switch (kind) {
+    case 'roomEntered':
+    case 'deliveryFlush':
+      return boundary('roomEntered');
+    case 'encounterStart':
+      return phaseKey === undefined
+        ? boundary('roomEntered')
+        : boundary('encounterStart', phaseKey);
+    case 'encounterOutcome':
+      return boundary('encounterOutcome', phaseKey);
+    case 'encounterEnd':
+    case 'afterEncounterReward':
+      if (phaseKey === undefined) return entries.length - 1;
+      return entries.some(
+        (entry) =>
+          entry.kind === 'boundary' &&
+          entry.boundary.kind === 'encounterEnd' &&
+          entry.boundary.phaseKey === phaseKey,
+      )
+        ? boundary('encounterEnd', phaseKey)
+        : boundary('bossDefeated', phaseKey);
+  }
 }
 
 /**
@@ -568,17 +624,6 @@ export function spawnedLootForProjectEvaluationAssembly(
   const walk = roomWalk(assembly, occurrence);
   const entries = room.roomLifecycleTimeline.entries;
   type EntryState = ReturnType<RoomWalk['entry']>;
-  /** A boundary the room lacks stands at its last entry. */
-  const boundaryState = (kind: string, phaseKey?: string): EntryState => {
-    const index = entries.findIndex(
-      (entry) =>
-        entry.kind === 'boundary' &&
-        entry.boundary.kind === kind &&
-        (phaseKey === undefined ||
-          ('phaseKey' in entry.boundary && entry.boundary.phaseKey === phaseKey)),
-    );
-    return walk.entry(index >= 0 ? index : entries.length - 1);
-  };
   /** An action the walk never ranks never runs, so it settles nothing. */
   const actionSettled = (reference: RoomActionReference): boolean => {
     const key = roomActionKey(reference);
@@ -586,35 +631,22 @@ export function spawnedLootForProjectEvaluationAssembly(
     return index >= 0 && walk.entry(index) === 'settled';
   };
   const encounterEndState = (phaseKey: string): EntryState =>
-    entries.some(
-      (entry) =>
-        entry.kind === 'boundary' &&
-        entry.boundary.kind === 'encounterEnd' &&
-        entry.boundary.phaseKey === phaseKey,
-    )
-      ? boundaryState('encounterEnd', phaseKey)
-      : boundaryState('bossDefeated', phaseKey);
+    walk.entry(spawnMomentEntryIndex(entries, 'encounterEnd', phaseKey));
   const momentState = (kind: SpawnMomentKind, phaseKey: string | undefined): EntryState => {
     switch (kind) {
       case 'roomEntered':
       case 'deliveryFlush':
-        return boundaryState('roomEntered');
       case 'encounterStart':
-        return phaseKey === undefined
-          ? boundaryState('roomEntered')
-          : boundaryState('encounterStart', phaseKey);
+      case 'encounterEnd':
+        return walk.entry(spawnMomentEntryIndex(entries, kind, phaseKey));
       // The outcome decides what spawns, so it spawns once the outcome has settled.
       case 'encounterOutcome':
-        return phaseKey !== undefined && boundaryState('encounterOutcome', phaseKey) === 'settled'
+        return phaseKey !== undefined &&
+          walk.entry(spawnMomentEntryIndex(entries, kind, phaseKey)) === 'settled'
           ? 'settled'
           : 'unreached';
-      case 'encounterEnd':
-        return phaseKey === undefined
-          ? walk.entry(entries.length - 1)
-          : encounterEndState(phaseKey);
       case 'afterEncounterReward': {
-        const end =
-          phaseKey === undefined ? walk.entry(entries.length - 1) : encounterEndState(phaseKey);
+        const end = walk.entry(spawnMomentEntryIndex(entries, kind, phaseKey));
         // A Ship wheel's end effects spawn only once its reward is collected.
         const wheelKey = structure.phases.find(
           (phase) => phase.phaseKey === phaseKey,
