@@ -42,6 +42,11 @@ export interface ProjectDocumentTransition {
 export interface LoadProjectDocumentOptions {
   /** Names a document saved before projects carried a name: its file's stem, when known. */
   readonly legacyName?: string;
+  /**
+   * Reads a plan saved before schema 103 as saved, without the settlement opening it applies:
+   * for library upkeep that compares or re-identifies a file without opening it.
+   */
+  readonly asSaved?: boolean;
 }
 
 export interface ProjectMigrationProvenance {
@@ -137,7 +142,7 @@ export function loadProjectDocument(
     throw new Error('Project migration result must be JSON serializable.');
   }
   const before = parseProjectDocument(migratedJson, catalog);
-  if (envelope.schemaVersion >= UPGRADE_SETTLEMENT_SCHEMA_VERSION) {
+  if (envelope.schemaVersion >= UPGRADE_SETTLEMENT_SCHEMA_VERSION || options.asSaved === true) {
     return Object.freeze({ migrationProvenance: migrated.migrationProvenance, project: before });
   }
   // A plan saved under the earlier settlement rules is settled once, as they now would.

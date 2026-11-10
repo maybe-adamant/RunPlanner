@@ -280,11 +280,19 @@ export function createProjectLibraryOperations(
   const { adapter, catalog } = options;
   const mintProjectId = options.mintProjectId ?? mintRandomProjectId;
 
-  const load = (json: string, fileName: string, legacyName = projectFileStem(fileName)) => {
-    const loaded = loadProjectDocument(json, catalog, { legacyName });
+  const load = (
+    json: string,
+    fileName: string,
+    legacyName = projectFileStem(fileName),
+    asSaved = false,
+  ) => {
+    const loaded = loadProjectDocument(json, catalog, { legacyName, asSaved });
     assertPublicProjectAdmission(catalog, loaded.project);
     return loaded;
   };
+  /** A plan as saved, for upkeep that compares or re-identifies it without opening it. */
+  const loadAsSaved = (json: string, fileName: string, legacyName = projectFileStem(fileName)) =>
+    load(json, fileName, legacyName, true);
   const reidentified = (project: ProjectDocument): ProjectDocument =>
     reidentifyProjectHistory(createProjectHistory(project), mintProjectId()).present;
   const filed = (
@@ -309,11 +317,21 @@ export function createProjectLibraryOperations(
 
   const reidentifyCopy = async (item: LibraryItem): Promise<LibraryItem> => {
     try {
-      const loaded = load(await adapter.read(item.key), item.key);
-      const project = reidentified(loaded.project);
-      // A copy stored in an older schema keeps its original, as its first edit would.
-      if (loaded.migrationProvenance.length > 0) await adapter.preserveOriginal(item.key);
-      return classify(await adapter.write(item.key, encodeProjectDocument(project)));
+      const json = await adapter.read(item.key);
+      const loaded = loadAsSaved(json, item.key);
+      if (loaded.migrationProvenance.length === 0)
+        return classify(
+          await adapter.write(item.key, encodeProjectDocument(reidentified(loaded.project))),
+        );
+      // A copy stored in an older schema stays in it with only its identity replaced, so
+      // opening it still migrates it, settles it and announces what that removes.
+      const stored = JSON.parse(json) as Record<string, unknown>;
+      return classify(
+        await adapter.write(
+          item.key,
+          `${JSON.stringify({ ...stored, projectId: mintProjectId() }, null, 2)}\n`,
+        ),
+      );
     } catch {
       // A copy the planner cannot open keeps its identity until it can.
       return item;
@@ -340,7 +358,7 @@ export function createProjectLibraryOperations(
       const offer = Object.freeze({ ...file, legacyName: projectFileStem(file.fileName) });
       let canonical: string | null;
       try {
-        canonical = encodeProjectDocument(load(file.json, file.fileName).project);
+        canonical = encodeProjectDocument(loadAsSaved(file.json, file.fileName).project);
       } catch {
         canonical = null;
       }
@@ -368,7 +386,7 @@ export function createProjectLibraryOperations(
     let canonical: string;
     try {
       canonical = encodeProjectDocument(
-        load(json, `${legacyName}.runplanner.json`, legacyName).project,
+        loadAsSaved(json, `${legacyName}.runplanner.json`, legacyName).project,
       );
     } catch {
       return null;
