@@ -2207,14 +2207,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     // The wheel chosen after the Intro opens on the Intro Timeline, then is taken.
     const intro = screen.getByLabelText('Intro ship phase');
     const wheelOpen = within(intro).getByLabelText('Wheels open');
-    const nextPhase = within(intro).getByLabelText('Next phase ready');
     const selectWheel = within(intro).getByRole('listitem', { name: 'Select wheel' });
     expect(within(intro).getByLabelText('Combat 1 reward')).toBeTruthy();
+    expect(within(intro).queryByLabelText('Next phase ready')).toBeNull();
     expect(
-      wheelOpen.compareDocumentPosition(nextPhase) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).not.toBe(0);
-    expect(
-      nextPhase.compareDocumentPosition(selectWheel) & Node.DOCUMENT_POSITION_FOLLOWING,
+      wheelOpen.compareDocumentPosition(selectWheel) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
     expect(within(intro).queryByText('Doors open')).toBeNull();
     // Each phase is one Timeline tab, shown by its phase name.

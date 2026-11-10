@@ -1518,9 +1518,9 @@ describe('OccurrenceRoomActions', () => {
     const reasons = projected.room.roomActions!.proposals.flatMap(
       (proposal) => proposal.explanations,
     );
-    expect(reasons).toContain(
-      'Choose Combat 2 wheel must come after Combat 1 is ready to advance.',
-    );
+    // Combat 2's wheel waits on Combat 1's required actions, never on a checkpoint row.
+    expect(reasons).toContain('Talk to Icarus must come first.');
+    expect(reasons.some((reason) => reason.includes('ready to advance'))).toBe(false);
     expect(reasons).toContain('Choose Combat 1 wheel before collecting its reward.');
     expect(reasons.some((reason) => reason.includes('wheel1 next phase usable'))).toBe(false);
     const timingProposals = projected.room.roomActions!.proposals.filter((proposal) =>

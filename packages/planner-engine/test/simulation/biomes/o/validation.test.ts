@@ -317,7 +317,6 @@ describe('selected O validation', () => {
     expect(room.roomActionRoster.checkpoints).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ checkpointKey: 'combat:Combat1', afterRank: 2 }),
-        expect.objectContaining({ checkpointKey: 'nextPhaseUsable:wheel1', afterRank: 2 }),
         expect.objectContaining({ checkpointKey: 'combat:Combat2', afterRank: 4 }),
         expect.objectContaining({
           checkpointKey: 'outgoingGeneration',
@@ -348,10 +347,13 @@ describe('selected O validation', () => {
     const invalidRoom = materializedORoom(invalidOrder, oOccurrenceIds.combat07);
     expect(invalidRoom.roomActionRoster.issues).toContainEqual(
       expect.objectContaining({
-        kind: 'dependency',
+        kind: 'requiredFirst',
         reference: wheel2Choice,
-        detail: 'afterCheckpoint nextPhaseUsable:wheel1',
+        requiredAction: { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
       }),
+    );
+    expect(room.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey)).toEqual(
+      ['combat:Intro', 'combat:Combat1', 'combat:Combat2', 'outgoingGeneration', 'exitUsable'],
     );
     const invalid = simulateProject(catalog, invalidOrder);
     const owner = createRoomActionAddress(
@@ -362,14 +364,6 @@ describe('selected O validation', () => {
     expect(invalid.route.issue).toMatchObject({ owner, kind: 'invalid' });
     // Wheel 1's required choice ordered after it stops the walk at the Wheel 2 choice.
     expect(invalid.route.issue?.reasons).toEqual([
-      expect.objectContaining({
-        code: 'roomActionOrderUnavailable',
-        origin: owner,
-        evidence: expect.objectContaining({
-          reason: 'dependency',
-          detail: 'afterCheckpoint nextPhaseUsable:wheel1',
-        }),
-      }),
       expect.objectContaining({
         code: 'roomActionOrderUnavailable',
         origin: owner,
@@ -629,10 +623,171 @@ describe('selected O validation', () => {
       'encounterEnd:Intro',
       'wheelsOpen:wheel1',
       'delivery',
-      'nextPhase:wheel1',
       'choose',
       'encounterStart:Combat1',
     ]);
+  });
+
+  /**
+   * A Shrine Hermes boon bought in O matures at combat02's Combat1 end, after wheel 1's
+   * reward and before wheel 2's choice; wheel 2 offers RunProgress.
+   */
+  function wheel2DeliveryProject(options: { readonly rerolls?: boolean } = {}) {
+    const { oShrine } = surfaceShrineDeliverySources;
+    const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
+    let project = surfaceShrineDeliveriesProject();
+    if (options.rerolls === true) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceManualArcanaSelection',
+        route: createRouteAddress('Surface'),
+        arcanaKeys: ['DoorReroll'],
+      });
+      for (const [biomeKey, arcanaKeys] of [
+        ['N', ['ScreenReroll', 'TradeOff', 'StartingGold', 'HealthRegen', 'BonusDodge']],
+        ['O', ['ChanneledCast', 'CastCount', 'SorceryRegenUpgrade', 'CastBuff', 'BonusHealth']],
+      ] as const)
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceJudgmentArcana',
+          judgment: {
+            kind: 'judgmentArcana',
+            routeKey: 'Surface',
+            biomeKey,
+            occurrenceId: createOccurrenceId(`surface-${biomeKey.toLowerCase()}-preboss:boss`),
+            phaseKey: 'Encounter',
+          },
+          arcanaKeys,
+        });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: ship,
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: oShrine,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'ShopHermesUpgrade' },
+    });
+    project = purchaseTestHermesShrineOffer(project, catalog, oShrine, 'initial:secondLeft', {
+      delay: 5,
+      rushed: false,
+    });
+    project = placeDueHermesShrineDeliveries(project);
+    return applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat02, 'wheel2'),
+      storeKey: 'RunProgress',
+    });
+  }
+
+  const combat02Events = (biome: ReturnType<typeof evaluateO>['biome']) =>
+    biome.history.events.flatMap((event) =>
+      'origin' in event &&
+      semanticAddressKey(event.origin) ===
+        semanticAddressKey(createOccurrenceAddress(oBiome, oOccurrenceIds.combat02))
+        ? [
+            event.kind === 'offerPointMaterialized'
+              ? `open ${event.offerPoint}`
+              : event.kind === 'acquisitionPointReached' && event.siteKey === 'hermesShrineDelivery'
+                ? `delivery`
+                : event.kind === 'rewardRerolled'
+                  ? 'reroll'
+                  : event.kind === 'encounterStarted'
+                    ? `start ${event.phaseKey}`
+                    : event.kind === 'encounterEndEffectsApplied'
+                      ? `end ${event.phaseKey}`
+                      : undefined,
+          ].filter((entry): entry is string => entry !== undefined)
+        : [],
+    );
+
+  const wheel2Interval = (biome: ReturnType<typeof evaluateO>['biome']) => {
+    const events = combat02Events(biome);
+    return events.slice(events.indexOf('open wheel2'), events.indexOf('start Combat2') + 1);
+  };
+
+  it('rolls wheel 2 at its Wheels open, before a delivery Combat 1 matured', () => {
+    const wheelOffer = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat02,
+      'wheel2',
+      'offer1',
+    );
+    const { biome } = evaluateValidO(
+      authorLegalTraitOffers(
+        applyProjectCommand(wheel2DeliveryProject(), catalog, {
+          kind: 'ReplaceRewardWheelOffer',
+          offer: wheelOffer,
+          value: { rewardType: 'HermesUpgrade' },
+        }),
+      ),
+    );
+    expect(biome.rewards.findings).not.toContainEqual(
+      expect.objectContaining({ origin: wheelOffer }),
+    );
+    expect(combat02Events(biome).slice(-6)).toEqual([
+      'start Combat1',
+      'end Combat1',
+      'open wheel2',
+      'delivery',
+      'start Combat2',
+      'end Combat2',
+    ]);
+  });
+
+  it('rerolls a wheel from Wheels open, each roll seeing the pickups ranked before it', () => {
+    const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
+    const project = applyProjectCommand(wheel2DeliveryProject({ rerolls: true }), catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    const order = () =>
+      project.route.biomes
+        .find((candidate) => candidate.biomeKey === 'O')!
+        .topology!.occurrences.find(
+          (candidate) => candidate.occurrenceId === oOccurrenceIds.combat02,
+        )!.roomActions.order;
+    const delivery = order().findIndex(
+      (reference) =>
+        reference.kind === 'interactAcquisitionEntry' &&
+        reference.siteKey === 'hermesShrineDelivery',
+    );
+    const reroll = (index: number, rewardType: string) =>
+      authorLegalTraitOffers(
+        applyProjectCommand(project, catalog, {
+          kind: 'InsertReroll',
+          occurrence: ship,
+          target: { kind: 'wheelOffer', wheelKey: 'wheel2', offerKey: 'offer1' },
+          reward: { rewardType },
+          index,
+        }),
+      );
+
+    // Before the pickup, the press draws the Hermes boon the delivery has not yet spent.
+    const before = evaluateValidO(reroll(delivery, 'HermesUpgrade')).biome;
+    expect(wheel2Interval(before)).toEqual(['open wheel2', 'reroll', 'delivery', 'start Combat2']);
+    // After it, the press is still in its window, and its roll sees the delivered boon.
+    const after = evaluateValidO(reroll(delivery + 1, 'MaxManaDrop')).biome;
+    expect(wheel2Interval(after)).toEqual(['open wheel2', 'delivery', 'reroll', 'start Combat2']);
+    const spentProject = reroll(delivery + 1, 'HermesUpgrade');
+    const press = createRoomActionAddress(
+      oBiome,
+      oOccurrenceIds.combat02,
+      roomActionKey(
+        spentProject.route.biomes
+          .find((candidate) => candidate.biomeKey === 'O')!
+          .topology!.occurrences.find(
+            (candidate) => candidate.occurrenceId === oOccurrenceIds.combat02,
+          )!
+          .roomActions.order.find((reference) => reference.kind === 'reroll')!,
+      ),
+    );
+    const spent = evaluateO(spentProject).biome;
+    expect(spent.rewards.findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: press }),
+    );
   });
 
   it('preserves a non-Ship terminal base store through the Preboss takeover and fixed completion chain', () => {

@@ -144,7 +144,6 @@ function structure(
   ];
   phases.forEach((phase, index) => {
     if (phase.rewardWheelKey !== undefined && index > 0) {
-      const previousWheelKey = phases[index - 1]?.rewardWheelKey;
       points.push(
         Object.freeze({
           kind: 'wheelsOpen',
@@ -155,7 +154,6 @@ function structure(
           kind: 'nextPhase',
           key: `nextPhase:${phase.rewardWheelKey}`,
           wheelKey: phase.rewardWheelKey,
-          ...(previousWheelKey === undefined ? {} : { previousWheelKey }),
         }),
       );
     }
@@ -765,18 +763,6 @@ describe('room lifecycle timeline', () => {
         ]),
         checkpoints: Object.freeze([
           Object.freeze({
-            checkpointKey: 'nextPhaseUsable:wheel1',
-            label: 'Next phase usable',
-            window: Object.freeze({ kind: 'shipPostCombat' as const, wheelKey: 'wheel1' }),
-            afterRank: 2,
-          }),
-          Object.freeze({
-            checkpointKey: 'nextPhaseUsable:wheel2',
-            label: 'Next phase usable',
-            window: Object.freeze({ kind: 'shipPostCombat' as const, wheelKey: 'wheel2' }),
-            afterRank: 4,
-          }),
-          Object.freeze({
             checkpointKey: 'outgoingGeneration',
             label: 'Outgoing generation',
             window: Object.freeze({ kind: 'shipPostCombat' as const, wheelKey: 'wheel2' }),
@@ -791,24 +777,22 @@ describe('room lifecycle timeline', () => {
       'encounterStart',
       'encounterEnd',
       'wheelsOpen',
-      'nextPhase',
       'encounterStart',
       'encounterEnd',
       'wheelsOpen',
-      'nextPhase',
       'encounterStart',
       'encounterEnd',
       'cleanup',
     ]);
     expect(
       timeline.boundaries
-        .filter((boundary) => boundary.kind === 'nextPhase')
+        .filter((boundary) => boundary.kind === 'wheelsOpen')
         .map((boundary) => boundary.wheelKey),
     ).toEqual(['wheel1', 'wheel2']);
     expect(timeline.boundaries.filter((boundary) => boundary.kind === 'cleanup')).toHaveLength(1);
     expect(
       timeline.entries.filter(
-        (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'nextPhase',
+        (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'wheelsOpen',
       )[0],
     ).toMatchObject({
       rank: 0,
@@ -821,7 +805,7 @@ describe('room lifecycle timeline', () => {
       (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStart:Combat2',
     );
     const wheelTwoStart = timeline.entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'nextPhase:wheel2',
+      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'wheelsOpen:wheel2',
     );
     const wheelTwoChoice = timeline.entries.findIndex(
       (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(choose2),
@@ -833,7 +817,7 @@ describe('room lifecycle timeline', () => {
     expect(wheelTwoChoice).toBeLessThan(combatTwoStart);
     expect(
       timeline.entries.find(
-        (entry) => entry.kind === 'boundary' && entry.boundary.key === 'nextPhase:wheel2',
+        (entry) => entry.kind === 'boundary' && entry.boundary.key === 'wheelsOpen:wheel2',
       ),
     ).toMatchObject({ rank: 2, placement: 'after' });
   });
@@ -880,12 +864,6 @@ describe('room lifecycle timeline', () => {
         ]),
         checkpoints: Object.freeze([
           Object.freeze({
-            checkpointKey: 'nextPhaseUsable:wheel1',
-            label: 'Next phase usable',
-            window: Object.freeze({ kind: 'shipPostCombat' as const, wheelKey: 'wheel1' }),
-            afterRank: 2,
-          }),
-          Object.freeze({
             checkpointKey: 'outgoingGeneration',
             label: 'Outgoing generation',
             window: Object.freeze({ kind: 'shipPostCombat' as const, wheelKey: 'wheel2' }),
@@ -912,7 +890,7 @@ describe('room lifecycle timeline', () => {
     const nextPhase = indexOf(
       (entry) =>
         entry.kind === 'boundary' &&
-        entry.boundary.kind === 'nextPhase' &&
+        entry.boundary.kind === 'wheelsOpen' &&
         entry.boundary.wheelKey === 'wheel2',
     );
     const wheel2 = indexOf(

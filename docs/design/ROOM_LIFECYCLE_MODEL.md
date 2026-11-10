@@ -627,7 +627,7 @@ The engine constructs one closed lifecycle structure from the resolved profile
 and its active declaration-owned phase scope. Its ordered points are the rigid
 room skeleton: Room entered, each exact encounter start, its encounter
 outcome boundary where the phase can host one (Boss defeated in a Boss room),
-then the encounter end, Ship Wheels open and next-phase seams, internal outgoing generation,
+then the encounter end, Ship Wheels open seams with their internal choice point, internal outgoing generation,
 and final cleanup. The
 same frozen structure is carried by the roster and consumed by required-action
 scheduling, lifecycle execution, checkpoint assembly, and the room timeline.
@@ -652,7 +652,7 @@ tabs, labels, callbacks, or another eligibility/order calculation.
 An action rank selects only the inter-action slot to which a boundary is
 anchored. The profile and its active phase order independently own the
 structural boundary sequence: Room entered, each phase's Start then End, the
-Wheels open and next-phase seams between phases, and the profile-specific final seams. If
+Wheels open seams between phases, and the profile-specific final seams. If
 retained-invalid action ranks imply contradictory boundary anchors, the
 timeline keeps the authored action order for repair and moves the later
 semantic boundary forward to the earliest compatible slot. It never sorts
@@ -672,7 +672,7 @@ does not place wheel or action rows by rank arithmetic.
 Door and Fields cage reroll presses are optional ranked actions in the source
 room's post-outgoing window: after its doors unlock and before it commits, so
 they interleave with other post-unlock actions such as a Mystery box or a Well
-purchase. A ship-wheel press follows its wheel's offers and precedes the
+purchase. A ship-wheel press follows its wheel's offers, from Wheels open, and precedes the
 wheel's Choose action. Hub board-door presses sit in the Hub's own action
 order, in the stay before a later visit. The walk settles each press at its
 rank as a draw from the target's store
@@ -1108,18 +1108,20 @@ exitRoom
 Encounter completion emits end effects unless the phase suppresses them; a
 phase carrying a reward wheel applies them after its wheel acquisition. The
 [O rules](../biomes/O_GAME_RULES.md#shipcombat-phase-and-wheel-contract) own its
-active phases, offer points and the derived `nextPhaseUsable` barrier between
-Ship phases; O has one room-level Cleanup after its final active phase.
+active phases and offer points; O has one room-level Cleanup after its final
+active phase.
 
 Between Ship phases the points run: the previous phase's **Encounter ended**
 (its end effects, which spawn its matured deliveries and drops), **Wheels
 open** (the next encounter's setup rolls its wheels, so their store and offers
-are fixed here), the pickups those end effects spawned, **Next phase ready**
-(the wheel can be used once no required pickup is loose), the wheel's rerolls
-and its choice, then the next encounter's start. The end-effect pickups' window
-opens at Wheels open and closes at the choice, so a required one is due before
-Next phase ready, and a pickup taken there never feeds the wheel's offers:
-neither their candidate context, store ledger nor reward state. Intro and a
+are fixed here), then in any authored order the pickups those end effects
+spawned and the wheel's rerolls, then the wheel's choice and the next
+encounter's start. The pickups' and rerolls' windows open at Wheels open and
+close at the choice, which waits on every required pickup since the previous
+phase's end; that internal point is not a Timeline event. A pickup taken there
+never feeds the wheel's offers (neither their candidate context, store ledger
+nor reward state), while each reroll draws against the state at its own rank,
+so it sees exactly the pickups ranked before it. Intro and a
 Heracles Intro set up no wheel of their own; the next wheel's Wheels open
 follows their end the same way. After the final phase there is no Wheels open:
 its end-effect pickups follow its wheel reward and are due before Doors open.

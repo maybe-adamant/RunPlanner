@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createOccurrenceAddress,
   createBiomeAddress,
   createOccurrenceId,
   createRewardWheelAddress,
@@ -11,6 +12,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   projectStructuredWorkspaceFixture,
   requireWorkspaceBiome,
@@ -77,12 +79,12 @@ describe('ship wheels on their phase Timeline', () => {
     const phase = wheelPhase(projected);
     expect(phase).toMatchObject({ tab: 'shipIntroActions', wheel: { key: 'wheel1' } });
     expect(phase.wheelRerolls).toMatchObject({ poolRemaining: 10, targetNoun: 'offer', rows: [] });
-    // The Timeline keeps only its Next phase marker.
-    const nextPhase = phase.timeline.find(
-      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'nextPhase',
+    // The Timeline keeps only its Wheels open marker.
+    const wheelsOpen = phase.timeline.find(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'wheelsOpen',
     );
-    expect(nextPhase).toBeDefined();
-    expect(nextPhase?.kind === 'boundary' ? nextPhase.supplement : undefined).toBeUndefined();
+    expect(wheelsOpen).toBeDefined();
+    expect(wheelsOpen?.kind === 'boundary' ? wheelsOpen.supplement : undefined).toBeUndefined();
     for (const owner of [wheel, createRewardWheelOfferAddress(o, ship, 'wheel1', 'offer1')])
       expect(projected.workspace.focusByOwner.get(semanticAddressKey(owner))).toMatchObject({
         roomTab: 'shipIntroActions',
@@ -143,5 +145,54 @@ describe('ship wheels on their phase Timeline', () => {
         press.address.kind === 'roomAction' && candidate.key === press.address.actionKey,
     );
     expect(row?.label).toMatch(/^Reroll Offer → \S/);
+  });
+
+  it('opens each wheel at Wheels open and leaves no next-phase checkpoint row in any phase', () => {
+    const threePhase = createOccurrenceId('surface-o-combat07');
+    const wheel2 = createRewardWheelAddress(o, threePhase, 'wheel2');
+    const project = [
+      { kind: 'ReplaceRewardWheelOfferCount', wheel: wheel2, offerCount: 1 },
+      { kind: 'ReplaceRewardWheelStore', wheel: wheel2, storeKey: 'RunProgress' },
+      {
+        kind: 'ReplaceRewardWheelOffer',
+        offer: createRewardWheelOfferAddress(o, threePhase, 'wheel2', 'offer1'),
+        value: { rewardType: 'RoomMoneyDrop' },
+      },
+      {
+        kind: 'ReplaceShipEncounterCount',
+        occurrence: createOccurrenceAddress(o, threePhase),
+        encounterCount: 3,
+      },
+    ].reduce(
+      (current, command) =>
+        applyProjectCommand(current, catalog, command as Parameters<typeof applyProjectCommand>[2]),
+      cardHolder(),
+    );
+    const node = requireWorkspaceBiome(
+      projectStructuredWorkspaceFixture(authorLegalTraitOffers(project)).workspace,
+      'O',
+    ).nodes.find(
+      (candidate) =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === threePhase,
+    );
+    if (node?.kind !== 'occurrenceWorkbench') throw new Error('the ship room is not projected');
+    const room = node.room;
+    if (room.workbench.kind !== 'ship') throw new Error('the ship room is not projected');
+    const wheelsOpen = room.workbench.phases.map((phase) =>
+      phase.timeline.flatMap((entry) =>
+        entry.kind === 'boundary' && entry.boundary.kind === 'wheelsOpen'
+          ? [entry.boundary.wheelKey]
+          : [],
+      ),
+    );
+    expect(wheelsOpen).toEqual([['wheel1'], ['wheel2'], []]);
+    for (const phase of room.workbench.phases) {
+      expect(phase.checkpoints.map((checkpoint) => checkpoint.key)).not.toContainEqual(
+        expect.stringMatching(/^nextPhase/),
+      );
+      expect(phase.checkpoints.map((checkpoint) => checkpoint.label)).not.toContainEqual(
+        expect.stringContaining('ready to advance'),
+      );
+    }
   });
 });

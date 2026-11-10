@@ -684,21 +684,11 @@ export function RoomActionsWorkbench({
       {...(entry.unlocks ? { unlocks: true } : {})}
     />
   );
-  // The wheel's offers show where they roll, at Wheels open. It is taken at its choice; while
-  // the choice has no place of its own, at Next phase ready, or else beside its offers.
-  const wheelChoiceHost = (
-    timeline: readonly WorkspaceRoomLifecycleTimelineEntry[],
-  ): 'choice' | 'nextPhase' | 'wheelsOpen' =>
-    phaseWheel !== undefined && timeline.some((entry) => isWheelChoiceAnchor(entry, phaseWheel.key))
-      ? 'choice'
-      : timeline.some(
-            (entry) =>
-              entry.kind === 'boundary' &&
-              entry.boundary.kind === 'nextPhase' &&
-              entry.boundary.wheelKey === phaseWheel?.key,
-          )
-        ? 'nextPhase'
-        : 'wheelsOpen';
+  // The wheel's offers show where they roll, at Wheels open. It is taken at its choice, or
+  // beside its offers while the choice has no place of its own.
+  const wheelChoiceAnchored = (timeline: readonly WorkspaceRoomLifecycleTimelineEntry[]) =>
+    phaseWheel !== undefined &&
+    timeline.some((entry) => isWheelChoiceAnchor(entry, phaseWheel.key));
   const isWheelChoiceAnchor = (entry: WorkspaceRoomLifecycleTimelineEntry, wheelKey: string) => {
     if (entry.kind !== 'action' || entry.presentation !== 'rewardWheelAnchor') return false;
     const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
@@ -1196,7 +1186,7 @@ export function RoomActionsWorkbench({
               const timelineActionRanks = new Set(
                 phase.timeline.flatMap((entry) => (entry.kind === 'action' ? [entry.rank] : [])),
               );
-              const choiceHost = wheelChoiceHost(phase.timeline);
+              const choiceAnchored = wheelChoiceAnchored(phase.timeline);
               const selectWheel =
                 phaseWheel === undefined
                   ? []
@@ -1218,18 +1208,11 @@ export function RoomActionsWorkbench({
                 )
                   return [
                     <DoorsOpenBanner doors={wheelDoors} key="wheel-open" label={entry.label} />,
-                    ...(choiceHost === 'wheelsOpen' ? selectWheel : []),
+                    ...(choiceAnchored ? [] : selectWheel),
                   ];
                 // The wheel is taken as the next phase starts.
                 if (phaseWheel !== undefined && isWheelChoiceAnchor(entry, phaseWheel.key))
                   return selectWheel;
-                if (
-                  choiceHost === 'nextPhase' &&
-                  entry.kind === 'boundary' &&
-                  entry.boundary.kind === 'nextPhase' &&
-                  phaseWheel?.key === entry.boundary.wheelKey
-                )
-                  return [renderBoundary(entry), ...selectWheel];
                 if (entry.kind === 'boundary') return [renderBoundary(entry)];
                 if (entry.kind === 'spawned') return [renderSpawned(entry)];
                 if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);

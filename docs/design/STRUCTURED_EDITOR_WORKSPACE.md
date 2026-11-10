@@ -706,9 +706,9 @@ and room features. Each phase tab holds its encounter banners and their events
 and its post-combat actions. A phase a wheel follows then opens that wheel at
 **Wheels open**, like Doors open: its offers' chips and the wheel's editor
 (pool and offer count, then its offers as first drawn). The pickups the phase's
-end spawned follow, then the **Next phase ready** banner. Wheel-offer rerolls
-follow as press rows, added from the phase's **Wheel** object, and the phase
-ends with **Select wheel** at the choice's place, which picks the offer by its
+end spawned and the wheel-offer rerolls, press rows added from the phase's
+**Wheel** object, follow in their authored order, and the phase ends with
+**Select wheel** at the choice's place, which picks the offer by its
 name and shows its reward as it stands; a one-offer wheel has nothing to pick.
 While the walk stops before the choice, Select wheel stands at the last wheel
 banner reached. The last phase keeps Doors open and Leave room, since a Ship room

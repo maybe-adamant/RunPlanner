@@ -59,8 +59,7 @@ function shipWorkbenchPresentation(
         return phaseIndexForKey(boundary.phaseKey);
       case 'bossDefeated':
         return phaseIndexForKey(boundary.phaseKey);
-      case 'wheelsOpen':
-      case 'nextPhase': {
+      case 'wheelsOpen': {
         const targetIndex = roomLocal.phases.findIndex(
           (phase) => phase.rewardWheelKey === boundary.wheelKey,
         );
@@ -74,8 +73,6 @@ function shipWorkbenchPresentation(
     switch (boundary.kind) {
       case 'encounterEnd':
         return `combat:${boundary.phaseKey}`;
-      case 'nextPhase':
-        return `nextPhaseUsable:${boundary.wheelKey}`;
       default:
         return boundary.key;
     }
@@ -89,11 +86,12 @@ function shipWorkbenchPresentation(
       case 'encounterEnd':
         return roomLocal.phases.findIndex((phase) => phase.key === window.phaseKey);
       case 'shipPostCombat':
+      case 'shipWheelsOpen':
       case 'shipPreCombat': {
         const index = roomLocal.phases.findIndex(
           (phase) => phase.rewardWheelKey === window.wheelKey,
         );
-        return index < 0 ? -1 : window.kind === 'shipPreCombat' ? Math.max(0, index - 1) : index;
+        return index < 0 ? -1 : window.kind === 'shipPostCombat' ? index : Math.max(0, index - 1);
       }
       case 'standard':
         return window.phase === 'beforeCombat' ? 0 : roomLocal.phases.length - 1;

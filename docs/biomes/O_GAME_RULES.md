@@ -113,18 +113,20 @@ each wheel's reward (`RoomLogic.lua:1426-1436`). The wheels are usable and show
 their rewards, but `UseShipWheelForward`, `UseShipWheelLeft` and
 `UseShipWheelRight` refuse while `HasRoomRequiredObject()`
 (`PresentationBiomeO.lua:880-928`), so the delivery is picked up after the
-roll and before the choice. An Intro or Heracles Intro skips the setup
+roll and before the choice. A reroll is not refused: the Reroll control
+(`GiftLogic.lua:55-77`) calls `AttemptReroll` (`InteractLogic.lua:1351-1385`),
+which has no required-object guard, so a wheel can be rerolled while the
+delivery is still loose. An Intro or Heracles Intro skips the setup
 (`SkipShipsEncounterSetup`), so the following wheel phase's setup opens the next
 wheel after its end in the same way.
 
-The planner therefore splits the seam in two. **Wheels open** is where the
-wheel's store and offers are fixed, right after the previous phase's end
-effects; pickups ranked after it, before the choice, never feed them. **Next
-phase ready**, the derived Ship-only `nextPhaseUsable(wheel)` barrier, is not a
-free action and not one native callback: it means every required pickup since
-the previous phase's end, its deliveries included, has been taken, so the wheel
-can be used. `chooseRewardWheel` records the player's selection, and the
-selected pickup remains after the matching encounter end. After the final
+The planner therefore opens the wheel at **Wheels open**, where its store and
+offers are fixed, right after the previous phase's end effects; pickups ranked
+after it never feed them. The pickups and the wheel's rerolls then follow in
+any authored order, each reroll drawing against the state at its own rank.
+`chooseRewardWheel` comes last: it waits on every required pickup since the
+previous phase's end, its deliveries included, records the player's
+selection, and the selected pickup remains after the matching encounter end. After the final
 phase no wheel opens, and its end-effect pickups are due before the doors. There is no
 room-level Cleanup between Ship phases: room features and physical exits stay
 unavailable until the final active encounter and its required post-combat
@@ -290,7 +292,7 @@ The editor renders Room Overview and one Timeline per phase: Intro, Combat 1
 and, when it plays, Combat 2. Overview owns encounter count, each phase's
 encounter (including whether Combat 2 plays) and room features. Wheel 1 opens
 on the Intro Timeline at Wheels open and Wheel 2 on Combat 1's; the pickups due
-before the choice follow, then Next phase ready and the offer rerolls before
+before the choice and the offer rerolls follow in their authored order, then
 the phase's Select wheel row, which is the choice action's place, and the
 pickup keeps its engine timeline position. Invalid,
 missing, or retained inactive choice actions remain visible for repair.

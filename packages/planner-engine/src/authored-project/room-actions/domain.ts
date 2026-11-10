@@ -475,14 +475,6 @@ function baseContribution(
         'required',
         frozen({ kind: 'shipPreCombat', wheelKey: reference.wheelKey }),
         [
-          ...(reference.wheelKey === 'wheel2'
-            ? [
-                frozen({
-                  kind: 'afterCheckpoint' as const,
-                  checkpointKey: 'nextPhaseUsable:wheel1',
-                }),
-              ]
-            : []),
           // Using the wheel ends its rerolls.
           ...occurrence.roomActions.order.flatMap((action) =>
             action.kind === 'reroll' &&
@@ -505,8 +497,9 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
+        // A wheel rerolls from its roll on; only its use waits on a loose pickup.
         target.kind === 'wheelOffer'
-          ? frozen({ kind: 'shipPreCombat', wheelKey: target.wheelKey })
+          ? frozen({ kind: 'shipWheelsOpen', wheelKey: target.wheelKey })
           : frozen({ kind: 'postOutgoing' }),
         locked
           ? [
@@ -840,25 +833,6 @@ function checkpoints(
             : frozen({ kind: 'standard', phase: 'afterCombat' }),
     });
   });
-  for (const point of structure.points) {
-    if (point.kind === 'nextPhase' && point.previousWheelKey !== undefined) {
-      const previousPhase = structure.phases.find(
-        (phase) => phase.rewardWheelKey === point.previousWheelKey,
-      );
-      result.push(
-        frozen({
-          kind: 'checkpoint',
-          checkpointKey: `nextPhaseUsable:${point.previousWheelKey}`,
-          label: `${point.previousWheelKey} next phase usable`,
-          // Usable once the previous phase's end-effect pickups after Wheels open are taken.
-          window:
-            previousPhase === undefined
-              ? frozen({ kind: 'shipPostCombat', wheelKey: point.previousWheelKey })
-              : frozen({ kind: 'encounterEnd', phaseKey: previousPhase.phaseKey }),
-        }),
-      );
-    }
-  }
   const finalPhase = structure.phases.at(-1);
   const finalWindow: RoomActionWindow =
     structure.profileKey === 'WorldShopRoom'

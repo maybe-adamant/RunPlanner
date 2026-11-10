@@ -35,13 +35,6 @@ interface ExecutionState {
   readonly events: readonly RoomLifecycleEvent[];
   readonly reachedActions?: readonly import('./model').ReachedRoomAction[];
   readonly blockedAt?: import('../../authored-project/addresses').RoomActionSemanticAddress;
-  /**
-   * Wheel rerolls reached before their wheel's offers rolled; they settle
-   * right after the offers.
-   */
-  readonly pendingWheelRerolls?: readonly EventData<
-    Extract<RoomLifecycleEvent, { readonly kind: 'rewardRerolled' }>
-  >[];
 }
 
 interface RoomActionSchedule {
@@ -179,22 +172,10 @@ const lifecycleEffectRegistry = Object.freeze({
     const attachment = requireEncounterPhase(context).rewardAttachment;
     if (attachment?.kind !== 'rewardWheel' || wheelOffersRolled(state, attachment.key))
       return state;
-    let next = appendEvent(state, context, {
+    return appendEvent(state, context, {
       kind: 'offerPointMaterialized',
       offerPoint: attachment.key,
     });
-    const pending = next.pendingWheelRerolls ?? [];
-    for (const reroll of pending)
-      if (reroll.target.kind === 'wheelOffer' && reroll.target.wheelKey === attachment.key)
-        next = appendEvent(next, context, reroll);
-    const remaining = pending.filter(
-      (reroll) => reroll.target.kind !== 'wheelOffer' || reroll.target.wheelKey !== attachment.key,
-    );
-    const { pendingWheelRerolls: _settled, ...rest } = next;
-    void _settled;
-    return Object.freeze(
-      remaining.length === 0 ? rest : { ...rest, pendingWheelRerolls: Object.freeze(remaining) },
-    );
   },
   recordAppearance: (context, state) =>
     appendEvent(state, context, {
@@ -836,20 +817,13 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
           exitKey: row.reference.exitKey,
         });
-      case 'reroll': {
-        const reroll = Object.freeze({
-          kind: 'rewardRerolled' as const,
+      // A wheel reroll's window opens at its wheel's roll, so its offers precede it.
+      case 'reroll':
+        return appendEvent(state, operationContext, {
+          kind: 'rewardRerolled',
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
           target: row.reference.target,
         });
-        return row.reference.target.kind === 'wheelOffer' &&
-          !wheelOffersRolled(state, row.reference.target.wheelKey)
-          ? Object.freeze({
-              ...state,
-              pendingWheelRerolls: Object.freeze([...(state.pendingWheelRerolls ?? []), reroll]),
-            })
-          : appendEvent(state, operationContext, reroll);
-      }
       case 'completeFieldsCage':
       case 'chooseRewardWheel':
         throw new LifecycleExecutionContractError(

@@ -1411,7 +1411,7 @@ export function assembleWorkspaceOccurrence(
         input.markerDestinations.setRoomTab(wheelMarkers, 'overview');
         continue;
       }
-      // The phase the wheel follows hosts its Next phase ready and Select wheel rows.
+      // The phase the wheel follows hosts its Wheels open and Select wheel rows.
       const tab: WorkspaceRoomTab = workbenchPhase!.tab;
       input.markerDestinations.setRoomTab(wheelMarkers, tab);
       const choice = roomActions?.rows.find(

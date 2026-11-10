@@ -205,7 +205,6 @@ function actionRoster(
           kind: 'nextPhase',
           key: `nextPhase:${phase.rewardWheelKey}`,
           wheelKey: phase.rewardWheelKey,
-          previousWheelKey: phasesForStructure[index - 1]!.rewardWheelKey!,
         }),
       );
     }

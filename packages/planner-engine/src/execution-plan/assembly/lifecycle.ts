@@ -16,6 +16,9 @@ export function assembleLifecycleWindow(row: RoomActionWindow): ExecutionLifecyc
       : Object.freeze({ kind: 'encounterEnd', phaseKey: row.phaseKey });
   if (row.kind === 'shipPreCombat' || row.kind === 'shipPostCombat')
     return Object.freeze({ kind: row.kind, wheelKey: row.wheelKey });
+  // A wheel reroll's contact is still before its wheel's choice.
+  if (row.kind === 'shipWheelsOpen')
+    return Object.freeze({ kind: 'shipPreCombat', wheelKey: row.wheelKey });
   if (row.kind === 'postOutgoing') return Object.freeze({ kind: row.kind });
   throw new CompilerError(
     'executionCoverageMissing',

@@ -371,7 +371,9 @@ The wheels are usable from then on, but `UseShipWheelForward`, `Left` and
 `Right` refuse while `HasRoomRequiredObject()`
 (`PresentationBiomeO.lua:880-928`), so a required object the previous phase's
 end effects spawned, such as a matured delivery, is taken after the roll and
-before the choice. `UseShipWheel` fixes the selected reward/store on that
+before the choice. Rerolling a wheel is not refused meanwhile: `AttemptReroll`
+(`InteractLogic.lua:1351-1385`, reached from the Reroll control at
+`GiftLogic.lua:55-77`) has no required-object guard. `UseShipWheel` fixes the selected reward/store on that
 exact encounter. Only then do encounter-start effects and
 combat proceed. After combat, `SpawnRoomReward` creates the selected concrete
 reward. The reward is not acquired by choosing the wheel.

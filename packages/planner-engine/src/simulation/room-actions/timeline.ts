@@ -16,18 +16,12 @@ import {
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RoomActionRoster, RoomActionRow } from './model';
-import { lastRequiredRankThrough } from './assemble';
 
-export type RoomLifecycleBoundary =
-  | Exclude<
-      RoomLifecycleStructurePoint,
-      { readonly kind: 'nextPhase' } | { readonly kind: 'outgoingGeneration' }
-    >
-  | {
-      readonly kind: 'nextPhase';
-      readonly key: string;
-      readonly wheelKey: string;
-    };
+/** A Timeline boundary; the internal outgoing generation and next-phase points are not. */
+export type RoomLifecycleBoundary = Exclude<
+  RoomLifecycleStructurePoint,
+  { readonly kind: 'nextPhase' } | { readonly kind: 'outgoingGeneration' }
+>;
 
 export type RoomLifecycleTimelineEntry =
   | {
@@ -238,15 +232,7 @@ function lastRank(
   return matches.length === 0 ? undefined : (matches[matches.length - 1]!.rank ?? undefined);
 }
 
-type VisibleRoomLifecycleStructurePoint = Exclude<
-  RoomLifecycleStructurePoint,
-  { readonly kind: 'outgoingGeneration' }
->;
-
-function publicBoundary(point: VisibleRoomLifecycleStructurePoint): RoomLifecycleBoundary {
-  if (point.kind !== 'nextPhase') return point;
-  return Object.freeze({ kind: point.kind, key: point.key, wheelKey: point.wheelKey });
-}
+type VisibleRoomLifecycleStructurePoint = RoomLifecycleBoundary;
 
 function boundaryEntry(
   point: VisibleRoomLifecycleStructurePoint,
@@ -255,7 +241,7 @@ function boundaryEntry(
 ): RoomLifecycleBoundaryEntry {
   return Object.freeze({
     kind: 'boundary',
-    boundary: publicBoundary(point),
+    boundary: point,
     rank,
     placement,
   });
@@ -287,7 +273,9 @@ export function assembleRoomLifecycleTimeline(
     rankedRows.filter((row) => {
       if (phase.rewardWheelKey !== undefined) {
         return (
-          (row.window.kind === 'shipPreCombat' || row.window.kind === 'shipPostCombat') &&
+          (row.window.kind === 'shipPreCombat' ||
+            row.window.kind === 'shipWheelsOpen' ||
+            row.window.kind === 'shipPostCombat') &&
           row.window.wheelKey === phase.rewardWheelKey
         );
       }
@@ -322,7 +310,7 @@ export function assembleRoomLifecycleTimeline(
       const wheelKey = row.window.wheelKey;
       return structure.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey;
     }
-    if (row.window.kind === 'shipPreCombat') {
+    if (row.window.kind === 'shipPreCombat' || row.window.kind === 'shipWheelsOpen') {
       const wheelKey = row.window.wheelKey;
       const targetIndex = structure.phases.findIndex((phase) => phase.rewardWheelKey === wheelKey);
       return targetIndex > 0 ? structure.phases[targetIndex - 1]?.phaseKey : undefined;
@@ -422,10 +410,8 @@ export function assembleRoomLifecycleTimeline(
           0;
         return boundaryEntry(point, rank, firstPostCombatRank === undefined ? 'after' : 'before');
       }
-      // The next wheels roll right after the previous phase's end effects; the choice
-      // becomes possible once the pickups those effects spawned are taken.
-      case 'wheelsOpen':
-      case 'nextPhase': {
+      // The next wheels roll right after the previous phase's end effects.
+      case 'wheelsOpen': {
         const previousPhase =
           structure.phases[
             structure.phases.findIndex((phase) => phase.rewardWheelKey === point.wheelKey) - 1
@@ -435,12 +421,6 @@ export function assembleRoomLifecycleTimeline(
           kind: 'encounterEnd' as const,
           phaseKey: previousPhase.phaseKey,
         });
-        if (point.kind === 'nextPhase')
-          return boundaryEntry(
-            point,
-            lastRequiredRankThrough(structure, roster.rows, opened),
-            'after',
-          );
         const openedOrdinal = roomLifecycleWindowOrdinal(structure, opened);
         return boundaryEntry(
           point,
@@ -461,7 +441,8 @@ export function assembleRoomLifecycleTimeline(
   let precedingSlot = 0;
   const boundaryEntries = structure.points
     .filter(
-      (point): point is VisibleRoomLifecycleStructurePoint => point.kind !== 'outgoingGeneration',
+      (point): point is VisibleRoomLifecycleStructurePoint =>
+        point.kind !== 'outgoingGeneration' && point.kind !== 'nextPhase',
     )
     .map((point) => {
       const desired = desiredBoundary(point);
@@ -532,7 +513,6 @@ export function scopeRoomLifecycleTimeline(
       case 'encounterEnd':
         return active.has(boundary.phaseKey);
       case 'wheelsOpen':
-      case 'nextPhase':
         return activeWheelKeys.has(boundary.wheelKey);
       case 'roomEntered':
       case 'cleanup':
