@@ -3,10 +3,11 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
+  createBiomeAddress,
   createEncounterPhaseAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
-  createProjectAddress,
+  createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
   DEFAULT_PROJECT_NAME,
@@ -14,15 +15,13 @@ import {
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { fillNemesisBetOutcomeWins } from '@run-planner/engine/project-migration';
 import { migrateProjectDocument as migrate101To102 } from '@planner/persistence/project-101-to-102.js';
+import { migrateProjectDocument as migrate102To103 } from '@planner/persistence/project-102-to-103.js';
 import { catalog } from '@run-planner/hades2-catalog';
-import {
-  settleProjectEdit,
-  simulateProject,
-  simulateProjectAssembly,
-} from '@run-planner/engine/simulation';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import {
   createGoldenFGHIProject,
@@ -79,7 +78,7 @@ const project = createProjectDocument(catalog, {
 });
 
 describe('project document loader', () => {
-  it('loads a current schema-102 document through the strict parser without migration provenance', () => {
+  it('loads a current schema-103 document through the strict parser without migration provenance', () => {
     const json = encodeProjectDocument(project);
 
     expect(loadProjectDocument(json, catalog)).toEqual({
@@ -93,6 +92,72 @@ describe('project document loader', () => {
       const json = JSON.stringify({ ...project, schemaRevision: revision });
       expect(loadProjectDocument(json, catalog)).toEqual({ migrationProvenance: [], project });
     }
+  });
+
+  describe('a plan saved before schema 103', () => {
+    // The G opening keeps a pickup of a role its reward no longer has.
+    const stale = createGoldenFGHIProject();
+    const gOpening = (document: ProjectDocument) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'G')!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === 'golden-g-b1-e1')!
+        .roomActions.order;
+    const at102 = (revision: number) =>
+      JSON.stringify({
+        ...JSON.parse(encodeProjectDocument(stale)),
+        schemaVersion: 102,
+        schemaRevision: revision,
+      });
+
+    it('opens settled once, with the plan as saved and the removals it announces', () => {
+      for (const revision of [0, 1]) {
+        const loaded = loadProjectDocument(at102(revision), catalog);
+        expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([103]);
+        expect(loaded.upgrade?.before).toEqual(stale);
+        expect(loaded.upgrade?.fault).toBeUndefined();
+        expect(gOpening(loaded.project)).toEqual(
+          gOpening(stale).filter(
+            (action) =>
+              !(action.kind === 'interactIncomingReward' && action.acquisitionRole === 'source'),
+          ),
+        );
+        expect(loaded.upgrade?.removedStaleActions).toEqual([
+          {
+            occurrence: createOccurrenceAddress(
+              createBiomeAddress('Underworld', 'G'),
+              createOccurrenceId('golden-g-b1-e1'),
+            ),
+            actions: [expect.objectContaining({ acquisitionRole: 'source' })],
+          },
+        ]);
+      }
+    });
+
+    it('rejects a later revision of schema 102', () => {
+      expect(() => loadProjectDocument(at102(2), catalog)).toThrow(
+        /schema 102\.2 is newer than schema 102's final revision 1/,
+      );
+    });
+
+    it('opens without an upgrade when settling changes nothing', () => {
+      const clean = { ...JSON.parse(encodeProjectDocument(project)), schemaVersion: 102 };
+      expect(loadProjectDocument(JSON.stringify(clean), catalog)).toEqual({
+        migrationProvenance: [
+          {
+            sourceCatalogVersion: catalog.version,
+            sourceSchemaVersion: 102,
+            targetCatalogVersion: catalog.version,
+            targetSchemaVersion: 103,
+          },
+        ],
+        project,
+      });
+    });
+
+    it('is never settled again once saved at schema 103', () => {
+      const loaded = loadProjectDocument(encodeProjectDocument(stale), catalog);
+      expect(loaded).toEqual({ migrationProvenance: [], project: stale });
+    });
   });
 
   it('fills each unstored Nemesis kill race of a schema-100 or older document with a win', () => {
@@ -124,7 +189,9 @@ describe('project document loader', () => {
       /nemesisBetOutcomeByPhase: must be an object/,
     );
     const loaded = loadProjectDocument(JSON.stringify({ ...sparse, schemaVersion: 100 }), catalog);
-    expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([101, 102]);
+    expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
+      101, 102, 103,
+    ]);
     expect(loaded.project).toEqual(current);
 
     const won = applyProjectCommand(current, catalog, {
@@ -139,7 +206,7 @@ describe('project document loader', () => {
     expect(JSON.stringify(legacy)).not.toContain('nemesisBetOutcomeByPhase');
     legacy.schemaVersion = 99;
     const migrated = loadProjectDocument(JSON.stringify(legacy), catalog);
-    expect(migrated.migrationProvenance).toHaveLength(3);
+    expect(migrated.migrationProvenance).toHaveLength(4);
     expect(migrated.project).toEqual(won);
   });
 
@@ -160,8 +227,9 @@ describe('project document loader', () => {
         /schemaVersion/,
       );
       const loaded = loadProjectDocument(JSON.stringify(document), catalog);
-      expect(loaded.migrationProvenance.at(-1)?.targetSchemaVersion).toBe(102);
-      expect(encodeProjectDocument(loaded.project)).toBe(encodeProjectDocument(current));
+      expect(loaded.migrationProvenance.at(-1)?.targetSchemaVersion).toBe(103);
+      // The plan as saved; opening it also settles its G opening's stale pickup.
+      expect(encodeProjectDocument(loaded.upgrade!.before)).toBe(encodeProjectDocument(current));
     }
   });
 
@@ -174,7 +242,7 @@ describe('project document loader', () => {
     legacy.schemaRevision = PROJECT_DOCUMENT_SCHEMA_REVISION + 3;
 
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
-    expect(loaded.migrationProvenance).toHaveLength(6);
+    expect(loaded.migrationProvenance).toHaveLength(7);
     expect(loaded.project).toEqual(project);
   });
 
@@ -215,7 +283,7 @@ describe('project document loader', () => {
     ).toThrow(/visitOrder/);
 
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
-    expect(loaded.migrationProvenance).toHaveLength(15);
+    expect(loaded.migrationProvenance).toHaveLength(16);
     expect(loaded.project).toEqual(
       applyProjectCommand(current, catalog, {
         kind: 'ReplaceHubActionOrder',
@@ -225,7 +293,7 @@ describe('project document loader', () => {
     );
   });
 
-  it('chains a schema-87 document without a Hub through 88 to 102', () => {
+  it('chains a schema-87 document without a Hub through 88 to 103', () => {
     const legacy = legacySchema99Body(JSON.parse(encodeProjectDocument(project))) as Record<
       string,
       unknown
@@ -324,6 +392,12 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 102,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 102,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 103,
+        },
       ],
       project,
     });
@@ -351,7 +425,7 @@ describe('project document loader', () => {
     const loaded = loadProjectDocument(legacy, catalog);
 
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
-      93, 94, 95, 96, 97, 98, 99, 100, 101, 102,
+      93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103,
     ]);
     expect(encodeProjectDocument(loaded.project)).toBe(current);
   });
@@ -371,7 +445,7 @@ describe('project document loader', () => {
     const loaded = loadProjectDocument(legacy, catalog);
 
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
-      94, 95, 96, 97, 98, 99, 100, 101, 102,
+      94, 95, 96, 97, 98, 99, 100, 101, 102, 103,
     ]);
     expect(encodeProjectDocument(loaded.project)).toBe(JSON.stringify(unresolved, null, 2) + '\n');
   });
@@ -387,7 +461,7 @@ describe('project document loader', () => {
     const loaded = loadProjectDocument(JSON.stringify(legacySchema99Body(legacy)), catalog);
 
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
-      95, 96, 97, 98, 99, 100, 101, 102,
+      95, 96, 97, 98, 99, 100, 101, 102, 103,
     ]);
     expect(encodeProjectDocument(loaded.project)).toBe(
       JSON.stringify({ ...legacy, schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION }, null, 2) + '\n',
@@ -420,7 +494,7 @@ describe('project document loader', () => {
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
 
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
-      96, 97, 98, 99, 100, 101, 102,
+      96, 97, 98, 99, 100, 101, 102, 103,
     ]);
     expect(loaded.project).toEqual(checkpoint.load());
   });
@@ -462,7 +536,7 @@ describe('project document loader', () => {
     expect(racks).toBeGreaterThan(0);
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
-      97, 98, 99, 100, 101, 102,
+      97, 98, 99, 100, 101, 102, 103,
     ]);
     expect(loaded.project).toEqual(current);
   });
@@ -496,7 +570,7 @@ describe('project document loader', () => {
     const legacy = JSON.stringify({ ...rest, schemaVersion: 97, schemaRevision: 3 });
     const loaded = loadProjectDocument(legacy, catalog, { legacyName: 'Staff practice' });
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
-      98, 99, 100, 101, 102,
+      98, 99, 100, 101, 102, 103,
     ]);
     expect(loaded.project).toEqual(named);
     expect(loadProjectDocument(legacy, catalog).project.name).toBe(DEFAULT_PROJECT_NAME);
@@ -517,7 +591,7 @@ describe('project document loader', () => {
     const first = loadProjectDocument(JSON.stringify(legacy), catalog);
     const second = loadProjectDocument(JSON.stringify(legacy), catalog).project;
     expect(first.migrationProvenance.map((step) => step.sourceSchemaVersion)).toEqual([
-      88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101,
+      88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102,
     ]);
     expect(first.project.projectId).toMatch(/^run-plan-[0-9a-f-]{36}$/);
     expect(second.projectId).not.toBe(first.project.projectId);
@@ -540,7 +614,7 @@ describe('project document loader', () => {
     ['Underworld', () => createGoldenFGHIProject()],
     ['Surface', () => loadSurfaceNProject()],
   ])(
-    'migrates a mature schema-89 %s document to schema 102 without reinterpreting it',
+    'migrates a mature schema-89 %s document to schema 103 without reinterpreting it',
     (_route, current) => {
       const expected = current();
       const legacy = legacyRareEpicHexTrees({
@@ -627,9 +701,16 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 102,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 102,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 103,
+        },
       ]);
-      expect(loaded.project).toEqual(expected);
-      expect(encodeProjectDocument(loaded.project)).toBe(encodeProjectDocument(expected));
+      const saved = loaded.upgrade?.before ?? loaded.project;
+      expect(saved).toEqual(expected);
+      expect(encodeProjectDocument(saved)).toBe(encodeProjectDocument(expected));
     },
   );
 
@@ -692,7 +773,9 @@ describe('project document loader', () => {
     expect(() =>
       parseProjectDocument(
         JSON.stringify(
-          migrate101To102(fillNemesisBetOutcomeWins({ ...legacy, schemaVersion: 101 }, catalog)),
+          migrate102To103(
+            migrate101To102(fillNemesisBetOutcomeWins({ ...legacy, schemaVersion: 101 }, catalog)),
+          ),
         ),
         catalog,
       ),
@@ -797,6 +880,12 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 102,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 102,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 103,
+        },
       ],
       project: expected,
     });
@@ -811,13 +900,13 @@ describe('project document loader', () => {
     ],
     [
       'future schema',
-      JSON.stringify({ ...project, schemaVersion: 103 }),
-      /newer than supported schema 102/,
+      JSON.stringify({ ...project, schemaVersion: 104 }),
+      /newer than supported schema 103/,
     ],
     [
       'future revision of the current major',
       JSON.stringify({ ...project, schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION + 1 }),
-      /newer than supported schema 102\.\d+/,
+      /newer than supported schema 103\.\d+/,
     ],
     [
       'mismatched current catalog',
@@ -834,7 +923,10 @@ describe('project document loader', () => {
       catalogVersion: 'catalog-85-normalized',
       schemaVersion: 85,
     } as const;
-    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 102 } as const;
+    const currentIdentity = {
+      catalogVersion: catalog.version,
+      schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
+    } as const;
     const oldDocument = { ...project, ...oldIdentity };
 
     const migrated = applyProjectDocumentTransitions({
@@ -873,7 +965,7 @@ describe('project document loader', () => {
         sourceCatalogVersion: 'catalog-85-normalized',
         sourceSchemaVersion: 85,
         targetCatalogVersion: catalog.version,
-        targetSchemaVersion: 102,
+        targetSchemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
       },
     ]);
     expect(parseProjectDocument(JSON.stringify(migrated.document), catalog)).toEqual(project);
@@ -881,7 +973,10 @@ describe('project document loader', () => {
 
   it('rejects a transition that does not reach its declared target identity', () => {
     const oldIdentity = { catalogVersion: 'catalog-85', schemaVersion: 85 } as const;
-    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 102 } as const;
+    const currentIdentity = {
+      catalogVersion: catalog.version,
+      schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
+    } as const;
 
     expect(() =>
       applyProjectDocumentTransitions({
@@ -916,7 +1011,7 @@ describe('project document loader', () => {
       )}`;
     const loaded = loadProjectDocument(JSON.stringify(schema90ShrinePurchases), catalog);
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
-      91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102,
+      91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103,
     ]);
     const occurrence = loaded.project.route.biomes
       .find((biome) => biome.biomeKey === 'N')
@@ -976,7 +1071,7 @@ describe('project document loader', () => {
   it('migrates schema-91 Anvil results onto their reward roles and evaluates identically', () => {
     const loaded = loadProjectDocument(JSON.stringify(schema91AnvilResults), catalog);
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
-      92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102,
+      92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103,
     ]);
     const shop = loaded.project.route.biomes
       .find((biome) => biome.biomeKey === 'I')
@@ -1009,15 +1104,12 @@ describe('project document loader', () => {
       ),
       'echoDoubleShopReward',
     );
-    // The file's H Preboss source lost a door before settlement owned doors;
-    // its first edit lets the door go, and the route evaluates as it did.
-    const edited = settleProjectEdit({
-      catalog,
-      before: simulateProjectAssembly(catalog, loaded.project),
-      command: { kind: 'RenameProject', project: createProjectAddress(), name: 'Renamed' },
-      evaluate: (project) => simulateProjectAssembly(catalog, project),
-    }).assembly.project;
-    const evaluation = simulateProject(catalog, edited);
+    // The file's H Preboss source lost a door before settlement owned doors; opening it lets
+    // the door go, and the route evaluates as it did.
+    expect(loaded.upgrade?.removedStaleActions).toContainEqual(
+      expect.objectContaining({ doors: [expect.objectContaining({ gameName: 'H_PreBoss01' })] }),
+    );
+    const evaluation = simulateProject(catalog, loaded.project);
     expect(evaluation.status).toBe('incomplete');
     expect(evaluation.findings).toEqual([
       expect.objectContaining({

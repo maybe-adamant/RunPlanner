@@ -193,6 +193,14 @@ revision loads as is; a later revision, an unsupported older schema or a
 future one is refused and left untouched. No schema version has a path of its
 own: every older document reaches the strict parse only through the chain.
 
+A plan saved before schema 103 is also settled once after its transitions,
+as the engine's [upgrade settlement](SIMULATION_AND_VALIDATION.md#the-evaluation-pipeline)
+defines; the offline tool writes the settled plan without announcing what it
+removed. When that changes the plan, it opens one Undo ahead of the plan as
+saved and announces its removals as an edit's are announced. A settlement that
+throws opens the plan as saved with a settlement fault, and the offline tool
+writes it unsettled and prints the fault.
+
 A migrated plan opens in memory in the current schema and names the repairs
 its migrations may need. Its file is untouched until the first edit is saved;
 before that first write replaces it, the desktop library recycles a copy named

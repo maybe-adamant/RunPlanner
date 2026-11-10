@@ -3,6 +3,7 @@ import {
   createProjectAddress,
   createProjectHistory,
   encodeProjectDocument,
+  publishProjectHistoryEdit,
   reidentifyProjectHistory,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -12,6 +13,7 @@ import {
   LOADABLE_PROJECT_SCHEMAS,
   loadProjectDocument,
   type ProjectMigrationProvenance,
+  type ProjectUpgrade,
 } from '../persistence/projectDocumentLoader';
 import {
   EMPTY_LIBRARY_SESSION,
@@ -101,6 +103,8 @@ export interface FiledPlan {
   readonly key: string;
   readonly project: ProjectDocument;
   readonly migrationProvenance: readonly ProjectMigrationProvenance[];
+  /** What settling a plan saved before schema 103 changed, opened one Undo away. */
+  readonly upgrade?: ProjectUpgrade;
   /** The stored file is in an older schema, so its first write rewrites the original. */
   readonly olderOnDisk: boolean;
 }
@@ -276,19 +280,34 @@ export function createProjectLibraryOperations(
   const { adapter, catalog } = options;
   const mintProjectId = options.mintProjectId ?? mintRandomProjectId;
 
-  const load = (json: string, fileName: string, legacyName = projectFileStem(fileName)) => {
-    const loaded = loadProjectDocument(json, catalog, { legacyName });
+  const load = (
+    json: string,
+    fileName: string,
+    legacyName = projectFileStem(fileName),
+    asSaved = false,
+  ) => {
+    const loaded = loadProjectDocument(json, catalog, { legacyName, asSaved });
     assertPublicProjectAdmission(catalog, loaded.project);
     return loaded;
   };
+  /** A plan as saved, for upkeep that compares or re-identifies it without opening it. */
+  const loadAsSaved = (json: string, fileName: string, legacyName = projectFileStem(fileName)) =>
+    load(json, fileName, legacyName, true);
   const reidentified = (project: ProjectDocument): ProjectDocument =>
     reidentifyProjectHistory(createProjectHistory(project), mintProjectId()).present;
   const filed = (
     entry: ProjectLibraryEntry,
     project: ProjectDocument,
     migrationProvenance: readonly ProjectMigrationProvenance[] = [],
+    upgrade?: ProjectUpgrade,
   ): FiledPlan =>
-    Object.freeze({ key: entry.key, project, migrationProvenance, olderOnDisk: false });
+    Object.freeze({
+      key: entry.key,
+      project,
+      migrationProvenance,
+      ...(upgrade === undefined ? {} : { upgrade }),
+      olderOnDisk: false,
+    });
   const heldIdentities = async (): Promise<ReadonlySet<string>> =>
     new Set(
       (await adapter.list()).entries
@@ -298,11 +317,21 @@ export function createProjectLibraryOperations(
 
   const reidentifyCopy = async (item: LibraryItem): Promise<LibraryItem> => {
     try {
-      const loaded = load(await adapter.read(item.key), item.key);
-      const project = reidentified(loaded.project);
-      // A copy stored in an older schema keeps its original, as its first edit would.
-      if (loaded.migrationProvenance.length > 0) await adapter.preserveOriginal(item.key);
-      return classify(await adapter.write(item.key, encodeProjectDocument(project)));
+      const json = await adapter.read(item.key);
+      const loaded = loadAsSaved(json, item.key);
+      if (loaded.migrationProvenance.length === 0)
+        return classify(
+          await adapter.write(item.key, encodeProjectDocument(reidentified(loaded.project))),
+        );
+      // A copy stored in an older schema stays in it with only its identity replaced, so
+      // opening it still migrates it, settles it and announces what that removes.
+      const stored = JSON.parse(json) as Record<string, unknown>;
+      return classify(
+        await adapter.write(
+          item.key,
+          `${JSON.stringify({ ...stored, projectId: mintProjectId() }, null, 2)}\n`,
+        ),
+      );
     } catch {
       // A copy the planner cannot open keeps its identity until it can.
       return item;
@@ -329,7 +358,7 @@ export function createProjectLibraryOperations(
       const offer = Object.freeze({ ...file, legacyName: projectFileStem(file.fileName) });
       let canonical: string | null;
       try {
-        canonical = encodeProjectDocument(load(file.json, file.fileName).project);
+        canonical = encodeProjectDocument(loadAsSaved(file.json, file.fileName).project);
       } catch {
         canonical = null;
       }
@@ -357,7 +386,7 @@ export function createProjectLibraryOperations(
     let canonical: string;
     try {
       canonical = encodeProjectDocument(
-        load(json, `${legacyName}.runplanner.json`, legacyName).project,
+        loadAsSaved(json, `${legacyName}.runplanner.json`, legacyName).project,
       );
     } catch {
       return null;
@@ -388,11 +417,12 @@ export function createProjectLibraryOperations(
   };
 
   const read = async (key: string): Promise<FiledPlan> => {
-    const { project, migrationProvenance } = load(await adapter.read(key), key);
+    const { project, migrationProvenance, upgrade } = load(await adapter.read(key), key);
     return Object.freeze({
       key,
       project,
       migrationProvenance,
+      ...(upgrade === undefined ? {} : { upgrade }),
       olderOnDisk: migrationProvenance.length > 0,
     });
   };
@@ -403,22 +433,33 @@ export function createProjectLibraryOperations(
     importOptions: ImportFileOptions = {},
   ): Promise<FiledPlan> => {
     const loaded = load(file.json, file.fileName, importOptions.legacyName);
-    const { migrationProvenance } = loaded;
-    const project =
+    const { migrationProvenance, upgrade } = loaded;
+    const named = (document: ProjectDocument) =>
       importOptions.name === undefined
-        ? loaded.project
-        : applyProjectCommand(loaded.project, catalog, {
+        ? document
+        : applyProjectCommand(document, catalog, {
             kind: 'RenameProject',
             project: createProjectAddress(),
             name: importOptions.name,
           });
+    // The plan as saved, which Undo restores, takes the same name and identity as its copy;
+    // a settlement that only faulted left the plan as saved, so it is named once.
+    const present = named(loaded.project);
+    const history =
+      upgrade === undefined || upgrade.before === loaded.project
+        ? createProjectHistory(present)
+        : publishProjectHistoryEdit(createProjectHistory(named(upgrade.before)), present);
     const fresh =
-      importOptions.newIdentity === true || (await heldIdentities()).has(project.projectId);
-    const copy = fresh ? reidentified(project) : project;
+      importOptions.newIdentity === true || (await heldIdentities()).has(history.present.projectId);
+    const copied = fresh ? reidentifyProjectHistory(history, mintProjectId()) : history;
+    const copy = copied.present;
     return filed(
       await adapter.create(encodeProjectDocument(copy), importOptions.folder ?? ''),
       copy,
       migrationProvenance,
+      upgrade === undefined
+        ? undefined
+        : Object.freeze({ ...upgrade, before: copied.past[0] ?? copy }),
     );
   };
 

@@ -30,6 +30,7 @@ import { migrateProjectDocument as migrate98To99 } from '@planner/persistence/pr
 import { migrateProjectDocument as migrate99To100 } from '@planner/persistence/project-99-to-100.js';
 import { migrateProjectDocument as migrate100To101 } from '@planner/persistence/project-100-to-101.js';
 import { migrateProjectDocument as migrate101To102 } from '@planner/persistence/project-101-to-102.js';
+import { migrateProjectDocument as migrate102To103 } from '@planner/persistence/project-102-to-103.js';
 
 type Encoded = {
   schemaVersion: number;
@@ -69,14 +70,16 @@ function withoutChain(project: ProjectDocument): Encoded {
 
 function migrated(project: ProjectDocument): ProjectDocument {
   return decodeProjectDocument(
-    migrate101To102(
-      migrate100To101(
-        migrate99To100(
-          migrate98To99(
-            migrate97To98(migrate96To97(migrateProjectDocument(withoutChain(project)))),
+    migrate102To103(
+      migrate101To102(
+        migrate100To101(
+          migrate99To100(
+            migrate98To99(
+              migrate97To98(migrate96To97(migrateProjectDocument(withoutChain(project)))),
+            ),
           ),
+          { catalog },
         ),
-        { catalog },
       ),
     ) as never,
     catalog,
@@ -204,10 +207,12 @@ describe('schema 95 to 96 completed-Hub chain migration', () => {
     expect(
       encodeProjectDocument(
         decodeProjectDocument(
-          migrate101To102(
-            migrate100To101(migrate99To100(migrate98To99(migrate97To98(migrate96To97(result)))), {
-              catalog,
-            }),
+          migrate102To103(
+            migrate101To102(
+              migrate100To101(migrate99To100(migrate98To99(migrate97To98(migrate96To97(result)))), {
+                catalog,
+              }),
+            ),
           ) as never,
           catalog,
         ),

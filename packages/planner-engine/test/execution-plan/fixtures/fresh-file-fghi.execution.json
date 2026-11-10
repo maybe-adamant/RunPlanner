@@ -1,8 +1,8 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 102,
-  "schemaRevision": 1,
+  "schemaVersion": 103,
+  "schemaRevision": 0,
   "projectId": "fresh-route",
   "routeKey": "FreshFile",
   "startingLoadout": {
@@ -6932,5 +6932,5 @@
       }
     }
   ],
-  "planFingerprint": "df834f62"
+  "planFingerprint": "ca97a812"
 }

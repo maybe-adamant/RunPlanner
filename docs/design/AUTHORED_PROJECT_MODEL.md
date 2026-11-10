@@ -509,7 +509,9 @@ does for room actions:
   missing targets.
 
 Removals are announced, by source room, when the edit addresses another room.
-An installed route keeps the doors it was authored with.
+An installed route keeps the doors it was authored with. A plan saved before
+schema 103 has its doors settled once when it is opened, every removal
+announced.
 
 ### Empty decision envelopes
 
@@ -1265,7 +1267,9 @@ rather than adding a command step.
 
 `ProjectHistory` holds frozen `past`, `present`, and `future` document
 snapshots. One effective semantic edit, including engine-owned timed-effect
-settlement, creates one history step and clears redo. A no-op command retains
+settlement, creates one history step and clears redo. A plan saved before
+schema 103 whose opening settlement changed it opens one step ahead of the
+plan as saved. A no-op command retains
 history identity. Undo and redo restore exact prior snapshots. Derived
 simulation and transient UI state remain outside this history.
 
