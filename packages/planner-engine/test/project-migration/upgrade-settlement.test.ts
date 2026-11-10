@@ -195,39 +195,107 @@ describe('upgrade settlement of a plan saved under earlier rules', () => {
       expect(removedIn(settled, shop)).toBeUndefined();
     });
 
-    it('removes a matured trait drop whose trait the run no longer takes', () => {
+    describe('a matured trait drop', () => {
       const p3 = createOccurrenceAddress(
         createBiomeAddress('Surface', 'P'),
         createOccurrenceId('surface-p-1-1-p_combat03'),
       );
-      const drop = (document: ProjectDocument) =>
-        order(document, p3).filter((key) => key.includes('clockedTraitGenerated:'));
-      const original = loadSurfaceScheduledLifecycleCheckpoint();
-      // An earlier build kept the drop when its trait's offer took another option.
-      const swapped = raw(
-        saved(original, {
-          kind: 'ReplaceTraitSelection',
-          trait: createTraitOfferAddress(
-            createEncounterPhaseAddress(
-              createBiomeAddress('Surface', 'O'),
-              { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-o-combat01') },
-              'Combat1',
+      const isDrop = (key: string) => key.includes('clockedTraitGenerated:');
+      const drop = (document: ProjectDocument) => order(document, p3).filter(isDrop);
+      /** The drop's producing trait taken by another option, an earlier build keeping its drop. */
+      const lostDrop = () => {
+        const original = loadSurfaceScheduledLifecycleCheckpoint();
+        const swapped = raw(
+          saved(original, {
+            kind: 'ReplaceTraitSelection',
+            trait: createTraitOfferAddress(
+              createEncounterPhaseAddress(
+                createBiomeAddress('Surface', 'O'),
+                { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-o-combat01') },
+                'Combat1',
+              ),
+              'selection',
             ),
-            'selection',
-          ),
-          selectedOptionKey: 'option2',
-        }),
-      );
-      rawRoom(swapped, p3.occurrenceId).roomActions = rawRoom(
-        raw(original),
-        p3.occurrenceId,
-      ).roomActions;
-      const project = decodeProjectDocument(swapped, catalog);
-      expect(drop(project)).toHaveLength(1);
-      const settled = upgrade(project);
-      expect(settled.fault).toBeUndefined();
-      expect(drop(settled.assembly.project)).toEqual([]);
-      expect(removedIn(settled, p3)).toEqual(drop(project));
+            selectedOptionKey: 'option2',
+          }),
+        );
+        rawRoom(swapped, p3.occurrenceId).roomActions = rawRoom(
+          raw(original),
+          p3.occurrenceId,
+        ).roomActions;
+        return decodeProjectDocument(swapped, catalog);
+      };
+      const assessment = (project: ProjectDocument) =>
+        evaluate(project)
+          .evaluation.route.biomes.flatMap((biome) =>
+            'rewards' in biome ? (biome.rewards.generatedPickupPlacements ?? []) : [],
+          )
+          .find((placement) => placement.assessment.source.kind === 'clockedTraitPickup')
+          ?.assessment;
+
+      it('is removed when its trait the run no longer takes', () => {
+        const project = lostDrop();
+        expect(drop(project)).toHaveLength(1);
+        const settled = upgrade(project);
+        expect(settled.fault).toBeUndefined();
+        expect(drop(settled.assembly.project)).toEqual([]);
+        expect(removedIn(settled, p3)).toEqual(drop(project));
+      });
+
+      it('stays where its producer is held elsewhere in the walk without it', () => {
+        // An earlier build left the drop ahead of the room its trait is taken in.
+        const document = raw(loadSurfaceScheduledLifecycleCheckpoint());
+        const room = rawRoom(document, p3.occurrenceId);
+        const row = room.roomActions.order.find((action) =>
+          isDrop(roomActionKey(action as never)),
+        )!;
+        room.roomActions.order = room.roomActions.order.filter((action) => action !== row);
+        const sites = (target: RawRoom) =>
+          ((
+            target as unknown as { acquisitionSites?: Record<string, unknown> }
+          ).acquisitionSites ??= {}) as Record<string, { pickupEntries: Record<string, unknown> }>;
+        const entryKey = (row as { entryKey: string }).entryKey;
+        const intro = rawRoom(document, 'surface-o-intro');
+        intro.roomActions.order = [...intro.roomActions.order, row];
+        sites(intro).roomExit = {
+          pickupEntries: { [entryKey]: sites(room).roomExit!.pickupEntries[entryKey] },
+        };
+        delete sites(room).roomExit!.pickupEntries[entryKey];
+        if (Object.keys(sites(room).roomExit!.pickupEntries).length === 0)
+          delete sites(room).roomExit;
+        const project = decodeProjectDocument(document, catalog);
+        expect(assessment(project)).toMatchObject({ kind: 'invalid', reason: 'sourceInactive' });
+        const settled = upgrade(project);
+        expect(settled.fault).toBeUndefined();
+        expect(settled.assembly.project).toBe(project);
+        expect(settled.removedStaleActions).toBeUndefined();
+      });
+
+      it('stays when the walk without it stops short of the plan', () => {
+        // The last biome has no start, so the plan is incomplete past the drop.
+        const project = saved(lostDrop(), {
+          kind: 'ClearTopology',
+          biome: createBiomeAddress('Surface', 'Q'),
+        });
+        expect(assessment(project)).toMatchObject({ kind: 'invalid', reason: 'sourceInactive' });
+        const settled = upgrade(project);
+        expect(settled.fault).toBeUndefined();
+        expect(drop(settled.assembly.project)).toEqual(drop(project));
+        expect(removedIn(settled, p3)).toBeUndefined();
+      });
+
+      it('stays when it sits past where the walk stops', () => {
+        const project = saved(lostDrop(), {
+          kind: 'ReplacePlanEnd',
+          route: createRouteAddress('Surface'),
+          planEnd: { biomeKey: 'O', occurrenceId: createOccurrenceId('surface-o-combat01') },
+        });
+        expect(assessment(project)).toBeUndefined();
+        const settled = upgrade(project);
+        expect(settled.fault).toBeUndefined();
+        expect(drop(settled.assembly.project)).toEqual(drop(project));
+        expect(removedIn(settled, p3)).toBeUndefined();
+      });
     });
 
     it('removes a countdown delivery whose Shrine purchase is gone', () => {

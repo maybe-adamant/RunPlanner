@@ -44,13 +44,16 @@ without it, reaching the plan's end, never holds; a countdown Hermes delivery
 whose purchase is gone; and an unselected door its source room no longer
 has, with the rooms behind it. A takeover batch gains the Preboss doors it
 lacks, and a due delivery the plan lacks is placed, as any edit places it.
-Rows whose loss the plan cannot show stay with their findings: every Travel
-Deal refill, a duplicate with no purchase before it, a drop whose producer is
-held or may lie past where the walk stops, every door or cage reroll whose
-reward is gone, and a taken door its room lost. Rows the walk does not reach stay
-untouched. The application announces the removals and opens the plan one Undo
-ahead of it as saved; a settlement that throws opens the plan as saved with a
-settlement fault. The plan wire's schema pair becomes 103.0.
+Rows whose loss the plan cannot show stay with their findings: a Travel Deal
+refill or a duplicate the saved plan already shows unproduced, a drop whose
+producer is held or may lie past where the walk stops, every door or cage
+reroll whose reward is gone, and a taken door its room lost; a removal in the
+same settlement, such as a stale purchase's, can still take a refill or
+duplicate with its trigger. Rows the walk does not reach stay untouched. The
+application announces the removals and opens the plan one Undo ahead of it as
+saved; the offline tool writes the settled plan without announcing anything.
+A settlement that throws leaves the plan as saved, opened with a settlement
+fault or written with the fault printed. The plan wire's schema pair becomes 103.0.
 
 Revision 102.1 gives every unset position a meaning: a rolled flip, an entry
 the game picks among ties, an anchor object's anchor, a Fields cage, optional

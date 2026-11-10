@@ -87,7 +87,8 @@ export function migrateProjectDocumentTo(
     migrated = transition.migrate(migrated, { ...context, catalog });
   }
   // A plan saved before schema 103 is settled once at the current schema, as the application
-  // settles it on opening; a document strict decoding rejects is left for it to reject.
+  // settles it on opening but announcing nothing; a document strict decoding rejects is left
+  // for it to reject.
   if (source < UPGRADE_SETTLEMENT_SCHEMA_VERSION && target === CURRENT_SCHEMA_VERSION) {
     let project;
     try {
@@ -95,9 +96,19 @@ export function migrateProjectDocumentTo(
     } catch {
       return migrated;
     }
-    migrated = JSON.parse(
-      encodeProjectDocument(settleUpgradedProject(project, catalog).assembly.project),
-    );
+    let settled;
+    try {
+      settled = settleUpgradedProject(project, catalog);
+    } catch (error) {
+      // A settlement that throws is an engine defect: the plan is written as saved, with the fault.
+      console.warn(
+        `Upgrade settlement fault: ${error instanceof Error ? error.message : String(error)}; the plan is written unsettled.`,
+      );
+      return migrated;
+    }
+    if (settled.fault !== undefined)
+      console.warn(`Upgrade settlement fault at ${settled.fault.key}.`);
+    migrated = JSON.parse(encodeProjectDocument(settled.assembly.project));
   }
   return migrated;
 }

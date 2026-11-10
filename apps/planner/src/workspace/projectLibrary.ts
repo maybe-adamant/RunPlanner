@@ -442,14 +442,13 @@ export function createProjectLibraryOperations(
             project: createProjectAddress(),
             name: importOptions.name,
           });
-    // The plan as saved, which Undo restores, takes the same name and identity as its copy.
+    // The plan as saved, which Undo restores, takes the same name and identity as its copy;
+    // a settlement that only faulted left the plan as saved, so it is named once.
+    const present = named(loaded.project);
     const history =
-      upgrade === undefined
-        ? createProjectHistory(named(loaded.project))
-        : publishProjectHistoryEdit(
-            createProjectHistory(named(upgrade.before)),
-            named(loaded.project),
-          );
+      upgrade === undefined || upgrade.before === loaded.project
+        ? createProjectHistory(present)
+        : publishProjectHistoryEdit(createProjectHistory(named(upgrade.before)), present);
     const fresh =
       importOptions.newIdentity === true || (await heldIdentities()).has(history.present.projectId);
     const copied = fresh ? reidentifyProjectHistory(history, mintProjectId()) : history;
@@ -459,7 +458,7 @@ export function createProjectLibraryOperations(
       copy,
       migrationProvenance,
       upgrade === undefined
-        ? undefined // A settlement that only faulted changed nothing, so the copy is the plan as saved.
+        ? undefined
         : Object.freeze({ ...upgrade, before: copied.past[0] ?? copy }),
     );
   };

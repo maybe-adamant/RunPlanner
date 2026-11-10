@@ -50,4 +50,24 @@ describe('a plan saved before schema 103 whose settlement throws', () => {
     expect(filed.upgrade?.before).toBe(filed.project);
     expect(filed.upgrade?.fault?.key).toBe('upgradeSettlement:settlement defect');
   });
+
+  it('imports a renamed copy with no history step behind it', async () => {
+    const saved = createGoldenFGHProject();
+    const json = JSON.stringify({
+      ...JSON.parse(encodeProjectDocument(saved)),
+      schemaVersion: 102,
+    });
+    const library = createMemoryProjectLibrary();
+    const operations = createProjectLibraryOperations({
+      adapter: library.adapter,
+      catalog,
+      mintProjectId: () => 'minted',
+    });
+    const filed = await operations.importFile(
+      { fileName: 'old.runplanner.json', json },
+      { newIdentity: true, name: 'Renamed' },
+    );
+    expect(filed.project).toEqual({ ...saved, projectId: 'minted', name: 'Renamed' });
+    expect(filed.upgrade?.before).toBe(filed.project);
+  });
 });

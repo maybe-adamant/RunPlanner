@@ -582,9 +582,11 @@ stands before while no Echo produces it; a matured trait drop whose producing
 trait a walk without it never holds and that reaches the plan's end; and a
 countdown delivery whose purchase is gone. Every batch's doors settle as
 above. Whatever the plan cannot show had its source stays with its finding,
-as the never-removed list keeps it: a Travel Deal refill, a duplicate with no
-purchase before it, a drop whose producer is held or may lie past where the
-walk stops, and every door or cage reroll whose reward is gone. Rows the
+as the never-removed list keeps it: a Travel Deal refill or a duplicate the
+saved plan already shows unproduced, a drop whose producer is held or may lie
+past where the walk stops, and every door or cage reroll whose reward is gone;
+a removal in the same settlement, such as a stale purchase's, can still take a
+refill or duplicate with its trigger. Rows the
 walk does not reach and rows of rooms the run does not enter stay untouched.
 Every removal is announced, and one Undo restores the plan as saved. A stale
 row a plan still holds, such as one that Undo restores, goes at the next edit
