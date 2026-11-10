@@ -53,6 +53,7 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   prepareLegalPomTraitOffers,
   replaceTestShopOfferActions,
@@ -176,7 +177,7 @@ export function selectedNChaosFrontierProject(persistTerminalDecision = true): P
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     },
   });
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     decision: createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId: opening }),
@@ -205,7 +206,7 @@ export function selectedNChaosFrontierProject(persistTerminalDecision = true): P
     selection: createExitSelectionAddress(nBiome, { kind: 'occurrence', occurrenceId: opening }),
     value: { kind: 'additional', additionalExitKey: 'chaos' },
   });
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   return persistTerminalDecision
     ? applyProjectCommand(project, catalog, {
         kind: 'CreateBatch',
@@ -313,7 +314,7 @@ export function enteredShopProject(): {
       value,
     });
   }
-  return { project: authorLegalTraitOffers(project), shopId: shop };
+  return { project: authorTestTraitsAndRequiredItems(project), shopId: shop };
 }
 
 export function bind(
