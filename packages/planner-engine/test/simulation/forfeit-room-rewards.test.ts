@@ -30,7 +30,10 @@ import {
   loadNemesisFieldsCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  collectTestRequiredItems,
+} from '@run-planner/test-fixtures/shared';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   simulateProject,
@@ -113,6 +116,8 @@ function simulated(rewardType: 'Boon' | 'HermesUpgrade') {
         }),
       ),
     });
+    // The owner picks up the Hermes reward.
+    project = collectTestRequiredItems(project);
   }
   const result = simulateProject(catalog, project);
   const f = result.route?.biomes[0];

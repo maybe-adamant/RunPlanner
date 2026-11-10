@@ -15,7 +15,7 @@ import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   goldenFBiome,
@@ -38,7 +38,7 @@ function phialReprieveProject(): ProjectDocument {
     selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
     keepsakeKey: 'FountainRarityKeepsake',
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 function incomplete(project: ProjectDocument): ProjectDocument {

@@ -19,6 +19,7 @@ import {
 import { assembleExecutionProduct, compileExecutionPlan } from '@run-planner/engine/execution-plan';
 import type { FieldsSpatialTarget } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 
 import {
   createCompleteFGProject,
@@ -118,7 +119,9 @@ describe('Fields spatial candidates', () => {
       });
     }
 
-    // Unset points leave the game to place each slot: the room needs none to be complete.
+    // Unset points leave the game to place each slot: the room needs none to be complete
+    // once the owner takes its cages.
+    project = collectTestRequiredItems(project);
     const assembly = simulateProjectAssembly(catalog, project);
     expect(
       assembly.evaluation.findings.filter((finding) => finding.origin.kind === 'fieldsSpatial'),

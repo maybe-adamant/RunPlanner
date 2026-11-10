@@ -24,7 +24,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
@@ -507,7 +507,7 @@ describe('keepsake selection candidates', () => {
       phase,
       encounterKey: 'AthenaCombatP',
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const assembled = simulateProjectAssembly(catalog, project);
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembled, phase)

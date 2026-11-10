@@ -30,7 +30,7 @@ import {
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   authorTestArtificerReplacement,
   createCompleteFGProject,
@@ -1247,7 +1247,7 @@ describe('An authored Artificer conversion the game cannot make', () => {
       traitOffersByAcquisitionRole: { source: null },
       dispositionByAcquisitionRole: { source: { kind: 'normal' } },
     } as never);
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     return { ...project, route: { ...project.route, biomes: project.route.biomes.slice(0, 1) } };
   }
 

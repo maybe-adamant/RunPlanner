@@ -48,9 +48,10 @@ import {
   type TraitHistoryEvent,
 } from '@run-planner/engine/simulation';
 import {
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   authorTestArtificerReplacement,
   editTestRoomActionOrder,
+  placeTestLivePickupsAtSite,
 } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
@@ -231,8 +232,14 @@ describe('Narcissus pickup producer', () => {
     const withCard = withGoldenUnderworldJudgments(
       withArcana(createCompleteFGProject(), ['DoorReroll']),
     );
-    const taken = takeNarcissus(withCard, ['NarcissusF', 'NarcissusB', 'NarcissusC']);
-    const entry = pickupEntry(taken, 'reroll');
+    const chosen = takeNarcissus(withCard, ['NarcissusF', 'NarcissusB', 'NarcissusC']);
+    const entry = pickupEntry(chosen, 'reroll');
+    // The owner picks up Fates' Trimmings' drop.
+    const taken = placeTestLivePickupsAtSite(
+      chosen,
+      createOccurrenceAddress(goldenGBiome, narcissusOccurrence(chosen).occurrenceId),
+      entry.site.pointKey,
+    );
     expect(
       narcissusOccurrence(taken).roomActions.order.filter(
         (reference) =>
@@ -797,7 +804,7 @@ describe('Narcissus pickup producer', () => {
         payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
       },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const normalBranch = evaluatedG(project).rewards.frontier;
     expect(normalBranch?.state.rewardHistory.consumableRecord.BlindBoxLoot).toBe(1);
     expect(normalBranch?.state.rewardHistory.lastRewardRecreation?.offer.rewardType).toBe(
@@ -1415,7 +1422,7 @@ describe('Narcissus pickup producer', () => {
       'NarcissusD',
       'NarcissusE',
     ]);
-    pom = authorLegalTraitOffers(pom);
+    pom = authorTestTraitsAndRequiredItems(pom);
     pom = replacePickupActions(pom, pickupSite(pom), ['pom']);
     const pomEntry = pickupEntry(pom, 'pom');
     const pomResolution = createLevelResolutionAddress(pomEntry, 'self');
@@ -1448,7 +1455,7 @@ describe('Narcissus pickup producer', () => {
       'NarcissusC',
     ]);
     blindBox = replacePickupActions(blindBox, pickupSite(blindBox), ['mysteryBoon']);
-    blindBox = authorLegalTraitOffers(blindBox);
+    blindBox = authorTestTraitsAndRequiredItems(blindBox);
     const blindBoxEntry = pickupEntry(blindBox, 'mysteryBoon');
     blindBox = applyProjectCommand(blindBox, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
@@ -1458,7 +1465,7 @@ describe('Narcissus pickup producer', () => {
         payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
       },
     });
-    blindBox = authorLegalTraitOffers(blindBox);
+    blindBox = authorTestTraitsAndRequiredItems(blindBox);
     const blindBoxEvaluation = evaluatedG(blindBox);
     expect(
       reachedFrontier(blindBoxEvaluation.rewards)

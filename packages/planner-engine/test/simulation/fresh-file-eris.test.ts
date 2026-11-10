@@ -20,6 +20,7 @@ import {
   freshFileHBiome,
   freshFileHIntroId,
 } from '@run-planner/test-fixtures/fresh-file';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import { erisGiftDropped } from '../../src/simulation/rewards/biome/lifecycle-transitions/eris-interacted';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
@@ -37,11 +38,14 @@ function setEris(
   occurrenceId: OccurrenceId,
   spawned: boolean,
 ): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
-    kind: 'SetErisSpawned',
-    occurrence: createOccurrenceAddress(biome, occurrenceId),
-    spawned,
-  });
+  // The owner talks to an observed Eris.
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'SetErisSpawned',
+      occurrence: createOccurrenceAddress(biome, occurrenceId),
+      spawned,
+    }),
+  );
 }
 
 function occurrenceOf(project: ProjectDocument, biomeKey: string, occurrenceId: string) {

@@ -40,7 +40,7 @@ import {
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 describe('encounter choice identity context', () => {
@@ -50,7 +50,7 @@ describe('encounter choice identity context', () => {
   ])(
     'prepares %s from effective Shadow after prior Black Night suppression',
     (gameName, encounterKey, exitKey) => {
-      const project = authorLegalTraitOffers(
+      const project = authorTestTraitsAndRequiredItems(
         applyProjectCommand(createGoldenFGHIProject(), catalog, {
           kind: 'SetExitSelection',
           selection: createExitSelectionAddress(createBiomeAddress('Underworld', 'F'), {
@@ -203,7 +203,7 @@ describe('encounter phase authored domains', () => {
     expect(supportFor(simulateProjectAssembly(catalog, project), phase)).toMatchObject({
       supported: true,
     });
-    project = authorLegalTraitOffers(
+    project = authorTestTraitsAndRequiredItems(
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(biome, occurrenceId),

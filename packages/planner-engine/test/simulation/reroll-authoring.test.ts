@@ -40,6 +40,7 @@ import {
   withJudgment,
   withGuessedRerolledScreens,
 } from '../support/rerolls';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 
 const f = createBiomeAddress('Underworld', 'F');
 const n = createBiomeAddress('Surface', 'N');
@@ -507,9 +508,12 @@ describe('reroll spend allowance', () => {
       command: appendPress(project, earlier, target, reward),
       evaluate,
     }).assembly;
-    expect(settled.evaluation.findings.map((finding) => finding.code)).toEqual([
-      'traitOfferMissing',
-    ]);
+    // Once the owner picks up the drawn Boon, the walk stops at its screen.
+    expect(
+      evaluate(collectTestRequiredItems(settled.project)).evaluation.findings.map(
+        (finding) => finding.code,
+      ),
+    ).toEqual(['traitOfferMissing']);
   });
 
   it('is unreached for a surface the walk never reached', () => {
