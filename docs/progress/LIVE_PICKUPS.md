@@ -33,9 +33,11 @@ You either interact with pickups or active objects.
   proposals and the positioned commands' accepted indices (purchases and
   derived placements share one rule); no evaluation work, equivalence
   unchanged. Its witnesses (golden Underworld and Surface checkpoints) stand
-  every reached row live at its own gap and, for sampled rooms at every gap
-  through the frontier, find the offered placements and moves equal to those
-  the walk takes there. Provisional classifications, current
+  every reached row live at its own gap; in the shortest room of each action
+  kind, the walk takes every offered placement and move at every gap through
+  the frontier and takes none it was not offered at the gaps bounding each
+  row's offered runs; each purchase and derived placement kind gets the same
+  check; and a required row's deadline is the last gap the walk takes it at. Provisional classifications, current
   engine ownership, for the owner to confirm or change (classification, not
   structure):
   - Boss forced drop: a pickup (spawned-loot `requiredDrop`), required.
@@ -56,12 +58,16 @@ You either interact with pickups or active objects.
     Artificer's replacement, a Nemesis trade's result, a delivery due after a
     wheel reward, a Fields cage reward (the stop rewinds to room entry), and a
     Boss room's reward after its forced drop (the stop rewinds before the
-    drop's row). The witness pins these by room and kind; C's walk change
+    drop's row). The witness pins each by room, row and kind; C's walk change
     should turn each into an offer at its own gap and empty the pin.
   - Not offered: a new door, cage, wheel, Well or Pool reroll, a Pool sale of a
     slot not yet chosen and a rack keepsake, each needing its own choice
     first; their rows are. Owner to decide whether the live row offers them
     (with the choice still to make) or they stay on their objects.
+  - The walk takes Gold Gold Gold's duplicate before the purchase that spawns
+    it: its row has no order dependency on that purchase. The live product
+    offers it only once spawned; the witness pins this leniency for C or the
+    owner to settle.
   - A choice's values (a blank Travel Deal item) are read where the room's
     reached actions end, not at the gap; the indices are value-independent.
   - Not exported: the query lands on the `simulation` entry with its first

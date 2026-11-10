@@ -21,7 +21,18 @@ import {
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import { checkpointRegistry } from '@run-planner/test-fixtures/checkpoints/registry';
-import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadSurfaceNOHermesShrineDeliveryCheckpoint,
+  loadSurfaceScheduledLifecycleCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadUnderworldFStygianWellCheckpoint,
+  loadUnderworldWorldShopTravelDealCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  createEchoGoldIAnvilDuplicateProject,
+  echoGoldIPrebossShopId,
+} from '@run-planner/test-fixtures/underworld';
 import { purchaseTestHermesShrineOffer } from '@run-planner/test-fixtures/shared';
 import { oBiome } from '@run-planner/test-fixtures/surface';
 import {
@@ -35,6 +46,14 @@ import {
 } from '../../src/simulation/evaluation/live-actions';
 
 const oPostboss = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-preboss:postboss'));
+const oShrine = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-combat07'));
+const pCombat = createOccurrenceAddress(
+  createBiomeAddress('Surface', 'P'),
+  createOccurrenceId('surface-p-1-1-p_combat03'),
+);
+const fBiome = createBiomeAddress('Underworld', 'F');
+const worldShop = createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-preboss-shop'));
+const fWell = createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-preboss-shop:postboss'));
 
 const goldenCheckpoints = checkpointRegistry.filter(
   ({ entry }) => entry.route === 'Underworld' || entry.route === 'Surface',
@@ -131,12 +150,12 @@ function walkAccepts(
   project: ProjectDocument,
   before: ReadonlySet<string>,
   address: OccurrenceAddress,
-  command: ProjectCommand,
+  commands: readonly ProjectCommand[],
   key: string,
 ): boolean {
-  let after: ProjectDocument;
+  let after = project;
   try {
-    after = applyProjectCommand(project, catalog, command);
+    for (const command of commands) after = applyProjectCommand(after, catalog, command);
   } catch (error) {
     if (error instanceof ProjectCommandContractError) return false;
     throw error;
@@ -182,28 +201,179 @@ function withRoomOrder(
   };
 }
 
+/** The room with Gold Gold Gold's duplicate unplaced: its row and its entry gone. */
+function withoutEchoGold(
+  project: ProjectDocument,
+  occurrence: OccurrenceAddress,
+  order: readonly RoomActionReference[],
+): ProjectDocument {
+  const ordered = withRoomOrder(project, occurrence, order);
+  return {
+    ...ordered,
+    route: {
+      ...ordered.route,
+      biomes: ordered.route.biomes.map((biome) =>
+        biome.biomeKey !== occurrence.biomeKey || biome.topology === null
+          ? biome
+          : {
+              ...biome,
+              topology: {
+                ...biome.topology,
+                occurrences: biome.topology.occurrences.map((candidate) => {
+                  if (candidate.occurrenceId !== occurrence.occurrenceId) return candidate;
+                  const { echoDoubleShopReward: _gold, ...pickupEntries } =
+                    candidate.acquisitionSites?.roomExit?.pickupEntries ?? {};
+                  void _gold;
+                  return {
+                    ...candidate,
+                    acquisitionSites: {
+                      ...candidate.acquisitionSites,
+                      roomExit: { ...candidate.acquisitionSites?.roomExit, pickupEntries },
+                    },
+                  };
+                }),
+              },
+            },
+      ),
+    },
+  };
+}
+
 /**
- * Required pickups today's walk cannot reach once unplaced, by room and kind:
- * the walk stops at the event or source that spawns them.
+ * Required pickups today's walk cannot reach once unplaced, by room, row and
+ * kind: the walk stops at the event or source that spawns them.
  */
-const HELD_TODAY: Readonly<Record<string, number>> = {
+const HELD_TODAY: readonly string[] = [
   // A Nemesis trade's result: the walk blocks at her contact.
-  'nemesis-f-trait-trade golden-f-b5-e1 interactAcquisitionEntry': 1,
+  'nemesis-f-trait-trade golden-f-b5-e1 #1 interactAcquisitionEntry',
   // A cage reward: the walk stops at room entry, where the cages spawn.
-  'nemesis-h-fields golden-h-combat05 interactLocalReward': 1,
+  'nemesis-h-fields golden-h-combat05 #7 interactLocalReward',
   // A deferred Ship wheel's reward: its encounter end waits on it.
-  'surface-shrine-travel-deal surface-o-combat07 interactWheelReward': 1,
-  'surface-no-hermes-shrine-delivery surface-o-combat07 interactWheelReward': 1,
-  'surface-scheduled-lifecycle surface-o-combat01 interactWheelReward': 1,
-  'surface-shrine-travel-deal surface-o-combat04 interactWheelReward': 1,
+  'surface-no-hermes-shrine-delivery surface-o-combat07 #1 interactWheelReward',
+  'surface-scheduled-lifecycle surface-o-combat01 #1 interactWheelReward',
+  'surface-shrine-travel-deal surface-o-combat04 #1 interactWheelReward',
+  'surface-shrine-travel-deal surface-o-combat07 #1 interactWheelReward',
   // A delivery due after a wheel reward: the walk blocks at the encounter end.
-  'surface-shrine-travel-deal surface-o-combat04 interactAcquisitionEntry': 1,
+  'surface-shrine-travel-deal surface-o-combat04 #2 interactAcquisitionEntry',
   // An Artificer replacement: the walk blocks at the pickup it converts.
-  'underworld-f-trait-order-checks e9c1775e-a04b-4ed2-b749-7ef344614cbe interactAcquisitionEntry': 1,
-  'underworld-f-trait-order-checks f4adb787-5267-4ce6-8712-e53744e505ff interactAcquisitionEntry': 1,
+  'underworld-f-trait-order-checks e9c1775e-a04b-4ed2-b749-7ef344614cbe #1 interactAcquisitionEntry',
+  'underworld-f-trait-order-checks f4adb787-5267-4ce6-8712-e53744e505ff #2 interactAcquisitionEntry',
   // A Boss room's reward after its forced drop: the stop rewinds before the drop's row.
-  'underworld-zagreus-contract zagreus-contract-showcase interactIncomingReward': 1,
-};
+  'underworld-zagreus-contract zagreus-contract-showcase #1 interactIncomingReward',
+];
+
+/** The plan through one biome: a later biome's walk takes no part in a room's own. */
+function throughBiome(project: ProjectDocument, biomeKey: string): ProjectDocument {
+  const last = project.route.biomes.findIndex((biome) => biome.biomeKey === biomeKey);
+  return {
+    ...project,
+    route: { ...project.route, biomes: project.route.biomes.slice(0, last + 1) },
+  };
+}
+
+const POSITIONED: ReadonlySet<string> = new Set([
+  'ReplaceShopPurchaseParticipation',
+  'PurchaseShopTravelDealRefill',
+  'SetStygianWellPurchase',
+  'PurchaseHermesShrineOffer',
+  'PlaceHermesShrineDelivery',
+  'PlaceClockedTraitPickup',
+  'PlaceEchoGoldPickup',
+]);
+
+/** The gaps just outside each run of offered gaps, with the room's first gap and the frontier. */
+function boundaryGaps(offered: ReadonlySet<number>, frontier: number): readonly number[] {
+  const gaps = new Set([0, frontier]);
+  for (const gap of offered) {
+    if (!offered.has(gap - 1)) gaps.add(gap - 1);
+    if (!offered.has(gap + 1)) gaps.add(gap + 1);
+  }
+  return [...gaps].filter((gap) => gap >= 0 && gap <= frontier && !offered.has(gap));
+}
+
+/**
+ * One room's live actions against the walk: every offered placement or move
+ * is taken, and no row, purchase or derived placement is taken at the gaps
+ * bounding where it is offered. A purchase or placement reaches a gap by its
+ * default placement and a move.
+ */
+function auditRoom(
+  id: string,
+  project: ProjectDocument,
+  address: OccurrenceAddress,
+  counts: {
+    sound: number;
+    complete: number;
+    families?: Set<string>;
+    beforeSpawn?: string[];
+  },
+  /** Audit only these commands' placements, leaving the room's rows to the sampled rooms. */
+  only?: string,
+): string[] {
+  const failures: string[] = [];
+  project = throughBiome(project, address.biomeKey);
+  const assembly = simulateProjectAssembly(catalog, project);
+  const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, address)!;
+  const room = canonicalRoom(assembly, address)!;
+  const before = placementFindings(assembly, address);
+  const biome = createBiomeAddress(address.routeKey, address.biomeKey);
+  const actionOf = (key: string) => createRoomActionAddress(biome, address.occurrenceId, key);
+  const offeredGaps = new Map<string, Set<number>>();
+  const positioned = new Map<string, ProjectCommand>();
+  for (const gap of live.gaps)
+    for (const action of gap.items.flatMap((item) => item.actions)) {
+      if (action.kind === 'placed') continue;
+      if (action.kind === 'place' && action.needsChoice === 'travelDealItem') continue;
+      if (only !== undefined && action.command.kind !== only) continue;
+      const key = roomActionKey(action.reference);
+      offeredGaps.set(key, (offeredGaps.get(key) ?? new Set()).add(gap.index));
+      if (POSITIONED.has(action.command.kind)) {
+        // A rushed Shrine item's pickup moves with its purchase; the plain purchase stands for both.
+        if (action.command.kind === 'PurchaseHermesShrineOffer' && action.command.rushed) continue;
+        const { index: _index, ...command } = action.command as ProjectCommand & { index?: number };
+        void _index;
+        positioned.set(key, command as ProjectCommand);
+        counts.families?.add(action.command.kind);
+      }
+      counts.sound += 1;
+      if (!walkAccepts(project, before, address, [action.command], key))
+        failures.push(`${id} ${address.occurrenceId} @${gap.index}: offered ${key} refused`);
+    }
+  const spawnGaps = new Map(
+    live.gaps.flatMap((gap) =>
+      gap.items.flatMap((item) =>
+        item.kind === 'pickup' ? [[roomActionKey(item.reference), item.spawn.gap] as const] : [],
+      ),
+    ),
+  );
+  const probe = (key: string, gap: number, commands: readonly ProjectCommand[]) => {
+    counts.complete += 1;
+    if (!walkAccepts(project, before, address, commands, key)) return;
+    // A pickup is live only once spawned; the walk taking it earlier is the walk's leniency.
+    if (gap < (spawnGaps.get(key) ?? 0)) counts.beforeSpawn?.push(`${id} @${gap} ${key}`);
+    else failures.push(`${id} ${address.occurrenceId} @${gap}: ${key} taken, not offered`);
+  };
+  for (const row of only === undefined ? room.roomActionRoster.rows : []) {
+    if (row.stale || positioned.has(row.key)) continue;
+    if (row.rank === null && FEATURE_OWNED.has(row.reference.kind)) continue;
+    for (const gap of boundaryGaps(offeredGaps.get(row.key) ?? new Set(), live.frontier))
+      if (row.rank === null)
+        probe(row.key, gap, [
+          {
+            kind: 'InsertRoomAction',
+            action: actionOf(row.key),
+            reference: row.reference,
+            index: gap,
+          },
+        ]);
+      else if (row.rank - 1 > gap)
+        probe(row.key, gap, [{ kind: 'MoveRoomAction', action: actionOf(row.key), toIndex: gap }]);
+  }
+  for (const [key, command] of positioned)
+    for (const gap of boundaryGaps(offeredGaps.get(key) ?? new Set(), live.frontier))
+      probe(key, gap, [command, { kind: 'MoveRoomAction', action: actionOf(key), toIndex: gap }]);
+  return failures;
+}
 
 describe('live actions at a gap', () => {
   const evaluated = goldenCheckpoints.map(({ entry, load }) => {
@@ -261,7 +431,7 @@ describe('live actions at a gap', () => {
     expect(failures).toEqual([]);
   });
 
-  // One room of each set of action kinds across the golden plans, and every room a plan stops in.
+  // The shortest room of each set of action kinds across the golden plans.
   const sampleRooms = (() => {
     const seen = new Set<string>();
     const rooms: {
@@ -285,75 +455,163 @@ describe('live actions at a gap', () => {
             project.route.biomes.findIndex((biome) => biome.biomeKey === address.biomeKey),
         })),
       )
-      .sort((left, right) => left.later - right.later);
+      .sort(
+        (left, right) =>
+          roomOrder(left.project, left.address).length -
+            roomOrder(right.project, right.address).length || left.later - right.later,
+      );
     for (const { later: _later, ...room } of candidates) {
       void _later;
       const order = roomOrder(room.project, room.address);
       if (order.length === 0) continue;
-      const stopped = room.live.frontier < order.length;
       const shape = [...new Set(order.map((reference) => reference.kind))].sort().join(',');
-      if (!stopped && seen.has(shape)) continue;
+      if (seen.has(shape)) continue;
       seen.add(shape);
       rooms.push(room);
     }
     return rooms;
   })();
 
-  it('offers at each gap through the frontier exactly the placements and moves the walk takes there', () => {
+  // The shortest room holding each action kind, and the shortest room a plan stops in.
+  const kindRooms = (() => {
+    const chosen = new Set<(typeof sampleRooms)[number]>();
+    const kinds = new Set(
+      sampleRooms.flatMap(({ project, address }) =>
+        roomOrder(project, address).map((reference) => reference.kind),
+      ),
+    );
+    for (const kind of kinds)
+      chosen.add(
+        sampleRooms.find(({ project, address }) =>
+          roomOrder(project, address).some((reference) => reference.kind === kind),
+        )!,
+      );
+    const stopped = sampleRooms.find(
+      ({ project, address, live }) => live.frontier < roomOrder(project, address).length,
+    );
+    if (stopped !== undefined) chosen.add(stopped);
+    return [...chosen];
+  })();
+
+  it('offers through the frontier only placements and moves the walk takes, and every one it takes', () => {
+    const failures: string[] = [];
+    const counts = { sound: 0, complete: 0, beforeSpawn: [] as string[] };
+    for (const { id, project, address } of kindRooms)
+      failures.push(...auditRoom(id, project, address, counts));
+    expect(failures).toEqual([]);
+    expect(counts.beforeSpawn).toEqual([]);
+    expect(kindRooms.length).toBeGreaterThan(10);
+    expect(counts.sound).toBeGreaterThan(40);
+    expect(counts.complete).toBeGreaterThan(10);
+  });
+
+  it('offers every index the walk takes for each object purchase and derived placement', () => {
+    const scheduled = purchaseTestHermesShrineOffer(
+      loadSurfaceScheduledLifecycleCheckpoint(),
+      catalog,
+      oPostboss,
+      'initial:secondRight',
+      { delay: 2, rushed: false },
+    );
+    const echoShop = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'I'),
+      echoGoldIPrebossShopId,
+    );
+    const echoGold = createEchoGoldIAnvilDuplicateProject();
+    const cases: readonly [string, ProjectDocument, OccurrenceAddress, string][] = [
+      [
+        'Shop item',
+        loadUnderworldWorldShopTravelDealCheckpoint(),
+        worldShop,
+        'ReplaceShopPurchaseParticipation',
+      ],
+      [
+        'Shrine buy',
+        loadSurfaceNOHermesShrineDeliveryCheckpoint(),
+        oShrine,
+        'PurchaseHermesShrineOffer',
+      ],
+      ['Well purchase', loadUnderworldFStygianWellCheckpoint(), fWell, 'SetStygianWellPurchase'],
+      ['delivery', scheduled, pCombat, 'PlaceHermesShrineDelivery'],
+      ['clocked drop', scheduled, pCombat, 'PlaceClockedTraitPickup'],
+      [
+        'Echo gold',
+        withoutEchoGold(
+          echoGold,
+          echoShop,
+          roomOrder(echoGold, echoShop).filter(
+            (reference) =>
+              !(
+                reference.kind === 'interactAcquisitionEntry' &&
+                reference.entryKey === 'echoDoubleShopReward'
+              ),
+          ),
+        ),
+        echoShop,
+        'PlaceEchoGoldPickup',
+      ],
+    ];
+    const beforeSpawn: string[] = [];
+    for (const [name, project, address, kind] of cases) {
+      const counts = { sound: 0, complete: 0, families: new Set<string>(), beforeSpawn };
+      expect(auditRoom(name, project, address, counts, kind), name).toEqual([]);
+      expect([...counts.families], name).toContain(kind);
+    }
+    // Gold Gold Gold's duplicate has no order dependency on the purchase that spawns it.
+    expect(beforeSpawn).toEqual([
+      'Echo gold @0 ["interactAcquisitionEntry","roomExit","echoDoubleShopReward"]',
+    ]);
+  });
+
+  it('closes a required row’s window at its deadline, before the room’s last gap', () => {
+    // Placed required rows whose window ends before the room's last gap: the walk takes the
+    // row at its deadline and refuses it at the next distinct gap.
     const failures: string[] = [];
     let tried = 0;
     for (const { id, project, assembly, address, live } of sampleRooms) {
+      const order = roomOrder(project, address);
+      if (live.frontier < order.length) continue;
       const before = placementFindings(assembly, address);
-      const room = canonicalRoom(assembly, address)!;
-      const accepts = (command: ProjectCommand, key: string) => {
+      for (let own = 0; own < order.length && tried < 6; own += 1) {
+        const key = roomActionKey(order[own]!);
+        const item = live.gaps[own]!.items.find((candidate) =>
+          candidate.actions.some(
+            (action) => action.kind === 'placed' && roomActionKey(action.reference) === key,
+          ),
+        );
+        const deadline =
+          item?.kind === 'pickup'
+            ? item.deadline
+            : item?.actions.find((action) => roomActionKey(action.reference) === key)?.deadline;
+        // The row's own gap and the one after it are the same position; the next gap is past it.
+        if (deadline === undefined) continue;
+        const past = deadline + (deadline === own ? 2 : 1);
+        if (past > order.length) continue;
         tried += 1;
-        return walkAccepts(project, before, address, command, key);
-      };
-      for (let gap = 0; gap <= live.frontier; gap += 1) {
-        const offeredRows = new Set<string>();
-        // Every offered action the walk takes; a choice still to make is proved apart.
-        for (const action of actionsAt(live, gap)) {
-          if (action.kind === 'placed') continue;
-          if (action.kind === 'place' && action.needsChoice === 'travelDealItem') continue;
-          const key = roomActionKey(action.reference);
-          if (
-            action.command.kind === 'InsertRoomAction' ||
-            action.command.kind === 'MoveRoomAction'
-          )
-            offeredRows.add(key);
-          if (!accepts(action.command, key))
-            failures.push(`${id} ${address.occurrenceId} @${gap}: offered ${key} refused`);
-        }
-        // Every row insertion, or move of a later row, the walk takes here is offered.
-        for (const row of room.roomActionRoster.rows) {
-          if (row.stale || offeredRows.has(row.key)) continue;
-          const action = createRoomActionAddress(
-            createBiomeAddress(address.routeKey, address.biomeKey),
-            address.occurrenceId,
-            row.key,
-          );
-          const command: ProjectCommand | undefined =
-            row.rank === null
-              ? FEATURE_OWNED.has(row.reference.kind)
-                ? undefined
-                : { kind: 'InsertRoomAction', action, reference: row.reference, index: gap }
-              : row.rank - 1 > gap
-                ? { kind: 'MoveRoomAction', action, toIndex: gap }
-                : undefined;
-          if (command !== undefined && accepts(command, row.key))
-            failures.push(`${id} ${address.occurrenceId} @${gap}: ${row.key} taken, not offered`);
-        }
+        const action = createRoomActionAddress(
+          createBiomeAddress(address.routeKey, address.biomeKey),
+          address.occurrenceId,
+          key,
+        );
+        const moveTo = (gap: number): ProjectCommand => ({
+          kind: 'MoveRoomAction',
+          action,
+          toIndex: gap > own ? gap - 1 : gap,
+        });
+        if (deadline !== own && !walkAccepts(project, before, address, [moveTo(deadline)], key))
+          failures.push(`${id} ${address.occurrenceId} #${own} ${key}: refused at ${deadline}`);
+        if (walkAccepts(project, before, address, [moveTo(past)], key))
+          failures.push(`${id} ${address.occurrenceId} #${own} ${key}: taken past ${deadline}`);
       }
     }
     expect(failures).toEqual([]);
-    expect(sampleRooms.length).toBeGreaterThan(20);
-    expect(tried).toBeGreaterThan(150);
+    expect(tried).toBe(6);
   });
 
   it('holds a required pickup at its spawn while it is unplaced, as today’s walk does', () => {
     // Take each placed required pickup of a sampled room back, alone: it stands offered at its
     // own gap unless today's walk stops, on its placement finding, at what spawns it.
-    const held = new Map<string, number>();
+    const held = new Set<string>();
     const failures: string[] = [];
     let tried = 0;
     for (const { id, project, assembly, address, live } of sampleRooms) {
@@ -409,13 +667,12 @@ describe('live actions at a gap', () => {
           failures.push(`${id} ${address.occurrenceId} #${index} ${row.key}`);
           continue;
         }
-        const pin = `${id} ${address.occurrenceId} ${row.reference.kind}`;
-        held.set(pin, (held.get(pin) ?? 0) + 1);
+        held.add(`${id} ${address.occurrenceId} #${index} ${row.reference.kind}`);
       }
     }
     expect(failures).toEqual([]);
     expect(tried).toBeGreaterThan(15);
-    expect(Object.fromEntries(held)).toEqual(HELD_TODAY);
+    expect([...held].sort()).toEqual([...HELD_TODAY].sort());
   });
 
   it('places a due delivery and a matured drop the walk left unplaced, at the gaps their commands accept', () => {
