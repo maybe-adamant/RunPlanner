@@ -36,7 +36,10 @@ describe('removed actions notice', () => {
     expect(shown).not.toBeNull();
     expect(echoShopRows(present())).not.toContain(echoDuplicateKey);
 
-    await user.click(within(shown!).getByRole('button', { name: 'Location 40' }));
+    const link = within(shown!).getByRole('button', { name: 'Location 40' });
+    // The room's own name shows on hover.
+    expect(link.getAttribute('data-hint')).toBe('Preboss');
+    await user.click(link);
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(echoShop);
     expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',

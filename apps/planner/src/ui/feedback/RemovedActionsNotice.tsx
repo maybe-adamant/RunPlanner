@@ -10,10 +10,11 @@ import {
   removedActionsAnnouncementDismissed,
 } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { hintProps } from '@planner/ui/controls/hint';
 
 /**
- * The last edit's removals in rooms it did not address, each room linked as the stop notice
- * links its place; it stays until dismissed, undone or replaced by the next edit.
+ * The last edit's removals in rooms it did not address, each room linked as every reference
+ * names a place; it stays until dismissed, undone or replaced by the next edit.
  */
 export function RemovedActionsNotice({
   catalog,
@@ -44,8 +45,9 @@ export function RemovedActionsNotice({
                   disabled={drafting}
                   onClick={() => dispatch(findingSelected(room.selection))}
                   type="button"
+                  {...hintProps(room.place.hint)}
                 >
-                  {room.place}
+                  {room.place.text}
                 </button>
               </li>
             ))}

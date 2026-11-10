@@ -40,7 +40,7 @@ describe('removed actions announcement', () => {
     expect(room).toMatchObject({
       count: 1,
       doors: 0,
-      place: 'Location 40',
+      place: { text: 'Location 40', hint: 'Preboss' },
       selection: {
         origin: echoShop,
         presentation: { kind: 'roomTimeline' },
