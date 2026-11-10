@@ -37,7 +37,10 @@ import {
   fDecision,
   fStartId,
 } from '../../support/f-takeover-project';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createFMidshopUnresolvedBlindBoxBeforePomProject,
@@ -177,7 +180,7 @@ function selectedNaturalChaosFrontier(): {
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     },
   });
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     decision: createExitDecisionAddress(goldenFBiome, {
@@ -198,7 +201,7 @@ function selectedNaturalChaosFrontier(): {
     }),
     value: { kind: 'additional', additionalExitKey: 'chaos' },
   });
-  return { project: authorLegalTraitOffers(project), chaosOccurrenceId };
+  return { project: authorTestTraitsAndRequiredItems(project), chaosOccurrenceId };
 }
 
 function roomCandidate(

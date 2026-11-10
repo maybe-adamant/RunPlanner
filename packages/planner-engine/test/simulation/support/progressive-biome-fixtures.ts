@@ -62,6 +62,8 @@ import {
 import {
   authorLegalTraitOffers,
   authorTestArtificerReplacement,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
 } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHProject,
@@ -279,7 +281,7 @@ function partialGWithOnePhysicalTarget() {
     reward: createIncomingRewardAddress(goldenGBiome, first),
     value: { rewardType: 'MetaCurrencyBigDrop' },
   });
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   project = appendBatch(
     project,
     goldenGBiome,
@@ -328,7 +330,7 @@ function partialGWithInvalidSecondPhysicalTarget() {
     reward: createIncomingRewardAddress(goldenGBiome, first),
     value: { rewardType: 'MetaCurrencyBigDrop' },
   });
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   project = appendBatch(
     project,
     goldenGBiome,
@@ -349,7 +351,7 @@ function partialGWithInvalidSecondPhysicalTarget() {
     reward: createIncomingRewardAddress(goldenGBiome, second),
     value: { rewardType: 'MetaCardPointsCommonBigDrop' },
   });
-  return { project: authorLegalTraitOffers(project), source: first, firstTarget: second };
+  return { project: authorTestTraitsAndRequiredItems(project), source: first, firstTarget: second };
 }
 
 function partialGWithEarlierInvalidReward() {
@@ -430,7 +432,9 @@ export {
   applyProjectCommand,
   authorLegalTraitOffers,
   authorTestArtificerReplacement,
+  authorTestTraitsAndRequiredItems,
   bindTestCandidateSession,
+  collectTestRequiredItems,
   catalog,
   catalogWithImpossibleEncounter,
   catalogWithImpossibleNaturalChaosSource,

@@ -14,7 +14,6 @@ import {
   createOccurrenceAddress,
   createRouteAddress,
   createStartingRewardAddress,
-  createRoomActionAddress,
   createProjectDocument,
   createShopOfferAddress,
   createAcquisitionEntryAddress,
@@ -22,7 +21,6 @@ import {
   createTraitOfferAddress,
   createAcquisitionRoleAddress,
   createRouteStartKeepsakeSelectionAddress,
-  roomActionKey,
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -45,7 +43,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   authorLegalTraitOffers,
   authorTestArtificerReplacement,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   replaceTestShopOfferActions,
+  scheduleTestRequiredRoomActions,
 } from '@run-planner/test-fixtures/shared';
 
 import {
@@ -277,7 +278,8 @@ function evaluate(
   authorTraits = true,
   initialBranches?: Parameters<typeof evaluateBiomeRewards>[5],
 ) {
-  if (authorTraits) project = authorLegalTraitOffers(project);
+  if (authorTraits) project = authorTestTraitsAndRequiredItems(project);
+  project = scheduleTestRequiredRoomActions(project, catalog, biome);
   const snapshot = materializeBiome(
     catalog,
     biome,
@@ -961,23 +963,10 @@ describe('F reward-history simulation', () => {
   });
 
   it('treats the opening reward as a biome entry without a current-room predecessor', () => {
-    const start = createOccurrenceId('ratio-start');
-    let project = applyProjectCommand(ratioBoundaryProject(), catalog, {
+    const project = applyProjectCommand(ratioBoundaryProject(), catalog, {
       kind: 'ReplaceStartingReward',
       reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'SpellDrop' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(
-        biome,
-        start,
-        roomActionKey({
-          kind: 'interactIncomingReward',
-          producerPoint: 'roomRewardPickup',
-          acquisitionRole: 'source',
-        }),
-      ),
     });
     const result = evaluate(project).rewards;
 
@@ -1019,7 +1008,7 @@ describe('F reward-history simulation', () => {
   });
 
   it('replays a later forced target store across earlier ordinary peers', () => {
-    let project = authorLegalTraitOffers(ratioBoundaryProject());
+    let project = authorTestTraitsAndRequiredItems(ratioBoundaryProject());
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(biome, createOccurrenceId('ratio-mixed-peer')),
@@ -1672,6 +1661,7 @@ describe('F reward-history simulation', () => {
       createOccurrenceId('retained-invalid-preboss-shop'),
       createOccurrenceId('retained-invalid-preboss-free'),
     ]);
+    project = collectTestRequiredItems(project);
 
     expect(simulateProject(catalog, project).findings).toContainEqual(
       expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: reward }),

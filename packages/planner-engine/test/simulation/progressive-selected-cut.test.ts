@@ -63,7 +63,10 @@ import {
   loadUnderworldFGProject,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
-import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import {
+  collectTestRequiredItems,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures/shared';
 import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 import {
   loadUnderworldFGCheckpoint,
@@ -1309,11 +1312,13 @@ describe('room stop', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
-    return applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShipEncounterCount',
-      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
-      encounterCount: 3,
-    });
+    return collectTestRequiredItems(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShipEncounterCount',
+        occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+        encounterCount: 3,
+      }),
+    );
   }
 
   function lockedExitTaken() {
@@ -1410,7 +1415,7 @@ describe('room stop', () => {
       },
     ];
     for (const command of commands) project = applyProjectCommand(project, catalog, command);
-    return project;
+    return collectTestRequiredItems(project);
   }
 
   const fPostboss = createOccurrenceId('golden-f-preboss-shop:postboss');

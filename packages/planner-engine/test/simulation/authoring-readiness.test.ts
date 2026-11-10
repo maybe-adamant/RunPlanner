@@ -57,7 +57,11 @@ import {
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { loadUnderworldIxionChaosCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  collectTestRequiredItems,
+  hubVisitActions,
+} from '@run-planner/test-fixtures/shared';
 import { compareOwnerLocations } from '../../src/simulation/progressive/finding-location';
 import { firstSupportedReroll, withArcana } from '../support/rerolls';
 
@@ -146,10 +150,12 @@ describe('chronological authoring horizon', () => {
       }),
       value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
     });
-    const project = applyProjectCommand(selected, catalog, {
-      kind: 'RemoveExitDecision',
-      decision,
-    });
+    const project = collectTestRequiredItems(
+      applyProjectCommand(selected, catalog, {
+        kind: 'RemoveExitDecision',
+        decision,
+      }),
+    );
     const assembly = simulateProjectAssembly(catalog, project);
     expect(assembly.evaluation.issue?.owner).toEqual(
       createBatchRewardStoreAddress(goldenGBiome, decision.source),

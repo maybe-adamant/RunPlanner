@@ -14,6 +14,7 @@ import {
   createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
 
 export const fBiome = createBiomeAddress('Underworld', 'F');
 export const fStartId = createOccurrenceId('f-takeover-start');
@@ -42,7 +43,7 @@ export function createFStart(project = createFProject()): ProjectDocument {
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     },
   });
-  return applyProjectCommand(rewarded, catalog, {
+  const offered = applyProjectCommand(rewarded, catalog, {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(createIncomingRewardAddress(fBiome, fStartId), 'source'),
     value: {
@@ -56,6 +57,7 @@ export function createFStart(project = createFProject()): ProjectDocument {
       selectedOptionKey: 'option1',
     },
   });
+  return scheduleTestRequiredRoomActions(offered, catalog, fBiome);
 }
 
 export function fDecision(occurrenceId = fStartId) {
@@ -92,11 +94,12 @@ export function createFOpeningTarget(
     occurrenceId: fCombatId,
     gameName,
   });
-  return applyProjectCommand(targeted, catalog, {
+  const rewarded = applyProjectCommand(targeted, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(fBiome, fCombatId),
     value: { rewardType: gameName === 'F_Combat01' ? 'MaxHealthDrop' : 'MetaCurrencyDrop' },
   });
+  return scheduleTestRequiredRoomActions(rewarded, catalog, fBiome);
 }
 
 export function createFCombatBatch(
@@ -206,7 +209,9 @@ export function createCompleteFTakeoverProject(
       },
     });
   }
-  return project;
+  // The takeover is structural (its Preboss is ineligible this early), so the
+  // walk stops before it: required rows take the engine's schedule.
+  return scheduleTestRequiredRoomActions(project, catalog, fBiome);
 }
 
 /** A complete physical takeover batch whose normal exit remains unselected. */

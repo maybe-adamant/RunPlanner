@@ -37,6 +37,7 @@ const {
   applyProjectCommand,
   authorLegalTraitOffers,
   authorTestArtificerReplacement,
+  collectTestRequiredItems,
   bindTestCandidateSession,
   catalog,
   candidateArtifactsForProjectEvaluationAssembly,
@@ -407,6 +408,7 @@ describe('progressive selected and blocked products', () => {
       occurrenceId: createOccurrenceId('progressive-selected-chaos-return'),
       gameName: 'F_Combat02',
     });
+    blockedProject = collectTestRequiredItems(blockedProject);
     const blockedAssembly = simulateProjectAssembly(catalog, blockedProject);
     const blocked = blockedAssembly.evaluation.route?.biomes.find(
       (candidate) => candidate.biomeKey === 'F',
@@ -784,7 +786,9 @@ describe('progressive selected and blocked products', () => {
       );
       if (replacement === undefined)
         throw new Error(`${replacementRewardType} Artificer replacement is missing`);
-      project = authorTestArtificerReplacement(project, catalog, fixture.acquisition, replacement);
+      project = collectTestRequiredItems(
+        authorTestArtificerReplacement(project, catalog, fixture.acquisition, replacement),
+      );
       const assembly = simulateProjectAssembly(catalog, project);
       const role = Object.keys(replacement.traitOffersByAcquisitionRole)[0];
       if (role === undefined) throw new Error(`${replacementRewardType} has no trait role`);
