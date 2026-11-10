@@ -24,9 +24,11 @@ import {
   createOccurrenceId,
   createTraitOfferAddress,
   createProjectHistory,
+  createRoomActionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   redoProjectHistory,
+  roomActionKey,
   undoProjectHistory,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -35,7 +37,11 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  hubVisitActions,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   goldenFBiome,
@@ -350,13 +356,29 @@ function enteredNLocalProject(): ProjectDocument {
     reward: createIncomingRewardAddress(nBiome, nLocalId2),
     value: { rewardType: 'MaxManaDropSmall' },
   });
-  return authorLegalTraitOffers(
+  return authorTestTraitsAndRequiredItems(
     applyProjectCommand(project, catalog, {
       kind: 'ReplaceLocalVisitOrder',
       order: createLocalVisitOrderAddress(nBiome, nCombatId, 'sideRooms'),
       occurrenceIds: [nLocalId],
     }),
   );
+}
+
+const nemesisContact = { kind: 'interactEncounter' as const, phaseKey: 'Encounter' };
+
+/** Places the golden F Nemesis room's contact, which its result spawns from. */
+function withNemesisContact(project: ProjectDocument, authoringCatalog: Catalog = catalog) {
+  return applyProjectCommand(project, authoringCatalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(
+      goldenFBiome,
+      goldenFOccurrenceId(5, 1),
+      roomActionKey(nemesisContact),
+    ),
+    reference: nemesisContact,
+    index: occurrence(project, 'F', goldenFOccurrenceId(5, 1)).roomActions.order.length,
+  });
 }
 
 describe('authored encounter occurrence commands', () => {
@@ -398,12 +420,19 @@ describe('authored encounter occurrence commands', () => {
       occurrence(familySelected, 'F', goldenFOccurrenceId(5, 1)).encounters.encounterKeyByPhase
         .Encounter,
     ).toBe('NemesisRandomEvent');
+    // The family activates the contact without placing it.
     expect(
       occurrence(familySelected, 'F', goldenFOccurrenceId(5, 1)).roomActions.order,
-    ).toContainEqual({
-      kind: 'interactEncounter',
-      phaseKey: 'Encounter',
-    });
+    ).not.toContainEqual(nemesisContact);
+    expect(
+      activeRoomActionReferences(
+        catalog,
+        goldenFBiome,
+        familySelected.route.biomes[0]!.topology!,
+        occurrence(familySelected, 'F', goldenFOccurrenceId(5, 1)),
+        ordinaryPositionFor(catalog, goldenFBiome),
+      ),
+    ).toContainEqual(nemesisContact);
     expect(
       occurrence(familySelected, 'F', goldenFOccurrenceId(5, 1)).encounters
         .nemesisRandomEventByPhase?.Encounter,
@@ -417,18 +446,31 @@ describe('authored encounter occurrence commands', () => {
       ],
     ).toEqual({ pickupEntries: { result: null } });
 
+    const result = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    };
     const accepted = replaceNemesisRandomEventInteraction(
-      familySelected,
+      withNemesisContact(familySelected),
       event,
       { kind: 'goldTrade', response: 'accept' },
       { rewardType: 'MaxHealthDrop' },
     );
-    expect(occurrence(accepted, 'F', goldenFOccurrenceId(5, 1)).roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'nemesisGenerated:Encounter',
-      entryKey: 'result',
+    // Accepting activates the result without placing it; its owner picks it up.
+    expect(
+      occurrence(accepted, 'F', goldenFOccurrenceId(5, 1)).roomActions.order,
+    ).not.toContainEqual(result);
+    const collected = applyProjectCommand(accepted, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(goldenFBiome, goldenFOccurrenceId(5, 1), roomActionKey(result)),
+      reference: result,
+      index: occurrence(accepted, 'F', goldenFOccurrenceId(5, 1)).roomActions.order.length,
     });
-    const declined = applyProjectCommand(accepted, catalog, {
+    expect(occurrence(collected, 'F', goldenFOccurrenceId(5, 1)).roomActions.order).toContainEqual(
+      result,
+    );
+    const declined = applyProjectCommand(collected, catalog, {
       kind: 'ReplaceNemesisRandomEventInteraction',
       event,
       value: { kind: 'goldTrade', response: 'decline', reward: { rewardType: 'MaxHealthDrop' } },
@@ -549,11 +591,13 @@ describe('authored encounter occurrence commands', () => {
       phase,
       encounterKey: 'NemesisRandomEvent',
     });
-    const changed = replaceNemesisRandomEventInteraction(
-      selected,
-      createNemesisRandomEventAddress(phase),
-      value,
-      reward,
+    const changed = withNemesisContact(
+      replaceNemesisRandomEventInteraction(
+        selected,
+        createNemesisRandomEventAddress(phase),
+        value,
+        reward,
+      ),
     );
     expect(
       occurrence(changed, 'F', goldenFOccurrenceId(5, 1)).acquisitionSites?.[
@@ -757,7 +801,7 @@ describe('authored encounter occurrence commands', () => {
       { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
       'Encounter',
     );
-    const nativeProject = authorLegalTraitOffers(
+    const nativeProject = authorTestTraitsAndRequiredItems(
       applyProjectCommand(createCompleteFGProject(), catalog, {
         kind: 'SelectEncounter',
         phase,
@@ -852,7 +896,11 @@ describe('authored encounter occurrence commands', () => {
         value: { kind: 'goldTrade', response: 'accept', reward: { rewardType: 'MaxHealthDrop' } },
       },
     );
-    const selected = occurrence(accepted, 'F', goldenFOccurrenceId(5, 1));
+    const selected = occurrence(
+      withNemesisContact(accepted, aliasCatalog),
+      'F',
+      goldenFOccurrenceId(5, 1),
+    );
     expect(selected.encounters.encounterKeyByPhase.Encounter).toBe('NemesisChoice');
     expect(selected.roomActions.order).not.toContainEqual({
       kind: 'interactIncomingReward',
