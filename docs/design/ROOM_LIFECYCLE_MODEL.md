@@ -563,7 +563,7 @@ projects over a long edit history.
 | Gold Gold Gold duplicate, boon swapped away         | 3          | removed, announced in the shop room     |
 | Matured trait drop, trait lost                      | 3          | removed, announced                      |
 | Door or cage reroll, the reward it rerolls gone     | 1          | removed, silent                         |
-| Reroll of a door the game refuses                   | 4          | invalid                                 |
+| Reroll of a door the game refuses or not available  | 4          | invalid                                 |
 | Hub board reroll, its slot closed or entered        | 4          | invalid                                 |
 | Trait drop, trait held but matures elsewhere        | 4          | invalid                                 |
 | Reward swapped between kinds                        | continuity | pickup rows re-keyed in place           |

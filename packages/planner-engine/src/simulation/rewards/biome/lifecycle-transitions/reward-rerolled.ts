@@ -122,6 +122,22 @@ export function roomTargetContext(
   target: RerollTarget,
   batchPeers: readonly OfferProcessingPeer[],
 ): RerollTargetContext | undefined {
+  const resolved = resolveRoomTarget(catalog, source, batch, target, batchPeers);
+  return resolved === 'cageNotPlayed' ? undefined : resolved;
+}
+
+/**
+ * A room reroll's target as its source sees it, or `cageNotPlayed` when the
+ * door to its room stands but that room no longer plays the cage: the reward
+ * it rerolls is gone.
+ */
+export function resolveRoomTarget(
+  catalog: Catalog,
+  source: CanonicalAuthoredRoom,
+  batch: CanonicalBatch | undefined,
+  target: RerollTarget,
+  batchPeers: readonly OfferProcessingPeer[],
+): RerollTargetContext | 'cageNotPlayed' | undefined {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) return undefined;
   const biome = createBiomeAddress(source.origin.routeKey, source.origin.biomeKey);
@@ -162,7 +178,7 @@ export function roomTargetContext(
   const cages = door.room.localRewards?.filter((reward) => reward.groupKey === 'cages') ?? [];
   if (target.kind === 'cage') {
     const cage = cages.find((candidate) => candidate.slotKey === target.slotKey);
-    if (cage === undefined) return undefined;
+    if (cage === undefined) return 'cageNotPlayed';
     const generated = forGeneration(cage).offer;
     return Object.freeze({
       owner,
@@ -364,8 +380,11 @@ export function applyRewardRerolledTransition(inputs: {
   readonly owner: RoomActionAddress | HubRerollAddress;
   readonly reward: ResolvedRewardOffer | undefined;
   readonly target: RerollTargetContext | undefined;
-  /** Why a Hub reroll cannot act: its slot's room was entered and that door closed. */
-  readonly refused?: 'slotEntered';
+  /**
+   * Why the press cannot act: a Hub slot's room was entered and that door
+   * closed, or the cage a room press rerolls is no longer played.
+   */
+  readonly refused?: 'slotEntered' | 'cageNotPlayed';
   /** A held card enabled door rerolls when the target was assigned (AssignRoomToExitDoor). */
   readonly flagged: boolean;
   readonly historySequence: number;
@@ -402,6 +421,8 @@ export function applyRewardRerolledTransition(inputs: {
   if (inputs.refused === 'slotEntered')
     return blocked('rerollTargetUnavailable', { reason: 'slotEntered' });
   if (!inputs.flagged) return blocked('rerollUnavailable', { kind: 'doors' });
+  if (inputs.refused === 'cageNotPlayed')
+    return blocked('rerollTargetUnavailable', { reason: 'cageNotPlayed' });
   if (target === undefined) return blocked('rerollTargetUnavailable', { reason: 'missing' });
   if (!target.rerollable) return blocked('rerollTargetUnavailable', { reason: 'notRerollable' });
   if (view === undefined)

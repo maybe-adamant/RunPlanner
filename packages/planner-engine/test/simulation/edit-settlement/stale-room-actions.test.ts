@@ -909,10 +909,39 @@ describe('stale room actions in edit settlement', () => {
         expect(settled.assembly.evaluation.findings).toContainEqual(
           expect.objectContaining({
             code: 'rerollTargetUnavailable',
-            evidence: { reason: 'missing' },
+            evidence: { reason: 'cageNotPlayed' },
           }),
         );
       });
+    });
+
+    it('stay invalid when the door to their cage becomes an unavailable exit', () => {
+      const source = createOccurrenceAddress(h, createOccurrenceId('golden-h-miniboss01'));
+      const project = press(
+        withGoldenUnderworldJudgments(withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll'])),
+        source,
+        {
+          kind: 'cage',
+          exitKey: 'exit2',
+          occurrenceId: createOccurrenceId('golden-h-combat04'),
+          slotKey: 'cage1',
+        },
+      );
+      expect(rerolls(project, source)).toHaveLength(1);
+      // Miniboss 2 has one door, so the retained second door is unavailable; an upstream edit can restore it.
+      const settled = settle(project, {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: source,
+        gameName: 'H_MiniBoss02',
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(rerolls(settled.assembly.project, source)).toEqual(rerolls(project, source));
+      expect(settled.assembly.evaluation.findings).toContainEqual(
+        expect.objectContaining({
+          code: 'targetRoomUnavailable',
+          evidence: expect.objectContaining({ exclusionReasons: ['physicalExitUnavailable'] }),
+        }),
+      );
     });
 
     it('stay out of order before the doors they redraw open', () => {

@@ -331,9 +331,10 @@ function sourceGoneShopRows(
 
 /**
  * Cage rerolls whose cage the edit stopped playing: the walk reaches the press
- * and its cage is gone, where before the edit the press found it (it settled,
- * or failed for a reason other than its cage). A press that never found its
- * cage, and every Hub reroll, stays with its finding.
+ * and its door's room no longer plays the cage, where before the edit the
+ * press found it (it settled, or failed for a reason other than its target).
+ * A press that never found its cage, one whose door is unavailable, and every
+ * Hub reroll stay with their findings.
  */
 function cageGoneRerolls(before: ProjectEvaluationAssembly, assembly: ProjectEvaluationAssembly) {
   const findingsAt = (evaluated: ProjectEvaluationAssembly, key: string) =>
@@ -341,12 +342,15 @@ function cageGoneRerolls(before: ProjectEvaluationAssembly, assembly: ProjectEva
       (finding) =>
         finding.origin.kind === 'roomAction' && semanticAddressKey(finding.origin) === key,
     );
-  const missing = (finding: { readonly code: string; readonly evidence: unknown }) =>
-    finding.code === 'rerollTargetUnavailable' &&
-    (finding.evidence as { readonly reason?: unknown }).reason === 'missing';
+  const reason = (finding: { readonly code: string; readonly evidence: unknown }) =>
+    finding.code === 'rerollTargetUnavailable'
+      ? (finding.evidence as { readonly reason?: unknown }).reason
+      : undefined;
+  const gone = (finding: { readonly code: string; readonly evidence: unknown }) =>
+    reason(finding) === 'cageNotPlayed';
   const removals: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   for (const finding of assembly.evaluation.findings) {
-    if (!missing(finding) || finding.origin.kind !== 'roomAction') continue;
+    if (!gone(finding) || finding.origin.kind !== 'roomAction') continue;
     const action = finding.origin;
     const owner = createOccurrenceAddress(
       createBiomeAddress(action.routeKey, action.biomeKey),
@@ -362,10 +366,9 @@ function cageGoneRerolls(before: ProjectEvaluationAssembly, assembly: ProjectEva
       rerollSettlementForProjectEvaluationAssembly(before, action) !== undefined ||
       prior.some(
         (candidate) =>
-          (candidate.code === 'rerollTargetUnavailable' && !missing(candidate)) ||
-          candidate.code === 'rerollPoolExceeded',
+          reason(candidate) === 'notRerollable' || candidate.code === 'rerollPoolExceeded',
       );
-    if (!foundCage || prior.some(missing)) continue;
+    if (!foundCage) continue;
     removals.push({ owner, reference });
   }
   return removals;

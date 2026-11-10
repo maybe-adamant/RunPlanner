@@ -81,7 +81,7 @@ import {
   applyRewardRerolledTransition,
   hubTargetContext,
   reachedRerollPool,
-  roomTargetContext,
+  resolveRoomTarget,
 } from './lifecycle-transitions/reward-rerolled';
 import { captureRerollSurfaces } from './reroll-surfaces';
 import { captureRoomActionEnd } from './object-interaction-seams';
@@ -332,17 +332,19 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
   )?.reference;
   if (source === undefined || reroll?.kind !== 'reroll')
     throw new BiomeRewardSimulationContractError(`${ownerKey} reached without its reroll`);
+  const target = resolveRoomTarget(
+    context.catalog,
+    source,
+    context.prepared.batchesByParent.get(semanticAddressKey(source.origin)),
+    reroll.target,
+    state.peers,
+  );
   const transition = applyRewardRerolledTransition({
     catalog: context.catalog,
     owner: event.owner,
     reward: reroll.reward,
-    target: roomTargetContext(
-      context.catalog,
-      source,
-      context.prepared.batchesByParent.get(semanticAddressKey(source.origin)),
-      reroll.target,
-      state.peers,
-    ),
+    target: target === 'cageNotPlayed' ? undefined : target,
+    ...(target === 'cageNotPlayed' ? { refused: target } : {}),
     flagged:
       state.rerollsFlagged.get(
         rerollFlagKey(
