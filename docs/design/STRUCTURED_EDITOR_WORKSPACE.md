@@ -437,11 +437,18 @@ in order and without their events, in one dimmed **Not reached yet** group
 after the Timeline, with the authored values of events not reached yet (a Fig
 Leaf skip, an outcome's choices). The group is collapsed until opened, an
 open state of the session that never enters history; its rows cannot be
-reordered until the walk reaches them, and can still be deleted. A room
-stopped in its Overview shows, in place of its Timeline, one line saying to
-fix the Overview first; a Ship phase the walk has not reached says which
-earlier phase to fix first. Later rooms show their authored values read-only
-with the unreached hint.
+reordered until the walk reaches them, and can still be deleted.
+
+The walk's stop is the frontier at every level: before it, everything is
+shown and editable; at it, the stopping item is shown with its controls so it
+can be repaired; past it, authored content stays saved but is not shown or
+editable. A room stopped in its Overview shows, in place of its Timeline, one
+line saying to fix the Overview first, with no Not reached yet group; a Ship
+phase the walk has not reached says which earlier phase to fix first. A room
+past the stop (later on the rail, in this biome or a later one) stays on the
+rail, dimmed, and opening it shows only that it is not reached, with the
+blocking finding's own repair link to where the walk stopped; its content
+returns as soon as the walk reaches it.
 
 Every Room Timeline row has one anatomy: its reorder handle, the icon of the
 object or NPC it uses (badged with the inventory slot it buys from, and marked

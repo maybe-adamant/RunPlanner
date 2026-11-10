@@ -127,6 +127,14 @@ item's resolution (a Pom target, a delivery's boon) is what blocks; the
 Artificer differs because its unchosen output is the spawn itself. Ship wheel
 deferred items spawn only after the wheel reward is collected.
 
+## Stopping policy (owner 2026-11-09)
+
+One rule at every level: the walk's stop is the frontier (recorded in
+STRUCTURED_EDITOR_WORKSPACE). Still to build: an Overview stop drops its Not
+reached yet group; rooms past the stop show only "room not reached" with the
+blocking finding's repair link, all content hidden, dimmed on the rail (today
+they stay fully editable). Copy settled in one pass afterwards.
+
 ## Required pickups: window and deadline
 
 - A required pickup's window opens when it spawns and closes at its deadline,
