@@ -247,7 +247,8 @@ export function RouteWorkspace({
           }}
           type="button"
         >
-          {pinned ? '⇤' : !navigationOpen ? '☰' : navigationAutoFolded ? '⇤' : '⇥'}
+          {/* Too narrow to pin, the list only opens and closes: no pin glyph. */}
+          {pinned ? '⇤' : !navigationOpen || navigationAutoFolded ? '☰' : '⇥'}
         </button>
         <nav className="panel-navigation" aria-label={`${navigation.label} panels`}>
           {/* Panels stay put while a draft runs. */}
