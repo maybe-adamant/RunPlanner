@@ -40,8 +40,28 @@ import {
 import { collectRequiredItems, nextRequiredPlacement } from '../../src/simulation/collect-required';
 import { collectTestRequiredItems } from '../support/collect-required';
 
-/** The golden witness's tally; extras are rows edit settlement still adds on its own. */
-const PINNED_COUNTS = { rooms: 107, restored: 107, settlementExtras: 2 };
+/**
+ * The golden witness's tally. A room is set-restored when its rows come back
+ * as a set, in whatever order collection places them.
+ */
+const PINNED_COUNTS = { rooms: 107, setRestored: 107 };
+
+/**
+ * Rows edit settlement still writes on its own as a collected row activates
+ * them, by room, each named by its key's last part; they go with C2's removal
+ * of automatic placement.
+ */
+const PINNED_SETTLEMENT_EXTRAS = {
+  'underworld-fg golden-g-b3-e1': ['pom'],
+  'underworld-f-trait-order-checks 38689388-fd7d-4262-bc0c-c0951542cc3e': [
+    'smallGold',
+    'tinyGold1',
+    'tinyGold2',
+    'minorHeal1',
+    'minorHeal2',
+    'bones',
+  ],
+};
 
 const PLACEMENT_FINDINGS: ReadonlySet<string> = new Set([
   'roomActionPlacementRequired',
@@ -218,7 +238,8 @@ describe('Collect all required', () => {
     );
     const seen = new Set<string>();
     const failures: string[] = [];
-    const counts = { rooms: 0, restored: 0, settlementExtras: 0 };
+    const counts = { rooms: 0, setRestored: 0 };
+    const extras: Record<string, readonly string[]> = {};
     for (const { entry, load } of golden) {
       const project = load();
       const assembly = evaluate(project);
@@ -259,14 +280,17 @@ describe('Collect all required', () => {
           const missing = [...before].filter((key) => !after.has(key));
           if (missing.length > 0) failures.push(`${name}: missing ${missing}`);
           // Edit settlement still activates rows of its own, never by this collection.
-          if ([...after].some((key) => !before.has(key))) counts.settlementExtras += 1;
+          const added = [...after].filter((key) => !before.has(key));
+          if (added.length > 0)
+            extras[name] = added.map((key) => String((JSON.parse(key) as unknown[]).at(-1)));
           if (issueKey(collected.assembly) !== issueKey(assembly))
             failures.push(`${name}: ${issueKey(collected.assembly)}`);
-          else if (missing.length === 0) counts.restored += 1;
+          else if (missing.length === 0) counts.setRestored += 1;
         }
     }
     expect(failures).toEqual([]);
     expect(counts).toEqual(PINNED_COUNTS);
+    expect(extras).toEqual(PINNED_SETTLEMENT_EXTRAS);
   });
 
   it('collects a Ship room across Wheels open: wheel reward, then delivery, then choice', () => {
@@ -309,20 +333,15 @@ describe('Collect all required', () => {
     expect(issueKey(collected.assembly)).toBe(issueKey(valid));
   });
 
-  it('clears then collects a Fields room cage by cage', () => {
+  it('pins the default order collected in a stripped Fields room: clear then collect, cage by cage', () => {
     const project = loadUnderworldGeneratedCompositionCheckpoint();
     const room = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'H'),
       createOccurrenceId('golden-h-combat05'),
     );
+    const required = requiredRows(evaluate(project), room);
     const stripped = evaluate(
-      withoutRows(
-        project,
-        room,
-        (reference) =>
-          reference.kind === 'completeFieldsCage' ||
-          (reference.kind === 'interactLocalReward' && reference.groupKey === 'cages'),
-      ),
+      withoutRows(project, room, (reference) => required.has(roomActionKey(reference))),
     );
 
     const collected = collectRequiredItems({
