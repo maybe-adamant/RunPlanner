@@ -50,7 +50,11 @@ import {
   loadUnderworldZagreusContractCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
-import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalPomResolutions,
+  collectTestRequiredItems,
+  scheduleTestRequiredRoomActions,
+} from '@run-planner/test-fixtures/shared';
 
 import { createAuthoringSession } from '../../../src/simulation/authoring/session';
 import {
@@ -83,11 +87,16 @@ const retainedPickup = {
 describe('stale room actions in edit settlement', () => {
   it('removes the rows an edit orphans in the same edit, silently in the room it addresses', () => {
     const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const three = settle(loadSurfaceNOProject(), {
-      kind: 'ReplaceShipEncounterCount',
-      occurrence: ship,
-      encounterCount: 3,
-    }).assembly.project;
+    // The third encounter's wheel rows, placed by the owner.
+    const three = scheduleTestRequiredRoomActions(
+      settle(loadSurfaceNOProject(), {
+        kind: 'ReplaceShipEncounterCount',
+        occurrence: ship,
+        encounterCount: 3,
+      }).assembly.project,
+      catalog,
+      oBiome,
+    );
     const wheel2 = order(three, ship).filter((key) => key.includes('wheel2'));
     expect(wheel2.length).toBeGreaterThan(0);
     const settled = settle(three, {
@@ -734,11 +743,15 @@ describe('stale room actions in edit settlement', () => {
             encounterCount,
           });
         const three = authorLegalPomResolutions(
-          applyProjectCommand(count(loadSurfaceScheduledLifecycleCheckpoint(), 3), catalog, {
-            kind: 'ReplaceRewardWheelOffer',
-            offer: createRewardWheelOfferAddress(o, combat02.occurrenceId, 'wheel2', 'offer1'),
-            value: { rewardType: 'StackUpgrade' },
-          }),
+          collectTestRequiredItems(
+            authorLegalPomResolutions(
+              applyProjectCommand(count(loadSurfaceScheduledLifecycleCheckpoint(), 3), catalog, {
+                kind: 'ReplaceRewardWheelOffer',
+                offer: createRewardWheelOfferAddress(o, combat02.occurrenceId, 'wheel2', 'offer1'),
+                value: { rewardType: 'StackUpgrade' },
+              }),
+            ),
+          ),
         );
         const project = count(three, 2);
         expect(drop(project)).toHaveLength(1);
@@ -884,7 +897,16 @@ describe('stale room actions in edit settlement', () => {
       ];
 
       it('leave silently when the cage they reroll is no longer played, and do not return', () => {
-        const project = press(settle(fields(), outcome('max')).assembly.project, intro, cage3);
+        // The third cage's rows, placed by the owner once it plays.
+        const project = press(
+          scheduleTestRequiredRoomActions(
+            settle(fields(), outcome('max')).assembly.project,
+            catalog,
+            h,
+          ),
+          intro,
+          cage3,
+        );
         expect(rerolls(project, intro)).toHaveLength(1);
         const lowered = settle(project, outcome('min'));
         expect(lowered.fault).toBeUndefined();

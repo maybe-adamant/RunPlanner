@@ -42,10 +42,10 @@ beforeAll(() => {
 });
 
 describe('required Echo Gold activation', () => {
-  it('inserts required membership before the unfinished paid source child is resolved', () => {
+  it('places no required duplicate while the paid source child is unresolved', () => {
     const beforeOrder = shop(project).roomActions.order;
     const settled = settle(project, purchase);
-    expect(gold(settled.project)).toBeDefined();
+    expect(gold(settled.project)).toBeUndefined();
     expect(
       shop(settled.project).roomActions.order.filter((reference) =>
         beforeOrder.some((old) => roomActionKey(old) === roomActionKey(reference)),
@@ -127,7 +127,7 @@ describe('required Echo Gold activation', () => {
     );
     expect(() => evaluate(duplicated)).not.toThrow();
   });
-  it('inserts a newly required duplicate when an optional source becomes loot', () => {
+  it('leaves a newly required duplicate live when an optional source becomes loot', () => {
     let optional = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShopOffer',
       offer,
@@ -139,11 +139,20 @@ describe('required Echo Gold activation', () => {
       offer,
       value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
-    expect(gold(settled.project)).toBeDefined();
+    expect(gold(settled.project)).toBeUndefined();
+    // Once the Boon's offer is authored, the unplaced duplicate stands with its finding.
+    expect(evaluate(authorLegalTraitOffers(settled.project)).evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'echoGoldPickupPlacementRequired' }),
+    );
   });
   it('retains populated incompatible children and placement when a different slot becomes the trigger', () => {
     const second = createShopOfferAddress(goldenHBiome, owner.occurrenceId, 'Minor');
-    let initial = settle(project, purchase).project;
+    let initial = applyProjectCommand(settle(project, purchase).project, catalog, {
+      kind: 'PlaceEchoGoldPickup',
+      site,
+      entryKey: 'echoDoubleShopReward',
+      sourceOfferKey: 'Boon',
+    });
     initial = applyProjectCommand(initial, catalog, {
       kind: 'ReplaceShopOffer',
       offer: second,

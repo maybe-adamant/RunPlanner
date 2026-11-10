@@ -2,73 +2,65 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  createAcquisitionEntryAddress,
-  createAcquisitionSiteAddress,
+  applyProjectCommand,
   createExitDecisionAddress,
   createOccurrenceAddress,
-  hermesShrineDeliveryEntryKey,
   ProjectCommandContractError,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
-import {
-  createSurfaceNOHermesShrineDeliveryCheckpoint,
-  oBiome,
-  oOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
 import * as commands from '../../../src/authored-project/commands/dispatch';
 import * as topology from '../../../src/authored-project/commands/topology-reconciliation';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
+const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+
+/** O Combat07 with a third encounter and its placed wheel rows, which a return to two orphans. */
+function threeEncounterShip(): ProjectDocument {
+  return scheduleTestRequiredRoomActions(
+    applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: ship,
+      encounterCount: 3,
+    }),
+    catalog,
+    oBiome,
+  );
+}
+const twoEncounters = {
+  kind: 'ReplaceShipEncounterCount',
+  occurrence: ship,
+  encounterCount: 2,
+} as const;
 
 describe('settlement repeat-repair guard', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('stops at a repeated delivery repair and reports the fault instead of throwing', () => {
-    const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
-    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const entry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(
-        createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
-        'hermesShrineDelivery',
-      ),
-      hermesShrineDeliveryEntryKey(source, 'initial:secondLeft'),
-    );
+  it('stops at a repeated stale-row repair and reports the fault instead of throwing', () => {
+    const project = threeEncounterShip();
     const apply = commands.applyProjectCommand;
-    // The due delivery's placement never takes effect, so its obligation stays due.
+    // The orphaned rows' removal never takes effect, so they stay stale.
     vi.spyOn(commands, 'applyProjectCommand').mockImplementation((document, catalog, command) =>
-      command.kind === 'PlaceHermesShrineDelivery' ? document : apply(document, catalog, command),
+      command.kind === 'RemoveRoomAction' ? document : apply(document, catalog, command),
     );
-    const command = {
-      kind: 'ReplaceHermesShrineOffer',
-      occurrence: source,
-      slotKey: 'secondRight',
-      value: { rewardType: 'MaxManaDrop' },
-    } as const;
     const before = evaluate(project);
-    const settled = settleProjectEdit({ catalog, before, command, evaluate });
+    const settled = settleProjectEdit({ catalog, before, command: twoEncounters, evaluate });
     expect(settled.fault).toEqual({
-      key: expect.stringMatching(/^delivery:/),
-      owner: entry,
+      key: expect.stringMatching(/^stale:/),
+      owner: expect.objectContaining({ kind: 'roomAction', occurrenceId: ship.occurrenceId }),
     });
-    expect(settled.assembly.project).toEqual(apply(project, catalog, command));
-    expect(settled.assembly.evaluation.findings).toContainEqual(
-      expect.objectContaining({ code: 'hermesShrineDeliveryPlacementRequired', origin: entry }),
-    );
+    expect(settled.assembly.project).toEqual(apply(project, catalog, twoEncounters));
   });
 
   it('reports a door batch that cannot settle while the edit’s other repairs still settle', () => {
-    const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
-    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const command = {
-      kind: 'ReplaceHermesShrineOffer',
-      occurrence: source,
-      slotKey: 'secondRight',
-      value: { rewardType: 'MaxManaDrop' },
-    } as const;
+    const project = threeEncounterShip();
+    // Returning to two encounters orphans the third's wheel rows, which settlement removes.
+    const command = twoEncounters;
     const before = evaluate(project);
     const clean = settleProjectEdit({ catalog, before, command, evaluate });
     expect(clean.fault).toBeUndefined();
@@ -92,7 +84,7 @@ describe('settlement repeat-repair guard', () => {
       key: `exitCapacity:${semanticAddressKey(decision)}`,
       owner: decision,
     });
-    // The due delivery is still placed: only the door pass stopped.
+    // The orphaned rows are still removed: only the door pass stopped.
     expect(faulted.assembly.project).toEqual(clean.assembly.project);
   });
 });
