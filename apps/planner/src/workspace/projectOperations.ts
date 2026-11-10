@@ -323,7 +323,7 @@ export function createProjectOperations(
     const prepared = options.prepareProjectWorkspace(plan.project);
     await saver().open(
       plan.key,
-      () => options.store.dispatch(authoredProjectReplaced(prepared.project, plan.upgrade)),
+      () => options.store.dispatch(authoredProjectReplaced(prepared.project)),
       { preserveOriginal: plan.olderOnDisk },
     );
     return result(

@@ -30,7 +30,7 @@ import { migrateProjectDocument as migrate98To99 } from '@planner/persistence/pr
 import { migrateProjectDocument as migrate99To100 } from '@planner/persistence/project-99-to-100.js';
 import { migrateProjectDocument as migrate100To101 } from '@planner/persistence/project-100-to-101.js';
 import { migrateProjectDocument as migrate101To102 } from '@planner/persistence/project-101-to-102.js';
-import { migrateProjectDocument as migrate102To103 } from '@planner/persistence/project-102-to-103.js';
+import { liftProjectDocument as migrate102To103 } from '@planner/persistence/project-102-to-103.js';
 
 type Encoded = {
   schemaVersion: number;

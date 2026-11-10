@@ -827,8 +827,8 @@ interface ProjectUpgradeSettlementOptions {
  * have left it: the policy for rows whose context or source is gone applies
  * to every row the walk reaches, as though each had just lost it, and every
  * batch settles its doors. Rows that policy keeps invalid stay with their
- * findings, and rows the walk does not reach stay untouched. Every removal is
- * announced. Total like an edit's settlement.
+ * findings, and rows the walk does not reach stay untouched. Run only by the
+ * schema 102 -> 103 migration. Total like an edit's settlement.
  */
 export function settleProjectUpgrade(
   options: ProjectUpgradeSettlementOptions,

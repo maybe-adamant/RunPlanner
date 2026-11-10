@@ -5,7 +5,7 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { dropFeatureInteraction, moveShrineDelays } from './project-99-to-100.js';
 import { migrateProjectDocument as liftSchema101 } from './project-101-to-102.js';
-import { migrateProjectDocument as liftSchema102 } from './project-102-to-103.js';
+import { liftProjectDocument as liftSchema102 } from './project-102-to-103.js';
 
 export const SOURCE_SCHEMA_VERSION = 100;
 export const OUTPUT_SCHEMA_VERSION = 101;

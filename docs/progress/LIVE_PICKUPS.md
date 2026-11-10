@@ -1,8 +1,9 @@
 # Part 2: live pickups
 
-Status: framing settled by the owner (2026-11-10); step A delivered on
-`live-pickups`; B's Draft half delivered, awaiting review; the run import's
-half waits on an owner decision; C and D not started. Temporary
+Status: framing and step C decisions settled by the owner (2026-11-10);
+steps A and B's Draft half delivered and accepted on `live-pickups`; the run
+import's half of B is decided and lands as C3; C1 in progress; D not
+started. Temporary
 plan; delete at delivery after promoting durable results. Follows the
 progressive room Timeline and spawned-loot notices, both delivered.
 
@@ -86,10 +87,15 @@ You either interact with pickups or active objects.
     Against the old schedule, 105 of 110 stripped golden rooms restore
     identically. The corpus is unchanged, since automatic placement still
     places these rows first.
-  - Run import: waits on the owner (canonical position vs. a "place all
-    required here" engine helper).
-- **C.** Remove automatic placement (change 1). If placements are derived,
-  fold any old-plan materialization into the unreleased schema 103.
+  - Run import: required rows at the live product's canonical position
+    (owner decision below); delivered in step C3.
+- **C.** Remove automatic placement (change 1). Placements are persisted
+  rows, so no saved plan needs migrating. Slices, each independently
+  reviewed: C1 the walk passes a spawning event while its spawned item is
+  unresolved (clears the pinned held cases and Draft's wheel-reward
+  fallback); C2 removes writers W1-W6 (W8 rekey stays), allows Remove and
+  Reset of required rows and adds the missing-pickup finding wording; C3 the
+  run import's half of B; C4 the Collect all required command.
   Equivalence and Draft corpus lanes before and after; separate and
   revertible. Expected Draft output changes, from the stripped-room witness:
   - a room reward placed at the frontier, before the required drop
@@ -117,10 +123,6 @@ You either interact with pickups or active objects.
     H Fields, an O ship room and a Postboss;
   - one copy pass.
 
-Earlier shape to reconfirm against this framing: a **Collect all required**
-action on a spawn notice placing every remaining required pickup as a plain
-collect in spawn order, in one edit, never placing optional pickups.
-
 ## Also carried
 
 - An engine-published reach/stop product, so the planner stops deriving
@@ -136,3 +138,54 @@ collect in spawn order, in one edit, never placing optional pickups.
 
 Inventory: pending (Part 2 step 0), recording the decision for each pickup
 kind.
+
+## Vision (owner, 2026-11-10)
+
+Planning a room mimics playing it.
+
+- **Existence is a game fact** the player does not control: items spawn on
+  the ground, an NPC stands there, a delivery arrives when it matures, a shop
+  exists. The engine announces it as spawn notices and lifecycle events.
+- **Interaction is the player's**, in the order they choose: talk to the NPC,
+  collect an item, unlock a cage, transform a Pom, buy. Only interactions are
+  Timeline rows; placing a row places the interaction, never the spawn.
+- **The live row** is a one-line snapshot of everything interactable at that
+  point: Required items/NPCs | Optional items | Active objects. Clicking an
+  icon performs that interaction as the next row; lifecycle events (encounter
+  ends, doors open) then progress and the live row updates. The `+` at a gap
+  is the same snapshot at that earlier point.
+
+## Step C decisions (owner, 2026-11-10)
+
+- **Owner-placed interactions:** the Boss forced drop, NPC/encounter contacts
+  (Nemesis, Gorgon, Eris), the Fields cage unlock, Hermes deliveries and Gold
+  Gold Gold duplicates. Settlement stops auto-placing deliveries and
+  duplicates (they arrive automatically; their pickup is a row). Rooms are
+  created without seeded rows.
+- **Remove and Reset of a required row** are allowed: the item is live on the
+  ground again and the walk shows its finding.
+- The reward-swap rekey stays.
+- **Collect all required:** a simple command placing every required live
+  item at its canonical spot; dropped if it feels bad in the planner.
+- **Draft order:** Fields goes clear then collect, cage by cage. Boss rooms
+  are like normal rooms, with no preferred order between the forced drop and
+  the room reward.
+- **Run import** (B's second half): required rows at the live product's
+  canonical position. Independent rows' order does not change the end state;
+  dependent rows produce different end states, which the end-room
+  conformance catches.
+- **Choice actions:** rerolls (door, cage, wheel, Well, Pool), Pool sales and
+  rack keepsakes are listed on their object with an action that opens the
+  picker on click. They appear only once their context is resolved (doors
+  unlocked and door values settled; Pool slot resolved, otherwise "resolve
+  first").
+- **Engine work:**
+  - the walk passes spawning events while their spawned item is unresolved,
+    clearing the pinned held cases;
+  - a new missing-pickup finding wording ("Collect X before …"), routed into
+    Draft's `placeRequiredActions`;
+  - close the walk leniency that accepts a Gold Gold Gold duplicate before
+    its purchase;
+  - remove Draft's wheel-reward fallback.
+
+  Old saves are unaffected: placements are persisted rows.

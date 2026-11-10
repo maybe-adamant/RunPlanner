@@ -253,42 +253,6 @@ describe('project operations', () => {
     expect(application.store.getState().librarySession.view).toEqual({ kind: 'editor' });
   });
 
-  it('opens a plan saved before schema 103 settled, its removals announced and one Undo away', async () => {
-    const { application, library } = createLibraryApplication();
-    // The G opening keeps a pickup of a role its reward no longer has.
-    const saved = createGoldenFGHProject();
-    const json = JSON.stringify({
-      ...JSON.parse(encodeProjectDocument(saved)),
-      schemaVersion: 102,
-      schemaRevision: 1,
-    });
-    const removed = [
-      {
-        occurrence: createOccurrenceAddress(goldenGBiome, 'golden-g-b1-e1' as never),
-        actions: [expect.objectContaining({ acquisitionRole: 'source' })],
-      },
-    ];
-    const { key } = await library.adapter.create(json, '');
-    await expect(application.projectOperations.openPlan(key)).resolves.toMatchObject({
-      status: 'success',
-      message: 'Migrated the plan to schema 103.',
-    });
-    expect(application.store.getState().projectWorkspace.removedStaleActions).toEqual(removed);
-    expect(presentHistory(application)).toMatchObject({ past: [saved], future: [] });
-    expect(presentProject(application)).not.toEqual(saved);
-    application.store.dispatch(authoredProjectUndoRequested());
-    expect(presentProject(application)).toEqual(saved);
-    expect(application.store.getState().projectWorkspace.removedStaleActions).toBeUndefined();
-
-    // An imported copy takes its own identity, the plan as saved behind it too.
-    library.choose({ fileName: 'old.runplanner.json', json });
-    await application.projectOperations.importPlan();
-    const copy = presentProject(application);
-    expect(copy.projectId).not.toBe(saved.projectId);
-    expect(presentHistory(application).past).toEqual([{ ...saved, projectId: copy.projectId }]);
-    expect(application.store.getState().projectWorkspace.removedStaleActions).toEqual(removed);
-  });
-
   it('reverts to the plan as opened as one undoable step', async () => {
     const { application } = createLibraryApplication();
     await application.projectOperations.createNew('Underworld');
