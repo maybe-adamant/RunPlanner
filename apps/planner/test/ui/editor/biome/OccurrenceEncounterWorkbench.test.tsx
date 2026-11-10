@@ -288,13 +288,10 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       );
     });
-    // The new encounter stops the walk before the outcome, which waits with its wave.
-    openNotReached();
-    expect(aetos().textContent).toBe('Wave 2');
-    // A retained wave whose phase context is not yet reached can still be cleared.
-    await pick('No');
-    expect(aetosWave()).toBeUndefined();
+    // The new encounter stops the walk in the Overview: the Timeline, wave and all, waits.
+    expect(screen.getByText('Fix the Overview first.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^Aetos appearance: / })).toBeNull();
+    expect(aetosWave()).toBe(2);
   });
 
   it('authors a Nemesis combat outcome in Events and undoes it', async () => {

@@ -566,7 +566,8 @@ export interface WorkspaceRoomLifecycleTimeline {
   readonly entries: readonly WorkspaceRoomLifecycleTimelineEntry[];
   /**
    * Present when the room's walk stops in this room: the authored rows past the stop, in
-   * Timeline order and without their phase banners, until the walk reaches them.
+   * Timeline order and without their phase banners, until the walk reaches them. Empty when
+   * the walk stops in the Overview: the whole Timeline then waits, its rows unshown.
    */
   readonly notReached?: readonly WorkspaceNotReachedEntry[];
   /** What to fix first when the walk stops before this Timeline starts, such as its Overview. */

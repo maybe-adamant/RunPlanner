@@ -145,7 +145,8 @@ export function splitAtRoomStop(
     entry.kind === 'action' && entry.presentation !== 'row'
       ? Object.freeze({ ...entry, presentation: 'row' as const })
       : entry;
-  const after = entries.slice(cut);
+  // A room stopped in its Overview shows none of its Timeline, its saved rows included.
+  const after = roomStop.kind === 'overview' ? [] : entries.slice(cut);
   return Object.freeze({
     reached: Object.freeze([
       ...entries.slice(0, cut),

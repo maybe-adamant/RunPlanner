@@ -52,6 +52,8 @@ import type {
   WorkspaceRailEntry,
 } from '@planner/projections/structured-workspace/contracts/structure';
 import { hubVisitActions } from '@run-planner/test-fixtures/shared';
+import { galleryCases } from '@planner-test/support/gallery/cases';
+import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
 
 let goldenProject: ReturnType<typeof createGoldenFGHIProject>;
 let surfaceProject: ReturnType<typeof loadSurfaceNOPQProject>;
@@ -1058,5 +1060,82 @@ describe('structured workspace biome presentation', () => {
     expect(selected.selectedContinuation?.marker).toBe(
       selected.targets.find((target) => target.selected)?.door.room.marker,
     );
+  });
+});
+
+describe("rooms past the walk's stop", () => {
+  function galleryProject(id: string): ProjectDocument {
+    const entry = galleryCases.find((candidate) => candidate.id === id);
+    if (entry === undefined) throw new Error(`No gallery case ${id}`);
+    return buildGalleryProject(entry);
+  }
+  // Each rail stop as its room (or `hub`) and whether it waits past the stop.
+  const railRooms = (biome: WorkspaceBiome): readonly (readonly [string, boolean])[] =>
+    biome.rail.flatMap((entry): (readonly [string, boolean])[] => {
+      if (entry.kind === 'node') {
+        const address = entry.focusMarker.address;
+        return [
+          [address.kind === 'occurrence' ? address.occurrenceId : '', entry.notReached === true],
+        ];
+      }
+      if (entry.kind !== 'hubGroup') return [];
+      return [
+        ['hub', entry.notReached === true],
+        ...entry.visits.flatMap((visit): (readonly [string, boolean])[] => [
+          [visit.node.room.occurrenceId, visit.notReached === true],
+          ...visit.sideVisits.map((side): readonly [string, boolean] => [
+            side.node.room.occurrenceId,
+            side.notReached === true,
+          ]),
+        ]),
+      ];
+    });
+  const notReachedRooms = (biome: WorkspaceBiome) =>
+    railRooms(biome).flatMap(([room, notReached]) => (notReached ? [room] : []));
+
+  it('marks only the rooms the walk never entered, from the stopped room on', () => {
+    const project = galleryProject('progressive-stop-at-entry');
+    const f = present(project, 'Underworld', 'F').presentation.biome;
+    // The room stopped in its Overview was entered; the rooms after it were not.
+    expect(notReachedRooms(f)).not.toContain('golden-f-start');
+    expect(notReachedRooms(f)).not.toContain('golden-f-b1-e1');
+    expect(notReachedRooms(f)).toContain('golden-f-b2-e1');
+    expect(f.notReached).toBeUndefined();
+    const stopped = f.nodes.find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === 'golden-f-b1-e1',
+    );
+    expect(stopped?.kind === 'occurrenceWorkbench' && stopped.room.notReached).toBeFalsy();
+    expect(f.completionOutline.every((node) => node.room.notReached === true)).toBe(true);
+    // A later biome is never started: every room in it waits.
+    const g = present(project, 'Underworld', 'G').presentation.biome;
+    expect(g.notReached).toBe(true);
+    expect(railRooms(g).every(([, notReached]) => notReached)).toBe(true);
+  });
+
+  it('does not count a room offered behind the stopped doors as reached', () => {
+    const f = present(galleryProject('progressive-stop-door-offer'), 'Underworld', 'F').presentation
+      .biome;
+    expect(notReachedRooms(f)).not.toContain('golden-f-start');
+    expect(notReachedRooms(f)).toContain('golden-f-b1-e1');
+  });
+
+  it('keeps a reached Hub and its stopped visit, and waits every later visit and side room', () => {
+    const n = present(galleryProject('progressive-stop-ephyra'), 'Surface', 'N').presentation.biome;
+    const waiting = notReachedRooms(n);
+    expect(waiting).not.toContain('hub');
+    expect(waiting).not.toContain('surface-n-combat05');
+    expect(waiting).toEqual(
+      expect.arrayContaining([
+        'surface-n-combat05-sideDoor1',
+        'surface-n-combat05-sideDoor2',
+        'surface-n-miniBoss01',
+        'surface-n-preboss',
+      ]),
+    );
+  });
+
+  it('marks nothing where the walk completes the biome', () => {
+    expect(notReachedRooms(directRewardBiome)).toEqual([]);
+    expect(directRewardBiome.notReached).toBeUndefined();
   });
 });

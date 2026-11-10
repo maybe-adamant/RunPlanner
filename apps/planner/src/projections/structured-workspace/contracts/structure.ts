@@ -486,6 +486,8 @@ export interface WorkspaceHubStay {
 export interface WorkspaceHubDecisionNode {
   readonly authoring: 'authored';
   readonly kind: 'hubDecision';
+  /** The walk stops before entering the Hub: its board waits until the walk enters it. */
+  readonly notReached?: true;
   readonly key: string;
   readonly hubKey: string;
   /** The static Hub terminal declaration used by the optional board reference. */
@@ -733,6 +735,8 @@ export interface WorkspaceOccurrenceStage {
 
 export interface WorkspaceHubVisitRailEntry {
   readonly key: string;
+  /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
+  readonly notReached?: true;
   /** The run's room depth on entering the visited room; absent while it is not reached. */
   readonly runDepth?: number;
   readonly planEnd?: WorkspacePlanEndRelation;
@@ -749,6 +753,8 @@ export interface WorkspaceHubVisitRailEntry {
 
 export interface WorkspaceHubSideVisitRailEntry {
   readonly key: string;
+  /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
+  readonly notReached?: true;
   /** The run's room depth on entering the side room; absent while it is not reached. */
   readonly runDepth?: number;
   readonly planEnd?: WorkspacePlanEndRelation;
@@ -764,6 +770,8 @@ export interface WorkspaceHubSideVisitRailEntry {
 export interface WorkspaceHubRailEntry {
   readonly kind: 'hubGroup';
   readonly key: string;
+  /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
+  readonly notReached?: true;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceHubDecisionNode;
   readonly roomIcon: WorkspaceRoomIcon;
@@ -831,6 +839,8 @@ export interface WorkspaceDecisionRailEntry {
   readonly roomNumber?: never;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode;
+  /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
+  readonly notReached?: true;
   /** The selected room's place against the plan end. */
   readonly planEnd?: WorkspacePlanEndRelation;
   readonly selectedTarget?: WorkspaceRailSelectedTarget;
@@ -856,6 +866,8 @@ export interface WorkspaceStageRailEntry {
   readonly runDepth?: number;
   readonly marker: WorkspaceMarker;
   readonly node: Exclude<WorkspaceNode, WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode>;
+  /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
+  readonly notReached?: true;
   /** The stage room's place against the plan end. */
   readonly planEnd?: WorkspacePlanEndRelation;
   /** A Preboss takeover exposes the door it continues through; a shop stage, its shop. */
@@ -874,6 +886,8 @@ export type WorkspaceRailEntry =
       >;
       readonly key: string;
       readonly marker: WorkspaceMarker;
+      /** The walk stops before the room this step continues from, or before the biome. */
+      readonly notReached?: true;
     };
 
 export interface WorkspaceBiome {
@@ -894,6 +908,8 @@ export interface WorkspaceBiome {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly nodes: readonly WorkspaceNode[];
+  /** The walk stops in an earlier biome, before this one starts. */
+  readonly notReached?: true;
   readonly occurrenceStages: readonly WorkspaceOccurrenceStage[];
   readonly owner: BiomeAddress;
   /** `end`: the plan ends in this biome; `pastEnd`: the biome follows that end. */

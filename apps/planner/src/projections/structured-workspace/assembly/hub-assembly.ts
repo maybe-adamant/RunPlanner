@@ -1,6 +1,7 @@
 import {
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
+  createHubRoomAddress,
   createHubFountainAddress,
   createExitDecisionAddress,
   createHubOpenSetAddress,
@@ -851,6 +852,9 @@ function projectHubNode(
   const node = Object.freeze({
     authoring: 'authored' as const,
     kind: 'hubDecision' as const,
+    ...(input.source?.walkReached(createHubRoomAddress(biome, descriptor.hubKey)) === false
+      ? { notReached: true as const }
+      : {}),
     fountain,
     stays: Object.freeze(stays),
     ...(rerollsRemaining === undefined ? {} : { rerollsRemaining }),

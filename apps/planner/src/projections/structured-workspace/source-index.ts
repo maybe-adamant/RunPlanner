@@ -30,6 +30,7 @@ import {
   type EncounterPhaseAddress,
   type HubDecision,
   type HubDecisionAddress,
+  type HubRoomAddress,
   type OccurrenceId,
   type OccurrenceAddress,
   type ProjectDocument,
@@ -150,6 +151,13 @@ export interface WorkspaceBiomeSource {
   readonly blockingRowKeys: (owner: OccurrenceAddress) => ReadonlySet<string> | undefined;
   /** Where the walk stopped inside this room, when the assessment blocks in it. */
   readonly roomStop: (owner: OccurrenceAddress) => WorkspaceRoomStop | undefined;
+  /**
+   * Whether a room or Hub lies before the walk's stop: false only where the walk stops
+   * earlier in the route and never entered it.
+   */
+  readonly walkReached: (room: OccurrenceAddress | HubRoomAddress) => boolean;
+  /** The walk stops in an earlier biome, before this one starts. */
+  readonly walkStopsBefore: boolean;
   /** Exact engine-reached trait child coverage; authored dormant children stay retained. */
   readonly isActiveTraitOffer: (
     owner: import('@run-planner/engine/authored-project').TraitOfferAddress,
@@ -927,6 +935,31 @@ function createWorkspaceBiomeSource(
     ).map((outcome) => [semanticAddressKey(outcome.address), outcome] as const),
   );
   const pastPlanEnd = planEnd.afterPlanEnd.has(plan.biomeKey);
+  // The rooms the walk entered, in a biome where it stops; a biome it never starts
+  // (later in the route, or stopped at its start) entered none. Past the plan end
+  // nothing is walked, and the plan end presents those rooms itself.
+  const walkedRooms =
+    evaluation === undefined
+      ? pastPlanEnd
+        ? undefined
+        : new Set<string>()
+      : evaluation.coverage.kind === 'complete' || evaluation.authoring === 'ended'
+        ? undefined
+        : new Set(
+            'history' in evaluation
+              ? evaluation.history.rooms.map((room) => semanticAddressKey(room.origin))
+              : [],
+          );
+  // A biome the walk stops at the start of stops in its entry room's Overview.
+  const startStop =
+    evaluation?.coverage.kind === 'none' && topology !== null
+      ? semanticAddressKey(createOccurrenceAddress(biome, topology.startOccurrenceId))
+      : undefined;
+  const walkReached = (room: OccurrenceAddress | HubRoomAddress): boolean => {
+    if (walkedRooms === undefined) return true;
+    const key = semanticAddressKey(room);
+    return walkedRooms.has(key) || key === startStop;
+  };
   const endOccurrenceId =
     planEnd.endRoom?.biomeKey === plan.biomeKey ? planEnd.endRoom.occurrenceId : undefined;
   // In the biome the plan ends in, the engine locks exactly what lies past the end.
@@ -1078,6 +1111,8 @@ function createWorkspaceBiomeSource(
         return undefined;
       return Object.freeze({ kind: stop.kind, entryIndex: stop.entryIndex, at: stop.at });
     },
+    walkReached,
+    walkStopsBefore: evaluation === undefined && !pastPlanEnd,
     isActiveTraitOffer,
     isActiveInventoryOffer,
     shopOfferAssessment,

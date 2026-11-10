@@ -669,6 +669,8 @@ export interface WorkspaceRoomSummary {
   /** Active pool-backed encounter phases in declaration/lifecycle order. */
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
   readonly entered: boolean;
+  /** The walk stops before entering the room: its content waits until the walk enters it. */
+  readonly notReached?: true;
   readonly gameName: string;
   readonly kind: RoomDeclaration['kind'];
   readonly label: string;

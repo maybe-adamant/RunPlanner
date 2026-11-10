@@ -370,6 +370,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly occurrence: RoomOccurrence;
   /** The room's plan-end action, bound by the biome assembly. */
   readonly planEnd?: import('../contracts/structure').WorkspaceRoomPlanEnd;
+  /** The walk stops before entering the room. */
+  readonly notReached?: boolean;
   readonly runState: (owner: RoomRunStateCheckpointAddress) =>
     | { readonly availability: 'available'; readonly snapshot: RunStateSnapshot }
     | {
@@ -886,6 +888,7 @@ export function assembleWorkspaceOccurrence(
     ...(lockedDoors === undefined ? {} : { lockedDoors: lockedDoors.lockedDoors }),
     encounterPhases,
     entered,
+    ...(input.notReached === true ? { notReached: true as const } : {}),
     gameName: occurrence.gameName,
     kind: room.kind,
     label: room.label,
@@ -1366,7 +1369,10 @@ export function assembleWorkspaceOccurrence(
               (workbench.kind === 'ship' &&
               workbench.repairRows.some((repair) => repair.key === row.key)
                 ? 'shipInactiveRepair'
-                : undefined))
+                : // A Timeline waiting on its Overview shows no row: its first phase says so.
+                  workbench.kind === 'ship' && roomActions.timeline.waitsOn !== undefined
+                  ? workbench.phases[0]?.tab
+                  : undefined))
             : 'actions';
       if (tab === undefined) {
         throw new StructuredWorkspaceProjectionContractError(

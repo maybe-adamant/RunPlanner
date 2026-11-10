@@ -444,11 +444,11 @@ describe('a room whose walk stops in it', () => {
     expect(shape(timeline.notReached ?? [])).toEqual(['action']);
   });
 
-  it('waits on its Overview when its Overview blocks', () => {
+  it('waits on its Overview when its Overview blocks, its saved rows unshown', () => {
     const timeline = galleryTimeline('progressive-stop-at-entry', 'golden-f-b1-e1');
     expect(shape(timeline.entries)).toEqual(['roomEntered']);
     expect(timeline.waitsOn).toBe('the Overview');
-    expect(shape(timeline.notReached ?? [])).toEqual(['action']);
+    expect(timeline.notReached).toEqual([]);
   });
 
   it('ends before the doors open while a required pickup is not placed', () => {

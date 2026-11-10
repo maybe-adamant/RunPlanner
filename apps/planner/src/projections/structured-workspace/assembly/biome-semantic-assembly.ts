@@ -116,6 +116,8 @@ export interface WorkspaceBiomeSemanticAssembly {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly nodes: readonly WorkspaceNode[];
+  /** The walk stops in an earlier biome, before this one starts. */
+  readonly notReached?: true;
   readonly occurrenceInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceOccurrenceInteractionRequirement
@@ -594,6 +596,9 @@ export function assembleWorkspaceBiomeSemantics(
     );
     const bossDoorRewardStore = bossDoorRewardStoreControl(request.occurrence.occurrenceId);
     const assembly = assembleWorkspaceOccurrence({
+      notReached: !source.walkReached(
+        createOccurrenceAddress(biome, request.occurrence.occurrenceId),
+      ),
       planEnd: assembleRoomPlanEnd({
         room: createOccurrenceAddress(biome, request.occurrence.occurrenceId),
         relation: source.planEndRelation(request.occurrence.occurrenceId),
@@ -1136,6 +1141,7 @@ export function assembleWorkspaceBiomeSemantics(
     label: catalog.biomes.byKey[plan.biomeKey]?.label ?? plan.biomeKey,
     marker: biomeMarker,
     nodes: completedNodes,
+    ...(source.walkStopsBefore ? { notReached: true as const } : {}),
     occurrenceInteractionRequirements,
     occurrenceOutgoing,
     ...(biomePlanEnd === undefined ? {} : { planEnd: biomePlanEnd }),

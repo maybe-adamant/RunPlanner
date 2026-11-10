@@ -202,7 +202,7 @@ function keyboardReorder(scope: HTMLElement, row: string, place: RegExp): void {
 }
 
 describe('Biome inspector controls', () => {
-  it('locks the F opening identity behind an incomplete route-start result', async () => {
+  it('shows only that the F opening is not reached behind an incomplete route-start result', () => {
     const occurrenceId = createOccurrenceId('locked-start-identity');
     let project = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
       biome: goldenFBiome,
@@ -215,23 +215,16 @@ describe('Biome inspector controls', () => {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
     });
-    const view = renderWorkspace(project, 'Underworld', 'F');
-    const identity = screen.getByRole('region', { name: 'Start room configuration' });
-    const room = within(identity).getByRole('button', { name: 'Room' });
-    if (!(room instanceof HTMLButtonElement))
-      throw new Error('opening identity control is not a button');
-    expect(room.disabled).toBe(true);
-    expect(within(identity).queryByRole('button', { name: 'Reward' })).toBeNull();
-
-    const historyBefore = view.application.store.getState().projectWorkspace.history;
-    await view.user.click(room);
-    const roomLabel = identity.querySelector<HTMLLabelElement>(
-      `label[for="${room.getAttribute('id') ?? ''}"]`,
-    );
-    if (roomLabel === null) throw new Error('opening room label is missing');
-    await view.user.click(roomLabel);
-    expect(screen.queryByRole('listbox')).toBeNull();
-    expect(view.application.store.getState().projectWorkspace.history).toBe(historyBefore);
+    renderWorkspace(project, 'Underworld', 'F');
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    expect(
+      within(inspector).queryByRole('region', { name: 'Start room configuration' }),
+    ).toBeNull();
+    expect(within(inspector).queryByRole('tab')).toBeNull();
+    expect(within(inspector).getByText('Room not reached')).toBeTruthy();
+    expect(
+      within(inspector).getByRole('button', { name: 'Go to where the plan stops' }),
+    ).toBeTruthy();
   });
 
   it('edits entry identity in Overview only and undoes exactly', async () => {

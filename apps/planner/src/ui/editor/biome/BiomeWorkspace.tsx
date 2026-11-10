@@ -15,7 +15,6 @@ import {
   type WorkspaceDefaultInspectorDestination,
   type WorkspaceInspectorDestination,
   type WorkspaceInteractionCatalog,
-  type WorkspaceAuthoringFrontier,
   type WorkspaceMarker,
   type WorkspaceNode,
   type WorkspacePlanEndRelation,
@@ -35,6 +34,8 @@ import { BiomeInspectorNode } from './BiomeInspectorNode';
 import { roomKindIcon } from './roomIcon';
 import { RoomNumberIcon } from './RoomNumberIcon';
 import { planEndHereLabel } from './planEndCopy';
+import { notReachedLabel } from './notReachedCopy';
+import { RoomNotReached } from './RoomNotReached';
 
 interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
@@ -141,7 +142,12 @@ function resolveInspectorSubject(
  * A stop's place against the plan end replaces its assessment: the end room
  * says so, a stop past it says nothing. Findings still count.
  */
-function assessmentLabel(marker: WorkspaceMarker, planEnd?: WorkspacePlanEndRelation): string {
+function assessmentLabel(
+  marker: WorkspaceMarker,
+  planEnd?: WorkspacePlanEndRelation,
+  notReached?: true,
+): string {
+  if (notReached === true) return notReachedLabel;
   if (planEnd === 'end') return planEndHereLabel;
   if (planEnd === 'pastEnd') return '';
   if (marker.findingCount > 0)
@@ -184,6 +190,7 @@ function FocusButton({
   children,
   marker,
   focusMarker = marker,
+  notReached,
   presentationMarker = marker,
   selected,
 }: {
@@ -192,6 +199,8 @@ function FocusButton({
   /** Exact navigation owner when presentation remains attached to another semantic stage. */
   readonly focusMarker?: WorkspaceMarker;
   readonly marker: WorkspaceMarker;
+  /** The walk stops before this stop's room: the card is dimmed. */
+  readonly notReached?: true | undefined;
   /** May retain a distinct staged-owner assessment while focus stays on a room. */
   readonly presentationMarker?: WorkspaceMarker;
   readonly selected: boolean;
@@ -202,8 +211,8 @@ function FocusButton({
       aria-label={accessibleLabel}
       aria-current={selected ? 'location' : undefined}
       className="biome-rail-node"
-      data-assessment={presentationMarker.assessment}
       data-findings={presentationMarker.findingCount > 0}
+      data-not-reached={notReached}
       data-selected={selected}
       data-workspace-node={marker.focusKey}
       onClick={() => dispatch(semanticOwnerFocused(focusMarker.address))}
@@ -360,17 +369,19 @@ function RailSelectedTarget({
 function RailHeading({
   label,
   marker,
+  notReached,
   planEnd,
 }: {
   readonly label: string;
   readonly marker: WorkspaceMarker;
+  readonly notReached?: true | undefined;
   readonly planEnd?: WorkspacePlanEndRelation | undefined;
 }) {
   return (
     <span className="biome-rail-heading visually-hidden">
       <strong>{label}</strong>
       <span className="biome-rail-status visually-hidden">
-        {assessmentLabel(marker, planEnd)}
+        {assessmentLabel(marker, planEnd, notReached)}
         <FindingCount count={marker.findingCount} label="findings" />
       </span>
     </span>
@@ -419,8 +430,18 @@ function RailNode({
       data-step={entry.runDepth}
       {...(undecided ? { 'data-pending': 'room' } : {})}
     >
-      <FocusButton focusMarker={entry.focusMarker ?? marker} marker={marker} selected={selected}>
-        <RailHeading label={entry.label} marker={marker} planEnd={entry.planEnd} />
+      <FocusButton
+        focusMarker={entry.focusMarker ?? marker}
+        marker={marker}
+        notReached={entry.notReached}
+        selected={selected}
+      >
+        <RailHeading
+          label={entry.label}
+          marker={marker}
+          notReached={entry.notReached}
+          planEnd={entry.planEnd}
+        />
         {undecided ? <RailPending glyph="?" label="Choose a room" /> : null}
         {entry.selectedTarget === undefined ? null : (
           <RailSelectedTarget biomeKey={biomeKey} selectedTarget={entry.selectedTarget} />
@@ -450,23 +471,25 @@ function RailNode({
 }
 
 function RailFrontier({
-  frontier,
+  entry,
   selectedRailKey,
 }: {
-  readonly frontier: Extract<
-    WorkspaceAuthoringFrontier,
-    { readonly kind: 'start' | 'exitDecision' }
-  >;
+  readonly entry: Extract<WorkspaceRailEntry, { readonly kind: 'frontier' }>;
   readonly selectedRailKey: string | undefined;
 }) {
+  const frontier = entry.frontier;
   const label = frontier.kind === 'start' ? 'Start biome' : 'Continue route';
   return (
     <div className="biome-rail-stop biome-frontier-stop" data-pending="frontier">
-      <FocusButton marker={frontier.marker} selected={selectedRailKey === frontier.marker.focusKey}>
+      <FocusButton
+        marker={frontier.marker}
+        notReached={entry.notReached}
+        selected={selectedRailKey === frontier.marker.focusKey}
+      >
         <span className="visually-hidden">Next step </span>
         <RailPending glyph="+" label={frontier.kind === 'start' ? 'Start biome' : 'Continue'} />
         <span className="visually-hidden">
-          {label} {assessmentLabel(frontier.marker)}
+          {label} {assessmentLabel(frontier.marker, undefined, entry.notReached)}
         </span>
       </FocusButton>
     </div>
@@ -485,8 +508,18 @@ function HubRailVisit({
   const selected = selectedRailKey === visit.marker.focusKey;
   return (
     <li className="biome-hub-rail-visit" data-plan-end={visit.planEnd} data-step={visit.runDepth}>
-      <FocusButton marker={visit.marker} presentationMarker={visit.visitMarker} selected={selected}>
-        <RailHeading label={visit.label} marker={visit.visitMarker} planEnd={visit.planEnd} />
+      <FocusButton
+        marker={visit.marker}
+        notReached={visit.notReached}
+        presentationMarker={visit.visitMarker}
+        selected={selected}
+      >
+        <RailHeading
+          label={visit.label}
+          marker={visit.visitMarker}
+          notReached={visit.notReached}
+          planEnd={visit.planEnd}
+        />
         <RailSelectedTarget biomeKey={biomeKey} selectedTarget={visit.room} />
         <RailTargetIcons biomeKey={biomeKey} target={visit.room} />
       </FocusButton>
@@ -504,12 +537,14 @@ function HubRailVisit({
               >
                 <FocusButton
                   marker={sideVisit.marker}
+                  notReached={sideVisit.notReached}
                   presentationMarker={sideVisit.visitMarker}
                   selected={sideSelected}
                 >
                   <RailHeading
                     label={sideVisit.label}
                     marker={sideVisit.visitMarker}
+                    notReached={sideVisit.notReached}
                     planEnd={sideVisit.planEnd}
                   />
                   <RailSelectedTarget biomeKey={biomeKey} selectedTarget={sideVisit.room} />
@@ -535,7 +570,7 @@ function HubRailGroup({
   readonly selectedRailKey: string | undefined;
 }) {
   const selected = selectedRailKey === entry.marker.focusKey;
-  const assessment = assessmentLabel(entry.marker);
+  const assessment = assessmentLabel(entry.marker, undefined, entry.notReached);
   return (
     <div className="biome-rail-stop biome-hub-rail-group" data-kind="hubDecision">
       {/* One panel: the Hub, then each visit with its side rooms. */}
@@ -543,6 +578,7 @@ function HubRailGroup({
         <FocusButton
           accessibleLabel={`Hub, ${entry.visits.length} of ${entry.node.requiredVisitCount} visits, ${assessment}`}
           marker={entry.marker}
+          notReached={entry.notReached}
           selected={selected}
         >
           <span className="biome-rail-selection">
@@ -591,7 +627,7 @@ function RailEntry({
     case 'hubGroup':
       return <HubRailGroup biomeKey={biomeKey} entry={entry} selectedRailKey={selectedRailKey} />;
     case 'frontier':
-      return <RailFrontier frontier={entry.frontier} selectedRailKey={selectedRailKey} />;
+      return <RailFrontier entry={entry} selectedRailKey={selectedRailKey} />;
   }
 }
 
@@ -621,10 +657,16 @@ function RailCompletionNode({
       <FocusButton
         focusMarker={focusMarker}
         marker={node.marker}
+        notReached={node.room.notReached}
         presentationMarker={railMarker}
         selected={selected}
       >
-        <RailHeading label={roleLabel} marker={railMarker} planEnd={planEnd} />
+        <RailHeading
+          label={roleLabel}
+          marker={railMarker}
+          notReached={node.room.notReached}
+          planEnd={planEnd}
+        />
         <RailRoom icon={node.room.roomIcon} label={node.room.label} />
         <RailIcons room={node.room.roomIcon} />
       </FocusButton>
@@ -735,7 +777,40 @@ export function BiomeWorkspace({
       : undefined;
   // A biome past the plan end is read-only; its rail and rooms are dimmed.
   const pastPlanEnd = biome.planEnd === 'pastEnd';
+  // Past the walk's stop a room or Hub shows only its title and the way to the stop.
+  const inspectedNode =
+    subject?.kind === 'node' &&
+    (subject.node.kind === 'occurrenceWorkbench' || subject.node.kind === 'hubDecision')
+      ? subject.node
+      : sourceOccurrence;
+  const hubRail = biome.rail.find(
+    (entry) => entry.kind === 'hubGroup' && entry.node.key === inspectedNode?.key,
+  );
+  const notReachedTitle: ReactNode =
+    inspectedNode === undefined ? (
+      subject?.kind !== 'node' && biome.notReached === true ? (
+        inspectorTitle
+      ) : undefined
+    ) : inspectedNode.kind === 'occurrenceWorkbench' ? (
+      inspectedNode.room.notReached === true ? (
+        <>
+          <ArtworkIcon
+            className="room-title-icon"
+            source={roomKindIcon(inspectedNode.room.roomIcon)}
+          />
+          {inspectedNode.room.label}
+        </>
+      ) : undefined
+    ) : inspectedNode.notReached === true ? (
+      <>
+        {hubRail?.kind === 'hubGroup' ? (
+          <ArtworkIcon className="room-title-icon" source={roomKindIcon(hubRail.roomIcon)} />
+        ) : null}
+        Hub
+      </>
+    ) : undefined;
   const rendersTitledWorkbench =
+    notReachedTitle !== undefined ||
     sourceOccurrence !== undefined ||
     (subject?.kind === 'node' &&
       (subject.node.kind === 'occurrenceWorkbench' || subject.node.kind === 'hubDecision'));
@@ -820,7 +895,9 @@ export function BiomeWorkspace({
         <div className="past-plan-end-content" inert={pastPlanEnd}>
           <EchoKeepsakeReplayControl biome={biome} interactions={interactions} />
         </div>
-        {subject === undefined ? (
+        {notReachedTitle !== undefined ? (
+          <RoomNotReached focusByOwner={focusByOwner} title={notReachedTitle} />
+        ) : subject === undefined ? (
           <p className="fixed-room-state">Choose the first room to start this biome.</p>
         ) : subject.kind === 'frontier' && sourceOccurrence === undefined ? (
           biome.frontier?.kind === 'start' || biome.frontier?.kind === 'exitDecision' ? (

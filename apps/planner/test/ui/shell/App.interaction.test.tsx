@@ -805,7 +805,7 @@ describe('planner history interaction', () => {
     expect(screen.getByRole('button', { name: 'Starting reward' })).toBeTruthy();
   });
 
-  it('keeps relocated opening controls locked behind incomplete loadout results', async () => {
+  it('hides the relocated opening behind incomplete loadout results and links to their repair', async () => {
     const { application, user } = renderPlannerForInteraction();
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
@@ -827,13 +827,13 @@ describe('planner history interaction', () => {
         }),
       ),
     );
-    const identity = screen.getByRole('region', { name: 'Start room configuration' });
+    // The opening lies past the walk's stop: only the way to the loadout repair shows.
+    expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
     const before = application.store.getState().projectWorkspace.history;
-    const roomControl = identity.querySelector<HTMLButtonElement>('button[id$="-room"]');
-    if (roomControl === null) throw new Error('start room control is missing');
-    expect(roomControl.disabled).toBe(true);
-    expect(within(identity).queryByText('Reward', { selector: 'label' })).toBeNull();
-    expect(screen.queryByRole('listbox')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Go to where the plan stops' }));
+    expect(screen.getByRole('button', { name: 'Loadout' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
     expect(application.store.getState().projectWorkspace.history).toBe(before);
   });
 

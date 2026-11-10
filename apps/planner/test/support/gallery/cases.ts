@@ -1783,4 +1783,39 @@ export const galleryCases: readonly GalleryCase[] = [
     commands: [unofferableRarity('N', 'surface-n-combat05', 'self')],
     target: room('N', 'surface-n-combat05'),
   },
+  // Past the walk's stop: rooms stay on the rail, dimmed, and show only that they are not reached.
+  ...(
+    [
+      ['room', 'F', 'golden-f-b2-e1', 'the room after one stopped in its Overview'],
+      ['later-biome', 'G', 'golden-g-intro', 'a later biome room'],
+    ] as const
+  ).map(([id, biomeKey, occurrenceId, what]): GalleryCase => ({
+    id: `progressive-past-stop-${id}`,
+    overview: true,
+    label: `Past the stop: ${what}`,
+    shows: ['room not reached', 'link to the stop', 'dimmed rail'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceRoomLayout',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b1-e1'),
+        layout: { flipped: false },
+      }),
+    ],
+    target: room(biomeKey, occurrenceId),
+  })),
+  ...(
+    [
+      ['visit', 'surface-n-miniBoss01', 'a Hub visit'],
+      ['side', 'surface-n-combat05-sideDoor2', 'a side room of the stopped Ephyra room'],
+    ] as const
+  ).map(([id, occurrenceId, what]): GalleryCase => ({
+    id: `progressive-past-stop-${id}`,
+    overview: true,
+    label: `Past the stop: ${what}`,
+    shows: ['room not reached', 'link to the stop', 'dimmed rail'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [unofferableRarity('N', 'surface-n-combat05', 'self')],
+    target: room('N', occurrenceId),
+  })),
 ];

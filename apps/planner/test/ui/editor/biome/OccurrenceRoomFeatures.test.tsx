@@ -69,7 +69,7 @@ async function chooseNemesisEvent(
 }
 
 describe('OccurrenceRoomFeatures', () => {
-  it('disables Nemesis detail pickers while the event context is unreached', async () => {
+  it('hides Nemesis detail pickers while the room waits on its Overview', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
     const reached = renderOccurrenceWorkbench(
       loadNemesisFieldsCheckpoint(),
@@ -92,10 +92,9 @@ describe('OccurrenceRoomFeatures', () => {
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    openNotReached();
-    const waiting = screen.getByRole('button', { name: 'Reward' }) as HTMLButtonElement;
-    expect(waiting.disabled).toBe(true);
-    expect(hintOf(waiting)).toBe('Waits on an earlier choice.');
+    // The room stops in its Overview: its Timeline, the event's row included, waits unshown.
+    expect(screen.getByText('Fix the Overview first.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Reward' })).toBeNull();
   });
 
   it('splits Anomaly room outcome from door map and revert controls as exact commands', async () => {
@@ -468,9 +467,8 @@ describe('OccurrenceRoomFeatures', () => {
     const family = screen.getByRole('button', { name: 'Nemesis event type' });
     await waitFor(() => expect(family.contains(document.activeElement)).toBe(true));
     openRoomTab('Room Timeline');
-    openNotReached();
-    const hint = screen.getByText('Choose a Nemesis event.');
-    expect(hint.closest('.control-placeholder')).toBeTruthy();
+    // Its event type unchosen, the room stops in its Overview.
+    expect(screen.getByText('Fix the Overview first.')).toBeTruthy();
     openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Free item');
     openRoomTab('Room Timeline');

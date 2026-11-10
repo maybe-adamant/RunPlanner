@@ -208,17 +208,16 @@ describe('plan end in the biome workspace', () => {
     expect(currentPlanEnd(application)).toEqual({ biomeKey: 'F', occurrenceId: 'golden-f-b7-e1' });
   });
 
-  it('waits on an earlier choice in a room the plan does not reach', async () => {
-    const { application, user } = renderWorkspace(
+  it('offers no plan end in a room the walk does not reach', () => {
+    const { application } = renderWorkspace(
       loadUnderworldFMidshopPomFrontierCheckpoint(),
       'Underworld',
       'F',
     );
     openRoom(application, createOccurrenceAddress(goldenFBiome, createOccurrenceId(offPath)));
-    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expect(within(roomCard()).getByText('Room not reached')).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'Room Timeline' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'End plan here' })).toBeNull();
-    expect(leaveTrigger()).toHaveProperty('disabled', true);
-    expect(hintOf(leaveTrigger())).toBe('Waits on an earlier choice.');
   });
 
   it('shows a saved end in its room while the plan up to it is incomplete, and continues it', async () => {
