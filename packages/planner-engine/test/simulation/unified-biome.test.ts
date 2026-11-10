@@ -28,7 +28,11 @@ import {
   simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  scheduleTestRequiredRoomActions,
+} from '@run-planner/test-fixtures/shared';
 import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import {
@@ -65,7 +69,7 @@ function legalHFieldsProject() {
     reward: createIncomingRewardAddress(biome, createOccurrenceId('golden-h-miniboss01')),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 function legalOProject() {
@@ -98,7 +102,7 @@ function legalOProject() {
     offer: createRewardWheelOfferAddress(biome, oOccurrenceIds.combat02, 'wheel1', 'offer1'),
     value: { rewardType: 'HermesUpgrade' },
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 function legalIProject() {
@@ -221,7 +225,12 @@ function legalIProject() {
       selectedOptionKey: 'option1',
     },
   });
-  return authorLegalTraitOffers(project);
+  // I is evaluated on its own, below the route walk.
+  return scheduleTestRequiredRoomActions(
+    authorTestTraitsAndRequiredItems(project),
+    catalog,
+    createBiomeAddress('Underworld', 'I'),
+  );
 }
 
 function incompleteFPrefixProject() {
@@ -275,14 +284,16 @@ function incompleteFPrefixProject() {
     reward: createIncomingRewardAddress(biome, createOccurrenceId('f-prefix-combat')),
     value: { rewardType: 'GiftDrop' },
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLevelResolution',
-    levelResolution: createLevelResolutionAddress(
-      createIncomingRewardAddress(biome, createOccurrenceId('f-prefix-combat')),
-      'self',
-    ),
-    value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: createLevelResolutionAddress(
+        createIncomingRewardAddress(biome, createOccurrenceId('f-prefix-combat')),
+        'self',
+      ),
+      value: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
+    }),
+  );
 }
 
 function createBatchTargets(
@@ -720,7 +731,7 @@ describe('unified biome simulation', () => {
   ] as const)(
     'gives %s takeover batches their declaration-owned shop and free-reward roles',
     (biomeKey, project) => {
-      const legalProject = authorLegalTraitOffers(project);
+      const legalProject = authorTestTraitsAndRequiredItems(project);
       const biome = simulateProject(catalog, legalProject).route?.biomes.find(
         (candidate) => candidate.biomeKey === biomeKey,
       );

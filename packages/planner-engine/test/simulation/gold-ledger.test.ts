@@ -57,7 +57,11 @@ import {
   loadUnderworldWorldShopTravelDealCheckpoint,
   underworldCheckpointArtifacts,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { authorLegalTraitOffers, editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  editTestRoomActionOrder,
+  placeTestLivePickup,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGIxionChaosProject,
   createGoldenFGHIProject,
@@ -167,14 +171,11 @@ function narcissusProject(
   )![0];
   const site = createAcquisitionSiteAddress(room, siteKey);
   const storageKey = site.pointKey === 'roomExit' ? 'roomExit' : acquisitionSiteStorageKey(site);
-  // Taking the trait takes every drop; keep only the one under test.
-  project = editTestRoomActionOrder(project, catalog, room, (order) =>
-    order.filter(
-      (reference) =>
-        reference.kind !== 'interactAcquisitionEntry' ||
-        reference.siteKey !== storageKey ||
-        reference.entryKey === entryKey,
-    ),
+  // The owner picks up only the drop under test.
+  project = placeTestLivePickup(
+    project,
+    room,
+    roomActionKey({ kind: 'interactAcquisitionEntry', siteKey: storageKey, entryKey }),
   );
   return { project, room, site };
 }
@@ -805,7 +806,7 @@ describe('gold binding to wheel and cage rows', () => {
       occurrence: room,
       encounterCount: 3,
     });
-    const paid = actionGains(ledger(authorLegalTraitOffers(project)), room);
+    const paid = actionGains(ledger(authorTestTraitsAndRequiredItems(project)), room);
     expect(paid).toContainEqual([
       'moneyPickup',
       roomActionKey({ kind: 'interactWheelReward', wheelKey: 'wheel2' }),

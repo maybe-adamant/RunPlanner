@@ -15,7 +15,9 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import {
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  scheduleTestRequiredRoomActions,
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -87,15 +89,17 @@ function authorGorgon(
   project: import('../../src/authored-project').ProjectDocument,
   phase: import('../../src/authored-project').EncounterPhaseAddress,
 ) {
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceGorgonAthenaOffer',
-    trait: createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
-    value: athenaOffer(),
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonAthenaOffer',
+      trait: createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
+      value: athenaOffer(),
+    }),
+  );
 }
 
 function createCompleteRepresentativeNOPProject() {
-  return authorLegalTraitOffers(loadSurfaceNOPProject());
+  return authorTestTraitsAndRequiredItems(loadSurfaceNOPProject());
 }
 
 function assembled(project: import('../../src/authored-project').ProjectDocument) {
@@ -547,11 +551,16 @@ describe('Gorgon Amulet lifecycle', () => {
       { kind: 'occurrence', occurrenceId: gorgonOccurrenceId },
       'Encounter',
     );
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceGorgonDeathDefianceCondition',
-      phase,
-      value: true,
-    });
+    // The owner places the Gorgon contact the condition requires.
+    let project = scheduleTestRequiredRoomActions(
+      applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'ReplaceGorgonDeathDefianceCondition',
+        phase,
+        value: true,
+      }),
+      catalog,
+      goldenGBiome,
+    );
     if (!priorCherished) {
       const incoming = createIncomingRewardAddress(goldenGBiome, gorgonOccurrenceId);
       project = applyProjectCommand(project, catalog, {
@@ -569,7 +578,7 @@ describe('Gorgon Amulet lifecycle', () => {
       });
       // Demeter may appear once in this window, so the route's own later
       // Hestia door moves to Zeus rather than colliding with the Gorgon room.
-      project = authorLegalTraitOffers(
+      project = authorTestTraitsAndRequiredItems(
         applyProjectCommand(project, catalog, {
           kind: 'ReplaceIncomingReward',
           reward: createIncomingRewardAddress(goldenGBiome, goldenGOccurrenceId(7, 1)),
@@ -1020,7 +1029,7 @@ describe('Gorgon Amulet lifecycle', () => {
       result: { supported: true },
     });
 
-    const naturalFirst = authorLegalTraitOffers(
+    const naturalFirst = authorTestTraitsAndRequiredItems(
       applyProjectCommand(pendingProject, catalog, {
         kind: 'SelectEncounter',
         phase,
@@ -1032,11 +1041,13 @@ describe('Gorgon Amulet lifecycle', () => {
       false,
     );
 
-    const nProject = applyProjectCommand(createEnteredNLocalProject(), catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
-      keepsakeKey: 'AthenaEncounterKeepsake',
-    });
+    const nProject = authorTestTraitsAndRequiredItems(
+      applyProjectCommand(createEnteredNLocalProject(), catalog, {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+        keepsakeKey: 'AthenaEncounterKeepsake',
+      }),
+    );
     const nAssembly = assembled(nProject);
     const nBiomeEvaluation = nAssembly.evaluation.route.biomes.find(
       (biome) => biome.biomeKey === 'N',
@@ -1077,11 +1088,13 @@ describe('Gorgon Amulet lifecycle', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceGorgonDeathDefianceCondition',
-      phase,
-      value: true,
-    });
+    project = collectTestRequiredItems(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceGorgonDeathDefianceCondition',
+        phase,
+        value: true,
+      }),
+    );
 
     const assembly = assembled(project);
     const p = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
@@ -1126,7 +1139,7 @@ describe('Gorgon Amulet lifecycle', () => {
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(pendingAssembly, phase)
         ?.candidateEncounterKeys,
     ).toContain('AthenaCombatP');
-    project = authorLegalTraitOffers(
+    project = authorTestTraitsAndRequiredItems(
       applyProjectCommand(project, catalog, {
         kind: 'SelectEncounter',
         phase,

@@ -32,7 +32,7 @@ import {
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import { nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import {
-  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   editTestRoomActionOrder,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures/shared';
@@ -72,7 +72,7 @@ const rewardRow: RoomActionReference = Object.freeze({
 });
 
 function withHeracles(project: ProjectDocument): ProjectDocument {
-  return authorLegalTraitOffers(
+  return authorTestTraitsAndRequiredItems(
     applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
       phase,

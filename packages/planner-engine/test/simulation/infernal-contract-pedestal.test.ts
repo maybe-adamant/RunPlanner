@@ -34,7 +34,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
 
 const shopId = createOccurrenceId('zagreus-contract-preboss-shop');
 const peerId = createOccurrenceId('zagreus-contract-preboss-peer');
@@ -298,7 +298,7 @@ function contractShopProject(withHex = false): ProjectDocument {
       purchased: true,
     });
   }
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 function collected(project: ProjectDocument, value: boolean): ProjectDocument {
@@ -333,7 +333,7 @@ describe('Infernal Contract pedestal acquisition and publication', () => {
     expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([
       expect.objectContaining({ code: 'rewardMissing', origin: gEntry }),
     ]);
-    project = authorLegalTraitOffers(
+    project = authorTestTraitsAndRequiredItems(
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceAcquisitionEntryOffer',
         entry: gEntry,
