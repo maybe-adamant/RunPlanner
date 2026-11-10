@@ -53,6 +53,8 @@ export interface GalleryCase {
   readonly opensBiome?: true;
   /** The case shows the editor header's finding pill above the biome. */
   readonly findingPill?: true;
+  /** One edit made once the case opens, as the editor dispatches it, so its announcement shows. */
+  readonly edit?: GalleryStep;
 }
 
 export function room(biomeKey: string, occurrenceId: string): GalleryTarget {

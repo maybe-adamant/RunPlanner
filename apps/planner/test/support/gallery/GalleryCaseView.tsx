@@ -10,7 +10,10 @@ import {
   semanticOwnerFocused,
   semanticOwnerOpened,
 } from '@planner/state/editorSessionSlice';
-import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+} from '@planner/state/projectWorkspaceSlice';
 import {
   selectPresentProject,
   selectProjectEvaluation,
@@ -20,6 +23,7 @@ import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import { PomResolutionDialog } from '@planner/ui/editor/rewards/PomResolutionEditor';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
+import { RemovedActionsNotice } from '@planner/ui/feedback/RemovedActionsNotice';
 import { buildGalleryProject, galleryTargetOwner, type GalleryCase } from './galleryCase';
 
 type CaseView = 'timeline' | 'overview';
@@ -32,6 +36,12 @@ function openCaseApplication(entry: GalleryCase, view: CaseView): PlannerApplica
   const project = buildGalleryProject(entry);
   const application = createApplication();
   application.store.dispatch(authoredProjectReplaced(project));
+  if (entry.edit !== undefined)
+    application.store.dispatch(
+      authoredProjectCommandDispatched(
+        typeof entry.edit === 'function' ? entry.edit(project) : entry.edit,
+      ),
+    );
   if (entry.opensBiome === true) {
     // As the biome's tab opens it: on the walk's stop when the biome holds it.
     const workspace = application.selectStructuredWorkspace(application.store.getState());
@@ -119,6 +129,9 @@ function CaseWorkspace({
           </div>
         </div>
       </div>
+      {entry.edit === undefined ? null : (
+        <RemovedActionsNotice catalog={catalog} workspace={workspace} />
+      )}
       {/* A Pom choice opens as the app opens it, so a chip that opens one can be seen. */}
       {levelResolutionTarget === null ? null : (
         <PomResolutionDialog

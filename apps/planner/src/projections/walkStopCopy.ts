@@ -50,3 +50,11 @@ export function stopNoticeLink(at: StopNoticeAt): string {
 export function requiredFirstTitle(actionLabel: string | undefined): string {
   return `${actionLabel ?? 'A required action'} must come first`;
 }
+
+/** An edit's removals in another room, before that room's link. */
+export function removedActionsLead(count: number): string {
+  return `${count} ${count === 1 ? 'action' : 'actions'} removed at`;
+}
+
+/** Restores what the announced edit removed, as the app's Undo does. */
+export const removedActionsUndo = 'Undo';

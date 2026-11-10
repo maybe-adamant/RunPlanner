@@ -44,6 +44,7 @@ import { HintLayer } from '../controls/HintLayer';
 import { HomeScreen } from '../home/HomeScreen';
 import { RouteWorkspace } from './RouteWorkspace';
 import { FindingTargetScope } from '../feedback/useFindingTarget';
+import { RemovedActionsNotice } from '../feedback/RemovedActionsNotice';
 import { useAppScale } from './useAppScale';
 import { LoadoutPresetsContext } from './loadoutPresetsContext';
 import { NoticeArea } from './NoticeArea';
@@ -255,6 +256,9 @@ export function App({
               key={semanticAddressKey(levelResolutionDialogTarget)}
               target={levelResolutionDialogTarget}
             />
+          )}
+          {!showEditor || workspace === undefined ? null : (
+            <RemovedActionsNotice catalog={catalog} workspace={workspace} />
           )}
           {closeRequest === undefined ? null : <CloseConfirmDialog controller={closeRequest} />}
           <HintLayer />

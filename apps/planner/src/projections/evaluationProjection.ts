@@ -1629,11 +1629,20 @@ export function nextRepairSelection(
   issue: AssessmentIssue,
   focusByOwner: ReadonlyMap<string, import('./structured-workspace').WorkspaceInspectorDestination>,
 ): FindingSelection {
-  const destination = focusByOwner.get(semanticAddressKey(issue.owner));
+  return ownerSelection(issue.owner, issue.regionKey, focusByOwner);
+}
+
+/** The navigation to an owner's place, as a finding pill there takes it. */
+export function ownerSelection(
+  owner: SemanticAddress,
+  key: string,
+  focusByOwner: ReadonlyMap<string, import('./structured-workspace').WorkspaceInspectorDestination>,
+): FindingSelection {
+  const destination = focusByOwner.get(semanticAddressKey(owner));
   return {
-    focusAddress: destination?.focusAddress ?? issue.owner,
-    key: issue.regionKey,
-    origin: issue.owner,
+    focusAddress: destination?.focusAddress ?? owner,
+    key,
+    origin: owner,
     ...(destination?.presentationPanel !== undefined
       ? { presentationPanel: { kind: destination.presentationPanel } as const }
       : destination?.biomeKey === undefined

@@ -69,7 +69,9 @@ import {
   type RoomAnchorObjectKind,
 } from '@run-planner/engine/simulation';
 import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
+import { swapEchoAway } from '../removed-actions';
 import {
+  createEchoGoldIAnvilDuplicateProject,
   createGoldenFGHIProject,
   createUnderworldFWellCheckpoint,
   loadUnderworldFGProject,
@@ -1832,6 +1834,14 @@ export const galleryCases: readonly GalleryCase[] = [
     project: loadSurfaceNOPQCheckpoint,
     commands: [unofferableRarity('N', 'surface-n-prehub', 'source')],
     target: hub('N'),
+  },
+  {
+    id: 'removed-actions-announced',
+    label: 'An edit removes a row in another room',
+    shows: ['announcement naming the room', 'link to that room', 'Undo'],
+    project: createEchoGoldIAnvilDuplicateProject,
+    edit: swapEchoAway,
+    target: room('H', 'golden-h-bridge01'),
   },
   {
     id: 'stop-notice-loadout',
