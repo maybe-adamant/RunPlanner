@@ -6,7 +6,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
-import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 
 import {
   EMPTY_LIBRARY_SESSION,
@@ -343,25 +342,18 @@ describe('project library operations', () => {
     expect(stored.get('Broken.runplanner.json')?.json).toBe('{ broken');
   });
 
-  it('re-identifies an older copy in its own schema, leaving it to migrate and settle on opening', async () => {
-    for (const legacy of [
-      JSON.stringify(schema91Json),
-      // A schema 102 plan whose opening settles a stale pickup away.
-      JSON.stringify({
-        ...JSON.parse(encodeProjectDocument(createGoldenFGHProject())),
-        schemaVersion: 102,
-      }),
-    ]) {
-      const { adapter, calls, stored } = createFolder({
-        'original.runplanner.json': { json: legacy, modifiedMs: 10 },
-        'copy.runplanner.json': { json: legacy, modifiedMs: 20 },
-      });
-      await operations(adapter).list();
-      expect(calls).toEqual(['write copy.runplanner.json']);
-      expect(stored.get('original.runplanner.json')?.json).toBe(legacy);
-      const copy = JSON.parse(stored.get('copy.runplanner.json')!.json) as Record<string, unknown>;
-      expect(copy).toEqual({ ...JSON.parse(legacy), projectId: 'run-plan-minted-1' });
-    }
+  it('keeps the original of an older copy before re-identifying it', async () => {
+    const legacy = JSON.stringify(schema91Json);
+    const { adapter, calls, stored } = createFolder({
+      'original.runplanner.json': { json: legacy, modifiedMs: 10 },
+      'copy.runplanner.json': { json: legacy, modifiedMs: 20 },
+    });
+    await operations(adapter).list();
+    expect(calls).toEqual(['preserve copy.runplanner.json', 'write copy.runplanner.json']);
+    expect(stored.get('original.runplanner.json')?.json).toBe(legacy);
+    expect(parseProjectDocument(stored.get('copy.runplanner.json')!.json, catalog).projectId).toBe(
+      'run-plan-minted-1',
+    );
   });
 
   it('scans without re-identifying anything', async () => {

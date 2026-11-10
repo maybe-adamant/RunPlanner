@@ -3,11 +3,9 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
-  createBiomeAddress,
   createEncounterPhaseAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
-  createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
   DEFAULT_PROJECT_NAME,
@@ -19,7 +17,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { fillNemesisBetOutcomeWins } from '@run-planner/engine/project-migration';
 import { migrateProjectDocument as migrate101To102 } from '@planner/persistence/project-101-to-102.js';
-import { migrateProjectDocument as migrate102To103 } from '@planner/persistence/project-102-to-103.js';
+import { liftProjectDocument as migrate102To103 } from '@planner/persistence/project-102-to-103.js';
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -71,6 +69,13 @@ function currentRevisionText(checkpoint: unknown): string {
   );
 }
 
+/** The plan as opening it saved at schema 102 leaves it: settled once by its migration. */
+const openedAt102 = (document: ProjectDocument) =>
+  loadProjectDocument(
+    JSON.stringify({ ...JSON.parse(encodeProjectDocument(document)), schemaVersion: 102 }),
+    catalog,
+  ).project;
+
 const project = createProjectDocument(catalog, {
   configuredBiomeCount: 1,
   projectId: 'project-loader-current',
@@ -109,27 +114,16 @@ describe('project document loader', () => {
         schemaRevision: revision,
       });
 
-    it('opens settled once, with the plan as saved and the removals it announces', () => {
+    it('opens settled once by its migration', () => {
       for (const revision of [0, 1]) {
         const loaded = loadProjectDocument(at102(revision), catalog);
         expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([103]);
-        expect(loaded.upgrade?.before).toEqual(stale);
-        expect(loaded.upgrade?.fault).toBeUndefined();
         expect(gOpening(loaded.project)).toEqual(
           gOpening(stale).filter(
             (action) =>
               !(action.kind === 'interactIncomingReward' && action.acquisitionRole === 'source'),
           ),
         );
-        expect(loaded.upgrade?.removedStaleActions).toEqual([
-          {
-            occurrence: createOccurrenceAddress(
-              createBiomeAddress('Underworld', 'G'),
-              createOccurrenceId('golden-g-b1-e1'),
-            ),
-            actions: [expect.objectContaining({ acquisitionRole: 'source' })],
-          },
-        ]);
       }
     });
 
@@ -139,7 +133,7 @@ describe('project document loader', () => {
       );
     });
 
-    it('opens without an upgrade when settling changes nothing', () => {
+    it('opens as saved when settling changes nothing', () => {
       const clean = { ...JSON.parse(encodeProjectDocument(project)), schemaVersion: 102 };
       expect(loadProjectDocument(JSON.stringify(clean), catalog)).toEqual({
         migrationProvenance: [
@@ -228,8 +222,10 @@ describe('project document loader', () => {
       );
       const loaded = loadProjectDocument(JSON.stringify(document), catalog);
       expect(loaded.migrationProvenance.at(-1)?.targetSchemaVersion).toBe(103);
-      // The plan as saved; opening it also settles its G opening's stale pickup.
-      expect(encodeProjectDocument(loaded.upgrade!.before)).toBe(encodeProjectDocument(current));
+      // Opened as the same plan saved at schema 102, settled by the same migration.
+      expect(encodeProjectDocument(loaded.project)).toBe(
+        encodeProjectDocument(openedAt102(current)),
+      );
     }
   });
 
@@ -708,9 +704,10 @@ describe('project document loader', () => {
           targetSchemaVersion: 103,
         },
       ]);
-      const saved = loaded.upgrade?.before ?? loaded.project;
-      expect(saved).toEqual(expected);
-      expect(encodeProjectDocument(saved)).toBe(encodeProjectDocument(expected));
+      expect(loaded.project).toEqual(openedAt102(expected));
+      expect(encodeProjectDocument(loaded.project)).toBe(
+        encodeProjectDocument(openedAt102(expected)),
+      );
     },
   );
 
@@ -1104,11 +1101,8 @@ describe('project document loader', () => {
       ),
       'echoDoubleShopReward',
     );
-    // The file's H Preboss source lost a door before settlement owned doors; opening it lets
-    // the door go, and the route evaluates as it did.
-    expect(loaded.upgrade?.removedStaleActions).toContainEqual(
-      expect.objectContaining({ doors: [expect.objectContaining({ gameName: 'H_PreBoss01' })] }),
-    );
+    // The file's H Preboss source lost a door before settlement owned doors; its migration
+    // lets the door go, and the route evaluates as it did.
     const evaluation = simulateProject(catalog, loaded.project);
     expect(evaluation.status).toBe('incomplete');
     expect(evaluation.findings).toEqual([
