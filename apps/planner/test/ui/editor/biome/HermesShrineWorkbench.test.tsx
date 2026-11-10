@@ -52,6 +52,7 @@ import {
 import { loadSurfaceNShrineSideRoomDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   purchaseTestHermesShrineOffer,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures/shared';
@@ -205,10 +206,17 @@ describe('Hermes Shrine workbench', () => {
     expect(deliveryRow?.label).toBe('Collect Big Heal');
     expect(deliveryRow?.labelParts?.origin).toBe('Delivered from the Hermes Shrine');
     expect(deliveryRow?.rewardPayload?.control.offer).toMatchObject({ rewardType: 'HealBigDrop' });
-    // A rushed item is optional loot: ranked by default, removable, and re-addable.
-    expect(deliveryRow).toMatchObject({ participation: 'optional' });
+    // A rushed item is optional loot left on the ground: picked up, removed and re-added.
+    expect(deliveryRow).toMatchObject({ participation: 'optional', rank: null });
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
-    const deliveryTimelineRow = timelineRow('Collect Big Heal');
+    const spawnedBigHeal = () =>
+      screen
+        .getAllByRole('listitem', { name: 'Spawned' })
+        .flatMap((row) => within(row).queryAllByRole('button', { name: 'Big Heal' }));
+    expect(spawnedBigHeal()).toHaveLength(1);
+    expect(spawnedBigHeal()[0]!.hasAttribute('data-spawn-placed')).toBe(false);
+    await view.user.click(spawnedBigHeal()[0]!);
+    const deliveryTimelineRow = await findTimelineRow('Collect Big Heal');
     expect(within(deliveryTimelineRow).queryByText('required')).toBeNull();
     const remove = within(deliveryTimelineRow).getByRole('button', {
       name: 'Remove Collect Big Heal from timeline',
@@ -269,6 +277,12 @@ describe('Hermes Shrine workbench', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
     await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Mystery Boon');
+    // The rushed item is picked up from where it spawned.
+    await view.user.click(
+      within(screen.getByRole('listitem', { name: 'Spawned' })).getByRole('button', {
+        name: 'Mystery Boon',
+      }),
+    );
     const entryKey = hermesShrineDeliveryEntryKey(owner, 'initial:secondRight');
     const entry = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(owner, 'hermesShrineDelivery'),
@@ -289,7 +303,7 @@ describe('Hermes Shrine workbench', () => {
         .find((item) => item.label === 'Apollo'),
     ).toMatchObject({ state: 'possible', disabled: false });
 
-    const deliveryRow = timelineRow('Collect Mystery Boon');
+    const deliveryRow = await findTimelineRow('Collect Mystery Boon');
     await view.user.click(within(deliveryRow).getByRole('button', { name: 'Reward' }));
     expect(await screen.findByText('Eventual God')).toBeTruthy();
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
@@ -839,6 +853,7 @@ describe('Hermes Shrine workbench', () => {
         selectedOptionKey: 'option1',
       },
     });
+    project = collectTestRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceHermesShrineTravelDealRefill',
       occurrence: owner,

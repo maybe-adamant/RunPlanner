@@ -43,6 +43,7 @@ import {
   renderWorkspace,
 } from '@planner-test/support/biome-workbench';
 import { hintOf } from '@planner-test/support/hints';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 
 afterEach(cleanup);
 
@@ -173,7 +174,7 @@ describe('a room’s doors on its Timeline', () => {
       occurrenceId: start,
       gameName: 'F_Opening01',
     });
-    // The starting boon is settled, so the room's walk reaches its doors.
+    // The starting boon is settled and collected, so the room's walk reaches its doors.
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(createIncomingRewardAddress(f, start), 'source'),
@@ -188,6 +189,7 @@ describe('a room’s doors on its Timeline', () => {
         selectedOptionKey: 'option1',
       },
     });
+    project = collectTestRequiredItems(project);
     const view = renderWorkspace(project, 'Underworld', 'F');
     act(() =>
       view.application.store.dispatch(semanticOwnerFocused(createOccurrenceAddress(f, start))),

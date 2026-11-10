@@ -7,6 +7,8 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   type ProjectDocument,
+  type RoomActionReference,
+  type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
@@ -68,6 +70,51 @@ function withoutChain(project: ProjectDocument): Encoded {
   return encoded;
 }
 
+/**
+ * What an old save holds once migrated, where room creation now seeds no rows:
+ * schema-95 Hub creation seeded the N Boss's required reward and Postboss's
+ * fountain, and schema 97 gave every keepsake rack its use after the fountain.
+ */
+function withLegacySeededRows(project: ProjectDocument): ProjectDocument {
+  const seeded = (biomeKey: string, occurrence: RoomOccurrence): RoomActionReference[] => {
+    const order = [...occurrence.roomActions.order];
+    if (biomeKey === 'N' && order.length === 0) {
+      if (occurrence.occurrenceId.endsWith(':boss')) order.push({ kind: 'collectRequiredReward' });
+      if (occurrence.occurrenceId.endsWith(':postboss')) order.push({ kind: 'useFountain' });
+    }
+    if (
+      occurrence.keepsakeRack !== undefined &&
+      !order.some((reference) => reference.kind === 'interactKeepsakeRack')
+    ) {
+      const fountain = order.findIndex((reference) => reference.kind === 'useFountain');
+      order.splice(fountain < 0 ? order.length : fountain + 1, 0, {
+        kind: 'interactKeepsakeRack',
+      });
+    }
+    return order;
+  };
+  return {
+    ...project,
+    route: {
+      ...project.route,
+      biomes: project.route.biomes.map((biome) =>
+        biome.topology === null
+          ? biome
+          : {
+              ...biome,
+              topology: {
+                ...biome.topology,
+                occurrences: biome.topology.occurrences.map((occurrence) => ({
+                  ...occurrence,
+                  roomActions: { order: seeded(biome.biomeKey, occurrence) },
+                })),
+              },
+            },
+      ),
+    },
+  };
+}
+
 function migrated(project: ProjectDocument): ProjectDocument {
   return decodeProjectDocument(
     migrate102To103(
@@ -121,9 +168,9 @@ function hubOpened(project: ProjectDocument): ProjectDocument {
 }
 
 describe('schema 95 to 96 completed-Hub chain migration', () => {
-  it('gives a Hub without its chain exactly what Hub creation builds', () => {
+  it('gives a Hub without its chain what Hub creation built', () => {
     const created = hubOpened(loadSurfaceNEntryFrontierProject());
-    expect(migrated(created)).toEqual(created);
+    expect(migrated(created)).toEqual(withLegacySeededRows(created));
   });
 
   it('resolves the Rivals Boss and the Dream Postboss from the route position', () => {
@@ -135,12 +182,12 @@ describe('schema 95 to 96 completed-Hub chain migration', () => {
         rank: 1,
       }),
     );
-    expect(migrated(rivals)).toEqual(rivals);
+    expect(migrated(rivals)).toEqual(withLegacySeededRows(rivals));
     expect(encodeProjectDocument(rivals)).toContain('"gameName": "N_Boss02"');
 
     const dream = dreamHubRecreated(dreamMixedHandoffProject());
     expect(encodeProjectDocument(dream)).toContain('"gameName": "Dream_PostBoss03"');
-    expect(migrated(dream)).toEqual(dream);
+    expect(migrated(dream)).toEqual(withLegacySeededRows(dream));
   });
 
   it.each([
@@ -156,7 +203,7 @@ describe('schema 95 to 96 completed-Hub chain migration', () => {
       }),
     );
     expect(encodeProjectDocument(dream)).toContain(`"gameName": "${bossGameName}"`);
-    expect(migrated(dream)).toEqual(dream);
+    expect(migrated(dream)).toEqual(withLegacySeededRows(dream));
   });
 
   it('omits the Postboss when Dream N is the last biome', () => {
@@ -195,7 +242,7 @@ describe('schema 95 to 96 completed-Hub chain migration', () => {
       ?.occurrences;
     expect(nRooms?.some((occurrence) => occurrence.gameName.includes('PostBoss'))).toBe(false);
     expect(nRooms?.some((occurrence) => occurrence.gameName === 'N_Boss01')).toBe(true);
-    expect(migrated(dream)).toEqual(dream);
+    expect(migrated(dream)).toEqual(withLegacySeededRows(dream));
   });
 
   it('keeps a Hub that owns its chain and every imported identity unchanged', () => {

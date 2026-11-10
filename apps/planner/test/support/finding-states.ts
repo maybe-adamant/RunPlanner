@@ -15,6 +15,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   prepareLegalPomTraitOffers,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
@@ -158,20 +159,22 @@ export function groupedOutcomeProject(
     reward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: `${giverKey}Upgrade` } },
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait: createTraitOfferAddress(reward, 'source'),
-    value: {
-      kind: 'traits',
-      giverKey,
-      selectedOptionKey: 'option2',
-      options: [
-        { traitKey: options[0], rarity: 'Common' },
-        { traitKey: options[1], rarity: effect === 'All Together' ? 'Legendary' : 'Duo' },
-        { traitKey: options[2], rarity: 'Common' },
-      ],
-    },
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(reward, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey,
+        selectedOptionKey: 'option2',
+        options: [
+          { traitKey: options[0], rarity: 'Common' },
+          { traitKey: options[1], rarity: effect === 'All Together' ? 'Legendary' : 'Duo' },
+          { traitKey: options[2], rarity: 'Common' },
+        ],
+      },
+    }),
+  );
 }
 
 /** An Echo Boon Boon Boon choice whose first row the reached run cannot grant. */

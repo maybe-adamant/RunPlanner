@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import type { CandidateProjectionSession } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   surfaceTravelDealRefillAnvilProject,
   surfaceTravelDealRefillAnvilResult,
@@ -345,7 +346,7 @@ describe('acquisition-conversion-interactions', () => {
     );
     const screen = createAcquisitionRoleAddress(replayEntry, 'self');
     const { interactions } = projectStructuredWorkspaceFixture(
-      createEchoTalentDropReplayProject(),
+      collectTestRequiredItems(createEchoTalentDropReplayProject()),
     ).workspace;
     const hexActivation = interactions.acquisitionConversions.get(
       semanticAddressKey(screen),

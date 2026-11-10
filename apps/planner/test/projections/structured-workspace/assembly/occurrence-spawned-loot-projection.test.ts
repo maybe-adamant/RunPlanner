@@ -16,6 +16,7 @@ import {
   loadSurfaceScheduledLifecycleCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadUnderworldFGHCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -219,15 +220,17 @@ describe('outcome-dependent loot', () => {
   );
   /** Nemesis answered, her optional result placed right after her. */
   function answered(value: AuthoredNemesisRandomEventOutcome, rewardType: string) {
-    const project = replaceNemesisRandomEventInteraction(
-      applyProjectCommand(createGoldenFGHIProject(), catalog, {
-        kind: 'SelectEncounter',
-        phase,
-        encounterKey: 'NemesisRandomEvent',
-      }),
-      createNemesisRandomEventAddress(phase),
-      value,
-      { rewardType },
+    const project = collectTestRequiredItems(
+      replaceNemesisRandomEventInteraction(
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'NemesisRandomEvent',
+        }),
+        createNemesisRandomEventAddress(phase),
+        value,
+        { rewardType },
+      ),
     );
     const reference = {
       kind: 'interactAcquisitionEntry' as const,

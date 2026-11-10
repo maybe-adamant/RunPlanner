@@ -17,6 +17,7 @@ import {
   type CandidateEvaluationEvent,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 
 import type {
   WorkspaceHubActionOrderInteraction,
@@ -291,7 +292,7 @@ describe('workspace candidate interaction families', () => {
         selectedOptionKey: 'option1',
       },
     });
-    const project = applyProjectCommand(authoredTrait, catalog, {
+    const project = applyProjectCommand(collectTestRequiredItems(authoredTrait), catalog, {
       decision: owner,
       kind: 'CreateBatch',
     });

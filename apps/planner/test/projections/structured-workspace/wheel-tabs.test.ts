@@ -15,6 +15,7 @@ import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   purchaseTestHermesShrineOffer,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -234,7 +235,7 @@ describe('ship wheels on their phase Timeline', () => {
       wheel: createRewardWheelAddress(o, oOccurrenceIds.combat02, 'wheel2'),
       storeKey: 'RunProgress',
     });
-    project = authorLegalTraitOffers(
+    project = authorTestTraitsAndRequiredItems(
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceRewardWheelOffer',
         offer: createRewardWheelOfferAddress(o, oOccurrenceIds.combat02, 'wheel2', 'offer1'),

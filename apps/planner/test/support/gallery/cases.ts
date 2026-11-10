@@ -1285,26 +1285,6 @@ export const galleryCases: readonly GalleryCase[] = [
         generationKey: 'initial:first',
         rushed: true,
       }),
-      (project) => {
-        const pickup = authoredOccurrence(
-          project,
-          'O',
-          'surface-o-combat02',
-        ).roomActions.order.find(
-          (reference) =>
-            reference.kind === 'interactAcquisitionEntry' &&
-            reference.siteKey === 'hermesShrineDelivery',
-        );
-        if (pickup === undefined) throw new Error('the rush placed no pickup');
-        return {
-          kind: 'RemoveRoomAction',
-          action: createRoomActionAddress(
-            createBiomeAddress('Surface', 'O'),
-            createOccurrenceId('surface-o-combat02'),
-            roomActionKey(pickup),
-          ),
-        };
-      },
     ],
     target: room('O', 'surface-o-combat02'),
   },

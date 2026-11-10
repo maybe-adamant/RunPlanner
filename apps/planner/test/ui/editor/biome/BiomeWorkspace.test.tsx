@@ -3,7 +3,11 @@
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { hintOf } from '@planner-test/support/hints';
 import { catalog } from '@run-planner/hades2-catalog';
-import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  hubVisitActions,
+} from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
   createAdditionalExitAddress,
@@ -220,7 +224,7 @@ function fTwoDoorBatchProject(): {
       value: { rewardType: 'MaxHealthDrop' },
     });
   }
-  return { owner, project: authorLegalTraitOffers(project), start };
+  return { owner, project: authorTestTraitsAndRequiredItems(project), start };
 }
 
 function inactiveOccurrenceDetails(node: WorkspaceNode): WorkspaceNode {
@@ -284,7 +288,7 @@ describe('BiomeWorkspace', () => {
       }),
       value: { kind: 'additional', additionalExitKey: 'chaos' },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const view = renderWorkspace(project, 'Surface', 'N');
     const finding = view.application.store
       .getState()

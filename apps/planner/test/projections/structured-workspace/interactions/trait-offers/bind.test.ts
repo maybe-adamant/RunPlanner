@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNStoryBoardProject,
@@ -281,6 +282,7 @@ describe('trait-offers/bind', () => {
       phase,
       value: true,
     });
+    project = collectTestRequiredItems(project);
     const { interactions } = bind(project, 'Surface', 'P');
     const interaction = [...interactions.traitOffers.values()].find(
       (candidate) => candidate.owner.owner.kind === 'gorgonPhase',

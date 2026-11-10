@@ -53,6 +53,8 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 import {
   reachedTraitOffers,
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   prepareLegalPomTraitOffers,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures/shared';
@@ -105,7 +107,7 @@ function projectWithArtemisInErebus() {
   );
   return {
     phase,
-    project: authorLegalTraitOffers(
+    project: authorTestTraitsAndRequiredItems(
       applyProjectCommand(initial, catalog, {
         kind: 'SelectEncounter',
         phase,
@@ -140,7 +142,7 @@ function seaStarRewardFixture() {
     reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
   });
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   const openingOffer = supportedTraitOffer(
     project,
     createTraitOfferAddress(startReward, 'source'),
@@ -232,7 +234,7 @@ function seaStarRewardFixture() {
     reward: seaStarReward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
   });
-  project = authorLegalTraitOffers(project);
+  project = authorTestTraitsAndRequiredItems(project);
   const seaStarOffer = supportedTraitOffer(
     project,
     createTraitOfferAddress(seaStarReward, 'source'),
@@ -302,7 +304,7 @@ function seaStarRewardFixture() {
     value: { rewardType: 'RoomMoneyDrop' },
   });
   return {
-    project,
+    project: collectTestRequiredItems(project),
     targetReward,
     targetAcquisition: createAcquisitionRoleAddress(targetReward, 'self'),
     target,
@@ -423,7 +425,7 @@ function allTogetherFindingFixture() {
       reward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const prepared = prepareLegalPomTraitOffers(project);
     project = prepared.project;
     const trace = reachedTraitOffers(project).find(
