@@ -77,6 +77,8 @@ import {
 import {
   authorLegalPomResolutions,
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   editTestRoomActionOrder,
   purchaseTestHermesShrineOffer,
 } from '@run-planner/test-fixtures/shared';
@@ -463,7 +465,7 @@ describe('spawned loot', () => {
 
   it('drops Heracles’s bounty after the encounter end’s own spawns', () => {
     const combat05 = nOccurrenceId('combat05');
-    const project = authorLegalTraitOffers(
+    const project = authorTestTraitsAndRequiredItems(
       applyProjectCommand(loadSurfaceNCheckpoint(), catalog, {
         kind: 'SelectEncounter',
         phase: createEncounterPhaseAddress(
@@ -548,15 +550,17 @@ describe('spawned loot', () => {
     const event = createNemesisRandomEventAddress(phase);
     /** Her event answered with an optional result, placed right after her interaction. */
     const answered = (value: AuthoredNemesisRandomEventOutcome, rewardType: string) => {
-      const project = replaceNemesisRandomEventInteraction(
-        applyProjectCommand(createGoldenFGHIProject(), catalog, {
-          kind: 'SelectEncounter',
-          phase,
-          encounterKey: 'NemesisRandomEvent',
-        }),
-        event,
-        value,
-        { rewardType },
+      const project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(
+          applyProjectCommand(createGoldenFGHIProject(), catalog, {
+            kind: 'SelectEncounter',
+            phase,
+            encounterKey: 'NemesisRandomEvent',
+          }),
+          event,
+          value,
+          { rewardType },
+        ),
       );
       const reference = {
         kind: 'interactAcquisitionEntry' as const,
@@ -621,15 +625,17 @@ describe('spawned loot', () => {
     });
 
     it('spawns Consolation from a lost contest with no success item planned', () => {
-      const project = replaceNemesisRandomEventInteraction(
-        applyProjectCommand(createGoldenFGHIProject(), catalog, {
-          kind: 'SelectEncounter',
-          phase,
-          encounterKey: 'NemesisRandomEvent',
-        }),
-        event,
-        { kind: 'damageContest', result: 'failure' },
-        null,
+      const project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(
+          applyProjectCommand(createGoldenFGHIProject(), catalog, {
+            kind: 'SelectEncounter',
+            phase,
+            encounterKey: 'NemesisRandomEvent',
+          }),
+          event,
+          { kind: 'damageContest', result: 'failure' },
+          null,
+        ),
       );
       const { assembly, spawned } = loot(project, 'F', nemesisRoom);
       expect(assembly.evaluation.findings).toEqual([]);
@@ -656,15 +662,17 @@ describe('spawned loot', () => {
 
     it('spawns nothing her outcome decides while the walk is stopped at her row', () => {
       // A won contest with no item planned blocks her interaction.
-      const project = replaceNemesisRandomEventInteraction(
-        applyProjectCommand(createGoldenFGHIProject(), catalog, {
-          kind: 'SelectEncounter',
-          phase,
-          encounterKey: 'NemesisRandomEvent',
-        }),
-        event,
-        { kind: 'damageContest', result: 'success' },
-        null,
+      const project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(
+          applyProjectCommand(createGoldenFGHIProject(), catalog, {
+            kind: 'SelectEncounter',
+            phase,
+            encounterKey: 'NemesisRandomEvent',
+          }),
+          event,
+          { kind: 'damageContest', result: 'success' },
+          null,
+        ),
       );
       const { assembly, spawned } = loot(project, 'F', nemesisRoom);
       const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
@@ -725,7 +733,7 @@ describe('spawned loot', () => {
 
   it('spawns Heracles’s bounty with the rest of an encounter end whose due delivery is unplaced', () => {
     const combat09 = nOccurrenceId('combat09');
-    const project = authorLegalTraitOffers(
+    const selected = authorLegalTraitOffers(
       applyProjectCommand(loadSurfaceNShrineSideRoomDeliveryCheckpoint(), catalog, {
         kind: 'SelectEncounter',
         phase: createEncounterPhaseAddress(
@@ -736,6 +744,15 @@ describe('spawned loot', () => {
         encounterKey: 'HeraclesCombatN',
       }),
     );
+    // The owner picks up the bounty from its spawn notice; the delivery stays unplaced.
+    const bounty = loot(selected, 'N', combat09)
+      .spawned.moments.flatMap((moment) => moment.items)
+      .find(
+        (item) => item.source.kind === 'generated' && item.source.family.kind === 'heraclesBounty',
+      );
+    if (bounty?.placement.kind !== 'unplaced' || bounty.placement.command === undefined)
+      throw new Error('Heracles bounty has no placement');
+    const project = applyProjectCommand(selected, catalog, bounty.placement.command);
     const { assembly, spawned } = loot(project, 'N', combat09);
     const n = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
     // The walk passes the encounter end and stops where the delivery falls due.
@@ -807,11 +824,9 @@ describe('spawned loot', () => {
         slotKey,
         value: { rewardType },
       });
+    // Rushing places no pickup: the item is listed for the owner to take.
     expect(actionSpawns(loot(project, 'O', combat02).spawned)).toEqual([
-      [
-        'purchaseHermesShrineOffer',
-        [expect.stringMatching(/^hermesShrineDelivery optional #\d+$/)],
-      ],
+      ['purchaseHermesShrineOffer', ['hermesShrineDelivery optional unplaced:InsertRoomAction']],
     ]);
   });
 });
