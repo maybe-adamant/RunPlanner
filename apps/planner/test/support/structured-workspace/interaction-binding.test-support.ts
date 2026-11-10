@@ -53,6 +53,7 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   prepareLegalPomTraitOffers,
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
@@ -149,11 +150,13 @@ export function createReachableNaturalChaosProject(): ProjectDocument {
     occurrenceId: targetId,
     gameName: 'F_Combat01',
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(goldenFBiome, targetId),
-    value: { rewardType: 'MaxHealthDrop' },
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, targetId),
+      value: { rewardType: 'MaxHealthDrop' },
+    }),
+  );
 }
 
 export function selectedNChaosFrontierProject(persistTerminalDecision = true): ProjectDocument {

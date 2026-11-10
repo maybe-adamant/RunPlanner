@@ -33,6 +33,7 @@ import type {
 } from '@planner/projections/structured-workspace';
 import {
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -451,5 +452,5 @@ export function enteredShopProject(): {
       value,
     });
   }
-  return { project: authorLegalTraitOffers(project), shopId: dormant.shopId };
+  return { project: authorTestTraitsAndRequiredItems(project), shopId: dormant.shopId };
 }

@@ -2,6 +2,7 @@
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  acquisitionSiteStorageKey,
   applyProjectCommand,
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
@@ -59,6 +60,8 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import {
   authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
@@ -1270,7 +1273,7 @@ describe('OccurrenceRoomActions', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
       keepsakeKey: 'GoldifyKeepsake',
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     renderOccurrenceWorkbench(
       project,
       'Underworld',
@@ -1297,15 +1300,30 @@ describe('OccurrenceRoomActions', () => {
     const occurrenceId = goldenFOccurrenceId(1, 1);
     const source = createIncomingRewardAddress(goldenFBiome, occurrenceId);
     const acquisition = createAcquisitionRoleAddress(source, 'self');
-    const project = applyProjectCommand(
+    const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
+    const site = artificerAcquisitionSite(occurrence, source);
+    const entry = createAcquisitionEntryAddress(site, artificerReplacementEntryKey(source, 'self'));
+    const converted = applyProjectCommand(
       createFConversionFrontierProject('MetaCurrencyDrop').project,
       catalog,
-      {
-        kind: 'ReplaceAcquisitionDisposition',
-        acquisition,
-        value: { kind: 'artificer' },
-      },
+      { kind: 'ReplaceAcquisitionDisposition', acquisition, value: { kind: 'artificer' } },
     );
+    // The owner places the replacement's pickup after its source, before choosing it.
+    const replacementReference = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: acquisitionSiteStorageKey(site),
+      entryKey: entry.entryKey,
+    };
+    const project = applyProjectCommand(converted, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        occurrenceId,
+        roomActionKey(replacementReference),
+      ),
+      reference: replacementReference,
+      index: 1,
+    });
     const view = renderOccurrenceWorkbench(
       project,
       'Underworld',
@@ -1344,9 +1362,6 @@ describe('OccurrenceRoomActions', () => {
     expect(within(replacementAction).queryByRole('button', { name: /^How to take / })).toBeNull();
     expect(within(replacementAction).queryByRole('button', { name: /^Artificer item/ })).toBeNull();
 
-    const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
-    const site = artificerAcquisitionSite(occurrence, source);
-    const entry = createAcquisitionEntryAddress(site, artificerReplacementEntryKey(source, 'self'));
     const interaction = workspaceProjection(view.application).interactions.rewards.get(
       semanticAddressKey(entry),
     );
@@ -1366,7 +1381,7 @@ describe('OccurrenceRoomActions', () => {
     });
   });
 
-  it('restores an unranked required action once without exposing remove or free insertion UI', async () => {
+  it('restores an unranked required action once without free insertion UI', async () => {
     const occurrenceId = goldenFOccurrenceId(1, 1);
     const authored = createFConversionFrontierProject('MetaCurrencyDrop').project;
     const reference = occurrenceRoomActionOrder(authored, 'Underworld', 'F', occurrenceId)?.[0];
@@ -1429,10 +1444,11 @@ describe('OccurrenceRoomActions', () => {
     await waitFor(() => {
       const restored = actionRow(actions, 'Collect Bones');
       expect(within(restored).queryByText('Position')).toBeNull();
+      // A placed required row can be removed again, leaving its item on the ground.
       const requiredDelete = within(restored).getByRole('button', {
         name: /Remove .* from timeline/,
       });
-      expect((requiredDelete as HTMLButtonElement).disabled).toBe(true);
+      expect((requiredDelete as HTMLButtonElement).disabled).toBe(false);
     });
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
@@ -1506,7 +1522,7 @@ describe('OccurrenceRoomActions', () => {
       phase: createEncounterPhaseAddress(oBiome, occurrence, 'Combat1'),
       encounterKey: 'IcarusCombatO',
     });
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
 
     const view = renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(occurrenceId));
     const projected = workspaceProjection(view.application)
