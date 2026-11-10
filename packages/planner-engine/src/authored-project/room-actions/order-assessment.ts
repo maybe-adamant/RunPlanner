@@ -65,9 +65,8 @@ export interface RoomActionOrderContext {
   readonly terminalActionKey?: string;
   /** Each active action's window ordinal, which no order changes. */
   readonly windowOrdinals: ReadonlyMap<string, number>;
-  /** Active required action keys, and those of each Ship wheel's post-combat window. */
+  /** Active required action keys. */
   readonly requiredKeys: readonly string[];
-  readonly requiredKeysByWheel: ReadonlyMap<string, readonly string[]>;
 }
 
 export function roomActionOrderContext(options: {
@@ -81,14 +80,6 @@ export function roomActionOrderContext(options: {
     ),
   );
   const required = [...active].filter(([, entry]) => entry.participation === 'required');
-  const requiredKeysByWheel = new Map<string, string[]>();
-  for (const [key, entry] of required) {
-    if (entry.window.kind !== 'shipPostCombat') continue;
-    requiredKeysByWheel.set(entry.window.wheelKey, [
-      ...(requiredKeysByWheel.get(entry.window.wheelKey) ?? []),
-      key,
-    ]);
-  }
   return frozen({
     active,
     checkpoints: new Map(
@@ -107,7 +98,6 @@ export function roomActionOrderContext(options: {
       ]),
     ),
     requiredKeys: frozen(required.map(([key]) => key)),
-    requiredKeysByWheel,
   });
 }
 
@@ -154,14 +144,7 @@ function rowAndWindowIssues(
     let index = afterIndexes.get(checkpointKey);
     if (index !== undefined) return index;
     // The exit is usable once every required action is done.
-    index =
-      checkpointKey === 'exitUsable'
-        ? latestIndex(context.requiredKeys)
-        : !checkpointKey.startsWith('nextPhaseUsable:') || !checkpoints.has(checkpointKey)
-          ? -1
-          : latestIndex(
-              context.requiredKeysByWheel.get(checkpointKey.slice('nextPhaseUsable:'.length)) ?? [],
-            );
+    index = checkpointKey === 'exitUsable' ? latestIndex(context.requiredKeys) : -1;
     afterIndexes.set(checkpointKey, index);
     return index;
   };

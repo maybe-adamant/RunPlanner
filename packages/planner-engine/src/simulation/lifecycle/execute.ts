@@ -35,13 +35,6 @@ interface ExecutionState {
   readonly events: readonly RoomLifecycleEvent[];
   readonly reachedActions?: readonly import('./model').ReachedRoomAction[];
   readonly blockedAt?: import('../../authored-project/addresses').RoomActionSemanticAddress;
-  /**
-   * Wheel rerolls ranked before their wheel's use. The wheel's offers spawn as
-   * its phase starts, after the use's rank, so they settle right after.
-   */
-  readonly pendingWheelRerolls?: readonly EventData<
-    Extract<RoomLifecycleEvent, { readonly kind: 'rewardRerolled' }>
-  >[];
 }
 
 interface RoomActionSchedule {
@@ -152,6 +145,13 @@ function deferShipEncounterEndEffects(
   );
 }
 
+/** Whether the wheel's offers already rolled, at Wheels open or its phase start. */
+function wheelOffersRolled(state: ExecutionState, wheelKey: string): boolean {
+  return state.events.some(
+    (event) => event.kind === 'offerPointMaterialized' && event.offerPoint === wheelKey,
+  );
+}
+
 function appendEncounterEndEffects(
   context: OperationContext,
   state: ExecutionState,
@@ -176,23 +176,12 @@ const lifecycleEffectRegistry = Object.freeze({
   },
   recordPhaseOfferPoint: (context, state) => {
     const attachment = requireEncounterPhase(context).rewardAttachment;
-    if (attachment?.kind !== 'rewardWheel') return state;
-    let next = appendEvent(state, context, {
+    if (attachment?.kind !== 'rewardWheel' || wheelOffersRolled(state, attachment.key))
+      return state;
+    return appendEvent(state, context, {
       kind: 'offerPointMaterialized',
       offerPoint: attachment.key,
     });
-    const pending = next.pendingWheelRerolls ?? [];
-    for (const reroll of pending)
-      if (reroll.target.kind === 'wheelOffer' && reroll.target.wheelKey === attachment.key)
-        next = appendEvent(next, context, reroll);
-    const remaining = pending.filter(
-      (reroll) => reroll.target.kind !== 'wheelOffer' || reroll.target.wheelKey !== attachment.key,
-    );
-    const { pendingWheelRerolls: _settled, ...rest } = next;
-    void _settled;
-    return Object.freeze(
-      remaining.length === 0 ? rest : { ...rest, pendingWheelRerolls: Object.freeze(remaining) },
-    );
   },
   recordAppearance: (context, state) =>
     appendEvent(state, context, {
@@ -875,19 +864,13 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
           exitKey: row.reference.exitKey,
         });
-      case 'reroll': {
-        const reroll = Object.freeze({
-          kind: 'rewardRerolled' as const,
+      // A wheel reroll's window opens at its wheel's roll, so its offers precede it.
+      case 'reroll':
+        return appendEvent(state, operationContext, {
+          kind: 'rewardRerolled',
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
           target: row.reference.target,
         });
-        return row.reference.target.kind === 'wheelOffer'
-          ? Object.freeze({
-              ...state,
-              pendingWheelRerolls: Object.freeze([...(state.pendingWheelRerolls ?? []), reroll]),
-            })
-          : appendEvent(state, operationContext, reroll);
-      }
       case 'completeFieldsCage':
       case 'chooseRewardWheel':
         throw new LifecycleExecutionContractError(
@@ -1058,15 +1041,33 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         state,
         false,
       );
-    if (context.profile.key === 'ShipCombatRoom' && phase.rewardAttachment?.kind === 'rewardWheel')
+    if (
+      context.profile.key === 'ShipCombatRoom' &&
+      phase.rewardAttachment?.kind === 'rewardWheel'
+    ) {
+      const wheelKey = phase.rewardAttachment.key;
+      // The next encounter's setup rolls its wheels right after the previous phase's
+      // end effects; pickups ranked before the choice follow the roll.
+      const opened = wheelsOpenFollows(wheelKey)
+        ? lifecycleEffectRegistry.recordPhaseOfferPoint(
+            { ...context, operationIndex, encounterPhase: phase },
+            state,
+          )
+        : state;
       return consumeExact(
-        Object.freeze({ kind: 'chooseRewardWheel', wheelKey: phase.rewardAttachment.key }),
+        Object.freeze({ kind: 'chooseRewardWheel', wheelKey }),
         operationIndex,
-        state,
+        opened,
         false,
       );
+    }
     return state;
   };
+
+  const wheelsOpenFollows = (wheelKey: string): boolean =>
+    lifecycleStructure.points.some(
+      (point) => point.kind === 'wheelsOpen' && point.wheelKey === wheelKey,
+    );
 
   const postCombatRows = (wheelKey: string) =>
     roster.rows.filter(
@@ -1115,6 +1116,17 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     state: ExecutionState,
   ): ExecutionState => {
     let next = state;
+    // A phase a wheel follows leaves its end-effect pickups until that wheel opens.
+    const phaseIndex = lifecycleStructure.phases.findIndex(
+      (candidate) => candidate.phaseKey === phase.slotKey,
+    );
+    const nextPhase = phaseIndex < 0 ? undefined : lifecycleStructure.phases[phaseIndex + 1];
+    if (
+      context.profile.key === 'ShipCombatRoom' &&
+      nextPhase?.rewardWheelKey !== undefined &&
+      wheelsOpenFollows(nextPhase.rewardWheelKey)
+    )
+      return next;
     const deliveries = roster.rows
       .filter(
         (row) =>

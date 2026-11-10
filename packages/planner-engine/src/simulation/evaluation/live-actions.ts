@@ -541,7 +541,9 @@ export function liveActionsForProjectEvaluationAssembly(
   }
   const spawns: PickupSpawn[] = [];
   for (const moment of loot.moments) {
-    let gap = gapOfEntry(spawnMomentEntryIndex(entries, moment.kind, moment.phaseKey));
+    let gap = gapOfEntry(
+      spawnMomentEntryIndex(entries, moment.kind, moment.phaseKey, moment.wheelKey),
+    );
     if (moment.kind === 'afterEncounterReward') {
       // A Ship wheel's end effects spawn once its reward is collected.
       const wheelKey = roster.lifecycleStructure.phases.find(

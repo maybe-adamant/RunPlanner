@@ -35,8 +35,8 @@ function lifecycleBoundaryLabel(boundary: WorkspaceRoomLifecycleBoundary): strin
       return 'Encounter ended';
     case 'bossDefeated':
       return 'Boss defeated';
-    case 'nextPhase':
-      return 'Next phase ready';
+    case 'wheelsOpen':
+      return 'Wheels open';
     case 'cleanup':
       return 'Doors open';
   }
@@ -46,8 +46,6 @@ function lifecycleBoundaryCheckpointKey(boundary: WorkspaceRoomLifecycleBoundary
   switch (boundary.kind) {
     case 'encounterEnd':
       return `combat:${boundary.phaseKey}`;
-    case 'nextPhase':
-      return `nextPhaseUsable:${boundary.wheelKey}`;
     default:
       return boundary.key;
   }
@@ -378,7 +376,7 @@ function projectRoomLifecycleTimeline(
       // encounter's end announces what it spawns; a Boss defeat hosts its own content.
       case 'encounterEnd':
       case 'bossDefeated':
-      case 'nextPhase':
+      case 'wheelsOpen':
       case 'cleanup':
         return undefined;
     }

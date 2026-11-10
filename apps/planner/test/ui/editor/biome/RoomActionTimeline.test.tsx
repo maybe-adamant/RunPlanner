@@ -1518,9 +1518,9 @@ describe('OccurrenceRoomActions', () => {
     const reasons = projected.room.roomActions!.proposals.flatMap(
       (proposal) => proposal.explanations,
     );
-    expect(reasons).toContain(
-      'Choose Combat 2 wheel must come after Combat 1 is ready to advance.',
-    );
+    // Combat 2's wheel waits on Combat 1's required actions, never on a checkpoint row.
+    expect(reasons).toContain('Talk to Icarus must come first.');
+    expect(reasons.some((reason) => reason.includes('ready to advance'))).toBe(false);
     expect(reasons).toContain('Choose Combat 1 wheel before collecting its reward.');
     expect(reasons.some((reason) => reason.includes('wheel1 next phase usable'))).toBe(false);
     const timingProposals = projected.room.roomActions!.proposals.filter((proposal) =>
@@ -1555,7 +1555,7 @@ describe('OccurrenceRoomActions', () => {
 
     const icarus = rowFor('Talk to Icarus');
     const moveIcarus = within(icarus).getByRole('button', { name: 'Reorder Talk to Icarus' });
-    // Combat 2's wheel offer is unset, so the walk stops at Combat 1's Next phase ready and
+    // Combat 2's wheel offer is unset, so the walk stops at Combat 1's Wheels open and
     // the Combat 2 wheel choice it blocks stands at that stop as its repair.
     expect(within(combatOne).getByText('Choose Combat 2 wheel')).toBeTruthy();
     const icarusRow = projected.room.roomActions!.rows.find(

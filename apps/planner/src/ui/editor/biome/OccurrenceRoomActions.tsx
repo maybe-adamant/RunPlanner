@@ -684,25 +684,15 @@ export function RoomActionsWorkbench({
       {...(entry.unlocks ? { unlocks: true } : {})}
     />
   );
-  // The wheel opens once the phase's own actions are done: before its first offer reroll,
-  // or else just before the pick that starts the next phase.
-  const phaseTimelineWithWheel = (
-    timeline: readonly WorkspaceRoomLifecycleTimelineEntry[],
-  ): readonly (WorkspaceRoomLifecycleTimelineEntry | 'wheelOpen')[] => {
-    if (phaseWheel === undefined) return timeline;
-    const opensBefore = timeline.findIndex((entry) => {
-      if (entry.kind === 'boundary')
-        return entry.boundary.kind === 'nextPhase' && entry.boundary.wheelKey === phaseWheel.key;
-      if (entry.kind !== 'action') return false;
-      const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
-      return (
-        row?.reference.kind === 'reroll' &&
-        row.reference.target.kind === 'wheelOffer' &&
-        row.reference.target.wheelKey === phaseWheel.key
-      );
-    });
-    if (opensBefore < 0) return [...timeline, 'wheelOpen'];
-    return [...timeline.slice(0, opensBefore), 'wheelOpen', ...timeline.slice(opensBefore)];
+  // The wheel's offers show where they roll, at Wheels open. It is taken at its choice, or
+  // beside its offers while the choice has no place of its own.
+  const wheelChoiceAnchored = (timeline: readonly WorkspaceRoomLifecycleTimelineEntry[]) =>
+    phaseWheel !== undefined &&
+    timeline.some((entry) => isWheelChoiceAnchor(entry, phaseWheel.key));
+  const isWheelChoiceAnchor = (entry: WorkspaceRoomLifecycleTimelineEntry, wheelKey: string) => {
+    if (entry.kind !== 'action' || entry.presentation !== 'rewardWheelAnchor') return false;
+    const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
+    return row?.reference.kind === 'chooseRewardWheel' && row.reference.wheelKey === wheelKey;
   };
   const renderRow = (
     row: WorkspaceRoomActions['rows'][number],
@@ -1196,32 +1186,33 @@ export function RoomActionsWorkbench({
               const timelineActionRanks = new Set(
                 phase.timeline.flatMap((entry) => (entry.kind === 'action' ? [entry.rank] : [])),
               );
+              const choiceAnchored = wheelChoiceAnchored(phase.timeline);
+              const selectWheel =
+                phaseWheel === undefined
+                  ? []
+                  : [
+                      <SelectWheelRow
+                        interactions={interactions}
+                        key={`select:${phaseWheel.key}`}
+                        wheel={phaseWheel}
+                      />,
+                    ];
               const renderPhaseTimelineEntry = (
-                entry: WorkspaceRoomLifecycleTimelineEntry | 'wheelOpen',
+                entry: WorkspaceRoomLifecycleTimelineEntry,
               ): ReactNode[] => {
-                if (entry === 'wheelOpen')
-                  return wheelDoors === undefined
-                    ? []
-                    : [
-                        <DoorsOpenBanner
-                          doors={wheelDoors}
-                          key="wheel-open"
-                          label="Next phase ready"
-                        />,
-                      ];
-                // The wheel is taken as the next phase starts.
                 if (
                   entry.kind === 'boundary' &&
-                  entry.boundary.kind === 'nextPhase' &&
-                  phaseWheel?.key === entry.boundary.wheelKey
+                  entry.boundary.kind === 'wheelsOpen' &&
+                  phaseWheel?.key === entry.boundary.wheelKey &&
+                  wheelDoors !== undefined
                 )
                   return [
-                    <SelectWheelRow
-                      interactions={interactions}
-                      key={entry.boundary.key}
-                      wheel={phaseWheel}
-                    />,
+                    <DoorsOpenBanner doors={wheelDoors} key="wheel-open" label={entry.label} />,
+                    ...(choiceAnchored ? [] : selectWheel),
                   ];
+                // The wheel is taken as the next phase starts.
+                if (phaseWheel !== undefined && isWheelChoiceAnchor(entry, phaseWheel.key))
+                  return selectWheel;
                 if (entry.kind === 'boundary') return [renderBoundary(entry)];
                 if (entry.kind === 'spawned') return [renderSpawned(entry)];
                 if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);
@@ -1254,7 +1245,7 @@ export function RoomActionsWorkbench({
                       phase.timeline.length === 0) ? null : (
                       <ol aria-label={`${phase.label} timeline`} className="room-action-list">
                         {checkpointRows(0, phase.checkpoints)}
-                        {phaseTimelineWithWheel(phase.timeline).flatMap(renderPhaseTimelineEntry)}
+                        {phase.timeline.flatMap(renderPhaseTimelineEntry)}
                         {trailingCheckpoints.map((checkpoint) => (
                           <TimelineRow
                             key={`checkpoint:${checkpoint.key}`}

@@ -34,7 +34,13 @@ import {
   echoGoldIPrebossShopId,
 } from '@run-planner/test-fixtures/underworld';
 import { purchaseTestHermesShrineOffer } from '@run-planner/test-fixtures/shared';
-import { oBiome } from '@run-planner/test-fixtures/surface';
+import {
+  oBiome,
+  oOccurrenceIds,
+  placeDueHermesShrineDeliveries,
+  surfaceShrineDeliveriesProject,
+  surfaceShrineDeliverySources,
+} from '@run-planner/test-fixtures/surface';
 import {
   candidateBiome,
   candidateBiomeRooms,
@@ -688,5 +694,84 @@ describe('live actions at a gap', () => {
     expect(delivery.command).toMatchObject({ index: 2 });
     const placed = roomOrder(applyProjectCommand(project, catalog, delivery.command), room);
     expect(roomActionKey(placed[2]!)).toBe(roomActionKey(delivery.reference));
+  });
+
+  it('lets a Ship delivery left unplaced lie from Wheels open until the next wheel choice', () => {
+    // A Shrine item bought in O matures at combat02's Intro end; wheel 1 rolls before it is due.
+    const { oShrine: shrine } = surfaceShrineDeliverySources;
+    const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
+    let placed = applyProjectCommand(surfaceShrineDeliveriesProject(), catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: shrine,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'ShopHermesUpgrade' },
+    });
+    placed = placeDueHermesShrineDeliveries(
+      purchaseTestHermesShrineOffer(placed, catalog, shrine, 'initial:secondLeft', {
+        delay: 4,
+        rushed: false,
+      }),
+    );
+    const order = roomOrder(placed, ship);
+    const deliveryIndex = order.findIndex(
+      (reference) =>
+        reference.kind === 'interactAcquisitionEntry' &&
+        reference.siteKey === 'hermesShrineDelivery',
+    );
+    const chooseIndex = order.findIndex(
+      (reference) => reference.kind === 'chooseRewardWheel' && reference.wheelKey === 'wheel1',
+    );
+    expect(deliveryIndex).toBeGreaterThanOrEqual(0);
+    expect(chooseIndex).toBe(deliveryIndex + 1);
+    const deliveryKey = roomActionKey(order[deliveryIndex]!);
+    const project = withRoomOrder(placed, ship, order.toSpliced(deliveryIndex, 1));
+    const assembly = simulateProjectAssembly(catalog, project);
+    const biome = assembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O')!;
+    const events = ('history' in biome ? biome.history.events : []).flatMap((event) =>
+      'origin' in event && semanticAddressKey(event.origin) === semanticAddressKey(ship)
+        ? [
+            event.kind === 'offerPointMaterialized'
+              ? `open ${event.offerPoint}`
+              : event.kind === 'encounterEndEffectsApplied'
+                ? `end ${event.phaseKey}`
+                : event.kind === 'encounterStarted'
+                  ? `start ${event.phaseKey}`
+                  : event.kind === 'acquisitionPointReached'
+                    ? `reach ${event.point}`
+                    : event.kind,
+          ]
+        : [],
+    );
+    // The walk passes the Intro's end, rolls wheel 1 and stops before its choice.
+    expect(events.slice(-3)).toEqual(['encounterCompleted', 'end Intro', 'open wheel1']);
+    expect([...placementFindings(assembly, ship)]).toEqual([
+      expect.stringMatching(/^hermesShrineDeliveryPlacementRequired /),
+    ]);
+    const room = canonicalRoom(assembly, ship)!;
+    const stop = biome.coverage.kind === 'prefix' ? biome.coverage.roomStop : undefined;
+    expect(stop).toMatchObject({ kind: 'timeline', at: 'before' });
+    const entries = room.roomLifecycleTimeline.entries;
+    const stopEntry = entries[stop!.entryIndex]!;
+    const previous = entries[stop!.entryIndex - 1]!;
+    expect(previous.kind === 'boundary' && previous.boundary.key).toBe('wheelsOpen:wheel1');
+    expect(stopEntry.kind === 'action' && stopEntry.action.reference.kind).toBe(
+      'chooseRewardWheel',
+    );
+
+    // The pickup spawns at Wheels open and is due at the choice, its only gap.
+    const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, ship)!;
+    expect(live.frontier).toBe(0);
+    const pickup = live.gaps[0]!.items.find(
+      (item) => item.kind === 'pickup' && roomActionKey(item.reference) === deliveryKey,
+    );
+    expect(pickup).toMatchObject({
+      spawn: { gap: 0, moment: 'wheelsOpen:Intro' },
+      deadline: 0,
+    });
+    const place = pickup!.actions[0]!;
+    if (place.kind !== 'place') throw new Error('the delivery is not placeable');
+    expect(place.command).toMatchObject({ kind: 'PlaceHermesShrineDelivery', index: 0 });
+    const repaired = applyProjectCommand(project, catalog, place.command);
+    expect(roomOrder(repaired, ship).map(roomActionKey)).toEqual(order.map(roomActionKey));
   });
 });

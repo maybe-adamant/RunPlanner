@@ -253,17 +253,19 @@ describe('spawned loot', () => {
     expect(after.moments[0]!.items.at(-1)?.needsChoice).toBeUndefined();
   });
 
-  it('spawns an O phase’s deliveries after its wheel reward, and an Intro’s at its end', () => {
+  it('spawns an O final phase’s deliveries after its wheel reward, and an earlier phase’s as the next wheel opens', () => {
     const project = surfaceShrineDeliveriesProject();
     expect(moments(loot(project, 'O', oOccurrenceIds.combat04).spawned)).toEqual([
       ['encounterEnd:Combat1', ['rewardWheel required #2']],
       ['afterEncounterReward:Combat1', ['hermesShrineDelivery required #3']],
     ]);
-    expect(moments(loot(project, 'O', oOccurrenceIds.combat01).spawned)).toEqual([
-      ['encounterEnd:Intro', ['hermesShrineDelivery required #1']],
+    const combat01 = loot(project, 'O', oOccurrenceIds.combat01).spawned;
+    expect(moments(combat01)).toEqual([
+      ['wheelsOpen:Intro', ['hermesShrineDelivery required #1']],
       ['encounterEnd:Combat1', ['rewardWheel required #3']],
       ['afterEncounterReward:Combat1', ['hermesShrineDelivery required #4']],
     ]);
+    expect(combat01.moments[0]).toMatchObject({ kind: 'wheelsOpen', wheelKey: 'wheel1' });
   });
 
   it('flushes the fourth-biome delivery at Preboss entry', () => {

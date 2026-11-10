@@ -394,7 +394,7 @@ past it: it claims no entry the walk did not pass.
 | A Timeline row                                                                                                                   | The first row of the blocking product the walk reached by the contact                                      | At      |
 | A contact with its own entry (a Fig Leaf at its phase start; Aetos or the Gorgon condition at its fight's **Encounter outcome**) | That entry                                                                                                 | At      |
 | A door's generation or offer, or the store the doors draw from                                                                   | **Doors open**                                                                                             | At      |
-| A boundary's own contact: Boss defeated's Judgment, an encounter end's due outcome, a wheel's offers at **Next phase ready**     | That boundary                                                                                              | At      |
+| A boundary's own contact: Boss defeated's Judgment, an encounter end's due outcome, a wheel's offers at **Wheels open**          | That boundary                                                                                              | At      |
 | A required item left unplaced, at its deadline                                                                                   | The first entry the walk did not reach; a deferred Ship phase's end is reached at its completion           | Before  |
 | Any other Timeline contact                                                                                                       | The entry after the last boundary the walk passed before the contact                                       | Before  |
 | Exit work, after the room committed or as a restored room departs again                                                          | Past every entry                                                                                           | Before  |
@@ -409,7 +409,7 @@ and a Shrine purchase its initial item. A Travel Deal restock is judged at the
 earlier purchase that restocks it and a Pool list as the fountain opens it, so
 neither has a row. A row is claimed only when the walk reached it at or before
 the blocking contact: never a later row of the same stretch of the Timeline,
-nor a wheel's choice row while its offers block at **Next phase ready**, which
+nor a wheel's choice row while its offers block at **Wheels open**, which
 settles with them. A deferred Ship wheel's post-combat rows run before its
 encounter's end effects, so the walk reaches them while that encounter end is
 not yet passed. A contact inside a reached row's own settlement, such as a

@@ -47,7 +47,7 @@ import { roomMapPlacements } from './room-map/roomMapPlacements';
 
 /**
  * The map's stage for a Timeline row: before Doors open (or a Ship phase's
- * Next phase ready) the doors are closed, from it they are open, from the
+ * Wheels open) the doors are closed, from it they are open, from the
  * room's last row (or Select wheel) it is left. Rows outside the Timeline
  * leave the map as it is.
  */

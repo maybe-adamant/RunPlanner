@@ -20,6 +20,7 @@ export function withRequiredScopes(
     if (
       row.reference.kind === 'completeFieldsCage' ||
       window.kind === 'shipPreCombat' ||
+      window.kind === 'shipWheelsOpen' ||
       window.kind === 'shipPostCombat' ||
       (window.kind !== 'fields' &&
         window.kind !== 'postOutgoing' &&
@@ -30,10 +31,8 @@ export function withRequiredScopes(
           dependency.kind === 'beforeCheckpoint' &&
           structure.points.some(
             (point) =>
-              (point.kind === 'encounterEnd' &&
-                dependency.checkpointKey === `combat:${point.phaseKey}`) ||
-              (point.kind === 'nextPhase' &&
-                dependency.checkpointKey === `nextPhaseUsable:${point.previousWheelKey}`),
+              point.kind === 'encounterEnd' &&
+              dependency.checkpointKey === `combat:${point.phaseKey}`,
           ),
       )
     )
