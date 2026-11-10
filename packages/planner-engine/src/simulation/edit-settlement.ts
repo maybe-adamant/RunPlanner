@@ -636,10 +636,13 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
   const removedElsewhere: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   // Doors an edit left on no exit of their room, by room.
   const removedDoors: { owner: OccurrenceAddress; doors: readonly RemovedRoomDoor[] }[] = [];
+  // A door settlement that failed stops only that pass; the edit's other passes still settle.
+  let exitCapacityFault: SettlementFault | undefined;
   const settled = (
     assembly: ProjectEvaluationAssembly,
-    fault?: SettlementFault,
+    passFault?: SettlementFault,
   ): ProjectEditSettlement => {
+    const fault = exitCapacityFault ?? passFault;
     const placed = new Set(
       occurrences(assembly.project).flatMap(({ occurrence }) =>
         occurrence.roomActions.order.map(roomActionKey),
@@ -780,7 +783,10 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
       const decisionKey = semanticAddressKey(drift.decision);
       const fault = Object.freeze({ key: `exitCapacity:${decisionKey}`, owner: drift.decision });
       // A batch that drifts again after settling is an engine defect, never replayed.
-      if (settledDecisions.has(decisionKey)) return settled(evaluate(project), fault);
+      if (settledDecisions.has(decisionKey)) {
+        exitCapacityFault = fault;
+        break;
+      }
       settledDecisions.add(decisionKey);
       const biome = createBiomeAddress(drift.decision.routeKey, drift.decision.biomeKey);
       const doors = drift.undeclared.map(({ exitKey, occurrenceId }) =>
@@ -794,8 +800,9 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
         project = settleExitCapacity(project, catalog, drift.decision, command);
       } catch (error) {
         // The topology and its reconciliation disagree: an engine defect.
-        if (error instanceof ProjectCommandContractError) return settled(evaluate(project), fault);
-        throw error;
+        if (!(error instanceof ProjectCommandContractError)) throw error;
+        exitCapacityFault = fault;
+        break;
       }
       if (doors.length > 0 && drift.decision.source.kind === 'occurrence')
         removedDoors.push({
