@@ -3577,9 +3577,10 @@ span.hub-board-status-line {
 }
 
 /*
- * Stacked, the map takes the room panel's full width below the controls: where the
- * controls would fall below a Timeline row, and on a window taller than wide, where the
- * height below the controls gives the map more room than a column beside them.
+ * Stacked, the map takes the room panel's full width above the controls, so a growing
+ * Timeline never pushes it down, and scrolls away with them: where the controls would fall
+ * below a Timeline row, and on a window taller than wide, where the room panel's height
+ * gives the map more room than a column beside them.
  */
 @container room-map-workbench (max-width: 56rem) {
   .room-map-columns {
@@ -3588,6 +3589,7 @@ span.hub-board-status-line {
 
   .room-map-column {
     position: static;
+    order: -1;
   }
 
   .room-map-columns > .room-map-column > .room-map-viewport > .room-map-canvas {
@@ -3602,6 +3604,7 @@ span.hub-board-status-line {
 
   .room-map-column {
     position: static;
+    order: -1;
   }
 
   .room-map-columns > .room-map-column > .room-map-viewport > .room-map-canvas {
