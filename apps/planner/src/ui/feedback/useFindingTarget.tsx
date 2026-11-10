@@ -250,6 +250,12 @@ export function useFindingScreens(owner: SemanticAddress): {
   return selected === undefined ? { marked } : { marked, selected };
 }
 
+/**
+ * Dispatched on a navigation landing inside an inert container; a collapsed container that
+ * listens opens synchronously so the landing can take focus.
+ */
+export const findingRevealEvent = 'findingreveal';
+
 type FocusTarget = (anchor: HTMLElement) => HTMLElement | null;
 
 const nativeControls = 'button, input, select, textarea';
@@ -356,8 +362,20 @@ function useTargetBinder() {
             .map(([markKey]) => markKey),
         );
         const landing = navigationFocus(focusTarget?.(element) ?? element, markKeys);
-        landing.focus({ preventScroll: true, focusVisible: true });
-        element.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        const land = () => {
+          landing.focus({ preventScroll: true, focusVisible: true });
+          element.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        };
+        if (landing.closest('[inert]') === null) {
+          land();
+          return;
+        }
+        // A collapsed container mounted in this same commit listens only once its effects run.
+        setTimeout(() => {
+          if (!landing.isConnected) return;
+          landing.dispatchEvent(new Event(findingRevealEvent, { bubbles: true }));
+          land();
+        });
       },
     };
   };

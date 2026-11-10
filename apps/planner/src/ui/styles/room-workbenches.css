@@ -3653,8 +3653,8 @@ span.hub-board-status-line {
   cursor: default;
 }
 
-/* A collapsed waiting list keeps its controls focusable, so navigation can open it. */
-.room-action-not-reached[data-collapsed] > .room-action-list {
+/* A collapsed waiting list is inert until opened. */
+.room-action-not-reached > .room-action-list[inert] {
   block-size: 0;
   overflow: hidden;
 }

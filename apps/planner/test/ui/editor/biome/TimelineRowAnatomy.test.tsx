@@ -3,11 +3,14 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBiomeAddress,
   createEncounterPhaseAddress,
   createOccurrenceId,
+  createRoomActionAddress,
   roomActionKey,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { findingSelected } from '@planner/state/editorSessionSlice';
 import { authoredProjectUndoRequested } from '@planner/state/projectWorkspaceSlice';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceLauncherPresentation } from '@planner/projections/structured-workspace';
@@ -187,6 +190,41 @@ describe('Rows past the room stop', () => {
     expect(within(row!).getByRole('button', { name: /Remove .* from timeline/ })).toBeTruthy();
     fireEvent.click(toggle);
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('keep collapsed rows out of reach until opened or navigated to', async () => {
+    const entry = galleryCases.find(
+      (candidate) => candidate.id === 'progressive-stop-encounter-end',
+    )!;
+    const view = renderOccurrenceWorkbench(
+      buildGalleryProject(entry),
+      'Surface',
+      'O',
+      occurrenceById(createOccurrenceId('surface-o-devotion')),
+    );
+    openRoomTab('Room Timeline');
+    const group = screen.getByRole('region', { name: 'Not reached yet' });
+    const toggle = within(group).getByRole('button', { name: /Not reached yet/ });
+    const list = group.querySelector<HTMLElement>('.room-action-list')!;
+    expect(list.hasAttribute('inert')).toBe(true);
+    expect(list.getAttribute('aria-label')).toBeNull();
+    const row = list.querySelector<HTMLElement>('li[data-semantic-owner]')!;
+    const actionKey = (JSON.parse(row.dataset.semanticOwner!) as string[])[4]!;
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({
+          key: 'navigation',
+          origin: createRoomActionAddress(
+            createBiomeAddress('Surface', 'O'),
+            createOccurrenceId('surface-o-devotion'),
+            actionKey,
+          ),
+        }),
+      ),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(row));
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(list.hasAttribute('inert')).toBe(false);
   });
 });
 

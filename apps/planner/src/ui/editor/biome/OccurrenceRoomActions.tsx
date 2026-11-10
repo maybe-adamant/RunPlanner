@@ -1,7 +1,7 @@
 import { FeatureRollEntry, FeatureRollSlots } from './commerce/FeatureRollInteract';
 import { StopNotice } from './StopNotice';
 import { ArtworkChip } from '../rewards/TimelineChip';
-import { Fragment, useId, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import {
   requireWorkspaceInteraction,
@@ -16,6 +16,7 @@ import {
   type WorkspaceShipPhasePresentation,
 } from '@planner/projections/structured-workspace';
 import {
+  findingRevealEvent,
   useFindingAnchor,
   useFindingMark,
   type FindingMarkProps,
@@ -309,8 +310,7 @@ function WorkbenchAddArea({
 
 /**
  * Authored rows past the room's stop, dimmed in Timeline order until the walk reaches them;
- * collapsed until opened. A collapsed list stays focusable, so navigation to a control in it
- * opens it.
+ * collapsed and inert until opened. Navigation to a control in it opens it.
  */
 function NotReachedGroup({
   children,
@@ -321,15 +321,20 @@ function NotReachedGroup({
 }) {
   const [expanded, setExpanded] = useState(false);
   const listId = useId();
+  const listRef = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const list = listRef.current;
+    if (list === null) return undefined;
+    // Opens at once, so the landing control can take focus in the same navigation.
+    const reveal = () => {
+      list.removeAttribute('inert');
+      setExpanded(true);
+    };
+    list.addEventListener(findingRevealEvent, reveal);
+    return () => list.removeEventListener(findingRevealEvent, reveal);
+  }, []);
   return (
-    <section
-      aria-label="Not reached yet"
-      className="room-action-not-reached"
-      data-collapsed={expanded ? undefined : ''}
-      onFocus={(event) => {
-        if (!expanded && event.target.closest('.room-action-list') !== null) setExpanded(true);
-      }}
-    >
+    <section aria-label="Not reached yet" className="room-action-not-reached">
       <div className="local-reward-heading">
         <h5>
           <button
@@ -347,7 +352,7 @@ function NotReachedGroup({
           </button>
         </h5>
       </div>
-      <ol aria-label="Not reached yet" className="room-action-list" id={listId}>
+      <ol className="room-action-list" id={listId} inert={!expanded} ref={listRef}>
         {children}
       </ol>
     </section>
