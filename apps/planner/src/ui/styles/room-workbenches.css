@@ -3574,3 +3574,34 @@ span.hub-board-status-line {
     position: static;
   }
 }
+
+/* The Not reached yet heading opens its waiting rows. */
+.room-action-not-reached-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.room-action-not-reached-count {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* A Timeline that waits on an earlier repair says so in one plain line. */
+.room-timeline-waits-on {
+  margin: 0;
+  padding: 8px var(--timeline-title-x, 8px);
+  color: var(--muted);
+}
+
+/* A collapsed waiting list keeps its controls focusable, so navigation can open it. */
+.room-action-not-reached[data-collapsed] > .room-action-list {
+  block-size: 0;
+  overflow: hidden;
+}

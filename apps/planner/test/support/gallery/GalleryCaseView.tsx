@@ -163,6 +163,23 @@ function OpenedCase({
       )
       ?.click();
   }, [entry, view]);
+  // A case showing the waiting rows opens them as a user would.
+  useEffect(() => {
+    if (view !== 'timeline' || entry.notReachedExpanded !== true) return;
+    const timer = window.setInterval(() => {
+      const toggle = frame.current?.querySelector<HTMLButtonElement>(
+        '.room-action-not-reached-toggle[aria-expanded="false"]',
+      );
+      if (toggle === null || toggle === undefined) return;
+      window.clearInterval(timer);
+      toggle.click();
+    }, 50);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [entry, view]);
   // A case showing an Optional actions list opens its picker once it is enabled, as a user would.
   const pickerOpened = useRef(false);
   useEffect(() => {

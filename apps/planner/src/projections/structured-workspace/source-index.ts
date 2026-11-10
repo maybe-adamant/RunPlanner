@@ -202,6 +202,10 @@ export interface WorkspaceBiomeSource {
   readonly spawnedLoot: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomSpawnedLoot | undefined;
+  /** Each phase's Encounter outcome that hosts a choice; undefined while unentered. */
+  readonly encounterOutcomes: (
+    occurrence: OccurrenceAddress,
+  ) => readonly import('@run-planner/engine/simulation').EncounterOutcome[] | undefined;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
@@ -798,6 +802,7 @@ function createWorkspaceBiomeSource(
   roomAnchorSlots: WorkspaceBiomeSource['roomAnchorSlots'],
   roomLayout: WorkspaceBiomeSource['roomLayout'],
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'],
+  encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -1087,6 +1092,7 @@ function createWorkspaceBiomeSource(
     roomAnchorSlots,
     roomLayout,
     spawnedLoot,
+    encounterOutcomes,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -1184,6 +1190,7 @@ export function createWorkspaceProjectSourceIndex(
   roomAnchorSlots: WorkspaceBiomeSource['roomAnchorSlots'] = () => undefined,
   roomLayout: WorkspaceBiomeSource['roomLayout'] = () => undefined,
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'] = () => undefined,
+  encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1268,6 +1275,7 @@ export function createWorkspaceProjectSourceIndex(
             roomAnchorSlots,
             roomLayout,
             spawnedLoot,
+            encounterOutcomes,
           ),
         ),
       ),

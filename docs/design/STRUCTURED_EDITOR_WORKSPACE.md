@@ -99,7 +99,8 @@ engine's plan-end availability (a hint only when the room or something before
 it is not settled); in the end room's row, picking a way out again clears the
 end ([Doors on the Timeline](#doors-on-the-timeline)). A saved end shows in its
 room even while the plan up to it is not settled enough for the engine to end
-there, so it can always be continued from its room. The room
+there, so it can always be continued from its room: its Leave row stays even
+where the room's walk stops before its doors. The room
 header and the rail say where the plan ends, and the Route panel shows the end
 with its room and removal. The route-owned unreached-end finding repairs at
 that Route row. The end room's doors lie inside the plan, the rooms behind
@@ -301,7 +302,8 @@ selects Overview and focuses/highlights the launcher without automatically
 opening the dialog.
 
 On the Room Timeline each encounter phase opens with its Encounter banner and
-closes with its Encounter ended banner; a Fields room numbers both by the
+closes with its Encounter ended banner, with its Encounter outcome between
+them where the fight's ending hosts a choice; a Fields room numbers start and end by the
 cage's combat cycle and tags the start with its cage. A definitional encounter's start banner
 names its settled identity: the phase's role, when the room has more than one
 encounter start banner and no Fields cage tag already names the phase, then the
@@ -311,23 +313,24 @@ Room entered banner plain; a selected Nemesis family is read-only text on its
 movable interaction row. The banner identity only navigates to its Overview
 owner.
 
-A banner hosts the events of its moment. The start banner carries what the
-game settles as the encounter starts: the Fig Leaf skip, the Aetos appearance
-and its wave, and the Gorgon Amulet's Death Defiance condition, whose Athena
-appears in that fight. The end banner carries what the finished encounter
-settled: its fight gold, a Nemesis kill-race outcome with the gold its bet
-won or lost, and an Anomaly's capture-point outcome. A Boss's defeat directly
-followed by its encounter's end reads as that one end banner, its
-defeat-owned fixed effects (Judgment, Crystal Figurine) first. The fight gold is the
-engine's summary for the phase, shown as its estimate and spread, or plainly
-when exact, with its breakdown by source on hover; a challenge switch's or
-locked door's fight shows its summary on its press row the same way. A
-phase with an end event but no end boundary keeps it on its start banner. An
-encounter's end hosts at most one outcome: a Nemesis kill race and an Anomaly
-never share a phase. A banner is one line: its title, then its controls at the
-line's end. The start banner keeps one fixed slot per event, in the order Aetos,
-Death Defiance condition, Fig Leaf skip, so each event lines up across banners
-and an absent event leaves its slot empty. The Fig Leaf skip and the Death
+A banner hosts the events of its moment, as the
+[Encounter outcome](ROOM_LIFECYCLE_MODEL.md#encounter-outcome) divides them.
+The start banner carries only the Fig Leaf skip. The **Encounter outcome**
+carries how the fight ended: the Aetos appearance and its wave, the Gorgon
+Amulet's Death Defiance condition (whose Athena appears in that fight), a
+Nemesis kill race, a Nemesis event's result and an Anomaly's capture point. It
+appears only where the engine lists a choice for it, an eligible one or an
+authored value; a stop at the outcome keeps it with its controls to repair
+them. In a Boss room **Boss defeated** is the outcome, its own event between
+the start and end hosting the fixed effects Judgment and Crystal Figurine. The
+end banner hosts no choice: it carries the fight gold and announces what
+spawns. The fight gold is the engine's summary for the phase, a Nemesis bet's
+win or loss included, shown as its estimate and spread, or plainly when
+exact, with its breakdown by source on hover; a challenge switch's or locked
+door's fight shows its summary on its press row the same way. A banner is one
+line: its title, then its controls at the line's end. The outcome keeps one
+fixed slot per event, in the order Aetos, Death Defiance condition, so each
+event lines up across banners and an absent event leaves its slot empty. The Fig Leaf skip and the Death
 Defiance condition are icon toggles named by their meaning, which their hint
 also tells; the Aetos appearance is one compact choice of no appearance or the
 wave it joins. The title gives way first; only a line that still cannot fit
@@ -425,10 +428,20 @@ the rows named by the engine's `roomTimeline.blockingRowKeys` as the blocking
 product; it never infers that row set. Those rows keep their row-level edits
 (order, removal, purchase participation) and findings; an inner picker is
 editable only where the engine published a reached capability, so rows past
-the failing contact show it read-only with the unreached hint. Rows after the
-blocking product, the room's doors and later rooms show their authored values
-the same way. A block at the Overview leaves the Overview as the repair surface
-and the Timeline read-only.
+the failing contact show it read-only with the unreached hint.
+
+The Timeline ends where the engine's room stop says the walk stopped: entries
+before the stop, and the stop's own entry when the walk reached it, so its
+controls repair it there. Authored rows past the stop never vanish: they wait,
+in order and without their events, in one dimmed **Not reached yet** group
+after the Timeline, with the authored values of events not reached yet (a Fig
+Leaf skip, an outcome's choices). The group is collapsed until opened, an
+open state of the session that never enters history; its rows cannot be
+reordered until the walk reaches them, and can still be deleted. A room
+stopped in its Overview shows, in place of its Timeline, one line saying to
+fix the Overview first; a Ship phase the walk has not reached says which
+earlier phase to fix first. Later rooms show their authored values read-only
+with the unreached hint.
 
 Every Room Timeline row has one anatomy: its reorder handle, the icon of the
 object or NPC it uses (badged with the inventory slot it buys from, and marked
@@ -521,7 +534,10 @@ the World Shop.
 ### Doors on the Timeline
 
 A room's doors are rows of its Timeline, in the tab whose phase opens them (a
-Ship's last phase). The engine-placed **Doors open** banner holds the doors'
+Ship's last phase). They appear once the walk reaches the doors opening: a
+room whose walk stops before it, or at a row after it (a Postboss purchase
+after the fountain), shows neither its doors on **Doors open** nor its Leave
+row, while a stop at the doors opening itself keeps both to repair them there. The engine-placed **Doors open** banner holds the doors'
 compact state at its right end: one chip per door, each its room's icon then
 its rewards' icons as first drawn, the picked door outlined and a missing door
 dashed; a fixed exit (a boss door, the next biome) is one chip of its

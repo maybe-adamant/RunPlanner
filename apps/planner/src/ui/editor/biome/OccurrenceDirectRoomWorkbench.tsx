@@ -20,7 +20,7 @@ import { roomFeatureSections } from './room-features/roomFeatureSections';
 import { RoomOverviewSections } from './RoomOverviewSections';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
 import {
-  EncounterEndControls,
+  EncounterOutcomeControls,
   EncounterPhaseControl,
   EncounterStartControls,
 } from './locals/EncounterPhaseControl';
@@ -192,10 +192,12 @@ export function DirectRoomWorkbench({
       <EncounterStartControls interactions={interactions} phase={controls.phase} />
     ) : (
       <>
-        {controls.phase === undefined ? null : (
-          <EncounterEndControls interactions={interactions} phase={controls.phase} />
-        )}
-        {controls.anomalyCleared === true ? <AnomalyClearedControl room={room} /> : null}
+        <EncounterOutcomeControls
+          choices={new Set(controls.choices)}
+          interactions={interactions}
+          phase={controls.phase}
+        />
+        {controls.choices.includes('anomalyCleared') ? <AnomalyClearedControl room={room} /> : null}
       </>
     );
   // Every phase's identity and customization are fixed on entry: the room Overview.

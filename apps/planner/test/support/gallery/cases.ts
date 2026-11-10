@@ -73,7 +73,10 @@ import {
   createGoldenFGHIProject,
   loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
-import { surfaceShrineDeliveriesProject } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOPProject,
+  surfaceShrineDeliveriesProject,
+} from '@run-planner/test-fixtures/surface';
 import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
 import { createReachableNaturalChaosProject } from '../structured-workspace/interaction-binding.test-support';
 import {
@@ -190,6 +193,19 @@ const nemesisPhase = createEncounterPhaseAddress(
   { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-f-b5-e1') },
   'Encounter',
 );
+
+// The first P combat room, where Aetos and the Gorgon condition share an outcome.
+const pCombat03Phase = createEncounterPhaseAddress(
+  createBiomeAddress('Surface', 'P'),
+  { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-p-1-1-p_combat03') },
+  'Combat',
+);
+
+const athenaAmulet: GalleryStep = {
+  kind: 'ReplaceStartingKeepsake',
+  selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+  keepsakeKey: 'AthenaEncounterKeepsake',
+};
 
 /** One case per Nemesis event family, each with its setup row and end outcome. */
 function nemesisFamilyCases(): readonly GalleryCase[] {
@@ -639,6 +655,61 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['ship phase', 'doors'],
     project: loadSurfaceEncounterShowcaseCheckpoint,
     target: room('O', 'surface-o-combat04'),
+  },
+  {
+    id: 'ship-phase-waiting',
+    roomTab: 'shipCombat1Actions',
+    label: 'Ship room combat phase waiting on its Intro phase',
+    shows: ['ship phase', 'phase not reached'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceRewardWheelOfferCount',
+        wheel: createRewardWheelAddress(
+          createBiomeAddress('Surface', 'O'),
+          createOccurrenceId('surface-o-combat04'),
+          'wheel1',
+        ),
+        offerCount: 2,
+      },
+    ],
+    target: room('O', 'surface-o-combat04'),
+  },
+  {
+    id: 'outcome-aetos-gorgon',
+    label: 'P combat room: Aetos wave and Gorgon condition at the Encounter outcome',
+    shows: ['encounter outcome', 'Aetos wave', 'Gorgon condition'],
+    project: loadSurfaceNOPProject,
+    commands: [athenaAmulet],
+    target: room('P', 'surface-p-1-1-p_combat03'),
+  },
+  {
+    id: 'outcome-aetos-gorgon-set',
+    label: 'P combat room: Aetos wave and Gorgon condition set',
+    shows: ['encounter outcome', 'Aetos wave', 'Gorgon condition'],
+    project: loadSurfaceNOPProject,
+    commands: [
+      athenaAmulet,
+      {
+        kind: 'ReplaceAetosWave',
+        phase: pCombat03Phase,
+        value: 2,
+      },
+      {
+        kind: 'ReplaceGorgonDeathDefianceCondition',
+        phase: pCombat03Phase,
+        value: true,
+      },
+    ],
+    target: room('P', 'surface-p-1-1-p_combat03'),
+  },
+  {
+    id: 'outcome-aetos-unavailable',
+    label: 'P combat room stopped at its Encounter outcome: an Aetos wave the fight cannot field',
+    shows: ['stop at the encounter outcome', 'Aetos wave', 'Not reached yet'],
+    project: loadSurfaceNOPProject,
+    commands: [athenaAmulet, { kind: 'ReplaceAetosWave', phase: pCombat03Phase, value: 9 }],
+    target: room('P', 'surface-p-1-1-p_combat03'),
   },
   {
     id: 'anomaly-encounter-end',
@@ -1638,6 +1709,15 @@ export const galleryCases: readonly GalleryCase[] = [
     id: 'progressive-stop-encounter-end',
     label: 'Room stopped at its encounter end: a boon it cannot offer, later rows waiting',
     shows: ['stop at a row', 'Not reached yet', 'no Doors open'],
+    project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
+    commands: [unofferableRarity('O', 'surface-o-devotion', 'spurnedSource')],
+    target: room('O', 'surface-o-devotion'),
+  },
+  {
+    id: 'progressive-stop-encounter-end-expanded',
+    notReachedExpanded: true,
+    label: 'Room stopped at its encounter end, its waiting rows opened',
+    shows: ['stop at a row', 'Not reached yet opened'],
     project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
     commands: [unofferableRarity('O', 'surface-o-devotion', 'spurnedSource')],
     target: room('O', 'surface-o-devotion'),

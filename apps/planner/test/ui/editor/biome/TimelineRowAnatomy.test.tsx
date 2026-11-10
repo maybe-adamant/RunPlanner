@@ -17,6 +17,8 @@ import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixture
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
 import { hintOf } from '@planner-test/support/hints';
+import { galleryCases } from '@planner-test/support/gallery/cases';
+import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
 
 afterEach(() => {
   cleanup();
@@ -134,7 +136,7 @@ describe('Encounter banners', () => {
     expect(authored()).toBe(true);
   });
 
-  it('keeps a retained Death Defiance condition on a skipped start, clearable and marked', () => {
+  it('keeps a retained Death Defiance condition on a skipped fight’s outcome, clearable and marked', () => {
     const project = applyProjectCommand(loadUnderworldFigLeafCheckpoint(), catalog, {
       kind: 'ReplaceGorgonDeathDefianceCondition',
       phase: createEncounterPhaseAddress(
@@ -146,10 +148,10 @@ describe('Encounter banners', () => {
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(skipped));
     openRoomTab('Room Timeline');
-    const events = within(within(timeline()).getByLabelText('Encounter started')).getByRole(
+    const events = within(within(timeline()).getByLabelText('Encounter outcome')).getByRole(
       'group',
       {
-        name: 'Encounter start',
+        name: 'Encounter outcome choices',
       },
     );
     const condition = within(events).getByRole('button', {
@@ -160,6 +162,31 @@ describe('Encounter banners', () => {
     expect(condition.disabled).toBe(false);
     expect(condition.dataset.hasFindings).toBe('true');
     expect(condition.closest('[data-inapplicable]')).not.toBeNull();
+  });
+});
+
+describe('Rows past the room stop', () => {
+  it('wait collapsed until opened, deletable but not reorderable', () => {
+    const entry = galleryCases.find(
+      (candidate) => candidate.id === 'progressive-stop-encounter-end',
+    )!;
+    renderOccurrenceWorkbench(
+      buildGalleryProject(entry),
+      'Surface',
+      'O',
+      occurrenceById(createOccurrenceId('surface-o-devotion')),
+    );
+    openRoomTab('Room Timeline');
+    const group = screen.getByRole('region', { name: 'Not reached yet' });
+    const toggle = within(group).getByRole('button', { name: /Not reached yet/ });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const [row] = within(group).getAllByRole('listitem');
+    expect(within(row!).queryByRole('button', { name: /^Reorder / })).toBeNull();
+    expect(within(row!).getByRole('button', { name: /Remove .* from timeline/ })).toBeTruthy();
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
   });
 });
 

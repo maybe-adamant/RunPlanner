@@ -84,6 +84,7 @@ import {
   occurrenceEncounterSelections,
   occurrenceRoomActionOrder,
   occurrenceState,
+  openNotReached,
   openRoomTab,
   pickRoomObjectAction,
   selectedNarcissusPickupSite,
@@ -287,6 +288,8 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       );
     });
+    // The new encounter stops the walk before the outcome, which waits with its wave.
+    openNotReached();
     expect(aetos().textContent).toBe('Wave 2');
     // A retained wave whose phase context is not yet reached can still be cleared.
     await pick('No');
@@ -1198,7 +1201,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(condition.disabled).toBe(false);
     expect(condition.getAttribute('aria-pressed')).toBe('false');
     expect(
-      within(screen.getByRole('group', { name: / start$/ })).getByRole('button', {
+      within(screen.getByRole('group', { name: / outcome choices$/ })).getByRole('button', {
         name: 'No Death Defiance',
       }),
     ).toBe(condition);
@@ -1257,6 +1260,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(condition.getAttribute('aria-pressed')).toBe('true');
     expect(condition.disabled).toBe(false);
     // The Combat phase starts before the blocked Athena offer: its reached Gorgon support is unsupported.
+    openNotReached();
     expect(screen.getByRole('button', { name: 'Edit Trait · Divine Dash' })).toBeTruthy();
     await view.user.click(condition);
     await waitFor(() => {
@@ -1399,14 +1403,16 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    // The skip and the retained condition both sit on the start banner.
+    // Both wait past the stop, the skip on the start, the condition on the fight's outcome.
+    openNotReached();
     const start = screen.getByRole('group', { name: / start$/ });
     const skip = within(start).getByRole('button', {
       name: 'Fig Leaf skip',
     }) as HTMLButtonElement;
     expect(skip.getAttribute('aria-pressed')).toBe('true');
     expect(skip.disabled).toBe(false);
-    const condition = within(start).getByRole('button', {
+    const outcome = screen.getByRole('group', { name: / outcome choices$/ });
+    const condition = within(outcome).getByRole('button', {
       name: 'No Death Defiance',
     }) as HTMLButtonElement;
     expect(condition.getAttribute('aria-pressed')).toBe('true');

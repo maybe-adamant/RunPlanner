@@ -24,6 +24,7 @@ import {
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  roomActionKey,
   semanticAddressKey,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -652,6 +653,27 @@ describe('timeline finding guidance', () => {
     expect(presentFinding(finding('dependency', 'afterCheckpoint', true))).toEqual({
       title: 'Room phase for this action is gone',
     });
+  });
+
+  it('names the required action a row must follow', () => {
+    const requiredFirst = (requiredAction: string): SemanticFinding => ({
+      ...finding('requiredFirst'),
+      evidence: { reason: 'requiredFirst', requiredAction },
+    });
+    expect(presentFinding(requiredFirst(roomActionKey({ kind: 'useFountain' })))).toEqual({
+      title: 'Use Fountain must come first',
+    });
+    expect(
+      presentFinding(
+        requiredFirst(
+          roomActionKey({
+            kind: 'interactIncomingReward',
+            producerPoint: 'roomRewardPickup',
+            acquisitionRole: 'self',
+          }),
+        ),
+      ).title,
+    ).toBe('A required pickup must come first');
   });
 
   it.each([

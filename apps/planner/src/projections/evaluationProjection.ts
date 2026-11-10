@@ -886,6 +886,31 @@ export function presentTraitOfferGenerationFinding(
   return Object.freeze(filler === undefined ? { title } : { title, description: filler });
 }
 
+/** The required action a later-window row must follow, named by its kind. */
+function requiredFirstActionName(actionKey: string | undefined): string {
+  let kind: unknown;
+  try {
+    kind = actionKey === undefined ? undefined : (JSON.parse(actionKey) as unknown[])[0];
+  } catch {
+    kind = undefined;
+  }
+  switch (kind) {
+    case 'useFountain':
+      return 'Use Fountain';
+    case 'collectRequiredReward':
+      return 'Collecting the boss reward';
+    case 'completeFieldsCage':
+      return 'A cage fight';
+    case 'interactIncomingReward':
+    case 'interactLocalReward':
+    case 'interactWheelReward':
+    case 'interactAcquisitionEntry':
+      return 'A required pickup';
+    default:
+      return 'A required action';
+  }
+}
+
 function evidenceString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
@@ -1125,6 +1150,10 @@ export function presentFinding(
     }
   }
   if (finding.code === 'roomActionOrderUnavailable') {
+    if (finding.evidence.reason === 'requiredFirst')
+      return Object.freeze({
+        title: `${requiredFirstActionName(evidenceString(finding.evidence.requiredAction))} must come first`,
+      });
     if (finding.evidence.reason === 'dependency' && finding.evidence.checkpointUnavailable === true)
       return Object.freeze({ title: 'Room phase for this action is gone' });
     return Object.freeze({

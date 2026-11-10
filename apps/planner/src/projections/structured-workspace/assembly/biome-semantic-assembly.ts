@@ -643,6 +643,7 @@ export function assembleWorkspaceBiomeSemantics(
       roomAnchorSlots: source.roomAnchorSlots,
       roomLayout: source.roomLayout,
       spawnedLoot: source.spawnedLoot,
+      encounterOutcomes: source.encounterOutcomes,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       transcendentEmbryoOutcomes: source.transcendentEmbryoOutcomes,
       fountainRarityOutcome: source.fountainRarityOutcome,

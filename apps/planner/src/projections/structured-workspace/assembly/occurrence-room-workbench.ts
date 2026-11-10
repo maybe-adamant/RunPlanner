@@ -53,6 +53,7 @@ function shipWorkbenchPresentation(
       case 'roomEntered':
         return 0;
       case 'encounterStart':
+      case 'encounterOutcome':
       case 'encounterEnd':
         return phaseIndexForKey(boundary.phaseKey);
       case 'bossDefeated':
@@ -156,10 +157,7 @@ function shipWorkbenchPresentation(
       if (checkpoint.key === 'exitUsable') continue;
       const matchingBoundary = roomActions.timeline.entries.find(
         (entry) =>
-          entry.kind === 'boundary' &&
-          (checkpointKeyForBoundary(entry.boundary) === checkpoint.key ||
-            (entry.bossDefeated !== undefined &&
-              checkpointKeyForBoundary(entry.bossDefeated) === checkpoint.key)),
+          entry.kind === 'boundary' && checkpointKeyForBoundary(entry.boundary) === checkpoint.key,
       );
       const phaseIndex =
         matchingBoundary?.kind === 'boundary'
@@ -185,7 +183,18 @@ function shipWorkbenchPresentation(
       repairRows.push(row);
     }
   }
+  // A phase the stopped walk has not reached waits on the last phase it did reach.
+  const stopped = roomActions?.timeline.notReached !== undefined;
+  const waitsOn = (index: number): string | undefined => {
+    if (roomActions?.timeline.waitsOn !== undefined) return roomActions.timeline.waitsOn;
+    if (!stopped || phaseTimelineEntries[index]!.length > 0) return undefined;
+    const reached = phaseTimelineEntries.findLastIndex(
+      (entries, earlier) => earlier < index && entries.length > 0,
+    );
+    return reached < 0 ? undefined : roomLocal.phases[reached]!.label;
+  };
   const phases: WorkspaceShipPhasePresentation[] = roomLocal.phases.map((phase, index) => {
+    const phaseWaitsOn = waitsOn(index);
     const encounter = encounterPhases.find((candidate) => candidate.address.phaseKey === phase.key);
     const wheel = wheelForNextPhase(index);
     return Object.freeze({
@@ -200,6 +209,7 @@ function shipWorkbenchPresentation(
       ...(roomActions?.timeline.notReached === undefined
         ? {}
         : { notReached: Object.freeze(phaseNotReached[index]!) }),
+      ...(phaseWaitsOn === undefined ? {} : { waitsOn: phaseWaitsOn }),
       optionalRows: Object.freeze(phaseOptionalRows[index]!),
       ...(index !== roomLocal.phases.length - 1 || roomActions?.objectEntries === undefined
         ? {}

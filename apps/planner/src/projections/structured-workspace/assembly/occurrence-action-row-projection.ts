@@ -116,6 +116,8 @@ export interface WorkspaceOccurrenceActionsInput {
   readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
   /** The loot the room spawns on its own, by moment and source action. */
   readonly spawnedLoot?: import('@run-planner/engine/simulation').RoomSpawnedLoot;
+  /** Each phase's Encounter outcome that hosts a choice. */
+  readonly encounterOutcomes?: readonly import('@run-planner/engine/simulation').EncounterOutcome[];
 }
 
 /** The Phial target control for one fountain use; pending until the engine requires a target. */
@@ -1122,6 +1124,8 @@ function roomActionsForOccurrence(
       ...projectedTimeline,
       entries: stop?.reached ?? spawned.entries,
       ...(stop === undefined ? {} : { notReached: stop.notReached }),
+      ...(stop?.waitsOn === undefined ? {} : { waitsOn: stop.waitsOn }),
+      ...(stop?.doorsWait === undefined ? {} : { doorsWait: stop.doorsWait }),
     }),
     ...(spawned.actionSpawns.length === 0 ? {} : { actionSpawns: spawned.actionSpawns }),
     ...(spawned.copies.length === 0 ? {} : { spawnCopies: spawned.copies }),

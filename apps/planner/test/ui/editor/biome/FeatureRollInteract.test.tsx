@@ -13,6 +13,7 @@ import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench
 import {
   completionOccurrenceById,
   occurrenceById,
+  openNotReached,
   openRoomTab,
 } from '@planner-test/support/occurrence-workbench';
 import { hintOf } from '@planner-test/support/hints';
@@ -101,6 +102,7 @@ it('rerolls the Well from its Timeline entry and buys a restocked slot with its 
   expect(
     roomOrder(view.application).find((reference) => reference.kind === 'rerollStygianWell'),
   ).toMatchObject({ offerKeyBySlot: { healing: expect.any(String) } });
+  openNotReached();
   expect(screen.getAllByRole('img', { name: 'Roll 2' })).toHaveLength(2);
   expect(
     screen.getByRole('button', { name: /^Remove Reroll Well from timeline$/ }),

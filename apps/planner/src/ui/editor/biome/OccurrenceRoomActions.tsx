@@ -1,6 +1,6 @@
 import { FeatureRollEntry, FeatureRollSlots } from './commerce/FeatureRollInteract';
 import { ArtworkChip } from '../rewards/TimelineChip';
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useId, useState, type ReactNode } from 'react';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import {
   requireWorkspaceInteraction,
@@ -307,18 +307,56 @@ function WorkbenchAddArea({
   );
 }
 
-/** Authored rows past the room's stop, dimmed in Timeline order until the walk reaches them. */
-function NotReachedGroup({ children }: { readonly children: ReactNode }) {
+/**
+ * Authored rows past the room's stop, dimmed in Timeline order until the walk reaches them;
+ * collapsed until opened. A collapsed list stays focusable, so navigation to a control in it
+ * opens it.
+ */
+function NotReachedGroup({
+  children,
+  count,
+}: {
+  readonly children: ReactNode;
+  readonly count: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
   return (
-    <section aria-label="Not reached yet" className="room-action-not-reached">
+    <section
+      aria-label="Not reached yet"
+      className="room-action-not-reached"
+      data-collapsed={expanded ? undefined : ''}
+      onFocus={(event) => {
+        if (!expanded && event.target.closest('.room-action-list') !== null) setExpanded(true);
+      }}
+    >
       <div className="local-reward-heading">
-        <h5>Not reached yet</h5>
+        <h5>
+          <button
+            aria-controls={listId}
+            aria-expanded={expanded}
+            className="room-action-not-reached-toggle"
+            onClick={() => setExpanded((open) => !open)}
+            type="button"
+          >
+            <span aria-hidden="true" className="timeline-banner-toggle-caret">
+              {expanded ? '▾' : '▸'}
+            </span>
+            Not reached yet
+            <span className="room-action-not-reached-count">{count}</span>
+          </button>
+        </h5>
       </div>
-      <ol aria-label="Not reached yet" className="room-action-list">
+      <ol aria-label="Not reached yet" className="room-action-list" id={listId}>
         {children}
       </ol>
     </section>
   );
+}
+
+/** The one line of a Timeline that waits on an earlier part of the plan. */
+function TimelineWaitsOn({ label }: { readonly label: string }) {
+  return <p className="room-timeline-waits-on">Fix {label} first.</p>;
 }
 
 export function RoomActionsWorkbench({
@@ -410,13 +448,12 @@ export function RoomActionsWorkbench({
         };
   // A room whose walk stops in it has not reached its doors, unless it stops at their opening,
   // which keeps its doors and Leave row to repair; a saved end keeps its last row.
+  const doorsWait = actions?.timeline.doorsWait === true;
   const doorsTail = (timeline: readonly WorkspaceRoomLifecycleTimelineEntry[]): ReactNode => {
-    const opensDoorsHere = (entry: WorkspaceRoomLifecycleTimelineEntry | undefined) =>
-      entry?.kind === 'boundary' && entry.boundary.kind === 'cleanup';
-    const hasDoorsOpenRow = timeline.some(opensDoorsHere);
-    const stopsAtDoors = opensDoorsHere(timeline.at(-1));
-    return roomDoors === undefined ? null : actions?.timeline.notReached !== undefined &&
-      !stopsAtDoors ? (
+    const hasDoorsOpenRow = timeline.some(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+    );
+    return roomDoors === undefined ? null : doorsWait ? (
       roomDoors.endsPlan === true ? (
         roomDoors.leave
       ) : null
@@ -439,7 +476,11 @@ export function RoomActionsWorkbench({
           .map((phase) => (
             <Fragment key={workspaceInteractionKey(phase.address)}>
               {renderEncounterControls?.({ kind: 'encounterStart', phase })}
-              {renderEncounterControls?.({ kind: 'encounterEnd', phase })}
+              {renderEncounterControls?.({
+                kind: 'encounterOutcome',
+                phase,
+                choices: ['aetos', 'gorgonCondition', 'nemesisBet', 'nemesisEvent'],
+              })}
             </Fragment>
           ))}
         {roomDoors === undefined ? null : (
@@ -537,7 +578,11 @@ export function RoomActionsWorkbench({
       if (entry.kind === 'boundary') {
         if (entry.boundary.kind === 'encounterStart' || entry.boundary.kind === 'roomEntered')
           phase = count++;
-        else if (entry.boundary.kind !== 'encounterEnd' && entry.boundary.kind !== 'bossDefeated')
+        else if (
+          entry.boundary.kind !== 'encounterOutcome' &&
+          entry.boundary.kind !== 'encounterEnd' &&
+          entry.boundary.kind !== 'bossDefeated'
+        )
           phase = undefined;
         if (phase !== undefined) phaseByKey.set(entry.boundary.key, phase);
       } else if (entry.kind === 'action' && phase !== undefined) {
@@ -556,13 +601,9 @@ export function RoomActionsWorkbench({
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>,
   ) => {
     const content = renderBoundaryContent?.(entry.boundary);
-    // A folded boss defeat's content leads its encounter end's.
-    const defeatContent =
-      entry.bossDefeated === undefined ? undefined : renderBoundaryContent?.(entry.bossDefeated);
     const boundary = entry.boundary;
-    const doorsOpen = boundary.kind === 'cleanup' ? roomDoors : undefined;
+    const doorsOpen = boundary.kind === 'cleanup' && !doorsWait ? roomDoors : undefined;
     const modifiers = [
-      defeatContent?.editors,
       renderSupplement(entry.supplement),
       content?.editors,
       doorsOpen === undefined ? undefined : <DoorsOpenControls doors={doorsOpen} />,
@@ -610,7 +651,6 @@ export function RoomActionsWorkbench({
               }
             : {})}
         />
-        {defeatContent?.rows}
         {content?.rows}
         {doorsOpen?.expanded === true && doorsOpen.detail !== undefined ? (
           <DoorsOpenDetailRow id={doorsOpen.detailId}>{doorsOpen.detail}</DoorsOpenDetailRow>
@@ -656,6 +696,8 @@ export function RoomActionsWorkbench({
       WorkspaceRoomLifecycleTimelineEntry,
       { readonly kind: 'action' }
     >['supplement'],
+    // A row past the stop is not reordered until the walk reaches it.
+    waiting = false,
   ) => {
     if (actions === undefined) return null;
     const nemesisInteraction =
@@ -814,7 +856,7 @@ export function RoomActionsWorkbench({
           tabIndex={-1}
           kind="action"
           handle={
-            row.rank !== null ? (
+            row.rank !== null && !waiting ? (
               <TimelineReorderHandle
                 findingMark={findingMark(row.address, 'move')}
                 item={{
@@ -1120,7 +1162,7 @@ export function RoomActionsWorkbench({
     const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
     return row === undefined
       ? []
-      : [<Fragment key={entry.actionKey}>{renderRow(row, [], entry.supplement)}</Fragment>];
+      : [<Fragment key={entry.actionKey}>{renderRow(row, [], entry.supplement, true)}</Fragment>];
   };
   if (mode.kind !== 'roomTimeline') {
     return (
@@ -1191,9 +1233,10 @@ export function RoomActionsWorkbench({
                   key={phase.key}
                 >
                   <div className="room-timeline-main">
-                    {phase.actionRows.length === 0 &&
-                    phase.checkpoints.length === 0 &&
-                    phase.timeline.length === 0 ? null : (
+                    {phase.waitsOn !== undefined ||
+                    (phase.actionRows.length === 0 &&
+                      phase.checkpoints.length === 0 &&
+                      phase.timeline.length === 0) ? null : (
                       <ol aria-label={`${phase.label} timeline`} className="room-action-list">
                         {checkpointRows(0, phase.checkpoints)}
                         {phaseTimelineWithWheel(phase.timeline).flatMap(renderPhaseTimelineEntry)}
@@ -1207,8 +1250,18 @@ export function RoomActionsWorkbench({
                         {doorsTail(phase.timeline)}
                       </ol>
                     )}
+                    {phase.waitsOn === undefined ? null : (
+                      <>
+                        <TimelineWaitsOn label={phase.waitsOn} />
+                        {doorsTail([]) === null ? null : (
+                          <ol aria-label={`${phase.label} timeline`} className="room-action-list">
+                            {doorsTail([])}
+                          </ol>
+                        )}
+                      </>
+                    )}
                     {phase.notReached === undefined || phase.notReached.length === 0 ? null : (
-                      <NotReachedGroup>
+                      <NotReachedGroup count={phase.notReached.length}>
                         {phase.notReached.flatMap(renderNotReached)}
                       </NotReachedGroup>
                     )}
@@ -1300,13 +1353,24 @@ export function RoomActionsWorkbench({
             interaction={interaction}
           />
         )}
-        <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
-          {timelineRows}
-          {rankedRows.length === 0 ? checkpointRows(0) : null}
-          {doorsTail(actions.timeline.entries)}
-        </ol>
+        {actions.timeline.waitsOn === undefined ? (
+          <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
+            {timelineRows}
+            {rankedRows.length === 0 ? checkpointRows(0) : null}
+            {doorsTail(actions.timeline.entries)}
+          </ol>
+        ) : (
+          <>
+            <TimelineWaitsOn label={actions.timeline.waitsOn} />
+            {doorsTail([]) === null ? null : (
+              <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
+                {doorsTail([])}
+              </ol>
+            )}
+          </>
+        )}
         {(actions.timeline.notReached?.length ?? 0) === 0 ? null : (
-          <NotReachedGroup>
+          <NotReachedGroup count={actions.timeline.notReached?.length ?? 0}>
             {(actions.timeline.notReached ?? []).flatMap(renderNotReached)}
           </NotReachedGroup>
         )}

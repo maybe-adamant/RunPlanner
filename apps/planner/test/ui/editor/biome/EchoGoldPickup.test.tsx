@@ -31,6 +31,7 @@ import {
 } from '@planner-test/support/biome-workbench';
 import {
   occurrenceById,
+  openNotReached,
   openRoomTab,
   pickRoomObjectAction,
 } from '@planner-test/support/occurrence-workbench';
@@ -110,13 +111,15 @@ it('adds required Gold with the purchase and restores both through one Undo and 
   await pickRoomObjectAction(view.user, 'World Shop', 'Buy Apollo');
   const history = view.application.store.getState().projectWorkspace.history!;
   expect(history.past).toHaveLength(1);
+  // The walk stops at the purchase, so the Gold waits past it.
+  openNotReached();
   expect(goldRow().queryByRole('button', { name: 'Restore pickup' })).toBeNull();
   expect(
     (goldRow().getByRole('button', { name: /Remove .* from timeline/ }) as HTMLButtonElement)
       .disabled,
   ).toBe(true);
-  // The required pickup moves only through its reorder handle.
-  expect(goldRow().getByRole('button', { name: /^Reorder / })).toBeTruthy();
+  // A waiting row is not reordered until the walk reaches it.
+  expect(goldRow().queryByRole('button', { name: /^Reorder / })).toBeNull();
   act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
   expect(view.application.store.getState().projectWorkspace.history!.present).toBe(project);
   act(() => view.application.store.dispatch(authoredProjectRedoRequested()));

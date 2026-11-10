@@ -597,9 +597,8 @@ describe('Biome inspector controls', () => {
     );
     expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
     expect(within(inspector).getByText('Encounter started')).toBeTruthy();
-    // The boss defeat reads as its encounter's end, which leads with the Judgment.
-    expect(within(inspector).queryByText('Boss defeated')).toBeNull();
-    expect(within(inspector).getAllByText('Encounter ended')).toHaveLength(1);
+    // The boss defeat is the fight's outcome, which leads with the Judgment.
+    expect(within(inspector).getAllByText('Boss defeated')).toHaveLength(1);
     const timeline = within(inspector).getByRole('region', { name: 'Room Timeline' });
     expect(timeline.classList.contains('room-actions-workbench')).toBe(true);
     expect(
@@ -608,10 +607,10 @@ describe('Biome inspector controls', () => {
       }),
     ).toBeTruthy();
     const timelineEntries = Array.from(timeline.querySelectorAll('ol > li'));
-    const ended = timelineEntries.findIndex(
-      (entry) => entry.getAttribute('aria-label') === 'Encounter ended',
+    const defeated = timelineEntries.findIndex(
+      (entry) => entry.getAttribute('aria-label') === 'Boss defeated',
     );
-    expect(timelineEntries[ended + 1]?.getAttribute('aria-label')).toMatch(/^Judgment — /);
+    expect(timelineEntries[defeated + 1]?.getAttribute('aria-label')).toMatch(/^Judgment — /);
     act(() => judgmentLauncher.click());
     const optionList = inspector.querySelector('.room-judgment-options');
     if (optionList === null) throw new Error('Judgment options list is missing');
@@ -652,7 +651,7 @@ describe('Biome inspector controls', () => {
     );
   });
 
-  it('reads a boss defeat as its encounter end banner, its fixed effects first and its fight gold on it', () => {
+  it('gives a boss defeat its own event with its fixed effects, the fight gold on the encounter end', () => {
     const view = renderWorkspace(loadUnderworldAutomaticBossCheckpoint(), 'Underworld', 'F');
     const bossOccurrence = createOccurrenceAddress(
       goldenFBiome,
@@ -667,16 +666,17 @@ describe('Biome inspector controls', () => {
       'region',
       { name: 'Room Timeline' },
     );
-    expect(within(timeline).queryByRole('listitem', { name: 'Boss defeated' })).toBeNull();
+    expect(within(timeline).getAllByRole('listitem', { name: 'Boss defeated' })).toHaveLength(1);
     const ended = within(timeline).getAllByRole('listitem', { name: 'Encounter ended' });
     expect(ended).toHaveLength(1);
     expect(within(ended[0]!).getByText(/gold/)).toBeTruthy();
     const names = within(timeline)
       .getAllByRole('listitem')
       .map((item) => item.getAttribute('aria-label') ?? '');
-    const end = names.indexOf('Encounter ended');
-    expect(names[end + 1]).toMatch(/^Judgment/);
-    expect(names[end + 2]).toMatch(/^Crystal Figurine/);
+    const defeated = names.indexOf('Boss defeated');
+    expect(names[defeated + 1]).toMatch(/^Judgment/);
+    expect(names[defeated + 2]).toMatch(/^Crystal Figurine/);
+    expect(names[defeated + 3]).toBe('Encounter ended');
   });
 
   it('keeps Judgment and Crystal Figurine independently authorable and undoable', async () => {

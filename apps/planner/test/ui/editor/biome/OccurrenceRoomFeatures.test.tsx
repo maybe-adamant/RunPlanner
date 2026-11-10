@@ -39,6 +39,7 @@ import {
   decisionContainingOccurrence,
   expectBefore,
   occurrenceById,
+  openNotReached,
   openRoomTab,
   reachedAnomalyProject,
 } from '@planner-test/support/occurrence-workbench';
@@ -91,6 +92,7 @@ describe('OccurrenceRoomFeatures', () => {
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
+    openNotReached();
     const waiting = screen.getByRole('button', { name: 'Reward' }) as HTMLButtonElement;
     expect(waiting.disabled).toBe(true);
     expect(hintOf(waiting)).toBe('Waits on an earlier choice.');
@@ -154,7 +156,7 @@ describe('OccurrenceRoomFeatures', () => {
     ]);
   });
 
-  it('decides the Anomaly outcome at its Timeline encounter end, before its reward pickup', async () => {
+  it('decides the Anomaly outcome at its Encounter outcome, before its end and reward pickup', async () => {
     const { occurrenceId, project } = reachedAnomalyProject();
     const application = createApplication();
     const dispatch = vi.spyOn(application.store, 'dispatch');
@@ -175,11 +177,11 @@ describe('OccurrenceRoomFeatures', () => {
       .getAllByRole('listitem')
       .find((row) => row.getAttribute('data-room-action-key')?.includes('interactIncomingReward'));
     if (pickup === undefined) throw new Error('cleared Anomaly lost its reward pickup');
-    expectBefore(encounterEnd, cleared);
-    expectBefore(cleared, pickup);
-    // The outcome is an Encounter ended event: it sits among that banner's controls.
+    expectBefore(cleared, encounterEnd);
+    expectBefore(encounterEnd, pickup);
+    // The capture point is how the fight ended: it sits among its outcome's controls.
     expect(cleared.closest('.timeline-banner-modifiers')).not.toBeNull();
-    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Encounter ended'));
+    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Encounter outcome'));
 
     await view.user.click(cleared);
     await view.user.click(await screen.findByRole('option', { name: 'Not cleared' }));
@@ -466,6 +468,7 @@ describe('OccurrenceRoomFeatures', () => {
     const family = screen.getByRole('button', { name: 'Nemesis event type' });
     await waitFor(() => expect(family.contains(document.activeElement)).toBe(true));
     openRoomTab('Room Timeline');
+    openNotReached();
     const hint = screen.getByText('Choose a Nemesis event.');
     expect(hint.closest('.control-placeholder')).toBeTruthy();
     openRoomTab('Room Overview');
@@ -521,6 +524,8 @@ describe('OccurrenceRoomFeatures', () => {
     freeAction = nemesisAction();
     expect(within(freeAction).getByText('hits you to get')).toBeTruthy();
     expect(within(freeAction).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    // Her unchosen reward stops the walk at her row; the trade's outcome waits past it.
+    openNotReached();
     expect(screen.getByRole('button', { name: /^Nemesis outcome/ }).textContent).toBe('Declined');
   });
 
