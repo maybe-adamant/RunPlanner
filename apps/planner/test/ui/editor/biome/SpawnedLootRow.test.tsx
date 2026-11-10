@@ -23,7 +23,10 @@ import {
   loadNemesisPomSeaStarCheckpoint,
   loadUnderworldFGHCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalPomResolutions,
+  collectTestRequiredItems,
+} from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -246,15 +249,18 @@ describe('Nemesis results', () => {
 
   /** Every spawn chip's item icon and source badge. */
   function renderedChips(value: AuthoredNemesisRandomEventOutcome, rewardType: string) {
-    const project = replaceNemesisRandomEventInteraction(
-      applyProjectCommand(createGoldenFGHIProject(), catalog, {
-        kind: 'SelectEncounter',
-        phase,
-        encounterKey: 'NemesisRandomEvent',
-      }),
-      createNemesisRandomEventAddress(phase),
-      value,
-      { rewardType },
+    // Nemesis is met before her item spawns.
+    const project = collectTestRequiredItems(
+      replaceNemesisRandomEventInteraction(
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'NemesisRandomEvent',
+        }),
+        createNemesisRandomEventAddress(phase),
+        value,
+        { rewardType },
+      ),
     );
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(room));
     openRoomTab('Room Timeline');
