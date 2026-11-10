@@ -14,7 +14,8 @@ export interface WorkspaceRoomPlace {
 
 /**
  * A room named from elsewhere: by its Location where the plan reaches it, else by its own
- * name; a room the plan does not hold at all, by its biome.
+ * name; a room the plan does not hold at all, by its biome's name (its key when the catalog
+ * declares no such biome).
  */
 export function roomPlace(
   catalog: Catalog,
@@ -25,7 +26,7 @@ export function roomPlace(
   const runDepth = location?.runDepth;
   const name =
     location === undefined
-      ? (catalog.biomes.byKey[room.biomeKey]?.label ?? 'Biome')
+      ? (catalog.biomes.byKey[room.biomeKey]?.label ?? room.biomeKey)
       : routeRoomDeclaration(requireWorkspaceRoom(catalog, location.gameName), room.routeKey).label;
   return Object.freeze({
     place: placeName(name, runDepth),
