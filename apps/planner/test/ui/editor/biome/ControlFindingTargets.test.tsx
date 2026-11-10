@@ -39,6 +39,7 @@ import {
   loadSurfaceNPartialHubCheckpoint,
   loadSurfaceNTenOpenInvalidCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   artemisSourceAnomalyProject,
   cageBeforeAthenaProject,
@@ -142,6 +143,7 @@ it('marks the Nemesis interaction choice its action row needs, not the row', asy
     event: createNemesisRandomEventAddress(phase),
     family: 'freeItem',
   });
+  project = collectTestRequiredItems(project);
   const view = renderWorkspace(project, 'Underworld', 'F');
   const row = await openFirstFinding(view);
   expect(row.hasAttribute('data-has-findings')).toBe(false);
