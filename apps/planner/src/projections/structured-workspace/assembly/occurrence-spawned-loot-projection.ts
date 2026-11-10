@@ -192,7 +192,7 @@ function spawnGroups(
   );
 }
 
-type NoticeMoment = Pick<SpawnMoment, 'kind' | 'phaseKey'>;
+type NoticeMoment = Pick<SpawnMoment, 'kind' | 'phaseKey' | 'wheelKey'>;
 
 function momentLabel(moment: SpawnMoment): string {
   return moment.kind === 'deliveryFlush' ? 'Delivered' : 'Spawned';
@@ -202,7 +202,7 @@ function momentLabel(moment: SpawnMoment): string {
 function entryIdentity(entry: TimelineEntry): string | undefined {
   switch (entry.kind) {
     case 'boundary':
-      return `boundary:${entry.boundary.kind}:${'phaseKey' in entry.boundary ? entry.boundary.phaseKey : ''}`;
+      return `boundary:${entry.boundary.kind}:${'phaseKey' in entry.boundary ? entry.boundary.phaseKey : 'wheelKey' in entry.boundary ? entry.boundary.wheelKey : ''}`;
     case 'action':
       return `action:${entry.actionKey}`;
     case 'automaticEffect':
@@ -252,6 +252,8 @@ function momentAnchor(
         ['after', boundaryAt('encounterEnd', phase)],
       );
     }
+    case 'wheelsOpen':
+      return first(['after', boundaryAt('wheelsOpen', moment.wheelKey)]);
   }
 }
 
