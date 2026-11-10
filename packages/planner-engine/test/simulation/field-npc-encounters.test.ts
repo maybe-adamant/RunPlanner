@@ -52,6 +52,7 @@ import {
   levelResolutionCandidateForProjectEvaluationAssembly,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  collectRequiredItems,
   createPreparedProjectCandidateSession,
   simulateProject,
   simulateProjectAssembly,
@@ -67,7 +68,11 @@ import {
 } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  hubVisitActions,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
@@ -142,12 +147,15 @@ function sequenceStatus(project: ProjectDocument, owner: ReturnType<typeof phase
   );
 }
 
+/** Selects an encounter and, as the owner would, collects the contact it requires. */
 function select(project: ProjectDocument, owner: ReturnType<typeof phase>, encounterKey: string) {
-  return applyProjectCommand(project, catalog, {
-    kind: 'SelectEncounter',
-    phase: owner,
-    encounterKey,
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase: owner,
+      encounterKey,
+    }),
+  );
 }
 
 function surfaceProjectWithEnteredRankIHammer(): ProjectDocument {
@@ -163,7 +171,7 @@ function surfaceProjectWithEnteredRankIHammer(): ProjectDocument {
       'combat03',
     ]),
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 function evaluatedBiome(project: ProjectDocument, biomeKey: 'F' | 'G' | 'H' | 'I') {
@@ -503,7 +511,7 @@ function enteredNLocalProjectForArtemis(): ProjectDocument {
     ),
     value: { rewardType: 'MaxManaDropSmall' },
   });
-  return authorLegalTraitOffers(
+  return authorTestTraitsAndRequiredItems(
     applyProjectCommand(project, catalog, {
       kind: 'ReplaceLocalVisitOrder',
       order: createLocalVisitOrderAddress(nBiome, nCombatId, 'sideRooms'),
@@ -636,10 +644,10 @@ describe('field NPC encounter requirements', () => {
     expect(support(project, fNpcPhase)?.candidateEncounterKeys).toContain('ArtemisCombatF');
     expect(support(project, gNpcPhase)?.candidateEncounterKeys).toContain('ArtemisCombatG');
 
-    project = authorLegalTraitOffers(select(project, gNpcPhase, 'ArtemisCombatG'));
+    project = authorTestTraitsAndRequiredItems(select(project, gNpcPhase, 'ArtemisCombatG'));
     expect(support(project, fNpcPhase)?.candidateEncounterKeys).toContain('ArtemisCombatF');
 
-    project = authorLegalTraitOffers(select(project, fNpcPhase, 'ArtemisCombatF'));
+    project = authorTestTraitsAndRequiredItems(select(project, fNpcPhase, 'ArtemisCombatF'));
     const gSupport = support(project, gNpcPhase);
 
     expect(gSupport).toMatchObject({
@@ -796,7 +804,7 @@ describe('field NPC encounter requirements', () => {
       authoredOccurrence(project, 'F', occurrenceId).encounters.traitOffersByPhase?.Encounter
         ?.Story_Arachne_01,
     ).toBeNull();
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const selected = authoredOccurrence(project, 'F', occurrenceId);
     const initialOffer = selected.encounters.traitOffersByPhase?.Encounter?.Story_Arachne_01;
     expect(initialOffer).toMatchObject({
@@ -947,7 +955,7 @@ describe('field NPC encounter requirements', () => {
       authoredOccurrence(project, 'I', reachedStoryId).encounters.traitOffersByPhase?.Encounter
         ?.Story_Hades_01,
     ).toBeNull();
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const storyOffer = authoredOccurrence(project, 'I', reachedStoryId).encounters
       .traitOffersByPhase?.Encounter?.Story_Hades_01;
     expect(storyOffer).toMatchObject({
@@ -1043,7 +1051,7 @@ describe('field NPC encounter requirements', () => {
         selectedOptionKey: 'option1',
       },
     });
-    initial = authorLegalTraitOffers(
+    initial = authorTestTraitsAndRequiredItems(
       applyProjectCommand(initial, catalog, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(pBiome, pOccurrenceId('P_MiniBoss01', 5, 1)),
@@ -1224,6 +1232,19 @@ describe('field NPC encounter requirements', () => {
     if (editedOffer?.kind !== 'traits') throw new Error('Artemis side-room must offer traits');
     expect(editedOffer.selectedOptionKey).toBe('option2');
 
+    // The owner collects the side room's required Artemis contact.
+    const evaluate = (document: ProjectDocument) => simulateProjectAssembly(sideCatalog, document);
+    const collected = collectRequiredItems({
+      catalog: sideCatalog,
+      before: evaluate(project),
+      occurrence: createOccurrenceAddress(
+        nBiome,
+        nRoundTripLocalOccurrenceId('combat02', 'sideDoor1'),
+      ),
+      evaluate,
+    });
+    expect(collected.fault).toBeUndefined();
+    project = collected.assembly.project;
     const evaluation = simulateProject(sideCatalog, project);
     const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (biome?.authoring !== 'complete' || !('rewards' in biome)) {
@@ -1381,11 +1402,13 @@ describe('field NPC encounter requirements', () => {
     expect(support(withNemesis, nemesisG)?.candidateEncounterKeys).not.toContain('NemesisCombatG');
     expect(support(withNemesis, nemesisI)?.candidateEncounterKeys).not.toContain('NemesisCombatI');
 
-    const withRandomEvent = replaceNemesisRandomEventInteraction(
-      select(initial, nemesisF, 'NemesisRandomEvent'),
-      createNemesisRandomEventAddress(nemesisF),
-      { kind: 'freeItem' },
-      { rewardType: 'ArmorBoost' },
+    const withRandomEvent = collectTestRequiredItems(
+      replaceNemesisRandomEventInteraction(
+        select(initial, nemesisF, 'NemesisRandomEvent'),
+        createNemesisRandomEventAddress(nemesisF),
+        { kind: 'freeItem' },
+        { rewardType: 'ArmorBoost' },
+      ),
     );
     expect(support(withRandomEvent, followingArtemis)?.candidateEncounterKeys).not.toContain(
       'NemesisRandomEvent',
@@ -1425,11 +1448,13 @@ describe('field NPC encounter requirements', () => {
     ).toContainEqual(expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: event }));
     const assembly = simulateProjectAssembly(
       catalog,
-      applyProjectCommand(selected, catalog, {
-        kind: 'SelectNemesisRandomEventFamily',
-        event,
-        family: 'freeItem',
-      }),
+      collectTestRequiredItems(
+        applyProjectCommand(selected, catalog, {
+          kind: 'SelectNemesisRandomEventFamily',
+          event,
+          family: 'freeItem',
+        }),
+      ),
     );
     const capability = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
       assembly,
@@ -1590,7 +1615,7 @@ describe('field NPC encounter requirements', () => {
         selectedOptionKey: 'option1',
       },
     });
-    withThreePhases = authorLegalTraitOffers(withThreePhases);
+    withThreePhases = authorTestTraitsAndRequiredItems(withThreePhases);
     const originalState = authoredOccurrence(withThreePhases, 'O', occurrenceId).state;
 
     expect(support(withThreePhases, intro)?.candidateEncounterKeys).toContain('HeraclesCombatO');
@@ -1604,7 +1629,7 @@ describe('field NPC encounter requirements', () => {
       authoredOccurrence(project, 'O', occurrenceId).encounters.traitOffersByPhase?.Combat1
         ?.IcarusCombatO,
     ).toBeNull();
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     expect(support(project, combat2)?.candidateEncounterKeys).not.toContain('IcarusCombatO');
     expect(authoredOccurrence(project, 'O', occurrenceId).state).toEqual(originalState);
 
@@ -1762,7 +1787,7 @@ describe('field NPC encounter requirements', () => {
     let project = fixture.project;
     expect(support(project, fixture.encounter)?.candidateEncounterKeys).toContain('IcarusCombatP');
     project = select(project, fixture.encounter, 'IcarusCombatP');
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
 
     const traitAddress = createTraitOfferAddress(fixture.encounter, 'selection');
     project = applyProjectCommand(project, catalog, {
@@ -1813,7 +1838,7 @@ describe('field NPC encounter requirements', () => {
     const missingButSkipped = evaluatedSurfaceBiome(skip(true), 'P').biome;
     expect(missingButSkipped.validity).toBe('valid');
 
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const traitAddress = createTraitOfferAddress(fixture.encounter, 'selection');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitSelection',
@@ -1883,7 +1908,7 @@ describe('field NPC encounter requirements', () => {
         keepsakeKey: 'SkipEncounterKeepsake',
       },
     );
-    project = authorLegalTraitOffers(
+    project = authorTestTraitsAndRequiredItems(
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceFigLeafSkip',
         phase: intro,
@@ -2207,7 +2232,7 @@ describe('field NPC encounter requirements', () => {
 
     expect(support(project, athenaPhase)?.candidateEncounterKeys).toContain('AthenaCombatP');
     project = select(project, athenaPhase, 'AthenaCombatP');
-    project = authorLegalTraitOffers(project);
+    project = authorTestTraitsAndRequiredItems(project);
     const selected = authoredOccurrence(project, 'P', occurrenceId);
     const athenaOffer = authoredTraits(
       selected.encounters.traitOffersByPhase?.Combat?.AthenaCombatP,
@@ -2261,7 +2286,7 @@ describe('field NPC encounter requirements', () => {
     const occurrenceId = pOccurrenceId('P_Combat10', 6, 1);
     const athenaPhase = phase(pBiome, occurrenceId, 'Combat');
     const athenaTrait = createTraitOfferAddress(athenaPhase, 'selection');
-    const afterSpell = authorLegalTraitOffers(
+    const afterSpell = authorTestTraitsAndRequiredItems(
       select(loadSurfaceNOPQProject(), athenaPhase, 'AthenaCombatP'),
     );
     expect(support(afterSpell, athenaPhase)?.candidateEncounterKeys).toContain('AthenaCombatP');
