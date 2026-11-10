@@ -253,6 +253,42 @@ describe('project operations', () => {
     expect(application.store.getState().librarySession.view).toEqual({ kind: 'editor' });
   });
 
+  it('opens a plan saved before schema 103 settled, its removals announced and one Undo away', async () => {
+    const { application, library } = createLibraryApplication();
+    // The G opening keeps a pickup of a role its reward no longer has.
+    const saved = createGoldenFGHProject();
+    const json = JSON.stringify({
+      ...JSON.parse(encodeProjectDocument(saved)),
+      schemaVersion: 102,
+      schemaRevision: 1,
+    });
+    const removed = [
+      {
+        occurrence: createOccurrenceAddress(goldenGBiome, 'golden-g-b1-e1' as never),
+        actions: [expect.objectContaining({ acquisitionRole: 'source' })],
+      },
+    ];
+    const { key } = await library.adapter.create(json, '');
+    await expect(application.projectOperations.openPlan(key)).resolves.toMatchObject({
+      status: 'success',
+      message: 'Migrated the plan to schema 103.',
+    });
+    expect(application.store.getState().projectWorkspace.removedStaleActions).toEqual(removed);
+    expect(presentHistory(application)).toMatchObject({ past: [saved], future: [] });
+    expect(presentProject(application)).not.toEqual(saved);
+    application.store.dispatch(authoredProjectUndoRequested());
+    expect(presentProject(application)).toEqual(saved);
+    expect(application.store.getState().projectWorkspace.removedStaleActions).toBeUndefined();
+
+    // An imported copy takes its own identity, the plan as saved behind it too.
+    library.choose({ fileName: 'old.runplanner.json', json });
+    await application.projectOperations.importPlan();
+    const copy = presentProject(application);
+    expect(copy.projectId).not.toBe(saved.projectId);
+    expect(presentHistory(application).past).toEqual([{ ...saved, projectId: copy.projectId }]);
+    expect(application.store.getState().projectWorkspace.removedStaleActions).toEqual(removed);
+  });
+
   it('reverts to the plan as opened as one undoable step', async () => {
     const { application } = createLibraryApplication();
     await application.projectOperations.createNew('Underworld');
@@ -507,7 +543,7 @@ describe('project operations', () => {
     expect(application.store.getState()).toBe(state);
     for (const json of [
       JSON.stringify({ ...current, schemaVersion: 8 }),
-      JSON.stringify({ ...current, schemaVersion: 103 }),
+      JSON.stringify({ ...current, schemaVersion: 104 }),
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     ]) {
       library.choose({ fileName: 'bad.runplanner.json', json });
@@ -724,14 +760,14 @@ describe('project operations', () => {
       operation: 'importPlan',
       status: 'success',
       message:
-        'Migrated the plan to schema 102; retained encounter choices may need missing fields repaired.',
+        'Migrated the plan to schema 103; retained encounter choices may need missing fields repaired.',
     });
     legacy.schemaVersion = 87;
     library.choose({ fileName: 'legacy.runplanner.json', json: JSON.stringify(legacy) });
     await expect(application.projectOperations.importPlan()).resolves.toEqual({
       operation: 'importPlan',
       status: 'success',
-      message: 'Migrated the plan to schema 102.',
+      message: 'Migrated the plan to schema 103.',
     });
     const hubLegacy = legacyRareEpicHexTrees(
       legacySchema99Body(JSON.parse(encodeProjectDocument(loadSurfaceNProject()))),
@@ -753,7 +789,7 @@ describe('project operations', () => {
       operation: 'importPlan',
       status: 'success',
       message:
-        'Migrated the plan to schema 102; the Hub fountain use is placed before the first visit, so a Phial target may need repair.',
+        'Migrated the plan to schema 103; the Hub fountain use is placed before the first visit, so a Phial target may need repair.',
     });
 
     // A schema-88 Hub already has its authored fountain placement, so no repair is named.
@@ -765,7 +801,7 @@ describe('project operations', () => {
     await expect(application.projectOperations.importPlan()).resolves.toEqual({
       operation: 'importPlan',
       status: 'success',
-      message: 'Migrated the plan to schema 102.',
+      message: 'Migrated the plan to schema 103.',
     });
   });
 

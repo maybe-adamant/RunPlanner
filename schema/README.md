@@ -31,6 +31,30 @@ npm run test:schema:migrate
 
 ## History
 
+Schema 103 changes no saved shape: it marks the plans saved after the settlement
+rules for [rows whose context or source is gone](../docs/design/ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
+and [exit capacity](../docs/design/AUTHORED_PROJECT_MODEL.md#exit-capacity)
+covered every edit. The migration only changes the version and accepts schema
+102 through its final revision 1. A plan saved before 103 is then settled once,
+by the application on opening and by the offline tool before writing, removing
+only what the saved plan shows had its source or context and lost it: stale
+room-action rows; a Gold Gold Gold duplicate that a purchase stands before
+while no Echo produces it; a matured trait drop whose producing trait a walk
+without it, reaching the plan's end, never holds; a countdown Hermes delivery
+whose purchase is gone; and an unselected door its source room no longer
+has, with the rooms behind it. A takeover batch gains the Preboss doors it
+lacks, and a due delivery the plan lacks is placed, as any edit places it.
+Rows whose loss the plan cannot show stay with their findings: a Travel Deal
+refill or a duplicate the saved plan already shows unproduced, a drop whose
+producer is held or may lie past where the walk stops, every door or cage
+reroll whose reward is gone, and a taken door its room lost; a removal in the
+same settlement, such as a stale purchase's, can still take a refill or
+duplicate with its trigger. Rows the walk does not reach stay untouched. The
+application announces the removals and opens the plan one Undo ahead of it as
+saved; the offline tool writes the settled plan without announcing anything.
+A settlement that throws leaves the plan as saved, opened with a settlement
+fault or written with the fault printed. The plan wire's schema pair becomes 103.0.
+
 Revision 102.1 gives every unset position a meaning: a rolled flip, an entry
 the game picks among ties, an anchor object's anchor, a Fields cage, optional
 reward or Nemesis point and a Chaos gate's spawn point each take a stable

@@ -18,9 +18,17 @@ import type {
   RoomOccurrence,
   AuthoredRoutePlan,
 } from '../model';
+import type { ExitDecisionAddress } from '../addresses';
 import type { BiomeOwnedProjectCommand, ProjectCommand, RouteDetourCommand } from './types';
 
-export type CommandContractSubject = ProjectCommand | RouteDetourCommand;
+/** An upgrade settling a batch's doors to its source's declared exits, with no command behind it. */
+export interface ExitCapacityUpgradeSubject {
+  readonly kind: 'SettleUpgradedExitCapacity';
+  readonly decision: ExitDecisionAddress;
+}
+
+export type CommandContractSubject =
+  ProjectCommand | RouteDetourCommand | ExitCapacityUpgradeSubject;
 
 export class ProjectCommandContractError extends Error {
   readonly commandKind: CommandContractSubject['kind'];
@@ -94,6 +102,7 @@ function commandContractAddress(
     case 'ReplaceWithTakeoverBatch':
     case 'RemoveExitDecision':
     case 'ReplaceWithHubDecision':
+    case 'SettleUpgradedExitCapacity':
       return command.decision;
     case 'CreateTarget':
       return command.target;

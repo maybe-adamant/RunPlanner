@@ -13,6 +13,7 @@ import {
 import {
   ProjectCommandContractError,
   projectCommandAddress,
+  type CommandContractSubject,
 } from '../authored-project/commands/contract';
 import { applyProjectCommand } from '../authored-project/commands/dispatch';
 import {
@@ -214,20 +215,21 @@ function addressedRoom(
 /**
  * The stale rows an edit removes in the rooms the run enters: every row the
  * edit left with no context, and in each room the edit changed, every stale
- * row retained from before it. Rooms the evaluation does not reach keep their
- * rows until it does.
+ * row retained from before it. An upgrade removes every stale row. Rooms the
+ * evaluation does not reach keep their rows until it does.
  */
 function staleRowsToRemove(
   before: ProjectEvaluationAssembly,
   beforeRosters: ReturnType<typeof enteredRosters>,
   assembly: ProjectEvaluationAssembly,
+  upgrade: boolean,
 ) {
   const removals: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   for (const [roomKey, { owner, rows }] of enteredRosters(assembly)) {
     const current = occurrenceAt(assembly.project, owner);
     if (current === undefined) continue;
     const prior = beforeRosters.get(roomKey)?.rows;
-    let edited: boolean | undefined;
+    let edited: boolean | undefined = upgrade || undefined;
     for (const reference of current.roomActions.order) {
       const key = roomActionKey(reference);
       if (rows.get(key)?.stale !== true || reference.kind === 'interactKeepsakeRack') continue;
@@ -288,13 +290,15 @@ function purchaseBefore(occurrence: RoomOccurrence | undefined, rowKey: string):
  * no source produced before the edit either (its enabler went earlier, or it
  * was placed before its source existed) stays with its finding until the edit
  * takes every purchase before it, its trigger among them. A row whose source
- * still produces it with other terms stays with its finding.
+ * still produces it with other terms stays with its finding. An upgrade, with no
+ * walk before it, removes only an automatic product that a purchase stands before.
  */
 function sourceGoneShopRows(
   before: ProjectEvaluationAssembly,
   beforeArtifacts: CandidateArtifacts,
   artifacts: CandidateArtifacts,
   assembly: ProjectEvaluationAssembly,
+  upgrade: boolean,
 ) {
   const unavailable = new Set(
     assembly.evaluation.findings.flatMap((finding) =>
@@ -333,6 +337,15 @@ function sourceGoneShopRows(
           );
         // Enabler gone: the owner's purchase stays, invalid, for the owner to remove or restore.
         if (!triggerGone && SOURCED_SHOP_ROWS.get(reference.entryKey) === 'decision') continue;
+      } else if (upgrade) {
+        // A purchase before an automatic product proves its trigger stands, so its enabler went.
+        // An owner's purchase, or a product with no purchase before it, may have been placed
+        // before its source existed: it stays with its finding.
+        if (
+          SOURCED_SHOP_ROWS.get(reference.entryKey) !== 'product' ||
+          !purchaseBefore(occurrence, roomActionKey(reference))
+        )
+          continue;
       } else {
         const rowKey = roomActionKey(reference);
         if (!purchaseBefore(occurrenceAt(before.project, owner), rowKey)) continue;
@@ -349,9 +362,13 @@ function sourceGoneShopRows(
  * and its door's room no longer plays the cage, where before the edit the
  * press found it (it settled, or failed for a reason other than its target).
  * A press that never found its cage, one whose door is unavailable, and every
- * Hub reroll stay with their findings.
+ * Hub reroll stay with their findings, and an upgrade removes none.
  */
-function cageGoneRerolls(before: ProjectEvaluationAssembly, assembly: ProjectEvaluationAssembly) {
+function cageGoneRerolls(
+  before: ProjectEvaluationAssembly,
+  assembly: ProjectEvaluationAssembly,
+  upgrade: boolean,
+) {
   const findingsAt = (evaluated: ProjectEvaluationAssembly, key: string) =>
     evaluated.evaluation.findings.filter(
       (finding) =>
@@ -375,6 +392,8 @@ function cageGoneRerolls(before: ProjectEvaluationAssembly, assembly: ProjectEva
       (candidate) => roomActionKey(candidate) === action.actionKey,
     );
     if (reference?.kind !== 'reroll' || reference.target.kind !== 'cage') continue;
+    // The saved plan cannot show that a press once found its cage: an upgrade keeps it.
+    if (upgrade) continue;
     const key = semanticAddressKey(action);
     const prior = findingsAt(before, key);
     const foundCage =
@@ -386,6 +405,106 @@ function cageGoneRerolls(before: ProjectEvaluationAssembly, assembly: ProjectEva
     if (!foundCage) continue;
     removals.push({ owner, reference });
   }
+  return removals;
+}
+
+/** The acquisitions whose trait produces timed drops at some checkpoint the walk reached. */
+function heldDropProducers(assembly: ProjectEvaluationAssembly): ReadonlySet<string> {
+  return new Set(
+    assembly.evaluation.route.biomes.flatMap((biome) =>
+      'rewards' in biome
+        ? biome.rewards.runStateSnapshots.flatMap((snapshot) =>
+            Object.values(snapshot.traits.equippedTraits).flatMap((trait) =>
+              trait.acquisitionIdentity === undefined || trait.pickupProducerInterval === undefined
+                ? []
+                : [trait.acquisitionIdentity],
+            ),
+          )
+        : [],
+    ),
+  );
+}
+
+/**
+ * Pickups an upgrade finds with their source gone in the rooms the run enters:
+ * a countdown delivery whose Shrine purchase is gone (its trigger), and a
+ * matured trait drop whose producing trait the run never holds (an automatic
+ * product of a gone enabler). A drop stands where its producer is not held, so
+ * the walk stops at it: the drops are judged by the walk without them, which
+ * must reach the plan's end holding none of their producers. A drop whose
+ * producer that walk holds, before or after it, or that a walk stopping short
+ * of the end may still hold, stays with its finding.
+ */
+function sourceGonePickups(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  evaluate: (project: ProjectDocument) => ProjectEvaluationAssembly,
+) {
+  const project = assembly.project;
+  const removals: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
+  const drops: {
+    owner: OccurrenceAddress;
+    reference: RoomActionReference;
+    acquisitionIdentity: string;
+  }[] = [];
+  const unheld = new Map(
+    placements(assembly).flatMap(({ address, assessment }) =>
+      assessment.kind === 'invalid' &&
+      assessment.source.kind === 'clockedTraitPickup' &&
+      assessment.reason === 'sourceInactive'
+        ? [[semanticAddressKey(address), assessment.source.acquisitionIdentity] as const]
+        : [],
+    ),
+  );
+  for (const { owner } of enteredRosters(assembly).values()) {
+    for (const reference of occurrenceAt(project, owner)?.roomActions.order ?? []) {
+      if (reference.kind !== 'interactAcquisitionEntry') continue;
+      const delivery =
+        reference.siteKey === HERMES_SHRINE_DELIVERY_SITE_KEY
+          ? parseHermesShrineDeliveryEntryKey(reference.entryKey)
+          : undefined;
+      if (delivery !== undefined) {
+        const shrine = hermesShrineDeliverySourceAddress(delivery);
+        if (isSameRoomDelivery(shrine, owner)) continue;
+        const source = occurrenceAt(project, shrine);
+        if (
+          source !== undefined &&
+          purchasedOfferFor(
+            source.hermesShrine,
+            source.roomActions.order,
+            delivery.generationKey,
+          ) !== undefined
+        )
+          continue;
+        removals.push({ owner, reference });
+        continue;
+      }
+      const acquisitionIdentity = unheld.get(
+        semanticAddressKey(
+          createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(owner, reference.siteKey),
+            reference.entryKey,
+          ),
+        ),
+      );
+      if (acquisitionIdentity !== undefined) drops.push({ owner, reference, acquisitionIdentity });
+    }
+  }
+  if (drops.length === 0) return removals;
+  let without = project;
+  try {
+    for (const { owner, reference } of drops)
+      without = applyProjectCommand(without, catalog, roomActionRemovalCommand(owner, reference));
+  } catch (error) {
+    // A drop its removal command refuses cannot be judged; it stays with its finding.
+    if (error instanceof ProjectCommandContractError) return removals;
+    throw error;
+  }
+  const probe = evaluate(without);
+  if (probe.evaluation.issue !== undefined) return removals;
+  const held = heldDropProducers(probe);
+  for (const { owner, reference, acquisitionIdentity } of drops)
+    if (!held.has(acquisitionIdentity)) removals.push({ owner, reference });
   return removals;
 }
 
@@ -610,6 +729,19 @@ interface ProjectEditSettlementOptions {
   readonly evaluate: (project: ProjectDocument) => ProjectEvaluationAssembly;
 }
 
+/** Checks that each evaluation matches the snapshot it was asked for. */
+function exactEvaluation(
+  evaluate: (project: ProjectDocument) => ProjectEvaluationAssembly,
+): (project: ProjectDocument) => ProjectEvaluationAssembly {
+  return (project) => {
+    const result = evaluate(project);
+    candidateArtifactsForProjectEvaluationAssembly(result);
+    if (result.project !== project)
+      throw new Error('Edit evaluation does not match its authored snapshot');
+    return result;
+  };
+}
+
 /**
  * Settle one semantic edit above structural commands and exact evaluation.
  * Preparation and Undo/Redo never call this operation. The result is total:
@@ -618,18 +750,120 @@ interface ProjectEditSettlementOptions {
  */
 export function settleProjectEdit(options: ProjectEditSettlementOptions): ProjectEditSettlement {
   const { catalog, before, command } = options;
-  const evaluate = (project: ProjectDocument): ProjectEvaluationAssembly => {
-    const result = options.evaluate(project);
-    candidateArtifactsForProjectEvaluationAssembly(result);
-    if (result.project !== project)
-      throw new Error('Edit evaluation does not match its authored snapshot');
-    return result;
-  };
+  const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
+  if (command.kind === 'RemoveRoomAction') {
+    const owner = createOccurrenceAddress(
+      createBiomeAddress(command.action.routeKey, command.action.biomeKey),
+      command.action.occurrenceId,
+    );
+    const reference = occurrenceAt(before.project, owner)?.roomActions.order.find(
+      (reference) => roomActionKey(reference) === command.action.actionKey,
+    );
+    if (
+      reference?.kind === 'interactAcquisitionEntry' &&
+      reference.siteKey === 'roomExit' &&
+      reference.entryKey === 'echoDoubleShopReward'
+    ) {
+      const capability = beforeArtifacts
+        .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
+        ?.derivedAcquisitionEntries.at(
+          createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(owner, reference.siteKey),
+            reference.entryKey,
+          ),
+        );
+      if (
+        capability?.kind === 'echoDoubleShopReward' &&
+        capability.participation === 'required' &&
+        capability.retainedSourceMismatch !== true
+      )
+        return Object.freeze({ assembly: before });
+    }
+  }
+  if (command.kind === 'UnplaceGeneratedDelivery') {
+    const owner = createOccurrenceAddress(
+      createBiomeAddress(command.action.routeKey, command.action.biomeKey),
+      command.action.occurrenceId,
+    );
+    const reference = occurrenceAt(before.project, owner)?.roomActions.order.find(
+      (reference) => roomActionKey(reference) === command.action.actionKey,
+    );
+    if (reference?.kind === 'interactAcquisitionEntry') {
+      const address = createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(owner, reference.siteKey),
+        reference.entryKey,
+      );
+      const placement = placements(before).find(
+        (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(address),
+      );
+      if (placement?.assessment.kind === 'valid') return Object.freeze({ assembly: before });
+    }
+  }
+  if (
+    command.kind === 'PlaceClockedTraitPickup' &&
+    !attestClockedTraitPickupPlacementForProjectEvaluationAssembly(before, command)
+  )
+    return Object.freeze({ assembly: before });
+  const project = applyProjectCommand(before.project, catalog, command);
+  if (project === before.project) return Object.freeze({ assembly: before });
+  return settleProject({
+    catalog,
+    before,
+    project,
+    command,
+    evaluate: exactEvaluation(options.evaluate),
+  });
+}
+
+interface ProjectUpgradeSettlementOptions {
+  readonly catalog: Catalog;
+  /** The plan as a file saved under an earlier schema holds it, read under the current one. */
+  readonly project: ProjectDocument;
+  readonly evaluate: (project: ProjectDocument) => ProjectEvaluationAssembly;
+}
+
+/**
+ * Settle a plan saved before the current settlement rules, once, as they would
+ * have left it: the policy for rows whose context or source is gone applies
+ * to every row the walk reaches, as though each had just lost it, and every
+ * batch settles its doors. Rows that policy keeps invalid stay with their
+ * findings, and rows the walk does not reach stay untouched. Every removal is
+ * announced. Total like an edit's settlement.
+ */
+export function settleProjectUpgrade(
+  options: ProjectUpgradeSettlementOptions,
+): ProjectEditSettlement {
+  const evaluate = exactEvaluation(options.evaluate);
+  const before = evaluate(options.project);
+  return settleProject({
+    catalog: options.catalog,
+    before,
+    project: options.project,
+    command: undefined,
+    evaluate,
+  });
+}
+
+/**
+ * The settlement after an edit's structural command, or of an upgraded plan
+ * when there is no command: its removals are all announced, and every row the
+ * walk reaches is judged as though it had just lost what it lacks.
+ */
+function settleProject(options: {
+  readonly catalog: Catalog;
+  readonly before: ProjectEvaluationAssembly;
+  readonly project: ProjectDocument;
+  readonly command: ProjectCommand | undefined;
+  readonly evaluate: (project: ProjectDocument) => ProjectEvaluationAssembly;
+}): ProjectEditSettlement {
+  const { catalog, before, command, evaluate } = options;
+  const upgrade = command === undefined;
+  let project = options.project;
   const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
   const beforeRosters = enteredRosters(before);
   const rekeyed = new Set<string>();
   // A removal in the room the edit addresses shows on the Timeline being edited; any other is announced.
-  const room = addressedRoom(projectCommandAddress(command));
+  const room = command === undefined ? undefined : addressedRoom(projectCommandAddress(command));
   const silentRoom = room === undefined ? undefined : semanticAddressKey(room);
   const removedStale: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   // Sourced rows the command or a displaced placement took; a delivery placed again elsewhere moved.
@@ -716,64 +950,11 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
         : [],
     ),
   );
-  if (command.kind === 'RemoveRoomAction') {
-    const owner = createOccurrenceAddress(
-      createBiomeAddress(command.action.routeKey, command.action.biomeKey),
-      command.action.occurrenceId,
-    );
-    const reference = occurrenceAt(before.project, owner)?.roomActions.order.find(
-      (reference) => roomActionKey(reference) === command.action.actionKey,
-    );
-    if (
-      reference?.kind === 'interactAcquisitionEntry' &&
-      reference.siteKey === 'roomExit' &&
-      reference.entryKey === 'echoDoubleShopReward'
-    ) {
-      const capability = beforeArtifacts
-        .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
-        ?.derivedAcquisitionEntries.at(
-          createAcquisitionEntryAddress(
-            createAcquisitionSiteAddress(owner, reference.siteKey),
-            reference.entryKey,
-          ),
-        );
-      if (
-        capability?.kind === 'echoDoubleShopReward' &&
-        capability.participation === 'required' &&
-        capability.retainedSourceMismatch !== true
-      )
-        return Object.freeze({ assembly: before });
-    }
-  }
   const beforePlacements = new Map(
     placements(before).map((placement) => [semanticAddressKey(placement.address), placement]),
   );
-  if (command.kind === 'UnplaceGeneratedDelivery') {
-    const owner = createOccurrenceAddress(
-      createBiomeAddress(command.action.routeKey, command.action.biomeKey),
-      command.action.occurrenceId,
-    );
-    const reference = occurrenceAt(before.project, owner)?.roomActions.order.find(
-      (reference) => roomActionKey(reference) === command.action.actionKey,
-    );
-    if (reference?.kind === 'interactAcquisitionEntry') {
-      const address = createAcquisitionEntryAddress(
-        createAcquisitionSiteAddress(owner, reference.siteKey),
-        reference.entryKey,
-      );
-      if (beforePlacements.get(semanticAddressKey(address))?.assessment.kind === 'valid')
-        return Object.freeze({ assembly: before });
-    }
-  }
-  if (
-    command.kind === 'PlaceClockedTraitPickup' &&
-    !attestClockedTraitPickupPlacementForProjectEvaluationAssembly(before, command)
-  )
-    return Object.freeze({ assembly: before });
-  let project = applyProjectCommand(before.project, catalog, command);
-  if (project === before.project) return Object.freeze({ assembly: before });
   // An installed route keeps exactly the doors and rows it was authored with.
-  if (command.kind !== 'ReplaceRoute') {
+  if (command?.kind !== 'ReplaceRoute') {
     // A door its room no longer has is context gone: an unselected one goes,
     // and a takeover batch fills the doors its Preboss takes over.
     const settledDecisions = new Set<string>();
@@ -797,7 +978,11 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
         }),
       );
       try {
-        project = settleExitCapacity(project, catalog, drift.decision, command);
+        const subject: CommandContractSubject = command ?? {
+          kind: 'SettleUpgradedExitCapacity',
+          decision: drift.decision,
+        };
+        project = settleExitCapacity(project, catalog, drift.decision, subject);
       } catch (error) {
         // The topology and its reconciliation disagree: an engine defect.
         if (!(error instanceof ProjectCommandContractError)) throw error;
@@ -812,12 +997,15 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
     }
     removedElsewhere.push(...sourcedRowsTaken(before.project, project));
   }
-  let assembly = evaluate(project);
+  let assembly = project === before.project ? before : evaluate(project);
   // The reroll pool is a fixed budget at each spend's own point: a new spend
   // past it is refused. An earlier spend takes precedence, so an edit that
   // leaves later spends short keeps them with their findings.
-  const spendOwners = addedRerollSpendOwners(catalog, before.project, project, command);
-  if (spendOwners.size > 0) {
+  const spendOwners =
+    command === undefined
+      ? new Set<string>()
+      : addedRerollSpendOwners(catalog, before.project, project, command);
+  if (command !== undefined && spendOwners.size > 0) {
     // Each over-spending owner and how far past the pool it goes.
     const overspent = (evaluated: ProjectEvaluationAssembly) =>
       new Map(
@@ -972,7 +1160,7 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
     });
     if (due.length === 0) {
       // An installed route keeps exactly the rows it was authored with.
-      if (command.kind === 'ReplaceRoute') return settled(assembly);
+      if (command?.kind === 'ReplaceRoute') return settled(assembly);
       const rekeys = incomingRewardRekeys(catalog, before.project, assembly, rekeyed);
       if (rekeys.length > 0) {
         for (const { owner, stale, role } of rekeys) {
@@ -1002,9 +1190,10 @@ export function settleProjectEdit(options: ProjectEditSettlementOptions): Projec
       }
       // A row with no context or source has nothing to repair: the edit that orphans it removes it.
       const stale = [
-        ...staleRowsToRemove(before, beforeRosters, assembly),
-        ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly),
-        ...cageGoneRerolls(before, assembly),
+        ...staleRowsToRemove(before, beforeRosters, assembly, upgrade),
+        ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly, upgrade),
+        ...cageGoneRerolls(before, assembly, upgrade),
+        ...(upgrade ? sourceGonePickups(catalog, assembly, evaluate) : []),
       ];
       if (stale.length === 0) return settled(assembly);
       const pass: { owner: OccurrenceAddress; reference: RoomActionReference; index: number }[] =

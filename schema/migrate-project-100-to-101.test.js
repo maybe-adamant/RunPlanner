@@ -40,6 +40,7 @@ const toyDocument = (occurrences) => ({
 describe('schema 100 to 101 migration', () => {
   let step;
   let nextStep;
+  let lastStep;
   let engine;
   before(async () => {
     ({ module: step } = await runnerImport(
@@ -48,6 +49,10 @@ describe('schema 100 to 101 migration', () => {
     ));
     ({ module: nextStep } = await runnerImport(
       join(root, 'apps/planner/src/persistence/project-101-to-102.js'),
+      runner,
+    ));
+    ({ module: lastStep } = await runnerImport(
+      join(root, 'apps/planner/src/persistence/project-102-to-103.js'),
       runner,
     ));
     ({ module: engine } = await runnerImport(
@@ -60,7 +65,9 @@ describe('schema 100 to 101 migration', () => {
   const decode = (document) =>
     engine.parseProjectDocument(
       JSON.stringify(
-        document.schemaVersion === 101 ? nextStep.migrateProjectDocument(document) : document,
+        document.schemaVersion === 101
+          ? lastStep.migrateProjectDocument(nextStep.migrateProjectDocument(document))
+          : document,
       ),
       engine.catalog,
     );

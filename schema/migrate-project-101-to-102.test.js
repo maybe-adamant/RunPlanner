@@ -37,10 +37,15 @@ function entries(document) {
 
 describe('schema 101 to 102 migration', () => {
   let step;
+  let nextStep;
   let engine;
   before(async () => {
     ({ module: step } = await runnerImport(
       join(root, 'apps/planner/src/persistence/project-101-to-102.js'),
+      runner,
+    ));
+    ({ module: nextStep } = await runnerImport(
+      join(root, 'apps/planner/src/persistence/project-102-to-103.js'),
       runner,
     ));
     ({ module: engine } = await runnerImport(
@@ -48,8 +53,14 @@ describe('schema 101 to 102 migration', () => {
       runner,
     ));
   });
+  // A schema 102 result is read by the current codec past the later transition.
   const decode = (document) =>
-    engine.parseProjectDocument(JSON.stringify(document), engine.catalog);
+    engine.parseProjectDocument(
+      JSON.stringify(
+        document.schemaVersion === 102 ? nextStep.migrateProjectDocument(document) : document,
+      ),
+      engine.catalog,
+    );
   const canonical = (document) => engine.encodeProjectDocument(decode(document));
   const at101 = (current, revision = 2) => ({
     ...engine.legacySchema101Body(current),

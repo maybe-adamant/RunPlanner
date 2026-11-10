@@ -1,10 +1,16 @@
 import {
+  createProjectAddress,
   parseProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { RemovedStaleRoomActions, SettlementFault } from '@run-planner/engine/simulation';
+import {
+  OUTPUT_SCHEMA_VERSION as UPGRADE_SETTLEMENT_SCHEMA_VERSION,
+  settleUpgradedProject,
+} from './project-102-to-103.js';
 import { PROJECT_TRANSITION_STEPS } from './project-transitions.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
@@ -36,6 +42,11 @@ export interface ProjectDocumentTransition {
 export interface LoadProjectDocumentOptions {
   /** Names a document saved before projects carried a name: its file's stem, when known. */
   readonly legacyName?: string;
+  /**
+   * Reads a plan saved before schema 103 as saved, without the settlement opening it applies:
+   * for library upkeep that compares or re-identifies a file without opening it.
+   */
+  readonly asSaved?: boolean;
 }
 
 export interface ProjectMigrationProvenance {
@@ -45,9 +56,22 @@ export interface ProjectMigrationProvenance {
   readonly targetSchemaVersion: number;
 }
 
+/**
+ * What settling a plan saved before schema 103 changed: the plan as saved, read at the current
+ * schema, which one Undo restores, and the removals to announce.
+ */
+export interface ProjectUpgrade {
+  readonly before: ProjectDocument;
+  readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
+  readonly fault?: SettlementFault;
+}
+
 export interface LoadedProjectDocument {
   readonly migrationProvenance: readonly ProjectMigrationProvenance[];
+  /** The plan to open: settled once when it was saved before schema 103. */
   readonly project: ProjectDocument;
+  /** Present when that settlement changed the plan or faulted. */
+  readonly upgrade?: ProjectUpgrade;
 }
 
 /** The registered transitions, each opening against the catalog the document loads under. */
@@ -117,9 +141,44 @@ export function loadProjectDocument(
   if (migratedJson === undefined) {
     throw new Error('Project migration result must be JSON serializable.');
   }
+  const before = parseProjectDocument(migratedJson, catalog);
+  if (envelope.schemaVersion >= UPGRADE_SETTLEMENT_SCHEMA_VERSION || options.asSaved === true) {
+    return Object.freeze({ migrationProvenance: migrated.migrationProvenance, project: before });
+  }
+  // A plan saved under the earlier settlement rules is settled once, as they now would.
+  let settled: ReturnType<typeof settleUpgradedProject>;
+  try {
+    settled = settleUpgradedProject(before, catalog);
+  } catch (error) {
+    // A settlement that throws is an engine defect, never a reason the plan cannot open: it
+    // opens as saved, with the fault reported where settlement faults are.
+    return Object.freeze({
+      migrationProvenance: migrated.migrationProvenance,
+      project: before,
+      upgrade: Object.freeze({
+        before,
+        fault: Object.freeze({
+          key: `upgradeSettlement:${error instanceof Error ? error.message : String(error)}`,
+          owner: createProjectAddress(),
+        }),
+      }),
+    });
+  }
+  const project = settled.assembly.project;
   return Object.freeze({
     migrationProvenance: migrated.migrationProvenance,
-    project: parseProjectDocument(migratedJson, catalog),
+    project,
+    ...(project === before && settled.fault === undefined
+      ? {}
+      : {
+          upgrade: Object.freeze({
+            before,
+            ...(settled.removedStaleActions === undefined
+              ? {}
+              : { removedStaleActions: settled.removedStaleActions }),
+            ...(settled.fault === undefined ? {} : { fault: settled.fault }),
+          }),
+        }),
   });
 }
 
