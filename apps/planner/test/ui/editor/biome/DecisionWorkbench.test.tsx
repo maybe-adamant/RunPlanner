@@ -1363,8 +1363,11 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(owner),
     );
 
-    expect(screen.getByText('Cage rewards appear bottom to top on the door')).toBeTruthy();
-    expect(screen.queryByText('No room here uses the cage count')).toBeNull();
+    expect(
+      screen
+        .getAllByRole('note', { name: 'Note' })
+        .map((marker) => marker.getAttribute('aria-description')),
+    ).toContain('Cage rewards appear bottom to top on the door');
 
     for (const roomLabel of ['Combat 05', 'Combat 04']) {
       const card = screen.getByRole('article', { name: `${roomLabel} room offer` });
@@ -1389,9 +1392,11 @@ describe('DecisionWorkbench', () => {
       return node === undefined ? undefined : { kind: 'node', node };
     });
 
-    const notes = within(screen.getByRole('complementary', { name: 'Notes' }));
-    expect(notes.getByText('No room here uses the cage count')).toBeTruthy();
-    expect(notes.queryByText('Cage rewards appear bottom to top on the door')).toBeNull();
+    const notes = screen
+      .getAllByRole('note', { name: 'Note' })
+      .map((marker) => marker.getAttribute('aria-description') ?? '');
+    expect(notes.some((note) => note.includes('No room here uses the cage count'))).toBe(true);
+    expect(notes.some((note) => note.includes('Cage rewards appear bottom to top'))).toBe(false);
   });
 
   it('authors multi-door G and P Prebosses through their required Door 1 choices', async () => {
@@ -1621,13 +1626,11 @@ describe('DecisionWorkbench', () => {
 
     expect(screen.getByLabelText('Reward Pool')).toBeTruthy();
     expect(screen.getByRole('status', { name: 'Effective Pool' }).textContent).toBe('Major Reward');
-    // The counted pool is described by the note saying why it differs.
+    // The counted pool is marked with the note saying why it differs.
+    const effective = screen.getByRole('status', { name: 'Effective Pool' }).parentElement!;
     expect(
-      screen.getByRole('group', {
-        name: 'Effective Pool Major Reward',
-        description: 'Forced by Combat 01',
-      }),
-    ).toBeTruthy();
+      within(effective).getByRole('note', { name: 'Note' }).getAttribute('aria-description'),
+    ).toBe('Forced by Combat 01');
   });
 
   it('names the effective pool only where it differs across editable, inherited and discarded pools', () => {
@@ -1689,14 +1692,11 @@ describe('DecisionWorkbench', () => {
     expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toMatch(/Choose room/);
     const inherited = screen.getByRole('group', { name: 'Reward Pool' });
     expect(within(inherited).getByText(/Major Reward/)).toBeTruthy();
-    // The wheel chose it, so it is a fixed value with no link, described by its note.
+    // The wheel chose it, so it is a fixed value with no link, marked with its note.
     expect(within(inherited).queryByRole('button')).toBeNull();
     expect(
-      within(inherited).getByRole('group', {
-        name: 'Reward Pool Major Reward',
-        description: "Chosen at this room's last reward wheel",
-      }),
-    ).toBeTruthy();
+      within(inherited).getByRole('note', { name: 'Note' }).getAttribute('aria-description'),
+    ).toBe("Chosen at this room's last reward wheel");
     cleanup();
 
     // An ordinary door publishes its pool picker just as early.

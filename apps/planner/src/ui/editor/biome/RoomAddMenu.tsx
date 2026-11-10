@@ -36,12 +36,9 @@ export interface RoomAddGroup {
  * a line of source families, each opening its short list of optional actions.
  */
 export function RoomAddArea({
-  footer,
   groups,
   objects,
 }: {
-  /** What sits under the area in its column, such as the doors' notes. */
-  readonly footer?: ReactNode;
   /** Source families in display order, each with its optional actions. */
   readonly groups: readonly RoomAddGroup[];
   /** The room objects' and features' entries, each its own `li`, in display order. */
@@ -51,19 +48,14 @@ export function RoomAddArea({
   const actionsId = useId();
   const titleId = useId();
   // Beside a wide timeline the area is a side column that stays put even when empty;
-  // below it, an empty area shows only for its notes.
+  // below it, an empty area is hidden.
   if (groups.length === 0 && objects.length === 0)
     return (
-      <section
-        aria-labelledby={titleId}
-        className="room-add"
-        data-empty={footer === undefined || footer === null ? '' : undefined}
-      >
+      <section aria-labelledby={titleId} className="room-add" data-empty="">
         <h4 className="room-add-title" id={titleId}>
           Optional actions
         </h4>
         <p className="room-add-empty">Nothing optional to add here</p>
-        {footer}
       </section>
     );
   return (
@@ -93,7 +85,6 @@ export function RoomAddArea({
           </ol>
         </div>
       )}
-      {footer}
     </section>
   );
 }

@@ -509,6 +509,22 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('P', 'surface-p-6-1-p_combat10'),
   },
   {
+    id: 'boss-door-fixed-pool',
+    doorsExpanded: true,
+    label: 'Preboss doors with the boss’s fixed Reward Pool and its note',
+    shows: ['fixed boss pool', 'door note marker'],
+    project: createGoldenFGHIProject,
+    target: room('H', 'golden-h-preboss-shop'),
+  },
+  {
+    id: 'side-room-hidden-door',
+    doorsExpanded: true,
+    label: 'Ephyra side room doors: the hidden return door and its note',
+    shows: ['hidden door row', 'door note marker'],
+    project: loadSurfaceNOPQCheckpoint,
+    target: room('N', 'surface-n-combat05-sideDoor1'),
+  },
+  {
     id: 'side-room-doors',
     overview: true,
     label: 'Ephyra main room: side doors in Spawns, a Leave room picker per side visit',

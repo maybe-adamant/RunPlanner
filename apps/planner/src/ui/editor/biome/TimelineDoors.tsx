@@ -6,14 +6,14 @@ import type {
 } from '@planner/projections/structured-workspace';
 import type { DoorChip } from './doorSummary';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
-import { DoorChips } from './DecisionWorkbench';
+import { DoorChips, NoteMarker } from './DecisionWorkbench';
 import { TimelineRow } from './TimelineRow';
 import { doorsOpenToggle, type BannerToggle } from './doorSummary';
 
 /**
  * A room's doors on its Timeline: the Doors open row (a compact state that
  * expands into the doors' editor), the room's last row saying how it is
- * left, the batch facts beside the Timeline and the Doors object.
+ * left, and the Doors object.
  */
 export interface TimelineDoorsContent {
   /** The doors' compact state on the Doors open row: a chip per door. */
@@ -22,12 +22,6 @@ export interface TimelineDoorsContent {
     /** The list's name, where it holds a wheel's offers. */
     readonly label?: string;
   };
-  /**
-   * The door note being hovered or focused: the chip it lights while the
-   * editor is shut, and whether the open editor shows it on a row of its own.
-   * A note lights the Doors open title where neither shows it.
-   */
-  readonly activeNote?: { readonly chip?: string; readonly ownRow: boolean };
   /** The owners the editor repairs; a new finding on any opens the doors. */
   readonly findingOwners?: readonly SemanticAddress[];
   /** Owners whose findings of one code also open the doors, such as a locked door picked to leave by. */
@@ -43,8 +37,8 @@ export interface TimelineDoorsContent {
   readonly endsPlan?: true;
   /** False where the room shows no doors, only its last row. */
   readonly doorsOpenRow?: false;
-  /** Batch facts, beside the Timeline. */
-  readonly notes?: ReactNode;
+  /** A note on the doors as a whole, marked on the Doors open title. */
+  readonly note?: string;
   /** The Doors object in the Add area, where presses on the doors are added. */
   readonly object?: ReactNode;
   /** The presses on the doors, each edited on its own Timeline row. */
@@ -70,11 +64,7 @@ export function DoorsOpenControls({ doors }: { readonly doors: TimelineDoors }) 
   return (
     <span className="timeline-doors-open-controls">
       {doors.summary === undefined ? null : (
-        <DoorChips
-          activeKey={doors.expanded ? undefined : doors.activeNote?.chip}
-          chips={doors.summary.chips}
-          label={doors.summary.label}
-        />
+        <DoorChips chips={doors.summary.chips} label={doors.summary.label} />
       )}
     </span>
   );
@@ -89,13 +79,12 @@ export function BannerTitle({
   readonly toggle?: BannerToggle | undefined;
 }) {
   if (toggle === undefined) return <strong>{label}</strong>;
-  return (
+  const button = (
     <button
       aria-controls={toggle.controls}
       aria-expanded={toggle.expanded}
       aria-label={toggle.label}
       className="timeline-banner-toggle"
-      data-note-active={toggle.noteActive || undefined}
       onClick={toggle.onToggle}
       type="button"
     >
@@ -104,6 +93,14 @@ export function BannerTitle({
       </span>
       <strong>{label}</strong>
     </button>
+  );
+  return toggle.note === undefined ? (
+    button
+  ) : (
+    <>
+      {button}
+      <NoteMarker note={toggle.note} />
+    </>
   );
 }
 

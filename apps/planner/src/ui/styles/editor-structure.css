@@ -1613,78 +1613,31 @@ select {
   padding: 12px 0 0;
 }
 
-@container door-workbench (min-width: 62rem) {
-  .door-body:has(> .door-notes) {
-    grid-template-columns: minmax(0, 46rem) minmax(12rem, 18rem);
-    align-items: start;
-  }
-
-  .door-body:has(> .door-notes) > :not(.door-notes) {
-    grid-column: 1;
-  }
-
-  /* The notes start level with the table and run beside the rest. */
-  .door-body > .door-notes {
-    grid-column: 2;
-    grid-row: 2 / span 2;
-  }
-
-  .door-body:has(> .door-batch:empty) > .door-notes {
-    grid-row: 1 / span 2;
-  }
-
-  /* Notes with no doors beside them take the doors' place. */
-  .door-body:not(:has(> .door-rows)) > .door-notes {
-    grid-column: 1;
-  }
-}
-
-.door-notes {
-  display: grid;
-  gap: 6px;
-  align-content: start;
-}
-
-.door-notes-title {
-  margin: 0;
-  color: #aaa7af;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.door-notes ul {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  color: #d8c9a6;
-  font-size: 0.84rem;
-}
-
-/* A note's footnote symbol: after the value it explains, and leading the note. */
+/* A note's footnote star after the value it explains; hovering or focusing it shows the note. */
 .door-note-symbol {
   margin-inline-start: 2px;
+  padding: 0 2px;
+  border-radius: 3px;
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 600;
+  cursor: help;
+  outline: none;
 }
 
-.door-notes li > .door-note-symbol {
-  margin-inline: 0 6px;
-  vertical-align: super;
+.door-note-symbol:hover {
+  color: var(--selection-accent);
 }
 
-/* One box for every marked value, so a fixed chip and plain text highlight alike. */
+.door-note-symbol:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--selection-accent) 80%, transparent);
+  outline-offset: 1px;
+}
+
 .door-note-marked {
   display: inline-flex;
   min-height: 30px;
   align-items: center;
-  padding: 0 6px;
-  border-radius: 4px;
-  outline: none;
 }
 
 .door-note-marked > .fixed-value-chip,
@@ -1698,32 +1651,9 @@ select {
   margin-top: 3px;
 }
 
-.door-notes li[tabindex] {
-  border-radius: 4px;
-  outline: none;
-}
-
-/* Hovering or focusing a value or its note highlights both; shut doors light the chip or title. */
-:is(
-  .door-note-marked,
-  .door-notes li,
-  .timeline-door-chip,
-  .timeline-banner-toggle
-)[data-note-active] {
-  background: color-mix(in srgb, var(--selection-accent) 14%, transparent);
-}
-
-.timeline-banner-toggle[data-note-active] {
-  border-radius: 4px;
-}
-
-.door-notes li[data-note-opens] {
-  cursor: pointer;
-}
-
-:is(.door-note-marked, .door-notes li[tabindex]):focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--selection-accent) 80%, transparent);
-  outline-offset: 2px;
+.timeline-banner-title > .door-note-symbol {
+  align-self: flex-start;
+  margin-inline-start: -4px;
 }
 
 .room-workbench-panel-content {

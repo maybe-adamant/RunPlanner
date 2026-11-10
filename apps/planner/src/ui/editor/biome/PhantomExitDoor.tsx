@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
   requireWorkspaceInteraction,
@@ -14,7 +14,6 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingMark, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { DoorRow, NoteMarked } from './DecisionWorkbench';
-import type { DoorNoteMark } from './doorNotes';
 import { roomKindIcon } from './roomIcon';
 
 const emptyModel: ContextualPickerModel<string> = Object.freeze({
@@ -33,15 +32,14 @@ export function PhantomExitDoor({
   control,
   idPrefix,
   interactions,
-  mark,
+  note,
 }: {
   readonly control: WorkspacePhantomExitControl;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
-  /** Links the door's name to the note that explains it. */
-  readonly mark?: DoorNoteMark | undefined;
+  /** The note that explains the door, marked on its name. */
+  readonly note?: string | undefined;
 }) {
-  const nameId = useId();
   const findingTarget = useFindingTarget();
   const findingMark = useFindingMark();
   const executeIntent = useCommandIntent();
@@ -64,10 +62,8 @@ export function PhantomExitDoor({
     <DoorRow
       ariaLabel="Hidden return door"
       identity={
-        <NoteMarked labelledBy={nameId} mark={mark}>
-          <span className="door-row-number" id={nameId}>
-            Hidden
-          </span>
+        <NoteMarked note={note}>
+          <span className="door-row-number">Hidden</span>
         </NoteMarked>
       }
       room={

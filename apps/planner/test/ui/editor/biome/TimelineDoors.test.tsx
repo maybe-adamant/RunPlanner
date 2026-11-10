@@ -29,7 +29,7 @@ import {
   goldenHBiome,
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
@@ -321,106 +321,49 @@ describe('a room’s door notes', () => {
     return details;
   }
 
-  const note = (text: RegExp | string) =>
-    within(screen.getByRole('complementary', { name: 'Notes' }))
-      .getByText(text)
-      .closest('li')!;
-  const lit = (element: Element | null | undefined) => element?.hasAttribute('data-note-active');
+  async function openDoors(view: ReturnType<typeof renderWorkspace>, details: HTMLElement) {
+    const disclosure = within(details).getByRole('button', { name: 'Door details' });
+    if (disclosure.getAttribute('aria-expanded') === 'false') await view.user.click(disclosure);
+  }
 
-  it('lights the hidden door’s chip while the doors are shut, and its row once open', async () => {
+  const noteText = (marker: Element) => marker.getAttribute('aria-description');
+
+  it('marks the hidden door with its note, in no notes section', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const details = await openRoom(view, sideRoom);
-    const disclosure = within(details).getByRole('button', { name: 'Door details' });
-    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
-    const hiddenNote = within(screen.getByRole('complementary', { name: 'Notes' }))
-      .getAllByRole('listitem')
-      .find((item) => item.querySelector('.door-note-symbol') !== null)!;
-    const chip = () =>
-      within(within(details).getByRole('list', { name: 'Door summary' })).getByRole('listitem', {
-        name: 'Hidden door',
-      });
-
-    fireEvent.mouseEnter(hiddenNote);
-    expect(lit(chip())).toBe(true);
-    expect(lit(disclosure)).toBe(false);
-    // Hovering never opens the doors.
-    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
-    fireEvent.mouseLeave(hiddenNote);
-    expect(lit(chip())).toBe(false);
-
-    await view.user.click(disclosure);
-    fireEvent.mouseEnter(hiddenNote);
+    await openDoors(view, details);
+    expect(screen.queryByRole('complementary', { name: 'Notes' })).toBeNull();
     const door = within(details).getByRole('article', { name: 'Hidden return door' });
-    expect(lit(door.querySelector('[aria-describedby]'))).toBe(true);
-    expect(lit(chip())).toBe(false);
-    expect(lit(disclosure)).toBe(false);
+    const marker = within(door).getByRole('note', { name: 'Note' });
+    expect(noteText(marker)).toBe(
+      'Its room and reward are drawn when the doors first unlock, before any side door.',
+    );
+    expect(marker.tabIndex).toBe(0);
   });
 
-  it('lights the Doors open title for a note on the doors as a whole', async () => {
+  it('marks the Doors open title with a note on the doors as a whole, shut or open', async () => {
     const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'H');
     const details = await openRoom(
       view,
       createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-miniboss01')),
     );
     const disclosure = within(details).getByRole('button', { name: 'Door details' });
-    const batchNote = note('Cage rewards appear bottom to top on the door');
-    const shut = disclosure.getAttribute('aria-expanded') === 'false';
-    fireEvent.mouseEnter(batchNote);
-    expect(lit(disclosure)).toBe(true);
-    fireEvent.mouseLeave(batchNote);
-    expect(lit(disclosure)).toBe(false);
-
-    // The title stays its target with the doors either way.
+    const titleNote = () => within(disclosure.parentElement!).getByRole('note', { name: 'Note' });
+    expect(noteText(titleNote())).toBe('Cage rewards appear bottom to top on the door');
     await view.user.click(disclosure);
-    expect(disclosure.getAttribute('aria-expanded')).toBe(shut ? 'true' : 'false');
-    fireEvent.mouseEnter(batchNote);
-    expect(lit(disclosure)).toBe(true);
-
-    // Opening it lands on the doors themselves.
-    await view.user.click(batchNote);
-    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
-    expect(document.activeElement).toBe(
-      within(details).getByRole('region', { name: 'Door details' }),
-    );
+    expect(noteText(titleNote())).toBe('Cage rewards appear bottom to top on the door');
   });
 
-  it('opens the doors onto a clicked note’s door, keeping the remembered choice', async () => {
-    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
-    const details = await openRoom(view, sideRoom);
-    const disclosure = () => within(details).getByRole('button', { name: 'Door details' });
-    // Shut by choice.
-    await view.user.click(disclosure());
-    await view.user.click(disclosure());
-    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
-    const choices = view.application.store.getState().editorSession.doorEditorChoices;
-
-    const hiddenNote = within(screen.getByRole('complementary', { name: 'Notes' }))
-      .getAllByRole('listitem')
-      .find((item) => item.querySelector('.door-note-symbol') !== null)!;
-    await view.user.click(hiddenNote);
-    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
-    const door = within(details).getByRole('article', { name: 'Hidden return door' });
-    expect(door.contains(document.activeElement)).toBe(true);
-    expect(view.application.store.getState().editorSession.doorEditorChoices).toBe(choices);
-
-    // Leaving that navigation brings the choice back.
-    await openRoom(view, sideRoom);
-    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
-  });
-  it('opens the doors onto a boss door’s fixed pool from its note', async () => {
+  it('marks a boss door’s fixed pool with its note', async () => {
     const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'H');
     const details = await openRoom(
       view,
       createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop')),
     );
-    const disclosure = () => within(details).getByRole('button', { name: 'Door details' });
-    if (disclosure().getAttribute('aria-expanded') === 'true') await view.user.click(disclosure());
-    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
-
-    await view.user.click(note('Fixed for this boss'));
-    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
-    expect(document.activeElement?.hasAttribute('data-door-note-focus')).toBe(true);
-    expect(document.activeElement?.textContent).toContain('Major Reward');
+    await openDoors(view, details);
+    const marker = within(details).getByRole('note', { name: 'Note' });
+    expect(noteText(marker)).toBe('Fixed for this boss');
+    expect(marker.parentElement?.textContent).toContain('Major Reward');
   });
 });
 

@@ -1,7 +1,7 @@
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { RewardPoolLine } from './DecisionWorkbench';
-import type { DoorNoteMark, DoorNoteTarget } from './doorNotes';
+import type { DoorNoteFor } from './doorNotes';
 import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { ReactNode } from 'react';
 import type {
@@ -117,12 +117,12 @@ function BossDoorRewardStoreEditor({
 export function BossDoorRewardPoolRow({
   idPrefix,
   interactions,
-  markFor,
+  noteFor,
   store,
 }: {
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
+  readonly noteFor: DoorNoteFor;
   readonly store: WorkspaceBossDoorRewardStoreControl;
 }) {
   switch (store.kind) {
@@ -141,13 +141,13 @@ export function BossDoorRewardPoolRow({
       );
     case 'fixed':
       return (
-        <RewardPoolLine fixedLabel={store.label} label="Reward Pool" poolMark={markFor('pool')} />
+        <RewardPoolLine fixedLabel={store.label} label="Reward Pool" poolNote={noteFor('pool')} />
       );
     case 'ignored':
       return (
         <RewardPoolLine
           effective={store.effective}
-          effectiveMark={markFor('effective')}
+          effectiveNote={noteFor('effective')}
           fixedLabel={store.label}
           label="Reward Pool"
         />

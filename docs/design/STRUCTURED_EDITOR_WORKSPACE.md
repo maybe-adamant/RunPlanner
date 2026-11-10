@@ -645,7 +645,7 @@ with their findings. Each door row of the editor keeps its first draw, with any
 kept-reward repair as a die button in its action zone; the Leave row, the next
 room's header and the rail show the final reward. Reroll findings route to the
 press's Timeline row. An Ephyra room's hidden return door is a row of the door
-table whose name is footnote-linked to the note explaining it; it shows its
+table whose name carries the note explaining it; it shows its
 automatic room and reward as plain values until its placeholder room or reward
 is pinned, and a reward picker waits for the room.
 
@@ -940,23 +940,22 @@ additional exit's own store. A Fields batch states its door roll and its cage
 facts on the same line. React derives none of these values. A decision without
 a pool renders no pool line.
 
-Batch-wide facts sit in the Notes block of the Timeline's side column: where an
-inherited pool was chosen, why the effective store differs (the forcing room,
-the discarding room, the counting exit), and how Fields cages read. Notes are
-absent, with no reserved space, when a batch has none, and a reason shown there
-is not repeated on hover. The projection supplies each batch's notes in order,
+Batch-wide facts are notes, each a footnote star after what it explains that
+shows the note on hover or keyboard focus: where an inherited pool was chosen,
+why the effective store differs (the forcing room, the discarding room, the
+counting exit), and how Fields cages read. There is no notes block and nothing
+is reserved when a batch has none. The projection supplies each batch's notes,
 each naming what it explains: the pool, the store after the arrow, a room's
-hidden return door, or the batch as a whole. A note that explains one value is linked to it by a footnote symbol
-after the value and before the note, assigned in order of appearance; the
-value is described by its note for assistive technology, and hovering or
-focusing either highlights both. Notes about the whole batch carry no symbol. Row state stays on its row
-and findings stay on their controls.
+hidden return door, or the batch as a whole, whose notes mark the Doors open
+title and read one per line. A note shows only on its star, which also carries
+it as the star's accessible description. Row state stays on its row and
+findings stay on their controls.
 
-A boss door uses the same pool line and Notes. A boss that resolves its entered
+A boss door uses the same pool line and notes. A boss that resolves its entered
 store from the chosen offer authors the pool there; one that pins its store
-shows that store as a fixed value with the reason in Notes; one that records no
-entered store shows the carried pool, if any, with an arrow to none and the
-reason in Notes. The projection supplies these values and notes.
+shows that store as a fixed value with the reason as its note; one that records
+no entered store shows the carried pool, if any, with an arrow to none and the
+reason as its note. The projection supplies these values and notes.
 
 Unpicked targets remain fully visible in the decision workbench because they
 still affect reward bags, sibling conflicts, source support, and possibility

@@ -52,7 +52,7 @@ import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
 import { doorChipMapLink, type DoorChip } from './doorSummary';
 import { DoorRows } from './DoorRows';
-import { type DoorNoteItem, type DoorNoteMark, type DoorNoteTarget } from './doorNotes';
+import type { DoorNoteFor } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
@@ -562,42 +562,34 @@ function AdditionalExitRow({
   );
 }
 
-/**
- * A value a note explains: its footnote symbol follows it, it is named by its
- * label and value and described by the note, and hovering or focusing either
- * highlights both.
- */
+/** A note's footnote star, which shows the note on hover or keyboard focus. */
+export function NoteMarker({ note }: { readonly note: string }) {
+  return (
+    <sup
+      aria-label="Note"
+      className="door-note-symbol"
+      role="note"
+      tabIndex={0}
+      {...hintProps(note, undefined, 'Note')}
+    >
+      *
+    </sup>
+  );
+}
+
+/** A value a note explains, its footnote star following it. */
 export function NoteMarked({
   children,
-  labelledBy,
-  mark,
+  note,
 }: {
   readonly children: ReactNode;
-  /** The ids of the value's label and of its text, which together name it. */
-  readonly labelledBy: string;
-  readonly mark: DoorNoteMark | undefined;
+  readonly note: string | undefined;
 }) {
-  if (mark === undefined) return children;
+  if (note === undefined) return children;
   return (
-    <span
-      aria-describedby={mark.noteId}
-      aria-labelledby={labelledBy}
-      className="door-note-marked"
-      data-note-active={mark.active || undefined}
-      onBlur={() => mark.setActive(false)}
-      onFocus={() => mark.setActive(true)}
-      onMouseEnter={() => mark.setActive(true)}
-      onMouseLeave={() => mark.setActive(false)}
-      data-door-note-focus={mark.focusKey}
-      role="group"
-      tabIndex={0}
-    >
+    <span className="door-note-marked">
       {children}
-      {mark.symbol === undefined ? null : (
-        <sup aria-hidden="true" className="door-note-symbol">
-          {mark.symbol}
-        </sup>
-      )}
+      <NoteMarker note={note} />
     </span>
   );
 }
@@ -605,24 +597,22 @@ export function NoteMarked({
 /** The pool line: the batch's pool, then what the selected exit counts where that differs. */
 export function RewardPoolLine({
   effective,
-  effectiveMark,
+  effectiveNote,
   fixedLabel,
   label,
   picker,
-  poolMark,
+  poolNote,
 }: {
   readonly effective?: WorkspaceEffectiveRewardPool | undefined;
-  readonly effectiveMark?: DoorNoteMark | undefined;
+  readonly effectiveNote?: string | undefined;
   /** A pool decided elsewhere, shown as a plain value. */
   readonly fixedLabel?: string | undefined;
   readonly label: string;
   readonly picker?: ReactNode;
-  readonly poolMark?: DoorNoteMark | undefined;
+  readonly poolNote?: string | undefined;
 }) {
   const labelId = useId();
-  const valueId = useId();
   const effectiveLabelId = useId();
-  const effectiveValueId = useId();
   return (
     <div className="door-pool-line">
       {picker ?? (
@@ -631,8 +621,8 @@ export function RewardPoolLine({
             {label}
           </span>
           {fixedLabel === undefined ? null : (
-            <NoteMarked labelledBy={`${labelId} ${valueId}`} mark={poolMark}>
-              <FixedValueChip label={fixedLabel} textId={valueId} />
+            <NoteMarked note={poolNote}>
+              <FixedValueChip label={fixedLabel} />
             </NoteMarked>
           )}
         </span>
@@ -648,9 +638,9 @@ export function RewardPoolLine({
           <span className="visually-hidden" id={effectiveLabelId}>
             Effective Pool
           </span>
-          <NoteMarked labelledBy={`${effectiveLabelId} ${effectiveValueId}`} mark={effectiveMark}>
+          <NoteMarked note={effectiveNote}>
             <span aria-labelledby={effectiveLabelId} role="status">
-              <FixedValueChip label={effective.label} textId={effectiveValueId} />
+              <FixedValueChip label={effective.label} />
             </span>
           </NoteMarked>
         </span>
@@ -659,58 +649,13 @@ export function RewardPoolLine({
   );
 }
 
-/** The doors tab's side column of batch facts; absent when there are none. */
-export function DoorNotes({ items }: { readonly items: readonly DoorNoteItem[] }) {
-  const titleId = useId();
-  if (items.length === 0) return null;
-  return (
-    <aside aria-labelledby={titleId} className="door-notes">
-      <h4 className="door-notes-title" id={titleId}>
-        Notes
-      </h4>
-      <ul>
-        {items.map(({ key, mark, open, text }) =>
-          mark === undefined ? (
-            <li key={key}>{text}</li>
-          ) : (
-            <li
-              aria-labelledby={mark.noteId}
-              data-note-active={mark.active || undefined}
-              data-note-opens={open === undefined ? undefined : true}
-              key={key}
-              onBlur={() => mark.setActive(false)}
-              onClick={open}
-              onFocus={() => mark.setActive(true)}
-              onKeyDown={(event) => {
-                if (open === undefined || event.key !== 'Enter') return;
-                event.preventDefault();
-                open();
-              }}
-              onMouseEnter={() => mark.setActive(true)}
-              onMouseLeave={() => mark.setActive(false)}
-              tabIndex={0}
-            >
-              {mark.symbol === undefined ? null : (
-                <span aria-hidden="true" className="door-note-symbol">
-                  {mark.symbol}
-                </span>
-              )}
-              <span id={mark.noteId}>{text}</span>
-            </li>
-          ),
-        )}
-      </ul>
-    </aside>
-  );
-}
-
 function BatchSettings({
   interactions,
-  markFor,
+  noteFor,
   node,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
+  readonly noteFor: DoorNoteFor;
   readonly node: BatchNode;
 }) {
   const executeIntent = useCommandIntent();
@@ -733,9 +678,9 @@ function BatchSettings({
       {node.rewardPool === undefined ? null : (
         <RewardPoolLine
           effective={node.rewardPool.effective}
-          effectiveMark={markFor('effective')}
+          effectiveNote={noteFor('effective')}
           fixedLabel={node.rewardPool.inherited?.label}
-          poolMark={markFor('pool')}
+          poolNote={noteFor('pool')}
           label={node.rewardStoreLabel ?? 'Reward Pool'}
           picker={
             store === undefined ? undefined : (
@@ -817,12 +762,9 @@ export function BatchDoorsRepair({
 
 /** The doors' compact state on the Doors open row; each chip names its door on hover. */
 export function DoorChips({
-  activeKey,
   chips,
   label = 'Door summary',
 }: {
-  /** The chip of the door whose note is hovered or focused. */
-  readonly activeKey?: string | undefined;
   readonly chips: readonly DoorChip[];
   /** The list's name: a room's doors, or a Ship wheel's offers. */
   readonly label?: string | undefined;
@@ -838,7 +780,6 @@ export function DoorChips({
           aria-label={doorChipName(chip)}
           className="timeline-door-chip"
           data-missing={chip.missing}
-          data-note-active={chip.key === activeKey || undefined}
           data-unavailable={chip.unavailable || undefined}
           key={chip.key}
           role="listitem"
@@ -990,14 +931,14 @@ function DoorLockToggle({
 export function BatchDoorsDetail({
   interactions,
   lockedDoors,
-  markFor,
+  noteFor,
   node,
   repair,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   /** The room's lockable doors, each toggled on its row. */
   readonly lockedDoors?: WorkspaceLockedDoors | undefined;
-  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
+  readonly noteFor: DoorNoteFor;
   readonly node: BatchNode;
   /** The doors' repair or removal, where it sits under the doors. */
   readonly repair?: ReactNode;
@@ -1006,8 +947,6 @@ export function BatchDoorsDetail({
   // Where the doors lie past the plan end every door row is read-only together;
   // the end room's own doors still open inside the plan.
   const locked = useAuthoringLocked(node.owner);
-  // A note about the doors as a whole opens onto them.
-  const batchNote = markFor('batch');
   const lockFor = (exitKey: string, index: number) => {
     const door = lockedDoors?.doors.find((candidate) => candidate.exitKey === exitKey);
     return lockedDoors === undefined || door === undefined ? undefined : (
@@ -1026,12 +965,11 @@ export function BatchDoorsDetail({
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}
       {...findingAnchor(node.owner)}
-      data-door-note-focus={batchNote?.focusKey}
       tabIndex={-1}
     >
       <div className="door-body" data-authoring-locked={locked || undefined} inert={locked}>
         <div className="door-batch">
-          <BatchSettings interactions={interactions} markFor={markFor} node={node} />
+          <BatchSettings interactions={interactions} noteFor={noteFor} node={node} />
         </div>
         <DoorRows ariaLabel="Door rows" role="group">
           <DoorRowsHeader {...(repair === undefined ? {} : { action: repair })} />
@@ -1102,7 +1040,7 @@ function ExitFrontier({
   return (
     <BatchDoorsDetail
       interactions={interactions}
-      markFor={() => undefined}
+      noteFor={() => undefined}
       node={frontier.provisionalBatch}
     />
   );

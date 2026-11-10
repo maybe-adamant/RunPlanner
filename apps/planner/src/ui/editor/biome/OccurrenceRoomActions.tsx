@@ -128,7 +128,7 @@ function WorkbenchAddArea({
   objectRows,
   optionalRows,
 }: {
-  /** The room's Doors object and batch notes, where this list hosts the doors. */
+  /** The room's Doors object, where this list hosts the doors. */
   readonly doors?: TimelineDoors | undefined;
   /** Further object entries this list hosts, such as a Ship phase's Wheel. */
   readonly extraObjects?: readonly ReactNode[];
@@ -299,7 +299,6 @@ function WorkbenchAddArea({
     .map((entry) => entry.node);
   return (
     <RoomAddArea
-      footer={doors?.notes}
       groups={[...groups.entries()]
         .filter(([, entry]) => entry.object === undefined)
         .map(([key, entry]) => toGroup(key, entry))}
@@ -486,9 +485,8 @@ export function RoomActionsWorkbench({
                 {doorsTail([])}
               </ol>
             </div>
-            {/* Its notes and Doors object stay beside the doors without any room actions. */}
+            {/* Its Doors object stays beside the doors without any room actions. */}
             <RoomAddArea
-              footer={roomDoors.notes}
               groups={[]}
               objects={roomDoors.object === undefined ? [] : [roomDoors.object]}
             />

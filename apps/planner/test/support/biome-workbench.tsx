@@ -211,7 +211,7 @@ function DecisionDoors({
     ) : (
       <BatchDoorsDetail
         interactions={workspace.interactions}
-        markFor={() => undefined}
+        noteFor={() => undefined}
         node={subject.node}
       />
     );
