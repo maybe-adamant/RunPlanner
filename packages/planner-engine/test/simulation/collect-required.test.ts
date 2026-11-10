@@ -22,6 +22,7 @@ import {
   liveActionsForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
+  type RoomLiveActions,
 } from '@run-planner/engine/simulation';
 import { checkpointRegistry } from '@run-planner/test-fixtures/checkpoints/registry';
 import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
@@ -36,7 +37,7 @@ import {
   surfaceShrineDeliveriesProject,
   surfaceShrineDeliverySources,
 } from '@run-planner/test-fixtures/surface';
-import { collectRequiredItems } from '../../src/simulation/collect-required';
+import { collectRequiredItems, nextRequiredPlacement } from '../../src/simulation/collect-required';
 import { collectTestRequiredItems } from '../support/collect-required';
 
 /** The golden witness's tally; extras are rows edit settlement still adds on its own. */
@@ -340,6 +341,45 @@ describe('Collect all required', () => {
       'InsertRoomAction ["completeFieldsCage","Cage03"]@4',
       'InsertRoomAction ["interactLocalReward","cages","cage3"]@5',
     ]);
+  });
+
+  it('collects a pickup before acting on an object at the same index, whatever the item order', () => {
+    const place = (reference: RoomActionReference) => ({
+      kind: 'place' as const,
+      reference,
+      command: { kind: 'InsertRoomAction', reference, index: 2 } as unknown as ProjectCommand,
+    });
+    const choice = { kind: 'chooseRewardWheel', wheelKey: 'wheel2' } as const;
+    const delivery = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey: 'delivery',
+    } as const;
+    const live = {
+      owner: ship,
+      frontier: 0,
+      gaps: [
+        {
+          index: 0,
+          entries: { from: 0, to: 0 },
+          items: [
+            {
+              kind: 'object',
+              object: 'rewardWheel',
+              owner: ship,
+              actions: [{ ...place(choice), participation: 'required' }],
+            },
+            {
+              kind: 'pickup',
+              participation: 'required',
+              reference: delivery,
+              actions: [place(delivery)],
+            },
+          ],
+        },
+      ],
+    } as unknown as RoomLiveActions;
+    expect(nextRequiredPlacement(live, new Set())?.reference).toEqual(delivery);
   });
 
   it('stops cleanly at a missing choice and returns what it placed', () => {

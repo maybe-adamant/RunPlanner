@@ -53,17 +53,41 @@ function placementIndex(command: ProjectCommand, frontier: number): number {
   return 'index' in command && typeof command.index === 'number' ? command.index : frontier;
 }
 
+/** A required placement offered at the frontier, with what orders it among the others. */
+interface RequiredPlacement {
+  readonly placement: LivePlacement;
+  /** The action index it takes. */
+  readonly index: number;
+  /** Whether it collects loot lying on the ground rather than acting on an object. */
+  readonly pickup: boolean;
+}
+
+/**
+ * Which of two required placements goes first: the earlier index; then a
+ * pickup before an action on an object, since playing forward takes what lies
+ * on the ground before starting the next interaction (a cage's reward before
+ * the next cage, a delivery the wheels opening spawned before the next wheel's
+ * choice); then, for determinism, its row's kind and key.
+ */
+function comesFirst(left: RequiredPlacement, right: RequiredPlacement): boolean {
+  if (left.index !== right.index) return left.index < right.index;
+  if (left.pickup !== right.pickup) return left.pickup;
+  const leftKind = left.placement.reference.kind;
+  const rightKind = right.placement.reference.kind;
+  if (leftKind !== rightKind) return leftKind < rightKind;
+  return roomActionKey(left.placement.reference) < roomActionKey(right.placement.reference);
+}
+
 /**
  * The next required item to collect at the walk's frontier, by the command the
  * live product offers for it: its canonical restore where offered through the
  * frontier and not before an item this collection already took, otherwise its
  * placement at the frontier. Collection plays forward, so a Fields cage's
- * reward is collected before the next cage is cleared. The earliest placement
- * goes first, then the live product's item order. A caged pickup waits for its
- * unlock, and a placement that still needs a Travel Deal item's value is left
- * to its owner.
+ * reward is collected before the next cage is cleared. Placements are ordered
+ * as `comesFirst` says. A caged pickup waits for its unlock, and a placement
+ * that still needs a Travel Deal item's value is left to its owner.
  */
-function nextRequiredPlacement(
+export function nextRequiredPlacement(
   live: RoomLiveActions,
   collected: ReadonlySet<string>,
 ): LivePlacement | undefined {
@@ -78,7 +102,7 @@ function nextRequiredPlacement(
         else if (action.kind === 'placed' && collected.has(key))
           floor = Math.max(floor, gap.index + 1);
       }
-  let next: { readonly placement: LivePlacement; readonly index: number } | undefined;
+  let next: RequiredPlacement | undefined;
   for (const item of live.gaps[live.frontier]?.items ?? []) {
     const actions: readonly LiveAction[] =
       item.kind === 'pickup'
@@ -93,8 +117,12 @@ function nextRequiredPlacement(
         restore !== undefined && placementIndex(restore.command, live.frontier) >= floor
           ? restore
           : action;
-      const index = placementIndex(placement.command, live.frontier);
-      if (next === undefined || index < next.index) next = { placement, index };
+      const candidate: RequiredPlacement = {
+        placement,
+        index: placementIndex(placement.command, live.frontier),
+        pickup: item.kind === 'pickup',
+      };
+      if (next === undefined || comesFirst(candidate, next)) next = candidate;
     }
   }
   return next?.placement;
