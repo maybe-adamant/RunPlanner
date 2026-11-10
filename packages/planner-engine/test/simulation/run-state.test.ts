@@ -8,6 +8,8 @@ import {
   createIncomingRewardAddress,
   createJudgmentArcanaAddress,
   createOccurrenceAddress,
+  createHubRoomAddress,
+  createHubRunStateCheckpointAddress,
   createOccurrenceId,
   createRoomRunStateCheckpointAddress,
   createRouteAddress,
@@ -82,7 +84,11 @@ function reachedTestState(
 }
 
 function decisionSnapshots(snapshots: readonly RunStateSnapshot[]): readonly RunStateSnapshot[] {
-  return snapshots.filter((snapshot) => snapshot.owner.kind !== 'roomRunStateCheckpoint');
+  return snapshots.filter(
+    (snapshot) =>
+      snapshot.owner.kind !== 'roomRunStateCheckpoint' &&
+      snapshot.owner.kind !== 'hubRunStateCheckpoint',
+  );
 }
 
 function requirementFacts(ordinaryLootCount: number): RewardKernelFacts {
@@ -892,13 +898,56 @@ describe('decision run-state snapshots', () => {
     });
     expect(
       biome.rewards.runStateAvailability.filter(
-        (availability) => availability.owner.kind !== 'roomRunStateCheckpoint',
+        (availability) =>
+          availability.owner.kind !== 'roomRunStateCheckpoint' &&
+          availability.owner.kind !== 'hubRunStateCheckpoint',
       ),
     ).toHaveLength(3);
     expect(biome.rewards.runStateAvailability).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ owner: beforePreboss?.owner, availability: 'available' }),
       ]),
+    );
+  });
+
+  it('captures the Hub on its first entry only, at the depth it is entered at', () => {
+    const evaluation = simulateProject(catalog, loadSurfaceNProject());
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+      throw new Error('N did not evaluate validly');
+    }
+    const hub = createHubRoomAddress(createBiomeAddress('Surface', 'N'), 'hub');
+    const owner = createHubRunStateCheckpointAddress(hub);
+    const hubSnapshots = biome.rewards.runStateSnapshots.filter(
+      (snapshot) => snapshot.owner.kind === 'hubRunStateCheckpoint',
+    );
+    expect(hubSnapshots.map((snapshot) => snapshot.owner)).toEqual([owner]);
+    const entries = biome.history.events.filter(
+      (event) =>
+        event.kind === 'roomEntered' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(hub),
+    );
+    expect(entries).toHaveLength(1);
+    const [entry] = hubSnapshots;
+    expect(entry?.checkpoint).toBe('roomEntered');
+    expect(entry?.historySequence).toBe(entries[0]!.sequence);
+    // Entered after the PreHub commits, before the first visit's room.
+    const firstVisit = biome.rewards.runStateSnapshots.find(
+      (snapshot) =>
+        snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+        snapshot.owner.checkpoint.kind === 'roomEntered' &&
+        snapshot.historySequence > entry!.historySequence,
+    );
+    expect(entry?.counters.runDepthCache).toBe(3);
+    expect(firstVisit?.counters.runDepthCache).toBe(4);
+    // Every return to the Hub restores it; none captures again.
+    expect(
+      biome.history.ledgers.roomRestores.filter(
+        (restore) => semanticAddressKey(restore.origin) === semanticAddressKey(hub),
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(biome.rewards.runStateAvailability).toEqual(
+      expect.arrayContaining([expect.objectContaining({ owner, availability: 'available' })]),
     );
   });
 

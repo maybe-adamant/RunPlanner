@@ -1008,6 +1008,10 @@ describe('BiomeWorkspace', () => {
     expect(railButtonForMarker(view.container, firstVisit.marker.focusKey).textContent).toContain(
       firstVisit.room.reward.label,
     );
+    // The Hub's circle carries its Location, like a room's.
+    expect(
+      view.container.querySelector<HTMLElement>('[data-kind="hubDecision"]')?.dataset.step,
+    ).toBe('3');
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     expect(hintOf(screen.getByRole('button', { name: 'Visit 1 room' }))).toContain(

@@ -864,8 +864,10 @@ and persistent reward lookups can differ. Immutable substate identities permit
 reuse without serializing the whole state or recomputing every projection.
 
 Ordinary occurrences expose entry and pre-exit snapshots. Ship phases expose
-pre-encounter snapshots and the occurrence exposes pre-exit. N also retains
-the meaningful pre-board and pre-handoff generation contacts. The
+pre-encounter snapshots and the occurrence exposes pre-exit. N's Hub exposes
+one entry snapshot, at its first entry: a return to the Hub restores it and
+captures nothing new. N also retains the meaningful pre-board and pre-handoff
+generation contacts. The
 [lifecycle checkpoint contract](ROOM_LIFECYCLE_MODEL.md#run-state-checkpoints)
 owns their precise timing.
 

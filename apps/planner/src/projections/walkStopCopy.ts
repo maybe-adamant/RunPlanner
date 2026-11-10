@@ -36,9 +36,9 @@ export function stopNoticeLink(at: StopNoticeAt): string {
               ? place.room.label
               : place.label
             : `Location ${place.depth}`;
-        // The rail numbers neither the Hub nor a biome's unchosen start.
+        // A Hub the walk never entered has no number; nor has a biome's unchosen start.
         case 'hub':
-          return 'Hub';
+          return place.depth === undefined ? 'Hub' : `Location ${place.depth}`;
         case 'biome':
           return place.biomeLabel;
       }

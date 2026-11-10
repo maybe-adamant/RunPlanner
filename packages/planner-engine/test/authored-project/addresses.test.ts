@@ -24,6 +24,7 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createRoomRunStateCheckpointAddress,
+  createHubRunStateCheckpointAddress,
   createRouteAddress,
   createShopOfferAddress,
   createTargetAddress,
@@ -149,6 +150,13 @@ describe('semantic addresses', () => {
       ),
     ).toBe(
       '["roomRunStateCheckpoint","Underworld","F","address-f","beforeEncounterStart","Combat1"]',
+    );
+  });
+
+  it('keys the Hub entry checkpoint by its Hub, apart from any occurrence', () => {
+    const hub = createHubRoomAddress(createBiomeAddress('Surface', 'N'), 'hub');
+    expect(semanticAddressKey(createHubRunStateCheckpointAddress(hub))).toBe(
+      '["hubRunStateCheckpoint","Surface","N","hub","roomEntered"]',
     );
   });
 

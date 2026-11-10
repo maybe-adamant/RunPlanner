@@ -849,6 +849,7 @@ function projectHubNode(
   );
   const rerollsRemaining = stays.findLast((stay) => stay.rerolls?.poolRemaining !== undefined)
     ?.rerolls?.poolRemaining;
+  const runDepth = input.source?.hubRunDepth(createHubRoomAddress(biome, descriptor.hubKey));
   const node = Object.freeze({
     authoring: 'authored' as const,
     kind: 'hubDecision' as const,
@@ -858,6 +859,7 @@ function projectHubNode(
     fountain,
     stays: Object.freeze(stays),
     ...(rerollsRemaining === undefined ? {} : { rerollsRemaining }),
+    ...(runDepth === undefined ? {} : { runDepth }),
     key: nodeKey,
     hubKey: descriptor.hubKey,
     gameName: descriptor.terminal.roomGameName,

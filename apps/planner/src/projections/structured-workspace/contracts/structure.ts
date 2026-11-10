@@ -488,6 +488,8 @@ export interface WorkspaceHubDecisionNode {
   readonly kind: 'hubDecision';
   /** The walk stops before entering the Hub: its board waits until the walk enters it. */
   readonly notReached?: true;
+  /** The run's room depth on first entering the Hub; absent while it is not reached. */
+  readonly runDepth?: number;
   readonly key: string;
   readonly hubKey: string;
   /** The static Hub terminal declaration used by the optional board reference. */
@@ -772,6 +774,8 @@ export interface WorkspaceHubRailEntry {
   readonly key: string;
   /** The walk stops before this stop's room: the rail dims it and opening it shows only that. */
   readonly notReached?: true;
+  /** The run's room depth on first entering the Hub; absent while it is not reached. */
+  readonly runDepth?: number;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceHubDecisionNode;
   readonly roomIcon: WorkspaceRoomIcon;

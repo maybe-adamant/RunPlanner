@@ -2,6 +2,7 @@ import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createHubRunStateCheckpointAddress,
   createRoomRunStateCheckpointAddress,
   createTravelDealRefillRealizationAddress,
   semanticAddressKey,
@@ -47,6 +48,7 @@ import {
   type ChronologySeamStep,
   type ChronologyWalkContext,
   type ChronologyWalkState,
+  type RunStateCheckpointRequest,
   type SeamEvent,
 } from './chronology-walk';
 import { applyAcquisitionPointReachedTransition } from './encounter-acquisition/acquisition-point-reached';
@@ -1292,6 +1294,20 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
   };
 };
 
+/** The Hub's Run State on its one entry; a restored stay is not an entry. */
+function hubEntryCheckpoint(
+  context: ChronologyWalkContext,
+  event: SeamEvent<'roomEntered'>,
+): RunStateCheckpointRequest | undefined {
+  if (event.origin.kind !== 'hubRoom') return undefined;
+  const key = semanticAddressKey(event.origin);
+  const room = context.rooms.get(key);
+  const view = context.views.get(key)?.entry;
+  if (room?.kind !== 'hub' || view === undefined)
+    throw new BiomeRewardSimulationContractError(`${key} has no Hub-entry Run State view`);
+  return { owner: createHubRunStateCheckpointAddress(event.origin), room, view };
+}
+
 /** Room entry captures its Run State after its own features; a pending Shrine delivery halts here. */
 const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event) => {
   const room = authoredRoom(context, event.origin);
@@ -1369,7 +1385,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
   const enteredBranch = entered.branch;
   const shrine = entered.hermesShrineAssessment;
   const well = entered.stygianWellAssessment;
-  const checkpoint = entered.runStateCheckpoint;
+  const checkpoint = entered.runStateCheckpoint ?? hubEntryCheckpoint(context, event);
   if (checkpoint !== undefined && checkpoint.view === undefined)
     throw new BiomeRewardSimulationContractError(
       `${checkpoint.room.gameName} has no room-entry Run State view`,

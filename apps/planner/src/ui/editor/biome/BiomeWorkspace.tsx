@@ -573,7 +573,11 @@ function HubRailGroup({
   const selected = selectedRailKey === entry.marker.focusKey;
   const assessment = assessmentLabel(entry.marker, undefined, entry.notReached);
   return (
-    <div className="biome-rail-stop biome-hub-rail-group" data-kind="hubDecision">
+    <div
+      className="biome-rail-stop biome-hub-rail-group"
+      data-kind="hubDecision"
+      data-step={entry.runDepth}
+    >
       {/* One panel: the Hub, then each visit with its side rooms. */}
       <div className="biome-hub-rail-panel">
         <FocusButton

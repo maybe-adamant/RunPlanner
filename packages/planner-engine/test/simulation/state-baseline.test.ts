@@ -24,14 +24,14 @@ const baseline = {
   },
   Surface: {
     branches: [1, 1, 1, 1],
-    snapshots: [33, 31, 33, 25],
+    snapshots: [34, 31, 33, 25],
     offers: [7, 3, 3, 2],
     owners: 15,
   },
   Dream: {
     branches: [1, 1, 1],
     // F carries ten batches, reaching F_PreBoss01's biome depth 10.
-    snapshots: [27, 39, 25],
+    snapshots: [27, 39, 26],
     // The Dream F prefix carries a Boon batch in the Meta bag and a Zeus Boon in
     // its last batch; the N prehub holds a Hammer rather than a Pom.
     offers: [3, 3, 5],

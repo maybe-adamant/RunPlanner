@@ -1666,9 +1666,16 @@ export interface FindingDestination {
 export type FindingLocation =
   | { readonly kind: 'route' | 'loadout' | 'project' }
   | {
-      readonly kind: 'biome' | 'hub';
+      readonly kind: 'biome';
       readonly biomeKey: string;
       readonly biomeLabel: string;
+    }
+  | {
+      readonly kind: 'hub';
+      readonly biomeKey: string;
+      readonly biomeLabel: string;
+      /** The run depth on first entering the Hub, where it is reached. */
+      readonly depth?: number;
     }
   | {
       /** A rail stop without a room yet, named by its title. */
@@ -1774,7 +1781,12 @@ export function findingLocation(
         (entry.marker.focusKey === railKey || entry.node.key === predecessorNodeKey)
       ) {
         return entry.kind === 'hubGroup'
-          ? Object.freeze({ kind: 'hub', biomeKey, biomeLabel })
+          ? Object.freeze({
+              kind: 'hub',
+              biomeKey,
+              biomeLabel,
+              ...(entry.runDepth === undefined ? {} : { depth: entry.runDepth }),
+            })
           : railStopLocation(biomeKey, biomeLabel, entry);
       }
       if (entry.kind === 'hubGroup') {

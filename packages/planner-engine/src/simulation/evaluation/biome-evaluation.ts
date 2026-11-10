@@ -3,6 +3,7 @@ import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createOccurrenceAddress,
+  createHubRunStateCheckpointAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type BiomeAddress,
@@ -152,6 +153,7 @@ function structurallyEligibleRunStateOwners(
       for (const additional of decision.additional) appendRoom(additional.room);
       continue;
     }
+    owners.push(createHubRunStateCheckpointAddress(decision.room.origin));
     for (const visit of decision.visits) {
       appendRoom(visit.target.room);
       for (const local of visit.enteredLocalRooms) appendRoom(local);

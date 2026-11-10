@@ -493,6 +493,7 @@ function projectHubRailEntry(
     key: node.key,
     marker: node.marker,
     ...railNotReached(node),
+    ...(node.runDepth === undefined ? {} : { runDepth: node.runDepth }),
     node,
     roomIcon: candidateRoomIcon(catalog, node.owner.biomeKey, hubDeclaration),
     visits: Object.freeze(visits),

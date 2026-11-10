@@ -210,6 +210,12 @@ export interface RoomRunStateCheckpointAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
   readonly checkpoint: RoomRunStateCheckpoint;
 }
+/** Derived Run State owner of the Hub's first entry. It is never authored or persisted. */
+export interface HubRunStateCheckpointAddress extends BiomeOwnedAddress {
+  readonly kind: 'hubRunStateCheckpoint';
+  readonly hubKey: string;
+  readonly checkpoint: { readonly kind: 'roomEntered' };
+}
 export interface LocalVisitDecisionAddress extends BiomeOwnedAddress {
   readonly kind: 'localVisitDecision';
   readonly sourceOccurrenceId: OccurrenceId;
@@ -447,6 +453,7 @@ export type SemanticAddress =
   | RoomActionAddress
   | TravelDealRefillRealizationAddress
   | RoomRunStateCheckpointAddress
+  | HubRunStateCheckpointAddress
   | LocalVisitDecisionAddress
   | LocalVisitSlotAddress
   | LocalVisitOrderAddress
@@ -811,6 +818,17 @@ export function createRoomRunStateCheckpointAddress(
             phaseKey: nonBlank(checkpoint.phaseKey, 'phaseKey'),
           })
         : Object.freeze({ kind: checkpoint.kind }),
+  });
+}
+export function createHubRunStateCheckpointAddress(
+  hub: HubRoomAddress,
+): HubRunStateCheckpointAddress {
+  return Object.freeze({
+    kind: 'hubRunStateCheckpoint',
+    routeKey: hub.routeKey,
+    biomeKey: hub.biomeKey,
+    hubKey: hub.hubKey,
+    checkpoint: Object.freeze({ kind: 'roomEntered' as const }),
   });
 }
 export function createLocalVisitDecisionAddress(
@@ -1259,6 +1277,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
           ? [address.checkpoint.phaseKey]
           : []),
       ]);
+    case 'hubRunStateCheckpoint':
+      return JSON.stringify([...base, address.hubKey, address.checkpoint.kind]);
     case 'localVisitDecision':
     case 'localVisitOrder':
       return JSON.stringify([...base, address.sourceOccurrenceId, address.groupKey]);

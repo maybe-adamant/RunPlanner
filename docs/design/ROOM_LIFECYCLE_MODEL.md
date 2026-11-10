@@ -1145,6 +1145,9 @@ authority](SIMULATION_AND_VALIDATION.md#run-state-snapshots) owns its
 projection and cache contract. An ordinary occurrence publishes `roomEntered`
 and `beforeRoomExit`; a ShipCombat occurrence instead publishes one
 `beforeEncounterStart` checkpoint for each active phase plus `beforeRoomExit`.
+N's Hub publishes one `roomEntered` checkpoint of its own, owned by the Hub
+rather than an occurrence, at its first entry; each later stay is a restore,
+not an entry, and publishes none.
 Entry consumes the existing entry history, each Ship phase consumes the history
 fold captured immediately before its `encounterStarted` event, and pre-exit
 consumes post-commit room-local settlement immediately before `roomExited`.

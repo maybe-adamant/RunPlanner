@@ -13,6 +13,7 @@ import {
   createLocalVisitDecisionAddress,
   createLocalVisitOrderAddress,
   createOccurrenceAddress,
+  createHubRunStateCheckpointAddress,
   createRoomRunStateCheckpointAddress,
   routeStartIncomingReward,
   ixionGeneratedChaosOccurrenceKeys,
@@ -290,6 +291,8 @@ export interface WorkspaceBiomeSource {
   readonly roomLocation: (
     room: OccurrenceAddress,
   ) => { readonly gameName: string; readonly runDepth?: number } | undefined;
+  /** The Hub's run depth (its Location) on its first entry, where the plan reaches it. */
+  readonly hubRunDepth: (hub: HubRoomAddress) => number | undefined;
   /** Where a room stands against the plan's end: the end room, or a room past it. */
   readonly planEndRelation: (occurrenceId: OccurrenceId) => WorkspacePlanEndRelation | undefined;
   /** The whole biome lies after the biome the plan ends in. */
@@ -792,6 +795,7 @@ function createWorkspaceBiomeSource(
   stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'],
   resourceAuthoring: RouteResourceAuthoring,
   roomLocation: WorkspaceBiomeSource['roomLocation'],
+  hubRunDepth: WorkspaceBiomeSource['hubRunDepth'],
   acquisitionConversionCandidate: WorkspaceBiomeSource['acquisitionConversionCandidate'],
   chaosAssessment: WorkspaceBiomeSource['chaosAssessment'],
   chaosGateForced: WorkspaceBiomeSource['chaosGateForced'],
@@ -1161,6 +1165,7 @@ function createWorkspaceBiomeSource(
     plan,
     resourceAuthoring,
     roomLocation,
+    hubRunDepth,
     runState: (owner: RunStateOwner) => {
       const availability = runStateAvailability.get(semanticAddressKey(owner));
       if (availability === undefined) return undefined;
@@ -1269,6 +1274,11 @@ export function createWorkspaceProjectSourceIndex(
         );
     return Object.freeze({ gameName, ...(runDepth === undefined ? {} : { runDepth }) });
   };
+  const hubRunDepth = (hub: HubRoomAddress) =>
+    planEnd.afterPlanEnd.has(hub.biomeKey) ||
+    (planEnd.endRoom?.biomeKey === hub.biomeKey && planEnd.readiness(hub) === 'locked')
+      ? undefined
+      : enteredRunDepths.get(semanticAddressKey(createHubRunStateCheckpointAddress(hub)));
   return Object.freeze({
     route: Object.freeze({
       biomes: Object.freeze(
@@ -1292,6 +1302,7 @@ export function createWorkspaceProjectSourceIndex(
             stygianWellAssessment,
             resources,
             roomLocation,
+            hubRunDepth,
             acquisitionConversionCandidate,
             chaosAssessment,
             (owner) => ixionGeneratedChaos.has(semanticAddressKey(owner)),

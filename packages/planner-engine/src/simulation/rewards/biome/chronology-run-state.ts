@@ -11,7 +11,7 @@ import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materializat
 import { reachSimulationHistory } from '../../state/transitions';
 import type { RewardBranchState } from '../branch-primitives';
 import { createBiomeRewardFacts, visibleStoreOptionNames } from '../facts';
-import { createRunState, type RunStateSnapshot } from '../run-state';
+import { createRunState, isRoomLifecycleOwner, type RunStateSnapshot } from '../run-state';
 import { BiomeRewardSimulationContractError } from './biome-contract';
 import type { ChronologyAccumulator, ChronologyEmission } from './chronology-accumulator';
 import type {
@@ -92,7 +92,7 @@ export function captureRunState(
   // Trait-child candidate checkpoints retain only generation snapshots. Room
   // lifecycle diagnostics are occurrence-local and never become a later
   // candidate-generation authority.
-  if (owner.kind === 'roomRunStateCheckpoint') return;
+  if (isRoomLifecycleOwner(owner)) return;
   for (const child of accumulator.traitChildCheckpointsAwaiting(source.origin, ownerKey)) {
     accumulator.mergeEmissions([
       {
