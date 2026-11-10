@@ -34,6 +34,7 @@ import {
   surfaceProject,
 } from '../support/configured-projects';
 import { nLocalOccurrenceIds } from '../support/n-local-occurrences';
+import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
 
 function sourceDecision(project: ReturnType<typeof surfaceProject>, biome = oBiome) {
   const topology = project.route.biomes.find(
@@ -84,7 +85,10 @@ function fRewardTarget(
     reward: createIncomingRewardAddress(fBiome, occurrenceId),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
-  return Object.freeze({ project, occurrenceId });
+  return Object.freeze({
+    project: scheduleTestRequiredRoomActions(project, catalog, fBiome),
+    occurrenceId,
+  });
 }
 
 function fOccurrence(document: ProjectDocument, occurrenceId: string) {
@@ -109,11 +113,18 @@ describe('authored-project room replacement commands', () => {
       siteKey,
       entryKey,
     };
-    const converted = applyProjectCommand(target.project, catalog, {
-      kind: 'ReplaceAcquisitionDisposition',
-      acquisition,
-      value: { kind: 'artificer' },
-    });
+    const converted = scheduleTestRequiredRoomActions(
+      applyProjectCommand(target.project, catalog, {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition,
+        value: { kind: 'artificer' },
+      }),
+      catalog,
+      fBiome,
+    );
+    expect(fOccurrence(converted, target.occurrenceId).roomActions.order).toContainEqual(
+      artificerAction,
+    );
 
     const replaced = applyProjectCommand(converted, catalog, {
       kind: 'ReplaceOccurrenceRoom',
@@ -185,7 +196,7 @@ describe('authored-project room replacement commands', () => {
     expect(occurrence.roomActions.order).not.toContainEqual({ kind: 'useFountain' });
   });
 
-  it('schedules the declaration-required fountain action when combat becomes a Reprieve', () => {
+  it('keeps the still-active rows and places no fountain when combat becomes a Reprieve', () => {
     const target = fRewardTarget('F_Combat02', 'fountain-creation');
     const replaced = applyProjectCommand(target.project, catalog, {
       kind: 'ReplaceOccurrenceRoom',
@@ -199,7 +210,6 @@ describe('authored-project room replacement commands', () => {
         producerPoint: 'roomRewardPickup',
         acquisitionRole: 'source',
       },
-      { kind: 'useFountain' },
     ]);
   });
 
