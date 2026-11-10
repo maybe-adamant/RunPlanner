@@ -329,7 +329,7 @@ describe('structured workspace decision assembly', () => {
       doorCageRewardCount: 2,
     });
     expect(assembly.batch.notes).toEqual([
-      { target: 'batch', text: 'Cage rewards appear bottom to top on the door' },
+      { target: 'rewardColumn', text: 'Cage rewards appear bottom to top on the door' },
     ]);
     expect(fieldsWorkbench.room.roomLocal.cages.map((cage) => cage.key)).toEqual([
       'cage1',
