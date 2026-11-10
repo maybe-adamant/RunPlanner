@@ -289,3 +289,49 @@ export function testHermesShrinePurchaseAction(
     roomActionKey({ kind: 'purchaseHermesShrineOffer', generationKey, rushed: false }),
   );
 }
+
+/**
+ * Places each structurally active room's unplaced required rows at the
+ * engine's deterministic schedule, for fixtures that compose a biome's
+ * history directly rather than through the walk.
+ */
+export function scheduleTestRequiredRoomActions(
+  initial: ProjectDocument,
+  catalog: Catalog,
+  biome: ReturnType<typeof createBiomeAddress>,
+): ProjectDocument {
+  const topology = initial.route.biomes.find(
+    (candidate) => candidate.biomeKey === biome.biomeKey,
+  )?.topology;
+  if (topology === null || topology === undefined) throw new Error('test biome has no topology');
+  let document = initial;
+  for (const occurrenceId of structurallyActiveOccurrenceIds(topology)) {
+    const located = roomActionDomainForOccurrence(document, catalog, biome, occurrenceId);
+    if (located === undefined) continue;
+    const order = located.occurrence.roomActions.order;
+    const placed = new Set(order.map(roomActionKey));
+    const requiredKeys = new Set(
+      located.domain.contributions.flatMap((entry) =>
+        entry.kind === 'action' && entry.participation === 'required'
+          ? [roomActionKey(entry.reference)]
+          : [],
+      ),
+    );
+    const scheduled = scheduleRequiredRoomActions({
+      catalog,
+      domain: located.domain,
+      order,
+      requiredKeys,
+    });
+    for (const [index, reference] of scheduled.entries()) {
+      if (placed.has(roomActionKey(reference))) continue;
+      document = applyProjectCommand(document, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(biome, occurrenceId, roomActionKey(reference)),
+        reference,
+        index,
+      });
+    }
+  }
+  return document;
+}

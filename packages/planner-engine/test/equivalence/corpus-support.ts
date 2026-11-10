@@ -21,6 +21,7 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   editTestRoomActionOrder,
   settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
@@ -153,13 +154,15 @@ export function createEchoHammerReplayMissingProject(): ProjectDocument {
       rarificationActions: [],
     },
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplacePostbossKeepsake',
-    selection: createPostbossKeepsakeSelectionAddress(
-      createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop:postboss')),
-    ),
-    keepsakeKey: 'ManaOverTimeRefundKeepsake',
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(
+        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop:postboss')),
+      ),
+      keepsakeKey: 'ManaOverTimeRefundKeepsake',
+    }),
+  );
 }
 
 /** The F Pool checkpoint with its sold left slot cleared, so the Pool assessment reports it. */
@@ -257,14 +260,16 @@ export function createEchoReplayUnresolvedHammerProject(): ProjectDocument {
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     }),
   );
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceAcquisitionEntryOffer',
-    entry: createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridge), 'roomExit'),
-      echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
-    ),
-    value: { rewardType: 'MaxHealthDrop' },
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridge), 'roomExit'),
+        echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
+      ),
+      value: { rewardType: 'MaxHealthDrop' },
+    }),
+  );
 }
 
 /**
@@ -288,11 +293,13 @@ export function createOShipWheelPickupBeforeDeferredEndEffectsProject(): Project
     offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceShipEncounterCount',
-    occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
-    encounterCount: 3,
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+      encounterCount: 3,
+    }),
+  );
 }
 
 /** F's Postboss Travel Deal restocks a Boon rarity item the Well already sold: judged at the first purchase. */

@@ -1702,13 +1702,7 @@
                 }
               },
               "roomActions": {
-                "order": [
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
-                  }
-                ]
+                "order": []
               },
               "additionalExits": []
             },
@@ -2452,9 +2446,6 @@
                 "order": [
                   {
                     "kind": "useFountain"
-                  },
-                  {
-                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },

@@ -47,6 +47,7 @@ import {
   editTestRoomActionOrder,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
+  authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   settleTestEdit,
 } from '../shared';
@@ -690,7 +691,7 @@ export function createCompleteFGIxionChaosProject(): ProjectDocument {
       blessingValues: { damageBonus: 0.2 },
     },
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 export interface GContractAvailabilityFixture {

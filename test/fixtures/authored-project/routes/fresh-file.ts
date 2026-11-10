@@ -28,7 +28,12 @@ import {
   loadUnderworldFGHICheckpoint,
   loadUnderworldGeneratedCompositionCheckpoint,
 } from '../checkpoints/underworld';
-import { authorLegalTraitOffers } from '../shared';
+import {
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  scheduleTestRequiredRoomActions,
+} from '../shared';
 
 /** The first reached generated phase without an authored composition, in route chronology. */
 function firstUncustomizedGeneratedPhase(
@@ -89,7 +94,8 @@ export function authorFreshFileFrontier(
       observe?.(current);
       continue;
     }
-    const authored = authorLegalTraitOffers(current);
+    let authored = authorLegalTraitOffers(current);
+    if (authored === current) authored = collectTestRequiredItems(current);
     if (authored === current) {
       if (uncustomized !== undefined)
         throw new Error(`fresh fixture cannot compose ${JSON.stringify(uncustomized.phase)}`);
@@ -206,7 +212,8 @@ let freshFileF: ProjectDocument | undefined;
 export function createFreshFileFNativeProject(): ProjectDocument {
   let current = freshFileFTopology();
   for (let pass = 0; pass < 64; pass += 1) {
-    const authored = authorLegalTraitOffers(current);
+    let authored = authorLegalTraitOffers(current);
+    if (authored === current) authored = collectTestRequiredItems(current);
     if (authored === current) return current;
     current = authored;
   }
@@ -328,11 +335,13 @@ export function createFreshFileFirstSequence(projectId = 'fresh-first-sequence')
     occurrenceId: freshFileIntroId,
     gameName: 'F_Combat01',
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, freshFileIntroId),
-    value: boon('ApolloUpgrade'),
-  });
+  return collectTestRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, freshFileIntroId),
+      value: boon('ApolloUpgrade'),
+    }),
+  );
 }
 
 export const matureCombat01Biome = createBiomeAddress('Underworld', 'F');
@@ -380,7 +389,7 @@ export function createMatureCombat01Sequence(): ProjectDocument {
     reward: createIncomingRewardAddress(mature, matureCombat01Id),
     value: boon('ApolloUpgrade'),
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 /** A fresh profile's Nectar grants no boon level, so its authored child goes. */
@@ -713,6 +722,11 @@ export function authorFreshFileRoomIssues(
         reward: owner,
         value: { rewardType: 'RoomMoneyTinyDrop' },
       });
+    } else if (owner.kind === 'roomAction' && codes.includes('roomActionPlacementRequired')) {
+      label = 'collect';
+      const collected = collectTestRequiredItems(current);
+      if (collected === current) throw new Error(`nothing to collect for ${JSON.stringify(owner)}`);
+      current = collected;
     } else if (owner.kind === 'traitOffer') {
       label = `trait:${owner.owner.kind === 'localReward' ? owner.owner.slotKey : owner.owner.kind}`;
       current = authorLegalTraitOffers(current);
@@ -780,9 +794,11 @@ export function withNewHFieldsRoom(
         value: (cage as { offer: never }).offer,
       });
   }
-  return applyProjectCommand(current, catalog, {
+  current = applyProjectCommand(current, catalog, {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(biome, source),
     value: { kind: 'normal', exitKey: 'exit1' },
   });
+  // The new rooms' cage rows stand at their canonical schedule, as the replaced rooms' did.
+  return scheduleTestRequiredRoomActions(current, catalog, biome);
 }

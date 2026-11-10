@@ -82,7 +82,7 @@ describe('Fresh File room issue chronology with uncustomized compositions', () =
     ).toEqual(['optionalReward', 'trait:cage1', 'continuation']);
   });
 
-  it('asks a new uncustomized F combat only for its door reward and offer', () => {
+  it('asks a new uncustomized F combat only for its door reward, its pickup and its offer', () => {
     const biome = createBiomeAddress('FreshFile', 'F');
     const source = { kind: 'occurrence', occurrenceId: createOccurrenceId('fresh-2-0') } as const;
     const decision = createExitDecisionAddress(biome, source);
@@ -113,6 +113,7 @@ describe('Fresh File room issue chronology with uncustomized compositions', () =
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     expect(authorFreshFileRoomIssues(project, 'F', combat).labels).toEqual([
+      'collect',
       'trait:incomingReward',
       'continuation',
     ]);

@@ -12,7 +12,9 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   hubVisitActions,
+  placeTestRushedShrinePickup,
   purchaseTestHermesShrineOffer,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -104,9 +106,15 @@ function settleReachedAutomaticOutcomes(project: ProjectDocument): ProjectDocume
   throw new Error('scheduled lifecycle fixture exceeded its automatic-outcome bound');
 }
 
+/**
+ * Collects each Postboss's rushed Shrine item in its room and places its
+ * delayed delivery at the contact the engine derives.
+ */
 function placeDelayedShrineDeliveries(project: ProjectDocument): ProjectDocument {
   let next = project;
   for (const source of [nPostboss, oPostboss]) {
+    next = collectTestRequiredItems(next);
+    next = placeTestRushedShrinePickup(next, source, 'initial:first');
     const assembly = simulateProjectAssembly(catalog, next);
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
     const contact = next.route.biomes

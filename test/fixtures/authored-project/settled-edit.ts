@@ -3,6 +3,9 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  hermesShrineDeliveryEntryKey,
+  roomActionKey,
+  type HermesShrineGenerationKey,
   type OccurrenceAddress,
   type ProjectCommand,
   type ProjectDocument,
@@ -10,13 +13,16 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   collectRequiredItems,
+  liveActionsForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { authorLegalTraitOffers } from './trait-offers';
+
+const evaluate = (document: ProjectDocument) => simulateProjectAssembly(catalog, document);
 
 /** One edit settled as the editor's history settles it, so a swapped room's doors follow it. */
 export function settleTestEdit(project: ProjectDocument, command: ProjectCommand): ProjectDocument {
-  const evaluate = (document: ProjectDocument) => simulateProjectAssembly(catalog, document);
   return settleProjectEdit({ catalog, before: evaluate(project), command, evaluate }).assembly
     .project;
 }
@@ -52,18 +58,16 @@ function occurrenceOfAddress(address: SemanticAddress): OccurrenceAddress | unde
 
 /**
  * Collects every required item the plan leaves on the ground, as an owner
- * playing forward would: while the plan's first issue is a room's required
- * placement, Collect all required runs in that room.
+ * playing forward would: while the plan has a room's required placement
+ * finding, Collect all required runs in the first such room.
  */
 export function collectTestRequiredItems(project: ProjectDocument): ProjectDocument {
-  const evaluate = (document: ProjectDocument) => simulateProjectAssembly(catalog, document);
   let assembly = evaluate(project);
   for (;;) {
-    const reason = assembly.evaluation.issue?.reasons[0];
-    const room =
-      reason !== undefined && PLACEMENT_FINDINGS.has(reason.code)
-        ? occurrenceOfAddress(reason.origin)
-        : undefined;
+    const reason = assembly.evaluation.findings.find((finding) =>
+      PLACEMENT_FINDINGS.has(finding.code),
+    );
+    const room = reason === undefined ? undefined : occurrenceOfAddress(reason.origin);
     if (room === undefined) return assembly.project;
     const collected = collectRequiredItems({
       catalog,
@@ -76,4 +80,93 @@ export function collectTestRequiredItems(project: ProjectDocument): ProjectDocum
     if (collected.commands.length === 0) return collected.assembly.project;
     assembly = collected.assembly;
   }
+}
+
+/**
+ * Authors legal trait offers and collects required items in turn until
+ * neither changes the plan, so a route reaches as far as both carry it.
+ */
+export function authorTestTraitsAndRequiredItems(project: ProjectDocument): ProjectDocument {
+  let current = project;
+  for (let pass = 0; pass < 64; pass += 1) {
+    const next = collectTestRequiredItems(authorLegalTraitOffers(current));
+    if (next === current) return current;
+    current = next;
+  }
+  throw new Error('trait offers and required items did not settle');
+}
+
+/**
+ * Picks up one live item in a reached room, as the owner would from the live
+ * row: by the canonical placement the live product offers, otherwise at the
+ * room's frontier.
+ */
+export function placeTestLivePickup(
+  project: ProjectDocument,
+  occurrence: OccurrenceAddress,
+  actionKey: string,
+): ProjectDocument {
+  const before = evaluate(project);
+  const live = liveActionsForProjectEvaluationAssembly(catalog, before, occurrence);
+  if (live === undefined) throw new Error(`${occurrence.occurrenceId} is not reached`);
+  let canonical: ProjectCommand | undefined;
+  let frontier: ProjectCommand | undefined;
+  for (const gap of live.gaps)
+    for (const item of gap.items)
+      for (const action of item.actions) {
+        if (action.kind !== 'place' || roomActionKey(action.reference) !== actionKey) continue;
+        if (action.canonical === true) canonical = action.command;
+        if (gap.index === live.frontier) frontier ??= action.command;
+      }
+  const command = canonical ?? frontier;
+  if (command === undefined)
+    throw new Error(`${actionKey} is not live in ${occurrence.occurrenceId}`);
+  return settleProjectEdit({ catalog, before, command, evaluate }).assembly.project;
+}
+
+/**
+ * Picks up, one at a time in live order, every item a source spawned in a
+ * reached room, by its acquisition site.
+ */
+export function placeTestLivePickupsAtSite(
+  project: ProjectDocument,
+  occurrence: OccurrenceAddress,
+  siteKey: string,
+): ProjectDocument {
+  let current = project;
+  const placed = new Set<string>();
+  for (;;) {
+    const live = liveActionsForProjectEvaluationAssembly(catalog, evaluate(current), occurrence);
+    const next = live?.gaps
+      .flatMap((gap) => gap.items)
+      .find(
+        (item) =>
+          item.kind === 'pickup' &&
+          item.reference.kind === 'interactAcquisitionEntry' &&
+          item.reference.siteKey === siteKey &&
+          !placed.has(roomActionKey(item.reference)) &&
+          item.actions.some((action) => action.kind === 'place'),
+      );
+    if (next === undefined || next.kind !== 'pickup') return current;
+    const key = roomActionKey(next.reference);
+    placed.add(key);
+    current = placeTestLivePickup(current, occurrence, key);
+  }
+}
+
+/** Picks up a rushed Shrine purchase's item in its own room. */
+export function placeTestRushedShrinePickup(
+  project: ProjectDocument,
+  source: OccurrenceAddress,
+  generationKey: HermesShrineGenerationKey,
+): ProjectDocument {
+  return placeTestLivePickup(
+    project,
+    source,
+    roomActionKey({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(source, generationKey),
+    }),
+  );
 }

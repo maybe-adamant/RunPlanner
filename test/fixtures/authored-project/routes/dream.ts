@@ -31,6 +31,7 @@ import { loadSurfaceNCheckpoint } from '../checkpoints/surface';
 import {
   authorLegalTraitOffers,
   authorLegalPomResolutions,
+  authorTestTraitsAndRequiredItems,
   purchaseTestHermesShrineOffer,
 } from '../shared';
 import { hubVisitActions } from '../hub-actions';
@@ -544,7 +545,7 @@ export function dreamSingleQProject(): ProjectDocument {
   if (plan?.topology === null || plan === undefined) throw new Error('Dream Q plan is missing');
   const topology = plan.topology;
   const isPostboss = (occurrenceId: string) => occurrenceId.endsWith(':postboss');
-  return decodeProjectDocument(
+  const decoded = decodeProjectDocument(
     JSON.parse(
       encodeProjectDocument({
         ...mixed,
@@ -571,6 +572,7 @@ export function dreamSingleQProject(): ProjectDocument {
     ),
     catalog,
   );
+  return authorTestTraitsAndRequiredItems(decoded);
 }
 
 /** The single-Q itinerary with a Q Combat01 Shrine purchase whose delay outlasts the route. */
@@ -744,5 +746,5 @@ export function dreamOSkippedShipProject(): ProjectDocument {
     pedestal: createInfernalContractPedestalAddress(oBiome, preboss),
     value: { rewardType: 'StackUpgrade' },
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }

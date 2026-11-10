@@ -27,6 +27,7 @@ import {
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
@@ -35,7 +36,10 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   authorLegalTraitOffers,
+  collectTestRequiredItems,
   hubVisitActions,
+  placeTestRushedShrinePickup,
+  authorTestTraitsAndRequiredItems,
   replaceTestShopOfferActions,
   supportedTraitOffer,
   purchaseTestHermesShrineOffer,
@@ -220,6 +224,7 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(options?: {
     delay: 2,
     rushed: true,
   });
+  project = placeTestRushedShrinePickup(project, shrine, 'initial:first');
   project = purchaseTestHermesShrineOffer(project, catalog, shrine, 'initial:secondLeft', {
     delay: 3,
     rushed: false,
@@ -361,7 +366,12 @@ export function surfaceShrineTravelDealProject(): ProjectDocument {
     delay: 2,
     rushed: false,
   });
-  return authorLegalTraitOffers(
+  project = placeTestRushedShrinePickup(
+    authorTestTraitsAndRequiredItems(project),
+    shrine,
+    'initial:first',
+  );
+  return authorTestTraitsAndRequiredItems(
     applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry: createAcquisitionEntryAddress(
@@ -489,7 +499,12 @@ export function surfaceShrineDeliveriesProject(): ProjectDocument {
     delay: 8,
     rushed: false,
   });
-  return placeDueHermesShrineDeliveries(project);
+  project = placeTestRushedShrinePickup(
+    collectTestRequiredItems(project),
+    oShrine,
+    'initial:first',
+  );
+  return collectTestRequiredItems(project);
 }
 
 /**
@@ -894,7 +909,7 @@ export function surfaceTravelDealRefillAnvilProject(): ProjectDocument {
     reference,
     index: 1,
   });
-  return authorLegalTraitOffers(project);
+  return authorTestTraitsAndRequiredItems(project);
 }
 
 /** The Path screen a reward's `self` role opens. */
@@ -1128,6 +1143,22 @@ export function surfaceTraitFencesProject(): ProjectDocument {
     reward: reprieveReward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
+  // The Reprieve's boon is taken before its Fountain.
+  const reprieveActions: readonly RoomActionReference[] = [
+    {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source',
+    },
+    { kind: 'useFountain' },
+  ];
+  for (const [index, reference] of reprieveActions.entries())
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(oBiome, oOccurrenceIds.devotion, roomActionKey(reference)),
+      reference,
+      index,
+    });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplacePostbossKeepsake',
     selection: createPostbossKeepsakeSelectionAddress(postboss),
@@ -1149,5 +1180,10 @@ export function surfaceTraitFencesProject(): ProjectDocument {
     delay: 2,
     rushed: true,
   });
-  return authorLegalTraitOffers(placeDueHermesShrineDeliveries(authorLegalTraitOffers(project)));
+  project = placeTestRushedShrinePickup(
+    authorTestTraitsAndRequiredItems(project),
+    postboss,
+    'initial:secondLeft',
+  );
+  return authorTestTraitsAndRequiredItems(project);
 }
