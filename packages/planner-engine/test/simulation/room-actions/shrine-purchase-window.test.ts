@@ -28,6 +28,7 @@ import {
   qOccurrenceIds,
   surfaceShrineDeliveriesProject,
 } from '@run-planner/test-fixtures/surface';
+import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
 import {
   roomLifecycleWindowOrdinal,
   type RoomLifecycleStructure,
@@ -262,6 +263,8 @@ describe('Shrine purchases after the doors open', () => {
       reward: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion),
       value: { rewardType: 'MaxHealthDrop' },
     });
+    // The owner takes the Reprieve's reward, then uses its fountain.
+    project = scheduleTestRequiredRoomActions(project, catalog, oBiome);
     project = applyProjectCommand(project, catalog, {
       kind: 'SetHermesShrinePresence',
       occurrence: host,

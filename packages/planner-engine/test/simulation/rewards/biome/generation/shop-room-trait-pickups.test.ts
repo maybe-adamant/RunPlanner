@@ -95,18 +95,21 @@ function shopWithProducer(shop: Shop, producer: (typeof producers)[number]) {
       rarificationActions: [],
     },
   });
-  const taken = project;
-  // Taking the trait takes its drops; the placements below start without them.
+  // Taking the trait places none of its drops; `taken` picks them all up right after the Boon.
   const siteKey = traitGeneratedPickupSiteKey(trait, 'option1');
-  for (const [entryKey] of producer.drops)
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(
-        biome,
-        id,
-        roomActionKey({ kind: 'interactAcquisitionEntry', siteKey, entryKey }),
-      ),
+  const boonIndex = shopOccurrence(project, shop).roomActions.order.findIndex(
+    (reference) => reference.kind === 'interactShopOffer' && reference.offerKey === 'Boon',
+  );
+  let taken = project;
+  for (const [offset, [entryKey]] of producer.drops.entries()) {
+    const reference = { kind: 'interactAcquisitionEntry' as const, siteKey, entryKey };
+    taken = applyProjectCommand(taken, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(biome, id, roomActionKey(reference)),
+      reference,
+      index: boonIndex + 1 + offset,
     });
+  }
   const pickup = {
     kind: 'interactAcquisitionEntry' as const,
     siteKey,
@@ -156,7 +159,7 @@ function shopAcquisitions(project: ProjectDocument, shop: Shop) {
 describe('trait-generated pickups in a Shop room', () => {
   for (const shop of shops)
     for (const producer of producers)
-      it(`takes ${producer.trait}'s drops in a ${shop.label} and settles its gold before or after a later purchase`, () => {
+      it(`settles ${producer.trait}'s placed drops in a ${shop.label}, its gold before or after a later purchase`, () => {
         const { taken, project, place } = shopWithProducer(shop, producer);
         const minorOffer = shopOccurrence(project, shop).state;
         if (minorOffer.kind !== 'shop') throw new Error('expected Shop state');
