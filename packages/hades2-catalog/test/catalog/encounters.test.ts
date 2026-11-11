@@ -2065,24 +2065,28 @@ describe('encounter scripts', () => {
         gate: { kind: 'none' },
         waitReadyBeforeEnd: false,
         endsByInteraction: false,
+        endsWithBossDefeated: false,
         hostsOutcome: ['gorgon'],
       },
       GeneratedO_Intro01: {
         gate: { kind: 'none' },
         waitReadyBeforeEnd: true,
         endsByInteraction: false,
+        endsWithBossDefeated: false,
         hostsOutcome: [],
       },
       HeraclesCombatO: {
         gate: { kind: 'none' },
         waitReadyBeforeEnd: true,
         endsByInteraction: false,
+        endsWithBossDefeated: false,
         hostsOutcome: [],
       },
       NemesisRandomEvent: {
         gate: { kind: 'none' },
         waitReadyBeforeEnd: false,
         endsByInteraction: true,
+        endsWithBossDefeated: false,
         hostsOutcome: ['nemesisRandomEvent'],
       },
     });

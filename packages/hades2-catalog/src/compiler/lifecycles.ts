@@ -332,6 +332,8 @@ function producerRoles(input: SlotGateInput, reward: RewardProducerBinding): Rea
 /**
  * A wheel slot's encounters start by wheel use and a cage slot's by cage use;
  * no other slot does, and a pickup gate names a role of the room's reward.
+ * A wheel slot's encounters wait for every required object before their end,
+ * and only a wheel-phase room's encounters do (its intro included).
  * Route overlays and entry rules bind slots too.
  */
 function validateSlotGates(input: SlotGateInput, room: RoomDeclaration): void {
@@ -375,8 +377,13 @@ function validateSlotGates(input: SlotGateInput, room: RoomDeclaration): void {
             ? 'cageActivation'
             : undefined;
       for (const key of boundEncounterKeys(input, binding)) {
-        const gate = input.encounterDefinitions.byKey[key]?.script.gate;
-        if (gate === undefined) continue;
+        const script = input.encounterDefinitions.byKey[key]?.script;
+        if (script === undefined) continue;
+        if (slot.rewardAttachment?.kind === 'rewardWheel' && !script.waitReadyBeforeEnd)
+          fail(path, `${key} must wait for the next encounter before its wheel's end`);
+        if (script.waitReadyBeforeEnd && envelope?.kind !== 'wheelPhases')
+          fail(path, `${key} waits for the next encounter outside a wheel-phase room`);
+        const gate = script.gate;
         if (
           expected === undefined
             ? gate.kind === 'wheelUse' || gate.kind === 'cageActivation'

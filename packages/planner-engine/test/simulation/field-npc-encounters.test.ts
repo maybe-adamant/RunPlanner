@@ -252,6 +252,7 @@ function historyProbeCatalog(roomWindow = 5): Catalog {
       gate: Object.freeze({ kind: 'none' as const }),
       waitReadyBeforeEnd: false,
       endsByInteraction: false,
+      endsWithBossDefeated: false,
       hostsOutcome: Object.freeze([]),
     }),
     countsEncounterDepth: true,

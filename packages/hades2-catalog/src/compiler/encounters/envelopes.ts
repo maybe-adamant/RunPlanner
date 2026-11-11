@@ -122,6 +122,19 @@ function normalizeEnvelopeSlot(
   });
 }
 
+/**
+ * A cage starts its encounter when the player uses it (StartFieldsEncounter,
+ * EncounterLogic.lua:2890, 2939): a local-reward slot of a cage envelope.
+ */
+function withActivationVerb(
+  kind: EncounterEnvelopeKind,
+  slot: EncounterEnvelopeSlot,
+): EncounterEnvelopeSlot {
+  return kind === 'playerActivatedCages' && slot.rewardAttachment?.kind === 'localReward'
+    ? Object.freeze({ ...slot, activatedByVerb: 'completeFieldsCage' as const })
+    : slot;
+}
+
 /** The envelope kind its slots support: wheel phases carry wheels, cages carry local rewards. */
 function normalizeEnvelopeKind(
   kind: EncounterEnvelopeKind,
@@ -187,7 +200,15 @@ export function normalizeEncounterEnvelopes(
           );
       }
       const kind = normalizeEnvelopeKind(raw.kind, slots, `${path}.kind`);
-      return Object.freeze({ key, kind, slots: Object.freeze(slots) });
+      return Object.freeze({
+        key,
+        kind,
+        // Sequential and wheel-phase rooms declare MultipleEncountersData, which
+        // SetupRoomMultipleEncountersData prepares (RoomLogic.lua:4343-4344, 4383;
+        // RoomDataO.lua:1761, RoomDataP.lua:1529); Fields cages are chosen separately.
+        multiEncounter: kind === 'sequential' || kind === 'wheelPhases',
+        slots: Object.freeze(slots.map((slot) => withActivationVerb(kind, slot))),
+      });
     }),
     'encounterEnvelopes',
     (envelope) => envelope.key,

@@ -70,6 +70,8 @@ export interface RawEncounterDefinitionDeclaration {
   readonly hostsGorgon?: boolean;
   readonly aetosWaves?: readonly number[];
   readonly skipEndEncounterEffects?: boolean;
+  /** Native `SkipBossTraits`: a boss fight that runs no post-boss effects. */
+  readonly skipBossTraits?: true;
   readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;
   readonly enemyTriggeredIntroduction?: boolean;

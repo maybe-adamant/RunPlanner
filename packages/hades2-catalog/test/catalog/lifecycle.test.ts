@@ -1,9 +1,26 @@
 import { catalog, CatalogContractError, createCatalog } from '@run-planner/hades2-catalog';
+import type { EncounterSlotBinding } from '@run-planner/engine/catalog-schema';
 import { declarations, type RawCatalogInput } from '../../src/declarations';
 import { describe, expect, it } from 'vitest';
 
 function malformedCatalog(value: unknown): RawCatalogInput {
   return value as RawCatalogInput;
+}
+
+function boundEncounterKeys(bindings: readonly EncounterSlotBinding[]): readonly string[] {
+  return bindings.flatMap((binding) =>
+    binding.kind === 'set'
+      ? (catalog.encounterSets.byKey[binding.encounterSetKey]?.encounterDefinitionKeys ?? [])
+      : [
+          binding.encounterDefinitionKey,
+          ...(binding.rivalsEncounterDefinitionKey === undefined
+            ? []
+            : [binding.rivalsEncounterDefinitionKey]),
+          ...(binding.shadowEncounterDefinitionKey === undefined
+            ? []
+            : [binding.shadowEncounterDefinitionKey]),
+        ],
+  );
 }
 
 describe('room lifecycle catalog', () => {
@@ -73,6 +90,121 @@ describe('room lifecycle catalog', () => {
       PEncounter: 'sequential',
       FieldsEncounter: 'playerActivatedCages',
     });
+  });
+
+  it('declares the multi-encounter rooms and the slots a room action starts', () => {
+    expect(
+      Object.fromEntries(
+        catalog.encounterEnvelopes.values.map((envelope) => [
+          envelope.key,
+          {
+            multiEncounter: envelope.multiEncounter,
+            verbs: envelope.slots.flatMap((slot) =>
+              slot.activatedByVerb === undefined ? [] : [`${slot.key} ${slot.activatedByVerb}`],
+            ),
+          },
+        ]),
+      ),
+    ).toEqual({
+      EmptyEncounter: { multiEncounter: false, verbs: [] },
+      SingleEncounter: { multiEncounter: false, verbs: [] },
+      ShipEncounter: { multiEncounter: true, verbs: [] },
+      PEncounter: { multiEncounter: true, verbs: [] },
+      FieldsEncounter: {
+        multiEncounter: false,
+        verbs: [
+          'Cage01 completeFieldsCage',
+          'Cage02 completeFieldsCage',
+          'Cage03 completeFieldsCage',
+        ],
+      },
+    });
+  });
+
+  it("ends exactly the Boss rooms' encounters with a boss defeat", () => {
+    const bossRoomEncounters = new Set(
+      catalog.rooms.values
+        .filter((room) => room.mode.kind === 'authored' && room.mode.templateKey === 'Boss')
+        .flatMap((room) => boundEncounterKeys(room.encounterSlotBindings)),
+    );
+    expect(
+      catalog.encounterDefinitions.values
+        .filter((definition) => definition.script.endsWithBossDefeated)
+        .map((definition) => definition.key)
+        .sort(),
+    ).toEqual([...bossRoomEncounters].sort());
+    expect(catalog.encounterDefinitions.byKey.BossZagreus01?.script.endsWithBossDefeated).toBe(
+      false,
+    );
+  });
+
+  it('waits for the next encounter in every wheel slot and only in wheel-phase rooms', () => {
+    const wheelSlotEncounters = new Set<string>();
+    const waitingOutsideWheelRooms: string[] = [];
+    for (const room of catalog.rooms.values) {
+      const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey]!;
+      for (const bindings of [
+        room.encounterSlotBindings,
+        ...(room.routeOverlays ?? []).map((overlay) => overlay.encounterSlotBindings),
+      ])
+        for (const binding of bindings) {
+          const slot = envelope.slots.find((candidate) => candidate.key === binding.slotKey);
+          for (const key of boundEncounterKeys([binding])) {
+            if (slot?.rewardAttachment?.kind === 'rewardWheel') wheelSlotEncounters.add(key);
+            if (
+              catalog.encounterDefinitions.byKey[key]?.script.waitReadyBeforeEnd === true &&
+              envelope.kind !== 'wheelPhases'
+            )
+              waitingOutsideWheelRooms.push(`${room.gameName} ${key}`);
+          }
+        }
+    }
+    expect(wheelSlotEncounters.size).toBeGreaterThan(0);
+    expect(
+      [...wheelSlotEncounters].filter(
+        (key) => catalog.encounterDefinitions.byKey[key]?.script.waitReadyBeforeEnd !== true,
+      ),
+    ).toEqual([]);
+    expect(waitingOutsideWheelRooms).toEqual([]);
+  });
+
+  it.each([
+    [
+      'a wheel slot encounter without the ready wait',
+      'GeneratedO',
+      { gate: { kind: 'wheelUse' } },
+      /GeneratedO must wait for the next encounter before its wheel's end/,
+    ],
+    [
+      'a ready wait outside a wheel-phase room',
+      'GeneratedF',
+      { waitReadyBeforeEnd: true },
+      /GeneratedF waits for the next encounter outside a wheel-phase room/,
+    ],
+  ])('rejects %s', (_name, key, script, message) => {
+    expect(() =>
+      createCatalog(
+        malformedCatalog({
+          ...declarations,
+          encounterDefinitions: declarations.encounterDefinitions.map((definition) =>
+            definition.key === key ? { ...definition, script } : definition,
+          ),
+        }),
+      ),
+    ).toThrow(message);
+  });
+
+  it('rejects SkipBossTraits outside a boss encounter', () => {
+    expect(() =>
+      createCatalog(
+        malformedCatalog({
+          ...declarations,
+          encounterDefinitions: declarations.encounterDefinitions.map((definition) =>
+            definition.key === 'GeneratedF' ? { ...definition, skipBossTraits: true } : definition,
+          ),
+        }),
+      ),
+    ).toThrow(/must be true on a boss encounter/);
   });
 
   it('rejects an envelope kind its slots do not support', () => {

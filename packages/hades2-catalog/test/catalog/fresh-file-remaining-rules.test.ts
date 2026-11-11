@@ -87,6 +87,7 @@ describe('Fresh File remaining-rule declarations', () => {
         encounterSlotBindings: [
           { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BridgeShop' },
         ],
+        lifecycleProfile: { kind: 'fixed', profileKey: 'WorldShopRoom' },
       },
     ]);
     expect(bridge.force).toEqual({ kind: 'always' });

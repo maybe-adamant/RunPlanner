@@ -135,6 +135,11 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     encounterDefinitions,
     encounterSets,
     exitTypes,
+    {
+      templates: input.roomTemplateLifecycles,
+      derived: input.derivedRoomLifecycle,
+      profiles: roomLifecycleProfiles,
+    },
   );
   const requiredRewardDrops = normalizeRequiredRewardDrops(input.requiredRewardDrops);
   validateRoomRequiredRewardDrops(rooms, requiredRewardDrops);
