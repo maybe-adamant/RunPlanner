@@ -1,9 +1,0 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
-
-exports[`rows on a replaced item in edit settlement > [Wave C] keeps today’s delivery handling when a Shrine restock replaces its purchase 1`] = `
-{
-  "announced": undefined,
-  "payload": true,
-  "row": false,
-}
-`;

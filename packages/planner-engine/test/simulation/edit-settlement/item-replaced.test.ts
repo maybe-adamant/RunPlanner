@@ -632,42 +632,71 @@ describe('rows on a replaced item in edit settlement', () => {
       expect(actions.length).toBeGreaterThan(0);
       expect(actions.every((action) => action.kind === 'place')).toBe(true);
     });
-  });
 
-  it('[Wave C] keeps today’s delivery handling when a Shrine restock replaces its purchase', () => {
     const o = createBiomeAddress('Surface', 'O');
     const shrine = at(o, 'surface-o-combat07');
     const host = at(o, 'surface-o-devotion');
-    const project = loadCheckpoint('surface-no-hermes-shrine-delivery');
-    const purchase = {
-      kind: 'purchaseHermesShrineOffer',
-      generationKey: 'initial:secondLeft',
-    } as const;
-    const delivery = order(project, host).find(
-      (reference) =>
-        reference.kind === 'interactAcquisitionEntry' &&
-        reference.siteKey === 'hermesShrineDelivery',
-    )!;
-    const settled = settle(project, {
-      kind: 'ReplaceHermesShrineOffer',
-      occurrence: shrine,
-      slotKey: 'secondLeft',
-      value: { rewardType: 'HealBigDrop' },
+    const placedDelivery = (project: ProjectDocument) =>
+      order(project, host).find(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.siteKey === 'hermesShrineDelivery',
+      )!;
+    const entryOf = (reference: RoomActionReference) =>
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+        reference.kind === 'interactAcquisitionEntry' ? reference.entryKey : '',
+      );
+
+    it('discards it with its pickup, announced, when its Shrine slot is restocked', () => {
+      const project = loadCheckpoint('surface-no-hermes-shrine-delivery');
+      const delivery = placedDelivery(project);
+      const settled = settle(project, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: shrine,
+        slotKey: 'secondLeft',
+        value: { rewardType: 'HealBigDrop' },
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(
+        holds(settled.assembly.project, shrine, {
+          kind: 'purchaseHermesShrineOffer',
+          generationKey: 'initial:secondLeft',
+        }),
+      ).toBe(false);
+      expect(deliveryAt(settled.assembly.project, entryOf(delivery))).toEqual({
+        offer: undefined,
+        placed: false,
+      });
+      expect(settled.removedStaleActions).toEqual([
+        { occurrence: host, actions: [delivery], discarded: [{ item: entryOf(delivery) }] },
+      ]);
     });
-    expect(settled.fault).toBeUndefined();
-    expect(holds(settled.assembly.project, shrine, purchase)).toBe(false);
-    // Pinned for the Wave C delivery repair: what happens to the delivery row and its payload today.
-    const hostRoom = settled.assembly.project.route.biomes
-      .find((plan) => plan.biomeKey === 'O')!
-      .topology!.occurrences.find((candidate) => candidate.occurrenceId === host.occurrenceId)!;
-    expect({
-      row: holds(settled.assembly.project, host, delivery),
-      payload:
-        delivery.kind === 'interactAcquisitionEntry' &&
-        hostRoom.acquisitionSites?.[delivery.siteKey]?.pickupEntries?.[delivery.entryKey] !==
-          undefined,
-      announced: settled.removedStaleActions,
-    }).toMatchSnapshot();
+
+    it('discards it at its old host, announced, when it comes due at another', () => {
+      const project = loadCheckpoint('surface-no-hermes-shrine-delivery');
+      const delivery = placedDelivery(project);
+      const settled = settle(project, {
+        kind: 'SetHermesShrineOfferDelay',
+        occurrence: shrine,
+        generationKey: 'initial:secondLeft',
+        delay: 4,
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(deliveryAt(settled.assembly.project, entryOf(delivery))).toEqual({
+        offer: undefined,
+        placed: false,
+      });
+      expect(settled.removedStaleActions).toEqual([
+        { occurrence: host, actions: [delivery], discarded: [{ item: entryOf(delivery) }] },
+      ]);
+      // It arrives at its new host as a new item, live to be placed there.
+      expect(
+        settled.assembly.evaluation.findings.some(
+          (finding) => finding.code === 'hermesShrineDeliveryPlacementRequired',
+        ),
+      ).toBe(true);
+    });
   });
 
   describe('agree with the roster on what is replaced', () => {
