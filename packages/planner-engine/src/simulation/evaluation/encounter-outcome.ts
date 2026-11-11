@@ -123,8 +123,8 @@ export function encounterOutcomesForProjectEvaluationAssembly(
 
 /**
  * The room's Timeline as the walk evaluated it: an encounter with no gate shows
- * its begin and Combat as one marker unless an outcome is observed at that
- * Combat, when they show apart. Undefined for a room the evaluated biome does
+ * its begin and Combat as one marker unless that Combat hosts outcome choices,
+ * recorded or not, when they show apart so the choice has its place. Undefined for a room the evaluated biome does
  * not hold.
  */
 export function roomLifecycleTimelineForProjectEvaluationAssembly(

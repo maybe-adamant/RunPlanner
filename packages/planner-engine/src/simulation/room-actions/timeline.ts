@@ -28,7 +28,7 @@ export type RoomLifecycleTimelineEntry =
       readonly placement: 'before' | 'after';
       /**
        * An encounter's begin only: whether it shows as one marker with its Combat
-       * (no gate between them and no outcome observed there) or as its own. The
+       * (no gate between them and no outcome choice hosted there) or as its own. The
        * evaluated Timeline (`roomLifecycleTimelineForProjectEvaluationAssembly`)
        * settles it against the outcomes the walk reached.
        */
