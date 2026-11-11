@@ -26,6 +26,7 @@ import {
   parseStygianWellGenerationKey,
   purgingPoolRerolls,
   stygianWellGenerationKey,
+  stygianWellPurchasedGenerationKeys,
   stygianWellRerolls,
 } from '@run-planner/engine/authored-project';
 import {
@@ -1358,9 +1359,9 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
   // takes a free slot of its group on the last roll; without one it is unowned.
   for (const itemKey of extra) {
     const taken = new Set(
-      (
+      stygianWellPurchasedGenerationKeys(
         authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId)
-          ?.stygianWell?.purchasedGenerationKeys ?? []
+          ?.roomActions.order ?? [],
       ).flatMap((key) => {
         const parsed = parseStygianWellGenerationKey(key);
         return parsed?.rollKey === rollKey ? [parsed.slotKey] : [];

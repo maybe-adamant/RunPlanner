@@ -80,9 +80,8 @@ Gaps left for C5b (the engine cannot derive them today):
   reaches a fourth eligible pickup without the replacement choices
   rippling. The offer reads the same `supported` assessment as Time Piece,
   whose zero-charge and Unfated cases are witnessed.
-- A new reroll press, Well reroll and Pool reroll carry no `reference`: the
-  row id is allocated when the row is created (by the picker for a press,
-  by the engine for a Well or Pool reroll). C5b's item keys give them one.
+- A new reroll press carries no `reference`: the picker allocates its row
+  id. (A Well or Pool reroll names its row since C5b-1.)
 - A row covering several roles (a caged Blind Box) gets no conversion verbs.
 - Well and Pool rerolls, Pool sales and door rerolls only at their append
   point: no engine query answers their other legal indices. A wheel
@@ -92,6 +91,31 @@ Gaps left for C5b (the engine cannot derive them today):
   the row; there is no placement command carrying the keepsake.
 - No new verb exports on `./simulation` yet; they land with the first
   consumer (the planner's live row in D).
+
+## C5b contract changes
+
+What Draft and the run import adapt to, slice by slice.
+
+C5b-1, Well and Pool rolls on their objects (schema 103 shape):
+
+- `rerollStygianWell` and `rerollPurgingPool` rows are `{ kind, rerollId }`
+  only. Read a reroll's pins with `stygianWellRerollPins(well, rerollId)` or
+  `purgingPoolRerollPins(pool, rerollId)` (persisted as
+  `stygianWell.rerollOfferKeyBySlot` and `purgingPool.rerollTraitKeyBySlot`);
+  the existing `stygianWellGenerationItemKey` and `purgingPoolRollTraitKey`
+  are unchanged.
+- Fateful Twist results are `stygianWell.twistResultKeyByGeneration`, keyed
+  by generation (`initial:<slot>`, `<rerollId>:<slot>`, `travelDealRefill`);
+  read them with `stygianWellGenerationTwistResultKey`.
+- `stygianWell.purchasedGenerationKeys` is gone: a generation is bought when
+  the room's order holds its `purchaseStygianWellOffer`; read them with
+  `stygianWellPurchasedGenerationKeys(order)`. Run import
+  `commerce.ts` (the restock slot search) is re-pointed; its tests
+  `import-rerolls`, `import-synthetic-erebus` and `import-underworld-capture`
+  have their literals adapted but were compiled, not run.
+- Removing a Well or Pool reroll row removes its pins and Twist results.
+- A live Well or Pool reroll verb now carries the `reference` of the row its
+  command creates.
 
 ## Inventory (summary of existence-vs-interaction)
 

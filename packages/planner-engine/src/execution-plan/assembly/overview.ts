@@ -4,9 +4,11 @@ import {
   INITIAL_ROLL_KEY,
   PURGING_POOL_SLOT_KEYS,
   STYGIAN_WELL_SLOT_KEYS,
+  purgingPoolRerollPins,
   stygianWellGenerationItemKey,
   stygianWellGenerationKey,
   stygianWellGenerationTwistResultKey,
+  stygianWellPurchasedGenerationKeys,
   type FeatureRerollAction,
 } from '../../authored-project/feature-rolls';
 import { wellOccurrenceView } from '../../simulation/rewards/biome/encounter-acquisition/well-purchase';
@@ -598,7 +600,9 @@ function executionWellOffers(
   rollKey: string,
 ): readonly ExecutionWellOffer[] {
   const view = wellOccurrenceView(room);
-  const purchased = room.stygianWell?.purchasedGenerationKeys ?? [];
+  const purchased = stygianWellPurchasedGenerationKeys(
+    room.roomActionRoster.rows.flatMap((row) => (row.rank === null ? [] : [row.reference])),
+  );
   return Object.freeze(
     STYGIAN_WELL_SLOT_KEYS.flatMap((slotKey) => {
       const generationKey = stygianWellGenerationKey(rollKey, slotKey);
@@ -665,7 +669,7 @@ function executionPurgingPool(
   const rerolls = rankedFeatureRerolls(room, 'rerollPurgingPool').map((reroll) =>
     Object.freeze({
       rollKey: reroll.rerollId,
-      traits: executionPoolTraits(reroll.kind === 'rerollPurgingPool' ? reroll.traitKeyBySlot : {}),
+      traits: executionPoolTraits(purgingPoolRerollPins(room.purgingPool, reroll.rerollId)),
     }),
   );
   return Object.freeze({

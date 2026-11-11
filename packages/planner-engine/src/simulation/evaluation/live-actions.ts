@@ -17,6 +17,7 @@ import {
   INITIAL_ROLL_KEY,
   STYGIAN_WELL_SLOT_KEYS,
   stygianWellGenerationKey,
+  stygianWellPurchasedGenerationKeys,
   stygianWellRerolls,
 } from '../../authored-project/feature-rolls';
 import type { RoomActionReference } from '../../authored-project/model';
@@ -383,7 +384,7 @@ function objectPurchases(
     const order = room.roomActionRoster.rows.flatMap((row) =>
       row.rank === null ? [] : [row.reference],
     );
-    const purchased = new Set<string>(well.purchasedGenerationKeys ?? []);
+    const purchased = new Set<string>(stygianWellPurchasedGenerationKeys(order));
     const generationKeys = [
       ...STYGIAN_WELL_SLOT_KEYS.map((slotKey) =>
         stygianWellGenerationKey(INITIAL_ROLL_KEY, slotKey),

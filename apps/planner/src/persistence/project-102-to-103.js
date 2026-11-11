@@ -1,5 +1,8 @@
 import { encodeProjectDocument, parseProjectDocument } from '@run-planner/engine/authored-project';
-import { settleProjectUpgrade } from '@run-planner/engine/project-migration';
+import {
+  moveWellPoolRollsOntoObjects,
+  settleProjectUpgrade,
+} from '@run-planner/engine/project-migration';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 
 export const SOURCE_SCHEMA_VERSION = 102;
@@ -14,8 +17,18 @@ function record(value, label) {
   return value;
 }
 
-/** Schema 103 keeps schema 102's shape, so the lift changes only the version. */
-export function liftProjectDocument(value) {
+/**
+ * Raw transforms that reshape a schema 102 plan into schema 103's shape, in
+ * order. Each is lossless, leaves a plan already in that shape as it is, and
+ * runs before strict decoding.
+ */
+const SHAPE_TRANSFORMS = Object.freeze([
+  // Well and Pool rolls move from their reroll actions onto the Well and Pool.
+  moveWellPoolRollsOntoObjects,
+]);
+
+/** The version lift with schema 103's shape transforms; the catalog is for transforms that read it. */
+export function liftProjectDocument(value, catalog) {
   const source = record(value, 'project document');
   if (source.schemaVersion !== SOURCE_SCHEMA_VERSION)
     throw new Error(
@@ -32,7 +45,10 @@ export function liftProjectDocument(value) {
     );
   const copy = JSON.parse(JSON.stringify(source));
   delete copy.schemaRevision;
-  return { ...copy, schemaVersion: OUTPUT_SCHEMA_VERSION };
+  return SHAPE_TRANSFORMS.reduce((document, transform) => transform(document, catalog), {
+    ...copy,
+    schemaVersion: OUTPUT_SCHEMA_VERSION,
+  });
 }
 
 /**
@@ -42,7 +58,7 @@ export function liftProjectDocument(value) {
  * It settles only while 103 is the current schema; later it keeps the bare lift.
  */
 export function migrateProjectDocument(value, { catalog }) {
-  const lifted = liftProjectDocument(value);
+  const lifted = liftProjectDocument(value, catalog);
   try {
     const settled = settleProjectUpgrade({
       catalog,

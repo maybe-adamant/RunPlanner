@@ -406,10 +406,7 @@
                   "secondLeft": "TemporaryBoonRarityTrait",
                   "secondRight": "TemporaryDiscountTrait"
                 },
-                "travelDealRefillKey": "TemporaryImprovedSecondaryTrait",
-                "purchasedGenerationKeys": [
-                  "initial:secondLeft"
-                ]
+                "travelDealRefillKey": "TemporaryImprovedSecondaryTrait"
               },
               "additionalExits": []
             },

@@ -30,6 +30,7 @@ import {
   roomActionOrderContextForOccurrence,
 } from '../room-actions/order-assessment';
 import { applyShopOccurrenceCommand } from './occurrence/shop';
+import { withoutFeatureRerollObservations } from './occurrence/feature-rolls';
 import { withChosenIndex } from './chosen-index';
 
 function requireIndex(
@@ -373,7 +374,13 @@ export function applyRoomActionCommand(
     if (Object.keys(acquisitionSites).length === 0) delete nextOccurrence.acquisitionSites;
     else nextOccurrence.acquisitionSites = Object.freeze(acquisitionSites);
   }
-  const updated = updateOccurrence(document, located, Object.freeze(nextOccurrence));
+  const updated = updateOccurrence(
+    document,
+    located,
+    removed?.kind === 'rerollStygianWell' || removed?.kind === 'rerollPurgingPool'
+      ? withoutFeatureRerollObservations(Object.freeze(nextOccurrence), removed)
+      : Object.freeze(nextOccurrence),
+  );
   // Removing or moving a reroll can change its target's effective reward.
   const reroll =
     command.kind === 'RemoveRoomAction' || command.kind === 'MoveRoomAction'

@@ -32,18 +32,20 @@ const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, 
 const settle = (project: ProjectDocument, command: ProjectCommand) =>
   settleProjectEdit({ catalog, before: evaluate(project), command, evaluate }).assembly.project;
 
-function order(project: ProjectDocument): readonly RoomActionReference[] {
+function occurrenceOf(project: ProjectDocument) {
   return project.route.biomes[0]!.topology!.occurrences.find(
     (entry) => entry.occurrenceId === postboss,
-  )!.roomActions.order;
+  )!;
+}
+
+function order(project: ProjectDocument): readonly RoomActionReference[] {
+  return occurrenceOf(project).roomActions.order;
 }
 
 const actionAt = (reference: RoomActionReference) =>
   createRoomActionAddress(f, postboss as never, roomActionKey(reference));
-const wellReroll = (rerollId: string) =>
-  actionAt({ kind: 'rerollStygianWell', rerollId, offerKeyBySlot: {} });
-const poolReroll = (rerollId: string) =>
-  actionAt({ kind: 'rerollPurgingPool', rerollId, traitKeyBySlot: {} });
+const wellReroll = (rerollId: string) => actionAt({ kind: 'rerollStygianWell', rerollId });
+const poolReroll = (rerollId: string) => actionAt({ kind: 'rerollPurgingPool', rerollId });
 
 /**
  * The F Postboss Well with a held screen-reroll card: Travel Deal restocks its
@@ -82,11 +84,7 @@ const pool = (project: ProjectDocument) =>
 describe('Stygian Well rolls', () => {
   it('restock only slots not bought earlier, and the k-th reroll costs k', () => {
     const project = appendWellReroll(base());
-    expect(order(project).at(-1)).toEqual({
-      kind: 'rerollStygianWell',
-      rerollId: 'r1',
-      offerKeyBySlot: {},
-    });
+    expect(order(project).at(-1)).toEqual({ kind: 'rerollStygianWell', rerollId: 'r1' });
     expect(findings(project)).toEqual([]);
     const capability = well(project);
     // secondRight and the Travel Deal restock in secondLeft were bought: only healing restocks.
@@ -193,9 +191,12 @@ describe('Stygian Well rolls', () => {
       itemKey: 'HealDropRange',
     });
     expect(order(bought).slice(-2)).toEqual([
-      { kind: 'rerollStygianWell', rerollId: 'r1', offerKeyBySlot: { healing: 'HealDropRange' } },
+      { kind: 'rerollStygianWell', rerollId: 'r1' },
       { kind: 'purchaseStygianWellOffer', generationKey: 'r1:healing' },
     ]);
+    expect(occurrenceOf(bought).stygianWell?.rerollOfferKeyBySlot).toEqual({
+      r1: { healing: 'HealDropRange' },
+    });
     expect(findings(bought)).toEqual([]);
     expect(() =>
       applyProjectCommand(project, catalog, {
@@ -310,6 +311,8 @@ describe('Stygian Well rolls', () => {
       action: wellReroll('r1'),
     });
     const healing = actionAt({ kind: 'purchaseStygianWellOffer', generationKey: 'r1:healing' });
+    // The removed reroll's pins leave with it.
+    expect(occurrenceOf(project).stygianWell?.rerollOfferKeyBySlot).toBeUndefined();
     expect(order(project)).toContainEqual({
       kind: 'purchaseStygianWellOffer',
       generationKey: 'r1:healing',
@@ -452,9 +455,18 @@ describe('Pool of Purging rolls', () => {
       index: order(project).length,
     });
     expect(order(sold).slice(-2)).toEqual([
-      { kind: 'rerollPurgingPool', rerollId: 'r1', traitKeyBySlot: { right: traitKey } },
+      { kind: 'rerollPurgingPool', rerollId: 'r1' },
       { kind: 'sellPurgingPoolTrait', slotKey: 'right', rollKey: 'r1' },
     ]);
+    expect(occurrenceOf(sold).purgingPool?.rerollTraitKeyBySlot).toEqual({
+      r1: { right: traitKey },
+    });
+    // Removing the reroll takes its list with it; the sale keeps its finding.
+    const removed = applyProjectCommand(sold, catalog, {
+      kind: 'RemoveRoomAction',
+      action: poolReroll('r1'),
+    });
+    expect(occurrenceOf(removed).purgingPool?.rerollTraitKeyBySlot).toBeUndefined();
     expect(findings(sold)).toEqual([]);
   });
 

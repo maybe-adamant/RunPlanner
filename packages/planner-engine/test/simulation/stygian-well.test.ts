@@ -123,8 +123,8 @@ describe('Stygian Well generation slot', () => {
   it('names the slot and the roll number a generation was stocked by', () => {
     const roomActions = {
       order: [
-        { kind: 'rerollStygianWell' as const, rerollId: 'a', offerKeyBySlot: {} },
-        { kind: 'rerollStygianWell' as const, rerollId: 'b', offerKeyBySlot: {} },
+        { kind: 'rerollStygianWell' as const, rerollId: 'a' },
+        { kind: 'rerollStygianWell' as const, rerollId: 'b' },
       ],
     };
     const slot = (generationKey: StygianWellGenerationKey) =>
@@ -987,9 +987,8 @@ describe('Stygian Well consequential purchase state', () => {
         secondLeft: 'RandomStoreItem',
         secondRight: 'LimitedSwapTraitDrop',
       },
-      purchasedGenerationKeys: ['initial:secondLeft'],
       travelDealRefillKey: 'TemporaryImprovedCastTrait',
-      twistResultKeyBySlot: { secondLeft: 'TemporaryDiscountTrait' },
+      twistResultKeyByGeneration: { 'initial:secondLeft': 'TemporaryDiscountTrait' },
     } as const;
     const assessment = assessPurchase(
       catalog,
@@ -1175,7 +1174,6 @@ describe('Stygian Well consequential purchase state', () => {
         secondLeft: 'TemporaryImprovedCastTrait',
         secondRight: 'LimitedSwapTraitDrop',
       },
-      purchasedGenerationKeys: ['initial:healing'],
     } as const;
     // An unpinned restock stays native.
     const missing = assessPurchase(
@@ -1214,9 +1212,8 @@ describe('Stygian Well consequential purchase state', () => {
           secondLeft: null,
           secondRight: 'LimitedSwapTraitDrop',
         },
-        purchasedGenerationKeys: ['initial:secondLeft', 'travelDealRefill'],
         travelDealRefillKey: null,
-        twistResultKeyBySlot: { secondLeft: 'HealDropRange' },
+        twistResultKeyByGeneration: { 'initial:secondLeft': 'HealDropRange' },
       },
       empty(),
       undefined,
@@ -1234,7 +1231,7 @@ describe('Stygian Well consequential purchase state', () => {
         secondRight: 'LimitedSwapTraitDrop',
       },
       travelDealRefillKey: 'RandomStoreItem',
-      twistResultKeyBySlot: { travelDealRefill: 'HealDropRange' },
+      twistResultKeyByGeneration: { travelDealRefill: 'HealDropRange' },
     } as const;
     const dormant = assessStygianWell(
       catalog,

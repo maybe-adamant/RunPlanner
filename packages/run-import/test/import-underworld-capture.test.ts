@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { stygianWellPurchasedGenerationKeys } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { projectFromRunRecord, type RunImport } from '../src/import';
@@ -88,13 +89,17 @@ describe('run import of the Underworld capture', () => {
         secondLeft: 'TemporaryEmptySlotDamageTrait',
         secondRight: 'TemporaryMoveSpeedTrait',
       },
-      purchasedGenerationKeys: ['initial:secondLeft', 'initial:secondRight'],
     });
+    expect(
+      stygianWellPurchasedGenerationKeys(occurrence(imported.project, 'F-r3').roomActions.order),
+    ).toEqual(['initial:secondLeft', 'initial:secondRight']);
     // Travel Deal restocked the H Postboss Well with the item bought unstocked.
-    expect(occurrence(imported.project, 'H-r30:postboss').stygianWell).toMatchObject({
-      travelDealRefillKey: 'TemporaryMoveSpeedTrait',
-      purchasedGenerationKeys: ['initial:secondRight', 'travelDealRefill'],
-    });
+    const restocked = occurrence(imported.project, 'H-r30:postboss');
+    expect(restocked.stygianWell).toMatchObject({ travelDealRefillKey: 'TemporaryMoveSpeedTrait' });
+    expect(stygianWellPurchasedGenerationKeys(restocked.roomActions.order)).toEqual([
+      'initial:secondRight',
+      'travelDealRefill',
+    ]);
     const pool = occurrence(imported.project, 'F-r11:postboss');
     expect(pool.purgingPool).toEqual({
       traitKeyBySlot: {

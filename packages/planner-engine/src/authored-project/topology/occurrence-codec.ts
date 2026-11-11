@@ -21,7 +21,8 @@ import {
 import { declaredRequiredRoomActions, roomActionKey } from '../room-actions/state';
 import { decodeRoomActionState } from '../room-state/decoding/room-action-codec';
 import {
-  assertStygianWellPurchaseActionClosure,
+  assertFeatureRollClosure,
+  decodeRerollPins,
   decodeStygianWellState,
 } from '../room-state/decoding/well-codec';
 import { decodeRoomState } from '../room-state/codec';
@@ -250,7 +251,12 @@ function decodePurgingPoolState(
   if (room.purgingPool === undefined)
     failProjectDocument(path, 'requires a room declaration with a Purging Pool');
   const raw = expectRecord(value, path);
-  expectExactKeys(raw, ['traitKeyBySlot'], path);
+  const hasRerollPins = Object.hasOwn(raw, 'rerollTraitKeyBySlot');
+  expectExactKeys(
+    raw,
+    ['traitKeyBySlot', ...(hasRerollPins ? ['rerollTraitKeyBySlot'] : [])],
+    path,
+  );
   const traits = expectRecord(raw.traitKeyBySlot, `${path}.traitKeyBySlot`);
   expectExactKeys(traits, [...room.purgingPool.slotKeys], `${path}.traitKeyBySlot`);
   const traitKeyBySlot = Object.fromEntries(
@@ -263,8 +269,22 @@ function decodePurgingPoolState(
       return [slot, traitKey];
     }),
   ) as Readonly<Record<'left' | 'middle' | 'right', string | null>>;
+  const rerollTraitKeyBySlot = hasRerollPins
+    ? decodeRerollPins(
+        raw.rerollTraitKeyBySlot,
+        `${path}.rerollTraitKeyBySlot`,
+        room.purgingPool.slotKeys,
+        (entry, entryPath) => {
+          const traitKey = expectNonBlankString(entry, entryPath);
+          if (catalog.traits.byKey[traitKey] === undefined)
+            failProjectDocument(entryPath, 'unknown trait');
+          return traitKey;
+        },
+      )
+    : undefined;
   return Object.freeze({
     traitKeyBySlot: Object.freeze(traitKeyBySlot),
+    ...(rerollTraitKeyBySlot === undefined ? {} : { rerollTraitKeyBySlot }),
   });
 }
 
@@ -663,11 +683,7 @@ export function decodeRoomOccurrence(input: {
       `${rawOccurrence.path}.roomActions.order`,
       'a keepsake rack owns at most one interactKeepsakeRack action',
     );
-  assertStygianWellPurchaseActionClosure(
-    stygianWell,
-    roomActions,
-    `${rawOccurrence.path}.roomActions.order`,
-  );
+  assertFeatureRollClosure(stygianWell, purgingPool, roomActions, rawOccurrence.path);
   for (const [index, reference] of roomActions.order.entries()) {
     const feature =
       reference.kind === 'rerollStygianWell'

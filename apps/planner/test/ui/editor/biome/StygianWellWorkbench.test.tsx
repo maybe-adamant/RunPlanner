@@ -158,13 +158,16 @@ describe('Stygian Well workbench', () => {
     const remove = within(refillRow).getByRole('button', { name: /^Remove .* from timeline$/ });
     expect(remove).toHaveProperty('disabled', false);
     await view.user.click(remove);
-    const well = view.application.store
+    const room = view.application.store
       .getState()
       .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
         (room) => room.occurrenceId === postbossId,
-      )?.stygianWell;
-    expect(well?.purchasedGenerationKeys ?? []).not.toContain('travelDealRefill');
-    expect(well?.travelDealRefillKey).toBe('ArmorBoostStore');
+      );
+    expect(room?.roomActions.order).not.toContainEqual({
+      kind: 'purchaseStygianWellOffer',
+      generationKey: 'travelDealRefill',
+    });
+    expect(room?.stygianWell?.travelDealRefillKey).toBe('ArmorBoostStore');
   });
 
   it('authors the refill under the first purchase row and hides it when that purchase is cleared', async () => {
@@ -319,7 +322,7 @@ describe('Stygian Well workbench', () => {
         .getState()
         .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
           (room) => room.occurrenceId === postbossId,
-        )?.stygianWell?.twistResultKeyBySlot?.secondLeft,
+        )?.stygianWell?.twistResultKeyByGeneration?.['initial:secondLeft'],
     ).toBeUndefined();
   });
 

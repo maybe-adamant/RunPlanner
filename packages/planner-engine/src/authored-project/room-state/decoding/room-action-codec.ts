@@ -9,7 +9,6 @@ import type {
 import { decodeResolvedRewardOffer } from './reward-acquisition-codec';
 import { decodeGeneratedEncounterCustomization } from './generated-encounter-codec';
 import { decodeStygianWellGenerationKey } from './well-codec';
-import { PURGING_POOL_SLOT_KEYS, STYGIAN_WELL_SLOT_KEYS } from '../../feature-rolls';
 import { roomActionKey } from '../../room-actions/state';
 import {
   expectArray,
@@ -219,69 +218,11 @@ function decodeRoomActionReference(
       reward: decodeResolvedRewardOffer(reference.reward, catalog, `${path}.reward`),
     });
   }
-  if (kind === 'rerollStygianWell') {
-    const hasTwist = Object.hasOwn(reference, 'twistResultKeyBySlot');
-    expectExactKeys(
-      reference,
-      ['kind', 'rerollId', 'offerKeyBySlot', ...(hasTwist ? ['twistResultKeyBySlot'] : [])],
-      path,
-    );
-    const known = new Set(
-      catalog.rewards.shops.byKey.RoomShop?.groups.values.flatMap((group) =>
-        group.options.values.map((option) => option.key),
-      ) ?? [],
-    );
-    const item = (entry: unknown, entryPath: string): string => {
-      const itemKey = expectNonBlankString(entry, entryPath);
-      if (!known.has(itemKey)) failProjectDocument(entryPath, `unknown RoomShop item ${itemKey}`);
-      return itemKey;
-    };
-    const slots = (field: string, decode: (entry: unknown, entryPath: string) => unknown) => {
-      const record = expectRecord(reference[field], `${path}.${field}`);
-      for (const key of Object.keys(record))
-        if (!(STYGIAN_WELL_SLOT_KEYS as readonly string[]).includes(key))
-          failProjectDocument(`${path}.${field}`, `contains unknown Well slot ${key}`);
-      return Object.freeze(
-        Object.fromEntries(
-          Object.entries(record).map(([key, entry]) => [
-            key,
-            decode(entry, `${path}.${field}.${key}`),
-          ]),
-        ),
-      );
-    };
+  if (kind === 'rerollStygianWell' || kind === 'rerollPurgingPool') {
+    expectExactKeys(reference, ['kind', 'rerollId'], path);
     return Object.freeze({
       kind,
       rerollId: decodeRerollId(reference.rerollId, `${path}.rerollId`),
-      offerKeyBySlot: slots('offerKeyBySlot', item) as Record<string, string>,
-      ...(hasTwist
-        ? {
-            twistResultKeyBySlot: slots('twistResultKeyBySlot', (entry, entryPath) =>
-              entry === null ? null : item(entry, entryPath),
-            ) as Record<string, string | null>,
-          }
-        : {}),
-    });
-  }
-  if (kind === 'rerollPurgingPool') {
-    expectExactKeys(reference, ['kind', 'rerollId', 'traitKeyBySlot'], path);
-    const traits = expectRecord(reference.traitKeyBySlot, `${path}.traitKeyBySlot`);
-    for (const key of Object.keys(traits))
-      if (!(PURGING_POOL_SLOT_KEYS as readonly string[]).includes(key))
-        failProjectDocument(`${path}.traitKeyBySlot`, `contains unknown Pool slot ${key}`);
-    return Object.freeze({
-      kind,
-      rerollId: decodeRerollId(reference.rerollId, `${path}.rerollId`),
-      traitKeyBySlot: Object.freeze(
-        Object.fromEntries(
-          Object.entries(traits).map(([key, entry]) => {
-            const traitKey = expectNonBlankString(entry, `${path}.traitKeyBySlot.${key}`);
-            if (catalog.traits.byKey[traitKey] === undefined)
-              failProjectDocument(`${path}.traitKeyBySlot.${key}`, 'unknown trait');
-            return [key, traitKey];
-          }),
-        ),
-      ),
     });
   }
   failProjectDocument(`${path}.kind`, `unknown room action ${kind}`);

@@ -715,14 +715,19 @@ owns its rush and its position among the Shrine's purchases; no purchase state
 is persisted beside it. The codec rejects a purchase action whose item is not
 stocked, and a same-room Shrine pickup without a rushed purchase action. Its
 rushed or delayed delivery owns concrete acquisition payload. A
-Stygian Well or Pool of Purging holds its initial stock with no interaction
-flag: a blank slot stays native, a pinned one is assessed, and a slot becomes
-required only once a purchase or sale uses it; use follows from the room's
-actions. Each later roll is a repeatable `rerollStygianWell` or
-`rerollPurgingPool` room action with an engine-allocated `rerollId` and
-optional slot pins (an unpinned slot stays native); each Well purchase names
-its roll and slot, and each Pool sale its list (`rollKey`, absent for the
-initial list). A purchase or sale pins a blank slot in the same edit. Travel
+Stygian Well or Pool of Purging holds what the game rolled on it, with no
+interaction flag: its initial stock, where a blank slot stays native, a pinned
+one is assessed, and a slot becomes required only once a purchase or sale uses
+it; use follows from the room's actions. Each later roll is a repeatable
+`rerollStygianWell` or `rerollPurgingPool` room action that holds only its
+engine-allocated `rerollId`; the roll's optional slot pins live on the Well or
+Pool under that id (an unpinned slot stays native). A Well generation is
+bought exactly when the room's actions hold its one purchase, which names its
+roll and slot; the game rolls a Fateful Twist per bought generation, and its
+result lives on the Well under that generation. Pins and Twist results exist
+only for rolls the room holds, so removing a reroll takes them with it. Each Pool sale names its list
+(`rollKey`, absent for the initial list). A purchase or sale pins a blank
+slot in the same edit. Travel
 Deal refill state is
 occurrence-local to its Shop, Shrine, or Well carrier. Pending deliveries,
 temporary effects, Spell reservations, and expiry remain derived simulation

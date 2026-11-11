@@ -46,8 +46,10 @@ import {
   INITIAL_ROLL_KEY,
   PURGING_POOL_SLOT_KEYS,
   STYGIAN_WELL_SLOT_KEYS,
+  purgingPoolRerollPins,
   purgingPoolRerolls,
   stygianWellGenerationKey,
+  stygianWellPurchasedGenerationKeys,
   stygianWellRerolls,
 } from '../feature-rolls';
 
@@ -260,7 +262,7 @@ export function activeRoomActionReferences(
     for (const reroll of purgingPoolRerolls(occurrence.roomActions.order)) {
       references.push(reroll);
       for (const slotKey of PURGING_POOL_SLOT_KEYS)
-        if (reroll.traitKeyBySlot[slotKey] !== undefined)
+        if (purgingPoolRerollPins(occurrence.purgingPool, reroll.rerollId)[slotKey] !== undefined)
           sales.push(
             Object.freeze({ kind: 'sellPurgingPoolTrait', slotKey, rollKey: reroll.rerollId }),
           );
@@ -275,7 +277,7 @@ export function activeRoomActionReferences(
   }
   if (occurrence.stygianWell !== undefined) {
     references.push(...stygianWellRerolls(occurrence.roomActions.order));
-    const purchased = occurrence.stygianWell.purchasedGenerationKeys ?? [];
+    const purchased = stygianWellPurchasedGenerationKeys(occurrence.roomActions.order);
     // Purchase participation and rank survive an invalidating source edit.
     // The active action then reaches the missing source finding and remains
     // directly repairable by restoring this generation's offer.

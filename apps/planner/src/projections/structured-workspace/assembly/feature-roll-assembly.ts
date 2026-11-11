@@ -4,11 +4,13 @@ import {
   createRoomActionAddress,
   createRoomFeatureAddress,
   featureRerolls,
+  purgingPoolRerollPins,
   purgingPoolRollTraitKey,
   roomActionKey,
   semanticAddressKey,
   stygianWellGenerationItemKey,
   stygianWellGenerationKey,
+  stygianWellRerollPins,
   type FeatureRerollAction,
   type OccurrenceAddress,
   type RollFeature,
@@ -266,7 +268,9 @@ export function assembleFeatureRerollSlots(input: {
   const feature: RollFeature = reroll.kind === 'rerollStygianWell' ? 'stygianWell' : 'purgingPool';
   const labels = featureRollCatalog(input.catalog, feature);
   const pins: Readonly<Record<string, string>> =
-    reroll.kind === 'rerollStygianWell' ? reroll.offerKeyBySlot : reroll.traitKeyBySlot;
+    reroll.kind === 'rerollStygianWell'
+      ? stygianWellRerollPins(occurrence.stygianWell, reroll.rerollId)
+      : purgingPoolRerollPins(occurrence.purgingPool, reroll.rerollId);
   const roll =
     feature === 'stygianWell'
       ? input.wellCapability?.rolls[reroll.rerollId]

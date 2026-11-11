@@ -116,7 +116,7 @@ export function migrateProjectDocumentJudgedBy(value, catalog, blockOf) {
   );
   // The judge reads the plan through the current codec, past every later transition.
   return exchangeBlockedWheelOffers(filled, catalog, blockOf, (document) =>
-    liftSchema102(liftSchema101(document)),
+    liftSchema102(liftSchema101(document), catalog),
   );
 }
 
