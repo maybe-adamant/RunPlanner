@@ -4,6 +4,8 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  roomActionDomainForOccurrence,
+  roomActionKey,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
@@ -58,11 +60,23 @@ describe('Nemesis random-event checkpoint workflows', () => {
       kind: 'interactEncounter',
       phaseKey: 'Encounter',
     });
-    expect(selected.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'nemesisGenerated:Encounter',
-      entryKey: 'result',
-    });
+    // The placed result is the engine's live reference to it, item content included.
+    const result = roomActionDomainForOccurrence(
+      project,
+      catalog,
+      goldenFBiome,
+      id,
+    )?.domain.activeReferences.find(
+      (reference) =>
+        roomActionKey(reference) ===
+        roomActionKey({
+          kind: 'interactAcquisitionEntry',
+          siteKey: 'nemesisGenerated:Encounter',
+          entryKey: 'result',
+        }),
+    );
+    expect(result).toMatchObject({ content: expect.any(Array) });
+    expect(selected.roomActions.order).toContainEqual(result);
     expect(selected.roomActions.order).not.toContainEqual(
       expect.objectContaining({ kind: 'interactIncomingReward' }),
     );

@@ -4,9 +4,11 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   applyProjectCommand,
+  createBiomeAddress,
   createRouteAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  roomActionDomainForOccurrence,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { routeResourceAuthoring, simulateProject } from '@run-planner/engine/simulation';
@@ -220,12 +222,23 @@ describe('authored-project checkpoint integrity', () => {
               (occurrence) => occurrence.occurrenceId === oOccurrenceIds.devotion,
             )
         : undefined;
-    expect(host?.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
+    // The placed delivery is the engine's live reference to it, item content included.
+    const delivery = roomActionDomainForOccurrence(
+      saved,
+      catalog,
+      createBiomeAddress('Surface', 'O'),
+      oOccurrenceIds.devotion,
+    )?.domain.activeReferences.find(
+      (reference) =>
+        reference.kind === 'interactAcquisitionEntry' &&
+        reference.siteKey === 'hermesShrineDelivery',
+    );
+    expect(delivery).toMatchObject({
       entryKey: expect.stringContaining('initial%3AsecondLeft'),
       encounterPhaseKey: 'Encounter',
+      content: expect.any(Array),
     });
+    expect(host?.roomActions.order).toContainEqual(delivery);
   });
 
   it('keeps the reached N side-room Shrine source separate from its unplaced later host delivery', () => {
