@@ -901,12 +901,13 @@ describe('structured workspace actions assembly', () => {
         rarificationActions: [],
       },
     });
+    project = collectTestRequiredItems(project);
+    // A replay of another reward than the walk's last stands only unsettled, as a loaded plan holds it.
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry: replayEntry,
       value: { rewardType: 'HeraUpgrade' },
     });
-    project = collectTestRequiredItems(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitSelection',
       trait: echoOwner,

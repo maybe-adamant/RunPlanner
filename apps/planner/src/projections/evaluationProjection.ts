@@ -535,7 +535,7 @@ export const findingCopy = {
     title: 'Action out of order',
   },
   roomActionItemReplaced: {
-    title: 'Item changed after this action was placed',
+    title: "Action's item was replaced",
   },
   roomActionPlacementRequired: {
     title: 'Required action not taken',

@@ -52,7 +52,6 @@ import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected } from '@planner/state/editorSessionSlice';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
@@ -230,43 +229,37 @@ it('marks the visit reward’s repair for a rerolled reward its Hub rerolls no l
     route: { kind: 'route', routeKey: 'Surface' },
     arcanaKeys: ['DoorReroll'],
   });
+  const pressed = applyProjectCommand(held, catalog, {
+    kind: 'InsertHubReroll',
+    hub,
+    hubSlotKey: 'combat05',
+    reward: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+    index: 0,
+  });
+  const picked = applyProjectCommand(pressed, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(reward, 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Ares',
+      options: [
+        { traitKey: 'AresWeaponBoon', rarity: 'Common' },
+        { traitKey: 'AresSpecialBoon', rarity: 'Common' },
+        { traitKey: 'AresCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+      rarificationActions: [],
+    },
+  });
+  // A loaded plan whose press went without settling keeps the pick for repair.
   const view = renderWorkspace(
-    applyProjectCommand(held, catalog, {
-      kind: 'InsertHubReroll',
-      hub,
-      hubSlotKey: 'combat05',
-      reward: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
-      index: 0,
+    applyProjectCommand(picked, catalog, {
+      kind: 'RemoveHubReroll',
+      reroll: createHubRerollAddress(nBiome, 'hub', 'r1'),
     }),
     'Surface',
     'N',
   );
-  // The visit picks the rerolled Boon, then its press goes and the pick stays for repair.
-  act(() => {
-    view.application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ReplaceTraitOffer',
-        trait: createTraitOfferAddress(reward, 'source'),
-        value: {
-          kind: 'traits',
-          giverKey: 'Ares',
-          options: [
-            { traitKey: 'AresWeaponBoon', rarity: 'Common' },
-            { traitKey: 'AresSpecialBoon', rarity: 'Common' },
-            { traitKey: 'AresCastBoon', rarity: 'Common' },
-          ],
-          selectedOptionKey: 'option1',
-          rarificationActions: [],
-        },
-      }),
-    );
-    view.application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'RemoveHubReroll',
-        reroll: createHubRerollAddress(nBiome, 'hub', 'r1'),
-      }),
-    );
-  });
   const finding = view.application.store
     .getState()
     .projectWorkspace.assembly!.evaluation.findings.find(

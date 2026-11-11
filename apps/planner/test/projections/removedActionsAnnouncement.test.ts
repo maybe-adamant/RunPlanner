@@ -4,6 +4,7 @@ import {
   applyProjectCommand,
   createOccurrenceAddress,
   createOccurrenceId,
+  createBiomeAddress,
   createProjectAddress,
 } from '@run-planner/engine/authored-project';
 import {
@@ -11,12 +12,15 @@ import {
   createEchoGoldIAnvilDuplicateProject,
   goldenGBiome,
 } from '@run-planner/test-fixtures/underworld';
+import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { describe, expect, it } from 'vitest';
 
 import { removedActionsAnnouncement } from '@planner/projections/removedActionsAnnouncement';
 import { removedActionsLead } from '@planner/projections/walkStopCopy';
 import { createStructuredWorkspaceTestServices } from '@planner-test/fixtures/structuredWorkspace';
 import { echoShop, swapEchoAway } from '@planner-test/support/removed-actions';
+
+const surfaceO = createBiomeAddress('Surface', 'O');
 
 describe('removed actions announcement', () => {
   it('names each room by its location and opens it on its Timeline', () => {
@@ -71,5 +75,38 @@ describe('removed actions announcement', () => {
     expect(removedActionsLead(room!.count, room!.doors)).toBe('1 door removed at');
     expect(removedActionsLead(2, 1)).toBe('2 actions and 1 door removed at');
     expect(removedActionsLead(1)).toBe('1 action removed at');
+  });
+
+  it('counts the replaced items whose rolls and choices a room lost', () => {
+    const shrine = createOccurrenceAddress(surfaceO, createOccurrenceId('surface-o-combat07'));
+    const host = createOccurrenceAddress(surfaceO, createOccurrenceId('surface-o-devotion'));
+    // Restocking the Shrine slot replaces the countdown delivery due at the Devotion room.
+    const before = simulateProjectAssembly(catalog, loadSurfaceNOHermesShrineDeliveryCheckpoint());
+    const settled = settleProjectEdit({
+      catalog,
+      before,
+      command: {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: shrine,
+        slotKey: 'secondLeft',
+        value: { rewardType: 'HealBigDrop' },
+      },
+      evaluate: (project) => simulateProjectAssembly(catalog, project),
+    });
+    const workspace = createStructuredWorkspaceTestServices().structuredWorkspace.project(
+      settled.assembly,
+    );
+    const [room, ...others] = removedActionsAnnouncement(
+      catalog,
+      settled.removedStaleActions!,
+      workspace,
+    );
+    expect(others).toEqual([]);
+    expect(room).toMatchObject({ count: 1, doors: 0, items: 1, selection: { origin: host } });
+    expect(removedActionsLead(room!.count, room!.doors, room!.items)).toBe(
+      '1 action and 1 replaced item removed at',
+    );
+    expect(removedActionsLead(0, 0, 2)).toBe('2 replaced items removed at');
+    expect(removedActionsLead(1, 1, 1)).toBe('1 action, 1 door and 1 replaced item removed at');
   });
 });

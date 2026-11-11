@@ -34,13 +34,16 @@ export function requiredFirstTitle(actionLabel: string | undefined): string {
 }
 
 /** An edit's removals in another room, before that room's link. */
-export function removedActionsLead(actions: number, doors = 0): string {
+export function removedActionsLead(actions: number, doors = 0, items = 0): string {
   const counted = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
   const parts = [
-    ...(actions > 0 || doors === 0 ? [counted(actions, 'action')] : []),
+    ...(actions > 0 || (doors === 0 && items === 0) ? [counted(actions, 'action')] : []),
     ...(doors > 0 ? [counted(doors, 'door')] : []),
+    ...(items > 0 ? [counted(items, 'replaced item')] : []),
   ];
-  return `${parts.join(' and ')} removed at`;
+  const listed =
+    parts.length < 3 ? parts.join(' and ') : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
+  return `${listed} removed at`;
 }
 
 /** Restores what the announced edit removed, as the app's Undo does. */

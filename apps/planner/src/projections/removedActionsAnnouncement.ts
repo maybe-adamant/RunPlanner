@@ -12,6 +12,8 @@ export interface RemovedActionsRoom {
   readonly count: number;
   /** Doors the room lost because it no longer has them. */
   readonly doors: number;
+  /** Items replaced elsewhere whose recorded rolls and choices the room lost. */
+  readonly items: number;
   /** The room's link, such as "Location 40" with its room name on hover. */
   readonly place: PlaceName;
   readonly selection: FindingSelection;
@@ -24,12 +26,13 @@ export function removedActionsAnnouncement(
   workspace: Pick<StructuredWorkspaceProjection, 'focusByOwner' | 'route'>,
 ): readonly RemovedActionsRoom[] {
   return Object.freeze(
-    removed.map(({ occurrence, actions, doors }) => {
+    removed.map(({ occurrence, actions, doors, discarded }) => {
       const key = semanticAddressKey(occurrence);
       return Object.freeze({
         key,
         count: actions.length,
         doors: doors?.length ?? 0,
+        items: discarded?.length ?? 0,
         place: locationName(
           findingLocation(catalog, occurrence, workspace.focusByOwner.get(key), workspace.route),
         ),
