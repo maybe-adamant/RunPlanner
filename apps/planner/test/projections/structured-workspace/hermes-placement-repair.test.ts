@@ -1,4 +1,8 @@
-import { purchaseTestHermesShrineOffer } from '@run-planner/test-fixtures/shared';
+import {
+  collectTestRequiredItems,
+  purchaseTestHermesShrineOffer,
+  replaceTestPlacedItem,
+} from '@run-planner/test-fixtures/shared';
 import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '@run-planner/test-fixtures/scheduled-lifecycle';
 import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
@@ -166,14 +170,16 @@ it.each([true, false])(
         reference.siteKey === 'hermesShrineDelivery',
     );
     if (reference?.kind !== 'interactAcquisitionEntry') throw new Error('delivery missing');
-    // The checkpoint's Shrine sold the delayed item.
+    // The checkpoint's Shrine sold the delayed item; restocked, it is bought and delivered again.
     const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceHermesShrineOffer',
-      occurrence: source,
-      slotKey: 'secondLeft',
-      value: { rewardType: 'ShopHermesUpgrade' },
-    });
+    project = collectTestRequiredItems(
+      replaceTestPlacedItem(project, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: source,
+        slotKey: 'secondLeft',
+        value: { rewardType: 'ShopHermesUpgrade' },
+      }),
+    );
     if (refreshPayload)
       project = applyProjectCommand(project, catalog, {
         kind: 'PlaceHermesShrineDelivery',

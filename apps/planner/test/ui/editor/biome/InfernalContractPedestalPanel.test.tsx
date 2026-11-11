@@ -103,6 +103,8 @@ describe('Pedestal panel', () => {
     await view.user.click(within(pedestal()).getByRole('button', { name: /^Pedestal/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
+    // The restocked item is collected again from the Pedestal's entry.
+    await pickRoomObjectAction(view.user, 'Pedestal', 'Collect Mystery Boon');
     const row = timelineRow(/^Collect Mystery Boon/);
     await view.user.click(within(row).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));
