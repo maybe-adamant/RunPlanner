@@ -7,6 +7,7 @@ import {
 import type { Catalog } from '../../catalog-schema';
 import { candidateBiome, candidateBiomeRooms } from '../candidates/evaluated-biome';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
+import type { RoomLifecycleTimeline } from '../room-actions';
 import {
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
@@ -118,4 +119,44 @@ export function encounterOutcomesForProjectEvaluationAssembly(
         : [Object.freeze({ phaseKey: point.phaseKey, host, choices: Object.freeze(choices) })];
     }),
   );
+}
+
+/**
+ * The room's Timeline as the walk evaluated it: an encounter with no gate shows
+ * its begin and Combat as one marker unless an outcome is observed at that
+ * Combat, when they show apart. Undefined for a room the evaluated biome does
+ * not hold.
+ */
+export function roomLifecycleTimelineForProjectEvaluationAssembly(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  occurrence: OccurrenceAddress,
+): RoomLifecycleTimeline | undefined {
+  const biome = candidateBiome(assembly.evaluation, occurrence.routeKey, occurrence.biomeKey);
+  if (biome === undefined) return undefined;
+  const key = semanticAddressKey(occurrence);
+  const room = candidateBiomeRooms(biome).find(
+    (candidate) => semanticAddressKey(candidate.origin) === key,
+  );
+  if (room === undefined) return undefined;
+  const timeline = room.roomLifecycleTimeline;
+  const observed = new Set(
+    (encounterOutcomesForProjectEvaluationAssembly(catalog, assembly, occurrence) ?? []).flatMap(
+      (outcome) => (outcome.host.kind === 'combat' ? [outcome.phaseKey] : []),
+    ),
+  );
+  if (observed.size === 0) return timeline;
+  return Object.freeze({
+    ...timeline,
+    entries: Object.freeze(
+      timeline.entries.map((entry) =>
+        entry.kind === 'boundary' &&
+        entry.boundary.kind === 'encounterBegun' &&
+        entry.markers === 'merged' &&
+        observed.has(entry.boundary.phaseKey)
+          ? Object.freeze({ ...entry, markers: 'split' as const })
+          : entry,
+      ),
+    ),
+  });
 }

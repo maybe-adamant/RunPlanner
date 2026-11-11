@@ -4,6 +4,7 @@ import { describe, it, vi } from 'vitest';
 
 import { roomActionKey, semanticAddressKey } from '@run-planner/engine/authored-project';
 import {
+  roomLifecycleTimelineForProjectEvaluationAssembly,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -169,7 +170,15 @@ describe('room lifecycle event order', () => {
             ...(room === undefined
               ? {}
               : {
-                  timeline: room.roomLifecycleTimeline.entries.map(timelineEntryText).join(' | '),
+                  timeline: (
+                    roomLifecycleTimelineForProjectEvaluationAssembly(
+                      entry.catalog,
+                      assembly,
+                      room.origin,
+                    ) ?? room.roomLifecycleTimeline
+                  ).entries
+                    .map(timelineEntryText)
+                    .join(' | '),
                 }),
             ...(loot === undefined
               ? {}

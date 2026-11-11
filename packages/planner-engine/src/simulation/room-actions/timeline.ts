@@ -26,6 +26,13 @@ export type RoomLifecycleTimelineEntry =
       /** The ranked action position at which the seam is rendered. */
       readonly rank: number;
       readonly placement: 'before' | 'after';
+      /**
+       * An encounter's begin only: whether it shows as one marker with its Combat
+       * (no gate between them and no outcome observed there) or as its own. The
+       * evaluated Timeline (`roomLifecycleTimelineForProjectEvaluationAssembly`)
+       * settles it against the outcomes the walk reached.
+       */
+      readonly markers?: 'merged' | 'split';
     }
   | {
       readonly kind: 'action';
@@ -234,6 +241,9 @@ function boundaryEntry(
     boundary: point,
     rank,
     placement,
+    ...(point.kind === 'encounterBegun'
+      ? { markers: point.merged === true ? ('merged' as const) : ('split' as const) }
+      : {}),
   });
 }
 
@@ -385,7 +395,10 @@ export function assembleRoomLifecycleTimeline(
             ): event is Extract<RoomLifecycleBoundary, { readonly kind: 'encounterStarted' }> =>
               event.kind === 'encounterStarted' && event.phaseKey === point.phaseKey,
           );
-          if (combat !== undefined) return { ...desiredCombat(combat, point), boundary: point };
+          if (combat !== undefined) {
+            const at = desiredCombat(combat, point);
+            return boundaryEntry(point, at.rank, at.placement);
+          }
         }
         // A cage's row begins it; otherwise it begins with what came before (room
         // entry, Wheels open, the previous phase's end).
