@@ -55,17 +55,15 @@ export function createEmptyRoomActionState(): RoomActionState {
   return Object.freeze({ order: Object.freeze([]) });
 }
 
-/** Declaration-owned required actions for a newly materialized room occurrence. */
-export function createDefaultRoomActionState(room: RoomDeclaration): RoomActionState {
+/** The room declaration's own required actions: its forced drop and its fountain. */
+export function declaredRequiredRoomActions(room: RoomDeclaration): readonly RoomActionReference[] {
   const hasFountain =
     room.hasRequiredFountain ||
     (room.mode.kind === 'authored' && room.mode.templateKey === 'Fountain');
-  return Object.freeze({
-    order: Object.freeze([
-      ...(room.requiredReward !== undefined ? [{ kind: 'collectRequiredReward' as const }] : []),
-      ...(hasFountain ? [{ kind: 'useFountain' as const }] : []),
-    ]),
-  });
+  return Object.freeze([
+    ...(room.requiredReward !== undefined ? [{ kind: 'collectRequiredReward' as const }] : []),
+    ...(hasFountain ? [{ kind: 'useFountain' as const }] : []),
+  ]);
 }
 
 /**
@@ -94,7 +92,7 @@ export function activeRoomActionReferences(
   const rawRoom = catalog.rooms.byKey[occurrence.gameName];
   if (rawRoom === undefined) return Object.freeze([]);
   const room = resolveEntryDeclaration(rawRoom, routePosition);
-  const declarationActions = createDefaultRoomActionState(room).order;
+  const declarationActions = declaredRequiredRoomActions(room);
   const references: RoomActionReference[] = declarationActions.filter(
     (reference) => reference.kind !== 'useFountain',
   );

@@ -18,7 +18,7 @@ import {
   type RoomEncounterState,
   type RoomOccurrence,
 } from '../model';
-import { createDefaultRoomActionState, roomActionKey } from '../room-actions/state';
+import { declaredRequiredRoomActions, roomActionKey } from '../room-actions/state';
 import { decodeRoomActionState } from '../room-state/decoding/room-action-codec';
 import {
   assertStygianWellPurchaseActionClosure,
@@ -1150,7 +1150,7 @@ export function decodeRoomOccurrence(input: {
   });
   if (
     fountainRarityResult !== undefined &&
-    !createDefaultRoomActionState(contextualRoom).order.some(
+    !declaredRequiredRoomActions(contextualRoom).some(
       (reference) => reference.kind === 'useFountain',
     )
   )
