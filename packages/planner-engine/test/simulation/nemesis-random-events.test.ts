@@ -44,11 +44,14 @@ import {
   scheduleTestRequiredRoomActions,
 } from '@run-planner/test-fixtures/shared';
 import { reachedFrontier } from '../support/reward-frontier';
+import { withItemContent } from '../support/room-action-content';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBiome,
   MaterializedBiomePrefix,
 } from '../../src/simulation/materialization';
+
+const eventRoom = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
 
 function evaluatedRoom(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
   const biome = simulateProject(catalog, project).route?.biomes.find(
@@ -778,7 +781,9 @@ describe('Nemesis random events', () => {
     // Another event with the same reward is another source.
     const traded = duplicated({ kind: 'damageTrade', response: 'accept' }, 'MaxHealthDrop');
     expect(duplicateSites(traded)).toHaveLength(1);
-    expect(occurrence(traded).roomActions.order).toContainEqual(result);
+    expect(occurrence(traded).roomActions.order).toContainEqual(
+      withItemContent(traded, eventRoom, result),
+    );
     const contested = replaceNemesisRandomEventInteraction(
       traded,
       address,
@@ -786,7 +791,9 @@ describe('Nemesis random events', () => {
       { rewardType: 'MaxHealthDrop' },
     );
     expect(duplicateSites(contested)).toEqual([]);
-    expect(occurrence(contested).roomActions.order).not.toContainEqual(result);
+    expect(occurrence(contested).roomActions.order).not.toContainEqual(
+      withItemContent(contested, eventRoom, result),
+    );
     roundTrips(contested);
     const free = duplicated({ kind: 'freeItem' }, 'ArmorBoost');
     expect(duplicateSites(free)).toHaveLength(1);
@@ -796,7 +803,9 @@ describe('Nemesis random events', () => {
       family: 'goldTrade',
     });
     expect(duplicateSites(family)).toEqual([]);
-    expect(occurrence(family).roomActions.order).not.toContainEqual(result);
+    expect(occurrence(family).roomActions.order).not.toContainEqual(
+      withItemContent(family, eventRoom, result),
+    );
     roundTrips(family);
 
     // A contest won and then lost spawns another item.
@@ -854,7 +863,9 @@ describe('Nemesis random events', () => {
     };
     const pom = contest('StackUpgrade');
     expect(pom.contribution).toMatchObject({ participation: 'required' });
-    expect(pom.selected.roomActions.order).toContainEqual(result);
+    expect(pom.selected.roomActions.order).toContainEqual(
+      withItemContent(pom.project, eventRoom, result),
+    );
     const action = createRoomActionAddress(
       goldenFBiome,
       pom.selected.occurrenceId,
@@ -862,14 +873,18 @@ describe('Nemesis random events', () => {
     );
     // Removing the required pickup leaves the Pom live on the ground with its finding.
     const removed = applyProjectCommand(pom.project, catalog, { kind: 'RemoveRoomAction', action });
-    expect(occurrence(removed).roomActions.order).not.toContainEqual(result);
+    expect(occurrence(removed).roomActions.order).not.toContainEqual(
+      withItemContent(removed, eventRoom, result),
+    );
     expect(simulateProjectAssembly(catalog, removed).evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'roomActionPlacementRequired', origin: action }),
     );
 
     const talent = contest('TalentDrop');
     expect(talent.contribution).toMatchObject({ participation: 'optional' });
-    expect(talent.selected.roomActions.order).not.toContainEqual(result);
+    expect(talent.selected.roomActions.order).not.toContainEqual(
+      withItemContent(talent.project, eventRoom, result),
+    );
   });
 
   it('places the H event beside four optionals when the room has spare physical capacity', () => {

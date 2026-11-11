@@ -25,6 +25,7 @@ import {
 } from '@run-planner/engine/simulation';
 
 import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
+import { withItemContents } from '../support/room-action-content';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
@@ -318,11 +319,13 @@ describe('keepsake selection candidates', () => {
       project.route.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.roomActions.order,
-    ).toEqual([
-      { kind: 'useFountain' },
-      { kind: 'purchaseStygianWellOffer', generationKey: 'initial:healing' },
-      { kind: 'interactKeepsakeRack' },
-    ]);
+    ).toEqual(
+      withItemContents(project, completion, [
+        { kind: 'useFountain' },
+        { kind: 'purchaseStygianWellOffer', generationKey: 'initial:healing' },
+        { kind: 'interactKeepsakeRack' },
+      ]),
+    );
     const f = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
       (biome) => biome.biomeKey === 'F',
     );

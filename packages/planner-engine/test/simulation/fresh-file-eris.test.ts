@@ -28,6 +28,7 @@ import { createTraitHistoryState } from '../../src/simulation/traits';
 import { recordFixedAcquisitionTraitGrant } from '../../src/simulation/traits/offers';
 import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { reachedFrontier } from '../support/reward-frontier';
+import { withItemContents } from '../support/room-action-content';
 
 let cached: ProjectDocument | undefined;
 const freshRoute = () => (cached ??= createFreshFileRouteProject());
@@ -75,12 +76,15 @@ const erisAction = (biome: BiomeAddress, occurrenceId: OccurrenceId) =>
 
 describe('Fresh File Eris', () => {
   it('derives the talk and its required gift on a spawned intro', () => {
-    const intro = occurrenceOf(freshRoute(), 'G', freshFileGIntroId);
+    const route = freshRoute();
+    const intro = occurrenceOf(route, 'G', freshFileGIntroId);
     expect(intro.eris).toEqual({ spawned: true });
-    expect(intro.roomActions.order).toEqual([
-      { kind: 'interactEris' },
-      { kind: 'interactAcquisitionEntry', siteKey: 'erisGift', entryKey: 'gift' },
-    ]);
+    expect(intro.roomActions.order).toEqual(
+      withItemContents(route, createOccurrenceAddress(freshFileGBiome, freshFileGIntroId), [
+        { kind: 'interactEris' },
+        { kind: 'interactAcquisitionEntry', siteKey: 'erisGift', entryKey: 'gift' },
+      ]),
+    );
     expect(intro.acquisitionSites?.erisGift?.pickupEntries?.gift?.offer).toEqual({
       rewardType: 'MetaCardPointsCommonDrop',
     });

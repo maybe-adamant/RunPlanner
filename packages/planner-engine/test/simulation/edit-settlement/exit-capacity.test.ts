@@ -24,6 +24,7 @@ import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { createCompleteFGProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
+import { withItemContent } from '../../support/room-action-content';
 
 import {
   fBiome,
@@ -192,10 +193,12 @@ describe('exit capacity settlement', () => {
       gameName: 'G_PreBoss01',
       state: { kind: 'freeReward' },
     });
-    expect(occurrence(two, shop)?.roomActions.order).toContainEqual({
-      kind: 'interactShopOffer',
-      offerKey: 'MajorNonBoon',
-    });
+    expect(occurrence(two, shop)?.roomActions.order).toContainEqual(
+      withItemContent(two, createOccurrenceAddress(gBiome, shop), {
+        kind: 'interactShopOffer',
+        offerKey: 'MajorNonBoon',
+      }),
+    );
     expectRoundTrip(two);
 
     const three = replaceSource(two, 'G_Combat02');

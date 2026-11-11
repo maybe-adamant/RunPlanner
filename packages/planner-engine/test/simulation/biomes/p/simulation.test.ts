@@ -30,6 +30,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { evaluateProgressiveBiomeAssembly } from '../../../../src/simulation/progressive/biome';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../../src/authored-project/defaults';
+import { withItemContent } from '../../../support/room-action-content';
 
 const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
@@ -256,6 +257,11 @@ describe('P core loop', () => {
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === pOccurrenceIds.prebossShop,
         )?.roomActions.order,
-    ).toContainEqual({ kind: 'interactShopOffer', offerKey: 'Boon' });
+    ).toContainEqual(
+      withItemContent(project, createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop), {
+        kind: 'interactShopOffer',
+        offerKey: 'Boon',
+      }),
+    );
   });
 });

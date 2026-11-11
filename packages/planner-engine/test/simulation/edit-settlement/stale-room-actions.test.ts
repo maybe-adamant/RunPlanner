@@ -23,6 +23,7 @@ import {
   type ProjectCommand,
   type ProjectDocument,
   type RerollTarget,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
   liveActionsForProjectEvaluationAssembly,
@@ -67,6 +68,7 @@ import {
   withGoldenUnderworldJudgments,
 } from '../../support/rerolls';
 import { underworldGLockedDoorsProject } from '../../execution-plan/support/plan-end-switch-fixtures';
+import { withItemContents } from '../../support/room-action-content';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
 const settle = (project: ProjectDocument, command: ProjectCommand) =>
@@ -898,28 +900,31 @@ describe('stale room actions in edit settlement', () => {
       });
       const fields = () =>
         withGoldenUnderworldJudgments(withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll']));
-      const thirdCage = [
+      const thirdCage: RoomActionReference[] = [
         { kind: 'completeFieldsCage', phaseKey: 'Cage03' },
         { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage3' },
       ];
 
       it('leave silently when the cage they reroll is no longer played, and do not return', () => {
         // The third cage's rows, placed by the owner once it plays.
-        const project = press(
-          scheduleTestRequiredRoomActions(
-            settle(fields(), outcome('max')).assembly.project,
-            catalog,
-            h,
-          ),
-          intro,
-          cage3,
+        const placed = scheduleTestRequiredRoomActions(
+          settle(fields(), outcome('max')).assembly.project,
+          catalog,
+          h,
         );
+        const project = press(placed, intro, cage3);
         expect(rerolls(project, intro)).toHaveLength(1);
         const lowered = settle(project, outcome('min'));
         expect(lowered.fault).toBeUndefined();
         expect(rerolls(lowered.assembly.project, intro)).toEqual([]);
         // Only the cage's own rows, in its room, are announced.
-        expect(lowered.removedStaleActions).toEqual([{ occurrence: combat02, actions: thirdCage }]);
+        expect(lowered.removedStaleActions).toEqual([
+          {
+            occurrence: combat02,
+            // The unsettled press leaves the cage's pickup as it was placed.
+            actions: withItemContents(placed, combat02, thirdCage),
+          },
+        ]);
         const raised = settle(lowered.assembly.project, outcome('max'));
         expect(rerolls(raised.assembly.project, intro)).toEqual([]);
       });

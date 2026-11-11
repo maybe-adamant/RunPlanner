@@ -33,6 +33,7 @@ import {
   goldenGBiome,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
+import { withItemContent, withItemContents } from '../support/room-action-content';
 
 const interactionsAt = (
   project: ProjectDocument,
@@ -86,7 +87,7 @@ describe('World Shop interaction', () => {
       .find((biome) => biome.biomeKey === 'F')!
       .topology!.occurrences.find((room) => room.occurrenceId === shop.occurrenceId)!.roomActions
       .order;
-    expect(order.at(-1)).toEqual(refill);
+    expect(order.at(-1)).toEqual(withItemContent(bought, shop, refill));
     expect(interactionsAt(bought, shop)?.worldShop?.travelDealRefill).toBeUndefined();
   });
 
@@ -112,7 +113,7 @@ describe('World Shop interaction', () => {
       const room = bought.route.biomes
         .find((biome) => biome.biomeKey === 'F')!
         .topology!.occurrences.find((candidate) => candidate.occurrenceId === shop.occurrenceId)!;
-      expect(room.roomActions.order.at(-1)).toEqual(refill);
+      expect(room.roomActions.order.at(-1)).toEqual(withItemContent(bought, shop, refill));
       expect(room.state.kind === 'shop' && room.state.shop?.travelDealRefill).toMatchObject({
         optionKey: value.optionKey,
         reward: { offer: { rewardType: value.offer.rewardType } },
@@ -163,10 +164,12 @@ describe('Hermes Shrine interaction', () => {
       rushed: true,
     });
     const rushed = apply(bought, rush!.rush);
-    expect(order(rushed).slice(-2)).toEqual([
-      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft' },
-      { kind: 'rushHermesShrineOffer', generationKey: 'initial:secondLeft' },
-    ]);
+    expect(order(rushed).slice(-2)).toEqual(
+      withItemContents(rushed, shrine, [
+        { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft' },
+        { kind: 'rushHermesShrineOffer', generationKey: 'initial:secondLeft' },
+      ]),
+    );
     expect(
       interactionsAt(rushed, shrine)?.hermesShrine?.rushes.map(
         (candidate) => candidate.generationKey,
