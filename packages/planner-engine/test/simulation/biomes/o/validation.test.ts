@@ -1294,6 +1294,52 @@ describe('selected O validation', () => {
     ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
   });
 
+  it('answers a wheel candidate on an open wheel whose choice is unplaced as on a placed one', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
+    const placed = loadSurfaceNOProject();
+    let unplaced = placed;
+    for (const reference of [
+      { kind: 'interactWheelReward', wheelKey: 'wheel1' },
+      { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
+    ] as const)
+      unplaced = applyProjectCommand(unplaced, catalog, {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(oBiome, oOccurrenceIds.combat04, roomActionKey(reference)),
+      });
+    // The walk opens the wheel at Wheels open and stops at its unplaced choice.
+    expect(simulateProject(catalog, unplaced).issue?.reasons[0]).toMatchObject({
+      code: 'roomActionPlacementRequired',
+      origin: createRoomActionAddress(
+        oBiome,
+        oOccurrenceIds.combat04,
+        roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
+      ),
+    });
+    const answers = (project: ProjectDocument) => {
+      const session = createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      );
+      return [
+        session.evaluate({ kind: 'rewardWheelStore', wheel, storeKey: 'RunProgress' }),
+        session.evaluate({ kind: 'rewardWheelStore', wheel, storeKey: 'MetaProgress' }),
+        session.evaluate({ kind: 'rewardWheelOfferCount', wheel, offerCount: 1 }),
+        session.evaluate({ kind: 'shipEncounterCount', occurrence, encounterCount: 2 }),
+      ];
+    };
+
+    const open = answers(unplaced);
+    expect(open.map((answer) => answer.kind)).toEqual([
+      'rewardWheelStore',
+      'rewardWheelStore',
+      'rewardWheelOfferCount',
+      'shipEncounterCount',
+    ]);
+    // Generated from Wheels open, its answers match the placed choice's.
+    expect(open).toEqual(answers(placed));
+  });
+
   it('evaluates a supported opening target through the prepared selected O prefix', () => {
     const { project } = evaluateO();
     const candidates = createPreparedProjectCandidateSession(
