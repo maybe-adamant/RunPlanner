@@ -8,6 +8,17 @@ function rawRecord(value: unknown): RawRecord | undefined {
     : undefined;
 }
 
+/**
+ * Takes one stored map off a record when it is a record: its entries, or
+ * undefined when the field is absent or malformed and so stays for strict
+ * decoding to reject.
+ */
+function takeRecord(owner: RawRecord, key: string): RawRecord | undefined {
+  const value = rawRecord(owner[key]);
+  if (value !== undefined) delete owner[key];
+  return value;
+}
+
 /** Moves one occurrence's rolls in place; true when anything moved. */
 function moveOccurrenceRolls(occurrence: RawRecord): boolean {
   const order = rawRecord(occurrence.roomActions)?.order;
@@ -19,32 +30,31 @@ function moveOccurrenceRolls(occurrence: RawRecord): boolean {
   for (const entry of order) {
     const action = rawRecord(entry);
     if (action === undefined || typeof action.rerollId !== 'string') continue;
+    // An empty pin map pinned nothing; schema 103 omits it.
     if (action.kind === 'rerollStygianWell') {
-      const pins = rawRecord(action.offerKeyBySlot);
+      const pins = takeRecord(action, 'offerKeyBySlot');
       if (pins !== undefined && Object.keys(pins).length > 0) wellPins[action.rerollId] = pins;
-      for (const [slotKey, result] of Object.entries(rawRecord(action.twistResultKeyBySlot) ?? {}))
+      const results = takeRecord(action, 'twistResultKeyBySlot');
+      for (const [slotKey, result] of Object.entries(results ?? {}))
         twists[`${action.rerollId}:${slotKey}`] = result;
-      moved ||= 'offerKeyBySlot' in action || 'twistResultKeyBySlot' in action;
-      delete action.offerKeyBySlot;
-      delete action.twistResultKeyBySlot;
+      moved ||= pins !== undefined || results !== undefined;
     } else if (action.kind === 'rerollPurgingPool') {
-      const pins = rawRecord(action.traitKeyBySlot);
+      const pins = takeRecord(action, 'traitKeyBySlot');
       if (pins !== undefined && Object.keys(pins).length > 0) poolPins[action.rerollId] = pins;
-      moved ||= 'traitKeyBySlot' in action;
-      delete action.traitKeyBySlot;
+      moved ||= pins !== undefined;
     }
   }
   const well = rawRecord(occurrence.stygianWell);
   if (well !== undefined) {
-    const initialTwists = rawRecord(well.twistResultKeyBySlot);
+    const initialTwists = takeRecord(well, 'twistResultKeyBySlot');
     const generationTwists: RawRecord = {};
     for (const [slotKey, result] of Object.entries(initialTwists ?? {}))
       generationTwists[slotKey === 'travelDealRefill' ? slotKey : `initial:${slotKey}`] = result;
     Object.assign(generationTwists, twists);
-    moved ||= 'twistResultKeyBySlot' in well || 'purchasedGenerationKeys' in well;
     // Purchases are the room's purchase actions, which the codec held equal to this list.
-    delete well.purchasedGenerationKeys;
-    delete well.twistResultKeyBySlot;
+    const purchased = Array.isArray(well.purchasedGenerationKeys);
+    if (purchased) delete well.purchasedGenerationKeys;
+    moved ||= initialTwists !== undefined || purchased;
     const rest = { ...well };
     for (const key of Object.keys(well)) delete well[key];
     Object.assign(
@@ -76,8 +86,8 @@ function moveOccurrenceRolls(occurrence: RawRecord): boolean {
  * and Fateful Twist results move onto the Well or Pool by its `rerollId`, the
  * Well's Twist results are keyed by generation, and the Well's purchase list,
  * which duplicated its purchase actions, goes. Lossless; a plan already in
- * this shape, or malformed structure, is returned as it is for strict
- * decoding to judge.
+ * this shape is returned as it is, and a malformed map or list stays where it
+ * is for strict decoding to reject.
  */
 export function moveWellPoolRollsOntoObjects(value: unknown, _catalog?: Catalog): unknown {
   void _catalog;

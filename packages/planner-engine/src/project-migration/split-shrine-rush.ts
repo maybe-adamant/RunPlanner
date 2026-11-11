@@ -12,7 +12,8 @@ function rawRecord(value: unknown): RawRecord | undefined {
  */
 function splitAction(action: unknown): readonly unknown[] {
   const reference = rawRecord(action);
-  if (reference?.kind !== 'purchaseHermesShrineOffer' || !Object.hasOwn(reference, 'rushed'))
+  // A malformed flag stays for strict decoding to reject.
+  if (reference?.kind !== 'purchaseHermesShrineOffer' || typeof reference.rushed !== 'boolean')
     return [action];
   const { rushed, ...purchase } = reference;
   return rushed === true
@@ -40,7 +41,8 @@ function splitBiome(biome: unknown): unknown {
  * Schema 103 makes a Shrine rush its own room action on the bought item. A
  * stored rushed purchase becomes the purchase directly followed by its rush,
  * so the order of every other action is kept; an unrushed purchase only loses
- * the flag. Anything that is not a stored Shrine purchase passes unchanged.
+ * the flag. Anything that is not a stored Shrine purchase with a boolean flag
+ * passes unchanged.
  */
 export function splitShrineRush(raw: unknown): unknown {
   const document = rawRecord(raw);

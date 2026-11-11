@@ -96,4 +96,31 @@ describe('Well and Pool rolls onto their objects', () => {
     for (const malformed of [null, 'plan', { route: 'not a route' }, { route: { biomes: 1 } }])
       expect(moveWellPoolRollsOntoObjects(malformed, catalog)).toBe(malformed);
   });
+
+  it('leaves a malformed map or list where it is for strict decoding to reject', () => {
+    const document = current();
+    const room = roomOf(document);
+    room.roomActions.order.push(
+      { kind: 'rerollStygianWell', rerollId: 'r1', offerKeyBySlot: 'healing' },
+      { kind: 'rerollPurgingPool', rerollId: 'r1', traitKeyBySlot: ['left'] },
+    );
+    room.stygianWell = {
+      ...room.stygianWell,
+      twistResultKeyBySlot: 3,
+      purchasedGenerationKeys: 'all',
+    };
+    expect(moveWellPoolRollsOntoObjects(document, catalog)).toBe(document);
+    expect(() => decodeProjectDocument(document as never, catalog)).toThrow();
+    // A well-formed empty pin map pinned nothing and goes.
+    const empty = current();
+    roomOf(empty).roomActions.order.push({
+      kind: 'rerollPurgingPool',
+      rerollId: 'r1',
+      traitKeyBySlot: {},
+    });
+    expect(roomOf(moveWellPoolRollsOntoObjects(empty, catalog)).roomActions.order.at(-1)).toEqual({
+      kind: 'rerollPurgingPool',
+      rerollId: 'r1',
+    });
+  });
 });

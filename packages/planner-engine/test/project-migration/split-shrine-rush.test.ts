@@ -89,6 +89,11 @@ describe('splitting a stored Shrine rush into its own action', () => {
     expect(splitShrineRush(current)).toEqual(current);
     for (const raw of [null, 'plan', { route: 'not a route' }, planWith(['x', 3])])
       expect(splitShrineRush(raw)).toEqual(raw);
+    // A malformed flag stays for strict decoding to reject.
+    const malformed = planWith([
+      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first', rushed: 'yes' },
+    ]);
+    expect(splitShrineRush(malformed)).toEqual(malformed);
   });
 
   it('is lossless: a checked-in plan joined back into its stored shape splits to itself', () => {
