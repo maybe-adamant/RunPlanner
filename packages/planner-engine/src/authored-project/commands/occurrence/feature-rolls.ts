@@ -3,6 +3,7 @@ import {
   INITIAL_ROLL_KEY,
   PURGING_POOL_SLOT_KEYS,
   STYGIAN_WELL_SLOT_KEYS,
+  featureRerollIdsInUse,
   featureRerolls,
   parseStygianWellGenerationKey,
   purgingPoolRerollPins,
@@ -94,7 +95,7 @@ export function applyFeatureRollCommand(
       const order = occurrence.roomActions.order;
       if (!Number.isInteger(command.index) || command.index < 0 || command.index > order.length)
         failCommand(command, `index must be an integer from 0 through ${order.length}`);
-      const rerollId = nextRerollId(featureRerolls(order, feature));
+      const rerollId = nextRerollId(featureRerollIdsInUse(occurrence, feature));
       const reroll: RoomActionReference = Object.freeze({
         kind: rerollActionKind(feature),
         rerollId,

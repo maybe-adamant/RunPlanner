@@ -429,8 +429,8 @@ export function withRerolledReward(
   }
 }
 
-/** The smallest reroll id no present reroll of this owner list uses. */
-export function nextRerollId(present: readonly { readonly rerollId: string }[]): string {
-  const used = new Set(present.map((reroll) => reroll.rerollId));
+/** The smallest reroll id none of the ids still in use takes. */
+export function nextRerollId(inUse: Iterable<string>): string {
+  const used = new Set(inUse);
   for (let index = 1; ; index += 1) if (!used.has(`r${index}`)) return `r${index}`;
 }

@@ -494,6 +494,58 @@ describe('live interactions at a gap', () => {
     expect(verbAccepted(pinned, fWell, sale!.verb, sale!.gap)).toBe(true);
   });
 
+  it("offers no Well reroll while a removed reroll's purchase blocks the room", () => {
+    const well = withJudgment(
+      withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
+      'F',
+      'golden-f-preboss-shop:boss',
+      ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
+    );
+    const apply = (document: ProjectDocument, command: ProjectCommand) =>
+      applyProjectCommand(document, catalog, command);
+    const rerolled = apply(well, {
+      kind: 'InsertStygianWellReroll',
+      occurrence: fWell,
+      index: roomOrder(well, fWell).length,
+    });
+    const bought = apply(rerolled, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: fWell,
+      generationKey: 'r1:healing',
+      purchased: true,
+      itemKey: 'ArmorBoostStore',
+    });
+    const orphaned = apply(bought, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(
+        fBiome,
+        fWell.occurrenceId,
+        roomActionKey({ kind: 'rerollStygianWell', rerollId: 'r1' }),
+      ),
+    });
+    const live = interactions(orphaned, fWell);
+    expect(live.frontier).toBe(roomOrder(orphaned, fWell).length - 1);
+    expect(
+      roomVerbs(live).some(
+        ({ item, verb }) =>
+          item.kind === 'object' && item.object === 'stygianWell' && verb.verb === 'reroll',
+      ),
+    ).toBe(false);
+    // Once the orphan is repaired, the offered reroll is the row its command creates.
+    const repaired = apply(orphaned, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: fWell,
+      generationKey: 'r1:healing',
+      purchased: false,
+    });
+    const reroll = roomVerbs(interactions(repaired, fWell)).find(
+      ({ item, verb }) =>
+        item.kind === 'object' && item.object === 'stygianWell' && verb.verb === 'reroll',
+    )!;
+    const created = reroll.verb.commands!.reduce(apply, repaired);
+    expect(roomOrder(created, fWell)[reroll.gap]).toEqual(reroll.verb.reference);
+  });
+
   it('publishes progression exactly when nothing else required is live at the frontier', () => {
     const failures: string[] = [];
     for (const { id, project, assembly } of evaluated)

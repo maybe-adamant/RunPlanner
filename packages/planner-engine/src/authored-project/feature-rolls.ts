@@ -80,6 +80,36 @@ export function featureRerolls(
   return feature === 'stygianWell' ? stygianWellRerolls(order) : purgingPoolRerolls(order);
 }
 
+/**
+ * Every reroll id the room still names for one feature: its reroll rows, and
+ * the purchases, sales, Twist results and pins keyed by a reroll id. A
+ * removed reroll's purchase or sale stays authored, so its id is never reused.
+ */
+export function featureRerollIdsInUse(
+  occurrence: Pick<RoomOccurrence, 'roomActions' | 'stygianWell' | 'purgingPool'>,
+  feature: RollFeature,
+): ReadonlySet<string> {
+  const ids = new Set(featureRerolls(occurrence.roomActions.order, feature).map((r) => r.rerollId));
+  const addRoll = (rollKey: string | undefined) => {
+    if (rollKey !== undefined && rollKey !== INITIAL_ROLL_KEY) ids.add(rollKey);
+  };
+  if (feature === 'stygianWell') {
+    for (const reference of occurrence.roomActions.order)
+      if (reference.kind === 'purchaseStygianWellOffer')
+        addRoll(parseStygianWellGenerationKey(reference.generationKey)?.rollKey);
+    const well = occurrence.stygianWell;
+    for (const generationKey of Object.keys(well?.twistResultKeyByGeneration ?? {}))
+      addRoll(parseStygianWellGenerationKey(generationKey)?.rollKey);
+    for (const rerollId of Object.keys(well?.rerollOfferKeyBySlot ?? {})) addRoll(rerollId);
+  } else {
+    for (const reference of occurrence.roomActions.order)
+      if (reference.kind === 'sellPurgingPoolTrait') addRoll(reference.rollKey);
+    for (const rerollId of Object.keys(occurrence.purgingPool?.rerollTraitKeyBySlot ?? {}))
+      addRoll(rerollId);
+  }
+  return ids;
+}
+
 const NO_PINS = Object.freeze({});
 
 /** The pinned slots of one Well reroll; empty when none is pinned. */

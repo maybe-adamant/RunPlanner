@@ -14,11 +14,15 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   hubActionOrderRefusal,
+  purgingPoolRollTraitKey,
+  roomActionKey,
+  stygianWellGenerationItemKey,
   undoProjectHistory,
   type HubAction,
   type ProjectCommand,
   type ProjectDocument,
   type RerollRoomAction,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
@@ -398,6 +402,46 @@ describe('Well and Pool rerolls', () => {
         itemKey: 'ArmorBoostStore',
       }),
     ).toThrow('room action is not an ordered Well or Pool reroll');
+  });
+
+  it("never reuse a removed reroll's id while its purchase or sale stays authored", () => {
+    const rerolled = insert(
+      insert(loadUnderworldFStygianWellCheckpoint(), 'InsertStygianWellReroll'),
+      'InsertPurgingPoolReroll',
+    );
+    const remove = (project: ProjectDocument, reference: RoomActionReference) =>
+      applyProjectCommand(project, catalog, {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(f, room.occurrenceId, roomActionKey(reference)),
+      });
+    const bought = applyProjectCommand(rerolled, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: room,
+      generationKey: 'r1:healing',
+      purchased: true,
+      itemKey: 'ArmorBoostStore',
+    });
+    const sold = applyProjectCommand(bought, catalog, {
+      kind: 'SellPurgingPoolRollSlot',
+      occurrence: room,
+      rollKey: 'r1',
+      slotKey: 'left',
+      traitKey: Object.keys(catalog.traits.byKey)[0]!,
+      index: occurrence(bought, room.occurrenceId).roomActions.order.length,
+    });
+    const orphaned = remove(remove(sold, { kind: 'rerollStygianWell', rerollId: 'r1' }), {
+      kind: 'rerollPurgingPool',
+      rerollId: 'r1',
+    });
+    const again = insert(insert(orphaned, 'InsertStygianWellReroll'), 'InsertPurgingPoolReroll');
+    const after = occurrence(again, room.occurrenceId);
+    expect(after.roomActions.order.slice(-2)).toEqual([
+      { kind: 'rerollStygianWell', rerollId: 'r2' },
+      { kind: 'rerollPurgingPool', rerollId: 'r2' },
+    ]);
+    // The orphaned purchase and sale still name no present roll.
+    expect(stygianWellGenerationItemKey(after, 'r1:healing')).toBeUndefined();
+    expect(purgingPoolRollTraitKey(after, 'r1', 'left')).toBeUndefined();
   });
 });
 

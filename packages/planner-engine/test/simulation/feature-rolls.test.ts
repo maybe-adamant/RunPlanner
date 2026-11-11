@@ -322,8 +322,14 @@ describe('Stygian Well rolls', () => {
       origin: semanticAddressKey(healing),
       evidence: { reason: 'missing' },
     });
-    // A new reroll takes the smallest free id and adopts the kept purchase.
-    expect(order(appendWellReroll(project)).at(-1)).toMatchObject({ rerollId: 'r1' });
+    // A new reroll never takes the id the kept purchase names, which stays invalid.
+    const rerolled = appendWellReroll(project);
+    expect(order(rerolled).at(-1)).toMatchObject({ rerollId: 'r2' });
+    expect(findings(rerolled)).toContainEqual({
+      code: 'rollOfferUnavailable',
+      origin: semanticAddressKey(healing),
+      evidence: { reason: 'missing' },
+    });
   });
 
   it('refuse a reroll past the pool and report one with nothing left', () => {

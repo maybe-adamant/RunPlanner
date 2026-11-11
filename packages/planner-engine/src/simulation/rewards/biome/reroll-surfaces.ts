@@ -169,7 +169,7 @@ function surfaceCapture(
 function nextRoomPress(room: CanonicalAuthoredRoom): RoomActionAddress {
   const rerollId = nextRerollId(
     room.roomActionRoster.rows.flatMap((row) =>
-      row.reference.kind === 'reroll' ? [row.reference] : [],
+      row.reference.kind === 'reroll' ? [row.reference.rerollId] : [],
     ),
   );
   return createRoomActionAddress(
@@ -300,7 +300,7 @@ function hubCapture(
       createHubRerollAddress(
         biome,
         hub.origin.hubKey,
-        nextRerollId(hub.rerolls.map((reroll) => reroll.origin)),
+        nextRerollId(hub.rerolls.map((reroll) => reroll.origin.rerollId)),
       ),
     chronology: Object.freeze({
       kind: 'hubBoard' as const,

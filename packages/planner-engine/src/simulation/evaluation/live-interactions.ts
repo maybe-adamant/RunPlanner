@@ -19,7 +19,7 @@ import type {
 } from '../../authored-project/model';
 import {
   INITIAL_ROLL_KEY,
-  featureRerolls,
+  featureRerollIdsInUse,
   rerollActionKind,
 } from '../../authored-project/feature-rolls';
 import {
@@ -411,9 +411,10 @@ function objectChoiceVerbs(
   }
   // A Well's or Pool's interaction stands where the room's reached actions end.
   if (frontier !== orderLength) return frozen(verbs);
-  const order = room.roomActionRoster.rows.flatMap((row) =>
-    row.rank === null ? [] : [row.reference],
-  );
+  // The reroll's id and index come from the authored room its command edits.
+  const authored = assembly.project.route.biomes
+    .find((biome) => biome.biomeKey === occurrence.biomeKey)
+    ?.topology?.occurrences.find((entry) => entry.occurrenceId === occurrence.occurrenceId);
   const featureReroll = (
     object: 'stygianWell' | 'purgingPool',
     option: { readonly enabled: boolean; readonly available: boolean } | undefined,
@@ -424,15 +425,15 @@ function objectChoiceVerbs(
       occurrence,
       feature: object,
     });
-    if (allowance.kind !== 'reached' || !allowance.allowed) return;
+    if (allowance.kind !== 'reached' || !allowance.allowed || authored === undefined) return;
+    const index = authored.roomActions.order.length;
     const command: ProjectCommand =
       object === 'stygianWell'
-        ? frozen({ kind: 'InsertStygianWellReroll' as const, occurrence, index: orderLength })
-        : frozen({ kind: 'InsertPurgingPoolReroll' as const, occurrence, index: orderLength });
-    // The command allocates the smallest id the room's rerolls of this object leave free.
+        ? frozen({ kind: 'InsertStygianWellReroll' as const, occurrence, index })
+        : frozen({ kind: 'InsertPurgingPoolReroll' as const, occurrence, index });
     const reference: RoomActionReference = frozen({
       kind: rerollActionKind(object),
-      rerollId: nextRerollId(featureRerolls(order, object)),
+      rerollId: nextRerollId(featureRerollIdsInUse(authored, object)),
     });
     verbs.push(
       frozen({

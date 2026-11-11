@@ -202,7 +202,7 @@ export function applyRerollCommand(
       const reroll: RerollRoomAction = Object.freeze({
         kind: 'reroll',
         rerollId: nextRerollId(
-          order.flatMap((reference) => (reference.kind === 'reroll' ? [reference] : [])),
+          order.flatMap((reference) => (reference.kind === 'reroll' ? [reference.rerollId] : [])),
         ),
         target: Object.freeze({ ...command.target }),
         reward: command.reward,
@@ -263,7 +263,7 @@ export function applyRerollCommand(
           0,
           Object.freeze({
             kind: 'reroll',
-            rerollId: nextRerollId(hubRerolls(hub)),
+            rerollId: nextRerollId(hubRerolls(hub).map((reroll) => reroll.rerollId)),
             hubSlotKey: command.hubSlotKey,
             reward: command.reward,
           }),
