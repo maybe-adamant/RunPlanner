@@ -620,7 +620,11 @@ projects over a long edit history.
 | Reroll of a door the game refuses or not available  | 4    | invalid                                 |
 | Hub board reroll, its slot closed or entered        | 4    | invalid                                 |
 | Trait drop, trait held but matures elsewhere        | 4    | invalid                                 |
-| Reward swapped for another, its old pickup rows     | 1    | removed, silent; the new reward is live |
+| Reward swapped, a pickup role it no longer has      | 1    | removed, silent; the new reward is live |
+
+A pickup row is keyed by its producer point and acquisition role, not its
+item, so a swap that keeps the role (Zeus Boon to Hera Boon at the same point)
+keeps the row today; keying rows by item is planned.
 
 ### Lifecycle structure and authoring timeline
 

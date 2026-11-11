@@ -4,9 +4,13 @@ Status: framing and step C decisions settled by the owner (2026-11-10);
 steps A and B's Draft half delivered and accepted on `live-pickups`; the run
 import's half of B is decided and lands as C3; C1 and C4 delivered; C2's
 engine core and its engine and planner test migration delivered on
-`live-pickups` (engine and planner lanes green, equivalence unchanged past
-the migrated recipe checkpoints), Draft and run-import consumer pass next; D
-not started. Temporary
+`live-pickups` (engine and planner lanes green), Draft and run-import
+consumer pass next; D not started. Equivalence: C2's refresh changed all 163
+simulation digests (a roster `remove` proposal for every placed row, and
+rooms born empty in unentered rooms), the plan and candidate digests of 19
+`fresh-file/frontier/*` entries (the walk position moved) and added 7
+frontier keys; every other plan is byte-identical. The recipe migration then
+moved 8 simulation digests only (the rack and stale rows). Temporary
 plan; delete at delivery after promoting durable results. Follows the
 progressive room Timeline and spawned-loot notices, both delivered.
 
@@ -96,6 +100,8 @@ You either interact with pickups or active objects.
   an unplaced cage's or wheel choice's due point after the executable rows of
   its window the walk reaches before it, unless a required action of an
   earlier window is missing.
+  C5 keys pickup rows by item, so a same-role swap (Zeus Boon to Hera Boon)
+  removes the old row like any other swap.
   Equivalence and Draft corpus lanes before and after; separate and
   revertible. Expected Draft output changes, from the stripped-room witness:
   - a room reward placed at the frontier, before the required drop
@@ -165,7 +171,9 @@ Planning a room mimics playing it.
 - **Remove and Reset of a required row** are allowed: the item is live on the
   ground again and the walk shows its finding.
 - The reward-swap rekey is deleted (owner, revised 2026-11-10): a reward swap
-  replaces the item; the old item's rows go and the new item is live.
+  replaces the item; the old item's rows go and the new item is live. Until
+  C5 keys rows by item, a swap keeping the row's key (same producer point and
+  acquisition role) keeps the row.
 - A rescheduled Hermes delivery (due at another host) is a new item: it
   arrives with no choices, and the old item's chain goes with it. Due again at
   the same host, it keeps its choices.
@@ -231,6 +239,10 @@ Draft or the run import depend on that C2 changes.
   stays with its `rerolledRewardMismatch` finding, its pickup rows go
   (announced from a Hub edit), and the first draw is live once the pick is
   dropped.
+  Only a swap that changes the keyed role set removes rows: a row is keyed
+  by kind, producer point and acquisition role, so a same-key swap (Zeus Boon
+  to Hera Boon at the same point and role) keeps its row today; item-keyed
+  rows are planned for C5.
 - **Wheel candidates.** `rewardWheelStore`, `rewardWheelOfferCount` and the
   Ship encounter-count candidates answer for a wheel opened at Wheels open
   whose choice is unplaced (they threw before); its acquisition is projected
