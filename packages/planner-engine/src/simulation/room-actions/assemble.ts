@@ -266,13 +266,6 @@ export function assembleRoomActionRoster(options: {
       );
     }
   }
-  const lastRequiredRank = rows.reduce(
-    (rank, row) =>
-      row.rank !== null && row.participation === 'required' && row.window.kind !== 'postOutgoing'
-        ? Math.max(rank, row.rank)
-        : rank,
-    0,
-  );
   const checkpoints: RoomActionCheckpoint[] = options.contributions
     .filter((entry) => entry.kind === 'checkpoint')
     .map((entry) =>
@@ -282,7 +275,7 @@ export function assembleRoomActionRoster(options: {
         window: entry.window,
         afterRank:
           entry.checkpointKey === 'outgoingGeneration'
-            ? lastRequiredRank
+            ? doorsReadyAfterRank(rows).afterRank
             : entry.checkpointKey === 'exitUsable'
               ? rows.reduce(
                   (rank, row) =>
@@ -337,6 +330,25 @@ export function assembleRoomActionRoster(options: {
     }),
     valid: issues.length === 0 && !rows.some((row) => row.itemReplaced === true),
   });
+}
+
+type DoorsRow = Pick<RoomActionRow, 'participation' | 'rank' | 'stale' | 'window'>;
+
+/**
+ * When the doors can open: after the last placed required row they wait on,
+ * every required row but those that follow them. A required row they wait on
+ * still unplaced holds them; the walk also waits for every encounter to end.
+ */
+export function doorsReadyAfterRank<Row extends DoorsRow>(
+  rows: readonly Row[],
+): { readonly afterRank: number; readonly unplaced: readonly Row[] } {
+  const waitedOn = rows.filter(
+    (row) => !row.stale && row.participation === 'required' && row.window.kind !== 'postOutgoing',
+  );
+  return {
+    afterRank: waitedOn.reduce((rank, row) => Math.max(rank, row.rank ?? 0), 0),
+    unplaced: waitedOn.filter((row) => row.rank === null),
+  };
 }
 
 /**

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  authoredRoomLifecycleProfileKey,
+  roomLifecycleProfileKey,
   biomeStartRoomGameNames,
   resolveBiomeStart,
   resolveEntryDeclaration,
@@ -17,7 +17,7 @@ import type {
   RoomLifecycleOperation,
   RoomLifecycleProfile,
 } from '@run-planner/engine/catalog-schema';
-import { roomWalkSteps, type RoomWalkStep } from '@run-planner/engine/simulation';
+import { roomWalkSteps, type RoomWalkStep } from '../../../src/simulation/lifecycle/overview';
 
 const snapshotPath = './compiled-operations.snapshot.json';
 
@@ -100,7 +100,7 @@ function roomText(room: RoomDeclaration): string {
 }
 
 /**
- * Fixture: the occurrence states `authoredRoomLifecycleProfileKey` distinguishes
+ * Fixture: the occurrence states `roomLifecycleProfileKey` distinguishes
  * (Clockwork goal, Preboss shop); every room is selected under each.
  */
 const occurrenceStateFixtures = [
@@ -117,7 +117,7 @@ const occurrenceStateFixtures = [
 function hubMaterializationProfileKeys(room: RoomDeclaration): readonly string[] {
   if (room.mode.kind === 'derived' && room.mode.classification === 'hub') return ['EphyraHubRoom'];
   if (room.mode.kind === 'authored' && room.mode.templateKey === 'EphyraSideRoom')
-    return [authoredRoomLifecycleProfileKey(room, occurrenceStateFixtures[0]!, 'ephyraSide')];
+    return [roomLifecycleProfileKey(room, occurrenceStateFixtures[0]!, 'localVisit')];
   return [];
 }
 
@@ -148,7 +148,7 @@ function requireRoom(gameName: string): RoomDeclaration {
 /**
  * Every route's realized room declarations with each profile production
  * selects for them: a biome start room through `resolveEntryRoom`, every other
- * room through `authoredRoomLifecycleProfileKey` and the hub fixture.
+ * room through `roomLifecycleProfileKey` and the hub fixture.
  */
 function selections(): readonly Selection[] {
   const result: Selection[] = [];
@@ -172,7 +172,7 @@ function selections(): readonly Selection[] {
         result.push({
           profileKey:
             entry.lifecycleProfileKey ??
-            authoredRoomLifecycleProfileKey(entry.declaration, occurrenceStateFixtures[0]!),
+            roomLifecycleProfileKey(entry.declaration, occurrenceStateFixtures[0]!),
           declaration: entry.declaration,
           label: `${route.key} ${gameName}${isFirst ? ' start' : ''}`,
         });
@@ -180,9 +180,7 @@ function selections(): readonly Selection[] {
     for (const room of catalog.rooms.values.filter((room) => !startRooms.has(room.gameName))) {
       const routed = resolveEntryDeclaration(room, { routeKey: route.key, isFirst: false });
       const keys = new Set([
-        ...occurrenceStateFixtures.map((occurrence) =>
-          authoredRoomLifecycleProfileKey(routed, occurrence),
-        ),
+        ...occurrenceStateFixtures.map((occurrence) => roomLifecycleProfileKey(routed, occurrence)),
         ...hubMaterializationProfileKeys(routed),
       ]);
       for (const profileKey of keys)

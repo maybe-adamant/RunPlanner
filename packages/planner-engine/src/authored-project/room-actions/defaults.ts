@@ -17,7 +17,7 @@ import {
   type RoomActionDomain,
 } from './domain';
 import { windowAnchor } from './event-graph';
-import { authoredRoomLifecycleProfileKey } from './lifecycle-profile';
+import { roomLifecycleProfileKey } from './lifecycle-profile';
 import { fieldsDefaultActiveCageCount } from '../fields';
 import { roomActionKey } from './state';
 import { encounterEnvelopeSlots } from '../room-state/encounter-envelope';
@@ -215,9 +215,9 @@ function roomActionDomainContext(
         (target) => target.occurrenceId === occurrence.occurrenceId,
       ),
   );
-  const role = isLocalVisit ? 'ephyraSide' : 'ordinary';
   const lifecycleProfileKey =
-    resolved?.lifecycleProfileKey ?? authoredRoomLifecycleProfileKey(declaration, occurrence, role);
+    resolved?.lifecycleProfileKey ??
+    roomLifecycleProfileKey(declaration, occurrence, isLocalVisit ? 'localVisit' : 'ordinary');
   const startingReward =
     entry && routePosition.isFirst
       ? composeStartingReward(loadout.startingReward, occurrence.startingRewardAcquisition)

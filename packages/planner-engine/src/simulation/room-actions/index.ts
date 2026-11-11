@@ -2,6 +2,7 @@ export {
   assessRoomActionPlacements,
   assembleRoomActionRoster,
   asUnplacedWhenReplaced,
+  doorsReadyAfterRank,
   performedRoomActions,
   scopeRoomActionRoster,
 } from './assemble';

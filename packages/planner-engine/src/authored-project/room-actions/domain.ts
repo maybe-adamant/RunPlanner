@@ -87,10 +87,11 @@ import {
 import {
   assembleRoomEventGraph,
   producerPointsBeforeCombat,
+  runsOneEncounter,
   type RoomActionWindow,
   type RoomEventGraph,
 } from './event-graph';
-import { authoredRoomLifecycleProfileKey } from './lifecycle-profile';
+import { roomLifecycleProfileKey } from './lifecycle-profile';
 
 export type RoomActionParticipation = 'required' | 'optional';
 
@@ -232,11 +233,13 @@ function producerWindow(
   producerPoint: string,
 ): RoomActionWindow {
   const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
+  const envelope = catalog.encounterEnvelopes.byKey[declaration.encounterEnvelopeKey];
   return frozen({
     kind: 'standard',
     phase:
       profile !== undefined &&
-      catalog.encounterEnvelopes.byKey[declaration.encounterEnvelopeKey]?.slots.length === 1 &&
+      envelope !== undefined &&
+      runsOneEncounter(envelope) &&
       producerPointsBeforeCombat(catalog, profile, declaration).has(
         producerPoint as ProducerLifecyclePointKey,
       )
@@ -968,7 +971,7 @@ export function assembleRoomActionDomain(options: {
   if (rawDeclaration === undefined) throw new Error(`unknown room ${options.occurrence.gameName}`);
   const declaration = resolveEntryDeclaration(rawDeclaration, options.routePosition);
   const lifecycleProfileKey =
-    options.lifecycleProfileKey ?? authoredRoomLifecycleProfileKey(declaration, options.occurrence);
+    options.lifecycleProfileKey ?? roomLifecycleProfileKey(declaration, options.occurrence);
   const structuralReferences = activeRoomActionReferences(
     options.catalog,
     options.biome,

@@ -2,6 +2,7 @@ import {
   isCombatBearingEncounterPhaseKind,
   type Catalog,
   type EncounterDefinition,
+  type EncounterEnvelope,
   type RoomDeclaration,
   type RoomLifecycleProfile,
 } from '../../catalog-schema';
@@ -198,6 +199,18 @@ export function producerPointsBeforeCombat(
   return points;
 }
 
+/**
+ * Whether the room runs one encounter on its own: not native
+ * `MultipleEncountersData` and no encounter a player's verb starts (Fields cages).
+ */
+export function runsOneEncounter(envelope: EncounterEnvelope): boolean {
+  return (
+    envelope.slots.length > 0 &&
+    !envelope.multiEncounter &&
+    envelope.slots.every((slot) => slot.activatedByVerb === undefined)
+  );
+}
+
 interface GraphSlot {
   readonly phase: RoomEventGraphPhase;
   readonly definition?: EncounterDefinition;
@@ -221,16 +234,18 @@ export function assembleRoomEventGraph(options: {
       `${options.occurrence.gameName} selected unknown lifecycle ${options.lifecycleProfileKey}`,
     );
   }
-  const fields = options.lifecycleProfileKey === 'FieldsCombatRoom';
+  const envelopeSlots = encounterEnvelopeSlots(
+    options.catalog,
+    options.declaration,
+    options.occurrence.gameName,
+  );
+  // Fields: the player starts each cage's encounter, in the order the cages are used.
+  const fields = envelopeSlots.some((slot) => slot.activatedByVerb !== undefined);
   const activeSlotKeys =
     options.activeEncounterSlotKeys === undefined
       ? undefined
       : new Set(options.activeEncounterSlotKeys);
-  const activeSlots = encounterEnvelopeSlots(
-    options.catalog,
-    options.declaration,
-    options.occurrence.gameName,
-  ).filter(
+  const activeSlots = envelopeSlots.filter(
     (slot, index) =>
       (activeSlotKeys === undefined || activeSlotKeys.has(slot.key)) &&
       (options.occurrence.state.kind !== 'shipCombat' ||
@@ -286,9 +301,10 @@ export function assembleRoomEventGraph(options: {
       (authoring?.resolution.kind === 'direct'
         ? options.catalog.encounterDefinitions.byKey[authoring.resolution.encounterDefinitionKey]
         : undefined);
-    // A Boss room's outcome is its Boss defeated.
+    // A boss fight's outcome is its Boss defeated.
+    const bossEnding = (directDefinition ?? candidates[0])?.script.endsWithBossDefeated === true;
     const combatHostsOutcome =
-      options.lifecycleProfileKey !== 'BossRoom' &&
+      !bossEnding &&
       (options.occurrence.anomalyReplacement !== undefined ||
         candidates.some((candidate) => candidate.goldBet !== undefined));
     const wheel =
@@ -307,7 +323,7 @@ export function assembleRoomEventGraph(options: {
           definition: directDefinition,
         },
       ];
-    if (fields && slot.rewardAttachment?.kind !== 'localReward') return [];
+    if (fields && slot.activatedByVerb === undefined) return [];
     if (
       options.occurrence.state.kind !== 'shipCombat' &&
       (encounter === undefined || !isCombatBearingEncounterPhaseKind(encounter.kind))
@@ -318,10 +334,7 @@ export function assembleRoomEventGraph(options: {
         phase: frozen({
           phaseKey: slot.key,
           ...wheel,
-          // A Boss room's outcome is its Boss defeated.
-          ...(hostsOutcome && options.lifecycleProfileKey !== 'BossRoom'
-            ? { hostsOutcome: true as const }
-            : {}),
+          ...(hostsOutcome && !bossEnding ? { hostsOutcome: true as const } : {}),
         }),
         ...((directDefinition ?? candidates[0]) === undefined
           ? {}
@@ -441,7 +454,7 @@ export function assembleRoomEventGraph(options: {
         trigger: startedTrigger,
       }),
     );
-    if (options.lifecycleProfileKey === 'BossRoom')
+    if (definition?.script.endsWithBossDefeated === true)
       events.push(
         frozen({
           kind: 'bossDefeated',
@@ -557,7 +570,7 @@ function anchorPoints(graph: RoomEventGraph): readonly AnchorPoint[] {
         { kind: 'wheelChoice', wheelKey: phase.rewardWheelKey },
       );
     points.push({ kind: 'combat', phaseKey: phase.phaseKey });
-    if (graph.profileKey === 'BossRoom')
+    if (graph.events.some((event) => event.key === `bossDefeated:${phase.phaseKey}`))
       points.push({ kind: 'bossDefeated', phaseKey: phase.phaseKey });
     points.push({ kind: 'encounterEnd', phaseKey: phase.phaseKey });
   });
@@ -597,31 +610,27 @@ export function windowAnchor(window: RoomActionWindow, graph: RoomEventGraph): n
   };
   const phaseWithWheel = (phaseKey: string, wheelKey: string) =>
     graph.phases.some((phase) => phase.phaseKey === phaseKey && phase.rewardWheelKey === wheelKey);
-  const ship = graph.profileKey === 'ShipCombatRoom';
   switch (window.kind) {
     case 'standard':
       return window.phase === 'beforeCombat'
         ? beforePoint((point) => point.kind === 'combat')
         : lastAfterPoint((point) => point.kind === 'encounterEnd');
     case 'encounterEnd': {
-      // A Ship phase's end-effect pickups follow the next wheels opening, or, after
+      // A wheel phase's end-effect pickups follow the next wheels opening, or, after
       // the final phase, its wheel reward.
-      if (ship) {
-        const phaseIndex = graph.phases.findIndex((phase) => phase.phaseKey === window.phaseKey);
-        const nextWheelKey = graph.phases[phaseIndex + 1]?.rewardWheelKey;
-        if (
-          phaseIndex >= 0 &&
-          nextWheelKey !== undefined &&
-          all.some((point) => point.kind === 'wheelsOpen' && point.wheelKey === nextWheelKey)
-        )
-          return afterPoint(
-            (point) => point.kind === 'wheelsOpen' && point.wheelKey === nextWheelKey,
-          );
-      }
+      const phaseIndex = graph.phases.findIndex((phase) => phase.phaseKey === window.phaseKey);
+      const nextWheelKey = graph.phases[phaseIndex + 1]?.rewardWheelKey;
+      if (
+        phaseIndex >= 0 &&
+        nextWheelKey !== undefined &&
+        all.some((point) => point.kind === 'wheelsOpen' && point.wheelKey === nextWheelKey)
+      )
+        return afterPoint(
+          (point) => point.kind === 'wheelsOpen' && point.wheelKey === nextWheelKey,
+        );
       return (
         afterPoint((point) => point.kind === 'encounterEnd' && point.phaseKey === window.phaseKey) +
-        (ship &&
-        graph.phases.some(
+        (graph.phases.some(
           (phase) => phase.phaseKey === window.phaseKey && phase.rewardWheelKey !== undefined,
         )
           ? 1

@@ -5,7 +5,10 @@ import type {
   RoomLifecycleProfile,
 } from '../../catalog-schema';
 import type { ProducerLifecyclePointKey } from '../../reward-kernel/model';
-import { producerPointsBeforeCombat } from '../../authored-project/room-actions/event-graph';
+import {
+  producerPointsBeforeCombat,
+  runsOneEncounter,
+} from '../../authored-project/room-actions/event-graph';
 
 /**
  * One step of a room's walk; every history event records the step it was
@@ -55,7 +58,7 @@ export function roomWalkSteps(
   }
   const cached = byDeclaration.get(declaration);
   if (cached !== undefined) return cached;
-  const slots = catalog.encounterEnvelopes.byKey[declaration.encounterEnvelopeKey]?.slots ?? [];
+  const envelope = catalog.encounterEnvelopes.byKey[declaration.encounterEnvelopeKey];
   const points = profile.producer.kind === 'none' ? [] : profile.producer.points;
   const beforeCombat = producerPointsBeforeCombat(catalog, profile, declaration);
   const before = points.filter((point) => beforeCombat.has(point));
@@ -66,8 +69,11 @@ export function roomWalkSteps(
   profile.steps.forEach((step, index) => {
     if (step.kind === 'runEncounterScripts') {
       steps.push(...before.map((point) => operation(advance(point))));
-      if (slots.length > 0) steps.push(Object.freeze({ kind: 'encounters' as const }));
-      if (slots.length === 1) steps.push(Object.freeze({ kind: 'encounterEnds' as const }));
+      if ((envelope?.slots.length ?? 0) > 0)
+        steps.push(Object.freeze({ kind: 'encounters' as const }));
+      // One encounter ends at its own step; a sequence ends each fight in turn.
+      if (envelope !== undefined && runsOneEncounter(envelope))
+        steps.push(Object.freeze({ kind: 'encounterEnds' as const }));
       if (profile.steps[index + 1]?.kind !== 'completeRequiredObjects')
         steps.push(...after.map((point) => operation(advance(point))));
       return;

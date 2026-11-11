@@ -61,7 +61,8 @@ export function encounterOutcomesForProjectEvaluationAssembly(
   const authored = room.encounters;
   return Object.freeze(
     graph.phases.flatMap((point): EncounterOutcome[] => {
-      if (point.hostsOutcome !== true || graph.profileKey === 'BossRoom') return [];
+      // A boss fight hosts none: its outcome is its Boss defeated.
+      if (point.hostsOutcome !== true) return [];
       const fightHost: EncounterOutcomeHost =
         point.endsOnInteraction === true
           ? Object.freeze({

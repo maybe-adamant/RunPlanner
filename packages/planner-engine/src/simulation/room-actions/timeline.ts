@@ -14,6 +14,7 @@ import {
 } from '../../authored-project/room-actions/event-graph';
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import { semanticAddressKey } from '../../authored-project/addresses';
+import { doorsReadyAfterRank } from './assemble';
 import type { RoomActionRoster, RoomActionRow } from './model';
 
 /** A Timeline boundary: one event of the room's graph. */
@@ -275,6 +276,16 @@ export function assembleRoomLifecycleTimeline(
   const phaseByKey = new Map(structure.phases.map((phase) => [phase.phaseKey, phase]));
   const finalPhaseKey = structure.phases.at(-1)?.phaseKey;
 
+  // A Fields cage's encounter begins with its activation row.
+  const cagePhase = (phase: RoomEventGraphPhase): boolean =>
+    structure.events.some(
+      (event) =>
+        event.kind === 'encounterBegun' &&
+        event.phaseKey === phase.phaseKey &&
+        event.trigger.kind === 'action' &&
+        event.trigger.action.kind === 'completeFieldsCage',
+    );
+
   const rowsForPhase = (phase: RoomEventGraphPhase): readonly RoomActionRow[] =>
     rankedRows.filter((row) => {
       if (phase.rewardWheelKey !== undefined) {
@@ -285,7 +296,7 @@ export function assembleRoomLifecycleTimeline(
           row.window.wheelKey === phase.rewardWheelKey
         );
       }
-      if (structure.profileKey === 'FieldsCombatRoom') {
+      if (cagePhase(phase)) {
         return (
           (row.window.kind === 'fields' && row.window.phaseKey === phase.phaseKey) ||
           (row.window.kind === 'encounterEnd' && row.window.phaseKey === phase.phaseKey)
@@ -311,7 +322,6 @@ export function assembleRoomLifecycleTimeline(
   };
 
   const shipPhaseKeyForAction = (row: RoomActionRow): string | undefined => {
-    if (structure.profileKey !== 'ShipCombatRoom') return undefined;
     if (row.window.kind === 'shipPostCombat') {
       const wheelKey = row.window.wheelKey;
       return structure.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey;
@@ -433,7 +443,7 @@ export function assembleRoomLifecycleTimeline(
       case 'encounterEnd': {
         const phase = phaseByKey.get(point.phaseKey);
         if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
-        if (structure.profileKey === 'FieldsCombatRoom') {
+        if (cagePhase(phase)) {
           return boundaryEntry(
             point,
             actionRank(roster, {
@@ -483,17 +493,7 @@ export function assembleRoomLifecycleTimeline(
       // The doors open right after the row that makes the exits ready: the last
       // required one before them, once every encounter has ended.
       case 'doorsOpened':
-        return boundaryEntry(
-          point,
-          rankedRows.reduce(
-            (rank, row) =>
-              row.participation === 'required' && row.window.kind !== 'postOutgoing'
-                ? Math.max(rank, row.rank!)
-                : rank,
-            0,
-          ),
-          'after',
-        );
+        return boundaryEntry(point, doorsReadyAfterRank(roster.rows).afterRank, 'after');
     }
   };
 

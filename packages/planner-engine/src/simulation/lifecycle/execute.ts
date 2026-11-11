@@ -11,9 +11,9 @@ import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../../authored-project/infe
 import { createBiomeAddress, createRoomActionAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/state';
-import { windowAnchor } from '../../authored-project/room-actions/event-graph';
+import { runsOneEncounter, windowAnchor } from '../../authored-project/room-actions/event-graph';
 import { roomWalkSteps, type RoomWalkStep } from './overview';
-import { type RoomActionRow } from '../room-actions';
+import { doorsReadyAfterRank, type RoomActionRow } from '../room-actions';
 import { purgingPoolSalePoint } from '../commerce/feature-rolls';
 
 type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];
@@ -348,7 +348,8 @@ const encounterEffects = Object.freeze({
         ? 'deferred'
         : 'applied';
     const completed =
-      context.input.lifecycleProfileKey === 'BossRoom'
+      context.catalog.encounterDefinitions.byKey[phase.encounterKey]?.script
+        .endsWithBossDefeated === true
         ? appendEvent(
             appendEvent(state, context, { ...completion, kind: 'bossDefeated' }),
             context,
@@ -923,7 +924,9 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       );
       let state = drainThroughRank(checkpoint?.afterRank ?? 0, operationIndex, initial);
       if (state.blockedAt !== undefined) return state;
-      const missing = firstMissingRequired((row) => row.window.kind !== 'postOutgoing');
+      const missing = doorsReadyAfterRank(roster.rows).unplaced.find(
+        (row) => !skippedInteraction(row),
+      );
       if (missing !== undefined) state = blockAt(state, missing, { kind: 'doorsOpen' });
       return state;
     }
@@ -1009,12 +1012,11 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     });
   };
 
-  // A multi-encounter room runs the fights its graph orders (Fields cages by activation);
-  // no encounter runs for a Nemesis random event, which her talk row settles.
-  const slotCount =
-    context.catalog.encounterEnvelopes.byKey[context.input.encounterEnvelopeKey]?.slots.length ?? 0;
+  // A multi-encounter or cage room runs the fights its graph orders (Fields cages by
+  // activation); no fight runs for a Nemesis random event, which her talk row settles.
+  const envelope = context.catalog.encounterEnvelopes.byKey[context.input.encounterEnvelopeKey];
   const runPhases =
-    slotCount === 1
+    envelope !== undefined && runsOneEncounter(envelope)
       ? context.encounterPhases
       : (() => {
           const byKey = new Map(context.encounterPhases.map((phase) => [phase.slotKey, phase]));

@@ -93,8 +93,6 @@ export {
 export {
   executeRoomLifecycle,
   LifecycleExecutionContractError,
-  roomWalkSteps,
-  type RoomWalkStep,
   type RoomHistoryFragment,
   type RoomHistoryOrigin,
   type RoomLifecycleExecutionInput,
