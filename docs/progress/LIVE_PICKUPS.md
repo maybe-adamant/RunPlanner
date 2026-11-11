@@ -268,7 +268,10 @@ Draft or the run import depend on that C2 changes.
   `deadlineAction` or `deadlinePhase`. The Gold Gold Gold finding now stands
   at its deadline (the walk passes the purchase that spawns the duplicate)
   rather than at the Shop's last purchase, and is withheld while the walk
-  does not reach it.
+  does not reach it. Open: this holds once the duplicate's entry exists
+  (placed, then removed). On a fresh purchase no entry exists, so the
+  finding has no deadline and stops the walk at the purchase, the live row
+  does not offer the duplicate and Collect all required places nothing.
 - **New export.** `collectRequiredItems` (with `CollectRequiredOptions`,
   `CollectedRequiredItems`, `CollectRequiredStop`) on `./simulation`; its
   first consumer is the shared test fixtures' `collectTestRequiredItems`.
