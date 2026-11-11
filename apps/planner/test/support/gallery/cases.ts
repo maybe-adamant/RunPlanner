@@ -116,7 +116,6 @@ function placeAnchorObject(
   };
 }
 
-/** Places a room's last unplaced spawned item through the engine's own placement command. */
 /** Picks up a room's live item from its live row, at the gap the live product names canonical. */
 function placeLiveItem(
   biomeKey: string,
@@ -138,13 +137,15 @@ function placeLiveItem(
         ),
       ),
     );
-    const command = (placements.find((action) => action.canonical === true) ?? placements.at(-1))
-      ?.command;
-    if (command === undefined) throw new Error(`${occurrenceId} has no live ${reference.kind}`);
-    return command;
+    if (placements.length === 0) throw new Error(`${occurrenceId} has no live ${reference.kind}`);
+    const canonical = placements.find((action) => action.canonical === true);
+    if (canonical === undefined)
+      throw new Error(`${occurrenceId} names no canonical placement for ${reference.kind}`);
+    return canonical.command;
   };
 }
 
+/** Places a room's last unplaced spawned item through the engine's own placement command. */
 function placeLastSpawned(biomeKey: string, occurrenceId: string): GalleryStep {
   return (project) => {
     const spawned = spawnedLootForProjectEvaluationAssembly(
