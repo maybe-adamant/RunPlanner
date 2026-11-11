@@ -56,6 +56,7 @@ import {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   prepareLegalPomTraitOffers,
+  replaceTestPlacedItem,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -382,7 +383,7 @@ function heroicConcaveStoneTraitFixture() {
     trait: createTraitOfferAddress(startReward, 'source'),
     value: { kind: 'noProc' },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: targetReward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
@@ -420,7 +421,7 @@ function allTogetherFindingFixture() {
   let optionKey: 'option1' | 'option2' | 'option3' | undefined;
   for (const [biomeAddress, occurrenceId, traitKey] of plans) {
     const reward = createIncomingRewardAddress(biomeAddress, occurrenceId);
-    project = applyProjectCommand(project, application.catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
@@ -1965,7 +1966,7 @@ describe('planner history interaction', () => {
       [goldenFOccurrenceId(6, 1), 'Hera', 'HeraUpgrade', 'BoonDecayBoon'],
     ] as const) {
       const reward = createIncomingRewardAddress(goldenFBiome, occurrenceId);
-      project = applyProjectCommand(project, application.catalog, {
+      project = replaceTestPlacedItem(project, {
         kind: 'ReplaceIncomingReward',
         reward,
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
@@ -2137,7 +2138,7 @@ describe('planner history interaction', () => {
       }),
       value: { kind: 'normal', exitKey: 'exit2' },
     });
-    project = applyProjectCommand(project, application.catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(
         goldenGBiome,
@@ -2145,7 +2146,7 @@ describe('planner history interaction', () => {
       ),
       value: { rewardType: 'HermesUpgrade' },
     });
-    project = applyProjectCommand(project, application.catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(goldenGBiome, createOccurrenceId('golden-g-b7-e1:exit3')),
       value: { rewardType: 'StackUpgrade' },

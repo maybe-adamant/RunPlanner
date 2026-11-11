@@ -15,6 +15,7 @@ import {
   createEncounterPhaseAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
@@ -63,8 +64,10 @@ import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenFStartId,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
+import { replaceTestPlacedItem } from '@run-planner/test-fixtures/shared';
 import { hintOf } from '@planner-test/support/hints';
 import { dialogFinding, HeaderDialog } from '@planner-test/support/editor-dialog';
 
@@ -782,11 +785,16 @@ describe('selected outcomes', () => {
 
   it('walks the Natural Selection first pass, saves the completed allocation and focuses the exact child', async () => {
     const application = createApplication();
-    const project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
-      kind: 'ReplaceStartingReward',
-      reward: createStartingRewardAddress('Underworld'),
-      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
-    });
+    // The swapped starting Boon is picked up again.
+    const project = replaceTestPlacedItem(
+      createGoldenFGHIProject(),
+      {
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+      },
+      createOccurrenceAddress(goldenFBiome, goldenFStartId),
+    );
     application.store.dispatch(authoredProjectReplaced(project));
     const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const base = [...workspace.interactions.traitOffers.values()].find(
@@ -1902,7 +1910,8 @@ describe('selected outcomes', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
       keepsakeKey: 'UnpickedBoonKeepsake',
     });
-    project = applyProjectCommand(project, application.catalog, {
+    // The swapped Boon is picked up again before its offer is authored.
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },

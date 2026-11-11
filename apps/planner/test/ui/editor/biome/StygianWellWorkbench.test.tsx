@@ -31,7 +31,7 @@ import {
   loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 import { slotRow, timelineRow } from '@planner-test/support/timeline-rows';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
@@ -233,7 +233,8 @@ describe('Stygian Well workbench', () => {
       const inventory =
         generationKey === 'initial:secondLeft'
           ? authoredWell()
-          : applyProjectCommand(createUnderworldFWellCheckpoint(false), catalog, {
+          : // The restocked refill's purchase goes with its old item; it is bought again below.
+            settleTestEdit(createUnderworldFWellCheckpoint(false), {
               kind: 'ReplaceStygianWellTravelDealRefill',
               occurrence: owner,
               itemKey: 'RandomStoreItem',

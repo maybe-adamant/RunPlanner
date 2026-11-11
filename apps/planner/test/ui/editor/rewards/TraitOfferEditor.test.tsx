@@ -69,7 +69,11 @@ import {
   reachedEchoProject,
 } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import { hintOf } from '@planner-test/support/hints';
-import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
+import {
+  collectTestRequiredItems,
+  replaceTestPlacedItem,
+  settleTestEdit,
+} from '@run-planner/test-fixtures/shared';
 import { dialogFinding } from '@planner-test/support/editor-dialog';
 
 afterEach(cleanup);
@@ -251,7 +255,8 @@ describe('trait offer editor entry and dialog', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
       keepsakeKey: 'UnpickedBoonKeepsake',
     });
-    project = applyProjectCommand(project, application.catalog, {
+    // The swapped Boon is picked up again before its offer is authored.
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
@@ -598,7 +603,8 @@ describe('trait offer editor entry and dialog', () => {
       const sites = [goldenFStartId, goldenFOccurrenceId(2, 1), goldenFOccurrenceId(4, 1)];
       for (const [index, [giverKey, traits]] of prerequisites.entries()) {
         const reward = createIncomingRewardAddress(goldenFBiome, sites[index]!);
-        project = applyProjectCommand(project, application.catalog, {
+        // Each swap takes its placed pickup with it; the rewards are collected again below.
+        project = settleTestEdit(project, {
           ...(index === 0
             ? {
                 kind: 'ReplaceStartingReward' as const,
@@ -632,7 +638,7 @@ describe('trait offer editor entry and dialog', () => {
       const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1));
       const trait = createTraitOfferAddress(reward, 'source');
       const giverKey = effect === 'All Together' ? 'Hera' : 'Demeter';
-      project = applyProjectCommand(project, application.catalog, {
+      project = settleTestEdit(project, {
         kind: 'ReplaceIncomingReward',
         reward,
         value: {

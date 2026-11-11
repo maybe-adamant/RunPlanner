@@ -54,6 +54,7 @@ import {
   authorLegalTraitOffers,
   collectTestRequiredItems,
   purchaseTestHermesShrineOffer,
+  replaceTestPlacedItem,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -549,7 +550,7 @@ describe('Hermes Shrine workbench', () => {
       'wheel1',
       'offer1',
     );
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: fourthGodReward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } },
@@ -596,7 +597,7 @@ describe('Hermes Shrine workbench', () => {
     });
 
     project = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: fourthGodReward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
@@ -839,13 +840,13 @@ describe('Hermes Shrine workbench', () => {
     const postbossId = createOccurrenceId('surface-n-preboss:postboss');
     const owner = createOccurrenceAddress(nBiome, postbossId);
     let project = withFourthBoardGodBeforeCombat05(loadSurfaceNOProject());
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat05')),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
     });
     const hermes = createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat09'));
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: hermes,
       value: { rewardType: 'HermesUpgrade' },

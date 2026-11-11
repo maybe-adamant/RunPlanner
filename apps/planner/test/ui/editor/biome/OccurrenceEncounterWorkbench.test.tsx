@@ -45,6 +45,7 @@ import {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   replaceTestShopOfferActions,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGAnomalyProject,
@@ -2309,27 +2310,27 @@ describe('OccurrenceEncounterWorkbench', () => {
 
   it('keeps Ship offer identity on the wheel and acquisition children on its Room Action row', () => {
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNOPQProject(), {
       kind: 'ReplaceRewardWheelStore',
       wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
       storeKey: 'MetaProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
       encounterCount: 3,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelStore',
       wheel,
       storeKey: 'RunProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
       value: {
@@ -2337,12 +2338,13 @@ describe('OccurrenceEncounterWorkbench', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelPicked',
       wheel,
       pickedOfferIndex: 1,
     });
-    project = authorLegalTraitOffers(project);
+    // Each swap takes its placed pickup with it; the new rewards are picked up again.
+    project = authorTestTraitsAndRequiredItems(project);
 
     const view = renderOccurrenceWorkbench(
       project,
@@ -2660,22 +2662,22 @@ describe('OccurrenceEncounterWorkbench', () => {
       'wheel1',
       'offer2',
     );
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNOPQProject(), {
       kind: 'ReplaceRewardWheelStore',
       wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
       storeKey: 'MetaProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelStore',
       wheel,
       storeKey: 'RunProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
       value: {
@@ -2683,7 +2685,8 @@ describe('OccurrenceEncounterWorkbench', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    project = authorLegalTraitOffers(project);
+    // Each swap takes its placed pickup with it; the new rewards are picked up again.
+    project = authorTestTraitsAndRequiredItems(project);
     const view = renderOccurrenceWorkbench(
       project,
       'Surface',
