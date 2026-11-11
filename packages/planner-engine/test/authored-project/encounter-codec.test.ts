@@ -19,7 +19,10 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { simulateProject } from '@run-planner/engine/simulation';
-import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  withItemContent,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   replaceNemesisRandomEventInteraction,
@@ -35,7 +38,6 @@ import {
 } from '@run-planner/test-fixtures/surface';
 
 import { biome, encoded, occurrence, type JsonRecord } from './support/project-codec-json';
-import { withItemContent } from '../support/room-action-content';
 
 function selections(owner: JsonRecord): JsonRecord {
   return ((owner.encounters as JsonRecord).encounterKeyByPhase ?? {}) as JsonRecord;

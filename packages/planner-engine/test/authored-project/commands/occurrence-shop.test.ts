@@ -25,8 +25,7 @@ import {
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
-import { withItemContent } from '../../support/room-action-content';
-import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { replaceTestShopOfferActions, withItemContent } from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNOPQProject, qBiome, qOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import {
   createEchoGoldIAnvilDuplicateProject,

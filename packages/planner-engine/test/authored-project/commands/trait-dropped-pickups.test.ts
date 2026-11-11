@@ -30,7 +30,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { createGoldenFGHIProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
-import { withItemContents } from '../../support/room-action-content';
+import { withItemContents } from '@run-planner/test-fixtures/shared';
 
 const goldenF = createBiomeAddress('Underworld', 'F');
 const combatId = createOccurrenceId('golden-f-b2-e1');

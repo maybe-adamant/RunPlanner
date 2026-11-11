@@ -1,5 +1,5 @@
 import { ordinaryPositionFor } from '../../support/route-position';
-import { withItemContent } from '../../support/room-action-content';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';

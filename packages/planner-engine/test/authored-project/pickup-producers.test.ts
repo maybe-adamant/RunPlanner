@@ -28,7 +28,7 @@ import {
   selectedPickupProducers,
 } from '../../src/authored-project/acquisition/pickup-producers';
 import { composeStartingReward } from '../../src/authored-project/room-state/starting-reward';
-import { withItemContent } from '../support/room-action-content';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 const biome = createBiomeAddress('Surface', 'N');
 

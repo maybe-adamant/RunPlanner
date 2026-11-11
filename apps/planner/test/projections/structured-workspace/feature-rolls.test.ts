@@ -15,7 +15,7 @@ import {
   requireWorkspaceBiome,
 } from '@planner-test/fixtures/structuredWorkspace';
 import type { WorkspaceRoomFeature } from '@planner/projections/structured-workspace';
-import { withItemContent } from '@planner-test/support/room-action-content';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 const f = createBiomeAddress('Underworld', 'F');
 const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');

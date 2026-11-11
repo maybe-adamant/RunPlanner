@@ -37,8 +37,8 @@ import {
 import {
   authorTestTraitsAndRequiredItems,
   settleTestEdit,
+  withItemContent,
 } from '@run-planner/test-fixtures/shared';
-import { withItemContent } from '../support/room-action-content';
 
 const shopId = createOccurrenceId('zagreus-contract-preboss-shop');
 const peerId = createOccurrenceId('zagreus-contract-preboss-peer');

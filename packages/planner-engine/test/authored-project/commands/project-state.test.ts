@@ -1,4 +1,4 @@
-import { purchaseTestHermesShrineOffer } from '@run-planner/test-fixtures/shared';
+import { purchaseTestHermesShrineOffer, withItemContent } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -35,7 +35,6 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import { fBiome, fProject, iBiome, iProject } from '../support/configured-projects';
-import { withItemContent } from '../../support/room-action-content';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 /** Buys a Shrine item rushed and picks up its same-room pickup at the end of the room. */

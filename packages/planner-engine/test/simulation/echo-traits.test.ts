@@ -47,8 +47,8 @@ import {
   editTestRoomActionOrder,
   replaceTestPlacedItem,
   settleTestEdit,
+  withItemContent,
 } from '@run-planner/test-fixtures/shared';
-import { withItemContent } from '../support/room-action-content';
 import {
   createEchoTalentDropReplayProject,
   createGoldenFGHProject,

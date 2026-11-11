@@ -56,6 +56,7 @@ import {
   purchaseTestHermesShrineOffer,
   replaceTestPlacedItem,
   supportedTraitOffer,
+  withItemContent,
 } from '@run-planner/test-fixtures/shared';
 import {
   renderOccurrenceWorkbench,
@@ -64,7 +65,6 @@ import {
 } from '@planner-test/support/biome-workbench';
 import { RouteShrinesPanel } from '@planner/ui/shell/RouteShrinesPanel';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
-import { withItemContent } from '@planner-test/support/room-action-content';
 import {
   findTimelineRow,
   queryTimelineRow,

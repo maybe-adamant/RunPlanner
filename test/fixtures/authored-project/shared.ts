@@ -25,6 +25,7 @@ export {
   procTestSeaStar,
 } from './room-actions';
 export { hubVisitActions } from './hub-actions';
+export { withItemContent, withItemContents } from './item-content';
 export {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,

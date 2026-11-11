@@ -23,6 +23,8 @@ import {
 import {
   authorLegalTraitOffers,
   replaceTestShopOfferActions,
+  withItemContent,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import {
   nBiome as surfaceNBiome,
@@ -33,7 +35,6 @@ import {
   goldenGBiome,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
-import { withItemContent, withItemContents } from '../support/room-action-content';
 
 const interactionsAt = (
   project: ProjectDocument,

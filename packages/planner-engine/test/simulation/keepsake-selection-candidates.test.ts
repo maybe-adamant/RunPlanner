@@ -24,8 +24,10 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 
-import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
-import { withItemContents } from '../support/room-action-content';
+import {
+  authorTestTraitsAndRequiredItems,
+  withItemContents,
+} from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,

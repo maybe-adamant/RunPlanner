@@ -17,7 +17,7 @@ import {
   openRoomTab,
 } from '@planner-test/support/occurrence-workbench';
 import { hintOf } from '@planner-test/support/hints';
-import { withItemContent } from '@planner-test/support/room-action-content';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 afterEach(cleanup);
 

@@ -22,7 +22,7 @@ import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { withItemContent } from '../../support/room-action-content';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 describe('starting reward ownership', () => {
   it('evaluates the route-owned reward before entry identity and reports its absence on the route', () => {

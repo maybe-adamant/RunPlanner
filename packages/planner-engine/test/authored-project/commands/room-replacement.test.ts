@@ -34,8 +34,10 @@ import {
   surfaceProject,
 } from '../support/configured-projects';
 import { nLocalOccurrenceIds } from '../support/n-local-occurrences';
-import { withItemContents } from '../../support/room-action-content';
-import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
+import {
+  scheduleTestRequiredRoomActions,
+  withItemContents,
+} from '@run-planner/test-fixtures/shared';
 
 function sourceDecision(project: ReturnType<typeof surfaceProject>, biome = oBiome) {
   const topology = project.route.biomes.find(

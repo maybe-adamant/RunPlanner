@@ -35,7 +35,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { placeRoomActionsAtChosenIndex } from '../../../src/authored-project/room-actions/chosen-position';
 import { createCompleteNProject } from '../support/complete-n-project';
-import { withItemContent } from '../../support/room-action-content';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 const well = createOccurrenceAddress(
   goldenFBiome,

@@ -21,7 +21,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { ordinaryRoutePosition } from '../../../support/route-position';
 
-import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { replaceTestShopOfferActions, withItemContent } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNOPProject,
   pBiome,
@@ -30,7 +30,6 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { evaluateProgressiveBiomeAssembly } from '../../../../src/simulation/progressive/biome';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../../src/authored-project/defaults';
-import { withItemContent } from '../../../support/room-action-content';
 
 const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 

@@ -46,6 +46,8 @@ import {
   collectTestRequiredItems,
   replaceTestShopOfferActions,
   settleTestEdit,
+  withItemContent,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGAnomalyProject,
@@ -98,7 +100,6 @@ import {
 
 import { getAllByHint, getByHint, hintOf, queryByHint } from '@planner-test/support/hints';
 import { dialogFinding } from '@planner-test/support/editor-dialog';
-import { withItemContent, withItemContents } from '@planner-test/support/room-action-content';
 
 afterEach(() => {
   cleanup();

@@ -37,8 +37,8 @@ import {
   procTestSeaStar,
   replaceTestPlacedItem,
   supportedTraitOffer,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
-import { withItemContents } from '../support/room-action-content';
 import {
   assembleExecutionProduct,
   compileExecutionPlan,

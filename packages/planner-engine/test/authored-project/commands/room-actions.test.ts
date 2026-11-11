@@ -61,11 +61,12 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 
 import { createCompleteNProject } from '../support/complete-n-project';
-import { withItemContent, withItemContents } from '../../support/room-action-content';
 import { gBiome, gProject } from '../support/configured-projects';
 import {
   replaceTestRoomActionOrder,
   scheduleTestRequiredRoomActions,
+  withItemContent,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 
 const biome = createBiomeAddress('Underworld', 'F');

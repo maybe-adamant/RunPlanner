@@ -21,10 +21,9 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
-import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { replaceTestShopOfferActions, withItemContent } from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { createCompleteFGProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
-import { withItemContent } from '../../support/room-action-content';
 
 import {
   fBiome,

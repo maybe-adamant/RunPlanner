@@ -42,9 +42,9 @@ import {
 import {
   collectTestRequiredItems,
   scheduleTestRequiredRoomActions,
+  withItemContent,
 } from '@run-planner/test-fixtures/shared';
 import { reachedFrontier } from '../support/reward-frontier';
-import { withItemContent } from '../support/room-action-content';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBiome,

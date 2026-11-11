@@ -47,7 +47,7 @@ import {
   selectProjectEvaluation,
   selectProjectHistory,
 } from '@planner/state/store';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, withItemContent } from '@run-planner/test-fixtures/shared';
 import {
   createEchoGoldIAnvilDuplicateProject,
   createCompleteFGProject,
@@ -66,7 +66,6 @@ import {
   echoShopRows,
   swapEchoAway,
 } from '@planner-test/support/removed-actions';
-import { withItemContent } from '@planner-test/support/room-action-content';
 
 function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>

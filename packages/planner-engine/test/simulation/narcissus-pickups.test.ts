@@ -52,6 +52,8 @@ import {
   authorTestArtificerReplacement,
   editTestRoomActionOrder,
   placeTestLivePickupsAtSite,
+  withItemContent,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
@@ -66,7 +68,6 @@ import { settlePickupAcquisitionSite } from '../../src/simulation/rewards/acquis
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import type { SimulationState } from '../../src/simulation/state/model';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
-import { withItemContent, withItemContents } from '../support/room-action-content';
 import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { baseFacts } from './shop-trait-purchase-support';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';

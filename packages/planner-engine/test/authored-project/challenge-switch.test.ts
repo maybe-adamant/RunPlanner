@@ -17,7 +17,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { withItemContents } from '../support/room-action-content';
+import { withItemContents } from '@run-planner/test-fixtures/shared';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- encoded JSON edited before strict decoding
 type RawJson = any;

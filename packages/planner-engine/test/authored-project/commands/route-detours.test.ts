@@ -40,7 +40,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import { withItemContent } from '../../support/room-action-content';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 function biomeTopology(
   project: ReturnType<typeof fProject>,

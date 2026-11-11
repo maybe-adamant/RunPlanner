@@ -4,8 +4,8 @@ import {
   purchaseTestHermesShrineOffer,
   settleTestEdit,
   supportedTraitOffer,
+  withItemContent,
 } from '@run-planner/test-fixtures/shared';
-import { withItemContent } from '../../support/room-action-content';
 import { describe, expect, it } from 'vitest';
 import {
   loadSurfaceNOPQProject,

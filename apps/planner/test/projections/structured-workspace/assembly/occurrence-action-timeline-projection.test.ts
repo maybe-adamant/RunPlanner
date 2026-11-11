@@ -34,12 +34,11 @@ import {
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { describe, expect, it } from 'vitest';
-import { withItemContent } from '@planner-test/support/room-action-content';
 import type {
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceRoomLifecycleTimelineEntry,
 } from '@planner/projections/structured-workspace';
-import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
+import { collectTestRequiredItems, withItemContent } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import { galleryCases } from '@planner-test/support/gallery/cases';
 import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';

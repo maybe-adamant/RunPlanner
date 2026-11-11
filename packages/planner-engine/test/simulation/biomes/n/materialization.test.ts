@@ -17,8 +17,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { materializeBiomePrefix, simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
-import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
-import { withItemContents } from '../../../support/room-action-content';
+import { collectTestRequiredItems, withItemContents } from '@run-planner/test-fixtures/shared';
 
 import {
   loadSurfaceNEntryFrontierProject,

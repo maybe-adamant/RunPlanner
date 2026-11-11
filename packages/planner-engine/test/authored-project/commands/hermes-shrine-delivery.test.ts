@@ -4,6 +4,8 @@ import {
   purchaseTestHermesShrineOffer,
   testHermesShrinePurchaseAction,
   testHermesShrineRushAction,
+  withItemContent,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -54,7 +56,6 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { createEnteredNLocalProject, nLocalOccurrenceId } from '../support/complete-n-project';
 import { withRoomOrder } from '../../support/live-actions';
-import { withItemContent, withItemContents } from '../../support/room-action-content';
 import { assessGeneratedPickupPlacement } from '../../../src/authored-project/generated-pickup-placement';
 import { assessRoomActionPlacements } from '../../../src/simulation';
 import { initializeTestRewardBranch } from '../../support/arcana-fear';

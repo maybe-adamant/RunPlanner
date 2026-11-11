@@ -69,8 +69,9 @@ import {
   supportedTraitOffer,
   testHermesShrinePurchaseAction,
   testHermesShrineRushAction,
+  withItemContent,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
-import { withItemContent, withItemContents } from '../support/room-action-content';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   assessHermesShrineInventory,

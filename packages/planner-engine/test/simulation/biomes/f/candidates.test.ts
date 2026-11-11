@@ -42,8 +42,8 @@ import {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   settleTestEdit,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
-import { withItemContents } from '../../../support/room-action-content';
 import {
   createCompleteFGProject,
   createFMidshopUnresolvedBlindBoxBeforePomProject,

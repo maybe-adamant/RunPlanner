@@ -41,6 +41,7 @@ import {
   authorLegalTraitOffers,
   authorTestTraitsAndRequiredItems,
   hubVisitActions,
+  withItemContent,
 } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
@@ -61,7 +62,6 @@ import {
 } from '@run-planner/test-fixtures/surface';
 
 import { createCompleteNProject } from '../support/complete-n-project';
-import { withItemContent } from '../../support/room-action-content';
 import { nBiome } from '../support/configured-projects';
 
 const nCombatId = createOccurrenceId('round-trip-n-combat02');

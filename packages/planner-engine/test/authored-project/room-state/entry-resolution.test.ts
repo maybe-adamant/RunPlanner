@@ -20,7 +20,7 @@ import {
   roomActionKey,
 } from '@run-planner/engine/authored-project';
 import { selectedPickupProducers } from '../../../src/authored-project/acquisition/pickup-producers';
-import { withItemContent } from '../../support/room-action-content';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 function room(gameName: string) {
   const declaration = catalog.rooms.byKey[gameName];

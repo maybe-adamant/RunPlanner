@@ -20,7 +20,7 @@ import {
   freshFileHBiome,
   freshFileHIntroId,
 } from '@run-planner/test-fixtures/fresh-file';
-import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
+import { collectTestRequiredItems, withItemContents } from '@run-planner/test-fixtures/shared';
 import { erisGiftDropped } from '../../src/simulation/rewards/biome/lifecycle-transitions/eris-interacted';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
@@ -28,7 +28,6 @@ import { createTraitHistoryState } from '../../src/simulation/traits';
 import { recordFixedAcquisitionTraitGrant } from '../../src/simulation/traits/offers';
 import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { reachedFrontier } from '../support/reward-frontier';
-import { withItemContents } from '../support/room-action-content';
 
 let cached: ProjectDocument | undefined;
 const freshRoute = () => (cached ??= createFreshFileRouteProject());

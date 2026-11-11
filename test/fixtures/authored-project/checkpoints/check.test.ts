@@ -2,13 +2,14 @@ import { readdirSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from 'n
 import { join, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { withItemContent } from '../item-content';
 import {
   applyProjectCommand,
   createBiomeAddress,
   createRouteAddress,
   decodeProjectDocument,
   encodeProjectDocument,
-  roomActionDomainForOccurrence,
+  createOccurrenceAddress,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { routeResourceAuthoring, simulateProject } from '@run-planner/engine/simulation';
@@ -222,23 +223,25 @@ describe('authored-project checkpoint integrity', () => {
               (occurrence) => occurrence.occurrenceId === oOccurrenceIds.devotion,
             )
         : undefined;
-    // The placed delivery is the engine's live reference to it, item content included.
-    const delivery = roomActionDomainForOccurrence(
-      saved,
-      catalog,
-      createBiomeAddress('Surface', 'O'),
-      oOccurrenceIds.devotion,
-    )?.domain.activeReferences.find(
+    // The placed delivery carries the content the engine records for its item.
+    const delivery = host?.roomActions.order.find(
       (reference) =>
         reference.kind === 'interactAcquisitionEntry' &&
         reference.siteKey === 'hermesShrineDelivery',
     );
+    if (delivery === undefined) throw new Error('the O Shrine delivery is not placed');
     expect(delivery).toMatchObject({
       entryKey: expect.stringContaining('initial%3AsecondLeft'),
       encounterPhaseKey: 'Encounter',
       content: expect.any(Array),
     });
-    expect(host?.roomActions.order).toContainEqual(delivery);
+    expect(delivery).toEqual(
+      withItemContent(
+        saved,
+        createOccurrenceAddress(createBiomeAddress('Surface', 'O'), oOccurrenceIds.devotion),
+        delivery,
+      ),
+    );
   });
 
   it('keeps the reached N side-room Shrine source separate from its unplaced later host delivery', () => {

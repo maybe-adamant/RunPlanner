@@ -27,7 +27,7 @@ import {
   candidateBiomeRooms,
 } from '../../../src/simulation/candidates/evaluated-biome';
 import { withArcana } from '../../support/rerolls';
-import { withItemContent } from '../../support/room-action-content';
+import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 const f = createBiomeAddress('Underworld', 'F');
 const at = (biome: typeof f, id: string) => createOccurrenceAddress(biome, createOccurrenceId(id));

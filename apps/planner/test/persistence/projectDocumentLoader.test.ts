@@ -23,7 +23,6 @@ import { liftProjectDocument as migrate102To103 } from '@planner/persistence/pro
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
-import { withItemContents } from '@planner-test/support/room-action-content';
 import {
   createGoldenFGHIProject,
   echoGoldIPrebossShopId,
@@ -36,6 +35,7 @@ import {
   legacyRareEpicHexTrees,
   legacySchema99Body,
   legacySchema100Body,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNProject,

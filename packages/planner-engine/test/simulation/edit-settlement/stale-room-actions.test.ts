@@ -59,6 +59,7 @@ import {
   authorLegalPomResolutions,
   collectTestRequiredItems,
   scheduleTestRequiredRoomActions,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 
 import { createAuthoringSession } from '../../../src/simulation/authoring/session';
@@ -68,7 +69,6 @@ import {
   withGoldenUnderworldJudgments,
 } from '../../support/rerolls';
 import { underworldGLockedDoorsProject } from '../../execution-plan/support/plan-end-switch-fixtures';
-import { withItemContents } from '../../support/room-action-content';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
 const settle = (project: ProjectDocument, command: ProjectCommand) =>

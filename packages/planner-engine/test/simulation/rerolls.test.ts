@@ -53,8 +53,7 @@ import {
   withJudgment,
   withGuessedRerolledScreens,
 } from '../support/rerolls';
-import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
-import { withItemContent } from '../support/room-action-content';
+import { collectTestRequiredItems, withItemContent } from '@run-planner/test-fixtures/shared';
 
 const f = createBiomeAddress('Underworld', 'F');
 const source = 'golden-f-b2-e1';

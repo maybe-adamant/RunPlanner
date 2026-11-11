@@ -28,7 +28,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { withArcana, withJudgment } from '../support/rerolls';
-import { withItemContent, withItemContents } from '../support/room-action-content';
+import { withItemContent, withItemContents } from '@run-planner/test-fixtures/shared';
 
 const f = createBiomeAddress('Underworld', 'F');
 const postboss = 'golden-f-preboss-shop:postboss';

@@ -4,7 +4,6 @@ import {
   applyProjectHistoryCommand,
   resolveRoutePosition,
   assembleRoomActionDomain,
-  roomActionDomainForOccurrence,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
@@ -30,6 +29,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { withItemContent } from '../item-content';
 
 import { loadSurfaceNNaturalSelectionCheckpoint } from './surface';
 import {
@@ -180,14 +180,11 @@ describe('run-impacting trait checkpoint workflows', () => {
       siteKey,
       entryKey: 'smallGold',
     });
-    // Taking Buried Treasure took its small Gold, as the engine's live reference to it.
-    const placedSource = roomActionDomainForOccurrence(
+    // Taking Buried Treasure took its small Gold, with the content the engine records for it.
+    const placedSource = withItemContent(
       project,
-      catalog,
-      nBiome,
-      nOccurrenceIds.preHub,
-    )?.domain.activeReferences.find(
-      (reference) => roomActionKey(reference) === roomActionKey(sourceReference),
+      createOccurrenceAddress(nBiome, nOccurrenceIds.preHub),
+      sourceReference,
     );
     expect(placedSource).toMatchObject({ content: expect.any(Array) });
     expect(occurrence().roomActions.order).toContainEqual(placedSource);

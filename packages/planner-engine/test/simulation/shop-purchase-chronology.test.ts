@@ -47,7 +47,7 @@ import {
   echoGoldIPrebossShopId,
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
-import { withItemContent, withItemContents } from '../support/room-action-content';
+import { withItemContent, withItemContents } from '@run-planner/test-fixtures/shared';
 
 describe('Gold Gold Gold Shop pickups', () => {
   it.each([

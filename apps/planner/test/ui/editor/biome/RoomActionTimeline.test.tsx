@@ -66,6 +66,7 @@ import {
   authorTestTraitsAndRequiredItems,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
+  withItemContents,
 } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
@@ -86,7 +87,6 @@ import {
 } from '@planner-test/support/occurrence-workbench';
 
 import { hintOf, queryByHint } from '@planner-test/support/hints';
-import { withItemContents } from '@planner-test/support/room-action-content';
 
 /** An element's text as read aloud: icons by their names, tags after a separator. */
 /** The references as the engine records them for the room's items in the view's present project. */
