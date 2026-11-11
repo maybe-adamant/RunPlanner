@@ -562,12 +562,12 @@ describe('F candidate support', () => {
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === fMidshopPomShopId)
         ?.roomActions.order,
     ).toEqual(
-      expect.arrayContaining(
-        withItemContents(ordered, site.owner, [
+      expect.arrayContaining([
+        ...withItemContents(ordered, site.owner, [
           { kind: 'interactShopOffer', offerKey: 'Boon' },
           { kind: 'interactShopOffer', offerKey: 'Minor' },
         ]),
-      ),
+      ]),
     );
     const evaluation = simulateProject(catalog, ordered);
     expect(evaluation.findings.map((finding) => finding.code)).toContain('traitOfferMissing');

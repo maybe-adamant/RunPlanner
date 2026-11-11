@@ -1424,8 +1424,8 @@ describe('Hermes Shrine Travel Deal generation', () => {
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(host),
     );
     expect(bothRushedHost?.roomActionRoster.rows.map((row) => row.reference)).toEqual(
-      expect.arrayContaining(
-        withItemContents(bothRushed, host, [
+      expect.arrayContaining([
+        ...withItemContents(bothRushed, host, [
           {
             kind: 'interactAcquisitionEntry',
             siteKey: 'hermesShrineDelivery',
@@ -1437,7 +1437,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
             entryKey: hermesShrineDeliveryEntryKey(host, 'initial:secondLeft'),
           },
         ]),
-      ),
+      ]),
     );
     expect(
       bothRushedHost?.roomActionRoster.rows
