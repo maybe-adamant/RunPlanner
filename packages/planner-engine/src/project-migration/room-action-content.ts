@@ -1,6 +1,14 @@
 import type { Catalog } from '../catalog-schema';
 import { createBiomeAddress } from '../authored-project/addresses';
-import type { RoomActionReference, RoomOccurrence } from '../authored-project/model';
+import { decodeProjectDocument } from '../authored-project/codec';
+import type {
+  OccurrenceId,
+  ProjectDocument,
+  RoomActionReference,
+  RoomOccurrence,
+} from '../authored-project/model';
+import { roomActionDomainForOccurrence } from '../authored-project/room-actions/defaults';
+import { roomActionKey } from '../authored-project/room-actions/key';
 import {
   roomActionCarriesContent,
   roomActionContentSource,
@@ -25,11 +33,41 @@ function rewardHasRole(catalog: Catalog, rewardType: string, role: unknown): boo
   );
 }
 
+/**
+ * The keys of a room's active actions, as the decoded plan's action domain
+ * names them; undefined when the plan does not decode yet, where a role check
+ * stands in.
+ */
+type ActiveKeys = (biomeKey: string, occurrenceId: string) => ReadonlySet<string> | undefined;
+
+function activeKeysOf(raw: unknown, catalog: Catalog, routeKey: string): ActiveKeys {
+  let document: ProjectDocument | undefined;
+  try {
+    document = decodeProjectDocument(raw, catalog);
+  } catch {
+    // Strict decoding reports a malformed plan after the lift; it stamps by role meanwhile.
+    return () => undefined;
+  }
+  const decoded = document;
+  return (biomeKey, occurrenceId) =>
+    new Set(
+      (
+        roomActionDomainForOccurrence(
+          decoded,
+          catalog,
+          createBiomeAddress(routeKey, biomeKey),
+          occurrenceId as OccurrenceId,
+        )?.domain.contributions ?? []
+      ).flatMap((entry) => (entry.kind === 'action' ? [roomActionKey(entry.reference)] : [])),
+    );
+}
+
 /** The content a stored row gets, or none when its item or its own shape cannot say. */
 function storedContent(
   source: RoomActionContentSource,
   occurrence: RawRecord,
   action: RawRecord,
+  active: ReadonlySet<string> | undefined,
 ): readonly string[] | undefined {
   try {
     const content = roomActionItemContent(
@@ -44,7 +82,11 @@ function storedContent(
       !content.every((value) => typeof value === 'string' && value.trim().length > 0)
     )
       return undefined;
-    // A stale pickup of a role its reward never has acts on no item and records none.
+    // A stale row acts on no item of its room and records none.
+    if (active !== undefined)
+      return active.has(roomActionKey(action as unknown as RoomActionReference))
+        ? content
+        : undefined;
     return action.kind === 'interactIncomingReward' &&
       !rewardHasRole(source.catalog, content[1]!, action.acquisitionRole)
       ? undefined
@@ -54,11 +96,17 @@ function storedContent(
   }
 }
 
-function stampOccurrence(source: RoomActionContentSource, occurrence: unknown): unknown {
+function stampOccurrence(
+  source: RoomActionContentSource,
+  occurrence: unknown,
+  activeKeys: (occurrenceId: string) => ReadonlySet<string> | undefined,
+): unknown {
   const record = rawRecord(occurrence);
   const roomActions = rawRecord(record?.roomActions);
   const order = roomActions?.order;
   if (record === undefined || roomActions === undefined || !Array.isArray(order)) return occurrence;
+  const active =
+    typeof record.occurrenceId === 'string' ? activeKeys(record.occurrenceId) : undefined;
   return {
     ...record,
     roomActions: {
@@ -71,7 +119,7 @@ function stampOccurrence(source: RoomActionContentSource, occurrence: unknown): 
           !roomActionCarriesContent(action as unknown as RoomActionReference)
         )
           return entry;
-        const content = storedContent(source, record, action);
+        const content = storedContent(source, record, action, active);
         return content === undefined ? entry : { ...action, content: [...content] };
       }),
     },
@@ -83,6 +131,7 @@ function stampBiome(
   routeKey: string,
   biome: unknown,
   routeStart: { readonly startingReward: unknown } | undefined,
+  activeKeys: ActiveKeys,
 ): unknown {
   const record = rawRecord(biome);
   const topology = rawRecord(record?.topology);
@@ -115,14 +164,19 @@ function stampBiome(
     ...record,
     topology: {
       ...topology,
-      occurrences: occurrences.map((occurrence) => stampOccurrence(source, occurrence)),
+      occurrences: occurrences.map((occurrence) =>
+        stampOccurrence(source, occurrence, (occurrenceId) =>
+          activeKeys(String(record.biomeKey), occurrenceId),
+        ),
+      ),
     },
   };
 }
 
 /**
  * Schema 103 rows record the content of the item they act on. Every stored
- * pickup, purchase and sale row without it gets its item's current content
+ * pickup, purchase and sale row without it that its room still offers (a stale
+ * row acts on no item) gets its item's current content
  * (a door, cage or wheel reward's press is `native` or the last reroll's id);
  * a row whose item is not observed yet stays without, to be stamped once it
  * is. Lossless, and a row already carrying content is kept; the catalog
@@ -142,6 +196,7 @@ export function stampRoomActionItemContent(raw: unknown, catalog: Catalog): unkn
   const routeKey = route.routeKey;
   const itinerary = Array.isArray(route.itineraryBiomeKeys) ? route.itineraryBiomeKeys : [];
   const loadout = rawRecord(route.loadout);
+  const activeKeys = activeKeysOf(raw, catalog, routeKey);
   return {
     ...document,
     route: {
@@ -154,6 +209,7 @@ export function stampRoomActionItemContent(raw: unknown, catalog: Catalog): unkn
           routeKey,
           biome,
           first ? { startingReward: loadout?.startingReward ?? null } : undefined,
+          activeKeys,
         );
       }),
     },
