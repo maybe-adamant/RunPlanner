@@ -3,6 +3,7 @@ import type {
   EncounterDefinition,
   EncounterEnvelope,
   EncounterSet,
+  EncounterSlotBinding,
   RoomDeclaration,
   RoomLifecycleEffectKind,
   RoomLifecycleProfile,
@@ -10,7 +11,7 @@ import type {
   RoomLifecycleStep,
   TraitDeclaration,
 } from '@run-planner/engine/catalog-schema';
-import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
+import type { RewardKernelCatalog, RewardProducerBinding } from '@run-planner/engine/reward-kernel';
 import type {
   ProducerLifecyclePointKey,
   ProducerLifecycleProfileDeclaration,
@@ -291,11 +292,109 @@ export function normalizeRoomLifecycleProfiles(
   );
 }
 
+interface SlotGateInput {
+  readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;
+  readonly encounterSets: CatalogCollection<EncounterSet>;
+  readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;
+  readonly rewards: RewardKernelCatalog;
+  readonly runStartReward: { readonly incomingReward: RewardProducerBinding };
+}
+
+/** Every encounter a binding can run, its rivals and shadow included. */
+function boundEncounterKeys(
+  input: SlotGateInput,
+  binding: EncounterSlotBinding,
+): readonly string[] {
+  return binding.kind === 'set'
+    ? (input.encounterSets.byKey[binding.encounterSetKey]?.encounterDefinitionKeys ?? [])
+    : [
+        binding.encounterDefinitionKey,
+        ...(binding.rivalsEncounterDefinitionKey === undefined
+          ? []
+          : [binding.rivalsEncounterDefinitionKey]),
+        ...(binding.shadowEncounterDefinitionKey === undefined
+          ? []
+          : [binding.shadowEncounterDefinitionKey]),
+      ];
+}
+
+/** The acquisition roles of the reward a room's encounter can wait on; a route start's is the run-start reward. */
+function producerRoles(input: SlotGateInput, reward: RewardProducerBinding): ReadonlySet<string> {
+  const binding = reward.kind === 'none' ? input.runStartReward.incomingReward : reward;
+  if (binding.kind === 'none') return new Set();
+  return new Set(
+    (
+      input.rewards.producerLifecycles.byKey[binding.producerLifecycleKey]?.rewardTypes.values ?? []
+    ).flatMap((rewardType) => rewardType.acquisitionLifecycle.map((role) => role.role)),
+  );
+}
+
+/**
+ * A wheel slot's encounters start by wheel use and a cage slot's by cage use;
+ * no other slot does, and a pickup gate names a role of the room's reward.
+ * Route overlays and entry rules bind slots too.
+ */
+function validateSlotGates(input: SlotGateInput, room: RoomDeclaration): void {
+  const envelope = input.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
+  const variants: readonly {
+    readonly path: string;
+    readonly reward: RewardProducerBinding;
+    readonly bindings: readonly EncounterSlotBinding[];
+  }[] = [
+    {
+      path: `rooms.${room.gameName}.encounterSlotBindings`,
+      reward: room.incomingReward,
+      bindings: room.encounterSlotBindings,
+    },
+    ...(room.routeOverlays ?? []).map((overlay, index) => ({
+      path: `rooms.${room.gameName}.routeOverlays[${index}].encounterSlotBindings`,
+      reward: overlay.incomingReward,
+      bindings: overlay.encounterSlotBindings,
+    })),
+    ...(room.entryContextualEncounterRules ?? []).map((rule, index) => ({
+      path: `rooms.${room.gameName}.entryContextualEncounterRules[${index}]`,
+      reward: room.incomingReward,
+      bindings: [
+        {
+          slotKey: 'Encounter',
+          kind: 'fixed' as const,
+          encounterDefinitionKey: rule.encounterDefinitionKey,
+        },
+      ],
+    })),
+  ];
+  for (const variant of variants)
+    for (const binding of variant.bindings) {
+      const path = `${variant.path}.${binding.slotKey}`;
+      const slot = envelope?.slots.find((candidate) => candidate.key === binding.slotKey);
+      if (slot === undefined) fail(path, `unknown slot ${binding.slotKey}`);
+      const expected =
+        slot.rewardAttachment?.kind === 'rewardWheel'
+          ? 'wheelUse'
+          : slot.rewardAttachment?.kind === 'localReward'
+            ? 'cageActivation'
+            : undefined;
+      for (const key of boundEncounterKeys(input, binding)) {
+        const gate = input.encounterDefinitions.byKey[key]?.script.gate;
+        if (gate === undefined) continue;
+        if (
+          expected === undefined
+            ? gate.kind === 'wheelUse' || gate.kind === 'cageActivation'
+            : gate.kind !== expected
+        )
+          fail(path, `${key} gate ${gate.kind} does not fit the slot`);
+        if (gate.kind === 'useItemRole' && !producerRoles(input, variant.reward).has(gate.role))
+          fail(path, `${key} gate role ${gate.role} is not a role of the room's reward`);
+      }
+    }
+}
+
 export function validateLifecycleBindings(input: {
   readonly rooms: CatalogCollection<RoomDeclaration>;
   readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;
   readonly encounterSets: CatalogCollection<EncounterSet>;
   readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;
+  readonly runStartReward: { readonly incomingReward: RewardProducerBinding };
   readonly profiles: CatalogCollection<RoomLifecycleProfile>;
   readonly traits: CatalogCollection<TraitDeclaration>;
   readonly rewards: RewardKernelCatalog;
@@ -319,36 +418,7 @@ export function validateLifecycleBindings(input: {
     if (!profile.producer.lifecycleProfileKeys.includes(incomingReward.producerLifecycleKey))
       fail(path, 'does not admit the incoming producer lifecycle');
   };
-  // A wheel slot's encounters start by wheel use and a cage slot's by cage use; no other slot does.
-  for (const room of input.rooms.values) {
-    const envelope = input.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
-    for (const binding of room.encounterSlotBindings) {
-      const slot = envelope?.slots.find((candidate) => candidate.key === binding.slotKey);
-      const expected =
-        slot?.rewardAttachment?.kind === 'rewardWheel'
-          ? 'wheelUse'
-          : slot?.rewardAttachment?.kind === 'localReward'
-            ? 'cageActivation'
-            : undefined;
-      const keys =
-        binding.kind === 'set'
-          ? (input.encounterSets.byKey[binding.encounterSetKey]?.encounterDefinitionKeys ?? [])
-          : [binding.encounterDefinitionKey];
-      for (const key of keys) {
-        const gate = input.encounterDefinitions.byKey[key]?.script.gate.kind;
-        if (
-          gate !== undefined &&
-          (expected === undefined
-            ? gate === 'wheelUse' || gate === 'cageActivation'
-            : gate !== expected)
-        )
-          fail(
-            `rooms.${room.gameName}.encounterSlotBindings.${binding.slotKey}`,
-            `${key} gate ${gate} does not fit the slot`,
-          );
-      }
-    }
-  }
+  for (const room of input.rooms.values) validateSlotGates(input, room);
   for (const room of input.rooms.values) {
     validateRoomBinding(
       room,

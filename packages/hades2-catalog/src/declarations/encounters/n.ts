@@ -14,8 +14,8 @@ import { ephyraMoneyStore, godCombatMoneyStore, minibossMoneyStore } from './mon
 export const nEncounterDefinitions = [
   {
     key: 'OpeningGeneratedN',
-    // Combat starts once its room reward is used (SpawnRoomReward WaitUntilPickup, BeginOpeningEncounter, EncounterData_Opening.lua:20, 28-29).
-    script: { gate: { kind: 'useItemRole', role: 'self' }, delayedStart: true },
+    // Combat starts once its room reward is used (SpawnRoomReward WaitUntilPickup, BeginOpeningEncounter, EncounterData_Opening.lua:28-29).
+    script: { gate: { kind: 'useItemRole', role: 'self' } },
     moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.OpeningGeneratedN],
     label: 'Opening combat',
@@ -46,8 +46,6 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'ArtemisCombatN',
-    // DelayedStart, EncounterData_Artemis.lua:27.
-    script: { delayedStart: true },
     moneyStore: godCombatMoneyStore,
     customization: [generatedEncounterChoices.ArtemisCombatN],
     label: 'Artemis combat',
@@ -81,8 +79,6 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatN',
-    // DelayedStart, EncounterData_Heracles.lua:34.
-    script: { delayedStart: true },
     killBounty: heraclesKillBounty,
     moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.HeraclesCombatN],
@@ -192,8 +188,6 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'BossPolyphemus01',
-    // DelayedStart, EncounterData_Boss.lua:925.
-    script: { delayedStart: true },
     bossRoster: polyphemusRoster,
     label: 'Polyphemus',
     kind: 'boss',
@@ -202,8 +196,6 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'BossPolyphemus02',
-    // DelayedStart, EncounterData_Boss.lua:952.
-    script: { delayedStart: true },
     bossRoster: polyphemusRoster,
     label: 'Polyphemus',
     kind: 'boss',

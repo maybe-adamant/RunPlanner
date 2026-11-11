@@ -60,8 +60,6 @@ function hIntroduction(
 export const hEncounterDefinitions = [
   {
     key: 'GeneratedH_Passive',
-    // DelayedStart, EncounterData_Generated.lua:147.
-    script: { delayedStart: true },
     moneyStore: fieldsPassiveMoneyStore,
     customization: [generatedEncounterChoices.GeneratedH_Passive],
     label: 'Passive combat',
@@ -71,8 +69,6 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_PassiveSmall',
-    // DelayedStart, EncounterData_Generated.lua:147.
-    script: { delayedStart: true },
     moneyStore: fieldsPassiveMoneyStore,
     customization: [generatedEncounterChoices.GeneratedH_PassiveSmall],
     label: 'Small passive combat',
@@ -195,8 +191,8 @@ export const hEncounterDefinitions = [
   ),
   {
     key: 'NemesisCombatH',
-    // Using its Fields cage starts it (StartFieldsEncounter, EncounterLogic.lua:2890, 2939); DelayedStart, EncounterData_Nemesis.lua:33.
-    script: { gate: { kind: 'cageActivation' }, delayedStart: true },
+    // Using its Fields cage starts it (StartFieldsEncounter, EncounterLogic.lua:2890, 2939).
+    script: { gate: { kind: 'cageActivation' } },
     moneyStore: godCombatMoneyStore,
     // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
     // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).
@@ -274,8 +270,6 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'BossInfestedCerberus01',
-    // DelayedStart, EncounterData_Boss.lua:10.
-    script: { delayedStart: true },
     bossRoster: cerberusRoster,
     label: 'Cerberus',
     kind: 'boss',
@@ -328,8 +322,6 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'BossInfestedCerberus02',
-    // DelayedStart, EncounterData_Boss.lua:10.
-    script: { delayedStart: true },
     bossRoster: cerberusRivalsRoster,
     label: 'Cerberus',
     kind: 'boss',

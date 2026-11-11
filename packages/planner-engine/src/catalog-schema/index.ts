@@ -532,8 +532,6 @@ export type EncounterOutcomeKind = 'aetosWave' | 'gorgon' | 'goldBet' | 'nemesis
  */
 export interface EncounterScript {
   readonly gate: EncounterGate;
-  /** `DelayedStart`: combat waits for the encounter's own start step. */
-  readonly delayedStart: boolean;
   /** The event list ends by waiting for every required object (`WaitForNextEncounterReady`). */
   readonly waitReadyBeforeEnd: boolean;
   /** `SkipShipsEncounterSetup`: the phase opens no wheels. */

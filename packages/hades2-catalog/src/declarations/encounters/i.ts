@@ -97,8 +97,8 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'DevotionTestI',
-    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:33, 52; EncounterLogic.lua:1729).
-    script: { gate: { kind: 'useItemRole', role: 'chosenSource' }, delayedStart: true },
+    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:52; EncounterLogic.lua:1729).
+    script: { gate: { kind: 'useItemRole', role: 'chosenSource' } },
     moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestI],
     label: 'Devotion combat',
@@ -108,8 +108,6 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'NemesisCombatI',
-    // DelayedStart, EncounterData_Nemesis.lua:33.
-    script: { delayedStart: true },
     moneyStore: godCombatMoneyStore,
     // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
     // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).
@@ -175,8 +173,6 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'BossChronos01',
-    // DelayedStart, EncounterData_Boss.lua:715.
-    script: { delayedStart: true },
     bossRoster: chronosRoster,
     label: 'Chronos',
     kind: 'boss',
@@ -203,8 +199,6 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'BossChronos02',
-    // DelayedStart, EncounterData_Boss.lua:715.
-    script: { delayedStart: true },
     bossRoster: chronosRivalsRoster,
     label: 'Chronos',
     kind: 'boss',

@@ -50,8 +50,6 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'MiniBossBrute',
-    // DelayedStart, EncounterData_MiniBoss.lua:884.
-    script: { delayedStart: true },
     bossRoster: bruteRoster,
     moneyStore: summitMoneyStore,
     label: 'Brute',
@@ -63,8 +61,6 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'MiniBossStalker',
-    // DelayedStart, EncounterData_MiniBoss.lua:938.
-    script: { delayedStart: true },
     bossRoster: stalkerRoster,
     label: 'Stalker',
     kind: 'miniboss',
@@ -75,8 +71,6 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'BossTyphonTail01',
-    // DelayedStart, EncounterData_MiniBoss.lua:1042.
-    script: { delayedStart: true },
     bossRoster: typhonTailRoster,
     moneyStore: summitMoneyStore,
     label: 'Typhon tail',
@@ -88,8 +82,6 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'BossTyphonEye01',
-    // DelayedStart, EncounterData_MiniBoss.lua:1017.
-    script: { delayedStart: true },
     bossRoster: typhonEyeRoster,
     label: 'Typhon eye',
     kind: 'miniboss',
@@ -99,8 +91,6 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'BossTyphonHead01',
-    // DelayedStart, EncounterData_Boss.lua:1017.
-    script: { delayedStart: true },
     bossRoster: typhonRoster,
     label: 'Typhon',
     kind: 'boss',
@@ -133,8 +123,6 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'BossTyphonHead02',
-    // DelayedStart, EncounterData_Boss.lua:1017.
-    script: { delayedStart: true },
     bossRoster: typhonRivalsRoster,
     label: 'Typhon',
     kind: 'boss',

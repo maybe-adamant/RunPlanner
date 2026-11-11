@@ -2063,7 +2063,6 @@ describe('encounter scripts', () => {
     ).toEqual({
       GeneratedF: {
         gate: { kind: 'none' },
-        delayedStart: false,
         waitReadyBeforeEnd: false,
         skipShipsEncounterSetup: false,
         endsByInteraction: false,
@@ -2071,7 +2070,6 @@ describe('encounter scripts', () => {
       },
       GeneratedO_Intro01: {
         gate: { kind: 'none' },
-        delayedStart: false,
         waitReadyBeforeEnd: true,
         skipShipsEncounterSetup: true,
         endsByInteraction: false,
@@ -2079,7 +2077,6 @@ describe('encounter scripts', () => {
       },
       HeraclesCombatO: {
         gate: { kind: 'none' },
-        delayedStart: true,
         waitReadyBeforeEnd: true,
         skipShipsEncounterSetup: true,
         endsByInteraction: false,
@@ -2087,7 +2084,6 @@ describe('encounter scripts', () => {
       },
       NemesisRandomEvent: {
         gate: { kind: 'none' },
-        delayedStart: false,
         waitReadyBeforeEnd: false,
         skipShipsEncounterSetup: false,
         endsByInteraction: true,

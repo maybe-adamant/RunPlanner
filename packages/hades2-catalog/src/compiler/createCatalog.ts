@@ -154,6 +154,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     encounterEnvelopes,
     encounterSets,
     encounterDefinitions,
+    runStartReward,
     profiles: roomLifecycleProfiles,
     traits: traitCatalog.traits,
     rewards,

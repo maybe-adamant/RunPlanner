@@ -26,8 +26,8 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'GeneratedO',
-    // ShipsEncounterSetup waits for the wheel choice, then starts combat; the list ends in WaitForNextEncounterReady (EncounterData_Generated.lua:826, 830; EncounterSets.lua:476, 490; RoomLogic.lua:1442-1446).
-    script: { gate: { kind: 'wheelUse' }, delayedStart: true, waitReadyBeforeEnd: true },
+    // ShipsEncounterSetup waits for the wheel choice, then starts combat; the list ends in WaitForNextEncounterReady (EncounterData_Generated.lua:826; EncounterSets.lua:476, 490; RoomLogic.lua:1442-1446).
+    script: { gate: { kind: 'wheelUse' }, waitReadyBeforeEnd: true },
     moneyStore: thessalyMoneyStore,
     customization: [generatedEncounterChoices.GeneratedO],
     label: 'Ship combat',
@@ -38,8 +38,8 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatO',
-    // Skips its wheel setup and starts at BeginHeraclesEncounter; the list ends in WaitForNextEncounterReady (EncounterData_Heracles.lua:34, 118-120; EncounterSets.lua:593).
-    script: { delayedStart: true, waitReadyBeforeEnd: true, skipShipsEncounterSetup: true },
+    // Skips its wheel setup and starts at BeginHeraclesEncounter; the list ends in WaitForNextEncounterReady (EncounterData_Heracles.lua:118-120; EncounterSets.lua:593).
+    script: { waitReadyBeforeEnd: true, skipShipsEncounterSetup: true },
     killBounty: heraclesKillBounty,
     moneyStore: thessalyMoneyStore,
     customization: [generatedEncounterChoices.HeraclesCombatO],
@@ -79,8 +79,8 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'IcarusCombatO',
-    // ShipsEncounterSetup waits for the wheel choice, then starts combat; the list ends in WaitForNextEncounterReady (EncounterData_Icarus.lua:30, 80; EncounterSets.lua:559, 566; RoomLogic.lua:1442-1446).
-    script: { gate: { kind: 'wheelUse' }, delayedStart: true, waitReadyBeforeEnd: true },
+    // ShipsEncounterSetup waits for the wheel choice, then starts combat; the list ends in WaitForNextEncounterReady (EncounterData_Icarus.lua:80; EncounterSets.lua:559, 566; RoomLogic.lua:1442-1446).
+    script: { gate: { kind: 'wheelUse' }, waitReadyBeforeEnd: true },
     moneyStore: godCombatMoneyStore,
     customization: [generatedEncounterChoices.IcarusCombatO],
     label: 'Icarus combat',
@@ -140,8 +140,8 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'DevotionTestO',
-    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:33, 52; EncounterLogic.lua:1729).
-    script: { gate: { kind: 'useItemRole', role: 'chosenSource' }, delayedStart: true },
+    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:52; EncounterLogic.lua:1729).
+    script: { gate: { kind: 'useItemRole', role: 'chosenSource' } },
     moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestO],
     label: 'Devotion combat',
@@ -151,8 +151,6 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'BossEris01',
-    // DelayedStart, EncounterData_Boss.lua:757.
-    script: { delayedStart: true },
     bossRoster: erisRoster,
     label: 'Eris',
     kind: 'boss',
@@ -187,8 +185,6 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'BossEris02',
-    // DelayedStart, EncounterData_Boss.lua:757.
-    script: { delayedStart: true },
     bossRoster: erisRoster,
     label: 'Eris',
     kind: 'boss',

@@ -103,6 +103,102 @@ describe('room lifecycle catalog', () => {
     ).toThrow(/GeneratedF gate wheelUse does not fit the slot/);
   });
 
+  describe('slot gates', () => {
+    const withGate = (key: string, gate: unknown) =>
+      declarations.encounterDefinitions.map((definition) =>
+        definition.key === key ? { ...definition, script: { gate } } : definition,
+      );
+    const withRoom = (gameName: string, change: (room: Record<string, unknown>) => object) =>
+      declarations.rooms.map((room) =>
+        room.gameName === gameName ? change(room as unknown as Record<string, unknown>) : room,
+      );
+    const rejects = (overrides: object, error: CatalogContractError) =>
+      expect(() => createCatalog(malformedCatalog({ ...declarations, ...overrides }))).toThrowError(
+        error,
+      );
+
+    it('checks a route overlay binding', () => {
+      rejects(
+        { encounterDefinitions: withGate('BridgeShop', { kind: 'wheelUse' }) },
+        new CatalogContractError(
+          'rooms.H_Bridge01.routeOverlays[0].encounterSlotBindings.Encounter',
+          'BridgeShop gate wheelUse does not fit the slot',
+        ),
+      );
+    });
+
+    it('checks an entry rule binding', () => {
+      rejects(
+        { encounterDefinitions: withGate('OpeningEmpty', { kind: 'cageActivation' }) },
+        new CatalogContractError(
+          'rooms.F_Opening01.entryContextualEncounterRules[0].Encounter',
+          'OpeningEmpty gate cageActivation does not fit the slot',
+        ),
+      );
+    });
+
+    it('checks a rivals encounter', () => {
+      rejects(
+        { encounterDefinitions: withGate('BossPrometheus02', { kind: 'wheelUse' }) },
+        new CatalogContractError(
+          'rooms.P_Boss01.encounterSlotBindings.Encounter',
+          'BossPrometheus02 gate wheelUse does not fit the slot',
+        ),
+      );
+    });
+
+    // Room normalization rejects these before the gates are checked.
+    it.each([
+      [
+        'a base binding',
+        'F_Combat01',
+        (room: Record<string, unknown>) => ({
+          ...room,
+          encounterSlotBindings: [
+            { slotKey: 'Mystery', kind: 'fixed', encounterDefinitionKey: 'GeneratedF' },
+          ],
+        }),
+      ],
+      [
+        'a route overlay binding',
+        'H_Bridge01',
+        (room: Record<string, unknown>) => ({
+          ...room,
+          routeOverlays: (room.routeOverlays as Record<string, unknown>[]).map((overlay) => ({
+            ...overlay,
+            encounterSlotBindings: [
+              { slotKey: 'Mystery', kind: 'fixed', encounterDefinitionKey: 'BridgeShop' },
+            ],
+          })),
+        }),
+      ],
+      [
+        'an entry rule',
+        'G_Intro',
+        (room: Record<string, unknown>) => ({
+          ...room,
+          entryContextualEncounterRules: [
+            { routeKey: 'Dream', position: 'first', encounterDefinitionKey: 'OpeningEmpty' },
+          ],
+        }),
+      ],
+    ])('rejects %s for a slot the envelope lacks', (_name, gameName, change) => {
+      expect(() =>
+        createCatalog(malformedCatalog({ ...declarations, rooms: withRoom(gameName, change) })),
+      ).toThrowError(/slot|Encounter/);
+    });
+
+    it("rejects a pickup gate on a role the room's reward lacks", () => {
+      rejects(
+        { encounterDefinitions: withGate('GeneratedF', { kind: 'useItemRole', role: 'mystery' }) },
+        new CatalogContractError(
+          'rooms.F_Combat01.encounterSlotBindings.Encounter',
+          "GeneratedF gate role mystery is not a role of the room's reward",
+        ),
+      );
+    });
+  });
+
   it('rejects unknown step, effect and producer references', () => {
     const base = declarations.roomLifecycleProfiles[0];
     if (base === undefined) {

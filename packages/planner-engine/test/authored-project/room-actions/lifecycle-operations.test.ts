@@ -1,6 +1,11 @@
 import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createProjectDocument,
+  createStartingRewardAddress,
   resolveEntryDeclaration,
   resolveEntryRoom,
+  roomActionDomainForOccurrence,
   roomLifecycleOperations,
   type ResolvedRoutePosition,
 } from '@run-planner/engine/authored-project';
@@ -71,6 +76,36 @@ describe('room lifecycle operations', () => {
         'exitRoom',
       ],
     });
+  });
+
+  it("waits for a Dream start's reward only after its empty encounter", () => {
+    let project = createProjectDocument(catalog, {
+      projectId: 'dream-p-start',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['P', 'Q', 'F', 'N'],
+      configuredBiomeCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Dream'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    const topology = project.route.biomes[0]?.topology;
+    if (topology === null || topology === undefined) throw new Error('missing Dream P topology');
+    const start = roomActionDomainForOccurrence(
+      project,
+      catalog,
+      createBiomeAddress('Dream', 'P'),
+      topology.startOccurrenceId,
+    );
+    expect(start?.occurrence.gameName).toBe('P_Intro');
+    expect(
+      start?.domain.contributions.flatMap((entry) =>
+        entry.kind === 'action' && entry.reference.kind === 'interactIncomingReward'
+          ? [entry.window]
+          : [],
+      ),
+    ).toEqual([{ kind: 'standard', phase: 'afterCombat' }]);
   });
 
   it("composes a fresh file's first rooms from their route-resolved encounters", () => {

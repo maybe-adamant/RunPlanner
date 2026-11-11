@@ -83,8 +83,8 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'DevotionTestG',
-    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:33, 52; EncounterLogic.lua:1729).
-    script: { gate: { kind: 'useItemRole', role: 'chosenSource' }, delayedStart: true },
+    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:52; EncounterLogic.lua:1729).
+    script: { gate: { kind: 'useItemRole', role: 'chosenSource' } },
     moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestG],
     label: 'Devotion combat',
@@ -94,8 +94,6 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'ArtemisCombatG',
-    // DelayedStart, EncounterData_Artemis.lua:27.
-    script: { delayedStart: true },
     moneyStore: godCombatMoneyStore,
     customization: [generatedEncounterChoices.ArtemisCombatG],
     label: 'Artemis combat',
@@ -161,8 +159,6 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'NemesisCombatG',
-    // DelayedStart, EncounterData_Nemesis.lua:33.
-    script: { delayedStart: true },
     moneyStore: godCombatMoneyStore,
     // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
     // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).
@@ -217,8 +213,6 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'MiniBossCrawler',
-    // DelayedStart, EncounterData_MiniBoss.lua:237.
-    script: { delayedStart: true },
     bossRoster: crawlerRoster,
     label: 'Crawler',
     kind: 'miniboss',
@@ -238,8 +232,6 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'BossScylla01',
-    // DelayedStart, EncounterData_Boss.lua:775.
-    script: { delayedStart: true },
     bossRoster: scyllaRoster,
     label: 'Scylla',
     kind: 'boss',
@@ -268,8 +260,6 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'BossScylla02',
-    // DelayedStart, EncounterData_Boss.lua:817.
-    script: { delayedStart: true },
     bossRoster: scyllaRivalsRoster,
     label: 'Scylla',
     kind: 'boss',

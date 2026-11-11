@@ -28,12 +28,7 @@ const encounterPhaseKinds = new Set<EncounterPhaseKind>([
   'story',
 ]);
 
-const scriptFlags = [
-  'delayedStart',
-  'waitReadyBeforeEnd',
-  'skipShipsEncounterSetup',
-  'endsByInteraction',
-] as const;
+const scriptFlags = ['waitReadyBeforeEnd', 'skipShipsEncounterSetup'] as const;
 
 function normalizeGate(raw: EncounterGate | undefined, path: string): EncounterGate {
   if (raw === undefined) return Object.freeze({ kind: 'none' });
@@ -51,9 +46,11 @@ function normalizeGate(raw: EncounterGate | undefined, path: string): EncounterG
 }
 
 /**
- * The declared script, with the outcomes the encounter can host from its own
- * declared facts: Aetos waves, a Gorgon trigger it does not block, a Nemesis
- * bet or her random event.
+ * The declared script, with the facts that follow from the encounter's other
+ * declarations: the outcomes it hosts (Aetos waves, a Gorgon trigger it does
+ * not block, a Nemesis bet or her random event), and that her random event
+ * ends when she is answered, which clears her required object and unlocks the
+ * exits (EncounterData_Story.lua:1966, InteractLogic.lua:366-376, 605-611).
  */
 function normalizeScript(raw: RawEncounterDefinitionDeclaration, path: string): EncounterScript {
   const script = raw.script ?? {};
@@ -68,10 +65,9 @@ function normalizeScript(raw: RawEncounterDefinitionDeclaration, path: string): 
   ];
   return Object.freeze({
     gate: normalizeGate(script.gate, `${path}.gate`),
-    delayedStart: script.delayedStart === true,
     waitReadyBeforeEnd: script.waitReadyBeforeEnd === true,
     skipShipsEncounterSetup: script.skipShipsEncounterSetup === true,
-    endsByInteraction: script.endsByInteraction === true,
+    endsByInteraction: raw.nemesisRandomEvent !== undefined,
     hostsOutcome: Object.freeze(hostsOutcome),
   });
 }

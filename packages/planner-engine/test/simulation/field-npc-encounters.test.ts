@@ -250,7 +250,6 @@ function historyProbeCatalog(roomWindow = 5): Catalog {
     kind: 'combat',
     script: Object.freeze({
       gate: Object.freeze({ kind: 'none' as const }),
-      delayedStart: false,
       waitReadyBeforeEnd: false,
       skipShipsEncounterSetup: false,
       endsByInteraction: false,

@@ -53,11 +53,8 @@ export interface RawEncounterEnvelopeDeclaration {
  */
 export interface RawEncounterScriptDeclaration {
   readonly gate?: EncounterGate;
-  /** For minibosses, the intro step that then starts combat is not yet traced in the scripts. */
-  readonly delayedStart?: true;
   readonly waitReadyBeforeEnd?: true;
   readonly skipShipsEncounterSetup?: true;
-  readonly endsByInteraction?: true;
 }
 
 export interface RawEncounterDefinitionDeclaration {

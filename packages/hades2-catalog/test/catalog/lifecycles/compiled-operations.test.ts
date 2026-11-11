@@ -97,12 +97,39 @@ function roomText(room: RoomDeclaration): string {
   ].join(' | ');
 }
 
-/** The occurrence states a room's profile selection reads. */
-const selectionVariants = [
+/**
+ * Fixture: the occurrence states `authoredRoomLifecycleProfileKey` distinguishes
+ * (Clockwork goal, Preboss shop); every room is selected under each.
+ */
+const occurrenceStateFixtures = [
   { state: { kind: 'none' } },
   { state: { kind: 'counted', reward: null } },
   { state: { kind: 'shop' } },
 ].map((occurrence) => occurrence as unknown as RoomOccurrence);
+
+/**
+ * Fixture: profiles the Ephyra hub materialization assigns outside the
+ * template selection (simulation/materialization/hub.ts): the Hub room, and a
+ * side room on a local visit.
+ */
+function hubMaterializationProfileKeys(room: RoomDeclaration): readonly string[] {
+  if (room.mode.kind === 'derived' && room.mode.classification === 'hub') return ['EphyraHubRoom'];
+  if (room.mode.kind === 'authored' && room.mode.templateKey === 'EphyraSideRoom')
+    return [authoredRoomLifecycleProfileKey(room, occurrenceStateFixtures[0]!, 'ephyraSide')];
+  return [];
+}
+
+/**
+ * Fixture: route positions. A route's first biome (Dream: each initial biome)
+ * holds the route start; every biome start room is also a later entry.
+ */
+function routeStartBiomeKeys(route: (typeof catalog.routes.values)[number]): ReadonlySet<string> {
+  return new Set(
+    route.dreamItinerary === undefined
+      ? route.biomeKeys.slice(0, 1)
+      : route.dreamItinerary.initialBiomeKeys,
+  );
+}
 
 interface Selection {
   readonly profileKey: string;
@@ -110,64 +137,54 @@ interface Selection {
   readonly label: string;
 }
 
-/** Every route's realized room declarations with each profile they can select. */
+function requireRoom(gameName: string): RoomDeclaration {
+  const room = catalog.rooms.byKey[gameName];
+  if (room === undefined) throw new Error(`unknown room ${gameName}`);
+  return room;
+}
+
+/**
+ * Every route's realized room declarations with each profile production
+ * selects for them: a biome start room through `resolveEntryRoom`, every other
+ * room through `authoredRoomLifecycleProfileKey` and the hub fixture.
+ */
 function selections(): readonly Selection[] {
   const result: Selection[] = [];
   for (const route of catalog.routes.values) {
-    const biomeKeys =
-      route.dreamItinerary === undefined
-        ? route.biomeKeys
-        : [
-            ...route.dreamItinerary.initialBiomeKeys,
-            ...route.dreamItinerary.laterAdditionalBiomeKeys,
-          ];
-    const firstBiomeKeys = new Set(
-      route.dreamItinerary === undefined
-        ? route.biomeKeys.slice(0, 1)
-        : route.dreamItinerary.initialBiomeKeys,
-    );
-    const startRooms = new Map(
-      biomeKeys.flatMap((biomeKey) => {
-        const layout = catalog.biomeLayouts.byKey[biomeKey];
-        return layout === undefined
-          ? []
-          : biomeStartRoomGameNames(resolveBiomeStart(catalog, route.key, layout)).map(
-              (gameName) => [gameName, firstBiomeKeys.has(biomeKey)] as const,
-            );
-      }),
-    );
-    for (const room of catalog.rooms.values) {
-      // A biome's start room is always its entry, resolved below.
-      if (startRooms.has(room.gameName)) continue;
-      const routed = resolveEntryDeclaration(room, { routeKey: route.key, isFirst: false });
-      const keys = new Set(
-        selectionVariants.map((occurrence) => authoredRoomLifecycleProfileKey(routed, occurrence)),
-      );
-      if (routed.mode.kind === 'authored' && routed.mode.templateKey === 'EphyraSideRoom')
-        keys.add('EphyraSideRoom');
-      if (routed.mode.kind === 'derived' && routed.mode.classification === 'hub')
-        keys.add('EphyraHubRoom');
-      for (const profileKey of keys)
-        result.push({ profileKey, declaration: routed, label: `${route.key} ${room.gameName}` });
-    }
-    for (const [gameName, first] of startRooms) {
-      const room = catalog.rooms.byKey[gameName];
-      if (room === undefined) continue;
-      for (const isFirst of first ? [true, false] : [false]) {
+    const startBiomes = routeStartBiomeKeys(route);
+    const startRooms = new Map<string, boolean>();
+    for (const layout of catalog.biomeLayouts.values)
+      for (const gameName of biomeStartRoomGameNames(resolveBiomeStart(catalog, route.key, layout)))
+        startRooms.set(
+          gameName,
+          startRooms.get(gameName) === true || startBiomes.has(layout.biomeKey),
+        );
+    for (const [gameName, routeStart] of startRooms)
+      for (const isFirst of routeStart ? [true, false] : [false]) {
         const entry = resolveEntryRoom(
           catalog,
-          room,
+          requireRoom(gameName),
           { routeKey: route.key, isFirst } as ResolvedRoutePosition,
           true,
         );
         result.push({
           profileKey:
             entry.lifecycleProfileKey ??
-            authoredRoomLifecycleProfileKey(entry.declaration, selectionVariants[0]!),
+            authoredRoomLifecycleProfileKey(entry.declaration, occurrenceStateFixtures[0]!),
           declaration: entry.declaration,
           label: `${route.key} ${gameName}${isFirst ? ' start' : ''}`,
         });
       }
+    for (const room of catalog.rooms.values.filter((room) => !startRooms.has(room.gameName))) {
+      const routed = resolveEntryDeclaration(room, { routeKey: route.key, isFirst: false });
+      const keys = new Set([
+        ...occurrenceStateFixtures.map((occurrence) =>
+          authoredRoomLifecycleProfileKey(routed, occurrence),
+        ),
+        ...hubMaterializationProfileKeys(routed),
+      ]);
+      for (const profileKey of keys)
+        result.push({ profileKey, declaration: routed, label: `${route.key} ${room.gameName}` });
     }
   }
   return result;
@@ -185,7 +202,7 @@ function profileOperations(
   for (const selection of all) {
     if (selection.profileKey !== profile.key) continue;
     if (!profile.encounterEnvelopeKeys.includes(selection.declaration.encounterEnvelopeKey))
-      continue;
+      throw new Error(`${selection.label} selects ${profile.key} for its envelope`);
     const operations = roomLifecycleOperations(catalog, profile, selection.declaration).map(
       operationText,
     );
@@ -277,5 +294,47 @@ describe('compiled room lifecycle operations', () => {
       parser: 'json',
     });
     await expect(text).toMatchFileSnapshot(snapshotPath);
+  });
+
+  // Chronology cuts read a room's operation positions from its declared room
+  // (progressive/selected-cut.ts); every routed variant must keep them.
+  it("keep every room-level step at one position across a profile's routed variants", () => {
+    const all = selections();
+    for (const profile of catalog.roomLifecycleProfiles.values) {
+      const positions = all
+        .filter((selection) => selection.profileKey === profile.key)
+        .map((selection) => {
+          const operations = roomLifecycleOperations(catalog, profile, selection.declaration);
+          return {
+            label: selection.label,
+            count: operations.length,
+            outgoing: operations.findIndex(
+              (operation) => operation.kind === 'generateOutgoingBatch',
+            ),
+            overviewEnd: operations.findIndex(
+              (operation) =>
+                operation.kind !== 'prepareRoom' &&
+                operation.kind !== 'materializeOfferPoint' &&
+                operation.kind !== 'enterRoom',
+            ),
+            steps: operations.flatMap((operation, index) =>
+              operation.kind === 'advanceProducer' ||
+              operation.kind === 'startEncounter' ||
+              operation.kind === 'completeEncounter' ||
+              operation.kind === 'runEncounterSequence' ||
+              operation.kind === 'runRewardEncounterSequence'
+                ? []
+                : [`${index} ${operation.kind}`],
+            ),
+          };
+        });
+      const [first, ...rest] = positions;
+      if (first === undefined) throw new Error(`${profile.key} is selected by no room`);
+      for (const variant of rest)
+        expect(
+          { ...variant, label: first.label },
+          `${variant.label} places the ${profile.key} steps`,
+        ).toEqual(first);
+    }
   });
 });
