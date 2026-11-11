@@ -1223,6 +1223,7 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.acquisitionSites.${siteKey}.pickupEntries.${SEA_STAR_DUPLICATE_ENTRY_KEY}`,
         'does not match the Sea Star retained-or-fresh duplicate shape',
       );
+    // The proc is an observation: its duplicate lies live until its owner picks it up.
     const expectedAction = Object.freeze({
       kind: 'interactAcquisitionEntry' as const,
       siteKey,
@@ -1231,11 +1232,11 @@ export function decodeRoomOccurrence(input: {
     if (
       roomActions.order.filter(
         (reference) => roomActionKey(reference) === roomActionKey(expectedAction),
-      ).length !== 1
+      ).length > 1
     )
       failProjectDocument(
         `${rawOccurrence.path}.roomActions.order`,
-        'must retain the exact Sea Star duplicate action',
+        'holds at most one Sea Star duplicate action',
       );
   }
   return decodedOccurrence;

@@ -20,7 +20,7 @@ import {
   type NemesisRandomEventAssessment,
 } from '@run-planner/engine/simulation';
 
-import { collectTestRequiredItems } from '../shared';
+import { collectTestRequiredItems, procTestSeaStar } from '../shared';
 import {
   goldenFBiome,
   goldenFOccurrenceId,
@@ -200,11 +200,12 @@ export function createNemesisPomCheckpoint(): ProjectDocument {
 
 /** Accepted Pom/Hammer event result with its Sea Star duplicate child authored on the ordinary pickup path. */
 export function createNemesisPomSeaStarCheckpoint(): ProjectDocument {
-  return applyProjectCommand(createNemesisPomCheckpoint(), catalog, {
-    kind: 'ReplaceSeaStarResult',
-    acquisition: nemesisPomResultAcquisition(),
-    procced: true,
-  });
+  return procTestSeaStar(
+    createNemesisPomCheckpoint(),
+    catalog,
+    createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
+    nemesisPomResultAcquisition(),
+  );
 }
 
 export function nemesisPomResultAcquisition() {

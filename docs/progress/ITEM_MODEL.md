@@ -109,6 +109,12 @@ Changes Draft and the run import must absorb; each slice compiles them only.
   purchase row and the rush on the rush row. The rush settles with its
   purchase, so the walk and the wire are unchanged. Import: `commerce.ts`
   rushes with the new command; `action-order.ts` reads the rush row.
+- **Sea Star proc as an observation** (no schema). A procced
+  `ReplaceSeaStarResult` only adds the duplicate's site; its pickup lies live
+  for the owner (or Collect all required) to place, and clearing the proc
+  still removes a placed pickup. Import: `features.ts` `placeSeaStarDuplicate` must
+  place the duplicate's pickup itself (an `InsertRoomAction` right after its
+  source) instead of moving a row the command no longer appends.
 
 ## Inventory (summary of existence-vs-interaction)
 

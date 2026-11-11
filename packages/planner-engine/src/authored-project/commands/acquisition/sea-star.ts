@@ -82,20 +82,16 @@ export function applySeaStarResultCommand(
   } else {
     delete sites[siteKey];
   }
-  const actions = occurrence.roomActions.order.filter(
-    (action) =>
-      action.kind !== 'interactAcquisitionEntry' ||
-      action.siteKey !== siteKey ||
-      action.entryKey !== SEA_STAR_DUPLICATE_ENTRY_KEY,
-  );
-  if (command.procced)
-    actions.push(
-      Object.freeze({
-        kind: 'interactAcquisitionEntry' as const,
-        siteKey,
-        entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
-      }),
-    );
+  // The proc is an observation: its duplicate lies live for its owner to pick
+  // up, and clearing the proc takes the duplicate's pickup with it.
+  const actions = command.procced
+    ? occurrence.roomActions.order
+    : occurrence.roomActions.order.filter(
+        (action) =>
+          action.kind !== 'interactAcquisitionEntry' ||
+          action.siteKey !== siteKey ||
+          action.entryKey !== SEA_STAR_DUPLICATE_ENTRY_KEY,
+      );
   const withoutSites = { ...occurrence };
   delete withoutSites.acquisitionSites;
   return updateOccurrenceTopology(

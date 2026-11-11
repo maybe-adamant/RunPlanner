@@ -11,6 +11,8 @@ import {
   roomActionDomainForOccurrence,
   roomActionKey,
   scheduleRequiredRoomActions,
+  seaStarDuplicateSiteKey,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
   structurallyActiveOccurrenceIds,
   type AcquisitionRoleAddress,
   type AuthoredRewardState,
@@ -347,4 +349,41 @@ export function scheduleTestRequiredRoomActions(
     }
   }
   return document;
+}
+
+/**
+ * Procs Sea Star on one acquisition and picks up its live duplicate where the
+ * room's actions end, as the owner would.
+ */
+export function procTestSeaStar(
+  initial: ProjectDocument,
+  catalog: Catalog,
+  occurrence: ReturnType<typeof createOccurrenceAddress>,
+  acquisition: AcquisitionRoleAddress,
+): ProjectDocument {
+  const procced = applyProjectCommand(initial, catalog, {
+    kind: 'ReplaceSeaStarResult',
+    acquisition,
+    procced: true,
+  });
+  const reference: RoomActionReference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey: seaStarDuplicateSiteKey(acquisition),
+    entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+  };
+  const order =
+    procced.route.biomes
+      .find((biome) => biome.biomeKey === occurrence.biomeKey)
+      ?.topology?.occurrences.find((room) => room.occurrenceId === occurrence.occurrenceId)
+      ?.roomActions.order ?? [];
+  return applyProjectCommand(procced, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(
+      createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+      occurrence.occurrenceId,
+      roomActionKey(reference),
+    ),
+    reference,
+    index: order.length,
+  });
 }

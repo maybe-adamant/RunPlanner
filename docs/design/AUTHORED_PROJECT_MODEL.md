@@ -820,10 +820,12 @@ unplaced until the owner picks them up, after the source acquisition or in the
 room-exit window for drops that settle there; clocked drops likewise, and a
 whole-route replacement keeps exactly the pickups it carries. Removing or
 replacing the source removes its drops with it. A Sea Star result owns at most one non-recursive duplicate
-entry at its normal source acquisition role; toggling that result adds or
-removes the entry and its ordinary Room Action as one semantic command and one
-undo step. A retained result that becomes inactive remains authored for repair
-but has no active child action. The persisted entry is ordinary
+entry at its normal source acquisition role. The proc is an observation:
+setting it adds the entry, whose duplicate then lies live for its owner to
+pick up through its ordinary Room Action, and clearing it removes the entry and
+any such action, each as one semantic command and one undo step. A retained
+result that becomes inactive remains authored for repair but has no active
+child action. The persisted entry is ordinary
 `AuthoredRewardState`, so no reward-copy tree or second timeline is needed.
 
 A Nemesis random event's site holds her offer as its one `result` entry: the

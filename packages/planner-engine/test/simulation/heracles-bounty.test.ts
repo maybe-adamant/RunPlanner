@@ -34,6 +34,7 @@ import { nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import {
   authorTestTraitsAndRequiredItems,
   editTestRoomActionOrder,
+  procTestSeaStar,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -246,11 +247,19 @@ describe('Heracles’s bounty', () => {
 
   it('pays again for a Sea Star duplicate', () => {
     const project = withHeracles(withSeaStar(loadSurfaceNCheckpoint()));
-    const duplicated = applyProjectCommand(project, catalog, {
+    // The proc only observes the copy: it lies live, required by Doors open, until picked up.
+    const observed = applyProjectCommand(project, catalog, {
       kind: 'ReplaceSeaStarResult',
       acquisition: bountySource,
       procced: true,
     });
+    expect(
+      simulateProjectAssembly(catalog, observed).evaluation.findings.map((finding) => [
+        finding.code,
+        finding.evidence,
+      ]),
+    ).toEqual([['roomActionPlacementRequired', { deadline: 'doorsOpen' }]]);
+    const duplicated = procTestSeaStar(project, catalog, room, bountySource);
     const gold = spending(duplicated);
     const paid = bountyGains(gold);
     expect(paid.map((gain) => [gain.kind, gain.amount?.mean])).toEqual([
