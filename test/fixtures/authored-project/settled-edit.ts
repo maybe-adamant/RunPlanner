@@ -5,6 +5,7 @@ import {
   createOccurrenceId,
   hermesShrineDeliveryEntryKey,
   roomActionKey,
+  semanticAddressKey,
   type HermesShrineGenerationKey,
   type OccurrenceAddress,
   type ProjectCommand,
@@ -59,15 +60,18 @@ function occurrenceOfAddress(address: SemanticAddress): OccurrenceAddress | unde
 /**
  * Collects every required item the plan leaves on the ground, as an owner
  * playing forward would: while the plan has a room's required placement
- * finding, Collect all required runs in the first such room.
+ * finding, Collect all required runs in the first such room that still
+ * collects something.
  */
 export function collectTestRequiredItems(project: ProjectDocument): ProjectDocument {
   let assembly = evaluate(project);
+  // Rooms whose placement finding Collect all required leaves standing on this plan.
+  const settled = new Set<string>();
   for (;;) {
-    const reason = assembly.evaluation.findings.find((finding) =>
-      PLACEMENT_FINDINGS.has(finding.code),
-    );
-    const room = reason === undefined ? undefined : occurrenceOfAddress(reason.origin);
+    const room = assembly.evaluation.findings
+      .filter((finding) => PLACEMENT_FINDINGS.has(finding.code))
+      .map((finding) => occurrenceOfAddress(finding.origin))
+      .find((candidate) => candidate !== undefined && !settled.has(semanticAddressKey(candidate)));
     if (room === undefined) return assembly.project;
     const collected = collectRequiredItems({
       catalog,
@@ -77,7 +81,11 @@ export function collectTestRequiredItems(project: ProjectDocument): ProjectDocum
     });
     if (collected.fault !== undefined)
       throw new Error(`Collect all required faulted at ${collected.fault.key}`);
-    if (collected.commands.length === 0) return collected.assembly.project;
+    if (collected.commands.length === 0) {
+      settled.add(semanticAddressKey(room));
+      continue;
+    }
+    settled.clear();
     assembly = collected.assembly;
   }
 }
