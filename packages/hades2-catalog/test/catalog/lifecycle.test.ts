@@ -48,6 +48,7 @@ describe('room lifecycle catalog', () => {
     expect(catalog.roomLifecycleProfiles.byKey.StandardRewardRoom?.producer).toEqual({
       kind: 'required',
       lifecycleProfileKeys: ['RoomReward'],
+      points: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
     });
     expect(catalog.rooms.byKey.F_Opening01?.lifecycleProfileKey).toBeUndefined();
     expect(catalog.rooms.byKey.N_Opening01?.lifecycleProfileKey).toBeUndefined();
@@ -55,68 +56,93 @@ describe('room lifecycle catalog', () => {
       kind: 'none',
     });
     expect(Object.isFrozen(catalog.roomLifecycleProfiles.values)).toBe(true);
-    expect(
-      Object.isFrozen(catalog.roomLifecycleProfiles.byKey.StandardRewardRoom?.operations),
-    ).toBe(true);
+    expect(Object.isFrozen(catalog.roomLifecycleProfiles.byKey.StandardRewardRoom?.steps)).toBe(
+      true,
+    );
   });
 
-  it('keeps Fields cage encounters on the declaration-owned sequence operation', () => {
-    expect(catalog.roomLifecycleProfiles.byKey.FieldsCombatRoom?.operations).toContainEqual({
-      kind: 'runEncounterSequence',
-      effects: ['recordEncounterStart', 'advanceEncounterDepth', 'recordEncounterCompletion'],
+  it('declares how each envelope runs its encounters', () => {
+    expect(
+      Object.fromEntries(
+        catalog.encounterEnvelopes.values.map((envelope) => [envelope.key, envelope.kind]),
+      ),
+    ).toEqual({
+      EmptyEncounter: 'none',
+      SingleEncounter: 'single',
+      ShipEncounter: 'wheelPhases',
+      PEncounter: 'sequential',
+      FieldsEncounter: 'playerActivatedCages',
     });
   });
 
-  it('rejects unknown operation, effect, producer point, and encounter references', () => {
+  it('rejects an envelope kind its slots do not support', () => {
+    expect(() =>
+      createCatalog(
+        malformedCatalog({
+          ...declarations,
+          encounterEnvelopes: declarations.encounterEnvelopes.map((envelope) =>
+            envelope.key === 'PEncounter' ? { ...envelope, kind: 'wheelPhases' } : envelope,
+          ),
+        }),
+      ),
+    ).toThrow(/wheelPhases does not fit the envelope's slots/);
+  });
+
+  it('rejects an encounter whose gate does not fit its slot', () => {
+    expect(() =>
+      createCatalog(
+        malformedCatalog({
+          ...declarations,
+          encounterDefinitions: declarations.encounterDefinitions.map((definition) =>
+            definition.key === 'GeneratedF'
+              ? { ...definition, script: { gate: { kind: 'wheelUse' } } }
+              : definition,
+          ),
+        }),
+      ),
+    ).toThrow(/GeneratedF gate wheelUse does not fit the slot/);
+  });
+
+  it('rejects unknown step, effect and producer references', () => {
     const base = declarations.roomLifecycleProfiles[0];
     if (base === undefined) {
       throw new Error('standard lifecycle declaration is missing');
     }
     const cases = [
       {
-        profile: {
-          ...base,
-          operations: [{ kind: 'mystery', effects: [] }, ...base.operations.slice(1)],
-        },
+        profile: { ...base, steps: [{ kind: 'mystery', effects: [] }, ...base.steps.slice(1)] },
         error: new CatalogContractError(
-          'roomLifecycleProfiles[0].operations[0].kind',
-          'unknown lifecycle operation mystery',
+          'roomLifecycleProfiles[0].steps[0].kind',
+          'unknown lifecycle step mystery',
         ),
       },
       {
         profile: {
           ...base,
-          operations: [{ kind: 'prepareRoom', effects: ['mystery'] }, ...base.operations.slice(1)],
+          steps: [{ kind: 'prepareRoom', effects: ['mystery'] }, ...base.steps.slice(1)],
         },
         error: new CatalogContractError(
-          'roomLifecycleProfiles[0].operations[0].effects[0]',
+          'roomLifecycleProfiles[0].steps[0].effects[0]',
           'unknown lifecycle effect mystery',
         ),
       },
       {
         profile: {
           ...base,
-          operations: [
-            { kind: 'prepareRoom', effects: ['recordAppearance'] },
-            ...base.operations.slice(1),
-          ],
+          steps: [{ kind: 'prepareRoom', effects: ['recordAppearance'] }, ...base.steps.slice(1)],
         },
         error: new CatalogContractError(
-          'roomLifecycleProfiles[0].operations[0].effects',
+          'roomLifecycleProfiles[0].steps[0].effects',
           'prepareRoom requires effects recordPreparation, recordEncounter',
         ),
       },
       {
         profile: {
           ...base,
-          operations: base.operations.map((operation) =>
-            operation.kind === 'advanceProducer' && operation.point === 'beforeCombat'
-              ? { ...operation, point: 'mystery' }
-              : operation,
-          ),
+          producer: { ...base.producer, points: ['beforeCombat', 'mystery'] },
         },
         error: new CatalogContractError(
-          'roomLifecycleProfiles[0].operations[2].point',
+          'roomLifecycleProfiles[0].producer.points[1]',
           'unknown producer lifecycle point mystery',
         ),
       },
@@ -130,11 +156,21 @@ describe('room lifecycle catalog', () => {
       {
         profile: {
           ...base,
-          producer: { kind: 'required', lifecycleProfileKeys: ['MissingProducer'] },
+          producer: { kind: 'required', lifecycleProfileKeys: ['MissingProducer'], points: [] },
         },
         error: new CatalogContractError(
           'roomLifecycleProfiles[0].producer.lifecycleProfileKeys[0]',
           'unknown producer lifecycle MissingProducer',
+        ),
+      },
+      {
+        profile: {
+          ...base,
+          steps: base.steps.filter((step) => step.kind !== 'runEncounterScripts'),
+        },
+        error: new CatalogContractError(
+          'roomLifecycleProfiles[0].steps',
+          'producer points require the encounter scripts step',
         ),
       },
     ] as const;
@@ -154,30 +190,29 @@ describe('room lifecycle catalog', () => {
     }
   });
 
-  it('rejects outgoing generation while an encounter phase is active', () => {
+  it('rejects outgoing generation before the encounter scripts', () => {
     const base = declarations.roomLifecycleProfiles[0];
-    const outgoing = base?.operations.find(
-      (operation) => operation.kind === 'generateOutgoingBatch',
-    );
+    const outgoing = base?.steps.find((step) => step.kind === 'generateOutgoingBatch');
     if (base === undefined || outgoing === undefined) {
       throw new Error('standard lifecycle declaration is incomplete');
     }
+    const steps = base.steps.filter((step) => step !== outgoing);
+    const scripts = steps.findIndex((step) => step.kind === 'runEncounterScripts');
 
     expect(() =>
-      createCatalog({
-        ...declarations,
-        roomLifecycleProfiles: [
-          {
-            ...base,
-            operations: [...base.operations.slice(0, 4), outgoing, ...base.operations.slice(4)],
-          },
-          ...declarations.roomLifecycleProfiles.slice(1),
-        ],
-      }),
+      createCatalog(
+        malformedCatalog({
+          ...declarations,
+          roomLifecycleProfiles: [
+            { ...base, steps: [...steps.slice(0, scripts), outgoing, ...steps.slice(scripts)] },
+            ...declarations.roomLifecycleProfiles.slice(1),
+          ],
+        }),
+      ),
     ).toThrowError(
       new CatalogContractError(
-        'roomLifecycleProfiles[0].operations[4].kind',
-        'generateOutgoingBatch cannot interrupt an active encounter phase',
+        `roomLifecycleProfiles[0].steps[${scripts}].kind`,
+        'generateOutgoingBatch follows the encounter scripts',
       ),
     );
   });
@@ -190,65 +225,34 @@ describe('room lifecycle catalog', () => {
       throw new Error('World Shop lifecycle declaration is missing');
     }
     const profileIndex = declarations.roomLifecycleProfiles.indexOf(shopProfile);
-    const settlementIndex = shopProfile.operations.findIndex(
-      (operation) => operation.kind === 'settleAcquisitionPoint',
+    const settlementIndex = shopProfile.steps.findIndex(
+      (step) => step.kind === 'settleAcquisitionPoint',
     );
-    if (settlementIndex < 0) {
-      throw new Error('World Shop lifecycle declaration has no acquisition-point settlement');
-    }
-    const settlement = shopProfile.operations[settlementIndex];
+    const settlement = shopProfile.steps[settlementIndex];
     if (settlement?.kind !== 'settleAcquisitionPoint') {
       throw new Error('World Shop lifecycle settlement is malformed');
     }
-    const operations = [...shopProfile.operations];
-    operations.splice(settlementIndex + 1, 0, settlement);
+    const steps = [...shopProfile.steps];
+    steps.splice(settlementIndex + 1, 0, settlement);
 
     expect(() =>
       createCatalog(
         malformedCatalog({
           ...declarations,
           roomLifecycleProfiles: declarations.roomLifecycleProfiles.map((profile) =>
-            profile.key === shopProfile.key ? { ...profile, operations } : profile,
+            profile.key === shopProfile.key ? { ...profile, steps } : profile,
           ),
         }),
       ),
     ).toThrowError(
       new CatalogContractError(
-        `roomLifecycleProfiles[${profileIndex}].operations[${settlementIndex + 1}].point`,
+        `roomLifecycleProfiles[${profileIndex}].steps[${settlementIndex + 1}].point`,
         'duplicates acquisition point roomExit',
       ),
     );
   });
 
-  it('rejects reward encounter sequences without a reward-wheel slot', () => {
-    const shipProfile = declarations.roomLifecycleProfiles.find(
-      (profile) => profile.key === 'ShipCombatRoom',
-    );
-    if (shipProfile === undefined) {
-      throw new Error('Ship combat lifecycle declaration is missing');
-    }
-    const profileIndex = declarations.roomLifecycleProfiles.indexOf(shipProfile);
-
-    expect(() =>
-      createCatalog(
-        malformedCatalog({
-          ...declarations,
-          roomLifecycleProfiles: declarations.roomLifecycleProfiles.map((profile) =>
-            profile.key === 'ShipCombatRoom'
-              ? { ...profile, encounterEnvelopeKeys: ['PEncounter'] }
-              : profile,
-          ),
-        }),
-      ),
-    ).toThrowError(
-      new CatalogContractError(
-        `roomLifecycleProfiles[${profileIndex}].encounterEnvelopeKeys[0]`,
-        'PEncounter must expose a reward-wheel slot for runRewardEncounterSequence',
-      ),
-    );
-  });
-
-  it('rejects required-object timing outside the room-entry and exit-unlock boundary', () => {
+  it('rejects required-object timing outside the room-entry and encounter boundary', () => {
     const base = declarations.roomLifecycleProfiles.find(
       (profile) => profile.key === 'EphyraMainRoom',
     );
@@ -256,45 +260,32 @@ describe('room lifecycle catalog', () => {
       throw new Error('Ephyra main lifecycle declaration is missing');
     }
     const profileIndex = declarations.roomLifecycleProfiles.indexOf(base);
-    const spawnIndex = base.operations.findIndex(
-      (operation) => operation.kind === 'spawnRequiredObjects',
-    );
-    const beforeCombatIndex = base.operations.findIndex(
-      (operation) => operation.kind === 'advanceProducer' && operation.point === 'beforeCombat',
-    );
-    const completionIndex = base.operations.findIndex(
-      (operation) => operation.kind === 'completeRequiredObjects',
-    );
-    const outgoingIndex = base.operations.findIndex(
-      (operation) => operation.kind === 'generateOutgoingBatch',
-    );
-    if (spawnIndex < 0 || beforeCombatIndex < 0 || completionIndex < 0 || outgoingIndex < 0) {
+    const indexOf = (kind: string) => base.steps.findIndex((step) => step.kind === kind);
+    const spawnIndex = indexOf('spawnRequiredObjects');
+    const scriptsIndex = indexOf('runEncounterScripts');
+    const completionIndex = indexOf('completeRequiredObjects');
+    const outgoingIndex = indexOf('generateOutgoingBatch');
+    if (spawnIndex < 0 || scriptsIndex < 0 || completionIndex < 0 || outgoingIndex < 0) {
       throw new Error('Ephyra main lifecycle declaration is incomplete');
     }
-
-    const lateSpawn = [...base.operations];
-    [lateSpawn[spawnIndex], lateSpawn[beforeCombatIndex]] = [
-      lateSpawn[beforeCombatIndex]!,
-      lateSpawn[spawnIndex]!,
-    ];
-    const prematureOutgoing = [...base.operations];
-    [prematureOutgoing[completionIndex], prematureOutgoing[outgoingIndex]] = [
-      prematureOutgoing[outgoingIndex]!,
-      prematureOutgoing[completionIndex]!,
-    ];
+    const swapped = (left: number, right: number) => {
+      const steps = [...base.steps];
+      [steps[left], steps[right]] = [steps[right]!, steps[left]!];
+      return steps;
+    };
 
     const cases = [
       {
-        operations: lateSpawn,
+        steps: swapped(spawnIndex, scriptsIndex),
         error: new CatalogContractError(
-          `roomLifecycleProfiles[${profileIndex}].operations[${beforeCombatIndex}].kind`,
+          `roomLifecycleProfiles[${profileIndex}].steps[${scriptsIndex}].kind`,
           'required objects must spawn once immediately after room entry',
         ),
       },
       {
-        operations: prematureOutgoing,
+        steps: swapped(completionIndex, outgoingIndex),
         error: new CatalogContractError(
-          `roomLifecycleProfiles[${profileIndex}].operations[${completionIndex}].kind`,
+          `roomLifecycleProfiles[${profileIndex}].steps[${completionIndex}].kind`,
           'generateOutgoingBatch requires completed required objects',
         ),
       },
@@ -306,7 +297,7 @@ describe('room lifecycle catalog', () => {
           malformedCatalog({
             ...declarations,
             roomLifecycleProfiles: declarations.roomLifecycleProfiles.map((profile) =>
-              profile.key === base.key ? { ...base, operations: fixture.operations } : profile,
+              profile.key === base.key ? { ...base, steps: fixture.steps } : profile,
             ),
           }),
         ),

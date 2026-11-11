@@ -1,5 +1,7 @@
 import type {
   EncounterDefinition,
+  EncounterEnvelopeKind,
+  EncounterGate,
   EncounterSlotActivation,
   EncounterPhaseKind,
   GeneratedEncounterSelection,
@@ -40,13 +42,29 @@ export interface RawEncounterEnvelopeSlotDeclaration {
 
 export interface RawEncounterEnvelopeDeclaration {
   readonly key: string;
+  readonly kind: EncounterEnvelopeKind;
   readonly slots: readonly RawEncounterEnvelopeSlotDeclaration[];
+}
+
+/**
+ * The encounter's trigger script, each value cited to its game line. Absent
+ * values are the game default: `StartEncounter` starts combat itself
+ * (RoomLogic.lua:1856-1859) and nothing else applies.
+ */
+export interface RawEncounterScriptDeclaration {
+  readonly gate?: EncounterGate;
+  /** For minibosses, the intro step that then starts combat is not yet traced in the scripts. */
+  readonly delayedStart?: true;
+  readonly waitReadyBeforeEnd?: true;
+  readonly skipShipsEncounterSetup?: true;
+  readonly endsByInteraction?: true;
 }
 
 export interface RawEncounterDefinitionDeclaration {
   readonly key: string;
   readonly label: string;
   readonly kind: EncounterPhaseKind;
+  readonly script?: RawEncounterScriptDeclaration;
   readonly countsEncounterDepth: boolean;
   /** Exact encounter-level policy for advancing delayed Hermes Shrine delivery uses. */
   readonly advancesHermesShrineDeliveryUses?: boolean;

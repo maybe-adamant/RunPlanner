@@ -4,35 +4,15 @@ export const standardRoomLifecycleProfiles = [
   {
     key: 'StandardRewardRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: {
+      kind: 'required',
+      lifecycleProfileKeys: ['RoomReward'],
+      points: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
+    },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'advanceProducer',
-        point: 'beforeCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
-      {
-        kind: 'advanceProducer',
-        point: 'afterCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'advanceProducer',
-        point: 'roomRewardPickup',
-        effects: ['recordProducerPoint'],
-      },
+      { kind: 'runEncounterScripts' },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
         kind: 'commitRoom',
@@ -44,25 +24,15 @@ export const standardRoomLifecycleProfiles = [
   {
     key: 'OpeningRewardRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: {
+      kind: 'required',
+      lifecycleProfileKeys: ['RoomReward'],
+      points: ['roomRewardPickup'],
+    },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'advanceProducer',
-        point: 'roomRewardPickup',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
+      { kind: 'runEncounterScripts' },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
         kind: 'commitRoom',
@@ -74,15 +44,15 @@ export const standardRoomLifecycleProfiles = [
   {
     key: 'OpeningRewardNoEncounterRoom',
     encounterEnvelopeKeys: ['EmptyEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: {
+      kind: 'required',
+      lifecycleProfileKeys: ['RoomReward'],
+      points: ['roomRewardPickup'],
+    },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'advanceProducer',
-        point: 'roomRewardPickup',
-        effects: ['recordProducerPoint'],
-      },
+      { kind: 'runEncounterScripts' },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
         kind: 'commitRoom',
@@ -95,19 +65,10 @@ export const standardRoomLifecycleProfiles = [
     key: 'RewardlessCombatRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'none' },
-    operations: [
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
+      { kind: 'runEncounterScripts' },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
         kind: 'commitRoom',
@@ -119,29 +80,15 @@ export const standardRoomLifecycleProfiles = [
   {
     key: 'PCombatRoom',
     encounterEnvelopeKeys: ['PEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: {
+      kind: 'required',
+      lifecycleProfileKeys: ['RoomReward'],
+      points: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
+    },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'advanceProducer',
-        point: 'beforeCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'runEncounterSequence',
-        effects: ['recordEncounterStart', 'advanceEncounterDepth', 'recordEncounterCompletion'],
-      },
-      {
-        kind: 'advanceProducer',
-        point: 'afterCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'advanceProducer',
-        point: 'roomRewardPickup',
-        effects: ['recordProducerPoint'],
-      },
+      { kind: 'runEncounterScripts' },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
         kind: 'commitRoom',
@@ -156,23 +103,15 @@ export const specializedRewardRoomLifecycleProfiles = [
   {
     key: 'StoryPickupRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: {
+      kind: 'required',
+      lifecycleProfileKeys: ['RoomReward'],
+      points: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
+    },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      { kind: 'advanceProducer', point: 'beforeCombat', effects: ['recordProducerPoint'] },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
-      { kind: 'advanceProducer', point: 'afterCombat', effects: ['recordProducerPoint'] },
-      { kind: 'advanceProducer', point: 'roomRewardPickup', effects: ['recordProducerPoint'] },
+      { kind: 'runEncounterScripts' },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       { kind: 'settleAcquisitionPoint', point: 'roomExit', effects: ['recordAcquisitionPoint'] },
       {
@@ -186,7 +125,7 @@ export const specializedRewardRoomLifecycleProfiles = [
     key: 'RewardlessRoom',
     encounterEnvelopeKeys: ['EmptyEncounter'],
     producer: { kind: 'none' },
-    operations: [
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
@@ -200,30 +139,15 @@ export const specializedRewardRoomLifecycleProfiles = [
   {
     key: 'DevotionRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: {
+      kind: 'required',
+      lifecycleProfileKeys: ['RoomReward'],
+      points: ['beforeCombat', 'afterCombat'],
+    },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'advanceProducer',
-        point: 'beforeCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
-      {
-        kind: 'advanceProducer',
-        point: 'afterCombat',
-        effects: ['recordProducerPoint'],
-      },
+      { kind: 'runEncounterScripts' },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
         kind: 'commitRoom',

@@ -32,13 +32,18 @@ function rewardWheel(key: string) {
 }
 
 export const sharedEncounterEnvelopes = [
-  { key: 'EmptyEncounter', slots: [] },
+  { key: 'EmptyEncounter', kind: 'none', slots: [] },
   {
     key: 'SingleEncounter',
+    // StartRoom starts the room's one encounter (RoomLogic.lua:1336).
+    kind: 'single',
     slots: [{ key: 'Encounter', activation: 'always' }],
   },
   {
     key: 'ShipEncounter',
+    // StartRoom starts each phase once the previous returns (RoomLogic.lua:1318-1328); each
+    // combat phase's first event rolls its wheels (ShipsEncounterSetup, RoomLogic.lua:1375).
+    kind: 'wheelPhases',
     slots: [
       { key: 'Intro', activation: 'always' },
       {
@@ -60,6 +65,8 @@ export const sharedEncounterEnvelopes = [
   },
   {
     key: 'PEncounter',
+    // StartRoom starts each encounter once the previous returns (RoomLogic.lua:1318-1328).
+    kind: 'sequential',
     slots: [
       { key: 'Intro', activation: 'always' },
       { key: 'Combat', activation: 'always' },
@@ -67,6 +74,9 @@ export const sharedEncounterEnvelopes = [
   },
   {
     key: 'FieldsEncounter',
+    // Each cage's encounter starts when the player uses the cage (StartFieldsEncounter,
+    // EncounterLogic.lua:2890, 2939).
+    kind: 'playerActivatedCages',
     // StartFieldsEncounter (EncounterLogic.lua:2890-2938) starts a cage as
     // MapState.EncounterOverride and never makes it CurrentRoom.Encounter, whose
     // store CheckMoneyDrop drains (RoomLogic.lua:2361-2376): cage kills drain the

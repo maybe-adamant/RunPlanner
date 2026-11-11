@@ -1,6 +1,7 @@
 import type {
   CatalogCollection,
   EncounterEnvelope,
+  EncounterEnvelopeKind,
   EncounterEnvelopeSlot,
   EncounterSlotRewardAttachment,
 } from '@run-planner/engine/catalog-schema';
@@ -121,6 +122,32 @@ function normalizeEnvelopeSlot(
   });
 }
 
+/** The envelope kind its slots support: wheel phases carry wheels, cages carry local rewards. */
+function normalizeEnvelopeKind(
+  kind: EncounterEnvelopeKind,
+  slots: readonly EncounterEnvelopeSlot[],
+  path: string,
+): EncounterEnvelopeKind {
+  const supported = (() => {
+    switch (kind) {
+      case 'none':
+        return slots.length === 0;
+      case 'single':
+        return slots.length === 1;
+      case 'sequential':
+        return slots.length > 1 && slots.every((slot) => slot.rewardAttachment === undefined);
+      case 'wheelPhases':
+        return slots.some((slot) => slot.rewardAttachment?.kind === 'rewardWheel');
+      case 'playerActivatedCages':
+        return slots.some((slot) => slot.rewardAttachment?.kind === 'localReward');
+      default:
+        fail(path, `unknown encounter envelope kind ${String(kind)}`);
+    }
+  })();
+  if (!supported) fail(path, `${kind} does not fit the envelope's slots`);
+  return kind;
+}
+
 export function normalizeEncounterEnvelopes(
   rawEnvelopes: readonly RawEncounterEnvelopeDeclaration[],
   rewards: RewardKernelCatalog,
@@ -159,7 +186,8 @@ export function normalizeEncounterEnvelopes(
             `${slot.moneyStoreSlotKey} must be another slot that drains its own store`,
           );
       }
-      return Object.freeze({ key, slots: Object.freeze(slots) });
+      const kind = normalizeEnvelopeKind(raw.kind, slots, `${path}.kind`);
+      return Object.freeze({ key, kind, slots: Object.freeze(slots) });
     }),
     'encounterEnvelopes',
     (envelope) => envelope.key,

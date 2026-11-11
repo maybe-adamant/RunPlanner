@@ -90,6 +90,7 @@ import {
   type RoomActionWindow,
   type RoomLifecycleStructure,
 } from './lifecycle-structure';
+import { roomLifecycleOperations } from './lifecycle-operations';
 
 export type RoomActionParticipation = 'required' | 'optional';
 
@@ -212,34 +213,37 @@ function contribution(
  * unlock. Where the room opens no outgoing doors (Preboss) they span the room;
  * elsewhere purchases follow outgoing generation.
  */
-function shopPurchaseWindow(catalog: Catalog, lifecycleProfileKey: string): RoomActionWindow {
-  return catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey]?.operations.some(
-    (operation) => operation.kind === 'generateOutgoingBatch',
-  ) === false
+function shopPurchaseWindow(
+  catalog: Catalog,
+  declaration: RoomDeclaration,
+  lifecycleProfileKey: string,
+): RoomActionWindow {
+  const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
+  return profile !== undefined &&
+    !roomLifecycleOperations(catalog, profile, declaration).some(
+      (operation) => operation.kind === 'generateOutgoingBatch',
+    )
     ? frozen({ kind: 'standard', phase: 'afterCombat' })
     : frozen({ kind: 'postOutgoing' });
 }
 
 function producerWindow(
   catalog: Catalog,
+  declaration: RoomDeclaration,
   lifecycleProfileKey: string,
   producerPoint: string,
 ): RoomActionWindow {
   const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
-  const startIndex = profile?.operations.findIndex(
-    (operation) => operation.kind === 'startEncounter',
-  );
-  const producerIndex = profile?.operations.findIndex(
+  const operations =
+    profile === undefined ? [] : roomLifecycleOperations(catalog, profile, declaration);
+  const startIndex = operations.findIndex((operation) => operation.kind === 'startEncounter');
+  const producerIndex = operations.findIndex(
     (operation) => operation.kind === 'advanceProducer' && operation.point === producerPoint,
   );
   return frozen({
     kind: 'standard',
     phase:
-      startIndex !== undefined &&
-      startIndex >= 0 &&
-      producerIndex !== undefined &&
-      producerIndex >= 0 &&
-      producerIndex < startIndex
+      startIndex >= 0 && producerIndex >= 0 && producerIndex < startIndex
         ? 'beforeCombat'
         : 'afterCombat',
   });
@@ -484,7 +488,7 @@ function baseContribution(
         occurrence,
         reference,
         'required',
-        producerWindow(catalog, lifecycleProfileKey, reference.producerPoint),
+        producerWindow(catalog, declaration, lifecycleProfileKey, reference.producerPoint),
         [],
         createAcquisitionRoleAddress(
           createIncomingRewardAddress(biome, occurrence.occurrenceId),
@@ -642,7 +646,7 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
-        shopPurchaseWindow(catalog, lifecycleProfileKey),
+        shopPurchaseWindow(catalog, declaration, lifecycleProfileKey),
         [],
         owner,
       );
@@ -667,7 +671,7 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
-        shopPurchaseWindow(catalog, lifecycleProfileKey),
+        shopPurchaseWindow(catalog, declaration, lifecycleProfileKey),
         [],
         owner,
       );
@@ -837,7 +841,7 @@ function baseContribution(
                     producer.source.owner.kind === 'shopOffer') ||
                   reference.siteKey === 'roomExit'
                 ? occurrence.state.kind === 'shop'
-                  ? shopPurchaseWindow(catalog, lifecycleProfileKey)
+                  ? shopPurchaseWindow(catalog, declaration, lifecycleProfileKey)
                   : frozen({ kind: 'postOutgoing' })
                 : frozen({ kind: 'standard', phase: 'afterCombat' }),
         [

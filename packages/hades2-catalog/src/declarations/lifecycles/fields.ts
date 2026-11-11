@@ -5,7 +5,7 @@ export const fieldsRoomLifecycleProfiles = [
     key: 'FieldsCombatRoom',
     encounterEnvelopeKeys: ['FieldsEncounter'],
     producer: { kind: 'none' },
-    operations: [
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       {
@@ -13,10 +13,7 @@ export const fieldsRoomLifecycleProfiles = [
         offerPoint: 'fieldsOptionalRewards',
         effects: ['recordOfferPoint'],
       },
-      {
-        kind: 'runEncounterSequence',
-        effects: ['recordEncounterStart', 'advanceEncounterDepth', 'recordEncounterCompletion'],
-      },
+      { kind: 'runEncounterScripts' },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
         kind: 'commitRoom',

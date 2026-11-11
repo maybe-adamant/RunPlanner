@@ -8,35 +8,15 @@ export const prebossCompletionRoomLifecycleProfiles = [
   {
     key: 'PrebossFreeRewardRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: {
+      kind: 'required',
+      lifecycleProfileKeys: ['RoomReward'],
+      points: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
+    },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'advanceProducer',
-        point: 'beforeCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
-      {
-        kind: 'advanceProducer',
-        point: 'afterCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'advanceProducer',
-        point: 'roomRewardPickup',
-        effects: ['recordProducerPoint'],
-      },
+      { kind: 'runEncounterScripts' },
       {
         kind: 'commitRoom',
         effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
@@ -47,8 +27,8 @@ export const prebossCompletionRoomLifecycleProfiles = [
   {
     key: 'PrebossShopRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'], points: [] },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       {
         kind: 'materializeOfferPoint',
@@ -68,19 +48,10 @@ export const prebossCompletionRoomLifecycleProfiles = [
     key: 'BossRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'none' },
-    operations: [
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
+      { kind: 'runEncounterScripts' },
       {
         kind: 'commitRoom',
         effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
@@ -92,19 +63,10 @@ export const prebossCompletionRoomLifecycleProfiles = [
     key: 'PostBossRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'none' },
-    operations: [
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
+      { kind: 'runEncounterScripts' },
       {
         kind: 'commitRoom',
         effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],

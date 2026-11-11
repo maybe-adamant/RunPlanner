@@ -151,6 +151,9 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   validateTraitRouteReferences(traitCatalog, routes);
   validateLifecycleBindings({
     rooms,
+    encounterEnvelopes,
+    encounterSets,
+    encounterDefinitions,
     profiles: roomLifecycleProfiles,
     traits: traitCatalog.traits,
     rewards,

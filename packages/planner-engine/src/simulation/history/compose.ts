@@ -436,7 +436,7 @@ function postOutgoingAcquisitionPoint(
   if (profile === undefined)
     fail(`${room.gameName} has unknown lifecycle profile ${room.lifecycleProfileKey}`);
   let outgoingSeen = false;
-  for (const operation of profile.operations) {
+  for (const operation of profile.steps) {
     if (operation.kind === 'generateOutgoingBatch') outgoingSeen = true;
     if (outgoingSeen && operation.kind === 'settleAcquisitionPoint') return operation.point;
   }

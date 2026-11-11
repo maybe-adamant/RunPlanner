@@ -246,6 +246,8 @@ export interface RoomLifecycleProducerInput {
 export interface RoomLifecycleExecutionInput {
   readonly origin: RoomHistoryOrigin;
   readonly lifecycleProfileKey: string;
+  /** The route-resolved room declaration whose bound encounters compose the profile's operations. */
+  readonly roomDeclaration: import('../../catalog-schema').RoomDeclaration;
   readonly encounterEnvelopeKey: string;
   readonly encounterPhases?: readonly ResolvedEncounterPhase[];
   readonly producer?: RoomLifecycleProducerInput;

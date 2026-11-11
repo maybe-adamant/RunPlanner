@@ -634,6 +634,7 @@ describe('Supply Chain lifecycle', () => {
     const postbossLifecycle = executeRoomLifecycle(catalog, {
       origin: dreamOccurrence,
       lifecycleProfileKey: 'PostBossRoom',
+      roomDeclaration: postboss,
       encounterEnvelopeKey: postboss.encounterEnvelopeKey,
       encounterPhases: [
         {

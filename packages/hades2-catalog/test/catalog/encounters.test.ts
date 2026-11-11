@@ -2018,3 +2018,113 @@ describe('field NPC encounters', () => {
     }
   });
 });
+
+describe('encounter scripts', () => {
+  const catalog = createCatalog(declarations);
+  const scripts = (predicate: (key: string) => boolean) =>
+    Object.fromEntries(
+      catalog.encounterDefinitions.values
+        .filter((definition) => predicate(definition.key))
+        .map((definition) => [definition.key, definition.script]),
+    );
+
+  it('declares the gate that starts each gated encounter', () => {
+    expect(
+      Object.fromEntries(
+        catalog.encounterDefinitions.values
+          .filter((definition) => definition.script.gate.kind !== 'none')
+          .map((definition) => [definition.key, definition.script.gate]),
+      ),
+    ).toEqual({
+      OpeningGeneratedF: { kind: 'useItemRole', role: 'self' },
+      OpeningGeneratedN: { kind: 'useItemRole', role: 'self' },
+      DevotionTestF: { kind: 'useItemRole', role: 'chosenSource' },
+      DevotionTestG: { kind: 'useItemRole', role: 'chosenSource' },
+      DevotionTestI: { kind: 'useItemRole', role: 'chosenSource' },
+      DevotionTestO: { kind: 'useItemRole', role: 'chosenSource' },
+      GeneratedO: { kind: 'wheelUse' },
+      IcarusCombatO: { kind: 'wheelUse' },
+      GeneratedH: { kind: 'cageActivation' },
+      GeneratedH_Treant2: { kind: 'cageActivation' },
+      GeneratedH_Screamer2: { kind: 'cageActivation' },
+      MournerIntro: { kind: 'cageActivation' },
+      LamiaIntro: { kind: 'cageActivation' },
+      LovesickIntro: { kind: 'cageActivation' },
+      LycanthropeIntro: { kind: 'cageActivation' },
+      NemesisCombatH: { kind: 'cageActivation' },
+    });
+  });
+
+  it('declares the Ship phase and Nemesis event script steps', () => {
+    expect(
+      scripts((key) =>
+        ['GeneratedO_Intro01', 'HeraclesCombatO', 'NemesisRandomEvent', 'GeneratedF'].includes(key),
+      ),
+    ).toEqual({
+      GeneratedF: {
+        gate: { kind: 'none' },
+        delayedStart: false,
+        waitReadyBeforeEnd: false,
+        skipShipsEncounterSetup: false,
+        endsByInteraction: false,
+        hostsOutcome: ['gorgon'],
+      },
+      GeneratedO_Intro01: {
+        gate: { kind: 'none' },
+        delayedStart: false,
+        waitReadyBeforeEnd: true,
+        skipShipsEncounterSetup: true,
+        endsByInteraction: false,
+        hostsOutcome: [],
+      },
+      HeraclesCombatO: {
+        gate: { kind: 'none' },
+        delayedStart: true,
+        waitReadyBeforeEnd: true,
+        skipShipsEncounterSetup: true,
+        endsByInteraction: false,
+        hostsOutcome: [],
+      },
+      NemesisRandomEvent: {
+        gate: { kind: 'none' },
+        delayedStart: false,
+        waitReadyBeforeEnd: false,
+        skipShipsEncounterSetup: false,
+        endsByInteraction: true,
+        hostsOutcome: ['nemesisRandomEvent'],
+      },
+    });
+  });
+
+  it('derives the outcomes an encounter hosts from its declared facts', () => {
+    const hosted = (key: string) => catalog.encounterDefinitions.byKey[key]?.script.hostsOutcome;
+    expect({
+      GeneratedP: hosted('GeneratedP'),
+      NemesisCombatF: hosted('NemesisCombatF'),
+      ArtemisCombatF: hosted('ArtemisCombatF'),
+    }).toEqual({
+      GeneratedP: ['aetosWave', 'gorgon'],
+      NemesisCombatF: ['goldBet'],
+      ArtemisCombatF: [],
+    });
+  });
+
+  it('rejects an unknown gate', () => {
+    const raw = input();
+    expect(() =>
+      createCatalog({
+        ...raw,
+        encounterDefinitions: raw.encounterDefinitions.map((definition) =>
+          definition.key === 'GeneratedF'
+            ? { ...definition, script: { gate: { kind: 'mystery' } } as never }
+            : definition,
+        ),
+      }),
+    ).toThrowError(
+      new CatalogContractError(
+        `encounterDefinitions[${raw.encounterDefinitions.findIndex((definition) => definition.key === 'GeneratedF')}].script.gate.kind`,
+        'unknown encounter gate mystery',
+      ),
+    );
+  });
+});

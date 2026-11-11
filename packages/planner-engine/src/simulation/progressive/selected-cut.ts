@@ -24,6 +24,7 @@ import type { OrdinaryBatchGenerationAssessment } from '../generation/model';
 import { biomeHistoryThrough, type BiomeHistoryPrefix, type HistoryEvent } from '../history';
 import type { ReachedHistoryRoomAction } from '../history/model';
 import { roomOverviewOperationCount } from '../lifecycle';
+import { roomLifecycleOperations } from '../../authored-project/room-actions/lifecycle-operations';
 import type { RoomStopCoverage } from '../evaluation/evaluation-products';
 import {
   BiomeMaterializationContractError,
@@ -255,7 +256,14 @@ function positionRoom(
     throw new BiomeMaterializationContractError(
       `${owner.room.gameName} has unknown lifecycle profile ${owner.room.lifecycleProfileKey}`,
     );
-  const overviewEnd = roomOverviewOperationCount(profile);
+  // Route overlays and entry rules rebind encounters, never the envelope or the profile's
+  // steps, so the declared room places every operation where its routed variant does.
+  const declaration = catalog.rooms.byKey[owner.room.gameName];
+  if (declaration === undefined)
+    throw new BiomeMaterializationContractError(`${owner.room.gameName} has no room declaration`);
+  const overviewEnd = roomOverviewOperationCount(
+    roomLifecycleOperations(catalog, profile, declaration),
+  );
   const roomEvents = history.events.filter(
     (candidate): candidate is LifecycleEvent =>
       lifecycleEvent(candidate) && key(candidate.origin) === roomKey,
@@ -852,10 +860,16 @@ function roomStop(
     passed.some((event) => event.kind === 'roomCommitted')
   )
     return stop('exit', entries.length, 'before');
-  const generation = profile.operations.findIndex(
+  // Only the positions of outgoing generation and exit work are read; a routed variant
+  // keeps them (see positionRoom).
+  const declaration = catalog.rooms.byKey[room.gameName];
+  if (declaration === undefined)
+    throw new BiomeMaterializationContractError(`${room.gameName} has no room declaration`);
+  const operations = roomLifecycleOperations(catalog, profile, declaration);
+  const generation = operations.findIndex(
     (operation) => operation.kind === 'generateOutgoingBatch',
   );
-  const exitWork = profile.operations.findIndex(
+  const exitWork = operations.findIndex(
     (operation) => operation.kind === 'settleAcquisitionPoint' || operation.kind === 'commitRoom',
   );
   const generated = generation >= 0 && passed.some((event) => event.operationIndex >= generation);

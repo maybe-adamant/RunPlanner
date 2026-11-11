@@ -4,8 +4,8 @@ export const shopsRoomLifecycleProfiles = [
   {
     key: 'WorldShopRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'], points: [] },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       {
         kind: 'materializeOfferPoint',

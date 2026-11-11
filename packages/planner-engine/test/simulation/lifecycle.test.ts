@@ -26,10 +26,10 @@ const origin = createOccurrenceAddress(
 );
 
 it('declares the Gate A ordinary producer-point mapping without a room-flat fallback', () => {
-  const points = (profileKey: string) =>
-    catalog.roomLifecycleProfiles.byKey[profileKey]?.operations.flatMap((operation) =>
-      operation.kind === 'advanceProducer' ? [operation.point] : [],
-    );
+  const points = (profileKey: string) => {
+    const profile = catalog.roomLifecycleProfiles.byKey[profileKey];
+    return profile?.producer.kind === 'required' ? profile.producer.points : undefined;
+  };
 
   expect({
     standard: points('StandardRewardRoom'),
@@ -80,8 +80,38 @@ function phases(
   );
 }
 
+/** A room each profile runs in, whose bound encounters compose its operations. */
+const roomByProfile: Readonly<Record<string, string>> = {
+  StandardRewardRoom: 'F_Combat01',
+  OpeningRewardRoom: 'F_Opening01',
+  RewardlessCombatRoom: 'P_Intro',
+  PCombatRoom: 'P_Combat01',
+  EphyraMainRoom: 'N_Combat01',
+  EphyraSideRoom: 'N_Sub01',
+  StoryPickupRoom: 'G_Story01',
+  DevotionRoom: 'O_Devotion01',
+  FieldsCombatRoom: 'H_Combat01',
+  ShipCombatRoom: 'O_Combat01',
+  WorldShopRoom: 'F_Shop01',
+  PrebossFreeRewardRoom: 'F_PreBoss01',
+  PrebossShopRoom: 'F_PreBoss01',
+  BossRoom: 'F_Boss01',
+  PostBossRoom: 'F_PostBoss01',
+};
+
+function roomDeclaration(lifecycleProfileKey: string, encounterEnvelopeKey: string) {
+  const declared = catalog.rooms.byKey[roomByProfile[lifecycleProfileKey] ?? ''];
+  const room =
+    declared?.encounterEnvelopeKey === encounterEnvelopeKey
+      ? declared
+      : (catalog.rooms.values.find((room) => room.encounterEnvelopeKey === encounterEnvelopeKey) ??
+        catalog.rooms.byKey.F_Combat01);
+  if (room === undefined) throw new Error(`missing test room for ${lifecycleProfileKey}`);
+  return room;
+}
+
 function input(overrides: Partial<RoomLifecycleExecutionInput> = {}): RoomLifecycleExecutionInput {
-  return {
+  const executionInput: Omit<RoomLifecycleExecutionInput, 'roomDeclaration'> = {
     origin,
     lifecycleProfileKey: 'StandardRewardRoom',
     encounterEnvelopeKey: 'SingleEncounter',
@@ -96,6 +126,12 @@ function input(overrides: Partial<RoomLifecycleExecutionInput> = {}): RoomLifecy
     counterEffects: {},
     ...overrides,
   };
+  return {
+    ...executionInput,
+    roomDeclaration:
+      overrides.roomDeclaration ??
+      roomDeclaration(executionInput.lifecycleProfileKey, executionInput.encounterEnvelopeKey),
+  };
 }
 
 function inputWithoutProducer(
@@ -105,6 +141,7 @@ function inputWithoutProducer(
   return {
     origin: executionInput.origin,
     lifecycleProfileKey: executionInput.lifecycleProfileKey,
+    roomDeclaration: executionInput.roomDeclaration,
     encounterEnvelopeKey: executionInput.encounterEnvelopeKey,
     ...(executionInput.encounterPhases === undefined
       ? {}
@@ -224,8 +261,8 @@ function actionRoster(
     );
   });
   if (
-    catalog.roomLifecycleProfiles.byKey[profileKey]?.operations.some(
-      (operation) => operation.kind === 'generateOutgoingBatch',
+    catalog.roomLifecycleProfiles.byKey[profileKey]?.steps.some(
+      (step) => step.kind === 'generateOutgoingBatch',
     )
   )
     points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));

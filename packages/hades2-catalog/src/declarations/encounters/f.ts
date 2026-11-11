@@ -32,6 +32,8 @@ import {
 export const fEncounterDefinitions = [
   {
     key: 'OpeningGeneratedF',
+    // Combat starts once its room reward is used (SpawnRoomReward WaitUntilPickup, BeginOpeningEncounter, EncounterData.lua:492, 504-508).
+    script: { gate: { kind: 'useItemRole', role: 'self' }, delayedStart: true },
     moneyStore: generatedMoneyStore,
     customization: [generatedEncounterChoices.OpeningGeneratedF],
     label: 'Opening combat',
@@ -93,6 +95,8 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'DevotionTestF',
+    // StartDevotionTest starts combat after the god is chosen (EncounterData_Devotion.lua:33, 52; EncounterLogic.lua:1729).
+    script: { gate: { kind: 'useItemRole', role: 'chosenSource' }, delayedStart: true },
     moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestF],
     label: 'Devotion combat',
@@ -102,6 +106,8 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'ArtemisCombatF',
+    // DelayedStart, EncounterData_Artemis.lua:27.
+    script: { delayedStart: true },
     moneyStore: godCombatMoneyStore,
     customization: [generatedEncounterChoices.ArtemisCombatF],
     label: 'Artemis combat',
@@ -162,6 +168,8 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'NemesisCombatF',
+    // DelayedStart, EncounterData_Nemesis.lua:33.
+    script: { delayedStart: true },
     moneyStore: godCombatMoneyStore,
     // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
     // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).
@@ -199,6 +207,8 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'NemesisRandomEvent',
+    // No fight: answering Nemesis clears her required object and unlocks the exits (EncounterData_Story.lua:1966, InteractLogic.lua:366-376, 605-611).
+    script: { endsByInteraction: true },
     label: 'Nemesis event',
     // Fields cage kills drain it when the event is the room's Passive encounter.
     moneyStore: nemesisEventMoneyStore,
@@ -424,6 +434,8 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'BossHecate01',
+    // DelayedStart, EncounterData.lua:929.
+    script: { delayedStart: true },
     bossRoster: hecateRoster,
     label: 'Hecate',
     kind: 'boss',
@@ -475,6 +487,8 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'BossHecate02',
+    // DelayedStart, EncounterData.lua:929.
+    script: { delayedStart: true },
     bossRoster: hecateRivalsRoster,
     label: 'Hecate',
     kind: 'boss',

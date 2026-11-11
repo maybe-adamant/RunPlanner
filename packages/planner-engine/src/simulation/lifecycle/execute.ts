@@ -12,6 +12,7 @@ import { createBiomeAddress, createRoomActionAddress } from '../../authored-proj
 import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import { roomLifecycleWindowOrdinal } from '../../authored-project/room-actions/lifecycle-structure';
+import { roomLifecycleOperations } from '../../authored-project/room-actions/lifecycle-operations';
 import { type RoomActionRow } from '../room-actions';
 import { purgingPoolSalePoint } from '../commerce/feature-rolls';
 
@@ -20,6 +21,7 @@ type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];
 interface ExecutionContext {
   readonly input: RoomLifecycleExecutionInput;
   readonly profile: RoomLifecycleProfile;
+  readonly operations: readonly RoomLifecycleOperation[];
   readonly encounterPhases: readonly ResolvedEncounterPhase[];
   readonly producerRewardLifecycle?: ProducerRewardLifecycleDeclaration;
 }
@@ -112,7 +114,7 @@ function requireOperation<Kind extends RoomLifecycleOperationKind>(
   context: OperationContext,
   kind: Kind,
 ): Extract<RoomLifecycleOperation, { readonly kind: Kind }> {
-  const operation = context.profile.operations[context.operationIndex];
+  const operation = context.operations[context.operationIndex];
   if (operation?.kind !== kind) {
     throw new LifecycleExecutionContractError(
       `effect expected ${kind} at operation ${context.operationIndex}`,
@@ -506,6 +508,13 @@ function resolveExecutionContext(
       `${envelope.key} is incompatible with ${profile.key}`,
     );
   }
+  const declaration = input.roomDeclaration;
+  if (declaration.encounterEnvelopeKey !== envelope.key) {
+    throw new LifecycleExecutionContractError(
+      `${declaration.gameName} does not declare ${envelope.key}`,
+    );
+  }
+  const operations = roomLifecycleOperations(catalog, profile, declaration);
   const selectedPhases = input.encounterPhases ?? Object.freeze([]);
   if (
     selectedPhases.length > envelope.slots.length ||
@@ -553,7 +562,7 @@ function resolveExecutionContext(
   }
 
   const hasRequiredObjects = (input.requiredObjects?.length ?? 0) > 0;
-  const hasRequiredObjectOperations = profile.operations.some(
+  const hasRequiredObjectOperations = operations.some(
     (operation) =>
       operation.kind === 'spawnRequiredObjects' || operation.kind === 'completeRequiredObjects',
   );
@@ -566,7 +575,7 @@ function resolveExecutionContext(
     if (input.producer !== undefined) {
       throw new LifecycleExecutionContractError(`${profile.key} does not accept a producer`);
     }
-    return { input, profile, encounterPhases: Object.freeze([...selectedPhases]) };
+    return { input, profile, operations, encounterPhases: Object.freeze([...selectedPhases]) };
   }
   const producer = input.producer;
   if (producer === undefined) {
@@ -590,7 +599,7 @@ function resolveExecutionContext(
     );
   }
   const profilePoints = new Set(
-    profile.operations.flatMap((operation) =>
+    operations.flatMap((operation) =>
       operation.kind === 'advanceProducer' ? [operation.point] : [],
     ),
   );
@@ -604,6 +613,7 @@ function resolveExecutionContext(
   return {
     input,
     profile,
+    operations,
     encounterPhases: Object.freeze([...selectedPhases]),
     producerRewardLifecycle,
   };
@@ -731,9 +741,9 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   // A pickup taken before combat starts the fight, so the fight waits on it.
   const passesUncollected = (operation: RoomLifecycleOperation): boolean => {
     if (operation.kind !== 'advanceProducer') return false;
-    const index = context.profile.operations.indexOf(operation);
+    const index = context.operations.indexOf(operation);
     if (
-      context.profile.operations.some(
+      context.operations.some(
         (later, laterIndex) =>
           laterIndex > index &&
           (later.kind === 'startEncounter' ||
@@ -1035,7 +1045,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     let scheduledInitial = initial;
     if (
       context.input.hermesShrine !== undefined &&
-      !context.profile.operations.some((candidate) => candidate.kind === 'generateOutgoingBatch') &&
+      !context.operations.some((candidate) => candidate.kind === 'generateOutgoingBatch') &&
       (operation.kind === 'settleAcquisitionPoint' || operation.kind === 'commitRoom')
     )
       scheduledInitial = scheduleShrineDeliveries(operationIndex, initial);
@@ -1226,7 +1236,7 @@ export function executeRoomLifecycle(
   const schedule =
     input.roomActionRoster === undefined ? undefined : createRoomActionSchedule(context);
   let state: ExecutionState = Object.freeze({ events: Object.freeze([]) });
-  for (const [operationIndex, operation] of context.profile.operations.entries()) {
+  for (const [operationIndex, operation] of context.operations.entries()) {
     const reachedBefore = state.reachedActions?.length ?? 0;
     if (schedule !== undefined) {
       state = schedule.beforeOperation(operation, operationIndex, state);

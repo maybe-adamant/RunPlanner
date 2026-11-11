@@ -499,7 +499,49 @@ export interface EncounterEnvelopeSlot {
  */
 export interface EncounterEnvelope {
   readonly key: string;
+  readonly kind: EncounterEnvelopeKind;
   readonly slots: readonly EncounterEnvelopeSlot[];
+}
+
+/**
+ * How a room runs its encounters: none, one, a sequence started in turn, Ship
+ * wheel phases each opened by the previous phase's end, or Fields cages the
+ * player activates.
+ */
+export type EncounterEnvelopeKind =
+  'none' | 'single' | 'sequential' | 'wheelPhases' | 'playerActivatedCages';
+
+/** What starts an encounter's combat once the encounter has begun. */
+export type EncounterGate =
+  /** Automatic: `StartEncounter` calls `StartEncounterEffects` itself, or its own event list does. */
+  | { readonly kind: 'none' }
+  /** Using the room reward's pickup in this producer role starts combat. */
+  | { readonly kind: 'useItemRole'; readonly role: string }
+  /** Using a Ship wheel selects the phase's reward and starts its combat. */
+  | { readonly kind: 'wheelUse' }
+  /** Activating a Fields cage starts its encounter. */
+  | { readonly kind: 'cageActivation' };
+
+/** An observation the encounter's combat can host. */
+export type EncounterOutcomeKind = 'aetosWave' | 'gorgon' | 'goldBet' | 'nemesisRandomEvent';
+
+/**
+ * The encounter's own trigger script. The encounter kind, `skipEndEncounterEffects`
+ * and `createsIncomingRewardAtStart` stay the authorities for non-combat,
+ * skipped end effects and a reward spawned at the start.
+ */
+export interface EncounterScript {
+  readonly gate: EncounterGate;
+  /** `DelayedStart`: combat waits for the encounter's own start step. */
+  readonly delayedStart: boolean;
+  /** The event list ends by waiting for every required object (`WaitForNextEncounterReady`). */
+  readonly waitReadyBeforeEnd: boolean;
+  /** `SkipShipsEncounterSetup`: the phase opens no wheels. */
+  readonly skipShipsEncounterSetup: boolean;
+  /** No fight: answering the encounter's NPC resolves it and unlocks the exits. */
+  readonly endsByInteraction: boolean;
+  /** Outcomes this encounter can host; Aetos needs an Outdoor room, Gorgon a room that allows it. */
+  readonly hostsOutcome: readonly EncounterOutcomeKind[];
 }
 
 export type NpcShoppingFamily = 'Nemesis' | 'Heracles';
@@ -528,6 +570,7 @@ export interface EncounterDefinition {
   readonly key: string;
   readonly label: string;
   readonly kind: EncounterPhaseKind;
+  readonly script: EncounterScript;
   readonly countsEncounterDepth: boolean;
   /** Exact encounter-level policy for advancing delayed Hermes Shrine delivery uses. */
   readonly advancesHermesShrineDeliveryUses: boolean;
@@ -850,13 +893,38 @@ export type RoomLifecycleProducerPolicy =
   | {
       readonly kind: 'required';
       readonly lifecycleProfileKeys: readonly string[];
+      /**
+       * The room reward's lifecycle points, in order. `beforeCombat` and an
+       * encounter gate's point come before combat; the rest follow it.
+       */
+      readonly points: readonly ProducerLifecyclePointKey[];
     };
 
+/** A room-level lifecycle step; one step runs the room's encounter scripts. */
+export type RoomLifecycleStep =
+  | Extract<
+      RoomLifecycleOperation,
+      {
+        readonly kind:
+          | 'prepareRoom'
+          | 'materializeOfferPoint'
+          | 'enterRoom'
+          | 'spawnRequiredObjects'
+          | 'completeRequiredObjects'
+          | 'generateOutgoingBatch'
+          | 'settleAcquisitionPoint'
+          | 'commitRoom'
+          | 'exitRoom';
+      }
+    >
+  | { readonly kind: 'runEncounterScripts' };
+
+/** A room's lifecycle: its room-level steps and its reward's points. */
 export interface RoomLifecycleProfile {
   readonly key: string;
   readonly encounterEnvelopeKeys: readonly string[];
   readonly producer: RoomLifecycleProducerPolicy;
-  readonly operations: readonly RoomLifecycleOperation[];
+  readonly steps: readonly RoomLifecycleStep[];
 }
 
 export type RoomKind =

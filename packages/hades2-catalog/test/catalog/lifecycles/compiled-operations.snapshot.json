@@ -30,6 +30,20 @@
         "exitRoom: recordExit"
       ]
     },
+    "OpeningRewardRoom (Dream P_Intro start)": {
+      "envelopes": "SingleEncounter",
+      "producer": "required RoomReward",
+      "operations": [
+        "prepareRoom: recordPreparation, recordEncounter",
+        "enterRoom: recordAppearance",
+        "startEncounter only: recordEncounterStart, advanceEncounterDepth",
+        "completeEncounter only: recordEncounterCompletion",
+        "advanceProducer roomRewardPickup: recordProducerPoint",
+        "generateOutgoingBatch: recordOutgoingGeneration",
+        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
+        "exitRoom: recordExit"
+      ]
+    },
     "OpeningRewardNoEncounterRoom": {
       "envelopes": "EmptyEncounter",
       "producer": "required RoomReward",

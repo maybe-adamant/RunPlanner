@@ -5,18 +5,10 @@ export const shipRoomLifecycleProfiles = [
     key: 'ShipCombatRoom',
     encounterEnvelopeKeys: ['ShipEncounter'],
     producer: { kind: 'none' },
-    operations: [
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'runRewardEncounterSequence',
-        effects: [
-          'recordPhaseOfferPoint',
-          'recordEncounterStart',
-          'advanceEncounterDepth',
-          'recordEncounterCompletion',
-        ],
-      },
+      { kind: 'runEncounterScripts' },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
         kind: 'commitRoom',

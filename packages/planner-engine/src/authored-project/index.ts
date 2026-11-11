@@ -69,9 +69,11 @@ export {
   type AuthoredAcquisitionSource,
 } from './acquisition/acquisition-sources';
 export {
+  authoredRoomLifecycleProfileKey,
   type RoomLifecycleStructure,
   type RoomLifecycleStructurePhase,
 } from './room-actions/lifecycle-structure';
+export { roomLifecycleOperations } from './room-actions/lifecycle-operations';
 export { assembleRoomActionDomain, type RoomActionDomain } from './room-actions/domain';
 export {
   assessRoomActionInsertion,

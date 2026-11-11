@@ -876,6 +876,8 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatP',
+    // DelayedStart, EncounterData_Heracles.lua:34.
+    script: { delayedStart: true },
     killBounty: heraclesKillBounty,
     moneyStore: heraclesOlympusMoneyStore,
     customization: [generatedEncounterChoices.HeraclesCombatP],
@@ -917,6 +919,8 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'IcarusCombatP',
+    // DelayedStart, EncounterData_Icarus.lua:30.
+    script: { delayedStart: true },
     moneyStore: godCombatMoneyStore,
     customization: [generatedEncounterChoices.IcarusCombatP],
     label: 'Icarus combat',
@@ -951,6 +955,8 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'AthenaCombatP',
+    // DelayedStart, EncounterData_Athena.lua:34.
+    script: { delayedStart: true },
     moneyStore: godCombatMoneyStore,
     customization: [generatedEncounterChoices.AthenaCombatP],
     label: 'Athena combat',
@@ -995,6 +1001,8 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'MiniBossTalos',
+    // DelayedStart, EncounterData_MiniBoss.lua:791.
+    script: { delayedStart: true },
     bossRoster: talosRoster,
     label: 'Talos',
     kind: 'miniboss',
@@ -1003,6 +1011,8 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'MiniBossDragon',
+    // DelayedStart, EncounterData_MiniBoss.lua:817.
+    script: { delayedStart: true },
     bossRoster: dragonRoster,
     moneyStore: dragonMinibossMoneyStore,
     label: 'Dragon',
@@ -1014,6 +1024,8 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'BossPrometheus01',
+    // DelayedStart, EncounterData_Boss.lua:979.
+    script: { delayedStart: true },
     bossRoster: prometheusRoster,
     label: 'Prometheus',
     kind: 'boss',
@@ -1022,6 +1034,8 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'BossPrometheus02',
+    // DelayedStart, EncounterData_Boss.lua:979.
+    script: { delayedStart: true },
     bossRoster: prometheusRoster,
     label: 'Prometheus',
     kind: 'boss',

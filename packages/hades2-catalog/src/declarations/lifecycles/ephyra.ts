@@ -4,37 +4,17 @@ export const ephyraRoomLifecycleProfiles = [
   {
     key: 'EphyraMainRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: {
+      kind: 'required',
+      lifecycleProfileKeys: ['RoomReward'],
+      points: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
+    },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       { kind: 'spawnRequiredObjects', effects: ['recordRequiredObjectSpawns'] },
-      {
-        kind: 'advanceProducer',
-        point: 'beforeCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
+      { kind: 'runEncounterScripts' },
       { kind: 'completeRequiredObjects', effects: ['recordRequiredObjectCompletions'] },
-      {
-        kind: 'advanceProducer',
-        point: 'afterCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'advanceProducer',
-        point: 'roomRewardPickup',
-        effects: ['recordProducerPoint'],
-      },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
         kind: 'commitRoom',
@@ -46,35 +26,15 @@ export const ephyraRoomLifecycleProfiles = [
   {
     key: 'EphyraSideRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
+    producer: {
+      kind: 'required',
+      lifecycleProfileKeys: ['RoomReward'],
+      points: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
+    },
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'advanceProducer',
-        point: 'beforeCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
-      {
-        kind: 'advanceProducer',
-        point: 'afterCombat',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'advanceProducer',
-        point: 'roomRewardPickup',
-        effects: ['recordProducerPoint'],
-      },
+      { kind: 'runEncounterScripts' },
       {
         kind: 'commitRoom',
         effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
@@ -86,7 +46,7 @@ export const ephyraRoomLifecycleProfiles = [
     key: 'EphyraHubRoom',
     encounterEnvelopeKeys: ['EmptyEncounter'],
     producer: { kind: 'none' },
-    operations: [
+    steps: [
       { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
       { kind: 'enterRoom', effects: ['recordAppearance'] },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },

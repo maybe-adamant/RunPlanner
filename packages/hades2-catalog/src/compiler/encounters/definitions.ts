@@ -2,7 +2,10 @@ import { isCombatBearingEncounterPhaseKind } from '@run-planner/engine/catalog-s
 import type {
   CatalogCollection,
   EncounterDefinition,
+  EncounterGate,
+  EncounterOutcomeKind,
   EncounterPhaseKind,
+  EncounterScript,
 } from '@run-planner/engine/catalog-schema';
 
 import type { RawEncounterDefinitionDeclaration } from '../../declarations/index';
@@ -24,6 +27,54 @@ const encounterPhaseKinds = new Set<EncounterPhaseKind>([
   'nonCombat',
   'story',
 ]);
+
+const scriptFlags = [
+  'delayedStart',
+  'waitReadyBeforeEnd',
+  'skipShipsEncounterSetup',
+  'endsByInteraction',
+] as const;
+
+function normalizeGate(raw: EncounterGate | undefined, path: string): EncounterGate {
+  if (raw === undefined) return Object.freeze({ kind: 'none' });
+  const receivedKind: unknown = (raw as { readonly kind?: unknown }).kind;
+  switch (raw.kind) {
+    case 'none':
+    case 'wheelUse':
+    case 'cageActivation':
+      return Object.freeze({ kind: raw.kind });
+    case 'useItemRole':
+      return Object.freeze({ kind: raw.kind, role: requireNonEmpty(raw.role, `${path}.role`) });
+    default:
+      fail(`${path}.kind`, `unknown encounter gate ${String(receivedKind)}`);
+  }
+}
+
+/**
+ * The declared script, with the outcomes the encounter can host from its own
+ * declared facts: Aetos waves, a Gorgon trigger it does not block, a Nemesis
+ * bet or her random event.
+ */
+function normalizeScript(raw: RawEncounterDefinitionDeclaration, path: string): EncounterScript {
+  const script = raw.script ?? {};
+  for (const flag of scriptFlags)
+    if (script[flag] !== undefined && script[flag] !== true)
+      fail(`${path}.${flag}`, 'must be true when declared');
+  const hostsOutcome: EncounterOutcomeKind[] = [
+    ...(raw.aetosWaves === undefined ? [] : (['aetosWave'] as const)),
+    ...(raw.hostsGorgon === true && raw.blocksGorgon !== true ? (['gorgon'] as const) : []),
+    ...(raw.goldBet === undefined ? [] : (['goldBet'] as const)),
+    ...(raw.nemesisRandomEvent === undefined ? [] : (['nemesisRandomEvent'] as const)),
+  ];
+  return Object.freeze({
+    gate: normalizeGate(script.gate, `${path}.gate`),
+    delayedStart: script.delayedStart === true,
+    waitReadyBeforeEnd: script.waitReadyBeforeEnd === true,
+    skipShipsEncounterSetup: script.skipShipsEncounterSetup === true,
+    endsByInteraction: script.endsByInteraction === true,
+    hostsOutcome: Object.freeze(hostsOutcome),
+  });
+}
 
 /** A store's integer bounds are ordered and its ramp is a non-negative per-depth amount. */
 function normalizeMoneyStore(
@@ -660,6 +711,7 @@ export function normalizeEncounterDefinitions(
         key,
         label,
         kind: raw.kind,
+        script: normalizeScript(raw, `${path}.script`),
         countsEncounterDepth: raw.countsEncounterDepth,
         advancesHermesShrineDeliveryUses:
           raw.advancesHermesShrineDeliveryUses ?? isCombatBearingEncounterPhaseKind(raw.kind),

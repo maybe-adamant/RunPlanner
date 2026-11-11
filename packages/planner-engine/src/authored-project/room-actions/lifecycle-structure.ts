@@ -138,23 +138,21 @@ export function assembleRoomLifecycleStructure(options: {
         encounters.aetosWaveByPhase?.[slot.key] !== undefined ||
         encounters.gorgonResultByPhase[slot.key]?.athenaTriggerConditionMet === true ||
         options.occurrence.state.kind === 'anomaly' ||
-        candidates.some(
-          (candidate) =>
-            (outdoor && candidate.aetosWaves !== undefined) ||
-            (candidate.hostsGorgon &&
-              !candidate.blocksGorgon &&
-              !options.declaration.blocksGorgon) ||
-            candidate.goldBet !== undefined ||
-            candidate.nemesisRandomEvent !== undefined,
+        candidates.some((candidate) =>
+          candidate.script.hostsOutcome.some((kind) =>
+            kind === 'aetosWave'
+              ? outdoor
+              : kind === 'gorgon'
+                ? !options.declaration.blocksGorgon
+                : true,
+          ),
         );
       const directDefinition =
         definition ??
         (profile?.resolution.kind === 'direct'
           ? options.catalog.encounterDefinitions.byKey[profile.resolution.encounterDefinitionKey]
           : undefined);
-      // Nemesis keeps the exits locked until answering her resolves the event (EncounterLogic
-      // SpawnNemesisForRandomEvents, InteractLogic UnlockRoomExits), so that interaction ends it.
-      if (directDefinition?.nemesisRandomEvent !== undefined)
+      if (directDefinition?.script.endsByInteraction === true)
         return [{ slot, endsOnInteraction: true, hostsOutcome: true }];
       if (
         options.lifecycleProfileKey === 'FieldsCombatRoom' &&
@@ -251,9 +249,7 @@ export function assembleRoomLifecycleStructure(options: {
       }),
     );
   });
-  const hasOutgoing = profile.operations.some(
-    (operation) => operation.kind === 'generateOutgoingBatch',
-  );
+  const hasOutgoing = profile.steps.some((step) => step.kind === 'generateOutgoingBatch');
   if (hasOutgoing) points.push(frozen({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
   points.push(frozen({ kind: 'cleanup', key: 'cleanup' }));
   return frozen({
