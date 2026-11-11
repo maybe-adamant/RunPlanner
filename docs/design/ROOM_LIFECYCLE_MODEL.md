@@ -582,8 +582,9 @@ silently, removing only what the saved plan itself shows had its context or
 source and lost it:
 every stale row the walk reaches; a Gold Gold Gold duplicate that a purchase
 stands before while no Echo produces it; a matured trait drop whose producing
-trait a walk without it never holds and that reaches the plan's end; and a
-countdown delivery whose purchase is gone. Every batch's doors settle as
+trait a walk without it never holds and that reaches the plan's end; a
+countdown delivery whose purchase is gone; and the replaced deliveries and
+Echo replays below, as the saved plan and its walk show them. Every batch's doors settle as
 above. Whatever the plan cannot show had its source stays with its finding,
 as the never-removed list keeps it: a Travel Deal refill or a duplicate the
 saved plan already shows unproduced, a drop whose producer is held or may lie
@@ -644,8 +645,34 @@ unplaced, never the row as placed: placing that item takes the row's place.
 Derived items (a Sea Star duplicate, a Shrine delivery, an Artificer
 replacement, a Nemesis result) are judged the same way by their payload, so a
 payload redrawn as another item loses its pickup here as well as through its
-source's own discards. Removing a Well or Pool reroll removes the purchases
-and sales of its list with it.
+source's own discards; the payload itself is the new item's observation and
+stays, its item lying live to be placed again. Removing a Well or Pool reroll
+removes the purchases and sales of its list with it.
+
+Three replaced items carry no row content to judge, so settlement repairs them
+from what the walk or the plan shows, in the edit that replaces them and in the
+same Undo step. Each discards the old item's observations and outcomes with its
+pickup and the items derived from it; the new item lies live. Each is silent in
+the room the edit addresses and announced in any other, naming the replaced
+items beside the removed rows:
+
+- **A Hermes delivery** whose Shrine slot now stocks another reward, judged in
+  every room as a row on a replaced item is, or whose payload lies unplaced at a
+  host while the walk has the delivery due at another, judged only where the
+  walk reaches. A placed delivery the edit displaces is unplaced first and then
+  judged the same way.
+- **A rerolled reward's outcomes** once the press that drew it is no longer its
+  owner's effective press (a later press, an earlier one again, or none): they
+  reset to the unresolved acquisition of the effective press's reward, or go
+  when no press remains. A rerolled reward records the press that drew it; one
+  recorded before that, whose press is unknown, is stamped by the next edit of
+  its biome while it holds the effective press's reward.
+- **An Echo replay** the walk reaches holding another reward than the walk's
+  last reward there. Its recorded reward is discarded and the replay is
+  unobserved again; a pickup placed by the same edit takes the new replay and
+  stays. A replay in a room the walk does not reach stays until an edit's
+  settlement reaches it, and one never observed keeps only its missing-offer
+  finding.
 
 ### Lifecycle structure and authoring timeline
 

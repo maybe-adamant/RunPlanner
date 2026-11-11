@@ -1,8 +1,9 @@
 # Part 2, step C5: the item model
 
 Status: owner model approved (2026-11-10); schema 103 scope expanded for
-the later slices. C5a delivered on `live-pickups` (awaiting review); C5b-C5d
-not started. Temporary plan; delete at delivery after promoting durable
+the later slices. C5a delivered on `live-pickups`; C5b waves A, B and D
+merged, wave C (walk-based settlement repairs) delivered, awaiting review;
+C5b-4's reroll storage move, C5c and C5d not started. Temporary plan; delete at delivery after promoting durable
 results. Follows [LIVE_PICKUPS](LIVE_PICKUPS.md) step C.
 
 Investigations (read-only, 2026-11-10):
@@ -203,14 +204,39 @@ Wave B review fixes and notes for later slices:
 - C5b-4 (OD3 adopt): the transform that adopts an entered reward as a press's
   result must strip and restamp the content of every row on each owner whose
   result it adopts; the checked-in 103 fixtures already carry content.
-- Wave C delivery repair: also cover a delivery payload the `displaced` pass
-  keeps at its host when a Shrine restock replaces its purchase row in the
-  same settlement. The `[Wave C]` witness in
-  `edit-settlement/item-replaced.test.ts` pins today's behaviour: the delivery
-  row goes unannounced and its payload stays at the host.
 - A derived entry whose payload is redrawn as another item (Sea Star,
   delivery, Artificer, Nemesis result) loses its pickup through the replaced
   pass as well as the existing passes; intended and witnessed.
+
+C5b wave C, walk-based settlement repairs:
+
+- `RemovedStaleRoomActions` gains `discarded`: the replaced items (by
+  address) whose observations and outcomes a room lost, beside its removed
+  actions and doors. Every row a removal takes in another room is announced
+  too (a purchase's deliveries).
+- A row on a replaced item keeps its acquisition entry's payload when it goes:
+  the payload is the new item's observation (a delivery or clocked drop
+  payload change no longer loses the new payload). Consumers no longer
+  re-apply a payload after settling its change.
+- A delivery whose Shrine slot stocks another reward, or whose payload lies
+  unplaced at a host while the walk has it due elsewhere, is discarded with
+  its pickup (`strandedDeliveryPayloads` is folded into this repair).
+- A rerolled reward records `pressId` (the minimal structural part of
+  C5b-4's move: optional on `rerolledIncomingReward`, `rerolledCages[slot]`
+  and `rerolledOffers[offer]`; commands record it and stamp an unknown one
+  while it holds its effective press's reward). Once that press is no longer
+  effective, settlement resets the outcomes to the effective press's
+  unresolved acquisition, or drops them with no press left, announced in the
+  target room. A removed door or Hub press therefore no longer keeps its
+  pick with a `rerolledRewardMismatch` finding; the finding remains for a
+  same-press mismatch until C5b-4 deletes it. C5b-4 moves `pressId` onto the
+  rerolled record's `acquisition`.
+- An Echo replay the walk reaches holding another reward than the walk's
+  last is unobserved again (`null`), with its derived items and its pickup,
+  unless the same edit placed that pickup (Collect all required): it then
+  takes the new replay. A builder that authors a stale replay and settles
+  loses it; author the replay after the last settled edit to keep a stale
+  witness.
 
 Wave A review follow-ups:
 

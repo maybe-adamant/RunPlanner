@@ -54,8 +54,10 @@ only what the saved plan shows had its source or context and lost it: stale
 room-action rows; a Gold Gold Gold duplicate that a purchase stands before
 while no Echo produces it; a matured trait drop whose producing trait a walk
 without it, reaching the plan's end, never holds; a countdown Hermes delivery
-whose purchase is gone; and an unselected door its source room no longer
-has, with the rooms behind it. A takeover batch gains the Preboss doors it
+whose purchase is gone or whose Shrine slot stocks another reward; an Echo
+replay the walk reaches holding another reward than its last; and an
+unselected door its source room no longer has, with the rooms behind it. A
+rerolled reward records no press: the next edit of its biome stamps it. A takeover batch gains the Preboss doors it
 lacks, and a due delivery the plan lacks is placed, as any edit places it.
 Rows whose loss the plan cannot show stay with their findings: a Travel Deal
 refill or a duplicate the saved plan already shows unproduced, a drop whose
@@ -157,7 +159,7 @@ a door, a door's cage slot or a wheel offer, and the new `reward`) and a Hub
 `reroll` action (`rerollId`, `hubSlotKey`, `reward`) each record one press;
 the target keeps its first draw. A rerolled owner holds the reward it is
 entered with in `rerolledIncomingReward`, `rerolledCages` or
-`rerolledOffers`. Trait (Fallback Gold included), Chaos and Pom choice screens hold optional
+`rerolledOffers`, with the optional `pressId` of the press that drew it. Trait (Fallback Gold included), Chaos and Pom choice screens hold optional
 `rerolledScreens`: the screens shown before the final one, oldest first, each
 complete (trait rows with rarities and optional `persephoneLevelBonus`, an
 optional `rejectedOptionKey` and optional ordered `rarificationActions`, the

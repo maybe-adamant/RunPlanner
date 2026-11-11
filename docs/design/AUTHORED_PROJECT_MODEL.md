@@ -1055,9 +1055,12 @@ The target keeps its first native draw with its ordinary picker and meaning
 (the incoming reward, the cage or the wheel offer). The reward entered or
 collected after the presses, with its acquisition children, lives beside it in
 `rerolledIncomingReward`, `rerolledCages` or `rerolledOffers`; the first draw
-is inert while it is present. Its offer should equal the last press's; a
-mismatch is retained for repair (`DropRerolledReward`,
-`AdoptRerolledReward`), never rewritten. `InsertReroll` appends a press at an
+is inert while it is present, and records the press that drew it once known.
+Its offer should equal the last press's; a mismatch is retained for repair
+(`DropRerolledReward`, `AdoptRerolledReward`), never rewritten, while that
+press stays effective; once it is not, edit settlement resets the outcomes as
+a [replaced item](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
+`InsertReroll` appends a press at an
 engine-supplied index (after the doors unlock, or among a wheel's offers
 before its use), `ReplaceRerollReward` changes its reward, and presses are
 removed and moved as ordinary room actions; a removal keeps later presses it

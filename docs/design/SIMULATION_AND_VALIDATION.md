@@ -102,9 +102,10 @@ before assembly and returns the final project and its exact assembly.
   and lie live until the owner places their pickup, and an unplaced required
   one stops the walk at its deadline with its placement finding.
 - A delivery the edit proves displaced (valid before, invalid now) is
-  unplaced and lies live again at its reached due contact. A delivery item
-  retained at a host while the walk has it due at another is removed: it
-  arrives there as a new item. A displaced clocked
+  unplaced and lies live again at its reached due contact. A delivery, a
+  rerolled reward or an Echo replay the edit replaced is discarded as the
+  [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
+  repairs it: a delivery due at another host arrives there as a new item. A displaced clocked
   pickup is removed only when its trait is no longer held; one whose held trait
   now matures elsewhere stays with its finding. Deliveries and clocked pickups
   are keyed by their source, so no inherited choice is reset for being newly
@@ -122,7 +123,8 @@ before assembly and returns the final project and its exact assembly.
 - The settlement names, by room, the removals the
   [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
   announces, with the countdown deliveries and trait drops a command takes
-  from other rooms with their source and the doors a room lost. The room an edit addresses is the occurrence its command's
+  from other rooms with their source, the doors a room lost and the replaced
+  items whose observations it discarded. The room an edit addresses is the occurrence its command's
   address names or nests.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
