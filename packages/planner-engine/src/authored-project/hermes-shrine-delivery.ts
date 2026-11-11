@@ -105,23 +105,16 @@ export function hermesShrineRushAction(
 }
 
 /**
- * The rush of the first rushed initial purchase in timeline order: the
- * earliest rush that can refill with Travel Deal, since a rush settles with
- * its purchase. Simulation finds the first one made with the trait.
+ * The earliest initial rush in timeline order: the first rush that can refill
+ * with Travel Deal. Simulation finds the first one made with the trait.
  */
 export function firstInitialRush(
   order: readonly RoomActionReference[],
 ): HermesShrineRushAction | undefined {
-  for (const reference of order) {
-    if (
-      reference.kind !== 'purchaseHermesShrineOffer' ||
-      reference.generationKey === 'travelDealRefill'
-    )
-      continue;
-    const rush = hermesShrineRushAction(order, reference.generationKey);
-    if (rush !== undefined) return rush;
-  }
-  return undefined;
+  return order.find(
+    (reference): reference is HermesShrineRushAction =>
+      reference.kind === 'rushHermesShrineOffer' && reference.generationKey !== 'travelDealRefill',
+  );
 }
 
 /** The visible inventory offer behind one Shrine generation; `null` is an empty slot. */

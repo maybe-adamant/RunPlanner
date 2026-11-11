@@ -99,8 +99,6 @@ export type RoomActionDependency =
       readonly action: RoomActionReference;
       /** Constrains planner authoring without publishing an execution dependency. */
       readonly authoringOnly?: true;
-      /** The action must directly follow `action`, which carries it when it moves. */
-      readonly immediately?: true;
     }
   | { readonly kind: 'afterCheckpoint'; readonly checkpointKey: string }
   | { readonly kind: 'beforeCheckpoint'; readonly checkpointKey: string };
@@ -284,9 +282,9 @@ function travelDealSourceAction(
 }
 
 /**
- * A rush directly follows its purchase, since it settles with it, and a rushed
- * Shrine pickup follows its rush; the refill purchase follows the first
- * initial rush, the earliest rush that can create it.
+ * A rush follows its purchase, and a rushed Shrine pickup its rush, since the
+ * item spawns as the rush closes the Shrine; the refill purchase follows the
+ * first initial rush, the earliest rush that can create it.
  */
 function hermesShrinePurchaseDependencies(
   occurrence: RoomOccurrence,
@@ -309,9 +307,6 @@ function hermesShrinePurchaseDependencies(
       kind: 'afterAction' as const,
       action: source,
       authoringOnly: true as const,
-      ...(reference.kind === 'rushHermesShrineOffer' && sameRoomDelivery === undefined
-        ? { immediately: true as const }
-        : {}),
     }),
   ];
 }

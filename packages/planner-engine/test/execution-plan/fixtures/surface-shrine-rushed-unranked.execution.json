@@ -5417,7 +5417,7 @@
                   "remainingUses": 2,
                   "rushed": true,
                   "dueOccurrenceId": "surface-o-combat07",
-                  "dueSequence": 358
+                  "dueSequence": 360
                 },
                 {
                   "sourceKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-combat07%22%2C%22travelDealRefill%22%5D",
@@ -9354,7 +9354,7 @@
                   "remainingUses": 0,
                   "rushed": false,
                   "dueOccurrenceId": "surface-q-preboss",
-                  "dueSequence": 829
+                  "dueSequence": 830
                 }
               ],
               "stygianWell": {
@@ -9860,5 +9860,5 @@
       }
     }
   ],
-  "planFingerprint": "35bd4689"
+  "planFingerprint": "64de5d68"
 }

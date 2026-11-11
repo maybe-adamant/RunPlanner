@@ -161,18 +161,12 @@ function rowAndWindowIssues(
       if (dependency.kind === 'afterAction') {
         const dependencyKey = keyOf(dependency.action);
         const dependencyIndex = indexes.get(dependencyKey);
-        if (
-          dependencyIndex !== undefined &&
-          (dependency.immediately === true
-            ? ownIndex === dependencyIndex + 1
-            : ownIndex > dependencyIndex)
-        )
-          continue;
+        if (dependencyIndex !== undefined && ownIndex > dependencyIndex) continue;
         rows.push(
           frozen({
             kind: 'dependency',
             reference,
-            detail: `must ${dependency.immediately === true ? 'directly ' : ''}follow ${dependencyKey}`,
+            detail: `must follow ${dependencyKey}`,
             dependency,
           }),
         );
@@ -362,7 +356,6 @@ export function assessRoomActionPlacement(
       (issue): issue is Extract<RoomActionOrderIssue, { kind: 'dependency' | 'window' }> =>
         issue.kind === 'dependency' || issue.kind === 'window',
     ),
-    ...separatedFollowers(order, lastIndex, context),
     ...requiredFirstBlockers(order, lastIndex, context),
   ]);
   const terminalIndex =
@@ -390,79 +383,16 @@ export function assessRoomActionInsertion(
   return frozen({ toIndex, ...assessRoomActionPlacement(next, toIndex, context) });
 }
 
-/**
- * A row after the placed actions that must directly follow one of them and no
- * longer does: the placement separated the pair.
- */
-function separatedFollowers(
-  order: readonly RoomActionReference[],
-  lastIndex: number,
-  context: RoomActionOrderContext,
-): RoomActionPlacementBlocker[] {
-  const indexes = new Map(order.map((reference, index) => [keyOf(reference), index]));
-  return order.slice(lastIndex + 1).flatMap((reference, offset) =>
-    (context.active.get(keyOf(reference))?.dependencies ?? []).flatMap((dependency) => {
-      if (dependency.kind !== 'afterAction' || dependency.immediately !== true) return [];
-      const leader = indexes.get(keyOf(dependency.action));
-      return leader === undefined || leader > lastIndex || leader === lastIndex + offset
-        ? []
-        : [
-            frozen({
-              kind: 'dependency' as const,
-              reference,
-              detail: `must directly follow ${keyOf(dependency.action)}`,
-              dependency,
-            }),
-          ];
-    }),
-  );
-}
-
-/** Whether `follower` must directly follow `reference` (a Shrine rush its purchase). */
-function followsImmediately(
-  reference: RoomActionReference,
-  follower: RoomActionReference | undefined,
-  active: RoomActionOrderContext['active'],
-): boolean {
-  if (follower === undefined) return false;
-  const key = keyOf(reference);
-  return (active.get(keyOf(follower))?.dependencies ?? []).some(
-    (dependency) =>
-      dependency.kind === 'afterAction' &&
-      dependency.immediately === true &&
-      keyOf(dependency.action) === key,
-  );
-}
-
-/** How many rows that must directly follow another do. */
-export function immediateFollowersInPlace(
-  order: readonly RoomActionReference[],
-  active: RoomActionOrderContext['active'],
-): number {
-  return order.filter((reference, index) => followsImmediately(reference, order[index + 1], active))
-    .length;
-}
-
-/**
- * The order a move yields: the row lands at `toIndex`, and a row that must
- * directly follow it moves with it. `lastIndex` is the last moved row's index.
- */
+/** The order a move yields: the row lands at `toIndex`. */
 export function movedRoomActionOrder(
   order: readonly RoomActionReference[],
   fromIndex: number,
   toIndex: number,
-  active: RoomActionOrderContext['active'],
-): { readonly order: readonly RoomActionReference[]; readonly lastIndex: number } {
+): readonly RoomActionReference[] {
   const next = [...order];
   const [reference] = next.splice(fromIndex, 1);
   next.splice(toIndex, 0, reference!);
-  const follower = order[fromIndex + 1];
-  if (!followsImmediately(reference!, follower, active))
-    return frozen({ order: frozen(next), lastIndex: toIndex });
-  next.splice(next.indexOf(follower!), 1);
-  const leader = next.indexOf(reference!);
-  next.splice(leader + 1, 0, follower!);
-  return frozen({ order: frozen(next), lastIndex: leader + 1 });
+  return frozen(next);
 }
 
 /** One move and the order it yields, judged like an insertion at its landing. */
@@ -472,8 +402,11 @@ export function assessRoomActionMove(
   toIndex: number,
   context: RoomActionOrderContext,
 ): RoomActionPlacementAssessment {
-  const moved = movedRoomActionOrder(order, fromIndex, toIndex, context.active);
-  return assessRoomActionPlacement(moved.order, moved.lastIndex, context);
+  return assessRoomActionPlacement(
+    movedRoomActionOrder(order, fromIndex, toIndex),
+    toIndex,
+    context,
+  );
 }
 
 /** The contract error for an index whose placement is not structurally authorable. */

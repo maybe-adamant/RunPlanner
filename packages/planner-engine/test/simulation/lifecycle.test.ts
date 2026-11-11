@@ -303,7 +303,7 @@ describe('single-room lifecycle execution', () => {
     expect(committed).toBeGreaterThan(scheduled);
     expect(fragment.events[scheduled]).toMatchObject({
       kind: 'hermesShrineDeliveriesScheduled',
-      deliveries: [{ generationKey: 'initial:first', rewardType: 'Boon', delay: 2, rushed: false }],
+      deliveries: [{ generationKey: 'initial:first', rewardType: 'Boon', delay: 2 }],
     });
   });
 
@@ -361,6 +361,7 @@ describe('single-room lifecycle execution', () => {
     const scheduled = fragment.events.findIndex(
       (event) => event.kind === 'hermesShrineDeliveriesScheduled',
     );
+    const rushed = fragment.events.findIndex((event) => event.kind === 'hermesShrineRushReached');
     const deliveryReached = fragment.events.findIndex(
       (event) =>
         event.kind === 'acquisitionPointReached' && event.siteKey === 'hermesShrineDelivery',
@@ -368,12 +369,15 @@ describe('single-room lifecycle execution', () => {
     const committed = fragment.events.findIndex((event) => event.kind === 'roomCommitted');
 
     expect(fragment.blockedAt).toBeUndefined();
-    expect(deliveryReached).toBeGreaterThan(scheduled);
+    // The rush settles at its own row, between the scheduling and the pickup.
+    expect(rushed).toBeGreaterThan(scheduled);
+    expect(deliveryReached).toBeGreaterThan(rushed);
     expect(committed).toBeGreaterThan(deliveryReached);
     expect(fragment.events[scheduled]).toMatchObject({
       kind: 'hermesShrineDeliveriesScheduled',
-      deliveries: [{ generationKey: 'initial:first', rewardType: 'Boon', delay: 2, rushed: true }],
+      deliveries: [{ generationKey: 'initial:first', rewardType: 'Boon', delay: 2 }],
     });
+    expect(fragment.events[rushed]).toMatchObject({ generationKey: 'initial:first' });
   });
 
   it.each([['GeneratedO_Intro01'], ['HeraclesCombatO']])(

@@ -4,6 +4,7 @@ import {
   replaceTestPlacedItem,
   purchaseTestHermesShrineOffer,
   testHermesShrinePurchaseAction,
+  testHermesShrineRushAction,
 } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import {
@@ -1666,13 +1667,19 @@ describe('shop-like purchase rows', () => {
         delay: 2,
         rushed,
       });
-    // Timeline order, not slot order, decides which rushed purchase triggers the refill;
-    // a rush settles with its purchase, which carries it when moved.
+    // Timeline order, not slot order, decides which rush triggers the refill; a
+    // rush moves on its own, after its purchase.
     project = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
       action: testHermesShrinePurchaseAction(shrineOwner, 'initial:secondLeft'),
       toIndex: 1,
     });
+    if (rushed)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'MoveRoomAction',
+        action: testHermesShrineRushAction(shrineOwner, 'initial:secondLeft'),
+        toIndex: 2,
+      });
     return authorLegalTraitOffers({
       ...project,
       route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
@@ -1736,6 +1743,41 @@ describe('shop-like purchase rows', () => {
         },
       },
     });
+  });
+
+  it('lets a Shrine rush row move on its own to any gap after its purchase', () => {
+    const node = projectStructuredWorkspaceFixture(travelDealShrine(true))
+      .workspace.route.biomes.flatMap((biome) => biome.nodes)
+      .find(
+        (candidate) =>
+          candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === shrineId,
+      );
+    if (node?.kind !== 'occurrenceWorkbench') throw new Error(`${shrineId} is missing`);
+    const rows = node.room.roomActions?.rows ?? [];
+    const rankOf = (kind: string, generationKey: string) =>
+      rows.find(
+        (row) =>
+          row.reference.kind === kind &&
+          'generationKey' in row.reference &&
+          row.reference.generationKey === generationKey,
+      )?.rank ?? -1;
+    const moves = (node.room.roomActions?.proposals ?? []).filter(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.reference.kind === 'rushHermesShrineOffer' &&
+        proposal.reference.generationKey === 'initial:secondLeft',
+    );
+    const purchaseIndex = rankOf('purchaseHermesShrineOffer', 'initial:secondLeft') - 1;
+    const rushIndex = rankOf('rushHermesShrineOffer', 'initial:secondLeft') - 1;
+    const authorable = moves.filter((proposal) => proposal.structurallyAuthorable);
+    // Later gaps, with rows between, are offered; none before its purchase is.
+    expect(authorable.some((proposal) => proposal.toIndex! > rushIndex)).toBe(true);
+    expect(authorable.every((proposal) => proposal.toIndex! > purchaseIndex)).toBe(true);
+    expect(
+      moves.some(
+        (proposal) => proposal.toIndex! <= purchaseIndex && !proposal.structurallyAuthorable,
+      ),
+    ).toBe(true);
   });
 
   it('omits the Shrine refill line without a rushed purchase and removes a stranded refill', () => {

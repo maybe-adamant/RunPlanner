@@ -44,7 +44,7 @@ export interface HermesShrineInteractionRush {
   readonly generationKey: HermesShrineGenerationKey;
   readonly rewardType: string;
   readonly delay: HermesShrineDelay;
-  /** Appends the rush where the room's actions end. */
+  /** Rushes the item directly after its purchase; an `index` places the rush later. */
   readonly rush: CommandOf<'SetHermesShrineRush'>;
 }
 

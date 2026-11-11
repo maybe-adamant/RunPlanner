@@ -162,10 +162,7 @@ export function withWellPurchasePrice(
   });
 }
 
-/**
- * A Hermes Shrine purchase's price context, read before it settles; a rush,
- * settling with its purchase, is priced right after it on its own row.
- */
+/** A Hermes Shrine purchase's price context, read before it settles. */
 export function withHermesShrinePurchasePrice(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
@@ -180,12 +177,7 @@ export function withHermesShrinePurchasePrice(
       owner: undefined,
       resolution: contractFailure('a Shrine purchase has no authored room'),
     });
-  const owner = (kind: 'purchaseHermesShrineOffer' | 'rushHermesShrineOffer') =>
-    rankedRow(
-      room,
-      (reference) => reference.kind === kind && reference.generationKey === event.generationKey,
-    );
-  const resolution = (stage: 'order' | 'rush'): PurchaseResolution => {
+  const resolution = ((): PurchaseResolution => {
     const shrine = room.hermesShrine;
     if (shrine === undefined) return unresolvedItem;
     const slotKey = hermesShrineInitialSlotKey(event.generationKey);
@@ -199,24 +191,96 @@ export function withHermesShrinePurchasePrice(
       .find((option) => option.rewardType === offer.rewardType)?.key;
     return itemKey === undefined
       ? contractFailure(`the Shrine declares no option for ${offer.rewardType}`)
-      : priced({ kind: 'hermesShrine', itemKey, delay: offer.delay, stage });
-  };
-  const ordered = withPurchasePrice(context, state, {
+      : priced({ kind: 'hermesShrine', itemKey, delay: offer.delay, stage: 'order' });
+  })();
+  return withPurchasePrice(context, state, {
     sequence: event.sequence,
     room: room.origin,
     paid: true,
-    owner: owner('purchaseHermesShrineOffer'),
-    resolution: resolution('order'),
+    owner: rankedRow(
+      room,
+      (reference) =>
+        reference.kind === 'purchaseHermesShrineOffer' &&
+        reference.generationKey === event.generationKey,
+    ),
+    resolution,
   });
-  return event.rushed
-    ? withPurchasePrice(context, ordered, {
+}
+
+/**
+ * A Shrine rush's price context: the one its purchase read, since the rush
+ * price is fixed with the offer and only the room's first purchase, always
+ * earlier, reprices it; the rush pays it at its own row.
+ */
+export function withHermesShrineRushPrice(
+  context: ChronologyWalkContext,
+  state: ChronologyWalkState,
+  event: Extract<HistoryEvent, { readonly kind: 'hermesShrineRushReached' }>,
+): ChronologyWalkState {
+  const room = authoredRoom(context, event.origin);
+  const roomAddress = (room?.origin ?? event.origin) as OccurrenceAddress;
+  const owner =
+    room === undefined
+      ? undefined
+      : rankedRow(
+          room,
+          (reference) =>
+            reference.kind === 'rushHermesShrineOffer' &&
+            reference.generationKey === event.generationKey,
+        );
+  const purchaseOwner =
+    room === undefined
+      ? undefined
+      : rankedRow(
+          room,
+          (reference) =>
+            reference.kind === 'purchaseHermesShrineOffer' &&
+            reference.generationKey === event.generationKey,
+        );
+  const purchase =
+    purchaseOwner === undefined
+      ? undefined
+      : state.purchasePriceContexts.get(semanticAddressKey(purchaseOwner));
+  const ordered = purchase?.context;
+  const resolution: PurchaseResolution =
+    purchase === undefined
+      ? contractFailure('a Shrine rush has no priced purchase')
+      : ordered === undefined
+        ? (purchase.unpriced ?? contractFailure('a Shrine purchase has no price context'))
+        : ordered.venue.kind !== 'hermesShrine'
+          ? contractFailure('a Shrine rush follows a purchase of another venue')
+          : priced({ ...ordered.venue, stage: 'rush' });
+  if (
+    resolution.kind !== 'priced' ||
+    ordered === undefined ||
+    owner === undefined ||
+    state.branch === undefined
+  )
+    return withPurchasePrice(context, state, {
+      sequence: event.sequence,
+      room: roomAddress,
+      paid: true,
+      owner,
+      resolution,
+    });
+  // The purchase already made this room's first paid purchase.
+  return Object.freeze({
+    ...state,
+    purchasePriceContexts: new Map(state.purchasePriceContexts).set(
+      semanticAddressKey(owner),
+      Object.freeze({
         sequence: event.sequence,
-        room: room.origin,
-        paid: true,
-        owner: owner('rushHermesShrineOffer'),
-        resolution: resolution('rush'),
-      })
-    : ordered;
+        owner,
+        room: roomAddress,
+        context: Object.freeze({
+          venue: resolution.venue,
+          firstPaidPurchase: false,
+          vowRank: ordered.vowRank,
+          activeVoucherItemKeys: ordered.activeVoucherItemKeys,
+        }),
+      }),
+    ),
+  });
 }
 
 /**

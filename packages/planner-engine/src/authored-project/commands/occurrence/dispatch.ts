@@ -484,8 +484,8 @@ export function applyOccurrenceCommand(
       if (purchase === undefined) failCommand(command, 'only a bought Shrine item can be rushed');
       const offer = offerFor(occurrence.hermesShrine, command.generationKey);
       if (offer === undefined || offer === null) failCommand(command, 'Shrine offer is unresolved');
-      // A new rush follows its purchase directly; a rushed item is optional
-      // loot the owner picks up, so nothing ranks its pickup.
+      // A new rush enters right after its purchase unless an index places it
+      // later; a rushed item is optional loot the owner picks up, so nothing ranks its pickup.
       const purchaseIndex = order.indexOf(purchase);
       const rush = Object.freeze({
         kind: 'rushHermesShrineOffer' as const,
