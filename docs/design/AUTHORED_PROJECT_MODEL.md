@@ -728,7 +728,7 @@ generation is bought exactly when the room's actions hold its one purchase,
 which names its roll and slot; the game rolls a Fateful Twist per bought
 generation, and its result lives on the Well under that generation. Pins and
 Twist results exist only for rolls the room holds, so removing a reroll takes
-them with it. Each Pool sale names its list (`rollKey`, absent for the initial
+them with it, and with them the purchases and sales of its list. Each Pool sale names its list (`rollKey`, absent for the initial
 list). A purchase or sale pins a blank slot in the same edit. Travel
 Deal refill state is
 occurrence-local to its Shop, Shrine, or Well carrier. Pending deliveries,
@@ -981,10 +981,13 @@ kind:
 A reward is named by its type and the gods its payload names (a Devotion
 pair's chosen and spurned gods both). An item not observed yet (an unpinned
 Well or Pool slot, an unset reward, a payload not authored, Echo's replays)
-has no content. Every command stamps the rows of the biomes it changed that
-recorded none once their item is observed, and engine-built references (the
-roster's, the live product's) carry it; `InsertRoomAction` refuses a
-reference whose content its item does not hold. The codec accepts any
+has no content. Every command stamps the rows of the biomes it changes that
+recorded none while their item is observed, both before it applies (so a row
+records the item it was placed for, not the one the edit swaps in) and after;
+stamping alone is not an edit of the room. Engine-built references (the
+roster's, the live product's) carry content; `InsertRoomAction` refuses a
+reference whose content its item does not hold, and placing the current item
+of an item-replaced row takes that row's place. The codec accepts any
 recorded content; a row whose item holds other content is
 [an item-replaced row](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
 

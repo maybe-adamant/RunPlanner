@@ -545,7 +545,7 @@ Procedure, first match wins:
    duplicate, a matured trait drop) is removed.
 4. **Otherwise unable to happen but repairable another way**: invalid, with a
    finding (a Shop purchase past the god cap, a Purging Pool sale the game
-   refuses, a Well or Pool purchase whose roll changed, a row out of order, a
+   refuses, a Well or Pool purchase whose roll a later reroll replaced, a row out of order, a
    trait drop whose trait is held but now matures in another room).
 
 Every removal:
@@ -637,7 +637,15 @@ gone: the edit that replaces the item removes it, through the row's owning
 removal command, in every room of the plan whether or not the walk reaches
 it, silently in the room the edit addresses and announced in any other; one
 that a saved plan already held goes at the next edit of its room. Unpinning an
-item keeps its rows, since an unobserved item matches any content.
+item keeps its rows, since an unobserved item matches any content. A row with
+no active action is stale, never item-replaced, whatever content it recorded.
+Until it goes, the live product shows the item the row's place holds now as
+unplaced, never the row as placed: placing that item takes the row's place.
+Derived items (a Sea Star duplicate, a Shrine delivery, an Artificer
+replacement, a Nemesis result) are judged the same way by their payload, so a
+payload redrawn as another item loses its pickup here as well as through its
+source's own discards. Removing a Well or Pool reroll removes the purchases
+and sales of its list with it.
 
 ### Lifecycle structure and authoring timeline
 

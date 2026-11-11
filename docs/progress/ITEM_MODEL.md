@@ -187,6 +187,31 @@ C5b wave B, item content on rows (schema 103 shape):
   Builders that swap a reward after placing its pickup must swap first or
   settle.
 
+Wave B review fixes and notes for later slices:
+
+- OD7: removing a Well or Pool reroll (`RemoveRoomAction`, a reset, a stale
+  removal in settlement) removes the purchases and sales of its list in the
+  same edit; a pin changed to another value removes them as item-replaced.
+- Commands stamp absent content on the touched biomes' rows before applying as
+  well as after, so a never-stamped row records the item it was placed for.
+- The content tuple layout is fixed: `[press, ...token]` for door and cage
+  rewards, `[pickedOfferKey, press, ...token]` for a wheel (the offer key by the
+  wheel's declared order), `[optionKey, ...token]` for Shop, Pedestal and
+  refill, `[itemKey]`, `[rewardType]`, `[traitKey]` for Well, Shrine and Pool,
+  `[...token]` or `[eventKind, ...token]` or `[variantKey]` for entries; a token
+  is `[rewardType, source]`, `[rewardType, chosen, spurned]` or `[rewardType]`.
+- C5b-4 (OD3 adopt): the transform that adopts an entered reward as a press's
+  result must strip and restamp the content of every row on each owner whose
+  result it adopts; the checked-in 103 fixtures already carry content.
+- Wave C delivery repair: also cover a delivery payload the `displaced` pass
+  keeps at its host when a Shrine restock replaces its purchase row in the
+  same settlement. The `[Wave C]` witness in
+  `edit-settlement/item-replaced.test.ts` pins today's behaviour: the delivery
+  row goes unannounced and its payload stays at the host.
+- A derived entry whose payload is redrawn as another item (Sea Star,
+  delivery, Artificer, Nemesis result) loses its pickup through the replaced
+  pass as well as the existing passes; intended and witnessed.
+
 Wave A review follow-ups:
 
 - A Well or Pool reroll never takes an id the room's rows still name (a
