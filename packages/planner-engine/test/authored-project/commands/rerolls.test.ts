@@ -429,10 +429,32 @@ describe('Well and Pool rerolls', () => {
       traitKey: Object.keys(catalog.traits.byKey)[0]!,
       index: occurrence(bought, room.occurrenceId).roomActions.order.length,
     });
-    const orphaned = remove(remove(sold, { kind: 'rerollStygianWell', rerollId: 'r1' }), {
+    const removed = remove(remove(sold, { kind: 'rerollStygianWell', rerollId: 'r1' }), {
       kind: 'rerollPurgingPool',
       rerollId: 'r1',
     });
+    // Removing a reroll takes the purchases and sales of its list with it.
+    expect(
+      occurrence(removed, room.occurrenceId).roomActions.order.filter(
+        (reference) =>
+          (reference.kind === 'purchaseStygianWellOffer' &&
+            reference.generationKey === 'r1:healing') ||
+          (reference.kind === 'sellPurgingPoolTrait' && reference.rollKey === 'r1'),
+      ),
+    ).toEqual([]);
+    // A saved plan may still hold them without their rerolls.
+    const raw = JSON.parse(encodeProjectDocument(sold));
+    for (const plan of raw.route.biomes)
+      for (const candidate of plan.topology?.occurrences ?? []) {
+        if (candidate.occurrenceId !== room.occurrenceId) continue;
+        candidate.roomActions.order = candidate.roomActions.order.filter(
+          (reference: RoomActionReference) =>
+            reference.kind !== 'rerollStygianWell' && reference.kind !== 'rerollPurgingPool',
+        );
+        delete candidate.stygianWell.rerollOfferKeyBySlot;
+        delete candidate.purgingPool.rerollTraitKeyBySlot;
+      }
+    const orphaned = decodeProjectDocument(raw, catalog);
     const again = insert(insert(orphaned, 'InsertStygianWellReroll'), 'InsertPurgingPoolReroll');
     const after = occurrence(again, room.occurrenceId);
     expect(after.roomActions.order.slice(-2)).toEqual([

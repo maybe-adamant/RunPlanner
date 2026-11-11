@@ -8,6 +8,8 @@ import {
   createOccurrenceId,
   createRewardWheelAddress,
   createRoomActionAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   createRouteStartKeepsakeSelectionAddress,
   roomActionKey,
   semanticAddressKey,
@@ -515,14 +517,17 @@ describe('live interactions at a gap', () => {
       purchased: true,
       itemKey: 'ArmorBoostStore',
     });
-    const orphaned = apply(bought, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(
-        fBiome,
-        fWell.occurrenceId,
-        roomActionKey({ kind: 'rerollStygianWell', rerollId: 'r1' }),
-      ),
-    });
+    // Removing the reroll takes its purchase with it; a saved plan may still hold one.
+    const raw = JSON.parse(encodeProjectDocument(bought));
+    for (const plan of raw.route.biomes)
+      for (const candidate of plan.topology?.occurrences ?? [])
+        if (candidate.occurrenceId === fWell.occurrenceId) {
+          candidate.roomActions.order = candidate.roomActions.order.filter(
+            (reference: { kind: string }) => reference.kind !== 'rerollStygianWell',
+          );
+          delete candidate.stygianWell.rerollOfferKeyBySlot;
+        }
+    const orphaned = decodeProjectDocument(raw, catalog);
     const live = interactions(orphaned, fWell);
     expect(live.frontier).toBe(roomOrder(orphaned, fWell).length - 1);
     expect(

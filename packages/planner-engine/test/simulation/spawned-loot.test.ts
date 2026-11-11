@@ -717,14 +717,15 @@ describe('spawned loot', () => {
   });
 
   it('spawns an O phase’s deliveries only once its wheel reward is collected', () => {
-    // Wheel 1 offers a Boon whose trait offer is unset: the walk stops at its pickup.
+    // Wheel 1 offers a Boon in place of its picked reward: the old pickup's
+    // item is replaced, so the walk stops there and the Boon lies unplaced.
     const project = applyProjectCommand(surfaceShrineDeliveriesProject(), catalog, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
     expect(moments(loot(project, 'O', oOccurrenceIds.combat04).spawned)).toEqual([
-      ['encounterEnd:Combat1', ['rewardWheel required #2']],
+      ['encounterEnd:Combat1', ['rewardWheel required unplaced:InsertRoomAction']],
     ]);
   });
 
