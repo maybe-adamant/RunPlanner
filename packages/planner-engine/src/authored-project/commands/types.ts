@@ -713,13 +713,14 @@ export type HermesShrineCommand =
   | {
       /**
        * Rushes or un-rushes one bought item: a rush delivers it in the Shrine
-       * room and makes its optional pickup live; a new rush follows its purchase.
+       * room and makes its optional pickup live; a new rush follows its purchase,
+       * by default directly.
        */
       readonly kind: 'SetHermesShrineRush';
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').HermesShrineGenerationKey;
       readonly rushed: boolean;
-      /** Where a new rush enters instead: any structurally legal index. */
+      /** Where a new rush enters instead: any structurally legal index after its purchase. */
       readonly index?: number;
     }
   | {

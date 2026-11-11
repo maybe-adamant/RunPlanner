@@ -300,7 +300,7 @@ describe('placing actions at a chosen index', () => {
     ).toEqual([]);
   });
 
-  it('places a Shrine rush only directly after its purchase, without its pickup', () => {
+  it('places a Shrine rush at any gap after its purchase, without its pickup', () => {
     const loaded = loadSurfaceShrineTravelDealCheckpoint();
     const postboss = 'surface-n-preboss:postboss';
     const source = createOccurrenceAddress(
@@ -316,8 +316,7 @@ describe('placing actions at a chosen index', () => {
       'purchaseHermesShrineOffer',
       'interactAcquisitionEntry',
     ]);
-    // Bought before the first item, its rush settles with it as the first rush,
-    // and stands only directly after its purchase.
+    // Bought before the first item, its rush may stand at any gap after its purchase.
     const project = applyProjectCommand(loaded, catalog, {
       kind: 'PurchaseHermesShrineOffer',
       occurrence: source,
@@ -331,7 +330,7 @@ describe('placing actions at a chosen index', () => {
       generationKey: 'initial:secondLeft' as const,
       rushed: true,
     };
-    expect(positionedCommandInsertionIndexes(project, catalog, command)).toEqual([3]);
+    expect(positionedCommandInsertionIndexes(project, catalog, command)).toEqual([3, 4, 5, 6, 7]);
     const placed = (index: number) =>
       order(applyProjectCommand(project, catalog, { ...command, index }), postboss);
     const rush = withItemContent(project, source, {
@@ -339,7 +338,9 @@ describe('placing actions at a chosen index', () => {
       generationKey: 'initial:secondLeft',
     });
     expect(placed(3)).toEqual([...before.slice(0, 3), rush, ...before.slice(3)]);
-    for (const index of [4, 5, 6])
+    // After the first item's rush, which stays the Travel Deal trigger.
+    expect(placed(5)).toEqual([...before.slice(0, 5), rush, ...before.slice(5)]);
+    for (const index of [0, 2])
       expect(() => placed(index)).toThrow(new RegExp(`index ${index} is not a legal position`));
   });
 });

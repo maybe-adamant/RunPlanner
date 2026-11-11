@@ -27,7 +27,6 @@ import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } fr
 import { updateOccurrence } from './occurrence/mutation';
 import type { RoomActionCommand } from './types';
 import {
-  immediateFollowersInPlace,
   movedRoomActionOrder,
   roomActionInsertionRefusal,
   roomActionOrderContextForOccurrence,
@@ -229,10 +228,6 @@ export function applyRoomActionCommand(
   const existingIndex = order.findIndex(
     (reference) => roomActionKey(reference) === command.action.actionKey,
   );
-  const activeActions = () =>
-    domain === undefined
-      ? new Map()
-      : roomActionOrderContextForOccurrence(domain, occurrence).active;
 
   let nextOrder: RoomActionReference[];
   switch (command.kind) {
@@ -366,19 +361,10 @@ export function applyRoomActionCommand(
       if (existingIndex < 0) failCommand(command, 'room action is not ordered');
       requireIndex(command, command.toIndex, order.length - 1, 'toIndex');
       if (existingIndex === command.toIndex) return document;
-      nextOrder = [
-        ...movedRoomActionOrder(order, existingIndex, command.toIndex, activeActions()).order,
-      ];
+      nextOrder = [...movedRoomActionOrder(order, existingIndex, command.toIndex)];
       if (nextOrder.every((reference, index) => reference === order[index])) return document;
       break;
   }
-  // A rush settles with its purchase, so nothing parts the pair.
-  if (
-    (command.kind === 'InsertRoomAction' || command.kind === 'MoveRoomAction') &&
-    immediateFollowersInPlace(nextOrder, activeActions()) <
-      immediateFollowersInPlace(order, activeActions())
-  )
-    failCommand(command, 'a Shrine rush stays directly after its purchase');
 
   let nextOccurrence = {
     ...occurrence,

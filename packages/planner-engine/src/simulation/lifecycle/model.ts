@@ -175,17 +175,20 @@ export type RoomLifecycleEvent =
         readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
         readonly rewardType: string;
         readonly delay: number;
-        readonly rushed: boolean;
       }[];
     })
   | (RoomLifecycleEventBase & {
-      /**
-       * One ranked Shrine purchase with its rush, which settles with it and can
-       * trigger the Travel Deal refill.
-       */
+      /** One ranked Shrine purchase; the refill's purchase schedules its delivery here. */
       readonly kind: 'hermesShrinePurchaseReached';
       readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
-      readonly rushed: boolean;
+    })
+  | (RoomLifecycleEventBase & {
+      /**
+       * One ranked Shrine rush: it closes the Shrine, so the item spawns here,
+       * and the first rush made with Travel Deal refills its slot.
+       */
+      readonly kind: 'hermesShrineRushReached';
+      readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'acquisitionPointReached';

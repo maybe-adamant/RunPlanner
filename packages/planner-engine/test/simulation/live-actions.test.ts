@@ -405,7 +405,7 @@ describe('live actions at a gap', () => {
     expect(beforeSpawn).toEqual([]);
   });
 
-  it('offers a bought Shrine item’s rush only directly after its purchase', () => {
+  it('offers a bought Shrine item’s rush at every gap after its purchase', () => {
     // [wheel choice, wheel pickup, buy first, rush first, buy second left, first's pickup]
     const loaded = loadSurfaceNOHermesShrineDeliveryCheckpoint();
     const project = applyProjectCommand(loaded, catalog, {
@@ -436,9 +436,12 @@ describe('live actions at a gap', () => {
         ? [gap.index]
         : [],
     );
-    // Bought before the second right item, its rush stands right after its own purchase.
-    expect(purchaseIndex).toBeLessThan(roomOrder(project, oShrine).length - 1);
-    expect(gaps).toEqual([purchaseIndex + 1]);
+    // Bought before the second right item, its rush may stand at any later gap of the room.
+    const length = roomOrder(project, oShrine).length;
+    expect(purchaseIndex).toBeLessThan(length - 1);
+    expect(gaps).toEqual(
+      Array.from({ length: length - purchaseIndex }, (_, offset) => purchaseIndex + 1 + offset),
+    );
   });
 
   it('closes a required row’s window at its deadline, before the room’s last gap', () => {

@@ -2,7 +2,6 @@ import {
   assessReachedHermesDeliveryPlacement,
   assessReachedClockedPickupPlacement,
 } from '../../acquisition/generated-pickup-placement';
-import { spawnDueHermesDeliveries } from '../offer-lifecycle/spawned-trait-offers';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import {
@@ -161,28 +160,22 @@ export function applyAcquisitionPointReachedTransition(
           room,
           delivery.generationKey,
           delivery.rewardType,
-          delivery,
-          event.sequence,
+          delivery.delay,
         ),
       ),
     );
     const { sourceBranch } = inputs;
     return publish({
-      branch: spawnDueHermesDeliveries(
-        catalog,
-        room,
-        Object.freeze({
-          ...sourceBranch,
-          state: Object.freeze({
-            ...sourceBranch.state,
-            pendingHermesShrineDeliveries: Object.freeze({
-              ...sourceBranch.state.pendingHermesShrineDeliveries,
-              ...scheduled,
-            }),
+      branch: Object.freeze({
+        ...sourceBranch,
+        state: Object.freeze({
+          ...sourceBranch.state,
+          pendingHermesShrineDeliveries: Object.freeze({
+            ...sourceBranch.state.pendingHermesShrineDeliveries,
+            ...scheduled,
           }),
         }),
-        event.sequence,
-      ),
+      }),
       findings,
     });
   }

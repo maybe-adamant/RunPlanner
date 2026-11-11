@@ -242,7 +242,7 @@ function hermesShrineInteraction(
       ? []
       : [shrineOffer(room, generationKey, offer)];
   });
-  // A bought item can be rushed once, directly after its purchase.
+  // A bought item can be rushed once, any time after its purchase in this room.
   const rushes = [
     ...SHRINE_SLOT_KEYS.map(hermesShrineInitialGenerationKey),
     'travelDealRefill' as const,

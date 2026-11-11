@@ -4,8 +4,9 @@ Status: owner model approved (2026-11-10); schema 103 scope expanded for
 the later slices. C5a delivered on `live-pickups`; C5b waves A, B, C and D
 merged; wave E (C5b-4, reroll results on the rerolled item) delivered and
 reviewed. C5c (same-key swap) landed inside C5b through item content on rows.
-C5d not started. Temporary plan; delete at delivery after promoting durable
-results. Follows [LIVE_PICKUPS](LIVE_PICKUPS.md) step C.
+C5d: C5d-1 (the free Shrine rush) delivered on `c5d-rush`; C5d-2 (dropping
+`encounterPhaseKey`) in progress. Temporary plan; delete at delivery after
+promoting durable results. Follows [LIVE_PICKUPS](LIVE_PICKUPS.md) step C.
 
 Investigations (read-only, 2026-11-10):
 
@@ -149,13 +150,9 @@ C5b-3, Shrine rush as its own row (schema 103 shape):
   offers `rush` on a bought, unrushed item. Gold prices the order on the
   purchase row and the rush on the rush row. The rush settles with its
   purchase, so the walk and the wire are unchanged.
-- Until C5d the rush row stays directly after its purchase (an immediate
-  `afterAction` dependency): `SetHermesShrineRush` accepts no other index,
-  the live verb and the Shrine interaction offer only that gap (its command
-  carries no index), a moved purchase carries its rush, and insertions or
-  moves that would part the pair are refused. C5d revisits this when the
-  rush becomes its own triggered consequence. Import: `commerce.ts`
-  rushes with the new command; `action-order.ts` reads the rush row.
+- The rush stayed directly after its purchase until C5d-1 freed it (see
+  C5d contract changes). Import: `commerce.ts` rushes with the new command;
+  `action-order.ts` reads the rush row.
 
 C5b-4, Sea Star proc as an observation (no schema change):
 
@@ -302,6 +299,31 @@ Wave A review follow-ups:
 - Run import test literal: `packages/run-import/test/import-surface-capture.test.ts`
   still expects `{ kind: 'purchaseHermesShrineOffer', …, rushed: true }`; it
   must expect the purchase followed by its `rushHermesShrineOffer` row.
+
+## C5d contract changes
+
+C5d-1, the Shrine rush at any gap after its purchase (no schema change):
+
+- `SetHermesShrineRush` takes an `index` at any structurally authorable gap
+  after its purchase in the same room; without one it still enters directly
+  after the purchase. The rush is an ordinary `afterAction` dependency on its
+  purchase: a moved purchase no longer carries its rush, moves that part the
+  pair are no longer refused, and a rush before its purchase is refused at a
+  chosen index and keeps its ordering finding when preserved.
+- The rush settles at its own row (`hermesShrineRushReached`): its item
+  spawns there, so the rushed pickup follows the rush row, and the first
+  initial rush made with Travel Deal realizes the refill there.
+  `firstInitialRush` is now the earliest initial rush row, so the refill's
+  purchase follows that row. The rush price is unchanged: it reads its
+  purchase's price context and pays at the rush row.
+- The live product offers the rush verb at every legal gap after the
+  purchase; spawned loot lists the rushed item under its rush. The Shrine
+  interaction's rush command still carries no index.
+- Execution plan unchanged: the rush stays folded into its purchase's guide
+  entry and `purchase.rushed`.
+- Draft and run import: no compile change. An imported rush still enters
+  directly after its purchase; `action-order.ts` may later order it from the
+  record with `index`.
 
 ## Inventory (summary of existence-vs-interaction)
 

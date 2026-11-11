@@ -12,7 +12,7 @@ import { createBiomeAddress, createRoomActionAddress } from '../../authored-proj
 import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import { roomLifecycleWindowOrdinal } from '../../authored-project/room-actions/lifecycle-structure';
-import { performedRoomActions, type RoomActionRoster, type RoomActionRow } from '../room-actions';
+import { type RoomActionRow } from '../room-actions';
 import { purgingPoolSalePoint } from '../commerce/feature-rolls';
 
 type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];
@@ -641,7 +641,6 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     const purchaseActions = roster.rows.flatMap((row) =>
       row.reference.kind === 'purchaseHermesShrineOffer' ? [row.reference] : [],
     );
-    const rushedKeys = rushedShrineGenerations(roster);
     const shrine = context.input.hermesShrine;
     const deliveries = (['first', 'secondLeft', 'secondRight'] as const).flatMap((slotKey) => {
       const generationKey = `initial:${slotKey}` as const;
@@ -654,7 +653,6 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
               generationKey,
               rewardType: offer.rewardType,
               delay: offer.delay,
-              rushed: rushedKeys.has(generationKey),
             }),
           ];
     });
@@ -796,16 +794,17 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         });
       case 'purchaseHermesShrineOffer':
         // Initial deliveries are scheduled together at the Shrine checkpoint; the
-        // purchase's position, with its rush, decides the Travel Deal refill and
-        // the refill's purchase.
+        // purchase's position prices it and decides the refill's purchase.
         return appendEvent(state, operationContext, {
           kind: 'hermesShrinePurchaseReached',
           generationKey: row.reference.generationKey,
-          rushed: rushedShrineGenerations(roster).has(row.reference.generationKey),
         });
       case 'rushHermesShrineOffer':
-        // A rush settles with its purchase, as execution performs them together.
-        return state;
+        // The rush's own position spawns its item and decides the Travel Deal refill.
+        return appendEvent(state, operationContext, {
+          kind: 'hermesShrineRushReached',
+          generationKey: row.reference.generationKey,
+        });
       case 'interactShopOffer':
         return appendEvent(state, operationContext, {
           kind: 'acquisitionPointReached',
@@ -1217,17 +1216,6 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     afterEncounterPhase,
     afterEncounterEndEffects,
   });
-}
-
-/** The Shrine generations whose rush the walk performs. */
-function rushedShrineGenerations(
-  roster: RoomActionRoster,
-): ReadonlySet<import('../../authored-project/model').HermesShrineGenerationKey> {
-  return new Set(
-    performedRoomActions(roster).flatMap((reference) =>
-      reference.kind === 'rushHermesShrineOffer' ? [reference.generationKey] : [],
-    ),
-  );
 }
 
 export function executeRoomLifecycle(

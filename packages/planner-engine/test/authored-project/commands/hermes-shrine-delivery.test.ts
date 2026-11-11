@@ -287,33 +287,42 @@ describe('Hermes Shrine delivery placement', () => {
       siteKey: 'hermesShrineDelivery',
       entryKey: hermesShrineDeliveryEntryKey(source, 'initial:secondRight'),
     };
-    // After the wheel, among the Shrine's purchases, never between the first
+    // After the wheel, anywhere among the Shrine's rows, even between the first
     // item's purchase and its rush; the default is the end.
-    expect(positionedCommandInsertionIndexes(project, catalog, purchase)).toEqual([2, 4, 5, 6]);
+    expect(positionedCommandInsertionIndexes(project, catalog, purchase)).toEqual([2, 3, 4, 5, 6]);
     expect(order(applyProjectCommand(project, catalog, purchase))).toEqual([...before, bought]);
     const atFour = applyProjectCommand(project, catalog, { ...purchase, index: 4 });
     expect(order(atFour)).toEqual([...before.slice(0, 4), bought, ...before.slice(4)]);
     expect(() => applyProjectCommand(project, catalog, { ...purchase, index: 1 })).toThrow(
       /index 1 is not a legal position .* a required action of an earlier window/,
     );
-    expect(() => applyProjectCommand(project, catalog, { ...purchase, index: 3 })).toThrow(
-      /index 3 is not a legal position .* must directly follow/,
-    );
-    // Only a bought item is rushed, and only directly after its purchase.
+    expect(order(applyProjectCommand(project, catalog, { ...purchase, index: 3 }))).toEqual([
+      ...before.slice(0, 3),
+      bought,
+      ...before.slice(3),
+    ]);
+    // Only a bought item is rushed, at any gap after its purchase in its room.
     expect(() => applyProjectCommand(project, catalog, rush)).toThrow(
       /only a bought Shrine item can be rushed/,
     );
-    expect(positionedCommandInsertionIndexes(atFour, catalog, rush)).toEqual([5]);
+    expect(positionedCommandInsertionIndexes(atFour, catalog, rush)).toEqual([5, 6, 7]);
     const rushed = applyProjectCommand(atFour, catalog, rush);
     expect(order(rushed)).toEqual([...before.slice(0, 4), bought, rushRow, ...before.slice(4)]);
     expect(order(applyProjectCommand(atFour, catalog, { ...rush, index: 5 }))).toEqual(
       order(rushed),
     );
     expect(order(rushed)).not.toContainEqual(pickup);
-    for (const index of [3, 7])
-      expect(() => applyProjectCommand(atFour, catalog, { ...rush, index })).toThrow(
-        new RegExp(`index ${index} is not a legal position`),
-      );
+    // Later, with rows between it and its purchase.
+    expect(order(applyProjectCommand(atFour, catalog, { ...rush, index: 7 }))).toEqual([
+      ...before.slice(0, 4),
+      bought,
+      ...before.slice(4),
+      rushRow,
+    ]);
+    // Never before its purchase.
+    expect(() => applyProjectCommand(atFour, catalog, { ...rush, index: 3 })).toThrow(
+      /index 3 is not a legal position .* must follow/,
+    );
     const set = {
       kind: 'SetHermesShrinePurchase' as const,
       occurrence: source,
@@ -824,6 +833,12 @@ function materializedRoom(project: ProjectDocument, occurrenceId: string): Roste
   const found = search(simulateProjectAssembly(catalog, project).evaluation.route);
   if (found === undefined) throw new Error(`${occurrenceId} was not materialized`);
   return found;
+}
+
+function evaluationCodes(project: ProjectDocument): readonly string[] {
+  return simulateProjectAssembly(catalog, project).evaluation.findings.map(
+    (finding) => finding.code,
+  );
 }
 
 function occurrenceOf(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
@@ -1896,34 +1911,50 @@ describe('Hermes Shrine purchase actions', () => {
     expect(() => rush(project, 'initial:secondRight', true)).toThrow(
       /only a bought Shrine item can be rushed/,
     );
-    // A rush never moves away from its purchase; moving the purchase carries it.
-    expect(() =>
-      applyProjectCommand(rushedOnly, catalog, {
-        kind: 'MoveRoomAction',
-        action: testHermesShrineRushAction(shrine, 'initial:secondLeft'),
-        toIndex: 2,
-      }),
-    ).toThrow(/a Shrine rush stays directly after its purchase/);
-    expect(() =>
-      applyProjectCommand(rushedOnly, catalog, {
-        kind: 'MoveRoomAction',
-        action: testHermesShrinePurchaseAction(shrine, 'travelDealRefill'),
-        toIndex: 5,
-      }),
-    ).toThrow(/a Shrine rush stays directly after its purchase/);
-    const carried = applyProjectCommand(rushedOnly, catalog, {
+    // A rush moves on its own to any later gap, and its purchase moves without it.
+    const later = applyProjectCommand(rushedOnly, catalog, {
+      kind: 'MoveRoomAction',
+      action: testHermesShrineRushAction(shrine, 'initial:secondLeft'),
+      toIndex: 7,
+    });
+    expect(shrineRoom(later).roomActions.order.slice(4)).toEqual(
+      withItemContents(later, shrine, [
+        purchase('initial:secondLeft'),
+        purchase('travelDealRefill'),
+        pickup('initial:first'),
+        rushOf('initial:secondLeft'),
+      ]),
+    );
+    expect(evaluationCodes(later)).not.toContain('roomActionOrderUnavailable');
+    const purchaseMoved = applyProjectCommand(later, catalog, {
       kind: 'MoveRoomAction',
       action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
       toIndex: 2,
     });
-    expect(shrineRoom(carried).roomActions.order.slice(2, 6)).toEqual(
-      withItemContents(carried, shrine, [
+    expect(shrineRoom(purchaseMoved).roomActions.order.slice(2)).toEqual(
+      withItemContents(purchaseMoved, shrine, [
         purchase('initial:secondLeft'),
-        rushOf('initial:secondLeft'),
         purchase('initial:first'),
         rushOf('initial:first'),
+        purchase('travelDealRefill'),
+        pickup('initial:first'),
+        rushOf('initial:secondLeft'),
       ]),
     );
+    expect(evaluationCodes(purchaseMoved)).not.toContain('roomActionOrderUnavailable');
+    // The roster offers the rush only gaps after its purchase, and the purchase only gaps before its rush.
+    const proposals = materializedRoom(later, shrine.occurrenceId).roomActionRoster.proposals;
+    const authorableMoves = (reference: RoomActionReference) =>
+      proposals
+        .filter(
+          (proposal) =>
+            proposal.kind === 'move' &&
+            proposal.structurallyAuthorable &&
+            roomActionKey(proposal.reference) === roomActionKey(reference),
+        )
+        .map((proposal) => (proposal.kind === 'move' ? proposal.toIndex : -1));
+    expect(authorableMoves(rushOf('initial:secondLeft'))).toEqual([5, 6]);
+    expect(authorableMoves(purchase('initial:secondLeft'))).toEqual([1, 2, 3, 5, 6]);
     // A preserved rush apart from its purchase is kept with its ordering finding.
     const apart = shrineRoom(rushedOnly).roomActions.order.filter(
       (reference) => roomActionKey(reference) !== roomActionKey(rushOf('initial:secondLeft')),

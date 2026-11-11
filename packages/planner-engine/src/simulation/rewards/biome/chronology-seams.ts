@@ -59,12 +59,16 @@ import {
 import { applyAcquisitionPointReachedTransition } from './encounter-acquisition/acquisition-point-reached';
 import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
 import { applyGorgonOutcomeTransition } from './encounter-acquisition/gorgon-outcome';
-import { applyHermesShrinePurchaseReachedTransition } from './encounter-acquisition/hermes-shrine-purchase';
+import {
+  applyHermesShrinePurchaseReachedTransition,
+  applyHermesShrineRushReachedTransition,
+} from './encounter-acquisition/hermes-shrine-purchase';
 import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
 import { withPoolSaleGold } from './gold-event-seams';
 import {
   withAcquisitionPointPrice,
   withHermesShrinePurchasePrice,
+  withHermesShrineRushPrice,
   withWellPurchasePrice,
 } from './purchase-price-seams';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
@@ -837,9 +841,29 @@ const hermesShrinePurchaseReached: ChronologySeamHandler<'hermesShrinePurchaseRe
   event,
 ) => {
   const state = withHermesShrinePurchasePrice(context, received, event);
+  const transition = applyHermesShrinePurchaseReachedTransition({
+    catalog: context.catalog,
+    snapshot: context.snapshot,
+    event,
+    room: authoredRoom(context, event.origin),
+    branch: state.branch,
+    realized: state.hermesShrineTravelDealRefills.get(semanticAddressKey(event.origin)),
+  });
+  return {
+    state: withBranch(state, transition.branch),
+    emissions: [settledFindings(transition.findings)],
+  };
+};
+
+const hermesShrineRushReached: ChronologySeamHandler<'hermesShrineRushReached'> = (
+  context,
+  received,
+  event,
+) => {
+  const state = withHermesShrineRushPrice(context, received, event);
   const room = authoredRoom(context, event.origin);
   const key = semanticAddressKey(event.origin);
-  const transition = applyHermesShrinePurchaseReachedTransition({
+  const transition = applyHermesShrineRushReachedTransition({
     catalog: context.catalog,
     snapshot: context.snapshot,
     event,
@@ -1896,6 +1920,7 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     outgoingGenerationCheckpoint: { step: outgoingGenerationCheckpoint },
     hermesShrineDeliveriesScheduled: { step: hermesShrineDeliveriesScheduled },
     hermesShrinePurchaseReached: { step: hermesShrinePurchaseReached },
+    hermesShrineRushReached: { step: hermesShrineRushReached },
     acquisitionPointReached: { step: acquisitionPointReached },
     wellPurchase: { step: wellPurchase },
     featureRerolled: { step: featureRerolled },

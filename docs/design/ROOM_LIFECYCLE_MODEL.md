@@ -1165,10 +1165,13 @@ it), and a rushed one a `rushHermesShrineOffer` row in the same window after
 it. The game offers the rush as a second press of the bought item, any time
 later in the same visit: the room keeps its Shrine store, and the rush finds the
 pending order only while the run depth is the purchase's
-(`SurfaceShopLogic.lua:317-363, 521-540`). The rush settles with its purchase:
-the walk still schedules every initial Shrine purchase together at the Shrine
-checkpoint, while each purchase row's position, with its rush, settles the
-Travel Deal refill and the refill's own purchase. Shrine purchase and rush rows
+(`SurfaceShopLogic.lua:317-363, 521-540`). The walk schedules every initial
+Shrine purchase together at the Shrine checkpoint and prices each purchase at
+its row; a rush settles at its own row, at any gap after its purchase in the
+room: the rush closes the screen, so its item spawns there, and the first rush
+made with Travel Deal realizes the refill there. Its price is fixed with the
+offer and repriced only by the room's first purchase, always earlier, so the
+rush's position never changes it. Shrine purchase and rush rows
 never become timeline transactions: each stocked item's delay, bought or not,
 and each purchase's rush publish through the room Overview inventory, and the
 execution room guide carries the purchase row, with its rush, only as an
@@ -1178,7 +1181,7 @@ A rush, including one of a Travel Deal replacement, makes one optional
 same-room pickup live at the post-outgoing action rank; the author may place
 and remove it, and an item left behind vanishes at room exit. A rush follows
 its purchase row, a rushed pickup its rush, and the refill's purchase row the
-rush of the first rushed initial purchase; these dependencies constrain
+first initial rush; these dependencies constrain
 authoring only and are not published. The
 [Reward Model](REWARD_MODEL.md#refills) owns which purchase triggers the
 refill.
@@ -1592,7 +1595,8 @@ state to their sequence.
 | Eris interacted (Room Action)                           | Eris's curse.                                                                                                                                                                                                     |
 | Well purchase (Room Action)                             | Stygian Well purchase and refill realization.                                                                                                                                                                     |
 | Shrine deliveries scheduled (Room Action)               | Hermes Shrine initial delivery scheduling.                                                                                                                                                                        |
-| Shrine purchase reached (Room Action)                   | The purchase with its rush: the Travel Deal refill realization at a rush made with the trait, and the refill purchase's delivery.                                                                                 |
+| Shrine purchase reached (Room Action)                   | The purchase's price and the refill purchase's delivery.                                                                                                                                                          |
+| Shrine rush reached (Room Action)                       | The rushed item's spawn, and the Travel Deal refill realization at the first rush made with the trait.                                                                                                            |
 
 After the last event the walk captures the Hub frontier's Run State,
 evaluates every boss-door store, then records the blank exit-decision

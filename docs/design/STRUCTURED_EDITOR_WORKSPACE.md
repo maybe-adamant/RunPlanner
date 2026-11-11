@@ -519,7 +519,7 @@ Purchase and collect rows carry no inner checkbox; their delete control
 removes the action, and a Rush row's delete control undoes only the rush. The
 row that triggers Travel Deal renders the refill's inventory controls as its
 second line, a Restock line: for a Shrine, the rush of the engine's refill
-source (the first rushed initial purchase made with Travel Deal); for a Well,
+source (the first initial rush made with Travel Deal); for a Well,
 its first purchase; for a World Shop, the
 purchase the refill entry names as its source. The line has no placeholder. A
 purchased refill that no line hosts keeps its own purchase row with a bound
