@@ -9,9 +9,11 @@ import {
   createAcquisitionSiteAddress,
   createBiomeAddress,
   createOccurrenceAddress,
+  createHubDecisionAddress,
   createHubRerollAddress,
   createRoomActionAddress,
   semanticAddressKey,
+  type HubDecisionAddress,
   type OccurrenceAddress,
   type SemanticAddress,
 } from '../authored-project/addresses';
@@ -30,6 +32,8 @@ import { authoredLevelResolutionAt } from '../authored-project/commands/level-re
 import { authoredTraitOfferAt } from '../authored-project/commands/trait-offer';
 import type { ProjectCommand } from '../authored-project/commands/types';
 import type {
+  HubDecision,
+  HubRerollAction,
   OccurrenceId,
   ProjectDocument,
   RoomActionReference,
@@ -133,6 +137,12 @@ export interface RemovedStaleRoomActions {
   readonly discarded?: readonly DiscardedRoomObservation[];
 }
 
+/** The board-door presses one Hub lost to an edit with their slot's door, in their former order. */
+export interface RemovedHubRerolls {
+  readonly hub: HubDecisionAddress;
+  readonly rerolls: readonly HubRerollAction[];
+}
+
 export interface ProjectEditSettlement {
   readonly assembly: ProjectEvaluationAssembly;
   readonly fault?: SettlementFault;
@@ -141,6 +151,8 @@ export interface ProjectEditSettlement {
    * in every room but the one it addresses; absent when none.
    */
   readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
+  /** Hub presses the edit removed with their slot's door; absent when none. */
+  readonly removedHubRerolls?: readonly RemovedHubRerolls[];
 }
 
 interface RosterRow {
@@ -744,11 +756,15 @@ function replacedDeliveryPayloads(
 /** Each rerolled record the plan holds, with its biome's located route position. */
 function heldRecords(catalog: Catalog, project: ProjectDocument) {
   return project.route.biomes.flatMap((plan) => {
-    const located = locateConfiguredBiome(project, catalog, plan.biomeKey);
-    if (plan.topology == null || located === undefined) return [];
+    if (plan.topology == null) return [];
     const biome = createBiomeAddress(project.route.routeKey, plan.biomeKey);
     const topology = plan.topology;
-    return heldRerolledRecords(biome, topology).map(({ owner, record }) => ({
+    const held = heldRerolledRecords(biome, topology);
+    // Only a biome holding records needs its route position.
+    const located =
+      held.length === 0 ? undefined : locateConfiguredBiome(project, catalog, plan.biomeKey);
+    if (located === undefined) return [];
+    return held.map(({ owner, record }) => ({
       owner,
       record,
       biome,
@@ -768,24 +784,22 @@ function heldRecords(catalog: Catalog, project: ProjectDocument) {
  */
 function rerolledRewardsOffPress(
   catalog: Catalog,
-  project: ProjectDocument,
+  held: ReturnType<typeof heldRecords>,
 ): RerolledRewardOwner[] {
   const effective = new Map<string, ReturnType<typeof biomeRerolledOwners>>();
-  return heldRecords(catalog, project).flatMap(
-    ({ owner, record, biome, topology, routePosition, occurrence }) => {
-      let owners = effective.get(biome.biomeKey);
-      if (owners === undefined) {
-        owners = biomeRerolledOwners(biome, topology);
-        effective.set(biome.biomeKey, owners);
-      }
-      const press = owners.get(semanticAddressKey(owner))?.rerolls.at(-1)?.rerollId;
-      const off =
-        press === undefined
-          ? !rerolledOutcomesUnauthored(catalog, routePosition, occurrence, owner, record)
-          : press !== record.pressId;
-      return off ? [owner] : [];
-    },
-  );
+  return held.flatMap(({ owner, record, biome, topology, routePosition, occurrence }) => {
+    let owners = effective.get(biome.biomeKey);
+    if (owners === undefined) {
+      owners = biomeRerolledOwners(biome, topology);
+      effective.set(biome.biomeKey, owners);
+    }
+    const press = owners.get(semanticAddressKey(owner))?.rerolls.at(-1)?.rerollId;
+    const off =
+      press === undefined
+        ? !rerolledOutcomesUnauthored(catalog, routePosition, occurrence, owner, record)
+        : press !== record.pressId;
+    return off ? [owner] : [];
+  });
 }
 
 /**
@@ -795,10 +809,10 @@ function rerolledRewardsOffPress(
  */
 function rerolledItemsTheCommandReplaced(
   catalog: Catalog,
-  before: ProjectDocument,
+  before: ReturnType<typeof heldRecords>,
   after: ProjectDocument,
 ): RerolledRewardOwner[] {
-  return heldRecords(catalog, before).flatMap(({ owner, record, routePosition, occurrence }) => {
+  return before.flatMap(({ owner, record, routePosition, occurrence }) => {
     const current = occurrenceAt(
       after,
       createOccurrenceAddress(
@@ -837,7 +851,7 @@ function rerolledRewardsReplaced(
   edited: RoomEdited,
   after: ProjectDocument,
 ): RerolledRewardOwner[] {
-  return rerolledRewardsOffPress(catalog, after).filter(
+  return rerolledRewardsOffPress(catalog, heldRecords(catalog, after)).filter(
     (owner) =>
       !prior.has(semanticAddressKey(owner)) ||
       edited(
@@ -850,7 +864,10 @@ function rerolledRewardsReplaced(
   );
 }
 
-/** Such rows a structural command took out of the rooms that remain. */
+/**
+ * Such rows a structural command took out of the rooms that remain, and the
+ * reroll presses it took with the item they redrew.
+ */
 function sourcedRowsTaken(before: ProjectDocument, after: ProjectDocument) {
   const taken: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
   for (const { owner, occurrence } of occurrences(before)) {
@@ -858,9 +875,52 @@ function sourcedRowsTaken(before: ProjectDocument, after: ProjectDocument) {
     if (current === undefined || current === occurrence) continue;
     const remaining = new Set(current.roomActions.order.map(roomActionKey));
     for (const reference of occurrence.roomActions.order)
-      if (sourcedElsewhere(owner, reference) && !remaining.has(roomActionKey(reference)))
+      if (
+        (reference.kind === 'reroll' || sourcedElsewhere(owner, reference)) &&
+        !remaining.has(roomActionKey(reference))
+      )
         taken.push({ owner, reference });
   }
+  return taken;
+}
+
+/** The board-door presses an edit took with their slot's door from each Hub that remains. */
+function hubRerollsTakenWithTheirSlot(
+  before: ProjectDocument,
+  after: ProjectDocument,
+): RemovedHubRerolls[] {
+  const taken: RemovedHubRerolls[] = [];
+  for (const plan of before.route.biomes)
+    for (const hub of plan.topology?.decisions ?? []) {
+      if (hub.kind !== 'hub') continue;
+      const current = after.route.biomes
+        .find((candidate) => candidate.biomeKey === plan.biomeKey)
+        ?.topology?.decisions.find(
+          (decision): decision is HubDecision =>
+            decision.kind === 'hub' && decision.hubKey === hub.hubKey,
+        );
+      if (current === undefined || current === hub) continue;
+      const open = new Set(current.openTargets.map((target) => target.hubSlotKey));
+      const remaining = new Set(
+        current.actions.flatMap((action) => (action.kind === 'reroll' ? [action.rerollId] : [])),
+      );
+      const rerolls = hub.actions.filter(
+        (action): action is HubRerollAction =>
+          action.kind === 'reroll' &&
+          !remaining.has(action.rerollId) &&
+          !open.has(action.hubSlotKey),
+      );
+      if (rerolls.length > 0)
+        taken.push(
+          Object.freeze({
+            hub: createHubDecisionAddress(
+              createBiomeAddress(before.route.routeKey, plan.biomeKey),
+              hub.hubKey,
+            ),
+            rerolls: Object.freeze(rerolls),
+          }),
+        );
+    }
   return taken;
 }
 
@@ -975,8 +1035,9 @@ function settleProject(options: {
   const beforeRosters = enteredRosters(before);
   // What the plan already held replaced before the edit, read once: an upgrade takes every one.
   const priorReplaced = upgrade ? new Set<string>() : replacedItemRowKeys(before.project, catalog);
+  const heldBefore = upgrade ? [] : heldRecords(catalog, before.project);
   const priorOffPress = new Set(
-    upgrade ? [] : rerolledRewardsOffPress(catalog, before.project).map(semanticAddressKey),
+    upgrade ? [] : rerolledRewardsOffPress(catalog, heldBefore).map(semanticAddressKey),
   );
   const priorDeliveriesOffSource = upgrade
     ? new Set<string>()
@@ -991,7 +1052,7 @@ function settleProject(options: {
   // Items whose observations an edit discarded with them, by room.
   const discardedObservations: { owner: OccurrenceAddress; item: SemanticAddress }[] = [];
   if (!upgrade)
-    for (const owner of rerolledItemsTheCommandReplaced(catalog, before.project, project))
+    for (const owner of rerolledItemsTheCommandReplaced(catalog, heldBefore, project))
       discardedObservations.push({
         owner: createOccurrenceAddress(
           createBiomeAddress(owner.routeKey, owner.biomeKey),
@@ -999,6 +1060,11 @@ function settleProject(options: {
         ),
         item: owner,
       });
+  // Hub presses the command took with their slot's door.
+  const removedHubRerolls =
+    upgrade || command.kind === 'ReplaceRoute'
+      ? []
+      : hubRerollsTakenWithTheirSlot(before.project, project);
   // Doors an edit left on no exit of their room, by room.
   const removedDoors: { owner: OccurrenceAddress; doors: readonly RemovedRoomDoor[] }[] = [];
   // A door settlement that failed stops only that pass; the edit's other passes still settle.
@@ -1088,6 +1154,9 @@ function settleProject(options: {
               [...byRoom.values()].map((room) => Object.freeze(room)),
             ),
           }),
+      ...(removedHubRerolls.length === 0
+        ? {}
+        : { removedHubRerolls: Object.freeze(removedHubRerolls) }),
     });
   };
   const beforePlacements = new Map(

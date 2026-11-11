@@ -1,12 +1,15 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
-import type { RemovedStaleRoomActions } from '@run-planner/engine/simulation';
+import type { RemovedHubRerolls, RemovedStaleRoomActions } from '@run-planner/engine/simulation';
 import type { FindingSelection } from '@planner/state/editorSessionSlice';
 import { findingLocation, ownerSelection } from './evaluationProjection';
 import { locationName, type PlaceName } from './placeName';
 import type { StructuredWorkspaceProjection } from './structured-workspace';
 
-/** One room an edit removed rows in, named as every reference names it, opened on its Timeline. */
+/**
+ * One room or Hub an edit removed rows in, named as every reference names it,
+ * a room opened on its Timeline.
+ */
 export interface RemovedActionsRoom {
   readonly key: string;
   readonly count: number;
@@ -23,14 +26,28 @@ export interface RemovedActionsRoom {
   readonly selection: FindingSelection;
 }
 
-/** The rooms of an edit's announced removals, in the settlement's order. */
+/** The rooms of an edit's announced removals, in the settlement's order, then its Hubs. */
 export function removedActionsAnnouncement(
   catalog: Catalog,
   removed: readonly RemovedStaleRoomActions[],
   workspace: Pick<StructuredWorkspaceProjection, 'focusByOwner' | 'route'>,
+  removedHubRerolls: readonly RemovedHubRerolls[] = [],
 ): readonly RemovedActionsRoom[] {
-  return Object.freeze(
-    removed.map(({ occurrence, actions, doors, discarded }) => {
+  const hubs = removedHubRerolls.map(({ hub, rerolls }) => {
+    const key = semanticAddressKey(hub);
+    return Object.freeze({
+      key,
+      count: rerolls.length,
+      doors: 0,
+      items: 0,
+      place: locationName(
+        findingLocation(catalog, hub, workspace.focusByOwner.get(key), workspace.route),
+      ),
+      selection: ownerSelection(hub, `removedActions:${key}`, workspace.focusByOwner),
+    });
+  });
+  return Object.freeze([
+    ...removed.map(({ occurrence, actions, doors, discarded }) => {
       const key = semanticAddressKey(occurrence);
       return Object.freeze({
         key,
@@ -47,5 +64,6 @@ export function removedActionsAnnouncement(
         },
       });
     }),
-  );
+    ...hubs,
+  ]);
 }

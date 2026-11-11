@@ -24,6 +24,7 @@ import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliat
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
 import { activeRoomActionReferences, roomActionKey } from '../room-actions/state';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
+import { carryRerolledRecords } from '../rerolls';
 import {
   normalDecisionProgressionForLayout,
   selectedExitKey,
@@ -151,7 +152,8 @@ function reconcileReplacementAcquisitionSites(
 
 /**
  * Carries an occurrence's room-local authorship onto a replacement declaration:
- * only the actions the replacement can host, then its required defaults.
+ * only the actions the replacement can host, then its required defaults, and
+ * the rerolled items whose first draw the replacement kept.
  */
 export function reconcileReplacementRoomLocalState(
   catalog: Catalog,
@@ -200,10 +202,14 @@ export function reconcileReplacementRoomLocalState(
   const retained = previous.roomActions.order.filter((reference) =>
     activeKeys.has(roomActionKey(reference)),
   );
-  return Object.freeze({
-    ...withSites,
-    roomActions: Object.freeze({ order: Object.freeze(retained) }),
-  });
+  return carryRerolledRecords(
+    biome,
+    previous,
+    Object.freeze({
+      ...withSites,
+      roomActions: Object.freeze({ order: Object.freeze(retained) }),
+    }),
+  );
 }
 
 function occurrenceContext(

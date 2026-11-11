@@ -8,6 +8,7 @@ import {
   biomeRerollPressesByOwner,
   heldRerolledRecords,
   hubRerollOwner,
+  rerollPressNeedsResult,
   rerollResult,
   roomRerollOwner,
 } from '../../rerolls';
@@ -32,14 +33,7 @@ export function validateRerollResults(
     topology.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   for (const [index, source] of topology.occurrences.entries())
     for (const press of source.roomActions.order) {
-      if (press.kind !== 'reroll') continue;
-      const target =
-        press.target.kind === 'wheelOffer' ? source : occurrence(press.target.occurrenceId);
-      if (
-        target === undefined ||
-        (press.target.kind === 'cage' && target.state.kind !== 'fieldsCombat')
-      )
-        continue;
+      if (press.kind !== 'reroll' || !rerollPressNeedsResult(topology, source, press)) continue;
       const owner = roomRerollOwner(biome, topology, source.occurrenceId, press);
       if (rerollResult(topology, owner, press.rerollId) === undefined)
         failProjectDocument(

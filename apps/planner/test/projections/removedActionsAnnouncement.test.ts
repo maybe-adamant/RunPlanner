@@ -5,6 +5,8 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createBiomeAddress,
+  createHubDecisionAddress,
+  createHubSlotAddress,
   createProjectAddress,
 } from '@run-planner/engine/authored-project';
 import {
@@ -12,7 +14,10 @@ import {
   createEchoGoldIAnvilDuplicateProject,
   goldenGBiome,
 } from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadSurfaceNCheckpoint,
+  loadSurfaceNOHermesShrineDeliveryCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/surface';
 import { describe, expect, it } from 'vitest';
 
 import { removedActionsAnnouncement } from '@planner/projections/removedActionsAnnouncement';
@@ -108,5 +113,46 @@ describe('removed actions announcement', () => {
     );
     expect(removedActionsLead(0, 0, 2)).toBe('2 items reset at');
     expect(removedActionsLead(1, 1, 1)).toBe('1 action and 1 door removed, 1 item reset at');
+  });
+
+  it('names a Hub whose board-door presses went with their closed slot', () => {
+    const surfaceN = createBiomeAddress('Surface', 'N');
+    const hub = createHubDecisionAddress(surfaceN, 'hub');
+    const unvisited = [
+      {
+        kind: 'ReplaceManualArcanaSelection',
+        route: { kind: 'route', routeKey: 'Surface' },
+        arcanaKeys: ['DoorReroll'],
+      },
+      { kind: 'ResetHubVisits', hub },
+      {
+        kind: 'InsertHubReroll',
+        hub,
+        hubSlotKey: 'combat05',
+        reward: { rewardType: 'MaxHealthDrop' },
+        index: 0,
+      },
+    ] as const;
+    const pressed = unvisited.reduce(
+      (project, command) => applyProjectCommand(project, catalog, command),
+      loadSurfaceNCheckpoint(),
+    );
+    const settled = settleProjectEdit({
+      catalog,
+      before: simulateProjectAssembly(catalog, pressed),
+      command: { kind: 'CloseHubSlot', slot: createHubSlotAddress(surfaceN, 'hub', 'combat05') },
+      evaluate: (project) => simulateProjectAssembly(catalog, project),
+    });
+    const workspace = createStructuredWorkspaceTestServices().structuredWorkspace.project(
+      settled.assembly,
+    );
+    const [entry, ...others] = removedActionsAnnouncement(
+      catalog,
+      settled.removedStaleActions ?? [],
+      workspace,
+      settled.removedHubRerolls,
+    );
+    expect(others).toEqual([]);
+    expect(entry).toMatchObject({ count: 1, doors: 0, items: 0, selection: { origin: hub } });
   });
 });

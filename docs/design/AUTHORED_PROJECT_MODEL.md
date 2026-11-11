@@ -652,8 +652,8 @@ The same order also holds board-door reroll presses (`InsertHubReroll`,
 entered, carries an engine-allocated `rerollId`, and may sit in any Hub stay,
 before the first visit or between later ones; the reward its press drew is
 the slot room's observation. A press placed after its slot's visit redraws
-nothing, and closing a slot removes its presses. The slot's target keeps its
-first native draw; see [Rerolls](#rerolls).
+nothing, and closing a slot removes its presses, announced at the Hub. The
+slot's target keeps its first native draw; see [Rerolls](#rerolls).
 
 The completed-Hub exit exists for the Hub's whole lifetime and is removed only
 with the Hub. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
@@ -1068,7 +1068,10 @@ first draw is inert while a press is effective. Decoding holds `results` to
 exactly the presses naming the target, every press whose target room stands
 to its result, `pressId` to one of them, and `acquisition` present exactly
 while a press is effective and the owner can draw the recorded press's
-reward. A press whose door or room is gone holds no result and is stale.
+reward. A press whose door or room is gone holds no result and is stale. An
+edit that rebuilds a target's room keeps its rerolled item wherever it keeps
+the target's first draw, without outcomes the rebuilt room cannot draw;
+otherwise the item's presses go with it, announced as removed actions.
 
 Outcomes belong to one item. When the effective press changes (a later
 press, an earlier one again, none) or its result changes in place, the item

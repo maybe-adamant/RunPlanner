@@ -6,14 +6,18 @@ import {
   createBiomeAddress,
   createFountainRarityOutcomeAddress,
   createHubFountainAddress,
+  createHubSlotAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createProjectHistory,
+  createRewardWheelOfferAddress,
   createRoomActionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   hubActionOrderRefusal,
+  rerolledRecordOf,
   rerolledRewardOf,
   purgingPoolRollTraitKey,
   roomActionKey,
@@ -26,12 +30,19 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
 import {
+  loadNemesisFieldsCheckpoint,
   loadUnderworldFGCheckpoint,
   loadUnderworldFStygianWellCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { hubVisitActions } from '@run-planner/test-fixtures/shared';
-import { loadSurfaceNProject, nVisitSlotKeys } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOProject,
+  loadSurfaceNProject,
+  nVisitSlotKeys,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import { withArcana } from '../../support/rerolls';
 
 const f = createBiomeAddress('Underworld', 'F');
@@ -234,6 +245,190 @@ describe('rerolled rewards', () => {
     expect(effective(redrawn)?.traitOffersByAcquisitionRole.source).toBeNull();
     const removed = applyProjectCommand(project, catalog, removeReroll('r1'));
     expect(occurrence(removed, target).rerolledIncomingReward).toBeUndefined();
+  });
+});
+
+describe('presses and the item they redrew', () => {
+  const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
+  const settled = (project: ProjectDocument, command: ProjectCommand) =>
+    settleProjectEdit({ catalog, before: evaluate(project), command, evaluate });
+  const replaceRoom = (
+    biome: ReturnType<typeof createBiomeAddress>,
+    occurrenceId: string,
+    gameName: string,
+  ): ProjectCommand => ({
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence: createOccurrenceAddress(biome, occurrenceId as never),
+    gameName,
+  });
+  const roundTrip = (project: ProjectDocument) =>
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+
+  it('go with a door reward a replacement does not keep, announced in their room', () => {
+    const base = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    const pressed = applyProjectCommand(base, catalog, insertReroll(base, zeus));
+    // A miniboss room cannot draw the first draw (MaxManaDrop): the item goes, and its press.
+    const replaced = settled(pressed, replaceRoom(f, target, 'F_MiniBoss01'));
+    const project = replaced.assembly.project;
+    expect(replaced.fault).toBeUndefined();
+    expect(rerollIds(project)).toEqual([]);
+    expect(occurrence(project, target).rerolledIncomingReward).toBeUndefined();
+    expect(replaced.removedStaleActions).toEqual([
+      {
+        occurrence: createOccurrenceAddress(f, source as never),
+        actions: [{ kind: 'reroll', rerollId: 'r1', target: expect.anything() }],
+      },
+    ]);
+    roundTrip(project);
+  });
+
+  it('keep their record through a replacement that keeps the door reward', () => {
+    const base = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    let pressed = applyProjectCommand(base, catalog, insertReroll(base, zeus));
+    pressed = applyProjectCommand(pressed, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: {
+        kind: 'traitOffer',
+        routeKey: 'Underworld',
+        biomeKey: 'F',
+        owner,
+        acquisitionRole: 'source',
+      },
+      value: {
+        kind: 'traits',
+        giverKey: 'Zeus',
+        options: [
+          { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+          { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    const record = occurrence(pressed, target).rerolledIncomingReward;
+    // F_Combat05 draws both the first draw and the press's Boon: the item and its pick stay.
+    const kept = applyProjectCommand(pressed, catalog, replaceRoom(f, target, 'F_Combat05'));
+    expect(occurrence(kept, target).gameName).toBe('F_Combat05');
+    expect(rerollIds(kept)).toEqual(['r1']);
+    expect(occurrence(kept, target).rerolledIncomingReward).toEqual(record);
+    roundTrip(kept);
+
+    // F_Combat01 keeps the first draw but never draws Darkness: the press stays, its item
+    // holds no outcomes.
+    const darkness: ResolvedRewardOffer = { rewardType: 'MetaCurrencyDrop' };
+    const drawn = applyProjectCommand(base, catalog, insertReroll(base, darkness));
+    expect(occurrence(drawn, target).rerolledIncomingReward?.acquisition).toBeDefined();
+    const undrawn = applyProjectCommand(drawn, catalog, replaceRoom(f, target, 'F_Combat01'));
+    expect(rerollIds(undrawn)).toEqual(['r1']);
+    expect(occurrence(undrawn, target).rerolledIncomingReward).toEqual({
+      results: { r1: darkness },
+      pressId: 'r1',
+    });
+    roundTrip(undrawn);
+  });
+
+  it('go with a Fields cage whose room was replaced away from Fields and back', () => {
+    const h = createBiomeAddress('Underworld', 'H');
+    const from = 'golden-h-miniboss01';
+    const fields = 'golden-h-combat05';
+    const base = withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll']);
+    const roomIn = (project: ProjectDocument, id: string) =>
+      project.route.biomes
+        .find((plan) => plan.biomeKey === 'H')!
+        .topology!.occurrences.find((room) => room.occurrenceId === id)!;
+    const presses = (project: ProjectDocument) =>
+      roomIn(project, from).roomActions.order.filter((action) => action.kind === 'reroll');
+    const cage = createLocalRewardAddress(h, fields as never, 'cages', 'cage1');
+    const pressed = applyProjectCommand(base, catalog, {
+      kind: 'InsertReroll',
+      occurrence: createOccurrenceAddress(h, from as never),
+      target: { kind: 'cage', exitKey: 'exit1', occurrenceId: fields as never, slotKey: 'cage1' },
+      reward: { rewardType: 'RoomMoneyDrop' },
+      index: roomIn(base, from).roomActions.order.length,
+    });
+    expect(rerolledRecordOf(roomIn(pressed, fields), cage)?.results).toEqual({
+      r1: { rewardType: 'RoomMoneyDrop' },
+    });
+    // Away from Fields the room holds no cage: the press redraws nothing and holds no result.
+    const away = applyProjectCommand(pressed, catalog, replaceRoom(h, fields, 'H_MiniBoss01'));
+    expect(presses(away)).toHaveLength(1);
+    roundTrip(away);
+    // Back in Fields the cage's first draw is new: the press's item is gone, and the press.
+    const back = applyProjectCommand(away, catalog, replaceRoom(h, fields, 'H_Combat05'));
+    expect(presses(back)).toEqual([]);
+    expect(rerolledRecordOf(roomIn(back, fields), cage)).toBeUndefined();
+    roundTrip(back);
+  });
+
+  it('keep a wheel press and its result until the walk drops its unplayed wheel', () => {
+    const o = createBiomeAddress('Surface', 'O');
+    const ship = oOccurrenceIds.combat04;
+    const roomIn = (project: ProjectDocument) =>
+      project.route.biomes
+        .find((plan) => plan.biomeKey === 'O')!
+        .topology!.occurrences.find((room) => room.occurrenceId === ship)!;
+    const presses = (project: ProjectDocument) =>
+      roomIn(project).roomActions.order.filter((action) => action.kind === 'reroll');
+    const offer = createRewardWheelOfferAddress(o, ship, 'wheel2', 'offer1');
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(o, ship),
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertReroll',
+      occurrence: createOccurrenceAddress(o, ship),
+      target: { kind: 'wheelOffer', wheelKey: 'wheel2', offerKey: 'offer1' },
+      reward: { rewardType: 'MaxManaDrop' },
+      index: roomIn(project).roomActions.order.length,
+    });
+    const lower: ProjectCommand = {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(o, ship),
+      encounterCount: 2,
+    };
+    // The wheel's state stays, so the press keeps its result there.
+    const lowered = applyProjectCommand(project, catalog, lower);
+    expect(presses(lowered)).toHaveLength(1);
+    expect(rerolledRecordOf(roomIn(lowered), offer)?.results).toEqual({
+      r1: { rewardType: 'MaxManaDrop' },
+    });
+    roundTrip(lowered);
+    // Settled, the press goes with the wheel the room no longer plays, and its result with it.
+    const walked = settled(project, lower);
+    expect(walked.fault).toBeUndefined();
+    expect(presses(walked.assembly.project)).toEqual([]);
+    expect(rerolledRecordOf(roomIn(walked.assembly.project), offer)).toBeUndefined();
+    roundTrip(walked.assembly.project);
+  });
+
+  it("go with their Hub slot's door, announced at the Hub", () => {
+    const n = createBiomeAddress('Surface', 'N');
+    const hub = { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const;
+    // A slot closes only before its visit.
+    const unvisited = applyProjectCommand(
+      withArcana(loadSurfaceNProject(), ['DoorReroll']),
+      catalog,
+      { kind: 'ResetHubVisits', hub },
+    );
+    const pressed = applyProjectCommand(unvisited, catalog, {
+      kind: 'InsertHubReroll',
+      hub,
+      hubSlotKey: 'combat05',
+      reward: { rewardType: 'MaxHealthDrop' },
+      index: 0,
+    });
+    const closed = settled(pressed, {
+      kind: 'CloseHubSlot',
+      slot: createHubSlotAddress(n, 'hub', 'combat05'),
+    });
+    expect(closed.fault).toBeUndefined();
+    expect(closed.removedHubRerolls).toEqual([
+      { hub, rerolls: [{ kind: 'reroll', rerollId: 'r1', hubSlotKey: 'combat05' }] },
+    ]);
   });
 });
 

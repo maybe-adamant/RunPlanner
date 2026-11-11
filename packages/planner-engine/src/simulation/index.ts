@@ -473,6 +473,7 @@ export { assessmentRepairOwner, findingsAddedSince } from './finding-regions';
 export {
   settleProjectEdit,
   type ProjectEditSettlement,
+  type RemovedHubRerolls,
   type RemovedStaleRoomActions,
   type SettlementFault,
 } from './edit-settlement';

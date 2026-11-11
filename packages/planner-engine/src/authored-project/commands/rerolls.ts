@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
-import { createBiomeAddress, semanticAddressKey } from '../addresses';
+import { createBiomeAddress, semanticAddressKey, type BiomeAddress } from '../addresses';
 import type {
   BiomeTopology,
   HubAction,
@@ -20,6 +20,7 @@ import {
   hubRerollOwner,
   nextRerollId,
   rerolledRecordOf,
+  rerollPressNeedsResult,
   rerollResult,
   rerollTargetOwner,
   roomRerollOwner,
@@ -301,12 +302,60 @@ export function applyRerollCommand(
 }
 
 /**
- * Keeps each touched biome's rerolled records closed over its presses after
- * an edit: a record names exactly the results of the presses still naming its
- * owner, and goes with the last of them. Its effective item follows the edit:
+ * The topology without the presses whose target can hold a result but holds
+ * none: the item they redrew went with an edit that did not keep it, so they
+ * go with it. The same topology when none is.
+ */
+function withoutPressesOffTheirItem(biome: BiomeAddress, topology: BiomeTopology): BiomeTopology {
+  let changed = false;
+  const occurrences = topology.occurrences.map((source) => {
+    const order = source.roomActions.order.filter(
+      (action) =>
+        action.kind !== 'reroll' ||
+        !rerollPressNeedsResult(topology, source, action) ||
+        rerollResult(
+          topology,
+          roomRerollOwner(biome, topology, source.occurrenceId, action),
+          action.rerollId,
+        ) !== undefined,
+    );
+    if (order.length === source.roomActions.order.length) return source;
+    changed = true;
+    return Object.freeze({
+      ...source,
+      roomActions: Object.freeze({ ...source.roomActions, order: Object.freeze(order) }),
+    });
+  });
+  const decisions = topology.decisions.map((decision) => {
+    if (decision.kind !== 'hub') return decision;
+    const actions = decision.actions.filter((action) => {
+      if (action.kind !== 'reroll') return true;
+      const owner = hubRerollOwner(biome, decision, action);
+      return owner === undefined || rerollResult(topology, owner, action.rerollId) !== undefined;
+    });
+    if (actions.length === decision.actions.length) return decision;
+    changed = true;
+    return Object.freeze({ ...decision, actions: Object.freeze(actions) });
+  });
+  return changed
+    ? Object.freeze({
+        ...topology,
+        occurrences: Object.freeze(occurrences),
+        decisions: Object.freeze(decisions),
+      })
+    : topology;
+}
+
+/**
+ * Keeps each touched biome's presses and rerolled records closed over each
+ * other after an edit. A press whose target can hold a result but holds none
+ * goes: the edit did not keep its item. A record names exactly the results of
+ * the presses still naming its owner, and goes with the last of them. Its
+ * effective item follows the edit:
  * - a new or still unauthored item follows the owner's effective press;
  * - an item whose press went, or whose result the edit changed in place, is
- *   replaced by the effective press's item, its outcomes unresolved.
+ *   replaced by the effective press's item, its outcomes unresolved;
+ * - an item its owner can no longer draw holds no outcomes.
  * Authored outcomes whose press is still held but no longer effective stay for
  * settlement, which resets and announces them.
  */
@@ -319,22 +368,33 @@ export function closeRerolledRecords(
   let next = after;
   for (const biomeKey of biomeKeys) {
     const located = locateConfiguredBiome(next, catalog, biomeKey);
-    const topology = located?.plan.topology;
-    if (located === undefined || topology === null || topology === undefined) continue;
+    const edited = located?.plan.topology;
+    if (located === undefined || edited === null || edited === undefined) continue;
     const biome = createBiomeAddress(located.routeKey, biomeKey);
+    const topology = withoutPressesOffTheirItem(biome, edited);
     const held = heldRerolledRecords(biome, topology);
-    if (held.length === 0) continue;
+    if (held.length === 0) {
+      if (topology !== edited) next = updateOccurrenceTopology(next, located, topology);
+      continue;
+    }
     const priorTopology = before.route.biomes.find((plan) => plan.biomeKey === biomeKey)?.topology;
     const pressesByOwner = biomeRerollPressesByOwner(biome, topology);
-    const priorPresses =
-      priorTopology === null || priorTopology === undefined
-        ? new Map()
-        : biomeRerollPressesByOwner(biome, priorTopology);
     const effective = biomeRerolledOwners(biome, topology);
-    const priorEffective =
-      priorTopology === null || priorTopology === undefined
-        ? new Map()
-        : biomeRerolledOwners(biome, priorTopology);
+    // The presses before the edit matter only for a record the edit left as it was.
+    let priorMaps:
+      | {
+          readonly presses: ReturnType<typeof biomeRerollPressesByOwner>;
+          readonly effective: ReturnType<typeof biomeRerolledOwners>;
+        }
+      | undefined;
+    const beforeEdit = () =>
+      (priorMaps ??=
+        priorTopology === null || priorTopology === undefined
+          ? { presses: new Map(), effective: new Map() }
+          : {
+              presses: biomeRerollPressesByOwner(biome, priorTopology),
+              effective: biomeRerolledOwners(biome, priorTopology),
+            });
     let closed = topology;
     for (const { owner, record } of held) {
       const key = semanticAddressKey(owner);
@@ -369,8 +429,8 @@ export function closeRerolledRecords(
       const latest = effectivePress ?? pressIds.at(-1)!;
       const touched =
         prior !== record ||
-        (priorPresses.get(key)?.rerollIds ?? []).join(' ') !== pressIds.join(' ') ||
-        priorEffective.get(key)?.rerolls.at(-1)?.rerollId !== effectivePress;
+        (beforeEdit().presses.get(key)?.rerollIds ?? []).join(' ') !== pressIds.join(' ') ||
+        beforeEdit().effective.get(key)?.rerolls.at(-1)?.rerollId !== effectivePress;
       const priorResult = prior?.results[record.pressId];
       const changedInPlace =
         priorResult !== undefined &&
@@ -398,13 +458,22 @@ export function closeRerolledRecords(
               // No effective press: the owner acquires its first draw, so this item holds nothing.
               (effectivePress === undefined && record.acquisition !== undefined) ||
               // A new item, or one the owner draws again, holds its unresolved outcomes.
-              (effectivePress !== undefined && record.acquisition === undefined)
+              (effectivePress !== undefined && record.acquisition === undefined) ||
+              // A rebuilt room that kept the item may no longer draw its reward.
+              (record.acquisition !== undefined &&
+                unresolvedRerolledReward(
+                  catalog,
+                  located.routePosition,
+                  occurrence,
+                  owner,
+                  results[record.pressId]!,
+                ) === undefined)
             ? item(record.pressId)
             : Object.freeze({ ...record, results });
       if (canonicalJson(closedRecord) === canonicalJson(record)) continue;
       closed = replaceOccurrence(closed, withRerolledRecord(occurrence, owner, closedRecord));
     }
-    if (closed !== topology) next = updateOccurrenceTopology(next, located, closed);
+    if (closed !== edited) next = updateOccurrenceTopology(next, located, closed);
   }
   return next;
 }

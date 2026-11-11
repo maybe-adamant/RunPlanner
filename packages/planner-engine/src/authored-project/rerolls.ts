@@ -675,54 +675,79 @@ export function heldRerolledRecords(
   biome: BiomeAddress,
   topology: Pick<BiomeTopology, 'occurrences'>,
 ): { readonly owner: RerolledRewardOwner; readonly record: RerolledRewardState }[] {
+  return topology.occurrences.flatMap((occurrence) => occurrenceRerolledRecords(biome, occurrence));
+}
+
+/** Every rerolled record one room holds, by owner. */
+function occurrenceRerolledRecords(
+  biome: BiomeAddress,
+  occurrence: RoomOccurrence,
+): { readonly owner: RerolledRewardOwner; readonly record: RerolledRewardState }[] {
   const held: { owner: RerolledRewardOwner; record: RerolledRewardState }[] = [];
-  for (const occurrence of topology.occurrences) {
-    if (occurrence.rerolledIncomingReward !== undefined)
+  if (occurrence.rerolledIncomingReward !== undefined)
+    held.push({
+      owner: createIncomingRewardAddress(biome, occurrence.occurrenceId),
+      record: occurrence.rerolledIncomingReward,
+    });
+  if (occurrence.state.kind === 'fieldsCombat')
+    for (const [slotKey, record] of Object.entries(occurrence.state.rerolledCages ?? {}))
       held.push({
-        owner: createIncomingRewardAddress(biome, occurrence.occurrenceId),
-        record: occurrence.rerolledIncomingReward,
+        owner: createLocalRewardAddress(
+          biome,
+          occurrence.occurrenceId,
+          FIELDS_CAGE_GROUP_KEY,
+          slotKey,
+        ),
+        record,
       });
-    if (occurrence.state.kind === 'fieldsCombat')
-      for (const [slotKey, record] of Object.entries(occurrence.state.rerolledCages ?? {}))
+  if (occurrence.state.kind === 'shipCombat')
+    for (const [wheelKey, wheel] of Object.entries(occurrence.state.wheels))
+      for (const [offerKey, record] of Object.entries(wheel.rerolledOffers ?? {}))
         held.push({
-          owner: createLocalRewardAddress(
-            biome,
-            occurrence.occurrenceId,
-            FIELDS_CAGE_GROUP_KEY,
-            slotKey,
-          ),
+          owner: createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
           record,
         });
-    if (occurrence.state.kind === 'shipCombat')
-      for (const [wheelKey, wheel] of Object.entries(occurrence.state.wheels))
-        for (const [offerKey, record] of Object.entries(wheel.rerolledOffers ?? {}))
-          held.push({
-            owner: createRewardWheelOfferAddress(
-              biome,
-              occurrence.occurrenceId,
-              wheelKey,
-              offerKey,
-            ),
-            record,
-          });
-  }
   return held;
 }
 
 /**
- * The rerolled records whose recorded press is no longer their owner's
- * effective one (a later press, an earlier one again, or none): another item,
- * whose outcomes these are not.
+ * A rebuilt room with each rerolled record of its former state wherever the
+ * rebuild kept that owner's first draw: the item a press redrew survives with
+ * it. A record the rebuilt room already holds stays.
  */
-export function rerolledRewardsOffTheirPress(
+export function carryRerolledRecords(
   biome: BiomeAddress,
-  topology: RerollTopology,
-): readonly RerolledRewardOwner[] {
-  const owners = biomeRerolledOwners(biome, topology);
-  return heldRerolledRecords(biome, topology).flatMap(({ owner, record }) =>
-    owners.get(semanticAddressKey(owner))?.rerolls.at(-1)?.rerollId !== record.pressId
-      ? [owner]
-      : [],
+  previous: RoomOccurrence,
+  next: RoomOccurrence,
+): RoomOccurrence {
+  let carried = next;
+  for (const { owner, record } of occurrenceRerolledRecords(biome, previous)) {
+    if (rerolledRecordOf(carried, owner) !== undefined) continue;
+    const first = nativeRewardOf(previous, owner);
+    // A room with no first draw here (a Shop door) keeps its record while it keeps its kind.
+    if (
+      first !== nativeRewardOf(carried, owner) ||
+      (first === undefined && previous.state.kind !== carried.state.kind)
+    )
+      continue;
+    carried = withRerolledRecord(carried, owner, record);
+  }
+  return carried;
+}
+
+/**
+ * Whether a room press's target can hold its result: its door's room stands
+ * (a cage's as a Fields room), or it is the source's own wheel.
+ */
+export function rerollPressNeedsResult(
+  topology: Pick<BiomeTopology, 'occurrences'>,
+  source: RoomOccurrence,
+  press: RerollRoomAction,
+): boolean {
+  if (press.target.kind === 'wheelOffer') return true;
+  const target = occurrenceIn(topology, press.target.occurrenceId);
+  return (
+    target !== undefined && (press.target.kind !== 'cage' || target.state.kind === 'fieldsCombat')
   );
 }
 

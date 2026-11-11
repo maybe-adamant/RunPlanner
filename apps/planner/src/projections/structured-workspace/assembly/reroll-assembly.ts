@@ -290,7 +290,7 @@ function roomRerollRows(input: {
   const { occurrence } = input;
   const nodeKey = `occurrence:${semanticAddressKey(createOccurrenceAddress(biome, occurrence.occurrenceId))}`;
   return input.presses.flatMap((reference) => {
-    // A press whose target holds no result redraws nothing left in the plan.
+    // A press whose door's room is gone holds no result: it redraws nothing left in the plan.
     const press = workspaceRoomPress(input.source, occurrence.occurrenceId, reference);
     if (press === undefined) return [];
     const key = roomActionKey(reference);

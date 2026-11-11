@@ -13,7 +13,7 @@ import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { hintProps } from '@planner/ui/controls/hint';
 
 /**
- * The last edit's removals in rooms it did not address, each room linked as every reference
+ * The last edit's removals in rooms it did not address and Hub presses gone with their door, each room linked as every reference
  * names a place; it stays until dismissed (Escape inside it too), undone or replaced by the
  * next edit.
  */
@@ -26,12 +26,15 @@ export function RemovedActionsNotice({
 }) {
   const dispatch = useAppDispatch();
   const removed = useAppSelector((state) => state.projectWorkspace.removedStaleActions);
+  const removedHub = useAppSelector((state) => state.projectWorkspace.removedHubRerolls);
   // A running draft holds the workspace on the Draft panel.
   const drafting = useAppSelector((state) => state.draftSession.run.kind === 'running');
   const rooms = useMemo(
     () =>
-      removed === undefined ? undefined : removedActionsAnnouncement(catalog, removed, workspace),
-    [catalog, removed, workspace],
+      removed === undefined && removedHub === undefined
+        ? undefined
+        : removedActionsAnnouncement(catalog, removed ?? [], workspace, removedHub),
+    [catalog, removed, removedHub, workspace],
   );
   return (
     <div aria-live="polite" className="removed-actions-region">

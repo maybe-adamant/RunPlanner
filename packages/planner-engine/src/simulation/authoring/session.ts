@@ -8,6 +8,7 @@ import {
 import {
   RerollPoolRefusal,
   settleProjectEdit,
+  type RemovedHubRerolls,
   type RemovedStaleRoomActions,
   type SettlementFault,
 } from '../edit-settlement';
@@ -40,6 +41,8 @@ export type AuthoringOutcome =
       readonly fault?: SettlementFault;
       /** Rows the edit left with no context, removed with it. */
       readonly removedStaleActions?: readonly RemovedStaleRoomActions[];
+      /** Hub presses the edit removed with their slot's door. */
+      readonly removedHubRerolls?: readonly RemovedHubRerolls[];
     }
   | { readonly kind: 'refused'; readonly refusal: AuthoringRefusal };
 
@@ -113,6 +116,9 @@ export function createAuthoringSession(
         ...(settled.removedStaleActions === undefined
           ? {}
           : { removedStaleActions: settled.removedStaleActions }),
+        ...(settled.removedHubRerolls === undefined
+          ? {}
+          : { removedHubRerolls: settled.removedHubRerolls }),
       });
     },
     restore: (next: ProjectEvaluationAssembly) => {
