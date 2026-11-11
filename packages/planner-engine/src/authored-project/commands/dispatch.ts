@@ -1,5 +1,5 @@
 import { reconcileDerivedItems } from '../acquisition/derived-items';
-import { stampRoomActionContent } from '../room-actions/item-content';
+import { contentTouchedBiomeKeys, stampRoomActionContent } from '../room-actions/item-content';
 import type { Catalog } from '../../catalog-schema';
 import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
@@ -422,6 +422,13 @@ export function applyProjectCommand(
   try {
     const proposal = applyUnchecked(document, catalog, command);
     if (proposal === document) return document;
+    // A row of an observed item records that item before the edit can change it.
+    const stampedInput = stampRoomActionContent(
+      catalog,
+      document,
+      contentTouchedBiomeKeys(document, proposal),
+    );
+    if (stampedInput !== document) return applyProjectCommand(stampedInput, catalog, command);
     // Close source actions and derive generated pickup sites; nothing places a row the owner
     // has not placed.
     const withClearTopologyPlacements =
@@ -450,15 +457,13 @@ export function applyProjectCommand(
     );
     // Generated detours can delete occurrences after the direct command.
     // Close route-owned references against that final topology.
+    const closed = reconcilePlanEndTopology(
+      reconcileResourcePlacementTopology(reconciled),
+      command.kind === 'ClearTopology' ? command.biome.biomeKey : undefined,
+    );
     // A row placed before its item was observed records the content observed since.
     return decodeProjectDocument(
-      stampRoomActionContent(
-        document,
-        reconcilePlanEndTopology(
-          reconcileResourcePlacementTopology(reconciled),
-          command.kind === 'ClearTopology' ? command.biome.biomeKey : undefined,
-        ),
-      ),
+      stampRoomActionContent(catalog, closed, contentTouchedBiomeKeys(document, closed)),
       catalog,
     );
   } catch (error) {

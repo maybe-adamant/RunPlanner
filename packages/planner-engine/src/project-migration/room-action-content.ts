@@ -1,3 +1,4 @@
+import type { Catalog } from '../catalog-schema';
 import { createBiomeAddress } from '../authored-project/addresses';
 import type { RoomActionReference, RoomOccurrence } from '../authored-project/model';
 import {
@@ -63,6 +64,7 @@ function stampOccurrence(source: RoomActionContentSource, occurrence: unknown): 
 }
 
 function stampBiome(
+  catalog: Catalog,
   routeKey: string,
   biome: unknown,
   routeStart: { readonly startingReward: unknown } | undefined,
@@ -80,6 +82,7 @@ function stampBiome(
   let source: RoomActionContentSource;
   try {
     source = roomActionContentSource(
+      catalog,
       createBiomeAddress(routeKey, record.biomeKey),
       topology as never,
       routeStart === undefined || typeof topology.startOccurrenceId !== 'string'
@@ -107,9 +110,10 @@ function stampBiome(
  * pickup, purchase and sale row without it gets its item's current content
  * (a door, cage or wheel reward's press is `native` or the last reroll's id);
  * a row whose item is not observed yet stays without, to be stamped once it
- * is. Lossless, catalog-free, and a row already carrying content is kept.
+ * is. Lossless, and a row already carrying content is kept; the catalog
+ * gives a wheel's declared offer order.
  */
-export function stampRoomActionItemContent(raw: unknown): unknown {
+export function stampRoomActionItemContent(raw: unknown, catalog: Catalog): unknown {
   const document = rawRecord(raw);
   const route = rawRecord(document?.route);
   const biomes = route?.biomes;
@@ -131,6 +135,7 @@ export function stampRoomActionItemContent(raw: unknown): unknown {
         const biomeKey = rawRecord(biome)?.biomeKey;
         const first = index === 0 && biomeKey !== undefined && itinerary[0] === biomeKey;
         return stampBiome(
+          catalog,
           routeKey,
           biome,
           first ? { startingReward: loadout?.startingReward ?? null } : undefined,

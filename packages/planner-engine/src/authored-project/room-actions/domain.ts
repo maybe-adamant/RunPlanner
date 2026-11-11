@@ -1233,6 +1233,7 @@ export function assembleRoomActionDomain(options: {
   }
   // Each action names the content its item holds now, so a placed row is judged against it.
   const contentSource = roomActionContentSource(
+    options.catalog,
     options.biome,
     options.topology,
     options.incomingRewardState === undefined

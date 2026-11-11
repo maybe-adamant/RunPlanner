@@ -2,11 +2,9 @@ import {
   createBiomeAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
-  createOccurrenceAddress,
   createRewardWheelOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
-  type OccurrenceAddress,
 } from '../addresses';
 import type {
   AuthoredBiomePlan,
@@ -18,6 +16,8 @@ import type {
   RoomOccurrence,
 } from '../model';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
+import type { Catalog } from '../../catalog-schema';
+import { encounterEnvelopeSlots } from '../room-state/encounter-envelope';
 import { biomeRerolledOwners, FIELDS_CAGE_GROUP_KEY, type OwnerRerolls } from '../rerolls';
 import {
   purgingPoolRollTraitKey,
@@ -73,6 +73,7 @@ export function rewardOfferToken(offer: ResolvedRewardOffer): readonly string[] 
 
 /** The structural facts outside the occurrence its rows' items read. */
 export interface RoomActionContentSource {
+  readonly catalog: Catalog;
   readonly biome: BiomeAddress;
   /** Every rerolled reward owner of the biome, with its presses in order. */
   readonly rerolledOwners: ReadonlyMap<string, OwnerRerolls>;
@@ -85,18 +86,37 @@ export interface RoomActionContentSource {
 
 const rerolledOwnersByTopology = new WeakMap<object, ReadonlyMap<string, OwnerRerolls>>();
 
+/**
+ * A biome's rerolled owners, memoized only for a frozen topology: a decoded
+ * one cannot change under its identity, while a raw one being migrated can.
+ */
+function rerolledOwnersOf(
+  biome: BiomeAddress,
+  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
+): ReadonlyMap<string, OwnerRerolls> {
+  const immutable =
+    Object.isFrozen(topology) &&
+    Object.isFrozen(topology.occurrences) &&
+    Object.isFrozen(topology.decisions);
+  if (!immutable) return biomeRerolledOwners(biome, topology);
+  let owners = rerolledOwnersByTopology.get(topology);
+  if (owners === undefined) {
+    owners = biomeRerolledOwners(biome, topology);
+    rerolledOwnersByTopology.set(topology, owners);
+  }
+  return owners;
+}
+
 /** The content source of one biome topology. */
 export function roomActionContentSource(
+  catalog: Catalog,
   biome: BiomeAddress,
   topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
   routeStart?: RoomActionContentSource['routeStart'],
 ): RoomActionContentSource {
-  let rerolledOwners = rerolledOwnersByTopology.get(topology);
-  if (rerolledOwners === undefined) {
-    rerolledOwners = biomeRerolledOwners(biome, topology);
-    rerolledOwnersByTopology.set(topology, rerolledOwners);
-  }
+  const rerolledOwners = rerolledOwnersOf(biome, topology);
   return Object.freeze({
+    catalog,
     biome,
     rerolledOwners,
     ...(routeStart === undefined ? {} : { routeStart }),
@@ -105,6 +125,7 @@ export function roomActionContentSource(
 
 /** The content source of one authored biome plan, or none without a topology. */
 export function biomePlanContentSource(
+  catalog: Catalog,
   document: ProjectDocument,
   plan: AuthoredBiomePlan,
 ): RoomActionContentSource | undefined {
@@ -116,6 +137,7 @@ export function biomePlanContentSource(
       ? { occurrenceId: topology.startOccurrenceId, offer: route.loadout.startingReward }
       : undefined;
   return roomActionContentSource(
+    catalog,
     createBiomeAddress(route.routeKey, plan.biomeKey),
     topology,
     routeStart,
@@ -149,6 +171,20 @@ function incomingReward(
     default:
       return undefined;
   }
+}
+
+/** A wheel's offers in their declared order, which its picked index counts. */
+function declaredWheelOfferKeys(
+  catalog: Catalog,
+  occurrence: RoomOccurrence,
+  wheelKey: string,
+): readonly string[] | undefined {
+  const room = catalog.rooms.byKey[occurrence.gameName];
+  if (room === undefined) return undefined;
+  for (const slot of encounterEnvelopeSlots(catalog, room, occurrence.gameName))
+    if (slot.rewardAttachment?.kind === 'rewardWheel' && slot.rewardAttachment.key === wheelKey)
+      return slot.rewardAttachment.offerKeys;
+  return undefined;
 }
 
 function offerContent(
@@ -237,7 +273,11 @@ export function roomActionItemContent(
             ? occurrence.state.wheels[reference.wheelKey]
             : undefined;
         const offerKey =
-          wheel === undefined ? undefined : Object.keys(wheel.offers)[wheel.pickedOfferIndex - 1];
+          wheel === undefined
+            ? undefined
+            : declaredWheelOfferKeys(source.catalog, occurrence, reference.wheelKey)?.[
+                wheel.pickedOfferIndex - 1
+              ];
         if (wheel === undefined || offerKey === undefined) return null;
         const pressed = pressedContent(
           source,
@@ -351,8 +391,12 @@ export function withStampedRoomActionContent(
     : occurrence;
 }
 
-function stampedPlan(document: ProjectDocument, plan: AuthoredBiomePlan): AuthoredBiomePlan {
-  const source = biomePlanContentSource(document, plan);
+function stampedPlan(
+  catalog: Catalog,
+  document: ProjectDocument,
+  plan: AuthoredBiomePlan,
+): AuthoredBiomePlan {
+  const source = biomePlanContentSource(catalog, document, plan);
   const topology = plan.topology;
   if (source === undefined || topology === null || topology === undefined) return plan;
   let changed = false;
@@ -370,63 +414,47 @@ function stampedPlan(document: ProjectDocument, plan: AuthoredBiomePlan): Author
 }
 
 /**
- * Stamps the rows an edit lets observe their item: in every biome the edit
- * changed, and the route's first biome when its starting reward changed.
- * Every biome when there is no earlier document.
+ * The biomes whose items an edit from `before` to `after` may have changed:
+ * every biome whose plan changed, and the route's first when its starting
+ * reward changed.
+ */
+export function contentTouchedBiomeKeys(
+  before: ProjectDocument,
+  after: ProjectDocument,
+): ReadonlySet<string> {
+  const startingRewardChanged =
+    before.route.loadout.startingReward !== after.route.loadout.startingReward;
+  return new Set(
+    after.route.biomes.flatMap((plan, index) =>
+      before.route.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey) !== plan ||
+      (index === 0 && startingRewardChanged)
+        ? [plan.biomeKey]
+        : [],
+    ),
+  );
+}
+
+/**
+ * Stamps every row of these biomes that recorded no content and whose item is
+ * observed; the same document when none changes.
  */
 export function stampRoomActionContent(
-  before: ProjectDocument | undefined,
-  after: ProjectDocument,
+  catalog: Catalog,
+  document: ProjectDocument,
+  biomeKeys: ReadonlySet<string>,
 ): ProjectDocument {
-  const startingRewardChanged =
-    before === undefined ||
-    before.route.loadout.startingReward !== after.route.loadout.startingReward;
+  if (biomeKeys.size === 0) return document;
   let changed = false;
-  const biomes = after.route.biomes.map((plan, index) => {
-    const touched =
-      before === undefined ||
-      before.route.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey) !== plan ||
-      (index === 0 && startingRewardChanged);
-    if (!touched) return plan;
-    const stamped = stampedPlan(after, plan);
+  const biomes = document.route.biomes.map((plan) => {
+    if (!biomeKeys.has(plan.biomeKey)) return plan;
+    const stamped = stampedPlan(catalog, document, plan);
     if (stamped !== plan) changed = true;
     return stamped;
   });
   return changed
     ? Object.freeze({
-        ...after,
-        route: Object.freeze({ ...after.route, biomes: Object.freeze(biomes) }),
+        ...document,
+        route: Object.freeze({ ...document.route, biomes: Object.freeze(biomes) }),
       })
-    : after;
-}
-
-/** One row whose item was replaced since it was placed. */
-export interface ReplacedItemRow {
-  readonly owner: OccurrenceAddress;
-  readonly reference: RoomActionReference;
-}
-
-/** Every row of the plan whose item now holds content other than the row recorded. */
-export function roomActionsOnReplacedItems(document: ProjectDocument): readonly ReplacedItemRow[] {
-  const rows: ReplacedItemRow[] = [];
-  for (const plan of document.route.biomes) {
-    const source = biomePlanContentSource(document, plan);
-    if (source === undefined) continue;
-    for (const occurrence of plan.topology?.occurrences ?? []) {
-      for (const reference of occurrence.roomActions.order) {
-        if (roomActionReferenceContent(reference) === undefined) continue;
-        if (
-          roomActionContentMatches(reference, roomActionItemContent(source, occurrence, reference))
-        )
-          continue;
-        rows.push(
-          Object.freeze({
-            owner: createOccurrenceAddress(source.biome, occurrence.occurrenceId),
-            reference,
-          }),
-        );
-      }
-    }
-  }
-  return Object.freeze(rows);
+    : document;
 }

@@ -1,3 +1,4 @@
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   biomePlanContentSource,
   roomActionItemContent,
@@ -18,7 +19,7 @@ export function withItemContent(
   reference: RoomActionReference,
 ): RoomActionReference {
   const plan = project.route.biomes.find((biome) => biome.biomeKey === occurrence.biomeKey);
-  const source = plan === undefined ? undefined : biomePlanContentSource(project, plan);
+  const source = plan === undefined ? undefined : biomePlanContentSource(catalog, project, plan);
   const room = plan?.topology?.occurrences.find(
     (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
   );

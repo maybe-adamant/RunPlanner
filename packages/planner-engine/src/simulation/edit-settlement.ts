@@ -32,7 +32,7 @@ import type {
   RoomOccurrence,
 } from '../authored-project/model';
 import { roomActionKey } from '../authored-project/room-actions/state';
-import { roomActionsOnReplacedItems } from '../authored-project/room-actions/item-content';
+import { roomActionsOnReplacedItems } from '../authored-project/room-actions/replaced-items';
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import {
   discardRetainedHermesShrineDelivery,
@@ -146,11 +146,18 @@ function enteredRosters(assembly: ProjectEvaluationAssembly) {
   return rosters;
 }
 
-/** Whether the edit changed the room's authored occurrence. */
+/** The occurrence as authored, without the item content its rows record. */
+function withoutRecordedContent(occurrence: RoomOccurrence | undefined): string {
+  return JSON.stringify(occurrence, (key, value: unknown) =>
+    key === 'content' ? undefined : value,
+  );
+}
+
+/** Whether the edit changed the room's authored occurrence; stamping content alone does not. */
 function roomEdited(before: ProjectDocument, after: ProjectDocument, owner: OccurrenceAddress) {
   const previous = occurrenceAt(before, owner);
   const next = occurrenceAt(after, owner);
-  return previous !== next && JSON.stringify(previous) !== JSON.stringify(next);
+  return previous !== next && withoutRecordedContent(previous) !== withoutRecordedContent(next);
 }
 
 /**
@@ -207,24 +214,28 @@ function staleRowsToRemove(
   return removals;
 }
 
+/** Each row on a replaced item, by room and action key. */
+function replacedItemRowKeys(document: ProjectDocument, catalog: Catalog): ReadonlySet<string> {
+  return new Set(
+    roomActionsOnReplacedItems(document, catalog).map(
+      ({ owner, reference }) => `${semanticAddressKey(owner)}|${roomActionKey(reference)}`,
+    ),
+  );
+}
+
 /**
  * Rows whose item the edit replaced, in every room of the plan, reached or
  * not: each one the edit left on a replaced item, and in each room the edit
- * changed, every one retained from before it. An upgrade removes every one.
+ * changed, every one retained from before it (`prior`, read once from the
+ * plan before the edit). An upgrade removes every one.
  */
 function replacedItemRowsToRemove(
+  catalog: Catalog,
   before: ProjectDocument,
+  prior: ReadonlySet<string>,
   after: ProjectDocument,
-  upgrade: boolean,
 ) {
-  const prior = upgrade
-    ? new Set<string>()
-    : new Set(
-        roomActionsOnReplacedItems(before).map(
-          ({ owner, reference }) => `${semanticAddressKey(owner)}|${roomActionKey(reference)}`,
-        ),
-      );
-  return roomActionsOnReplacedItems(after).filter(
+  return roomActionsOnReplacedItems(after, catalog).filter(
     ({ owner, reference }) =>
       !prior.has(`${semanticAddressKey(owner)}|${roomActionKey(reference)}`) ||
       roomEdited(before, after, owner),
@@ -722,6 +733,7 @@ function settleProject(options: {
   let project = options.project;
   const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
   const beforeRosters = enteredRosters(before);
+  const priorReplaced = upgrade ? new Set<string>() : replacedItemRowKeys(before.project, catalog);
   // A removal in the room the edit addresses shows on the Timeline being edited; any other is announced.
   const room = command === undefined ? undefined : addressedRoom(projectCommandAddress(command));
   const silentRoom = room === undefined ? undefined : semanticAddressKey(room);
@@ -948,7 +960,7 @@ function settleProject(options: {
     // A row with no context or source has nothing to repair: the edit that orphans it removes it.
     const stale = [
       ...staleRowsToRemove(before, beforeRosters, assembly, upgrade),
-      ...replacedItemRowsToRemove(before.project, assembly.project, upgrade),
+      ...replacedItemRowsToRemove(catalog, before.project, priorReplaced, assembly.project),
       ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly, upgrade),
       ...cageGoneRerolls(before, assembly, upgrade),
       ...(upgrade ? sourceGonePickups(catalog, assembly, evaluate) : []),

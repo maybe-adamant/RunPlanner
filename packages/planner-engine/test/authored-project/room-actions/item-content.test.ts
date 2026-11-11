@@ -42,6 +42,7 @@ const contentOf = (
 ) =>
   roomActionItemContent(
     biomePlanContentSource(
+      catalog,
       project,
       project.route.biomes.find((plan) => plan.biomeKey === address.biomeKey)!,
     )!,

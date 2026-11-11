@@ -96,7 +96,7 @@ describe('schema 102 to 103 migration', () => {
 
   it('lifts a plan with nothing to reshape by the version alone', () => {
     const current = checkpoint('underworld-fg');
-    const lifted = step.liftProjectDocument(at102(current));
+    const lifted = step.liftProjectDocument(at102(current), engine.catalog);
     assert.equal(lifted.schemaVersion, 103);
     assert.equal('schemaRevision' in lifted, false);
     assert.deepEqual(lifted, current);
@@ -223,7 +223,7 @@ describe('schema 102 to 103 migration', () => {
         );
       }
     assert.ok(JSON.stringify(stored).includes('"rushed":true'));
-    assert.deepEqual(step.liftProjectDocument(stored), current);
+    assert.deepEqual(step.liftProjectDocument(stored, engine.catalog), current);
     assert.deepEqual(migrate(stored), current);
   });
 
