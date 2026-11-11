@@ -1015,6 +1015,9 @@ Travel Deal and Gold Gold Gold derive their trigger from the true action order:
 a refill follows the room's first purchase, and Gold Gold Gold's duplicate
 follows the room's first purchase of an item it can duplicate, so a duplicate
 placed earlier is out of order and no placement offers that position.
+The duplicate exists once that purchase settles, whether or not its pickup was
+ever placed: it lies live from the purchase until a row collects it, a
+required one is due before the room is left, and it goes with its purchase.
 The selected source slot is not a complete payload-authoring context: the
 generated payload is evaluated against the exact history prefix at the
 triggering action. A forced or ordinary Hermes delivery in `Q_PreBoss01` may

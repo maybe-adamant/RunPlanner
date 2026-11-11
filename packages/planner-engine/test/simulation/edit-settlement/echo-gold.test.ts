@@ -203,6 +203,24 @@ describe('required Echo Gold activation', () => {
     });
     expect(gold(settle(omitted, command).project)).toBeUndefined();
   });
+  it('takes a placed duplicate with its purchase', () => {
+    const placed = authorLegalTraitOffers(
+      settle(settle(project, purchase).project, {
+        kind: 'PlaceEchoGoldPickup',
+        site,
+        entryKey: 'echoDoubleShopReward',
+        sourceOfferKey: 'Boon',
+      }).project,
+    );
+    expect(gold(placed)).toBeDefined();
+
+    const unbought = settle(placed, { ...purchase, purchased: false });
+
+    expect(gold(unbought.project)).toBeUndefined();
+    expect(unbought.evaluation.findings.map((finding) => finding.code)).not.toContain(
+      'echoGoldPickupPlacementRequired',
+    );
+  });
   it('removes a placed required duplicate, which lies live again with its finding', () => {
     const placed = evaluate(
       authorLegalTraitOffers(

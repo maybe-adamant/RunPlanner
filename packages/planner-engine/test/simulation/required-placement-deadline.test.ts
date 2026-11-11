@@ -120,15 +120,21 @@ describe("Gold Gold Gold's duplicate left unplaced", () => {
     entryKey: 'echoDoubleShopReward',
   } as const;
 
+  /** The Shop's Boon bought, its duplicate never placed. */
+  function freshPurchase(): ProjectDocument {
+    return authorLegalTraitOffers(
+      applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
+        purchased: true,
+      }),
+    );
+  }
+
   /** The Shop's Boon bought and its duplicate placed after it. */
   function duplicatePlaced(): ProjectDocument {
-    const bought = applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
-      kind: 'ReplaceShopPurchaseParticipation',
-      offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
-      purchased: true,
-    });
     return authorLegalTraitOffers(
-      applyProjectCommand(bought, catalog, {
+      applyProjectCommand(freshPurchase(), catalog, {
         kind: 'PlaceEchoGoldPickup',
         site: createAcquisitionSiteAddress(shop, 'roomExit'),
         entryKey: 'echoDoubleShopReward',
@@ -138,6 +144,59 @@ describe("Gold Gold Gold's duplicate left unplaced", () => {
   }
   const isDuplicate = (finding: { readonly code: string }) =>
     finding.code === 'echoGoldPickupPlacementRequired';
+
+  it('lies live from a fresh purchase and stands at its deadline, never placed', () => {
+    const assembly = evaluate(freshPurchase());
+    const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, shop)!;
+    const pickup = (gap: (typeof live.gaps)[number]) =>
+      gap.items.find(
+        (item) =>
+          item.kind === 'pickup' && roomActionKey(item.reference) === roomActionKey(duplicate),
+      );
+
+    expect(assembly.evaluation.issue?.reasons[0]).toMatchObject({
+      code: 'echoGoldPickupPlacementRequired',
+      evidence: { deadline: 'leave' },
+    });
+    expect(assembly.evaluation.findings.filter(isDuplicate)).toHaveLength(1);
+    // The walk passes the purchase that spawns it: live after it, never before.
+    expect(live.frontier).toBe(1);
+    expect(pickup(live.gaps[0]!)).toBeUndefined();
+    expect(pickup(live.gaps[1]!)).toMatchObject({
+      participation: 'required',
+      actions: [
+        {
+          kind: 'place',
+          command: {
+            kind: 'PlaceEchoGoldPickup',
+            entryKey: 'echoDoubleShopReward',
+            sourceOfferKey: 'Boon',
+            index: 1,
+          },
+        },
+      ],
+    });
+  });
+
+  it('is gone with its purchase', () => {
+    const unbought = applyProjectCommand(freshPurchase(), catalog, {
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
+      purchased: false,
+    });
+    const assembly = evaluate(unbought);
+    const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, shop)!;
+
+    expect(assembly.evaluation.findings.filter(isDuplicate)).toEqual([]);
+    expect(
+      live.gaps.flatMap((gap) =>
+        gap.items.filter(
+          (item) =>
+            item.kind === 'pickup' && roomActionKey(item.reference) === roomActionKey(duplicate),
+        ),
+      ),
+    ).toEqual([]);
+  });
 
   it('stands at its deadline, past the purchase that spawns it', () => {
     const placed = duplicatePlaced();

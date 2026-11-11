@@ -12,7 +12,7 @@ import { resolveCompletionBoss } from '../../../authored-project/completion-boss
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import { encounterEntryVowRanks } from '../../arcana-fear';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
-import { ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY } from '../../../authored-project/shop';
+import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../../authored-project/shop';
 import {
   roomLifecycleWindowOrdinal,
   type RoomActionWindow,
@@ -958,9 +958,10 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
 };
 
 /**
- * Gold Gold Gold's duplicate left unplaced lies in the Shop from the purchase that spawns it;
- * its placement finding stands at its deadline, where the walk stops, and is withheld while
- * the walk does not reach it.
+ * Gold Gold Gold's duplicate left unplaced lies in the Shop from the purchase that spawns it,
+ * whether or not an earlier placement left its entry, and is collected in that purchase's
+ * window; its placement finding stands at its deadline, where the walk stops, and is withheld
+ * while the walk does not reach it.
  */
 function echoDuplicateAtDeadline(
   context: ChronologyWalkContext,
@@ -970,22 +971,24 @@ function echoDuplicateAtDeadline(
 ): { readonly emissions: readonly ChronologyEmission[]; readonly haltBefore?: number } {
   const placement = (finding: { readonly code: string }) =>
     finding.code === 'echoGoldPickupPlacementRequired';
-  const row = room.roomActionRoster.rows.find(
+  const purchase = room.roomActionRoster.rows.find(
     (candidate) =>
       !candidate.stale &&
-      candidate.reference.kind === 'interactAcquisitionEntry' &&
-      candidate.reference.siteKey === 'roomExit' &&
-      candidate.reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      candidate.rank !== null &&
+      (candidate.reference.kind === 'interactShopOffer' ||
+        (candidate.reference.kind === 'interactAcquisitionEntry' &&
+          candidate.reference.siteKey === 'roomExit' &&
+          candidate.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)),
   );
   if (
-    row === undefined ||
+    purchase === undefined ||
     !emissions.some(
       (emission) =>
         emission.kind === 'findings' && emission.entries.some((entry) => placement(entry.finding)),
     )
   )
     return { emissions };
-  const due = placementDeadline(context, room.origin, sequence, row.window);
+  const due = placementDeadline(context, room.origin, sequence, purchase.window);
   return {
     emissions: emissions.map((emission) =>
       emission.kind !== 'findings' || emission.rule !== 'add'

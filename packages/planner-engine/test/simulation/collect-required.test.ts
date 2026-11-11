@@ -367,6 +367,37 @@ describe('Collect all required', () => {
     expect(issueKey(collected.assembly)).toBe(issueKey(evaluate(project)));
   });
 
+  it("collects a fresh purchase's Gold Gold Gold duplicate after the purchase", () => {
+    const hBiome = createBiomeAddress('Underworld', 'H');
+    const shop = createOccurrenceAddress(hBiome, createOccurrenceId('golden-h-preboss-shop'));
+    const bought = evaluate(
+      authorLegalTraitOffers(
+        applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
+          kind: 'ReplaceShopPurchaseParticipation',
+          offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
+          purchased: true,
+        }),
+      ),
+    );
+    expect(isRoomPlacement(bought, shop)).toBe(true);
+
+    const collected = collectRequiredItems({ catalog, before: bought, occurrence: shop, evaluate });
+
+    expect(collected.fault).toBeUndefined();
+    // The duplicate is placed with no trait chosen; its offer is the owner's next choice.
+    expect(collected.stop).toBe('blocked');
+    expect(placements(collected.commands)).toEqual([
+      'PlaceEchoGoldPickup ["interactAcquisitionEntry","roomExit","echoDoubleShopReward"]@1',
+    ]);
+    expect(roomOrder(collected.assembly.project, shop).map((reference) => reference.kind)).toEqual([
+      'interactShopOffer',
+      'interactAcquisitionEntry',
+    ]);
+    expect(evaluate(authorLegalTraitOffers(collected.assembly.project)).evaluation.issue).toBe(
+      undefined,
+    );
+  });
+
   it('pins the default order collected in a stripped Fields room: clear then collect, cage by cage', () => {
     const project = loadUnderworldGeneratedCompositionCheckpoint();
     const room = createOccurrenceAddress(
