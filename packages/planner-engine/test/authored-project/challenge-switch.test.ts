@@ -17,6 +17,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { withItemContents } from '../support/room-action-content';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- encoded JSON edited before strict decoding
 type RawJson = any;
@@ -155,10 +156,12 @@ describe('challenge switch observation', () => {
     expect(occurrenceOf(interacted).roomActions.order.at(-1)).toEqual(interaction);
     const used = insertClaim(interacted, 'reward');
     const order = occurrenceOf(used).roomActions.order;
-    expect(order.slice(-2)).toEqual([
-      interaction,
-      { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
-    ]);
+    expect(order.slice(-2)).toEqual(
+      withItemContents(used, host, [
+        interaction,
+        { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
+      ]),
+    );
     const hit = applyProjectCommand(used, catalog, {
       kind: 'ReplaceChallengeSwitchOutcome',
       occurrence: host,
@@ -177,11 +180,13 @@ describe('challenge switch observation', () => {
     });
     expect(occurrenceOf(nectarDropped).roomActions.order).toEqual(order);
     const nectar = insertClaim(nectarDropped, 'nectar');
-    expect(occurrenceOf(nectar).roomActions.order.slice(-3)).toEqual([
-      interaction,
-      { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
-      { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'nectar' },
-    ]);
+    expect(occurrenceOf(nectar).roomActions.order.slice(-3)).toEqual(
+      withItemContents(nectar, host, [
+        interaction,
+        { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
+        { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'nectar' },
+      ]),
+    );
     expect(
       occurrenceOf(nectar).acquisitionSites?.challengeSwitch?.pickupEntries?.nectar?.offer
         .rewardType,

@@ -35,6 +35,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { placeRoomActionsAtChosenIndex } from '../../../src/authored-project/room-actions/chosen-position';
 import { createCompleteNProject } from '../support/complete-n-project';
+import { withItemContent } from '../../support/room-action-content';
 
 const well = createOccurrenceAddress(
   goldenFBiome,
@@ -333,7 +334,10 @@ describe('placing actions at a chosen index', () => {
     expect(positionedCommandInsertionIndexes(project, catalog, command)).toEqual([3]);
     const placed = (index: number) =>
       order(applyProjectCommand(project, catalog, { ...command, index }), postboss);
-    const rush = { kind: 'rushHermesShrineOffer', generationKey: 'initial:secondLeft' };
+    const rush = withItemContent(project, source, {
+      kind: 'rushHermesShrineOffer',
+      generationKey: 'initial:secondLeft',
+    });
     expect(placed(3)).toEqual([...before.slice(0, 3), rush, ...before.slice(3)]);
     for (const index of [4, 5, 6])
       expect(() => placed(index)).toThrow(new RegExp(`index ${index} is not a legal position`));

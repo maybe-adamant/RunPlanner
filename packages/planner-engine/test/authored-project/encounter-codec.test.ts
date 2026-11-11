@@ -35,6 +35,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 
 import { biome, encoded, occurrence, type JsonRecord } from './support/project-codec-json';
+import { withItemContent } from '../support/room-action-content';
 
 function selections(owner: JsonRecord): JsonRecord {
   return ((owner.encounters as JsonRecord).encounterKeyByPhase ?? {}) as JsonRecord;
@@ -239,7 +240,13 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
       read.route.biomes[0]!.topology!.occurrences.find(
         (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
       )!.roomActions.order,
-    ).toContainEqual(reference);
+    ).toContainEqual(
+      withItemContent(
+        failed,
+        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
+        reference,
+      ),
+    );
     expect(simulateProject(catalog, read).findings).toEqual([]);
     // A won contest never held Consolation as its offer.
     const won = encoded(contest('success'));

@@ -20,6 +20,7 @@ import {
   roomActionKey,
 } from '@run-planner/engine/authored-project';
 import { selectedPickupProducers } from '../../../src/authored-project/acquisition/pickup-producers';
+import { withItemContent } from '../../support/room-action-content';
 
 function room(gameName: string) {
   const declaration = catalog.rooms.byKey[gameName];
@@ -228,7 +229,7 @@ describe('contextual entry resolution', () => {
       index: 0,
     });
     expect(placed.route.biomes[0]?.topology?.occurrences[0]?.roomActions.order).toEqual([
-      sourceAction,
+      withItemContent(placed, createOccurrenceAddress(biome, occurrenceId), sourceAction),
     ]);
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(placed)), catalog)).toEqual(
       placed,

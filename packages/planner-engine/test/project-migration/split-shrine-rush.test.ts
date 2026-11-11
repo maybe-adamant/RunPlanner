@@ -28,11 +28,22 @@ function orderOf(plan: unknown): unknown {
     .topology.occurrences[0]!.roomActions;
 }
 
-/** The schema 102 shape of a rush: a flag on its purchase. */
+type RawPlan = {
+  route: { biomes: { topology: { occurrences: { roomActions: { order: Raw[] } }[] } | null }[] };
+};
+
+/** The plan with its rows' item content dropped, which schema 102 never stored. */
+function withoutItemContent(current: Raw): Raw {
+  const plan = structuredClone(current) as unknown as RawPlan;
+  for (const biome of plan.route.biomes)
+    for (const occurrence of biome.topology?.occurrences ?? [])
+      for (const action of occurrence.roomActions.order) delete action.content;
+  return plan as unknown as Raw;
+}
+
+/** The schema 102 shape of a rush: a flag on its purchase, and no item content. */
 function joinShrineRush(current: Raw): Raw {
-  const plan = structuredClone(current) as {
-    route: { biomes: { topology: { occurrences: { roomActions: { order: Raw[] } }[] } | null }[] };
-  };
+  const plan = withoutItemContent(current) as unknown as RawPlan;
   for (const biome of plan.route.biomes)
     for (const occurrence of biome.topology?.occurrences ?? []) {
       const order = occurrence.roomActions.order;
@@ -97,9 +108,9 @@ describe('splitting a stored Shrine rush into its own action', () => {
   });
 
   it('is lossless: a checked-in plan joined back into its stored shape splits to itself', () => {
-    const current = JSON.parse(
-      encodeProjectDocument(loadSurfaceShrineTravelDealCheckpoint()),
-    ) as Raw;
+    const current = withoutItemContent(
+      JSON.parse(encodeProjectDocument(loadSurfaceShrineTravelDealCheckpoint())) as Raw,
+    );
     const stored = joinShrineRush(current);
     expect(JSON.stringify(stored)).toContain('"rushed":true');
     const split = splitShrineRush(stored);
