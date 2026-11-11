@@ -68,11 +68,13 @@ export {
   authoredAcquisitionSources,
   type AuthoredAcquisitionSource,
 } from './acquisition/acquisition-sources';
-export {
-  authoredRoomLifecycleProfileKey,
-  type RoomLifecycleStructure,
-  type RoomLifecycleStructurePhase,
-} from './room-actions/lifecycle-structure';
+export { authoredRoomLifecycleProfileKey } from './room-actions/lifecycle-profile';
+export type {
+  RoomEvent,
+  RoomEventGraph,
+  RoomEventGraphPhase,
+  RoomEventTrigger,
+} from './room-actions/event-graph';
 export { roomLifecycleOperations } from './room-actions/lifecycle-operations';
 export { assembleRoomActionDomain, type RoomActionDomain } from './room-actions/domain';
 export {

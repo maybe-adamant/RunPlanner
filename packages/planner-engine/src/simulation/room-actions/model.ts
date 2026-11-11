@@ -2,8 +2,8 @@ import type { SemanticAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import type {
   RoomActionWindow,
-  RoomLifecycleStructure,
-} from '../../authored-project/room-actions/lifecycle-structure';
+  RoomEventGraph,
+} from '../../authored-project/room-actions/event-graph';
 import type {
   RoomActionCheckpointContribution,
   RoomActionContribution,
@@ -22,7 +22,7 @@ export type {
   RoomActionDependency,
   RoomActionParticipation,
 } from '../../authored-project/room-actions/domain';
-export type { RoomActionWindow } from '../../authored-project/room-actions/lifecycle-structure';
+export type { RoomActionWindow } from '../../authored-project/room-actions/event-graph';
 
 export type RoomActionRosterContribution =
   RoomActionContribution | RoomActionCheckpointContribution;
@@ -85,7 +85,7 @@ export interface RoomActionCheckpoint {
 }
 
 export interface RoomActionRoster {
-  readonly lifecycleStructure: RoomLifecycleStructure;
+  readonly eventGraph: RoomEventGraph;
   readonly rows: readonly RoomActionRow[];
   readonly checkpoints: readonly RoomActionCheckpoint[];
   readonly issues: readonly RoomActionRosterIssue[];

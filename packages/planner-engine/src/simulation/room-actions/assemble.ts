@@ -12,10 +12,10 @@ import {
 import type { RoomActionReference } from '../../authored-project/model';
 import type { AcquisitionEntrySourceFamily } from '../../authored-project/acquisition/entry-source-family';
 import {
-  roomLifecycleWindowOrdinal,
-  scopeRoomLifecycleStructure,
-  type RoomLifecycleStructure,
-} from '../../authored-project/room-actions/lifecycle-structure';
+  windowAnchor,
+  scopeRoomEventGraph,
+  type RoomEventGraph,
+} from '../../authored-project/room-actions/event-graph';
 import {
   assessRoomActionInsertion,
   assessRoomActionMove,
@@ -43,7 +43,7 @@ export function assembleRoomActionRoster(options: {
   readonly contributions: readonly RoomActionRosterContribution[];
   /** What created each authored pickup without an active contribution, by action key. */
   readonly retainedSourceFamilies?: ReadonlyMap<string, AcquisitionEntrySourceFamily>;
-  readonly lifecycleStructure: RoomLifecycleStructure;
+  readonly eventGraph: RoomEventGraph;
   readonly canonicalRequiredInsertions?: readonly {
     readonly actionKey: string;
     readonly toIndex: number;
@@ -56,7 +56,7 @@ export function assembleRoomActionRoster(options: {
   );
   const context = roomActionOrderContext({
     contributions: options.contributions,
-    lifecycleStructure: options.lifecycleStructure,
+    eventGraph: options.eventGraph,
     ...(options.terminalActionKey === undefined
       ? {}
       : { terminalActionKey: options.terminalActionKey }),
@@ -294,8 +294,8 @@ export function assembleRoomActionRoster(options: {
               : rows.reduce(
                   (rank, row) =>
                     row.rank !== null &&
-                    roomLifecycleWindowOrdinal(options.lifecycleStructure, row.window) <=
-                      roomLifecycleWindowOrdinal(options.lifecycleStructure, entry.window)
+                    windowAnchor(row.window, options.eventGraph) <=
+                      windowAnchor(entry.window, options.eventGraph)
                       ? Math.max(rank, row.rank)
                       : rank,
                   0,
@@ -326,8 +326,8 @@ export function assembleRoomActionRoster(options: {
     }
   }
   return frozen({
-    lifecycleStructure: options.lifecycleStructure,
-    rows: withRequiredScopes(rows, options.lifecycleStructure),
+    eventGraph: options.eventGraph,
+    rows: withRequiredScopes(rows, options.eventGraph),
     checkpoints: frozen(checkpoints),
     issues,
     proposals: frozen(proposals),
@@ -366,22 +366,19 @@ export function scopeRoomActionRoster(
   roster: RoomActionRoster,
   activePhaseKeys: readonly string[],
 ): RoomActionRoster {
-  const lifecycleStructure = scopeRoomLifecycleStructure(
-    roster.lifecycleStructure,
-    activePhaseKeys,
-  );
-  if (lifecycleStructure === roster.lifecycleStructure) return roster;
+  const eventGraph = scopeRoomEventGraph(roster.eventGraph, activePhaseKeys);
+  if (eventGraph === roster.eventGraph) return roster;
   const active = new Set(activePhaseKeys);
   return frozen({
     ...roster,
-    lifecycleStructure,
+    eventGraph,
     rows: withRequiredScopes(
       roster.rows.map((row) =>
         'phaseKey' in row.reference && !active.has(row.reference.phaseKey)
           ? frozen({ ...row, stale: true, executable: false })
           : row,
       ),
-      lifecycleStructure,
+      eventGraph,
     ),
   });
 }

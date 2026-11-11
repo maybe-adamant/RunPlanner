@@ -554,7 +554,7 @@ export function liveActionsForProjectEvaluationAssembly(
     );
     if (moment.kind === 'afterEncounterReward') {
       // A Ship wheel's end effects spawn once its reward is collected.
-      const wheelKey = roster.lifecycleStructure.phases.find(
+      const wheelKey = roster.eventGraph.phases.find(
         (phase) => phase.phaseKey === moment.phaseKey,
       )?.rewardWheelKey;
       const reward = liveRows.find(

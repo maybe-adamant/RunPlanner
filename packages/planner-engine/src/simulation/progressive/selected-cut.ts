@@ -25,6 +25,7 @@ import { biomeHistoryThrough, type BiomeHistoryPrefix, type HistoryEvent } from 
 import type { ReachedHistoryRoomAction } from '../history/model';
 import { roomOverviewOperationCount } from '../lifecycle';
 import { roomLifecycleOperations } from '../../authored-project/room-actions/lifecycle-operations';
+import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { RoomStopCoverage } from '../evaluation/evaluation-products';
 import {
   BiomeMaterializationContractError,
@@ -883,38 +884,21 @@ function roomStop(
     switch (boundary.kind) {
       case 'roomEntered':
         return event.kind === 'roomEntered';
-      case 'encounterStart':
+      // An encounter's begin has no effect of its own.
+      case 'encounterBegun':
+        return false;
+      case 'encounterStarted':
         return phaseEvent('encounterStarted', boundary.phaseKey, event);
-      case 'encounterOutcome':
-        // A fight's outcome settles at its completion; a Nemesis event's as answering her ends it.
-        return room.roomLifecycleTimeline.structure.phases.some(
-          (phase) => phase.phaseKey === boundary.phaseKey && phase.endsOnInteraction === true,
-        )
-          ? event.kind === 'encounterInteractionReached' &&
-              event.interaction === 'encounter' &&
-              event.phaseKey === boundary.phaseKey
-          : phaseEvent('encounterCompleted', boundary.phaseKey, event);
       case 'bossDefeated':
         return phaseEvent('bossDefeated', boundary.phaseKey, event);
       case 'encounterEnd':
         return phaseEvent('encounterEndEffectsApplied', boundary.phaseKey, event);
       case 'wheelsOpen':
         return event.kind === 'offerPointMaterialized' && event.offerPoint === boundary.wheelKey;
-      case 'cleanup':
+      case 'doorsOpened':
         return false;
     }
   };
-  const endsOnInteraction = (phaseKey: string) =>
-    room.roomLifecycleTimeline.structure.phases.some(
-      (phase) => phase.phaseKey === phaseKey && phase.endsOnInteraction === true,
-    );
-  const answered = (phaseKey: string) =>
-    passed.find(
-      (event) =>
-        event.kind === 'encounterInteractionReached' &&
-        event.interaction === 'encounter' &&
-        event.phaseKey === phaseKey,
-    );
   const boundaryPassed = (index: number): boolean => {
     const entry = entries[index];
     if (entry?.kind !== 'boundary') return true;
@@ -922,24 +906,21 @@ function roomStop(
     switch (boundary.kind) {
       case 'roomEntered':
         return true;
-      case 'encounterStart':
-        // A Nemesis event never starts an encounter; answering her is its start and outcome.
-        return endsOnInteraction(boundary.phaseKey)
-          ? answered(boundary.phaseKey) !== undefined
-          : passed.some((event) => boundaryEvent(index, event));
-      case 'encounterOutcome':
+      // It begins with the event before it, or as its cage's row is taken.
+      case 'encounterBegun':
+        return (
+          boundary.trigger.kind !== 'action' ||
+          rowReached(roomActionKey(boundary.trigger.action)) ||
+          passed.some((event) => phaseEvent('encounterStarted', boundary.phaseKey, event))
+        );
+      case 'encounterStarted':
       case 'bossDefeated':
       case 'wheelsOpen':
         return passed.some((event) => boundaryEvent(index, event));
       case 'encounterEnd': {
         if (passed.some((event) => boundaryEvent(index, event))) return true;
-        // A Nemesis event no encounter runs for ends once the walk goes on from answering her.
-        const answer = endsOnInteraction(boundary.phaseKey)
-          ? answered(boundary.phaseKey)
-          : undefined;
-        if (answer !== undefined) return passed.some((event) => event.sequence > answer.sequence);
-        // A phase without end effects (a Nemesis interaction, a story phase) ends at its
-        // completion, passed once the walk goes on from it; deferred effects must apply.
+        // A phase without end effects (a story phase) ends at its completion, passed once
+        // the walk goes on from it; deferred effects must apply.
         const completed = passed.find(
           (event): event is Extract<LifecycleEvent, { readonly kind: 'encounterCompleted' }> =>
             event.kind === 'encounterCompleted' && event.phaseKey === boundary.phaseKey,
@@ -949,7 +930,7 @@ function roomStop(
           passed.some((event) => event.sequence > completed.sequence)
         );
       }
-      case 'cleanup':
+      case 'doorsOpened':
         return generation >= 0
           ? generated
           : exitWork >= 0 && passed.some((event) => event.operationIndex >= exitWork);
@@ -1016,10 +997,10 @@ function roomStop(
     (entry) => entry.kind === 'action' && entry.action.key === atRow,
   );
   if (atRowIndex >= 0) return stop('timeline', atRowIndex, 'entry');
-  const cleanup = entries.findIndex(
-    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+  const doorsOpened = entries.findIndex(
+    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'doorsOpened',
   );
-  if (cleanup < 0)
+  if (doorsOpened < 0)
     throw new BiomeMaterializationContractError(`${room.gameName} has no Doors open boundary`);
   // A door's generation or offer, or the store they draw from, blocks inside the doors
   // opening. A missing Timeline action blocks only after the doors opened (its window
@@ -1029,7 +1010,7 @@ function roomStop(
     located.finding.origin.kind !== 'roomAction' &&
     !passed.some((event) => event.operationIndex > generation)
   )
-    return stop('timeline', cleanup, 'entry');
+    return stop('timeline', doorsOpened, 'entry');
   const unpassed = entries.findIndex(
     (entry, index) => entry.kind === 'boundary' && !boundaryPassed(index),
   );

@@ -50,16 +50,16 @@ import {
 /**
  * When the game spawns loot on its own: on entry (an Opening or Devotion
  * reward, Fields cages and optionals), the fourth-biome Preboss delivery
- * flush, an encounter's start (H minibosses), its outcome (what a Nemesis
- * trade or contest result gives), its end (Arachne's cocoon fight ends as the
- * reward cocoon breaks), and in an O phase the deliveries and drops after its
- * wheel reward, or, before a later wheel, as that wheel opens.
+ * flush, an encounter's begin (H minibosses cage their reward first), its end
+ * (Arachne's cocoon fight ends as the reward cocoon breaks), and in an O phase
+ * the deliveries and drops after its wheel reward, or, before a later wheel,
+ * as that wheel opens. Nothing spawns at Combat: a Nemesis trade's or
+ * contest's result spawns as her talk row settles.
  */
 export type SpawnMomentKind =
   | 'roomEntered'
   | 'deliveryFlush'
-  | 'encounterStart'
-  | 'encounterOutcome'
+  | 'encounterBegun'
   | 'encounterEnd'
   | 'afterEncounterReward'
   | 'wheelsOpen';
@@ -449,12 +449,10 @@ export function spawnMomentEntryIndex(
     case 'roomEntered':
     case 'deliveryFlush':
       return boundary('roomEntered');
-    case 'encounterStart':
+    case 'encounterBegun':
       return phaseKey === undefined
         ? boundary('roomEntered')
-        : boundary('encounterStart', phaseKey);
-    case 'encounterOutcome':
-      return boundary('encounterOutcome', phaseKey);
+        : boundary('encounterBegun', phaseKey);
     case 'encounterEnd':
     case 'afterEncounterReward':
       if (phaseKey === undefined) return entries.length - 1;
@@ -499,7 +497,7 @@ export function spawnedLootForProjectEvaluationAssembly(
   if (room === undefined || !room.entered) return undefined;
   const biome = createBiomeAddress(occurrence.routeKey, occurrence.biomeKey);
   const roster = room.roomActionRoster;
-  const structure = roster.lifecycleStructure;
+  const structure = roster.eventGraph;
   const actionAddress = (reference: RoomActionReference) =>
     createRoomActionAddress(biome, occurrence.occurrenceId, roomActionKey(reference));
   const liveRows = roster.rows.filter((row) => !row.stale).map(asUnplacedWhenReplaced);
@@ -652,7 +650,12 @@ export function spawnedLootForProjectEvaluationAssembly(
     const index = structure.phases.findIndex((phase) => phase.phaseKey === phaseKey);
     const wheelKey = index < 0 ? undefined : structure.phases[index + 1]?.rewardWheelKey;
     return wheelKey !== undefined &&
-      structure.points.some((point) => point.kind === 'wheelsOpen' && point.wheelKey === wheelKey)
+      structure.events.some(
+        (event) =>
+          event.kind === 'wheelsOpen' &&
+          event.wheelKey === wheelKey &&
+          event.afterPhaseKey === phaseKey,
+      )
       ? wheelKey
       : undefined;
   };
@@ -660,15 +663,9 @@ export function spawnedLootForProjectEvaluationAssembly(
     switch (kind) {
       case 'roomEntered':
       case 'deliveryFlush':
-      case 'encounterStart':
+      case 'encounterBegun':
       case 'encounterEnd':
         return walk.entry(spawnMomentEntryIndex(entries, kind, phaseKey));
-      // The outcome decides what spawns, so it spawns once the outcome has settled.
-      case 'encounterOutcome':
-        return phaseKey !== undefined &&
-          walk.entry(spawnMomentEntryIndex(entries, kind, phaseKey)) === 'settled'
-          ? 'settled'
-          : 'unreached';
       // What a phase's end effects spawn appears with the next wheel's roll.
       case 'wheelsOpen': {
         const wheelKey = phaseKey === undefined ? undefined : nextWheelKey(phaseKey);
@@ -743,7 +740,7 @@ export function spawnedLootForProjectEvaluationAssembly(
         else if (startSpawnPhase !== undefined)
           // An H miniboss cages its reward until the encounter ends.
           add(
-            'encounterStart',
+            'encounterBegun',
             startSpawnPhase,
             fromRow(row, roomReward, unlockKey(startSpawnPhase)),
           );
@@ -871,20 +868,6 @@ export function spawnedLootForProjectEvaluationAssembly(
     spawn.items.push(item);
     actionSpawns.set(key, spawn);
   };
-  /**
-   * The phase whose outcome decides a source action's spawn: a Nemesis trade's
-   * result exists only once accepted and a contest's follows its result, while
-   * her free item is given whatever happens.
-   */
-  const decidingOutcome = (
-    family: AcquisitionEntrySourceFamily,
-    source: RoomActionReference,
-  ): string | undefined =>
-    family.kind === 'nemesisEvent' &&
-    source.kind === 'interactEncounter' &&
-    room.encounters.nemesisRandomEventByPhase?.[source.phaseKey]?.kind !== 'freeItem'
-      ? source.phaseKey
-      : undefined;
   for (const row of liveRows) {
     const reference = row.reference;
     const family = row.sourceFamily;
@@ -911,11 +894,8 @@ export function spawnedLootForProjectEvaluationAssembly(
           (dependency) => dependency.kind === 'afterAction' && dependency.authoringOnly !== true,
         );
         if (source?.kind !== 'afterAction' || !rowByKey.has(roomActionKey(source.action))) break;
-        const item = fromRow(row, { kind: 'generated', family });
-        const outcomePhaseKey = decidingOutcome(family, source.action);
-        // A spawn an encounter outcome decides is announced after that outcome.
-        if (outcomePhaseKey === undefined) addActionSpawn(source.action, item);
-        else if (actionSettled(source.action)) add('encounterOutcome', outcomePhaseKey, item);
+        // A Nemesis trade's or contest's result is decided as her talk row settles.
+        addActionSpawn(source.action, fromRow(row, { kind: 'generated', family }));
         break;
       }
       case 'hermesShrineDelivery': {
@@ -982,8 +962,7 @@ export function spawnedLootForProjectEvaluationAssembly(
   const chronology: string[] = [momentKey('roomEntered'), momentKey('deliveryFlush')];
   for (const phaseKey of phaseKeys)
     chronology.push(
-      momentKey('encounterStart', phaseKey),
-      momentKey('encounterOutcome', phaseKey),
+      momentKey('encounterBegun', phaseKey),
       momentKey('encounterEnd', phaseKey),
       momentKey('afterEncounterReward', phaseKey),
       momentKey('wheelsOpen', phaseKey),

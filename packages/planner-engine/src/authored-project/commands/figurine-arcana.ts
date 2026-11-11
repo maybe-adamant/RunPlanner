@@ -33,10 +33,10 @@ export function applyFigurineArcanaCommand(
     topology: requireTopology(located.plan, command),
     occurrence: boss,
     routePosition: resolveRoutePosition(catalog, document.route, command.figurine.biomeKey),
-  }).lifecycleStructure;
+  }).eventGraph;
   if (
-    !lifecycle.points.some(
-      (point) => point.kind === 'bossDefeated' && point.phaseKey === command.figurine.phaseKey,
+    !lifecycle.events.some(
+      (event) => event.kind === 'bossDefeated' && event.phaseKey === command.figurine.phaseKey,
     )
   )
     failCommand(command, 'Crystal Figurine phase is not an active Boss-defeated phase');

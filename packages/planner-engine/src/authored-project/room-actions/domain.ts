@@ -84,12 +84,8 @@ import {
   acquisitionEntrySourceFamily,
   type AcquisitionEntrySourceFamily,
 } from '../acquisition/entry-source-family';
-import {
-  assembleRoomLifecycleStructure,
-  authoredRoomLifecycleProfileKey,
-  type RoomActionWindow,
-  type RoomLifecycleStructure,
-} from './lifecycle-structure';
+import { assembleRoomEventGraph, type RoomActionWindow, type RoomEventGraph } from './event-graph';
+import { authoredRoomLifecycleProfileKey } from './lifecycle-profile';
 import { roomLifecycleOperations } from './lifecycle-operations';
 
 export type RoomActionParticipation = 'required' | 'optional';
@@ -141,7 +137,7 @@ export interface RoomActionDomain {
   readonly owner: ReturnType<typeof createOccurrenceAddress>;
   readonly declaration: RoomDeclaration;
   readonly lifecycleProfileKey: string;
-  readonly lifecycleStructure: RoomLifecycleStructure;
+  readonly eventGraph: RoomEventGraph;
   readonly activeReferences: readonly RoomActionReference[];
   readonly contributions: readonly RoomActionDomainContribution[];
   /**
@@ -899,7 +895,7 @@ function checkpoints(
   catalog: Catalog,
   declaration: RoomDeclaration,
   occurrence: Pick<RoomOccurrence, 'gameName' | 'roomActions'>,
-  structure: RoomLifecycleStructure,
+  structure: RoomEventGraph,
 ): readonly RoomActionCheckpointContribution[] {
   const envelopeByKey = new Map(
     encounterEnvelopeSlots(catalog, declaration, occurrence.gameName).map((phase) => [
@@ -928,7 +924,7 @@ function checkpoints(
       : finalPhase?.rewardWheelKey !== undefined
         ? frozen({ kind: 'shipPostCombat', wheelKey: finalPhase.rewardWheelKey })
         : frozen({ kind: 'standard', phase: 'afterCombat' });
-  if (structure.points.some((point) => point.kind === 'outgoingGeneration'))
+  if (structure.events.some((event) => event.kind === 'doorsOpened' && event.generatesOutgoing))
     result.push(
       frozen({
         kind: 'checkpoint',
@@ -973,7 +969,7 @@ export function assembleRoomActionDomain(options: {
   const declaration = resolveEntryDeclaration(rawDeclaration, options.routePosition);
   const lifecycleProfileKey =
     options.lifecycleProfileKey ?? authoredRoomLifecycleProfileKey(declaration, options.occurrence);
-  const lifecycleStructure = assembleRoomLifecycleStructure({
+  const eventGraph = assembleRoomEventGraph({
     catalog: options.catalog,
     declaration,
     occurrence: options.occurrence,
@@ -1251,7 +1247,7 @@ export function assembleRoomActionDomain(options: {
   });
   const contributions = frozen([
     ...actions,
-    ...checkpoints(options.catalog, declaration, options.occurrence, lifecycleStructure),
+    ...checkpoints(options.catalog, declaration, options.occurrence, eventGraph),
   ]);
   const activeReferences = frozen(actions.map((action) => action.reference));
   const activeKeys = new Set(activeReferences.map(roomActionKey));
@@ -1281,7 +1277,7 @@ export function assembleRoomActionDomain(options: {
     owner: createOccurrenceAddress(options.biome, options.occurrence.occurrenceId),
     declaration,
     lifecycleProfileKey,
-    lifecycleStructure,
+    eventGraph,
     activeReferences,
     contributions,
     retainedSourceFamilies,

@@ -146,9 +146,7 @@ describe('F takeover materialization', () => {
     );
 
     expect(opening.lifecycleProfileKey).toBe('OpeningRewardRoom');
-    expect(opening.roomActionRoster.lifecycleStructure).toBe(
-      opening.roomLifecycleTimeline.structure,
-    );
+    expect(opening.roomActionRoster.eventGraph).toBe(opening.roomLifecycleTimeline.structure);
     expect(opening.roomLifecycleTimeline.structure.points.map((point) => point.kind)).toEqual([
       'roomEntered',
       'encounterStart',

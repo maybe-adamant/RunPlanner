@@ -11,7 +11,7 @@ import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../../authored-project/infe
 import { createBiomeAddress, createRoomActionAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/state';
-import { roomLifecycleWindowOrdinal } from '../../authored-project/room-actions/lifecycle-structure';
+import { windowAnchor } from '../../authored-project/room-actions/event-graph';
 import { roomLifecycleOperations } from '../../authored-project/room-actions/lifecycle-operations';
 import { type RoomActionRow } from '../room-actions';
 import { purgingPoolSalePoint } from '../commerce/feature-rolls';
@@ -624,10 +624,10 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   if (roster === undefined) {
     throw new LifecycleExecutionContractError('room-action execution requires a roster');
   }
-  const lifecycleStructure = roster.lifecycleStructure;
-  if (lifecycleStructure.profileKey !== context.profile.key) {
+  const eventGraph = roster.eventGraph;
+  if (eventGraph.profileKey !== context.profile.key) {
     throw new LifecycleExecutionContractError(
-      `${context.profile.key} received ${lifecycleStructure.profileKey} room-action structure`,
+      `${context.profile.key} received ${eventGraph.profileKey} room-action structure`,
     );
   }
   const origin = context.input.origin;
@@ -912,7 +912,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   ): ExecutionState => {
     let state = initial;
     const missingEarlier = firstMissingRequired(
-      (row) => roomLifecycleWindowOrdinal(lifecycleStructure, row.window) < targetWindowRank,
+      (row) => windowAnchor(row.window, eventGraph) < targetWindowRank,
     );
     if (missingEarlier !== undefined)
       return blockAt(state, missingEarlier, { kind: 'action', actionKey: targetKey });
@@ -920,7 +920,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       const row = rankedRows[cursor]!;
       if (row.key === targetKey) return state;
       if (!row.executable) return blockAt(state, row);
-      if (roomLifecycleWindowOrdinal(lifecycleStructure, row.window) > targetWindowRank) break;
+      if (windowAnchor(row.window, eventGraph) > targetWindowRank) break;
       state = reach(state, playerAction(row, operationIndex, state), row);
       cursor += 1;
     }
@@ -949,17 +949,16 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       // once the executable rows of its window the walk reaches before it are
       // taken, such as the earlier cage's reward or a delivery the wheels opening
       // spawned; a required action of an earlier window missing comes first.
-      const ordinal = roomLifecycleWindowOrdinal(lifecycleStructure, target.window);
+      const ordinal = windowAnchor(target.window, eventGraph);
       const missingEarlier = firstMissingRequired(
-        (row) => roomLifecycleWindowOrdinal(lifecycleStructure, row.window) < ordinal,
+        (row) => windowAnchor(row.window, eventGraph) < ordinal,
       );
       if (missingEarlier !== undefined)
         return blockAt(initial, missingEarlier, { kind: 'action', actionKey: key });
       let state = initial;
       while (cursor < rankedRows.length) {
         const row = rankedRows[cursor]!;
-        if (!row.executable || roomLifecycleWindowOrdinal(lifecycleStructure, row.window) > ordinal)
-          break;
+        if (!row.executable || windowAnchor(row.window, eventGraph) > ordinal) break;
         state = reach(state, playerAction(row, operationIndex, state), row);
         cursor += 1;
       }
@@ -968,7 +967,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     }
     let state = consumeGenericBefore(
       key,
-      roomLifecycleWindowOrdinal(lifecycleStructure, target.window),
+      windowAnchor(target.window, eventGraph),
       operationIndex,
       initial,
     );
@@ -990,8 +989,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       const row = rankedRows[cursor]!;
       const missingEarlier = firstMissingRequired(
         (missing) =>
-          roomLifecycleWindowOrdinal(lifecycleStructure, missing.window) <
-          roomLifecycleWindowOrdinal(lifecycleStructure, row.window),
+          windowAnchor(missing.window, eventGraph) < windowAnchor(row.window, eventGraph),
       );
       if (missingEarlier !== undefined)
         return blockAt(state, missingEarlier, { kind: 'action', actionKey: row.key });
@@ -1064,14 +1062,14 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   ): readonly ResolvedEncounterPhase[] => {
     const byKey = new Map(phases.map((phase) => [phase.slotKey, phase]));
     return Object.freeze(
-      lifecycleStructure.phases.flatMap((phase) => {
+      eventGraph.phases.flatMap((phase) => {
         // Native never starts a NonCombat room encounter (RoomLogic StartRoom); a Fields
         // Nemesis event is recorded at preparation and ended by its interaction alone.
         if (phase.endsOnInteraction === true) return [];
         const resolved = byKey.get(phase.phaseKey);
         if (resolved === undefined) {
           throw new LifecycleExecutionContractError(
-            `${lifecycleStructure.profileKey} structure selected missing phase ${phase.phaseKey}`,
+            `${eventGraph.profileKey} structure selected missing phase ${phase.phaseKey}`,
           );
         }
         return [resolved];
@@ -1120,8 +1118,11 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   };
 
   const wheelsOpenFollows = (wheelKey: string): boolean =>
-    lifecycleStructure.points.some(
-      (point) => point.kind === 'wheelsOpen' && point.wheelKey === wheelKey,
+    eventGraph.events.some(
+      (event) =>
+        event.kind === 'wheelsOpen' &&
+        event.wheelKey === wheelKey &&
+        event.afterPhaseKey !== undefined,
     );
 
   const postCombatRows = (wheelKey: string) =>
@@ -1173,10 +1174,10 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   ): ExecutionState => {
     let next = state;
     // A phase a wheel follows leaves its end-effect pickups until that wheel opens.
-    const phaseIndex = lifecycleStructure.phases.findIndex(
+    const phaseIndex = eventGraph.phases.findIndex(
       (candidate) => candidate.phaseKey === phase.slotKey,
     );
-    const nextPhase = phaseIndex < 0 ? undefined : lifecycleStructure.phases[phaseIndex + 1];
+    const nextPhase = phaseIndex < 0 ? undefined : eventGraph.phases[phaseIndex + 1];
     if (
       context.profile.key === 'ShipCombatRoom' &&
       nextPhase?.rewardWheelKey !== undefined &&

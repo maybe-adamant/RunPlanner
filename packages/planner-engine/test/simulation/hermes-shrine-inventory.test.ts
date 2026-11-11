@@ -1040,7 +1040,7 @@ describe('Hermes Shrine delayed deliveries', () => {
       owner: host,
       order: occurrence.roomActions.order,
       contributions: domain.contributions,
-      lifecycleStructure: domain.lifecycleStructure,
+      eventGraph: domain.eventGraph,
     });
     expect(
       roster.proposals.find(

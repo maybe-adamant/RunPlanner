@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createOccurrenceId } from '../../../src/authored-project/addresses';
 import { roomActionKey } from '../../../src/authored-project/room-actions/state';
-import type { RoomLifecycleStructure } from '../../../src/authored-project/room-actions/lifecycle-structure';
+import type { RoomEventGraph } from '../../../src/authored-project/room-actions/event-graph';
 import type { RoomActionRow } from '../../../src/simulation/room-actions/model';
 import { withRequiredScopes } from '../../../src/simulation/room-actions/required-scope';
 import {
@@ -9,7 +9,7 @@ import {
   scopeRoomActionRoster,
 } from '../../../src/simulation/room-actions/assemble';
 
-const structure: RoomLifecycleStructure = {
+const structure: RoomEventGraph = {
   profileKey: 'FieldsCombatRoom',
   activeEncounterSlotKeys: ['Cage01', 'Cage02'],
   phases: [{ phaseKey: 'Cage01' }, { phaseKey: 'Cage02' }],
@@ -55,7 +55,7 @@ describe('required action scope', () => {
         occurrenceId: createOccurrenceId('scope'),
       },
       order: [],
-      lifecycleStructure: structure,
+      eventGraph: structure,
       contributions: [
         {
           kind: 'action',

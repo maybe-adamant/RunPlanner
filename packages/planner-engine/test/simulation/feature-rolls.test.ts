@@ -654,7 +654,7 @@ describe('roll-reference ordering', () => {
       owner: room,
       order: host.occurrence.roomActions.order,
       contributions: host.domain.contributions,
-      lifecycleStructure: host.domain.lifecycleStructure,
+      eventGraph: host.domain.eventGraph,
     });
     return roster.proposals.find(
       (proposal) =>

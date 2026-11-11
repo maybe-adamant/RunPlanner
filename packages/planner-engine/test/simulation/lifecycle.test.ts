@@ -5,8 +5,8 @@ import {
   createRoomActionAddress,
   hermesShrineDeliveryEntryKey,
   roomActionKey,
-  type RoomLifecycleStructure,
-  type RoomLifecycleStructurePhase,
+  type RoomEventGraph,
+  type RoomEventGraphPhase,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
@@ -219,7 +219,7 @@ function actionRoster(
       ),
     ),
   );
-  const phasesForStructure: readonly RoomLifecycleStructurePhase[] =
+  const phasesForStructure: readonly RoomEventGraphPhase[] =
     profileKey === 'ShipCombatRoom'
       ? [
           { phaseKey: 'Intro' },
@@ -229,7 +229,7 @@ function actionRoster(
           })),
         ]
       : phaseKeys.map((phaseKey) => ({ phaseKey }));
-  const points: RoomLifecycleStructure['points'][number][] = [
+  const points: RoomEventGraph['points'][number][] = [
     Object.freeze({ kind: 'roomEntered', key: 'roomEntered' }),
   ];
   phasesForStructure.forEach((phase, index) => {
@@ -267,7 +267,7 @@ function actionRoster(
   )
     points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
   points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
-  const lifecycleStructure: RoomLifecycleStructure = Object.freeze({
+  const eventGraph: RoomEventGraph = Object.freeze({
     profileKey,
     activeEncounterSlotKeys: Object.freeze(phaseKeys),
     phases: Object.freeze(phasesForStructure),
@@ -276,7 +276,7 @@ function actionRoster(
   return assembleRoomActionRoster({
     owner: actionOrigin,
     order,
-    lifecycleStructure,
+    eventGraph,
     contributions: contributions.map((entry) => ({
       kind: 'action' as const,
       owner: createRoomActionAddress(

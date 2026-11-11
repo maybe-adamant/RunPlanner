@@ -67,7 +67,7 @@ export function LifecycleBoundaryRow({
       data-reorder-anchor={boundary.key}
       data-phase={phase}
       data-phase-start={
-        (boundary.kind === 'encounterStart' || boundary.kind === 'roomEntered') &&
+        (boundary.kind === 'encounterBegun' || boundary.kind === 'roomEntered') &&
         phase !== undefined
           ? ''
           : undefined

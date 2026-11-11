@@ -14,9 +14,9 @@ import { encounterEntryVowRanks } from '../../arcana-fear';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../../authored-project/shop';
 import {
-  roomLifecycleWindowOrdinal,
+  windowAnchor,
   type RoomActionWindow,
-} from '../../../authored-project/room-actions/lifecycle-structure';
+} from '../../../authored-project/room-actions/event-graph';
 import type { HistoryEvent } from '../../history';
 import { projectRoomEncounterRecords } from '../../history/facts';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
@@ -175,8 +175,8 @@ function placementDeadline(
           }),
         };
   if (room === undefined) return closing;
-  const structure = room.roomActionRoster.lifecycleStructure;
-  const ordinal = roomLifecycleWindowOrdinal(structure, window);
+  const structure = room.roomActionRoster.eventGraph;
+  const ordinal = windowAnchor(window, structure);
   const rows = new Map(room.roomActionRoster.rows.map((row) => [row.key, row]));
   const last = context.history.events.at(-1)?.sequence ?? 0;
   const later = context.reachedActions.find((action) => {
@@ -187,7 +187,7 @@ function placementDeadline(
       action.sequence <= last &&
       row !== undefined &&
       !row.stale &&
-      roomLifecycleWindowOrdinal(structure, row.window) > ordinal &&
+      windowAnchor(row.window, structure) > ordinal &&
       (closing === undefined || action.sequence < closing.sequence)
     );
   });

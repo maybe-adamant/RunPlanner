@@ -238,8 +238,7 @@ function roomActionsForOccurrence(
     key;
   const wheelPhaseLabel = (key: string) =>
     phaseLabel(
-      roster.lifecycleStructure.phases.find((phase) => phase.rewardWheelKey === key)?.phaseKey ??
-        key,
+      roster.eventGraph.phases.find((phase) => phase.rewardWheelKey === key)?.phaseKey ?? key,
     );
   const checkpointLabel = (key: string): string => {
     if (key.startsWith('combat:')) return `${phaseLabel(key.slice('combat:'.length))} complete`;
@@ -255,11 +254,11 @@ function roomActionsForOccurrence(
         return window.phase === 'beforeCombat' ? 'before combat' : 'after combat';
       case 'encounterEnd': {
         // In a Ship room a phase's end-effect pickups are due before the next wheel's choice.
-        const phases = roster.lifecycleStructure.phases;
+        const phases = roster.eventGraph.phases;
         const wheelKey =
           phases[phases.findIndex((phase) => phase.phaseKey === window.phaseKey) + 1]
             ?.rewardWheelKey;
-        return wheelKey === undefined || roster.lifecycleStructure.profileKey !== 'ShipCombatRoom'
+        return wheelKey === undefined || roster.eventGraph.profileKey !== 'ShipCombatRoom'
           ? `after ${phaseLabel(window.phaseKey)} ends`
           : `after ${phaseLabel(window.phaseKey)} ends, before choosing the ${wheelPhaseLabel(wheelKey)} wheel`;
       }
@@ -1030,7 +1029,7 @@ function roomActionsForOccurrence(
       ),
       transcendentEmbryoOutcomes,
     ),
-    lifecycleTimeline.structure.activeEncounterSlotKeys.flatMap((phaseKey) => {
+    lifecycleTimeline.graph.activeEncounterSlotKeys.flatMap((phaseKey) => {
       const address = createEncounterPhaseAddress(
         input.biome,
         { kind: 'occurrence', occurrenceId: input.occurrence.occurrenceId },

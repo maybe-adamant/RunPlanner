@@ -518,7 +518,7 @@ export function executionTimelineTransactions(
     if (timeline.kind === 'boundary') {
       const boundary = timeline.boundary;
       if (boundary.kind === 'roomEntered') continue;
-      if (boundary.kind === 'encounterStart') {
+      if (boundary.kind === 'encounterStarted') {
         const phase = room.encounterPhases.find(
           (candidate) => candidate.slotKey === boundary.phaseKey,
         );

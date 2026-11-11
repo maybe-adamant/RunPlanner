@@ -7,8 +7,8 @@ import type {
 } from '../../../src/authored-project/room-actions/domain';
 import type {
   RoomActionWindow,
-  RoomLifecycleStructure,
-} from '../../../src/authored-project/room-actions/lifecycle-structure';
+  RoomEventGraph,
+} from '../../../src/authored-project/room-actions/event-graph';
 import { roomActionKey } from '../../../src/authored-project/room-actions/state';
 import { assembleRoomActionRoster } from '../../../src/simulation/room-actions/assemble';
 
@@ -23,7 +23,7 @@ const second: RoomActionReference = { kind: 'interactEncounter', phaseKey: 'seco
 const other: RoomActionReference = { kind: 'interactEncounter', phaseKey: 'other' };
 const before: RoomActionWindow = { kind: 'standard', phase: 'beforeCombat' };
 const after: RoomActionWindow = { kind: 'standard', phase: 'afterCombat' };
-const structure: RoomLifecycleStructure = {
+const structure: RoomEventGraph = {
   profileKey: 'StandardRewardRoom',
   activeEncounterSlotKeys: ['first'],
   phases: [{ phaseKey: 'first' }],
@@ -45,7 +45,7 @@ describe('room action proposal blockers', () => {
   it('distinguishes unavailable checkpoint evidence', () => {
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [],
       contributions: [action(first, [{ kind: 'afterCheckpoint', checkpointKey: 'missing' }])],
     });
@@ -64,7 +64,7 @@ describe('room action proposal blockers', () => {
     ];
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [second, first],
       contributions,
     });
@@ -84,7 +84,7 @@ describe('room action proposal blockers', () => {
     });
     const moves = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [second, first, other],
       contributions,
     }).proposals.filter((p) => p.kind === 'move' && p.fromIndex === 2);
@@ -103,7 +103,7 @@ describe('room action proposal blockers', () => {
     const dependency = { kind, checkpointKey: 'combat' };
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [],
       contributions: [
         action(first, [dependency], kind === 'beforeCheckpoint' ? after : before),
@@ -123,7 +123,7 @@ describe('room action proposal blockers', () => {
   it('anchors each move at the current-order index it lands in front of', () => {
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [first, second, other],
       contributions: [action(first), action(second), action(other)],
     });
@@ -140,7 +140,7 @@ describe('room action proposal blockers', () => {
   it('retains all dependency and timing evidence, and no evidence for a legal move', () => {
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [first, second],
       contributions: [
         action(first, [], before),
@@ -159,7 +159,7 @@ describe('room action proposal blockers', () => {
     ]);
     const legal = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [first, second],
       contributions: [action(first), action(second)],
     });
@@ -179,7 +179,7 @@ describe('room action proposal blockers', () => {
     };
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       order: [well, staleShrine],
       contributions: [action(well)],
     });
@@ -194,7 +194,7 @@ describe('room action proposal blockers', () => {
     const extra: RoomActionReference = { kind: 'interactEncounter', phaseKey: 'extra' };
     const roster = assembleRoomActionRoster({
       owner,
-      lifecycleStructure: structure,
+      eventGraph: structure,
       // The retained before-combat row follows an after-combat one: its own window issue.
       order: [other, first, extra],
       contributions: [

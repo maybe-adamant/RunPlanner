@@ -53,8 +53,8 @@ function shipWorkbenchPresentation(
     switch (boundary.kind) {
       case 'roomEntered':
         return 0;
-      case 'encounterStart':
-      case 'encounterOutcome':
+      case 'encounterBegun':
+      case 'encounterStarted':
       case 'encounterEnd':
         return phaseIndexForKey(boundary.phaseKey);
       case 'bossDefeated':
@@ -65,7 +65,7 @@ function shipWorkbenchPresentation(
         );
         return targetIndex <= 0 ? 0 : targetIndex - 1;
       }
-      case 'cleanup':
+      case 'doorsOpened':
         return roomLocal.phases.length - 1;
     }
   };
@@ -122,7 +122,7 @@ function shipWorkbenchPresentation(
         const phaseIndex = boundaryPhaseIndex(entry.boundary);
         phaseBoundaryEntries[phaseIndex]!.push(entry);
         phaseTimelineEntries[phaseIndex]!.push(entry);
-        if (entry.boundary.kind === 'encounterStart') currentPhaseIndex = phaseIndex;
+        if (entry.boundary.kind === 'encounterBegun') currentPhaseIndex = phaseIndex;
         lastPhaseIndex = phaseIndex;
         continue;
       }

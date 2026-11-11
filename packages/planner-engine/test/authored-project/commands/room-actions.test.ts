@@ -553,7 +553,7 @@ describe('room-action commands', () => {
         owner: createOccurrenceAddress(biome, candidate.occurrenceId),
         order: candidate.roomActions.order,
         contributions: domain.contributions,
-        lifecycleStructure: domain.lifecycleStructure,
+        eventGraph: domain.eventGraph,
       });
       expect(roster.valid).toBe(true);
       const timeline = assembleRoomLifecycleTimeline({
@@ -662,7 +662,7 @@ describe('room-action commands', () => {
       owner: host,
       order: hostOccurrence.roomActions.order,
       contributions: domain.contributions,
-      lifecycleStructure: domain.lifecycleStructure,
+      eventGraph: domain.eventGraph,
     });
     const replacement: RoomActionReference = {
       kind: 'interactAcquisitionEntry',
@@ -1921,7 +1921,7 @@ describe('room-action commands', () => {
         owner: completion,
         order,
         contributions: located.domain.contributions,
-        lifecycleStructure: located.domain.lifecycleStructure,
+        eventGraph: located.domain.eventGraph,
       });
     };
     const rackAction = createRoomActionAddress(biome, completion.occurrenceId, roomActionKey(rack));
@@ -1982,7 +1982,7 @@ describe('room-action commands', () => {
         owner: completion,
         order: [fountain, purchase],
         contributions: current.domain.contributions,
-        lifecycleStructure: current.domain.lifecycleStructure,
+        eventGraph: current.domain.eventGraph,
       }).proposals.some(
         (proposal) => proposal.kind === 'insert' && proposal.reference.kind === rack.kind,
       ),

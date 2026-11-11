@@ -9,10 +9,10 @@ import {
   roomActionKey,
   roomActionOrderContext,
   type RoomActionReference,
-  type RoomLifecycleStructure,
+  type RoomEventGraph,
 } from '@run-planner/engine/authored-project';
 import type { RoomActionDependency } from '../../../src/authored-project/room-actions/domain';
-import type { RoomActionWindow } from '../../../src/authored-project/room-actions/lifecycle-structure';
+import type { RoomActionWindow } from '../../../src/authored-project/room-actions/event-graph';
 import {
   assessRoomActionMove,
   assessRoomActionOrder,
@@ -24,7 +24,7 @@ const owner = createOccurrenceAddress(
   createOccurrenceId('order-assessment'),
 );
 
-const structure: RoomLifecycleStructure = {
+const structure: RoomEventGraph = {
   profileKey: 'StandardRewardRoom',
   activeEncounterSlotKeys: ['Encounter'],
   phases: [{ phaseKey: 'Encounter' }],
@@ -69,7 +69,7 @@ function action(
 
 function context(terminalActionKey?: string) {
   return roomActionOrderContext({
-    lifecycleStructure: structure,
+    eventGraph: structure,
     contributions: [
       action(before, 'required', { kind: 'standard', phase: 'beforeCombat' }),
       action(prep, 'optional', { kind: 'standard', phase: 'beforeCombat' }),
@@ -296,7 +296,7 @@ describe('room action insertion legality', () => {
       encounterPhaseKey: 'Gone',
     };
     const retained = roomActionOrderContext({
-      lifecycleStructure: structure,
+      eventGraph: structure,
       contributions: [
         action(reward, 'required', { kind: 'standard', phase: 'afterCombat' }),
         action(delivery, 'required', { kind: 'encounterEnd', phaseKey: 'Gone' }),

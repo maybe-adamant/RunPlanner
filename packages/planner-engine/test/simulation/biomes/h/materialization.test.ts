@@ -992,7 +992,7 @@ describe('H Fields materialization', () => {
       .flatMap((batch) => batch.targets.map((target) => target.room))
       .find((candidate) => candidate.occurrenceId === occurrenceId);
     if (room === undefined) throw new Error('Fields blocker room is missing');
-    expect(room.roomActionRoster.lifecycleStructure).toBe(room.roomLifecycleTimeline.structure);
+    expect(room.roomActionRoster.eventGraph).toBe(room.roomLifecycleTimeline.structure);
     expect(
       room.roomLifecycleTimeline.boundaries.map((boundary) =>
         'phaseKey' in boundary ? `${boundary.kind}:${boundary.phaseKey}` : boundary.kind,
@@ -1396,7 +1396,7 @@ describe('H Fields materialization', () => {
       owner: createOccurrenceAddress(biome, occurrenceId),
       order: [...placed, ...order],
       contributions: withDelivery.domain.contributions,
-      lifecycleStructure: withDelivery.domain.lifecycleStructure,
+      eventGraph: withDelivery.domain.eventGraph,
     });
     const deliveryIssues = roster.issues.filter(
       (issue) =>
@@ -1468,7 +1468,7 @@ describe('H Fields materialization', () => {
         owner: createOccurrenceAddress(biome, occurrenceId),
         order,
         contributions: domain.contributions,
-        lifecycleStructure: domain.lifecycleStructure,
+        eventGraph: domain.eventGraph,
       }).issues.filter((issue) => issue.kind !== 'unrankedRequired');
 
     it.each(['first', 'last'] as const)(

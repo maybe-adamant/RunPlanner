@@ -15,7 +15,7 @@ import {
   createTranscendentEmbryoOutcomeAddress,
   type OccurrenceAddress,
 } from '../../src/authored-project/addresses';
-import type { RoomLifecycleStructure } from '../../src/authored-project';
+import type { RoomEventGraph } from '../../src/authored-project';
 import { roomActionKey } from '../../src/authored-project/room-actions/state';
 import type { RoomActionReference } from '../../src/authored-project/model';
 import type { ResolvedEncounterPhase } from '../../src/simulation/encounters';
@@ -55,7 +55,7 @@ function embryoAt(phaseKey: string, cycle = 1) {
 
 function roster(overrides: Partial<RoomActionRoster> = {}): RoomActionRoster {
   return Object.freeze({
-    lifecycleStructure: Object.freeze({
+    eventGraph: Object.freeze({
       profileKey: 'StandardRewardRoom',
       activeEncounterSlotKeys: Object.freeze([]),
       phases: Object.freeze([]),
@@ -111,7 +111,7 @@ function structure(
   profileKey: string,
   encounterPhases: readonly ResolvedEncounterPhase[],
   roomActionRoster: RoomActionRoster,
-): RoomLifecycleStructure {
+): RoomEventGraph {
   const declared = encounterPhases
     .filter(
       (phase) =>
@@ -139,7 +139,7 @@ function structure(
           return [...ranked, ...declared.filter((phase) => !rankedKeys.has(phase.phaseKey))];
         })()
       : declared;
-  const points: RoomLifecycleStructure['points'][number][] = [
+  const points: RoomEventGraph['points'][number][] = [
     Object.freeze({ kind: 'roomEntered', key: 'roomEntered' }),
   ];
   phases.forEach((phase, index) => {
@@ -195,14 +195,14 @@ function assembleRoomLifecycleTimeline(input: {
   readonly encounterPhases: readonly ResolvedEncounterPhase[];
   readonly roomActionRoster: RoomActionRoster;
 }) {
-  const lifecycleStructure = structure(
+  const eventGraph = structure(
     input.lifecycleProfileKey,
     input.encounterPhases,
     input.roomActionRoster,
   );
   return assembleTimeline({
     owner: input.owner,
-    roomActionRoster: Object.freeze({ ...input.roomActionRoster, lifecycleStructure }),
+    roomActionRoster: Object.freeze({ ...input.roomActionRoster, eventGraph }),
   });
 }
 

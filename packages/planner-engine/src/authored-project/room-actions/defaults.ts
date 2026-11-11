@@ -16,7 +16,8 @@ import {
   type RoomActionContribution,
   type RoomActionDomain,
 } from './domain';
-import { authoredRoomLifecycleProfileKey, roomLifecycleWindowOrdinal } from './lifecycle-structure';
+import { windowAnchor } from './event-graph';
+import { authoredRoomLifecycleProfileKey } from './lifecycle-profile';
 import { fieldsDefaultActiveCageCount } from '../fields';
 import { roomActionKey } from './state';
 import { encounterEnvelopeSlots } from '../room-state/encounter-envelope';
@@ -51,10 +52,10 @@ function score(
 ): number {
   const reference = action.reference;
   if (action.window.kind !== 'fields') {
-    const ordinal = roomLifecycleWindowOrdinal(domain.lifecycleStructure, action.window);
+    const ordinal = windowAnchor(action.window, domain.eventGraph);
     // Fields rows score from their cage order below; a later window follows all of them.
-    return domain.lifecycleStructure.profileKey === 'FieldsCombatRoom' &&
-      ordinal > roomLifecycleWindowOrdinal(domain.lifecycleStructure, { kind: 'fields' })
+    return domain.eventGraph.profileKey === 'FieldsCombatRoom' &&
+      ordinal > windowAnchor({ kind: 'fields' }, domain.eventGraph)
       ? 10000 + ordinal * 100
       : ordinal * 100;
   }

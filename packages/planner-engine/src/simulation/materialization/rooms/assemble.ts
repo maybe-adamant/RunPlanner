@@ -427,7 +427,7 @@ export function materializeAuthoredRoom(
     ...(terminalActionKey === undefined ? {} : { terminalActionKey }),
     contributions: roomActionDomain.contributions,
     retainedSourceFamilies: roomActionDomain.retainedSourceFamilies,
-    lifecycleStructure: roomActionDomain.lifecycleStructure,
+    eventGraph: roomActionDomain.eventGraph,
     canonicalRequiredInsertions: roomActionDomain.contributions.flatMap((entry) => {
       if (entry.kind !== 'action' || entry.participation !== 'required') return [];
       const actionKey = roomActionKey(entry.reference);

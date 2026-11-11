@@ -8,11 +8,11 @@ import type {
   RoomActionDomainContribution,
 } from './domain';
 import {
-  roomLifecycleWindowOrdinal,
-  roomLifecycleWindowResolves,
+  windowAnchor,
+  roomActionWindowResolves,
   type RoomActionWindow,
-  type RoomLifecycleStructure,
-} from './lifecycle-structure';
+  type RoomEventGraph,
+} from './event-graph';
 import { roomActionKey } from './state';
 
 function frozen<T>(value: T): T {
@@ -60,7 +60,7 @@ export type RoomActionPlacementBlocker = Extract<
 export interface RoomActionOrderContext {
   readonly active: ReadonlyMap<string, RoomActionContribution>;
   readonly checkpoints: ReadonlyMap<string, RoomActionCheckpointContribution>;
-  readonly lifecycleStructure: RoomLifecycleStructure;
+  readonly eventGraph: RoomEventGraph;
   /** An action nothing may follow (a left switch press: leaving ends the room). */
   readonly terminalActionKey?: string;
   /** Each active action's window ordinal, which no order changes. */
@@ -71,7 +71,7 @@ export interface RoomActionOrderContext {
 
 export function roomActionOrderContext(options: {
   readonly contributions: readonly RoomActionDomainContribution[];
-  readonly lifecycleStructure: RoomLifecycleStructure;
+  readonly eventGraph: RoomEventGraph;
   readonly terminalActionKey?: string;
 }): RoomActionOrderContext {
   const active = new Map(
@@ -87,15 +87,12 @@ export function roomActionOrderContext(options: {
         entry.kind === 'checkpoint' ? [[entry.checkpointKey, entry] as const] : [],
       ),
     ),
-    lifecycleStructure: options.lifecycleStructure,
+    eventGraph: options.eventGraph,
     ...(options.terminalActionKey === undefined
       ? {}
       : { terminalActionKey: options.terminalActionKey }),
     windowOrdinals: new Map(
-      [...active].map(([key, entry]) => [
-        key,
-        roomLifecycleWindowOrdinal(options.lifecycleStructure, entry.window),
-      ]),
+      [...active].map(([key, entry]) => [key, windowAnchor(entry.window, options.eventGraph)]),
     ),
     requiredKeys: frozen(required.map(([key]) => key)),
   });
@@ -132,7 +129,7 @@ function rowAndWindowIssues(
   context: RoomActionOrderContext,
   through: number,
 ): { readonly rows: RoomActionOrderIssue[]; readonly windows: RoomActionOrderIssue[] } {
-  const { active, checkpoints, lifecycleStructure, windowOrdinals } = context;
+  const { active, checkpoints, eventGraph, windowOrdinals } = context;
   const rows: RoomActionOrderIssue[] = [];
   const windows: RoomActionOrderIssue[] = [];
   const keys = order.map(keyOf);
@@ -186,10 +183,7 @@ function rowAndWindowIssues(
         continue;
       }
       const ownRank = windowOrdinals.get(keys[ownIndex]!)!;
-      const checkpointWindowRank = roomLifecycleWindowOrdinal(
-        lifecycleStructure,
-        checkpoint.window,
-      );
+      const checkpointWindowRank = windowAnchor(checkpoint.window, eventGraph);
       const valid =
         dependency.kind === 'afterCheckpoint'
           ? ownRank >= checkpointWindowRank &&
@@ -273,7 +267,7 @@ function requiredDeadlinesAfter(
     if (
       entry?.participation !== 'required' ||
       entry.windowFollowsOrder === true ||
-      !roomLifecycleWindowResolves(context.lifecycleStructure, entry.window)
+      !roomActionWindowResolves(context.eventGraph, entry.window)
     )
       continue;
     const ordinal = context.windowOrdinals.get(key)!;
@@ -445,13 +439,13 @@ export function roomActionInsertionRefusal(
 
 /** The order context a command judges an occurrence's insertion against. */
 export function roomActionOrderContextForOccurrence(
-  domain: Pick<RoomActionDomain, 'contributions' | 'lifecycleStructure'>,
+  domain: Pick<RoomActionDomain, 'contributions' | 'eventGraph'>,
   occurrence: Pick<RoomOccurrence, 'challengeSwitch'>,
 ): RoomActionOrderContext {
   const terminalActionKey = terminalRoomActionKey(occurrence);
   return roomActionOrderContext({
     contributions: domain.contributions,
-    lifecycleStructure: domain.lifecycleStructure,
+    eventGraph: domain.eventGraph,
     ...(terminalActionKey === undefined ? {} : { terminalActionKey }),
   });
 }

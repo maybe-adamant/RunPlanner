@@ -469,7 +469,7 @@ export function RoomActionsWorkbench({
   const doorsWait = actions?.timeline.doorsWait === true;
   const doorsTail = (timeline: readonly WorkspaceRoomLifecycleTimelineEntry[]): ReactNode => {
     const hasDoorsOpenRow = timeline.some(
-      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'doorsOpened',
     );
     return roomDoors === undefined ? null : doorsWait ? (
       roomDoors.endsPlan === true ? (
@@ -593,10 +593,10 @@ export function RoomActionsWorkbench({
     let count = 0;
     for (const entry of visibleTimeline) {
       if (entry.kind === 'boundary') {
-        if (entry.boundary.kind === 'encounterStart' || entry.boundary.kind === 'roomEntered')
+        if (entry.boundary.kind === 'encounterBegun' || entry.boundary.kind === 'roomEntered')
           phase = count++;
         else if (
-          entry.boundary.kind !== 'encounterOutcome' &&
+          entry.boundary.kind !== 'encounterStarted' &&
           entry.boundary.kind !== 'encounterEnd' &&
           entry.boundary.kind !== 'bossDefeated'
         )
@@ -619,7 +619,7 @@ export function RoomActionsWorkbench({
   ) => {
     const content = renderBoundaryContent?.(entry.boundary);
     const boundary = entry.boundary;
-    const doorsOpen = boundary.kind === 'cleanup' && !doorsWait ? roomDoors : undefined;
+    const doorsOpen = boundary.kind === 'doorsOpened' && !doorsWait ? roomDoors : undefined;
     const modifiers = [
       renderSupplement(entry.supplement),
       content?.editors,

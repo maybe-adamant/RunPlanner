@@ -339,14 +339,9 @@ export interface WorkspaceActionSpawn {
   readonly groups: readonly WorkspaceSpawnGroup[];
 }
 
+/** One event of the room's graph, as the engine publishes it. */
 export type WorkspaceRoomLifecycleBoundary =
-  | { readonly kind: 'roomEntered'; readonly key: 'roomEntered' }
-  | { readonly kind: 'encounterStart'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'encounterOutcome'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'bossDefeated'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'wheelsOpen'; readonly key: string; readonly wheelKey: string }
-  | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
+  import('@run-planner/engine/authored-project').RoomEvent;
 
 /**
  * The encounter controls of one phase event. Its start hosts the identity and the Fig Leaf

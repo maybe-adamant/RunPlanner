@@ -379,7 +379,7 @@ function objectChoiceVerbs(
     readonly owner: SemanticAddress;
     readonly surface: RerollSurface;
   }[] = [{ object: 'doorRerolls', owner: occurrence, surface: { kind: 'doors', occurrence } }];
-  for (const phase of room.roomActionRoster.lifecycleStructure.phases) {
+  for (const phase of room.roomActionRoster.eventGraph.phases) {
     if (phase.rewardWheelKey === undefined) continue;
     const wheel = createRewardWheelAddress(biome, occurrence.occurrenceId, phase.rewardWheelKey);
     surfaces.push({ object: 'rewardWheel', owner: wheel, surface: { kind: 'rewardWheel', wheel } });

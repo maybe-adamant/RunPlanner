@@ -25,7 +25,7 @@ import {
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { assembleExecutionProduct } from '@run-planner/engine/execution-plan';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
-import type { RoomLifecycleStructure } from '../../src/authored-project/room-actions/lifecycle-structure';
+import type { RoomEventGraph } from '../../src/authored-project/room-actions/event-graph';
 import {
   classifyTimelineDependencyEndpoint,
   roomTimelineDependencies,
@@ -50,7 +50,7 @@ const steadyGrowthOutcome = createSteadyGrowthOutcomeAddress(
   createTraitOfferAddress(createIncomingRewardAddress(biome, occurrenceId), 'source'),
   1,
 );
-const structure: RoomLifecycleStructure = {
+const structure: RoomEventGraph = {
   profileKey: 'Combat',
   activeEncounterSlotKeys: ['Encounter'],
   phases: [{ phaseKey: 'Encounter' }],
@@ -142,7 +142,7 @@ function room(actions: readonly Action[], automatic: readonly SemanticAddress[] 
       gameName: 'F_Combat01',
       occurrenceId,
       origin: occurrence,
-      roomActionRoster: { lifecycleStructure: structure, rows },
+      roomActionRoster: { eventGraph: structure, rows },
     } as unknown as CanonicalAuthoredRoom,
     transactions: [
       ...transactions,

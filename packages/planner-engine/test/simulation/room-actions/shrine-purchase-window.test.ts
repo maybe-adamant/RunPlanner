@@ -30,9 +30,9 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
-  roomLifecycleWindowOrdinal,
-  type RoomLifecycleStructure,
-} from '../../../src/authored-project/room-actions/lifecycle-structure';
+  windowAnchor,
+  type RoomEventGraph,
+} from '../../../src/authored-project/room-actions/event-graph';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBiome,
@@ -119,7 +119,7 @@ function reorder(
 }
 
 describe('post-outgoing window without outgoing generation', () => {
-  const sideRoom: RoomLifecycleStructure = {
+  const sideRoom: RoomEventGraph = {
     profileKey: 'EphyraSideRoom',
     activeEncounterSlotKeys: ['Encounter'],
     phases: [{ phaseKey: 'Encounter' }],
@@ -130,7 +130,7 @@ describe('post-outgoing window without outgoing generation', () => {
       { kind: 'cleanup', key: 'cleanup' },
     ],
   };
-  const postboss: RoomLifecycleStructure = {
+  const postboss: RoomEventGraph = {
     profileKey: 'PostBossRoom',
     activeEncounterSlotKeys: [],
     phases: [],
@@ -144,8 +144,8 @@ describe('post-outgoing window without outgoing generation', () => {
     ['side room', sideRoom],
     ['Postboss', postboss],
   ])('follows the %s afterCombat work', (_, structure) => {
-    expect(roomLifecycleWindowOrdinal(structure, { kind: 'postOutgoing' })).toBeGreaterThan(
-      roomLifecycleWindowOrdinal(structure, { kind: 'standard', phase: 'afterCombat' }),
+    expect(windowAnchor({ kind: 'postOutgoing' }, structure)).toBeGreaterThan(
+      windowAnchor({ kind: 'standard', phase: 'afterCombat' }, structure),
     );
   });
 });

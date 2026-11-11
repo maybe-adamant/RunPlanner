@@ -349,6 +349,7 @@ export {
   encounterOutcomesForProjectEvaluationAssembly,
   type EncounterOutcome,
   type EncounterOutcomeChoice,
+  type EncounterOutcomeHost,
 } from './evaluation/encounter-outcome';
 export {
   spawnedLootForProjectEvaluationAssembly,

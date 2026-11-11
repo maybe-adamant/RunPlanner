@@ -1,20 +1,17 @@
 import { roomActionKey } from '../../authored-project/room-actions/state';
-import {
-  roomLifecycleWindowOrdinal,
-  type RoomLifecycleStructure,
-} from '../../authored-project/room-actions/lifecycle-structure';
+import { windowAnchor, type RoomEventGraph } from '../../authored-project/room-actions/event-graph';
 import type { RoomActionRow } from './model';
 
 /** Classifies existing obligations; it does not add ordering or participation constraints. */
 export function withRequiredScopes(
   rows: readonly RoomActionRow[],
-  structure: RoomLifecycleStructure,
+  structure: RoomEventGraph,
 ): readonly RoomActionRow[] {
   const phaseBound = new Set<string>();
   const active = rows.filter(
     (row) => !row.stale && (row.participation === 'required' || row.rank !== null),
   );
-  const roomEnd = roomLifecycleWindowOrdinal(structure, { kind: 'standard', phase: 'afterCombat' });
+  const roomEnd = windowAnchor({ kind: 'standard', phase: 'afterCombat' }, structure);
   for (const row of active) {
     const window = row.window;
     if (
@@ -24,16 +21,12 @@ export function withRequiredScopes(
       window.kind === 'shipPostCombat' ||
       (window.kind !== 'fields' &&
         window.kind !== 'postOutgoing' &&
-        structure.points.some((point) => point.kind === 'encounterStart') &&
-        roomLifecycleWindowOrdinal(structure, window) < roomEnd) ||
+        structure.phases.length > 0 &&
+        windowAnchor(window, structure) < roomEnd) ||
       row.dependencies.some(
         (dependency) =>
           dependency.kind === 'beforeCheckpoint' &&
-          structure.points.some(
-            (point) =>
-              point.kind === 'encounterEnd' &&
-              dependency.checkpointKey === `combat:${point.phaseKey}`,
-          ),
+          structure.phases.some((phase) => dependency.checkpointKey === `combat:${phase.phaseKey}`),
       )
     )
       phaseBound.add(row.key);

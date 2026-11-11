@@ -33,10 +33,10 @@ export function applyJudgmentArcanaCommand(
     topology: requireTopology(located.plan, command),
     occurrence: boss,
     routePosition: resolveRoutePosition(catalog, document.route, command.judgment.biomeKey),
-  }).lifecycleStructure;
+  }).eventGraph;
   if (
-    !lifecycle.points.some(
-      (point) => point.kind === 'bossDefeated' && point.phaseKey === command.judgment.phaseKey,
+    !lifecycle.events.some(
+      (event) => event.kind === 'bossDefeated' && event.phaseKey === command.judgment.phaseKey,
     )
   )
     failCommand(command, 'Judgment phase is not an active Boss-defeated phase');

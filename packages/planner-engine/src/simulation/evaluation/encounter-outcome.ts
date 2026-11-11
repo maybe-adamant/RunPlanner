@@ -12,18 +12,30 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
 } from './project-evaluation-assembly';
 
-/** A choice about how a fight ended, hosted by its Encounter outcome. */
+/** A choice about how a fight went, observed at its Combat. */
 export type EncounterOutcomeChoice =
   'aetos' | 'gorgonCondition' | 'nemesisBet' | 'nemesisEvent' | 'anomalyCleared';
 
+/**
+ * Where an outcome is observed: its phase's Combat event, or, for a Nemesis
+ * random event no encounter runs for, her talk row.
+ */
+export type EncounterOutcomeHost =
+  | { readonly kind: 'combat'; readonly eventKey: string }
+  | {
+      readonly kind: 'interaction';
+      readonly action: { readonly kind: 'interactEncounter'; readonly phaseKey: string };
+    };
+
 export interface EncounterOutcome {
   readonly phaseKey: string;
+  readonly host: EncounterOutcomeHost;
   /** In the room's choice order; Aetos and the Gorgon condition may share an outcome. */
   readonly choices: readonly EncounterOutcomeChoice[];
 }
 
 /**
- * The Encounter outcome of each phase of one entered room whose outcome hosts
+ * The outcome of each phase of one entered room whose Combat (or Nemesis talk row) hosts
  * an eligible choice, or a value the room authors for one, which never
  * vanishes. A Fig Leaf skip short-circuits the fight, so a skipped phase's
  * outcome hosts only such authored values, left for repair. Only what the walk
@@ -42,11 +54,24 @@ export function encounterOutcomesForProjectEvaluationAssembly(
     (candidate) => semanticAddressKey(candidate.origin) === key,
   );
   if (room === undefined || !room.entered) return undefined;
-  const structure = room.roomActionRoster.lifecycleStructure;
+  const graph = room.roomActionRoster.eventGraph;
   const authored = room.encounters;
   return Object.freeze(
-    structure.points.flatMap((point): EncounterOutcome[] => {
-      if (point.kind !== 'encounterOutcome') return [];
+    graph.phases.flatMap((point): EncounterOutcome[] => {
+      if (point.hostsOutcome !== true || graph.profileKey === 'BossRoom') return [];
+      const host: EncounterOutcomeHost =
+        point.endsOnInteraction === true
+          ? Object.freeze({
+              kind: 'interaction' as const,
+              action: Object.freeze({
+                kind: 'interactEncounter' as const,
+                phaseKey: point.phaseKey,
+              }),
+            })
+          : Object.freeze({
+              kind: 'combat' as const,
+              eventKey: `encounterStarted:${point.phaseKey}`,
+            });
       const phase = createEncounterPhaseAddress(
         createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
         { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
@@ -76,7 +101,7 @@ export function encounterOutcomesForProjectEvaluationAssembly(
       if (skipped)
         return choices.length === 0
           ? []
-          : [Object.freeze({ phaseKey: point.phaseKey, choices: Object.freeze(choices) })];
+          : [Object.freeze({ phaseKey: point.phaseKey, host, choices: Object.freeze(choices) })];
       if (definition?.goldBet !== undefined) choices.push('nemesisBet');
       // A trade's answer or a contest's result is chosen; a free item is given, and an
       // unchosen family leaves nothing to answer yet.
@@ -84,16 +109,13 @@ export function encounterOutcomesForProjectEvaluationAssembly(
       if (
         nemesisEvent != null &&
         nemesisEvent.kind !== 'freeItem' &&
-        structure.phases.some(
-          (candidate) =>
-            candidate.phaseKey === point.phaseKey && candidate.endsOnInteraction === true,
-        )
+        point.endsOnInteraction === true
       )
         choices.push('nemesisEvent');
       if (room.anomalyReplacement !== undefined) choices.push('anomalyCleared');
       return choices.length === 0
         ? []
-        : [Object.freeze({ phaseKey: point.phaseKey, choices: Object.freeze(choices) })];
+        : [Object.freeze({ phaseKey: point.phaseKey, host, choices: Object.freeze(choices) })];
     }),
   );
 }

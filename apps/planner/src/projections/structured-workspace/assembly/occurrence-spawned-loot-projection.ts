@@ -232,13 +232,8 @@ function momentAnchor(
     case 'roomEntered':
     case 'deliveryFlush':
       return first(entered);
-    case 'encounterStart':
-      return first(['after', boundaryAt('encounterStart', phase)], entered);
-    case 'encounterOutcome':
-      return first(
-        ['after', boundaryAt('encounterOutcome', phase)],
-        ['before', boundaryAt('encounterEnd', phase)],
-      );
+    case 'encounterBegun':
+      return first(['after', boundaryAt('encounterBegun', phase)], entered);
     case 'encounterEnd':
       return first(
         ['after', boundaryAt('encounterEnd', phase)],

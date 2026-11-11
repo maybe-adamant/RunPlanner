@@ -27,17 +27,17 @@ function lifecycleBoundaryLabel(boundary: WorkspaceRoomLifecycleBoundary): strin
   switch (boundary.kind) {
     case 'roomEntered':
       return 'Room entered';
-    case 'encounterStart':
-      return 'Encounter started';
-    case 'encounterOutcome':
-      return 'Encounter outcome';
+    case 'encounterBegun':
+      return 'Encounter';
+    case 'encounterStarted':
+      return 'Combat';
     case 'encounterEnd':
       return 'Encounter ended';
     case 'bossDefeated':
       return 'Boss defeated';
     case 'wheelsOpen':
       return 'Wheels open';
-    case 'cleanup':
+    case 'doorsOpened':
       return 'Doors open';
   }
 }
@@ -167,7 +167,7 @@ export function splitAtRoomStop(
     // Only a stop at the doors opening itself keeps the doors, to repair them there.
     ...(roomStop.at === 'entry' &&
     stopEntry?.kind === 'boundary' &&
-    stopEntry.boundary.kind === 'cleanup'
+    stopEntry.boundary.kind === 'doorsOpened'
       ? {}
       : { doorsWait: true as const }),
   });
@@ -198,7 +198,7 @@ function projectRoomLifecycleTimeline(
         roomLabel,
       );
     }
-    if (boundary.kind === 'encounterStart' && roomLocal.kind === 'ship') {
+    if (boundary.kind === 'encounterStarted' && roomLocal.kind === 'ship') {
       const phase = roomLocal.phases.find((candidate) => candidate.key === boundary.phaseKey);
       return runStateLauncher(
         input,
@@ -266,7 +266,7 @@ function projectRoomLifecycleTimeline(
   const cageLabelByBoundaryKey = new Map(
     timeline.entries
       .flatMap((entry) =>
-        entry.kind === 'boundary' && entry.boundary.kind === 'encounterStart'
+        entry.kind === 'boundary' && entry.boundary.kind === 'encounterStarted'
           ? [entry.boundary]
           : [],
       )
@@ -364,20 +364,19 @@ function projectRoomLifecycleTimeline(
         );
         return phase === undefined ? undefined : encounterStartSupplement(phase, false);
       }
-      case 'encounterStart': {
+      case 'encounterStarted': {
         const phase = encounterByPhase.get(boundary.phaseKey);
         return phase?.timelineAnchor === 'encounterStart'
           ? encounterStartSupplement(phase, cageLabelByBoundaryKey.has(boundary.key))
-          : undefined;
+          : encounterOutcomeSupplement(boundary.phaseKey);
       }
-      case 'encounterOutcome':
-        return encounterOutcomeSupplement(boundary.phaseKey);
       // A wheel opens and is taken on its phase's Timeline, beside these boundaries; an
       // encounter's end announces what it spawns; a Boss defeat hosts its own content.
+      case 'encounterBegun':
       case 'encounterEnd':
       case 'bossDefeated':
       case 'wheelsOpen':
-      case 'cleanup':
+      case 'doorsOpened':
         return undefined;
     }
   };
@@ -400,8 +399,7 @@ function projectRoomLifecycleTimeline(
   );
   // An outcome with no choice to host passes without an event of its own.
   const hostsOutcome = (boundary: RoomLifecycleTimeline['boundaries'][number]) =>
-    boundary.kind !== 'encounterOutcome' ||
-    encounterOutcomeSupplement(boundary.phaseKey) !== undefined;
+    boundary.kind !== 'encounterBegun' || boundary.merged !== true;
   for (const entry of timeline.entries) {
     if (entry.kind === 'boundary') {
       const boundary = entry.boundary;
