@@ -217,6 +217,11 @@ describe('run-impacting trait checkpoint workflows', () => {
         entry.reference.kind === 'interactAcquisitionEntry' &&
         entry.reference.siteKey === duplicateSite,
     );
+    // The source row the duplicate follows is the small Gold taken above.
+    expect(sourceAction).toBeDefined();
+    expect(sourceAction?.kind === 'action' && roomActionKey(sourceAction.reference)).toBe(
+      roomActionKey(sourceReference),
+    );
     expect(childAction).toMatchObject({
       kind: 'action',
       participation: sourceAction?.kind === 'action' ? sourceAction.participation : undefined,
