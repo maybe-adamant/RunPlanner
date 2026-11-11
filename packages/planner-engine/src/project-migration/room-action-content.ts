@@ -49,17 +49,23 @@ function activeKeysOf(raw: unknown, catalog: Catalog, routeKey: string): ActiveK
     return () => undefined;
   }
   const decoded = document;
-  return (biomeKey, occurrenceId) =>
-    new Set(
-      (
-        roomActionDomainForOccurrence(
-          decoded,
-          catalog,
-          createBiomeAddress(routeKey, biomeKey),
-          occurrenceId as OccurrenceId,
-        )?.domain.contributions ?? []
-      ).flatMap((entry) => (entry.kind === 'action' ? [roomActionKey(entry.reference)] : [])),
-    );
+  return (biomeKey, occurrenceId) => {
+    try {
+      return new Set(
+        (
+          roomActionDomainForOccurrence(
+            decoded,
+            catalog,
+            createBiomeAddress(routeKey, biomeKey),
+            occurrenceId as OccurrenceId,
+          )?.domain.contributions ?? []
+        ).flatMap((entry) => (entry.kind === 'action' ? [roomActionKey(entry.reference)] : [])),
+      );
+    } catch {
+      // A plan that decodes but whose route the domain cannot place stamps by role.
+      return undefined;
+    }
+  };
 }
 
 /** The content a stored row gets, or none when its item or its own shape cannot say. */
