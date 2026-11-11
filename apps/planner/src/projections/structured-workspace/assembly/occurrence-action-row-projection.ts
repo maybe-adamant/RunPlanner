@@ -120,8 +120,6 @@ export interface WorkspaceOccurrenceActionsInput {
   readonly spawnedLoot?: import('@run-planner/engine/simulation').RoomSpawnedLoot;
   /** Each phase's Encounter outcome that hosts a choice. */
   readonly encounterOutcomes?: readonly import('@run-planner/engine/simulation').EncounterOutcome[];
-  /** The room's Timeline with each encounter's settled markers. */
-  readonly roomLifecycleTimeline?: import('@run-planner/engine/simulation').RoomLifecycleTimeline;
 }
 
 /** The Phial target control for one fountain use; pending until the engine requires a target. */
@@ -187,7 +185,7 @@ function roomActionsForOccurrence(
           createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
           evaluatedRoster,
         );
-  const lifecycleTimeline = input.roomLifecycleTimeline;
+  const lifecycleTimeline = input.evaluatedRoom?.roomLifecycleTimeline;
   if (
     roster === undefined ||
     lifecycleTimeline === undefined ||

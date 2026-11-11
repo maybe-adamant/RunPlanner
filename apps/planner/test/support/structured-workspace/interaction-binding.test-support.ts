@@ -47,7 +47,6 @@ import {
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
-  roomLifecycleTimelineForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type CandidateEvaluationEvent,
@@ -343,11 +342,7 @@ export function bind(
       traitOfferCandidateForProjectEvaluationAssembly(projectAssembly, address) !== undefined,
   ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
-  const assembly = assembleWorkspaceBiomeSemantics(catalog, {
-    ...source,
-    roomLifecycleTimeline: (occurrence) =>
-      roomLifecycleTimelineForProjectEvaluationAssembly(catalog, projectAssembly, occurrence),
-  });
+  const assembly = assembleWorkspaceBiomeSemantics(catalog, source);
   const traitControls = new Map(
     [...assembly.rewardControls.values()]
       .flatMap((control) => control.traitOffers ?? [])

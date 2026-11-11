@@ -119,12 +119,14 @@ describe('encounter banner supplements', () => {
     ]);
   });
 
-  it('keeps the Gorgon condition on its Combat', () => {
+  it('keeps the Gorgon condition on the one marker naming its encounter', () => {
     const room = roomOf(
       loadUnderworldGorgonAthenaCheckpoint(),
       createOccurrenceId('golden-g-b1-e1'),
     );
+    expect(banners(room, 'encounterBegun')).toEqual([]);
     const [outcome] = banners(room, 'encounterStarted');
+    expect(outcome?.beginsEncounter).toBe(true);
     expect(outcome?.supplement).toMatchObject({
       choices: expect.arrayContaining(['gorgonCondition']),
       phase: { gorgonCondition: { selected: true, supported: true } },
@@ -159,13 +161,15 @@ describe('encounter banner supplements', () => {
     );
   });
 
-  it('hosts the Aetos wave and the Gorgon condition on one Combat', () => {
+  it('hosts the Aetos wave and the Gorgon condition on the one marker naming their encounter', () => {
     const entry = galleryCases.find((candidate) => candidate.id === 'outcome-aetos-gorgon')!;
     const room = roomOf(buildGalleryProject(entry), createOccurrenceId('surface-p-1-1-p_combat03'));
+    expect(banners(room, 'encounterBegun')).toEqual([]);
     const outcomes = banners(room, 'encounterStarted').filter(
       (banner) => (banner.supplement?.choices.length ?? 0) > 0,
     );
     expect(outcomes).toHaveLength(1);
+    expect(outcomes[0]?.beginsEncounter).toBe(true);
     expect(outcomes[0]?.supplement).toMatchObject({
       choices: ['aetos', 'gorgonCondition'],
       phase: { address: { phaseKey: 'Combat' } },
@@ -538,7 +542,8 @@ describe('a room whose walk stops in it', () => {
     const shown = (entry: Engine): Shown => entry as unknown as Shown;
     const keys = (split: ReturnType<typeof splitAtRoomStop>) =>
       split?.reached.map((entry) => (entry.kind === 'boundary' ? entry.boundary.key : entry.kind));
-    const stopAt = { kind: 'timeline', entryIndex: 1, at: 'entry' } as const;
+    const stopAt = (eventKey: string) =>
+      ({ kind: 'timeline', anchor: { kind: 'event', eventKey }, at: 'entry' }) as const;
     // A stop at a Combat keeps that Combat to repair its outcome choices there.
     const fight = [
       engine('roomEntered'),
@@ -546,10 +551,13 @@ describe('a room whose walk stops in it', () => {
       engine('encounterEnd', 'Encounter'),
       engine('doorsOpened'),
     ];
-    expect(keys(splitAtRoomStop(fight.map(shown), fight, { roomStop: stopAt }))).toEqual([
-      'roomEntered',
-      'encounterStarted:Encounter',
-    ]);
+    expect(
+      keys(
+        splitAtRoomStop(fight.map(shown), fight, {
+          roomStop: stopAt('encounterStarted:Encounter'),
+        }),
+      ),
+    ).toEqual(['roomEntered', 'encounterStarted:Encounter']);
     // A later entry shown in place of the stop entry is not reached.
     const start = [
       engine('roomEntered'),
@@ -557,7 +565,11 @@ describe('a room whose walk stops in it', () => {
       engine('doorsOpened'),
     ];
     expect(
-      keys(splitAtRoomStop([start[0]!, start[2]!].map(shown), start, { roomStop: stopAt })),
+      keys(
+        splitAtRoomStop([start[0]!, start[2]!].map(shown), start, {
+          roomStop: stopAt('encounterBegun:Encounter'),
+        }),
+      ),
     ).toEqual(['roomEntered']);
   });
 

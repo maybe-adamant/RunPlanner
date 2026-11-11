@@ -24,7 +24,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
-  roomLifecycleTimelineForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -86,11 +85,7 @@ function biomeSource(
     encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
   ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
-  return {
-    ...source,
-    roomLifecycleTimeline: (occurrence) =>
-      roomLifecycleTimelineForProjectEvaluationAssembly(catalog, assembly, occurrence),
-  };
+  return source;
 }
 
 function present(project: ProjectDocument, routeKey: 'Surface' | 'Underworld', biomeKey: string) {

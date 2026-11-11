@@ -5,7 +5,11 @@ import {
   semanticAddressKey,
   roomActionKey,
 } from '@run-planner/engine/authored-project';
-import type { RoomLifecycleTimeline, RoomActionRosterIssue } from '@run-planner/engine/simulation';
+import {
+  roomStopEntryIndex,
+  type RoomLifecycleTimeline,
+  type RoomActionRosterIssue,
+} from '@run-planner/engine/simulation';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
@@ -123,8 +127,9 @@ export function splitAtRoomStop(
   const roomStop = input.roomStop;
   if (roomStop === undefined || roomStop.kind === 'exit') return undefined;
   const blocking = input.blockingRowKeys ?? new Set<string>();
+  const stopIndex = roomStopEntryIndex(lifecycleEntries, roomStop);
   const unreached = new Set(
-    lifecycleEntries.slice(roomStop.entryIndex).flatMap((entry) => lifecycleEntryKey(entry) ?? []),
+    lifecycleEntries.slice(stopIndex).flatMap((entry) => lifecycleEntryKey(entry) ?? []),
   );
   const isUnreached = (entry: WorkspaceRoomLifecycleTimelineEntry) => {
     const key = lifecycleEntryKey(entry);
@@ -134,7 +139,7 @@ export function splitAtRoomStop(
   // A stop at its entry reached it (a banner whose contact blocks, a blocking row), so that
   // entry stays as the stop to repair it there. Any other first unreached entry was not
   // reached, so the stop never claims it.
-  const stopEntry = lifecycleEntries[roomStop.entryIndex];
+  const stopEntry = lifecycleEntries[stopIndex];
   const shown = entries[stop];
   const showsStopEntry =
     stopEntry !== undefined &&
@@ -371,7 +376,13 @@ function projectRoomLifecycleTimeline(
         : `${phase.selectedEncounter.label} · ${nemesisFamilyLabel(family)}`;
     return encounterMarkerCount > 1 && !cageNamed ? `${phase.label} · ${encounter}` : encounter;
   };
-  // How a fight ended sits where the engine observes it, only where it lists a choice.
+  // How a fight went sits on its host, only where it lists a choice: the encounter's own
+  // marker (the one naming it), its Combat, or her talk row.
+  const choicesAtEncounter = new Map(
+    (input.encounterOutcomes ?? []).flatMap((outcome) =>
+      outcome.host.kind === 'encounter' ? [[outcome.phaseKey, outcome.choices] as const] : [],
+    ),
+  );
   const choicesAtCombat = new Map(
     (input.encounterOutcomes ?? []).flatMap((outcome) =>
       outcome.host.kind === 'combat' ? [[outcome.host.eventKey, outcome.choices] as const] : [],
@@ -403,18 +414,23 @@ function projectRoomLifecycleTimeline(
           ? undefined
           : encounterEvents(phase, { start: true, choices: [] });
       }
-      // Its encounter is named where it begins; its Fig Leaf skip and outcome sit at its Combat.
+      // Its encounter is named where it begins, with the outcome the encounter hosts; its Fig
+      // Leaf skip and the outcome its fight hosts sit at its Combat.
       case 'encounterBegun':
       case 'encounterStarted': {
         const phase = encounterByPhase.get(boundary.phaseKey);
         if (phase?.timelineAnchor !== 'encounter') return undefined;
         const combat = boundary.kind === 'encounterStarted';
+        const begins = beginsEncounter(boundary);
         return encounterEvents(phase, {
-          ...(beginsEncounter(boundary)
+          ...(begins
             ? { identityLabel: identityLabel(phase, cageLabelByBoundaryKey.has(boundary.key)) }
             : {}),
           ...(combat ? { start: true as const } : {}),
-          choices: combat ? (choicesAtCombat.get(boundary.key) ?? []) : [],
+          choices: [
+            ...(begins ? (choicesAtEncounter.get(boundary.phaseKey) ?? []) : []),
+            ...(combat ? (choicesAtCombat.get(boundary.key) ?? []) : []),
+          ],
         });
       }
       // A wheel opens and is taken on its phase's Timeline, beside these boundaries; an
