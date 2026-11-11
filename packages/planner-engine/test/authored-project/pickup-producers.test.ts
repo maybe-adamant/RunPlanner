@@ -207,6 +207,7 @@ describe('authored pickup producers', () => {
     ).find((candidate) => candidate.traitKey === 'MoneyMultiplierBoon');
     if (producer === undefined) throw new Error('Quick Buck producer is missing');
     expect(producer.sourceNormal).toBe(true);
+    if (producer.sourceAction === undefined) throw new Error('Quick Buck source action is missing');
     expect(producer.pickups).toEqual([
       { key: 'quickBuckGold', rewardType: 'RoomMoneyDrop', required: false },
     ]);

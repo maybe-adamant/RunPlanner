@@ -40,6 +40,7 @@ import {
   type ProjectCommand,
   type ProjectDocument,
   type RoomActionReference,
+  type StygianWellGenerationKey,
 } from '@run-planner/engine/authored-project';
 import {
   assembleRoomActionRoster,
@@ -1763,7 +1764,7 @@ describe('room-action commands', () => {
     };
     const fountain = { kind: 'useFountain' as const };
     const rack = { kind: 'interactKeepsakeRack' as const };
-    const bought = (generationKey: string) =>
+    const bought = (generationKey: StygianWellGenerationKey) =>
       withItemContent(project, well, { kind: 'purchaseStygianWellOffer', generationKey });
     expect(order(project)).toEqual([fountain, rack, bought('initial:secondLeft')]);
     const secondRight = { ...refill, generationKey: 'initial:secondRight' as const };

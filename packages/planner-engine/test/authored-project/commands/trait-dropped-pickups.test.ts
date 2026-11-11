@@ -342,7 +342,7 @@ describe('trait-dropped pickups', () => {
       });
     const authoredOrder = occurrence(authored, 'F', combatId).roomActions.order;
     expect(authoredOrder).not.toEqual(
-      expect.arrayContaining(dropRows(authored, combat, siteKey, ['smallGold'])),
+      expect.arrayContaining([...dropRows(authored, combat, siteKey, ['smallGold'])]),
     );
 
     const { runModifiers: _runModifiers, ...loadout } = authored.route.loadout;
@@ -481,14 +481,14 @@ describe('Narcissus drops', () => {
       drops(siteKey, ['bones', 'maxHealth']),
     );
     expect(occurrence(picked, 'G', storyId).roomActions.order).toEqual(
-      expect.arrayContaining(
-        dropRows(
+      expect.arrayContaining([
+        ...dropRows(
           picked,
           createOccurrenceAddress(createBiomeAddress('Dream', 'G'), storyId),
           siteKey,
           ['bones', 'maxHealth'],
         ),
-      ),
+      ]),
     );
     const reset = applyProjectCommand(picked, catalog, { kind: 'ResetEncounterTraitOffer', trait });
     expect(
