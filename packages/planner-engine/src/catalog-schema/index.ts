@@ -471,6 +471,9 @@ interface EncounterLocalRewardAttachment {
   readonly slotKey: string;
 }
 
+/** A room action that starts a slot's encounter. */
+export type EncounterSlotActivationVerb = 'completeFieldsCage';
+
 export type EncounterSlotRewardAttachment =
   EncounterLocalRewardAttachment | EncounterRewardWheelAttachment;
 
@@ -485,6 +488,8 @@ export interface EncounterEnvelopeSlot {
    */
   readonly activationRequirement?: RequirementExpression;
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
+  /** The room action whose use starts this slot's encounter (a Fields cage). */
+  readonly activatedByVerb?: EncounterSlotActivationVerb;
   /**
    * The slot whose encounter's money store this slot's kills drain. Native
    * pays kill gold from the room's own encounter, and a slot started beside it
@@ -500,6 +505,11 @@ export interface EncounterEnvelopeSlot {
 export interface EncounterEnvelope {
   readonly key: string;
   readonly kind: EncounterEnvelopeKind;
+  /**
+   * Native `MultipleEncountersData`: the room prepares its ordered encounters
+   * before entry and starts each in turn. Fields cages are chosen separately.
+   */
+  readonly multiEncounter: boolean;
   readonly slots: readonly EncounterEnvelopeSlot[];
 }
 
@@ -536,6 +546,8 @@ export interface EncounterScript {
   readonly waitReadyBeforeEnd: boolean;
   /** No fight: answering the encounter's NPC resolves it and unlocks the exits. */
   readonly endsByInteraction: boolean;
+  /** The fight ends with a boss defeat that runs the post-boss effects. */
+  readonly endsWithBossDefeated: boolean;
   /** Outcomes this encounter can host; Aetos needs an Outdoor room, Gorgon a room that allows it. */
   readonly hostsOutcome: readonly EncounterOutcomeKind[];
 }
@@ -1159,7 +1171,30 @@ export interface RoomRouteOverlay {
   readonly incomingReward: RewardProducerBinding;
   readonly offerRewardBinding: RoomOfferRewardBinding;
   readonly encounterSlotBindings: readonly EncounterSlotBinding[];
+  /** The overlaid room's own lifecycle selection, from its overlaid template. */
+  readonly lifecycleProfile: RoomLifecycleProfileSelection;
+  readonly localVisitLifecycleProfileKey?: string;
 }
+
+/**
+ * The lifecycle profile a room runs. Two families choose by occurrence state: a
+ * Clockwork room without a reward runs its goal, and a Preboss room runs its
+ * shop or its free reward.
+ */
+export type RoomLifecycleProfileSelection =
+  | { readonly kind: 'fixed'; readonly profileKey: string }
+  | {
+      readonly kind: 'clockworkGoal';
+      /** Selected when the counted occurrence has no reward. */
+      readonly goalProfileKey: string;
+      readonly rewardProfileKey: string;
+    }
+  | {
+      readonly kind: 'prebossOffer';
+      /** Selected when the occurrence hosts the shop. */
+      readonly shopProfileKey: string;
+      readonly freeRewardProfileKey: string;
+    };
 
 /**
  * A required reward's resource drop (`ConsumableData`): it adds `amount` of one
@@ -1198,6 +1233,10 @@ export interface RoomDeclaration {
   readonly mode: RoomMode;
   /** Optional declaration-owned lifecycle specialization for this room. */
   readonly lifecycleProfileKey?: string;
+  /** The lifecycle the room runs, from its declared specialization or its template. */
+  readonly lifecycleProfile: RoomLifecycleProfileSelection;
+  /** The lifecycle the room runs when an Ephyra hub enters it as a local visit. */
+  readonly localVisitLifecycleProfileKey?: string;
   readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];

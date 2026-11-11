@@ -48,9 +48,11 @@ function normalizeGate(raw: EncounterGate | undefined, path: string): EncounterG
 /**
  * The declared script, with the facts that follow from the encounter's other
  * declarations: the outcomes it hosts (Aetos waves, a Gorgon trigger it does
- * not block, a Nemesis bet or her random event), and that her random event
+ * not block, a Nemesis bet or her random event), that her random event
  * ends when she is answered, which clears her required object and unlocks the
- * exits (EncounterData_Story.lua:1966, InteractLogic.lua:366-376, 605-611).
+ * exits (EncounterData_Story.lua:1966, InteractLogic.lua:366-376, 605-611), and
+ * that a Boss encounter without `SkipBossTraits` ends with the boss defeat
+ * (RoomLogic.lua:984, 2815).
  */
 function normalizeScript(raw: RawEncounterDefinitionDeclaration, path: string): EncounterScript {
   const script = raw.script ?? {};
@@ -67,6 +69,7 @@ function normalizeScript(raw: RawEncounterDefinitionDeclaration, path: string): 
     gate: normalizeGate(script.gate, `${path}.gate`),
     waitReadyBeforeEnd: script.waitReadyBeforeEnd === true,
     endsByInteraction: raw.nemesisRandomEvent !== undefined,
+    endsWithBossDefeated: raw.kind === 'boss' && raw.skipBossTraits !== true,
     hostsOutcome: Object.freeze(hostsOutcome),
   });
 }
@@ -225,6 +228,8 @@ export function normalizeEncounterDefinitions(
       if (raw.skipEndEncounterEffects === true && raw.canEncounterSkip !== true) {
         fail(`${path}.skipEndEncounterEffects`, 'requires canEncounterSkip');
       }
+      if (raw.skipBossTraits !== undefined && (raw.skipBossTraits !== true || raw.kind !== 'boss'))
+        fail(`${path}.skipBossTraits`, 'must be true on a boss encounter');
       const blocksKeepsakeSelectionKeys =
         raw.blocksKeepsakeSelectionKeys === undefined
           ? undefined

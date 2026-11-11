@@ -14,6 +14,7 @@ import type { RawRoomDeclaration } from '../../declarations/index';
 import { createCollection } from '../common';
 import { fail } from '../errors';
 import { validateRoomCollectionClosure } from './collection-closure';
+import type { RoomLifecycleInput } from './lifecycle-facts';
 import { normalizeRoomMapPoints } from './map-points';
 import { normalizeRoom } from './normalize-room';
 import { normalizeRoomOrientation } from './orientation';
@@ -31,6 +32,7 @@ export function normalizeRooms(
   encounterDefinitions: CatalogCollection<EncounterDefinition>,
   encounterSets: CatalogCollection<EncounterSet>,
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
+  lifecycles: RoomLifecycleInput,
 ): CatalogCollection<RoomDeclaration> {
   const declaredGameNames = new Set(rawRooms.map((room) => room.gameName));
   for (const gameName of Object.keys(rawExitDoorSetupOrders))
@@ -75,6 +77,7 @@ export function normalizeRooms(
         : undefined,
       mapPoints,
       orientation,
+      lifecycles,
     );
   });
   const collection = createCollection(rooms, 'rooms', (room) => room.gameName, 'gameName');

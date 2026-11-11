@@ -25,6 +25,7 @@ import {
 import { normalizeRoomEncounterFacts } from './encounter-facts';
 import { normalizeRoomExitFacts } from './exit-facts';
 import { normalizeRoomFieldsFacts } from './fields-facts';
+import { normalizeRoomLifecycleFacts, type RoomLifecycleInput } from './lifecycle-facts';
 import {
   normalizeRoomFeatureFacts,
   normalizeRoomInfernalContractFacts,
@@ -51,6 +52,7 @@ export function normalizeRoom(
   swappableBreakables: number | undefined,
   mapPoints: RoomMapPoints | undefined,
   orientation: RoomOrientation | undefined,
+  lifecycles: RoomLifecycleInput,
 ): RoomDeclaration {
   const path = `rooms[${roomIndex}]`;
 
@@ -96,6 +98,17 @@ export function normalizeRoom(
   const resourcePointSupport = normalizeRoomResourcePointSupport(room, path);
   const force =
     room.force === undefined ? undefined : normalizeRoomForce(room.force, rewards, `${path}.force`);
+  const lifecycle = normalizeRoomLifecycleFacts(
+    {
+      mode: identity.mode,
+      ...(core.lifecycleProfileKey === undefined
+        ? {}
+        : { lifecycleProfileKey: core.lifecycleProfileKey }),
+      encounterEnvelopeKey: encounter.encounterEnvelopeKey,
+    },
+    lifecycles,
+    path,
+  );
 
   const declaration: RoomDeclaration = Object.freeze({
     gameName: identity.gameName,
@@ -110,6 +123,7 @@ export function normalizeRoom(
     ...(core.lifecycleProfileKey === undefined
       ? {}
       : { lifecycleProfileKey: core.lifecycleProfileKey }),
+    ...lifecycle,
     structuralTags: core.structuralTags,
     exits: exits.exits,
     additionalExits: exits.additionalExits,
@@ -211,6 +225,7 @@ export function normalizeRoom(
           swappableBreakables,
           mapPoints,
           orientation,
+          lifecycles,
         ),
       `${path}.routeOverlays[${overlayIndex}]`,
     ),
@@ -225,6 +240,8 @@ const overlaidRoomFields = [
   'kind',
   'mode',
   'lifecycleProfileKey',
+  'lifecycleProfile',
+  'localVisitLifecycleProfileKey',
   'incomingReward',
   'offerRewardBinding',
   'encounterSlotBindings',
@@ -281,5 +298,9 @@ function normalizeRoomRouteOverlay(
     incomingReward: overlaid.incomingReward,
     offerRewardBinding: overlaid.offerRewardBinding,
     encounterSlotBindings: overlaid.encounterSlotBindings,
+    lifecycleProfile: overlaid.lifecycleProfile,
+    ...(overlaid.localVisitLifecycleProfileKey === undefined
+      ? {}
+      : { localVisitLifecycleProfileKey: overlaid.localVisitLifecycleProfileKey }),
   });
 }

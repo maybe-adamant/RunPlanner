@@ -5,6 +5,7 @@ import type {
   RequiredRewardDropDeclaration,
   RoomMapPoints,
   RoomOrientation,
+  RoomTemplateKey,
   RouteDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RawArcanaCardDeclaration, RawFearVowDeclaration } from './arcana-fear-types';
@@ -20,7 +21,10 @@ import type { RawExitTypeDeclaration } from './exits-types';
 import type { RawFamiliarDeclaration } from './familiars-types';
 import type { RawKeepsakeDeclaration } from './keepsakes-types';
 import type { RawBiomeLayoutDeclaration } from './layouts/types';
-import type { RawRoomLifecycleProfileDeclaration } from './lifecycles/types';
+import type {
+  RawRoomLifecycleProfileDeclaration,
+  RawRoomTemplateLifecycleDeclaration,
+} from './lifecycles/types';
 import type { RawRewardKernelInput, RawRewardProducerBinding } from './rewards/types';
 import type { RawRoomDeclaration } from './rooms/types';
 import type { RawTraitCatalogInput } from './traits/types';
@@ -46,6 +50,10 @@ export interface RawCatalogInput {
   /** RequirementsData.lua `NoRecentFieldNPCEncounter`: the field-NPC spacing set. */
   readonly fieldNpcEncounterKeys: readonly string[];
   readonly roomLifecycleProfiles: readonly RawRoomLifecycleProfileDeclaration[];
+  readonly roomTemplateLifecycles: Readonly<
+    Record<RoomTemplateKey, RawRoomTemplateLifecycleDeclaration>
+  >;
+  readonly derivedRoomLifecycle: RawRoomTemplateLifecycleDeclaration;
   readonly exitCompatibilityPolicies: readonly ExitCompatibilityPolicy[];
   readonly exitTypes: readonly RawExitTypeDeclaration[];
   readonly rooms: readonly RawRoomDeclaration[];
