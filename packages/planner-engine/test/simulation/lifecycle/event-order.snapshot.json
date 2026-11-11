@@ -169,7 +169,6 @@
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
-        "checkpoint/underworld-gorgon-athena",
         "checkpoint/underworld-persephone-calling-card",
         "checkpoint/underworld-ixion-chaos",
         "checkpoint/underworld-g-anomaly-roster",
@@ -219,6 +218,12 @@
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:source required #1"]
     },
     {
+      "entries": ["checkpoint/underworld-gorgon-athena"],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:source required #1"]
+    },
+    {
       "entries": ["underworld/createFInvalidLaterConversionProject"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpen",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
@@ -254,7 +259,6 @@
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
         "checkpoint/underworld-fig-leaf",
-        "checkpoint/underworld-gorgon-athena",
         "checkpoint/underworld-persephone-calling-card",
         "checkpoint/underworld-ixion-chaos",
         "checkpoint/underworld-g-anomaly-roster",
@@ -295,6 +299,12 @@
       "entries": ["execution/underworld-f-cut-end-rerolls"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened"
+    },
+    {
+      "entries": ["checkpoint/underworld-gorgon-athena"],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
     }
   ],
   "F/golden-f-b4-e1 F_Combat05": [
@@ -326,7 +336,6 @@
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
         "checkpoint/underworld-fig-leaf",
-        "checkpoint/underworld-gorgon-athena",
         "checkpoint/underworld-persephone-calling-card",
         "checkpoint/underworld-ixion-chaos",
         "checkpoint/underworld-g-anomaly-roster",
@@ -363,6 +372,12 @@
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
     },
     {
+      "entries": ["checkpoint/underworld-gorgon-athena"],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
+    },
+    {
       "entries": ["fresh-file/createFreshFileGeneratedComposition"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
@@ -395,7 +410,6 @@
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
         "checkpoint/underworld-fig-leaf",
-        "checkpoint/underworld-gorgon-athena",
         "checkpoint/underworld-persephone-calling-card",
         "checkpoint/underworld-ixion-chaos",
         "checkpoint/underworld-g-anomaly-roster",
@@ -451,6 +465,12 @@
         "encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1",
         "after interactChallengeSwitch: interactAcquisitionEntry:challengeSwitch:reward optional #3"
       ]
+    },
+    {
+      "entries": ["checkpoint/underworld-gorgon-athena"],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
     },
     {
       "entries": ["checkpoint/nemesis-f-trait-trade"],
@@ -581,7 +601,6 @@
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
         "checkpoint/underworld-fig-leaf",
-        "checkpoint/underworld-gorgon-athena",
         "checkpoint/underworld-persephone-calling-card",
         "checkpoint/underworld-ixion-chaos",
         "checkpoint/underworld-g-anomaly-roster",
@@ -614,6 +633,12 @@
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
+    },
+    {
+      "entries": ["checkpoint/underworld-gorgon-athena"],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
     },
     {
@@ -652,7 +677,6 @@
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
         "checkpoint/underworld-fig-leaf",
-        "checkpoint/underworld-gorgon-athena",
         "checkpoint/underworld-persephone-calling-card",
         "checkpoint/underworld-ixion-chaos",
         "checkpoint/underworld-g-anomaly-roster",
@@ -703,6 +727,12 @@
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
     },
     {
+      "entries": ["checkpoint/underworld-gorgon-athena"],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
+    },
+    {
       "entries": [
         "checkpoint/nemesis-f-pom-sea-star",
         "fresh-file/createFreshFileGeneratedComposition"
@@ -740,7 +770,6 @@
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
         "checkpoint/underworld-fig-leaf",
-        "checkpoint/underworld-gorgon-athena",
         "checkpoint/underworld-persephone-calling-card",
         "checkpoint/underworld-ixion-chaos",
         "checkpoint/underworld-g-anomaly-roster",
@@ -773,6 +802,12 @@
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
+    },
+    {
+      "entries": ["checkpoint/underworld-gorgon-athena"],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
     },
     {
@@ -811,7 +846,6 @@
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
         "checkpoint/underworld-fig-leaf",
-        "checkpoint/underworld-gorgon-athena",
         "checkpoint/underworld-persephone-calling-card",
         "checkpoint/underworld-ixion-chaos",
         "checkpoint/underworld-g-anomaly-roster",
@@ -850,6 +884,12 @@
       "entries": ["execution/underworld-f-switches", "execution/underworld-f-switches-failed-left"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened"
+    },
+    {
+      "entries": ["checkpoint/underworld-gorgon-athena"],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
     },
     {
       "entries": [
@@ -1261,7 +1301,7 @@
     {
       "entries": ["checkpoint/underworld-gorgon-athena"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > #2 > encounterInteractionReached(Encounter gorgon) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | #2 Encounter | doorsOpened",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | #2 Encounter | doorsOpened",
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
     }
   ],
@@ -1389,7 +1429,6 @@
     {
       "entries": [
         "execution/fg",
-        "execution/fg-npc-shopping-protection",
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
@@ -1449,6 +1488,12 @@
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
+    },
+    {
+      "entries": ["execution/fg-npc-shopping-protection"],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
     },
     {
@@ -3287,13 +3332,13 @@
         "underworld/createCompleteFGAnomalyProject(true)"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
     },
     {
       "entries": ["underworld/createCompleteFGAnomalyProject(false)"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > producerPointReached(roomRewardPickup) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
+      "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": []
     }
   ],
@@ -5021,7 +5066,7 @@
         "surface/surfaceSeleneHexPathProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Intro) > encounterCompleted(Intro none) > encounterStarted(Combat) > encounterDepthAdvanced(Combat) > encounterCompleted(Combat applied) > encounterEndEffectsApplied(Combat) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | encounterBegun Combat merged | encounterStarted Combat | encounterEnd Combat | #1 | doorsOpened",
+      "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | encounterBegun Combat | encounterStarted Combat | encounterEnd Combat | #1 | doorsOpened",
       "loot": ["encounterEnd:Combat: interactIncomingReward:roomRewardPickup:self required #1"]
     },
     {
@@ -5030,7 +5075,7 @@
         "checkpoint/surface-scheduled-lifecycle"
       ],
       "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Intro) > encounterCompleted(Intro none) > encounterStarted(Combat) > encounterDepthAdvanced(Combat) > encounterCompleted(Combat applied) > encounterEndEffectsApplied(Combat) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > #2 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:secondLeft]) > outgoingGenerationCheckpoint > #3 > acquisitionPointReached(acquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom1) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | encounterBegun Combat merged | encounterStarted Combat | encounterEnd Combat | #1 | #2 | doorsOpened | #3",
+      "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | encounterBegun Combat | encounterStarted Combat | encounterEnd Combat | #1 | #2 | doorsOpened | #3",
       "loot": [
         "encounterEnd:Combat: interactIncomingReward:roomRewardPickup:self required #1, interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:secondLeft] required #2, interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom1 optional #3, interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom2 optional unplaced placeable"
       ]
@@ -6151,7 +6196,7 @@
         "surface/surfaceSeleneHexPathProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Intro) > encounterCompleted(Intro none) > encounterStarted(Combat) > encounterDepthAdvanced(Combat) > encounterCompleted(Combat applied) > encounterEndEffectsApplied(Combat) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | encounterBegun Combat merged | encounterStarted Combat | encounterEnd Combat | #1 | doorsOpened",
+      "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | encounterBegun Combat | encounterStarted Combat | encounterEnd Combat | #1 | doorsOpened",
       "loot": ["encounterEnd:Combat: interactIncomingReward:roomRewardPickup:self required #1"]
     }
   ],
@@ -7091,7 +7136,7 @@
     {
       "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
       "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Intro) > encounterCompleted(Intro none) > encounterStarted(Combat) > encounterDepthAdvanced(Combat) > encounterCompleted(Combat applied) > encounterEndEffectsApplied(Combat) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | encounterBegun Combat merged | encounterStarted Combat | encounterEnd Combat | #1 | doorsOpened",
+      "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | encounterBegun Combat | encounterStarted Combat | encounterEnd Combat | #1 | doorsOpened",
       "loot": ["encounterEnd:Combat: interactIncomingReward:roomRewardPickup:self required #1"]
     }
   ],
