@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceDoorStep,
@@ -8,6 +8,7 @@ import type { DoorChip } from './doorSummary';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { DoorChips } from './DecisionWorkbench';
 import { TimelineRow } from './TimelineRow';
+import { TimelineMapStageContext } from './timelineMapStage';
 import { doorsOpenToggle, type BannerToggle } from './doorSummary';
 
 /**
@@ -103,8 +104,13 @@ export function DoorsOpenDetailRow({
   readonly children: ReactNode;
   readonly id: string;
 }) {
+  const mapStage = useContext(TimelineMapStageContext);
   return (
-    <li className="timeline-doors-detail-row" id={id}>
+    <li
+      className="timeline-doors-detail-row"
+      {...(mapStage === undefined ? {} : { 'data-map-stage': mapStage })}
+      id={id}
+    >
       {children}
     </li>
   );
@@ -120,7 +126,7 @@ export function DoorsOpenBanner({
   readonly label?: string;
 }) {
   return (
-    <>
+    <TimelineMapStageContext.Provider value="open">
       <TimelineRow
         aria-label={label}
         {...(doors.noun === 'offer' ? { 'data-wheels-open': '' } : { 'data-doors-open': '' })}
@@ -139,7 +145,7 @@ export function DoorsOpenBanner({
       {doors.expanded && doors.detail !== undefined ? (
         <DoorsOpenDetailRow id={doors.detailId}>{doors.detail}</DoorsOpenDetailRow>
       ) : null}
-    </>
+    </TimelineMapStageContext.Provider>
   );
 }
 
@@ -185,27 +191,29 @@ export function LeaveRow({
     return { ...props, tabIndex: -1 };
   };
   return (
-    <TimelineRow
-      {...anchor()}
-      aria-label={label}
-      className="timeline-leave-row"
-      {...(heroDoor === undefined ? {} : { 'data-hero-door': heroDoor })}
-      {...(pastEnd ? { 'data-plan-end': 'pastEnd' } : {})}
-      kind="boundary"
-      label={
-        <>
-          <span className="timeline-banner-title">
-            <strong>{label}</strong>
-          </span>
-          <span className="timeline-banner-modifiers timeline-leave-controls">
-            {children}
-            {status === undefined ? null : <span className="neutral-status">{status}</span>}
-            {actions === undefined ? null : (
-              <span className="timeline-leave-actions">{actions}</span>
-            )}
-          </span>
-        </>
-      }
-    />
+    <TimelineMapStageContext.Provider value="left">
+      <TimelineRow
+        {...anchor()}
+        aria-label={label}
+        className="timeline-leave-row"
+        {...(heroDoor === undefined ? {} : { 'data-hero-door': heroDoor })}
+        {...(pastEnd ? { 'data-plan-end': 'pastEnd' } : {})}
+        kind="boundary"
+        label={
+          <>
+            <span className="timeline-banner-title">
+              <strong>{label}</strong>
+            </span>
+            <span className="timeline-banner-modifiers timeline-leave-controls">
+              {children}
+              {status === undefined ? null : <span className="neutral-status">{status}</span>}
+              {actions === undefined ? null : (
+                <span className="timeline-leave-actions">{actions}</span>
+              )}
+            </span>
+          </>
+        }
+      />
+    </TimelineMapStageContext.Provider>
   );
 }

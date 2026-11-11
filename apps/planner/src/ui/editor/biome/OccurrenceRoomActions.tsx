@@ -30,6 +30,7 @@ import { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
 import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 import { TimelineRow } from './TimelineRow';
+import { TimelineMapStageContext, type TimelineMapStage } from './timelineMapStage';
 import { RowRewardName } from './RowRewardName';
 import { RowNpcName } from './RowNpcName';
 import { npcPortrait } from '@planner/ui/artwork/npcs/npcArtwork';
@@ -480,9 +481,81 @@ export function RoomActionsWorkbench({
         {hasDoorsOpenRow || roomDoors.doorsOpenRow === false ? null : (
           <DoorsOpenBanner doors={roomDoors} />
         )}
-        {roomDoors.leave}
+        <TimelineMapStageContext.Provider value="left">
+          {roomDoors.leave}
+        </TimelineMapStageContext.Provider>
       </>
     );
+  };
+  // The map opens at the room's doors, or on a Ship tab at the wheel it shows: its own
+  // marker and every row ranked after it stand on the open map.
+  const mapOpening = (
+    timeline: readonly WorkspaceRoomLifecycleTimelineEntry[],
+  ): { readonly afterRank: number | undefined; readonly wheelKey?: string } => {
+    if (phaseWheel === undefined) return { afterRank: actions?.timeline.doorsAfterRank };
+    const wheelsOpen = timeline.find(
+      (entry) =>
+        entry.kind === 'boundary' &&
+        entry.boundary.kind === 'wheelsOpen' &&
+        entry.boundary.wheelKey === phaseWheel.key,
+    );
+    return {
+      afterRank: wheelsOpen?.kind === 'boundary' ? wheelsOpen.dropIndex : undefined,
+      wheelKey: phaseWheel.key,
+    };
+  };
+  const entryMapStage = (
+    entry: WorkspaceRoomLifecycleTimelineEntry,
+    opening: ReturnType<typeof mapOpening>,
+  ): TimelineMapStage => {
+    switch (entry.kind) {
+      case 'boundary':
+        return (
+          opening.wheelKey === undefined
+            ? entry.boundary.kind === 'doorsOpened'
+            : entry.boundary.kind === 'wheelsOpen' && entry.boundary.wheelKey === opening.wheelKey
+        )
+          ? 'open'
+          : 'closed';
+      case 'spawned':
+        return opening.wheelKey !== undefined && entry.moment === 'wheelsOpen' ? 'open' : 'closed';
+      case 'action':
+      case 'automaticEffect':
+        return opening.afterRank !== undefined && entry.rank > opening.afterRank
+          ? 'open'
+          : 'closed';
+    }
+  };
+  const mapStageKey = (entry: WorkspaceRoomLifecycleTimelineEntry): string => {
+    switch (entry.kind) {
+      case 'boundary':
+        return `stage:${entry.boundary.key}`;
+      case 'action':
+        return `stage:${entry.actionKey}`;
+      case 'spawned':
+        return `stage:spawned:${entry.key}`;
+      case 'automaticEffect':
+        return `stage:${workspaceInteractionKey(entry.address)}`;
+    }
+  };
+  const withMapStage = (
+    timeline: readonly WorkspaceRoomLifecycleTimelineEntry[],
+    render: (entry: WorkspaceRoomLifecycleTimelineEntry) => ReactNode[],
+  ): ReactNode[] => {
+    const opening = mapOpening(timeline);
+    return timeline.flatMap((entry) => {
+      const nodes = render(entry);
+      return nodes.length === 0
+        ? []
+        : [
+            <TimelineMapStageContext.Provider
+              key={mapStageKey(entry)}
+              value={entryMapStage(entry, opening)}
+            >
+              {nodes}
+            </TimelineMapStageContext.Provider>,
+          ];
+    });
   };
   if (actions === undefined && mode.kind === 'roomTimeline') {
     if ((encounterPhases === undefined || idPrefix === undefined) && roomDoors === undefined)
@@ -1243,14 +1316,25 @@ export function RoomActionsWorkbench({
                       phase.timeline.length === 0) ? null : (
                       <ol aria-label={`${phase.label} timeline`} className="room-action-list">
                         {checkpointRows(0, phase.checkpoints)}
-                        {phase.timeline.flatMap(renderPhaseTimelineEntry)}
-                        {trailingCheckpoints.map((checkpoint) => (
-                          <TimelineRow
-                            key={`checkpoint:${checkpoint.key}`}
-                            kind="checkpoint"
-                            label={<strong>{checkpoint.label}</strong>}
-                          />
-                        ))}
+                        {withMapStage(phase.timeline, renderPhaseTimelineEntry)}
+                        {trailingCheckpoints.map((checkpoint) => {
+                          const afterRank = mapOpening(phase.timeline).afterRank;
+                          return (
+                            <TimelineMapStageContext.Provider
+                              key={`checkpoint:${checkpoint.key}`}
+                              value={
+                                afterRank !== undefined && checkpoint.afterRank > afterRank
+                                  ? 'open'
+                                  : 'closed'
+                              }
+                            >
+                              <TimelineRow
+                                kind="checkpoint"
+                                label={<strong>{checkpoint.label}</strong>}
+                              />
+                            </TimelineMapStageContext.Provider>
+                          );
+                        })}
                         {doorsTail(phase.timeline)}
                       </ol>
                     )}
@@ -1337,7 +1421,7 @@ export function RoomActionsWorkbench({
       ? []
       : [<Fragment key={entry.actionKey}>{renderRow(row, [], entry.supplement)}</Fragment>];
   };
-  const timelineRows = actions.timeline.entries.flatMap(renderTimelineEntry);
+  const timelineRows = withMapStage(actions.timeline.entries, renderTimelineEntry);
   return (
     <section
       aria-label="Room Timeline"

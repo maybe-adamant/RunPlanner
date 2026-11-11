@@ -595,6 +595,7 @@ function projectRoomLifecycleTimeline(
       ),
     ),
     entries: Object.freeze(entries),
+    doorsAfterRank: timeline.doorsAfterRank,
     suppressedCheckpointKeys: Object.freeze([
       'exitUsable',
       ...entries.flatMap((entry) => (entry.kind !== 'boundary' ? [] : [entry.checkpointKey])),

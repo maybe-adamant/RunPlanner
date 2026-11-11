@@ -581,6 +581,8 @@ export interface WorkspaceRoomLifecycleTimeline {
   /** The walk stops in this room before its doors: their picks and Leave row wait. */
   readonly doorsWait?: true;
   readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
+  /** The doors open after this many ranked rows. */
+  readonly doorsAfterRank: number;
   /** Checkpoints represented by lifecycle boundary rows rather than duplicate list items. */
   readonly suppressedCheckpointKeys: readonly string[];
 }

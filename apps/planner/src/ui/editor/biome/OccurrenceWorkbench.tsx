@@ -46,10 +46,8 @@ import { RoomMapHighlightScope } from './room-map/RoomMapHighlightScope';
 import { roomMapPlacements } from './room-map/roomMapPlacements';
 
 /**
- * The map's stage for a Timeline row: before Doors open (or a Ship phase's
- * Wheels open) the doors are closed, from it they are open, from the
- * room's last row (or Select wheel) it is left. Rows outside the Timeline
- * leave the map as it is.
+ * The Timeline row a map stage is read from: a row of the room's (or a Ship
+ * phase's) Timeline. Rows outside the Timeline leave the map as it is.
  */
 function timelineMapRow(target: Element): HTMLElement | undefined {
   return (
@@ -57,18 +55,10 @@ function timelineMapRow(target: Element): HTMLElement | undefined {
   );
 }
 
-function timelineMapStage(row: Element): RoomMapStage | undefined {
-  const list = row.parentElement;
-  if (list == null) return undefined;
-  const rows = [...list.children];
-  const index = rows.indexOf(row);
-  const leave = rows.findIndex((item) => item.classList.contains('timeline-leave-row'));
-  const open = rows.findIndex((item) =>
-    item.matches('[data-doors-open], [data-wheels-open], [data-boundary-kind="doorsOpened"]'),
-  );
-  if (leave >= 0 && index >= leave) return 'left';
-  if (open >= 0 && index >= open) return 'open';
-  return 'closed';
+/** The map's stage at a Timeline row, as the row stands against the room's opening. */
+function timelineMapStage(row: HTMLElement): RoomMapStage {
+  const stage = row.dataset.mapStage;
+  return stage === 'open' || stage === 'left' ? stage : 'closed';
 }
 
 /** The room's latest door press (an unlock or a reroll) at or before the row. */
@@ -322,8 +312,8 @@ export function OccurrenceWorkbench({
   };
   const workOnTimeline = (event: SyntheticEvent<HTMLElement>): void => {
     const row = timelineMapRow(event.target as Element);
-    const stage = row === undefined ? undefined : timelineMapStage(row);
-    if (row === undefined || stage === undefined) return;
+    if (row === undefined) return;
+    const stage = timelineMapStage(row);
     markMapRow(row);
     const step = timelineDoorStep(row, new Set(stepsShown.map((candidate) => candidate.actionKey)));
     const heroDoor = timelineHeroDoor(row);
