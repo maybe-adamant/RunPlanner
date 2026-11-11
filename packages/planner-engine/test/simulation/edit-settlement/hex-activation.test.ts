@@ -70,11 +70,16 @@ describe('Path of Stars screen selections', () => {
       value: { rewardType: 'MaxManaDrop' },
     });
     expect(pathSelection(mana.project)).toBeUndefined();
-    const big = settle(mana.project, {
-      kind: 'ReplaceIncomingReward',
-      reward,
-      value: { rewardType: 'TalentDrop' },
-    });
+    // The owner picks up the new Path of Stars drop.
+    const big = evaluate(
+      collectTestRequiredItems(
+        settle(mana.project, {
+          kind: 'ReplaceIncomingReward',
+          reward,
+          value: { rewardType: 'TalentDrop' },
+        }).project,
+      ),
+    );
     expect(pathSelection(big.project)).toBeUndefined();
     expect(
       big.evaluation.findings.map((finding) => [finding.code, finding.origin, finding.evidence]),

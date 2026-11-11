@@ -2,8 +2,10 @@ import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
 import {
   collectTestRequiredItems,
   purchaseTestHermesShrineOffer,
+  settleTestEdit,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures/shared';
+import { withItemContent } from '../../support/room-action-content';
 import { describe, expect, it } from 'vitest';
 import {
   loadSurfaceNOPQProject,
@@ -542,11 +544,22 @@ describe('timed-effect edit settlement', () => {
         entryKey,
       );
       let project = createSurfaceNOHermesShrineDeliveryCheckpoint();
-      project = applyProjectCommand(project, catalog, {
+      // Another Shrine stock is a new item: its purchase and delivery go, and the owner buys it
+      // again and places its delivery where the old one stood.
+      project = settleTestEdit(project, {
         kind: 'ReplaceHermesShrineOffer',
         occurrence: source,
         slotKey: 'secondLeft',
         value: { rewardType: 'BlindBoxLoot' },
+      });
+      project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondLeft', {
+        delay: 3,
+        rushed: false,
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'PlaceHermesShrineDelivery',
+        entry,
+        encounterPhaseKey: 'Encounter',
       });
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceAcquisitionEntryOffer',
@@ -707,12 +720,21 @@ describe('timed-effect edit settlement', () => {
       kind: 'interactAcquisitionEntry',
       siteKey: 'hermesShrineDelivery',
       entryKey: key,
-    };
-    expect(occurrence(settled.project, 'surface-q-preboss').roomActions.order).not.toContainEqual(
-      delivery,
-    );
+    } as const;
+    expect(
+      occurrence(settled.project, 'surface-q-preboss').roomActions.order.map(roomActionKey),
+    ).not.toContain(roomActionKey(delivery));
     const collected = collectTestRequiredItems(settled.project);
-    expect(occurrence(collected, 'surface-q-preboss').roomActions.order).toContainEqual(delivery);
+    expect(occurrence(collected, 'surface-q-preboss').roomActions.order).toContainEqual(
+      withItemContent(
+        collected,
+        createOccurrenceAddress(
+          createBiomeAddress('Surface', 'Q'),
+          createOccurrenceId('surface-q-preboss'),
+        ),
+        delivery,
+      ),
+    );
     expect(evaluate(collected).evaluation.status).toBe('valid');
   });
   it('retracts a removed source and leaves a newly repurchased obligation to place on reactivation', () => {
