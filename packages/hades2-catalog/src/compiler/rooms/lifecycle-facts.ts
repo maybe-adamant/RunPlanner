@@ -24,9 +24,12 @@ export type RoomLifecycleFacts = Pick<
 /**
  * The room's lifecycle: its declared specialization, else its template's, a
  * fixed template choosing the one lifecycle that admits the room's envelope.
+ * A specialization admits the producer of the room's reward, if it has one.
  */
 export function normalizeRoomLifecycleFacts(
-  room: Pick<RoomDeclaration, 'mode' | 'lifecycleProfileKey' | 'encounterEnvelopeKey'>,
+  room: Pick<RoomDeclaration, 'mode' | 'encounterEnvelopeKey' | 'incomingReward'> & {
+    readonly lifecycleProfileKey?: string;
+  },
   input: RoomLifecycleInput,
   path: string,
 ): RoomLifecycleFacts {
@@ -44,11 +47,18 @@ export function normalizeRoomLifecycleFacts(
   const template =
     room.mode.kind === 'authored' ? input.templates[room.mode.templateKey] : input.derived;
   const selection = ((): RoomLifecycleProfileSelection => {
-    if (room.lifecycleProfileKey !== undefined)
-      return {
-        kind: 'fixed',
-        profileKey: requireProfile(room.lifecycleProfileKey, `${path}.lifecycleProfileKey`),
-      };
+    if (room.lifecycleProfileKey !== undefined) {
+      const at = `${path}.lifecycleProfileKey`;
+      const profileKey = requireProfile(room.lifecycleProfileKey, at);
+      const producer = input.profiles.byKey[profileKey]!.producer;
+      if (
+        room.incomingReward.kind !== 'none' &&
+        (producer.kind !== 'required' ||
+          !producer.lifecycleProfileKeys.includes(room.incomingReward.producerLifecycleKey))
+      )
+        fail(at, 'does not admit the incoming producer lifecycle');
+      return { kind: 'fixed', profileKey };
+    }
     switch (template.kind) {
       case 'fixed': {
         const admitting = template.profileKeys.filter((key) =>

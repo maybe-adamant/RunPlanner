@@ -76,13 +76,7 @@ export function routeRoomDeclaration<Room extends RoomDeclaration | undefined>(
   const cached = routeOverlaidRooms.get(room as RoomDeclaration)?.get(routeKey);
   if (cached !== undefined) return cached as Room;
   const declared: RoomDeclaration = room;
-  const {
-    lifecycleProfileKey: _lifecycle,
-    roleLifecycleProfileKeys: _roles,
-    routeOverlays: _overlays,
-    ...base
-  } = declared;
-  void _lifecycle;
+  const { roleLifecycleProfileKeys: _roles, routeOverlays: _overlays, ...base } = declared;
   void _roles;
   void _overlays;
   const routed: RoomDeclaration = Object.freeze({

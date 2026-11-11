@@ -105,6 +105,7 @@ export function normalizeRoom(
         ? {}
         : { lifecycleProfileKey: core.lifecycleProfileKey }),
       encounterEnvelopeKey: encounter.encounterEnvelopeKey,
+      incomingReward: reward.incomingReward,
     },
     lifecycles,
     path,
@@ -120,9 +121,6 @@ export function normalizeRoom(
     ...(swappableBreakables === undefined ? {} : { swappableBreakables }),
     kind: identity.kind,
     mode: identity.mode,
-    ...(core.lifecycleProfileKey === undefined
-      ? {}
-      : { lifecycleProfileKey: core.lifecycleProfileKey }),
     ...lifecycle,
     structuralTags: core.structuralTags,
     exits: exits.exits,
@@ -239,7 +237,6 @@ const overlaidRoomFields = [
   'label',
   'kind',
   'mode',
-  'lifecycleProfileKey',
   'lifecycleProfile',
   'roleLifecycleProfileKeys',
   'incomingReward',

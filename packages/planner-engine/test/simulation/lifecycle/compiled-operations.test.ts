@@ -2,6 +2,7 @@ import { format, resolveConfig } from 'prettier';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import { declarations } from '@run-planner/hades2-catalog/test-support';
 import {
   roomLifecycleProfileKey,
   biomeStartRoomGameNames,
@@ -20,6 +21,13 @@ import type {
 import { roomWalkSteps, type RoomWalkStep } from '../../../src/simulation/lifecycle/overview';
 
 const snapshotPath = './compiled-operations.snapshot.json';
+
+/** Each room's own lifecycle specialization, as its declaration names it. */
+const specializations = new Map(
+  declarations.rooms.flatMap((room) =>
+    room.lifecycleProfileKey === undefined ? [] : [[room.gameName, room.lifecycleProfileKey]],
+  ),
+);
 
 function operationText(operation: RoomLifecycleOperation): string {
   const subject =
@@ -90,7 +98,7 @@ function roomText(room: RoomDeclaration): string {
     room.mode.kind === 'authored'
       ? `template ${room.mode.templateKey}`
       : `derived ${room.mode.classification}`,
-    `profile ${room.lifecycleProfileKey ?? '-'}`,
+    `profile ${specializations.get(room.gameName) ?? '-'}`,
     `envelope ${room.encounterEnvelopeKey}`,
     ...(room.structuralTags.includes('Outdoor') ? ['Outdoor'] : []),
     ...(room.blocksGorgon ? ['blocksGorgon'] : []),

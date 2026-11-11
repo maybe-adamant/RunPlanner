@@ -27,6 +27,11 @@ describe('room lifecycle catalog', () => {
   it.each([
     ['unknown profile', 'MissingLifecycle', /unknown room lifecycle profile/],
     ['incompatible envelope', 'PCombatRoom', /does not support the room encounter envelope/],
+    [
+      'inadmissible producer',
+      'RewardlessCombatRoom',
+      /does not admit the incoming producer lifecycle/,
+    ],
   ])('rejects Narcissus room lifecycle with %s', (_name, lifecycleProfileKey, message) => {
     expect(() =>
       createCatalog(
@@ -65,8 +70,11 @@ describe('room lifecycle catalog', () => {
       lifecycleProfileKeys: ['RoomReward'],
       points: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
     });
-    expect(catalog.rooms.byKey.F_Opening01?.lifecycleProfileKey).toBeUndefined();
-    expect(catalog.rooms.byKey.N_Opening01?.lifecycleProfileKey).toBeUndefined();
+    expect(catalog.rooms.byKey.F_Opening01).not.toHaveProperty('lifecycleProfileKey');
+    expect(catalog.rooms.byKey.G_Story01?.lifecycleProfile).toEqual({
+      kind: 'fixed',
+      profileKey: 'StoryPickupRoom',
+    });
     expect(catalog.roomLifecycleProfiles.byKey.RewardlessCombatRoom?.producer).toEqual({
       kind: 'none',
     });

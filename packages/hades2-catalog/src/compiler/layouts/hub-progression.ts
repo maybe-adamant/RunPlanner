@@ -284,6 +284,9 @@ export function normalizeHubDecision(
     if (room.mode.kind !== 'authored') {
       fail(`${slotPath}.roomGameName`, `${room.gameName} must be authored`);
     }
+    if (room.roleLifecycleProfileKeys?.hubTarget === undefined) {
+      fail(`${slotPath}.roomGameName`, `${room.gameName} declares no Hub-target lifecycle`);
+    }
     const physicalDoorId = requirePositiveInteger(
       slot.physicalDoorId,
       `${slotPath}.physicalDoorId`,

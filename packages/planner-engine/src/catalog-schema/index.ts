@@ -1237,8 +1237,6 @@ export interface RoomDeclaration {
   readonly swappableBreakables?: number;
   readonly kind: RoomKind;
   readonly mode: RoomMode;
-  /** Optional declaration-owned lifecycle specialization for this room. */
-  readonly lifecycleProfileKey?: string;
   /** The lifecycle the room runs, from its declared specialization or its template. */
   readonly lifecycleProfile: RoomLifecycleProfileSelection;
   /** The lifecycles the room runs when an Ephyra Hub enters it in another role. */

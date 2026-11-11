@@ -44,7 +44,10 @@ export type RoomIdentityFacts = Pick<
   | 'skipTimedDropResourcesInDream'
 >;
 
-export type RoomCoreFacts = Pick<RoomDeclaration, 'lifecycleProfileKey' | 'structuralTags'>;
+export interface RoomCoreFacts extends Pick<RoomDeclaration, 'structuralTags'> {
+  /** The room's own lifecycle specialization, read by lifecycle normalization only. */
+  readonly lifecycleProfileKey?: string;
+}
 
 export type RoomCounterFacts = Pick<RoomDeclaration, 'counters' | 'caps'>;
 

@@ -72,4 +72,12 @@ describe('Hub board door declarations', () => {
     const input = withHubDoors((doors) => doors.filter(([doorId]) => doorId !== 560705));
     expect(() => createCatalog(input)).toThrow(/560705 is not in N_Hub's door-setup order/);
   });
+
+  it('rejects a board target whose room declares no Hub-target lifecycle', () => {
+    const input = cloneCatalogInput();
+    const n = input.biomeLayouts.find((layout) => layout.biomeKey === 'N');
+    if (n?.progression.kind !== 'hub') throw new Error('missing N Hub');
+    (n.progression.slots[0] as { roomGameName: string }).roomGameName = 'N_Sub01';
+    expect(() => createCatalog(input)).toThrow(/N_Sub01 declares no Hub-target lifecycle/);
+  });
 });

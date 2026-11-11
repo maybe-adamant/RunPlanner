@@ -402,38 +402,10 @@ export function validateLifecycleBindings(input: {
   readonly encounterSets: CatalogCollection<EncounterSet>;
   readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;
   readonly runStartReward: { readonly incomingReward: RewardProducerBinding };
-  readonly profiles: CatalogCollection<RoomLifecycleProfile>;
   readonly traits: CatalogCollection<TraitDeclaration>;
   readonly rewards: RewardKernelCatalog;
 }): void {
-  const validateRoomBinding = (
-    room: RoomDeclaration,
-    lifecycleProfileKey: string | undefined,
-    incomingReward: RoomDeclaration['incomingReward'],
-    path: string,
-  ): void => {
-    if (lifecycleProfileKey === undefined) return;
-    const profile = input.profiles.byKey[lifecycleProfileKey];
-    if (profile === undefined) fail(path, 'unknown room lifecycle profile');
-    if (!profile.encounterEnvelopeKeys.includes(room.encounterEnvelopeKey))
-      fail(path, 'does not support the room encounter envelope');
-    if (profile.producer.kind === 'none') {
-      if (incomingReward.kind !== 'none') fail(path, 'requires no incoming reward producer');
-      return;
-    }
-    if (incomingReward.kind === 'none') fail(path, 'requires an incoming reward producer');
-    if (!profile.producer.lifecycleProfileKeys.includes(incomingReward.producerLifecycleKey))
-      fail(path, 'does not admit the incoming producer lifecycle');
-  };
   for (const room of input.rooms.values) validateSlotGates(input, room);
-  for (const room of input.rooms.values) {
-    validateRoomBinding(
-      room,
-      room.lifecycleProfileKey,
-      room.incomingReward,
-      `rooms.${room.gameName}.lifecycleProfileKey`,
-    );
-  }
   for (const trait of input.traits.values) {
     const disposition = trait.selectedDisposition;
     if (disposition.kind === 'echo' && disposition.effect === 'doubleShop') {

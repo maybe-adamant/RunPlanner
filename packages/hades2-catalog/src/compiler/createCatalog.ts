@@ -160,7 +160,6 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     encounterSets,
     encounterDefinitions,
     runStartReward,
-    profiles: roomLifecycleProfiles,
     traits: traitCatalog.traits,
     rewards,
   });
@@ -171,7 +170,18 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     rewards.stores,
     exitTypes,
   );
-  validateRoomLayoutClosure(rooms, biomeLayouts, exitCompatibilityPolicies, routes, rewards.shops);
+  validateRoomLayoutClosure(
+    rooms,
+    biomeLayouts,
+    exitCompatibilityPolicies,
+    routes,
+    rewards.shops,
+    new Set(
+      input.rooms
+        .filter((room) => room.lifecycleProfileKey !== undefined)
+        .map((room) => room.gameName),
+    ),
+  );
   validateEncounterRouteReferences(encounterDefinitions, encounterSets, routes);
   validateRoomRouteOverlayReferences(rooms, routes);
   validateRewardAcquisitionRoleTraitGivers(rewards, traitCatalog.givers);
