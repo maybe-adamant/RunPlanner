@@ -21,6 +21,7 @@ import {
   rerollAppendIndex,
   roomActionKey,
   type AuthoredNemesisRandomEventOutcome,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
   loadDreamHeraArtificerEchoCheckpoint,
@@ -62,6 +63,7 @@ import {
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  liveActionsForProjectEvaluationAssembly,
   roomLayoutAuthoringForProjectEvaluationAssembly,
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
   simulateProject,
@@ -115,6 +117,34 @@ function placeAnchorObject(
 }
 
 /** Places a room's last unplaced spawned item through the engine's own placement command. */
+/** Picks up a room's live item from its live row, at the gap the live product names canonical. */
+function placeLiveItem(
+  biomeKey: string,
+  occurrenceId: string,
+  reference: RoomActionReference,
+): GalleryStep {
+  return (project) => {
+    const live = liveActionsForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+      occurrenceAddress(project, biomeKey, occurrenceId),
+    );
+    const placements = (live?.gaps ?? []).flatMap((gap) =>
+      gap.items.flatMap((item) =>
+        item.actions.flatMap((action) =>
+          action.kind === 'place' && roomActionKey(action.reference) === roomActionKey(reference)
+            ? [action]
+            : [],
+        ),
+      ),
+    );
+    const command = (placements.find((action) => action.canonical === true) ?? placements.at(-1))
+      ?.command;
+    if (command === undefined) throw new Error(`${occurrenceId} has no live ${reference.kind}`);
+    return command;
+  };
+}
+
 function placeLastSpawned(biomeKey: string, occurrenceId: string): GalleryStep {
   return (project) => {
     const spawned = spawnedLootForProjectEvaluationAssembly(
@@ -1811,6 +1841,8 @@ export const galleryCases: readonly GalleryCase[] = [
         ),
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
       }),
+      // The swap takes the old reward's pickup with it; the new one is picked up again.
+      placeLiveItem('O', 'surface-o-combat04', { kind: 'interactWheelReward', wheelKey: 'wheel1' }),
     ],
     target: room('O', 'surface-o-combat04'),
   })),

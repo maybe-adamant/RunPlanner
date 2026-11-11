@@ -1,6 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  applyProjectCommand,
   createBiomeAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
@@ -15,6 +14,7 @@ import {
   type RoomActionReference,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
+import { settleTestEdit } from '@run-planner/test-fixtures/shared';
 
 /** Where a case opens: one room on its Timeline, or a biome's Hub on one Timeline segment. */
 export type GalleryTarget =
@@ -65,11 +65,10 @@ export function hub(biomeKey: string, segment?: number): GalleryTarget {
   return segment === undefined ? { kind: 'hub', biomeKey } : { kind: 'hub', biomeKey, segment };
 }
 
-/** The case's project with its commands applied through the engine's command authority. */
+/** The case's project with each of its commands settled as the editor's history settles it. */
 export function buildGalleryProject(entry: GalleryCase): ProjectDocument {
   return (entry.commands ?? []).reduce(
-    (current, step) =>
-      applyProjectCommand(current, catalog, typeof step === 'function' ? step(current) : step),
+    (current, step) => settleTestEdit(current, typeof step === 'function' ? step(current) : step),
     entry.project(),
   );
 }
