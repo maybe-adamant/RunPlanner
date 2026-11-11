@@ -72,6 +72,7 @@ import {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   hubVisitActions,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
@@ -1027,17 +1028,17 @@ describe('field NPC encounter requirements', () => {
     const storyId = pOccurrenceId('P_Story01', 7, 1);
     const storyPhase = phase(pBiome, storyId);
     const growthReward = createIncomingRewardAddress(pBiome, pOccurrenceId('P_Combat07', 4, 1));
-    let initial = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    let initial = settleTestEdit(loadSurfaceNOPQProject(), {
       kind: 'ReplaceIncomingReward',
       reward: growthReward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
     });
-    initial = applyProjectCommand(initial, catalog, {
+    initial = settleTestEdit(initial, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(pBiome, pOccurrenceId('P_Combat11', 4, 2)),
       value: { rewardType: 'HermesUpgrade' },
     });
-    initial = applyProjectCommand(initial, catalog, {
+    initial = settleTestEdit(initial, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(growthReward, 'source'),
       value: {
@@ -1052,7 +1053,7 @@ describe('field NPC encounter requirements', () => {
       },
     });
     initial = authorTestTraitsAndRequiredItems(
-      applyProjectCommand(initial, catalog, {
+      settleTestEdit(initial, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(pBiome, pOccurrenceId('P_MiniBoss01', 5, 1)),
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
@@ -1061,7 +1062,7 @@ describe('field NPC encounter requirements', () => {
     const storyOffer = authoredOccurrence(initial, 'P', storyId).encounters.traitOffersByPhase
       ?.Encounter?.Story_Dionysus_01;
     expect(storyOffer).toMatchObject({ giverKey: 'Dionysus' });
-    let project = applyProjectCommand(initial, catalog, {
+    let project = settleTestEdit(initial, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(storyPhase, 'selection'),
       value: {
@@ -1092,7 +1093,7 @@ describe('field NPC encounter requirements', () => {
     expect(candidate.result.selectedPossible).toBe(false);
     const target = candidate.result.eligibleTargetKeys[0];
     if (target === undefined) throw new Error('same-boss Growth needs a remaining eligible target');
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceSteadyGrowthTarget',
       outcome: growthOutcome,
       targetTraitKey: target,

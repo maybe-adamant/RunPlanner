@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  applyProjectHistoryCommand,
+  publishProjectHistoryEdit,
   createAcquisitionSiteAddress,
   createProjectHistory,
   redoProjectHistory,
@@ -21,7 +21,7 @@ import {
 import { evaluateRequirement, type RequirementExpression } from '@run-planner/engine/requirements';
 import { factsWithHistory } from '@run-planner/engine/reward-kernel';
 import { simulateProject, type RunStateSnapshot } from '@run-planner/engine/simulation';
-import { replaceTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import { replaceTestRoomActionOrder, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 import type { EquippedTrait } from '../../src/authored-project/traits/state';
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
@@ -380,11 +380,20 @@ describe('resource gains in the Run State product', () => {
 
   it('restores the prior gains when engine history undoes and redoes an edit', () => {
     const before = ordered(false);
-    const edited = applyProjectHistoryCommand(createProjectHistory(before), catalog, {
-      kind: 'ReplaceLocalReward',
-      reward: createLocalRewardAddress(goldenHBiome, occurrenceId, 'optionalRewards', 'optional1'),
-      value: { rewardType: 'MetaCardPointsCommonDrop' },
-    });
+    // The settled edit removes the optional pickup of the item it replaces.
+    const edited = publishProjectHistoryEdit(
+      createProjectHistory(before),
+      settleTestEdit(before, {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(
+          goldenHBiome,
+          occurrenceId,
+          'optionalRewards',
+          'optional1',
+        ),
+        value: { rewardType: 'MetaCardPointsCommonDrop' },
+      }),
+    );
     expect(hGains(edited.present)).toMatchObject({ exit: 250, next: 250 });
     const undone = undoProjectHistory(edited);
     expect(undone.present).toBe(before);
