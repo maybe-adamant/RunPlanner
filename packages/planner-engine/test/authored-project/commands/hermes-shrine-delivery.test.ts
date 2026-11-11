@@ -1618,12 +1618,27 @@ describe('flush-host admission after source retraction', () => {
     return collected;
   }
 
-  function expectDormant(project: ProjectDocument) {
+  /** Its source no longer produces the delivery: its pickup and payload go, announced at its host. */
+  function expectDiscarded(settled: ReturnType<typeof settle>, placed: ProjectDocument) {
+    expect(settled.fault).toBeUndefined();
+    const project = settled.assembly.project;
     expect(orderedKeys(project)).toEqual([]);
     expect(
       hostOf(project).acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey],
-    ).toMatchObject({ offer: { rewardType: 'HealBigDrop' } });
+    ).toBeUndefined();
     expect(requiredContribution(project)).toBeUndefined();
+    expect(settled.removedStaleActions).toContainEqual({
+      occurrence: host,
+      actions: orderedKeys(placed),
+      discarded: [
+        {
+          item: createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+            entryKey,
+          ),
+        },
+      ],
+    });
     const evaluation = evaluate(project).evaluation;
     expect(
       evaluation.findings
@@ -1635,7 +1650,7 @@ describe('flush-host admission after source retraction', () => {
     return evaluation;
   }
 
-  it('leaves retained payload dormant when the purchase is cleared and restores it on repurchase', () => {
+  it('discards the delivery when its purchase is cleared; a repurchase delivers a new item', () => {
     const placed = placedAtFlushHost();
     const cleared = settle(placed, {
       kind: 'SetHermesShrinePurchase',
@@ -1643,8 +1658,7 @@ describe('flush-host admission after source retraction', () => {
       generationKey: 'initial:first',
       purchased: false,
     });
-    expect(cleared.fault).toBeUndefined();
-    expect(expectDormant(cleared.assembly.project).status).toBe('valid');
+    expect(expectDiscarded(cleared, placed).status).toBe('valid');
     const history = publishProjectHistoryEdit(
       createProjectHistory(placed),
       cleared.assembly.project,
@@ -1671,15 +1685,14 @@ describe('flush-host admission after source retraction', () => {
     });
   });
 
-  it('leaves retained payload dormant when the Shrine is removed', () => {
+  it('discards the delivery when the Shrine is removed', () => {
     const placed = placedAtFlushHost();
     const removed = settle(placed, {
       kind: 'SetHermesShrinePresence',
       occurrence: source,
       present: false,
     });
-    expect(removed.fault).toBeUndefined();
-    expect(expectDormant(removed.assembly.project).status).toBe('valid');
+    expect(expectDiscarded(removed, placed).status).toBe('valid');
   });
 });
 

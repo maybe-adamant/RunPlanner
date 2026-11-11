@@ -47,6 +47,7 @@ import {
   discardRetainedHermesShrineDelivery,
   HERMES_SHRINE_DELIVERY_SITE_KEY,
   hermesShrineDeliverySourceAddress,
+  hermesShrineRushAction,
   isSameRoomDelivery,
   offerFor,
   parseHermesShrineDeliveryEntryKey,
@@ -171,17 +172,29 @@ function enteredRosters(assembly: ProjectEvaluationAssembly) {
 }
 
 /** The occurrence as authored, without the item content its rows record. */
-function withoutRecordedContent(occurrence: RoomOccurrence | undefined): string {
+function withoutRecordedContent(occurrence: RoomOccurrence | undefined): string | undefined {
   return JSON.stringify(occurrence, (key, value: unknown) =>
     key === 'content' || key === 'pressId' ? undefined : value,
   );
 }
 
 /** Whether the edit changed the room's authored occurrence; stamping content alone does not. */
-function roomEdited(before: ProjectDocument, after: ProjectDocument, owner: OccurrenceAddress) {
-  const previous = occurrenceAt(before, owner);
-  const next = occurrenceAt(after, owner);
-  return previous !== next && withoutRecordedContent(previous) !== withoutRecordedContent(next);
+type RoomEdited = (after: ProjectDocument, owner: OccurrenceAddress) => boolean;
+
+/** Judges rooms against the plan before the edit, reading each occurrence once per settlement. */
+function roomEditedSince(before: ProjectDocument): RoomEdited {
+  const previous = new Map<string, string | undefined>();
+  const next = new WeakMap<RoomOccurrence, string | undefined>();
+  return (after, owner) => {
+    const old = occurrenceAt(before, owner);
+    const now = occurrenceAt(after, owner);
+    if (old === now) return false;
+    const key = semanticAddressKey(owner);
+    if (!previous.has(key)) previous.set(key, withoutRecordedContent(old));
+    if (now === undefined) return previous.get(key) !== undefined;
+    if (!next.has(now)) next.set(now, withoutRecordedContent(now));
+    return previous.get(key) !== next.get(now);
+  };
 }
 
 /**
@@ -215,7 +228,7 @@ function addressedRoom(
  * evaluation does not reach keep their rows until it does.
  */
 function staleRowsToRemove(
-  before: ProjectEvaluationAssembly,
+  edited: RoomEdited,
   beforeRosters: ReturnType<typeof enteredRosters>,
   assembly: ProjectEvaluationAssembly,
   upgrade: boolean,
@@ -225,13 +238,12 @@ function staleRowsToRemove(
     const current = occurrenceAt(assembly.project, owner);
     if (current === undefined) continue;
     const prior = beforeRosters.get(roomKey)?.rows;
-    let edited: boolean | undefined = upgrade || undefined;
+    let changed: boolean | undefined = upgrade || undefined;
     for (const reference of current.roomActions.order) {
       const key = roomActionKey(reference);
       if (rows.get(key)?.stale !== true || reference.kind === 'interactKeepsakeRack') continue;
       const orphaned = prior?.get(key)?.stale === false;
-      if (!orphaned && (edited ??= roomEdited(before.project, assembly.project, owner)) === false)
-        continue;
+      if (!orphaned && (changed ??= edited(assembly.project, owner)) === false) continue;
       removals.push({ owner, reference });
     }
   }
@@ -255,14 +267,14 @@ function replacedItemRowKeys(document: ProjectDocument, catalog: Catalog): Reado
  */
 function replacedItemRowsToRemove(
   catalog: Catalog,
-  before: ProjectDocument,
+  edited: RoomEdited,
   prior: ReadonlySet<string>,
   after: ProjectDocument,
 ) {
   return roomActionsOnReplacedItems(after, catalog).filter(
     ({ owner, reference }) =>
       !prior.has(`${semanticAddressKey(owner)}|${roomActionKey(reference)}`) ||
-      roomEdited(before, after, owner),
+      edited(after, owner),
   );
 }
 
@@ -647,19 +659,47 @@ function sourcedElsewhere(owner: OccurrenceAddress, reference: RoomActionReferen
 }
 
 /**
- * Delivery items an edit replaced: a payload retained at a host while the walk
- * has its delivery due at another, which arrives there as a new item, or a
- * payload whose Shrine slot now stocks another reward. A due host is known only
- * where the walk reaches, and only an unplaced payload is judged by it (a placed
- * one is the displaced pass's). A changed stock is judged in every room, as a
- * row on a replaced item is: a mismatch the plan held before the edit goes only
- * with an edit of its host, and an upgrade takes every one.
+ * Why a delivery payload no longer belongs to the item its source produces, by
+ * the plan alone: its Shrine slot now stocks another reward, or its source no
+ * longer produces it (the purchase, or for one picked up in the Shrine's room
+ * the rush, is gone with its Shrine room or feature or by itself).
+ */
+function deliveryPayloadsOffTheirSource(project: ProjectDocument): ReadonlySet<string> {
+  const off = new Set<string>();
+  for (const { owner, occurrence } of occurrences(project)) {
+    const entries = occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY]?.pickupEntries;
+    for (const [entryKey, payload] of Object.entries(entries ?? {})) {
+      const source = parseHermesShrineDeliveryEntryKey(entryKey);
+      if (payload == null || source === undefined) continue;
+      const shrineAddress = hermesShrineDeliverySourceAddress(source);
+      const shrine = occurrenceAt(project, shrineAddress);
+      const order = shrine?.roomActions.order ?? [];
+      const produced = isSameRoomDelivery(shrineAddress, owner)
+        ? hermesShrineRushAction(order, source.generationKey) !== undefined
+        : purchasedOfferFor(shrine?.hermesShrine, order, source.generationKey) !== undefined;
+      const stock = offerFor(shrine?.hermesShrine, source.generationKey);
+      // An empty or unobserved slot names no item to tell it from.
+      const restocked = stock != null && stock.rewardType !== payload.offer.rewardType;
+      if (!produced || restocked) off.add(`${semanticAddressKey(owner)}|${entryKey}`);
+    }
+  }
+  return off;
+}
+
+/**
+ * Delivery items an edit replaced: a payload whose source no longer produces
+ * it or whose Shrine slot stocks another reward, judged in every room as a
+ * row on a replaced item is (one the plan held so before the edit, `prior`,
+ * goes only with an edit of its host, and an upgrade takes every one), and a
+ * payload retained unplaced at a host while the walk has its delivery due at
+ * another, judged only where the walk reaches (a placed one is the displaced
+ * pass's).
  */
 function replacedDeliveryPayloads(
-  before: ProjectDocument,
+  prior: ReadonlySet<string>,
+  edited: RoomEdited,
   assembly: ProjectEvaluationAssembly,
   artifacts: CandidateArtifacts,
-  upgrade: boolean,
 ): { owner: OccurrenceAddress; entryKey: string }[] {
   const rooms = occurrences(assembly.project);
   const dueHosts = new Map<string, string>();
@@ -671,29 +711,13 @@ function replacedDeliveryPayloads(
       if (capability.kind === 'hermesShrineDelivery')
         dueHosts.set(address.entryKey, semanticAddressKey(owner));
   }
-  const restocked = (project: ProjectDocument, owner: OccurrenceAddress, entryKey: string) => {
-    const payload = occurrenceAt(project, owner)?.acquisitionSites?.[
-      HERMES_SHRINE_DELIVERY_SITE_KEY
-    ]?.pickupEntries?.[entryKey];
-    const source = parseHermesShrineDeliveryEntryKey(entryKey);
-    if (payload == null || source === undefined) return false;
-    const stock = offerFor(
-      occurrenceAt(project, hermesShrineDeliverySourceAddress(source))?.hermesShrine,
-      source.generationKey,
-    );
-    // An empty or unobserved slot names no item to tell it from.
-    return stock != null && stock.rewardType !== payload.offer.rewardType;
-  };
+  const offSource = deliveryPayloadsOffTheirSource(assembly.project);
   const replaced: { owner: OccurrenceAddress; entryKey: string }[] = [];
   for (const { owner, occurrence } of rooms) {
     const entries = occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY]?.pickupEntries;
     for (const entryKey of Object.keys(entries ?? {})) {
-      if (
-        restocked(assembly.project, owner, entryKey) &&
-        (upgrade ||
-          !restocked(before, owner, entryKey) ||
-          roomEdited(before, assembly.project, owner))
-      ) {
+      const key = `${semanticAddressKey(owner)}|${entryKey}`;
+      if (offSource.has(key) && (!prior.has(key) || edited(assembly.project, owner))) {
         replaced.push({ owner, entryKey });
         continue;
       }
@@ -711,32 +735,33 @@ function replacedDeliveryPayloads(
   return replaced;
 }
 
+/** Every rerolled reward the plan holds off its press, by owner key. */
+function rerolledRewardsOffPress(project: ProjectDocument): RerolledRewardOwner[] {
+  return project.route.biomes.flatMap((plan) =>
+    plan.topology == null
+      ? []
+      : rerolledRewardsOffTheirPress(
+          createBiomeAddress(project.route.routeKey, plan.biomeKey),
+          plan.topology,
+        ),
+  );
+}
+
 /**
  * Rerolled rewards an edit left off their press: the press each recorded is no
  * longer its owner's effective one, so its outcomes belong to a replaced item.
  * Judged in every room, as a row on a replaced item is: one the plan held off
- * its press before the edit goes only with an edit of its room.
+ * its press before the edit (`prior`) goes only with an edit of its room.
  */
 function rerolledRewardsReplaced(
-  before: ProjectDocument,
+  prior: ReadonlySet<string>,
+  edited: RoomEdited,
   after: ProjectDocument,
-  upgrade: boolean,
 ): RerolledRewardOwner[] {
-  const offPress = (project: ProjectDocument) =>
-    project.route.biomes.flatMap((plan) =>
-      plan.topology == null
-        ? []
-        : rerolledRewardsOffTheirPress(
-            createBiomeAddress(project.route.routeKey, plan.biomeKey),
-            plan.topology,
-          ),
-    );
-  const prior = new Set(upgrade ? [] : offPress(before).map(semanticAddressKey));
-  return offPress(after).filter(
+  return rerolledRewardsOffPress(after).filter(
     (owner) =>
       !prior.has(semanticAddressKey(owner)) ||
-      roomEdited(
-        before,
+      edited(
         after,
         createOccurrenceAddress(
           createBiomeAddress(owner.routeKey, owner.biomeKey),
@@ -869,7 +894,15 @@ function settleProject(options: {
   let project = options.project;
   const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
   const beforeRosters = enteredRosters(before);
+  // What the plan already held replaced before the edit, read once: an upgrade takes every one.
   const priorReplaced = upgrade ? new Set<string>() : replacedItemRowKeys(before.project, catalog);
+  const priorOffPress = new Set(
+    upgrade ? [] : rerolledRewardsOffPress(before.project).map(semanticAddressKey),
+  );
+  const priorDeliveriesOffSource = upgrade
+    ? new Set<string>()
+    : deliveryPayloadsOffTheirSource(before.project);
+  const edited = roomEditedSince(before.project);
   // A removal in the room the edit addresses shows on the Timeline being edited; any other is announced.
   const room = command === undefined ? undefined : addressedRoom(projectCommandAddress(command));
   const silentRoom = room === undefined ? undefined : semanticAddressKey(room);
@@ -1099,7 +1132,12 @@ function settleProject(options: {
     const artifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
     // An installed route keeps exactly the rows it was authored with.
     if (command?.kind === 'ReplaceRoute') return settled(assembly);
-    const deliveries = replacedDeliveryPayloads(before.project, assembly, artifacts, upgrade);
+    const deliveries = replacedDeliveryPayloads(
+      priorDeliveriesOffSource,
+      edited,
+      assembly,
+      artifacts,
+    );
     if (deliveries.length > 0) {
       for (const { owner, entryKey } of deliveries) {
         const address = createAcquisitionEntryAddress(
@@ -1181,7 +1219,7 @@ function settleProject(options: {
       assembly = evaluate(project);
       continue;
     }
-    const offPress = rerolledRewardsReplaced(before.project, assembly.project, upgrade);
+    const offPress = rerolledRewardsReplaced(priorOffPress, edited, assembly.project);
     if (offPress.length > 0) {
       for (const owner of offPress) {
         const fault = consume(`rerolledReward:${semanticAddressKey(owner)}`, owner);
@@ -1199,12 +1237,7 @@ function settleProject(options: {
       continue;
     }
     // A row with no context or source has nothing to repair: the edit that orphans it removes it.
-    const replaced = replacedItemRowsToRemove(
-      catalog,
-      before.project,
-      priorReplaced,
-      assembly.project,
-    );
+    const replaced = replacedItemRowsToRemove(catalog, edited, priorReplaced, assembly.project);
     // The entry of a row on a replaced item holds the new item's observation: only the row goes.
     const replacedRows = new Set(
       replaced.map(
@@ -1212,7 +1245,7 @@ function settleProject(options: {
       ),
     );
     const stale = [
-      ...staleRowsToRemove(before, beforeRosters, assembly, upgrade),
+      ...staleRowsToRemove(edited, beforeRosters, assembly, upgrade),
       ...replaced,
       ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly, upgrade),
       ...cageGoneRerolls(before, assembly, upgrade),

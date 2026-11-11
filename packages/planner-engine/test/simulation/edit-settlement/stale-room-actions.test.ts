@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
@@ -673,8 +675,20 @@ describe('stale room actions in edit settlement', () => {
         purchased: false,
       });
       expect(order(unbought.assembly.project, host)).not.toContain(delivery);
+      // Its source no longer produces it: the payload goes with the pickup.
       expect(unbought.removedStaleActions).toEqual([
-        { occurrence: host, actions: [expect.anything()] },
+        {
+          occurrence: host,
+          actions: [expect.anything()],
+          discarded: [
+            {
+              item: createAcquisitionEntryAddress(
+                createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+                hermesShrineDeliveryEntryKey(shrine, 'initial:secondLeft'),
+              ),
+            },
+          ],
+        },
       ]);
       expect(removedIn(unbought, host)).toEqual([delivery]);
       expect(

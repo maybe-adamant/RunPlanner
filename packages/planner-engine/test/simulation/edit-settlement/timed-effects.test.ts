@@ -790,7 +790,7 @@ describe('timed-effect edit settlement', () => {
     expect(orders(restored)).toEqual([]);
     expect(orders(collectTestRequiredItems(restored))).toHaveLength(1);
   });
-  it('discards a reset retained delivery with its generated pickup site', () => {
+  it('discards an unbought delivery with its generated pickup site; a rebought one is new', () => {
     let project = loadSurfaceNOPQProject();
     const o = createBiomeAddress('Surface', 'O');
     const source = createOccurrenceAddress(o, createOccurrenceId('surface-o-combat07'));
@@ -849,14 +849,22 @@ describe('timed-effect edit settlement', () => {
     const quickBuck = supportedTraitOffer(project, trait, 'Hermes', 'MoneyMultiplierBoon');
     if (quickBuck === undefined) throw new Error('expected a Quick Buck Hermes offer');
     project = settle(project, { kind: 'ReplaceTraitOffer', trait, value: quickBuck }).project;
+    expect(
+      Object.keys(occurrence(project, lateHostId).acquisitionSites ?? {}).some((site) =>
+        site.startsWith('traitGenerated:'),
+      ),
+    ).toBe(true);
+    // Unbought, its source no longer produces the delivery: it goes with its generated pickup site.
     project = purchase(null);
     const retainedHost = occurrence(project, lateHostId);
-    expect(retainedHost.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[key]).toBeDefined();
+    expect(
+      retainedHost.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[key],
+    ).toBeUndefined();
     expect(
       Object.keys(retainedHost.acquisitionSites ?? {}).some((site) =>
         site.startsWith('traitGenerated:'),
       ),
-    ).toBe(true);
+    ).toBe(false);
 
     const settled = collectTestRequiredItems(purchase(2));
     const earlyHost = occurrence(settled, 'surface-o-combat01');

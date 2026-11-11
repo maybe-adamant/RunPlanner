@@ -19,6 +19,7 @@ import {
   createShopOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  hermesShrineDeliveryEntryKey,
   roomActionKey,
   type OccurrenceAddress,
   type ProjectCommand,
@@ -671,6 +672,29 @@ describe('rows on a replaced item in edit settlement', () => {
       expect(settled.removedStaleActions).toEqual([
         { occurrence: host, actions: [delivery], discarded: [{ item: entryOf(delivery) }] },
       ]);
+    });
+
+    it('discards a rushed delivery with its pickup when its rush is undone, silently', () => {
+      const project = loadCheckpoint('surface-no-hermes-shrine-delivery');
+      const entry = createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(shrine, 'hermesShrineDelivery'),
+        hermesShrineDeliveryEntryKey(shrine, 'initial:first'),
+      );
+      expect(deliveryAt(project, entry)).toMatchObject({ placed: true });
+      expect(deliveryAt(project, entry).offer).toBeDefined();
+      const settled = settle(project, {
+        kind: 'SetHermesShrineRush',
+        occurrence: shrine,
+        generationKey: 'initial:first',
+        rushed: false,
+      });
+      expect(settled.fault).toBeUndefined();
+      // The rush produced the item in the Shrine's room; unrushed, the purchase delivers a new one.
+      expect(deliveryAt(settled.assembly.project, entry)).toEqual({
+        offer: undefined,
+        placed: false,
+      });
+      expect(settled.removedStaleActions).toBeUndefined();
     });
 
     it('discards it at its old host, announced, when it comes due at another', () => {

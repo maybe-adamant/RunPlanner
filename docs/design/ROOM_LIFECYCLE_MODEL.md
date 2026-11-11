@@ -553,8 +553,10 @@ Every removal:
 - happens in the edit that causes it, in the same Undo step, through the
   command that owns the row's removal;
 - leaves the spawn's own choices with the source or feature that owns them (a
-  delivered item's offer, a refill's item and hidden god), so restoring the
-  source restores them; only the row goes;
+  refill's item and hidden god), so restoring the source restores them; only
+  the row goes. A Hermes delivery is the exception: its payload is the item
+  its purchase or rush produced, so it goes with them as a replaced item
+  (below);
 - is silent in the room the edit addresses, where it happens on the Timeline
   being edited, and announced prominently in any other room, naming the room;
   an edit that addresses no single room (a route, biome or Hub owner)
@@ -584,7 +586,9 @@ every stale row the walk reaches; a Gold Gold Gold duplicate that a purchase
 stands before while no Echo produces it; a matured trait drop whose producing
 trait a walk without it never holds and that reaches the plan's end; a
 countdown delivery whose purchase is gone; and the replaced deliveries and
-Echo replays below, as the saved plan and its walk show them. Every batch's doors settle as
+Echo replays below, as the saved plan and its walk show them, with no
+announcement: an Echo replay the walk reaches holding another reward than the
+walk's last goes there, its pickup with it. Every batch's doors settle as
 above. Whatever the plan cannot show had its source stays with its finding,
 as the never-removed list keeps it: a Travel Deal refill or a duplicate the
 saved plan already shows unproduced, a drop whose producer is held or may lie
@@ -609,8 +613,9 @@ projects over a long edit history.
 | -------------------------------------------------- | ---- | --------------------------------------- |
 | Phase or wheel the room no longer plays            | 1    | removed, silent                         |
 | Artificer replacement, reward set back to normal   | 2    | removed, silent                         |
-| Refill or rushed Shrine pickup, its rush undone    | 2    | removed, silent                         |
-| Hermes delivery, its Shrine purchase undone        | 2    | removed, announced in the delivery room |
+| Refill pickup, its purchase undone                 | 2    | removed, silent                         |
+| Rushed Shrine pickup, its rush undone              | 2    | discarded, silent                       |
+| Hermes delivery, its Shrine purchase undone        | 2    | discarded, announced in its room        |
 | Artificer card unequipped upstream                 | 3    | transform invalid                       |
 | Travel Deal no longer held                         | 3    | refill purchase invalid                 |
 | Gold Gold Gold duplicate, boon swapped away        | 3    | removed, announced in the shop room     |
@@ -656,10 +661,12 @@ pickup and the items derived from it; the new item lies live. Each is silent in
 the room the edit addresses and announced in any other, naming the replaced
 items beside the removed rows:
 
-- **A Hermes delivery** whose Shrine slot now stocks another reward, judged in
-  every room as a row on a replaced item is, or whose payload lies unplaced at a
-  host while the walk has the delivery due at another, judged only where the
-  walk reaches. A placed delivery the edit displaces is unplaced first and then
+- **A Hermes delivery** whose source no longer produces it (its purchase, or
+  for a pickup in the Shrine's room its rush, is gone, or the Shrine with it)
+  or whose Shrine slot now stocks another reward, judged in every room as a
+  row on a replaced item is; or whose payload lies unplaced at a host while
+  the walk has the delivery due at another, judged only where the walk
+  reaches. A placed delivery the edit displaces is unplaced first and then
   judged the same way.
 - **A rerolled reward's outcomes** once the press that drew it is no longer its
   owner's effective press (a later press, an earlier one again, or none): they
@@ -673,6 +680,13 @@ items beside the removed rows:
   stays. A replay in a room the walk does not reach stays until an edit's
   settlement reaches it, and one never observed keeps only its missing-offer
   finding.
+
+A delivery or rerolled reward the plan already held replaced before the edit
+goes only with an edit of its own room, as a row on a replaced item does: the
+plan shows the mismatch on its own, so an unrelated edit elsewhere leaves it
+with its finding. An Echo replay goes at any edit whose walk reaches it,
+because only the walk names its reward: no earlier settlement can be known to
+have judged it, so the first one that reaches it does.
 
 ### Lifecycle structure and authoring timeline
 

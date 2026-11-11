@@ -53,9 +53,11 @@ the plan once, silently, removing
 only what the saved plan shows had its source or context and lost it: stale
 room-action rows; a Gold Gold Gold duplicate that a purchase stands before
 while no Echo produces it; a matured trait drop whose producing trait a walk
-without it, reaching the plan's end, never holds; a countdown Hermes delivery
-whose purchase is gone or whose Shrine slot stocks another reward; an Echo
-replay the walk reaches holding another reward than its last; and an
+without it, reaching the plan's end, never holds; a countdown Hermes delivery, its
+payload with it, whose purchase is gone or whose Shrine slot stocks another
+reward; an Echo
+replay the walk reaches holding another reward than its last, silently, with
+its pickup; and an
 unselected door its source room no longer has, with the rooms behind it. A
 rerolled reward records no press: the next edit of its biome stamps it. A takeover batch gains the Preboss doors it
 lacks, and a due delivery the plan lacks is placed, as any edit places it.
