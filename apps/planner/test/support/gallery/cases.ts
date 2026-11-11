@@ -847,9 +847,39 @@ export const galleryCases: readonly GalleryCase[] = [
     }),
   ),
   {
+    id: 'ship-three-phase-unplaced-delivery',
+    roomTab: 'shipCombat1Actions',
+    label: 'Three-phase Ship room: an unplaced delivery waits on the tab of the fight maturing it',
+    shows: ['ship phase', 'required action', 'unplaced delivery'],
+    project: shipNonFinalDeliveryProject,
+    commands: [
+      (project) => {
+        const delivery = authoredOccurrence(
+          project,
+          'O',
+          'surface-o-combat02',
+        ).roomActions.order.find(
+          (reference) =>
+            reference.kind === 'interactAcquisitionEntry' &&
+            reference.siteKey === 'hermesShrineDelivery',
+        );
+        if (delivery === undefined) throw new Error('surface-o-combat02 places no delivery');
+        return {
+          kind: 'UnplaceGeneratedDelivery',
+          action: createRoomActionAddress(
+            surfaceO,
+            createOccurrenceId('surface-o-combat02'),
+            roomActionKey(delivery),
+          ),
+        };
+      },
+    ],
+    target: room('O', 'surface-o-combat02'),
+  },
+  {
     id: 'outcome-aetos-gorgon',
-    label: 'P combat room: Aetos wave and Gorgon condition at Combat',
-    shows: ['Combat outcome', 'Aetos wave', 'Gorgon condition'],
+    label: 'P combat room: Aetos wave and Gorgon condition on its one Encounter marker',
+    shows: ['Encounter outcome', 'merged marker', 'Aetos wave', 'Gorgon condition'],
     project: loadSurfaceNOPProject,
     commands: [athenaAmulet],
     target: room('P', 'surface-p-1-1-p_combat03'),

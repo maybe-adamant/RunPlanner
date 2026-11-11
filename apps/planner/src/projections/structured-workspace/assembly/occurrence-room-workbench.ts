@@ -76,18 +76,30 @@ function shipWorkbenchPresentation(
   const phaseRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
   const phaseUnplacedRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
   const repairRows: WorkspaceRoomActionRow[] = [];
-  // A row off the Timeline has no engine phase: a gate and a wheel's reroll stand with the
-  // wheel they use, and any other row with the last phase, where new actions are appended.
+  // A row off the Timeline sits on its engine phase's tab, but a row a wheel's choice waits
+  // on stands with the fight before it, as its gate does.
+  const phaseIndexOrLast = (phaseKey: string | undefined): number => {
+    const index =
+      phaseKey === undefined ? -1 : roomLocal.phases.findIndex((phase) => phase.key === phaseKey);
+    return index < 0 ? roomLocal.phases.length - 1 : index;
+  };
   const tabForUnrankedRow = (row: WorkspaceRoomActionRow): number => {
-    const gated = gatePhaseIndexByActionKey.get(row.key);
-    if (gated !== undefined) return precedingTab(gated);
-    const reference = row.reference;
-    if (reference.kind === 'reroll' && reference.target.kind === 'wheelOffer') {
-      const wheelKey = reference.target.wheelKey;
-      const tab = roomLocal.phases.findIndex((_, index) => wheelForTab(index)?.key === wheelKey);
-      if (tab >= 0) return tab;
+    const timing = row.timing;
+    switch (timing.kind) {
+      case 'afterEncounterEnd':
+        return phaseIndexOrLast(timing.phaseKey);
+      case 'beforeWheelPhase':
+      case 'beforeWheelChoice':
+        return timing.phaseKey === undefined
+          ? roomLocal.phases.length - 1
+          : precedingTab(phaseIndexOrLast(timing.phaseKey));
+      case 'afterWheelPhase':
+      case 'beforeCombat':
+      case 'afterCombat':
+      case 'fields':
+      case 'afterDoorsOpen':
+        return phaseIndexOrLast(row.phaseKey);
     }
-    return roomLocal.phases.length - 1;
   };
   const phaseOptionalRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
   const phaseTimelineEntries = roomLocal.phases.map(
@@ -120,14 +132,17 @@ function shipWorkbenchPresentation(
       const gated = gatePhaseIndexByActionKey.get(entry.actionKey);
       if (gated !== undefined) tabIndex = Math.max(tabIndex, gated);
     }
-    // Rows past the stop keep the engine's order: a gate still closes its tab, and a Combat's
-    // outcome events or end effects open their phase's.
+    // Rows past the stop sit as rows off the Timeline do; a banner's events and an end effect
+    // with their phase.
     for (const entry of roomActions.timeline.notReached ?? []) {
-      if (entry.kind !== 'action') tabIndex = Math.max(tabIndex, phaseIndexForKey(entry.phaseKey));
-      phaseNotReached[tabIndex]!.push(entry);
-      const gated =
-        entry.kind === 'action' ? gatePhaseIndexByActionKey.get(entry.actionKey) : undefined;
-      if (gated !== undefined) tabIndex = Math.max(tabIndex, gated);
+      const row = entry.kind === 'action' ? actionByKey.get(entry.actionKey) : undefined;
+      phaseNotReached[
+        entry.kind !== 'action'
+          ? phaseIndexOrLast(entry.phaseKey)
+          : row === undefined
+            ? roomLocal.phases.length - 1
+            : tabForUnrankedRow(row)
+      ]!.push(entry);
     }
     for (const checkpoint of roomActions.checkpoints) {
       if (checkpoint.key === 'exitUsable') continue;

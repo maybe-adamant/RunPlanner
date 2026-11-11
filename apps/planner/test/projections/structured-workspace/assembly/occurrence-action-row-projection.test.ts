@@ -562,7 +562,7 @@ describe('structured workspace actions assembly', () => {
         expect.objectContaining({
           participation: 'optional',
           rank: null,
-          window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+          timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
           placement: {
             command: expect.objectContaining({
               kind: 'PlaceClockedTraitPickup',
@@ -691,7 +691,7 @@ describe('structured workspace actions assembly', () => {
         reward: { offer: { rewardType: 'MixerFBossDrop' }, boosted: false },
       },
       participation: 'required',
-      window: { kind: 'standard', phase: 'afterCombat' },
+      timing: { kind: 'afterCombat' },
     });
     if (collect === undefined) throw new Error('expected the Boss reward action');
     expect(entryKeys.indexOf('Encounter ended')).toBeLessThan(entryKeys.indexOf(collect.key));
@@ -969,7 +969,7 @@ describe('structured workspace actions assembly', () => {
       participation: 'required',
       rank: null,
       reference: { encounterPhaseKey: 'Encounter' },
-      window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+      timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
     });
     expect(dueRow?.placement?.command).toEqual({
       kind: 'PlaceHermesShrineDelivery',
@@ -995,7 +995,7 @@ describe('structured workspace actions assembly', () => {
       sourceFamily: { kind: 'hermesShrineDelivery' },
       labelParts: { origin: 'Delivered from the Hermes Shrine' },
       participation: 'required',
-      window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+      timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
     });
     expect(placedRow?.rank).not.toBeNull();
     expect(placedRow?.placement).toBeUndefined();
