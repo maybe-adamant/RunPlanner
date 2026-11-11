@@ -1706,11 +1706,7 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source",
-                    "content": [
-                      "native",
-                      "MetaCurrencyBigDrop"
-                    ]
+                    "acquisitionRole": "source"
                   },
                   {
                     "kind": "interactIncomingReward",

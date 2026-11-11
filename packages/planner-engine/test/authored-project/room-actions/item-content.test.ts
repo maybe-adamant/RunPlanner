@@ -112,10 +112,9 @@ describe('item content', () => {
         (reference) => reference.kind === 'reroll',
       );
       expect(press?.kind).toBe('reroll');
-      expect(contentOf(project, at(f, 'golden-f-b6-e1'), pickup)).toEqual([
-        press?.kind === 'reroll' ? press.rerollId : '',
-        'RoomMoneyDrop',
-      ]);
+      expect(
+        contentOf(project, at(f, 'golden-f-b6-e1'), { ...pickup, acquisitionRole: 'self' }),
+      ).toEqual([press?.kind === 'reroll' ? press.rerollId : '', 'RoomMoneyDrop']);
     });
 
     it('reads a Well purchase’s generation item, unpinned as unobserved', () => {
@@ -170,6 +169,36 @@ describe('item content', () => {
     it('records nothing for a row that acts on no item', () => {
       const project = loadCheckpoint('underworld-fg');
       expect(contentOf(project, at(f, 'golden-f-b2-e1'), { kind: 'useFountain' })).toBeNull();
+    });
+
+    it('stamps no pickup of a role its reward never has: it acts on no item', () => {
+      const room = at(f, 'golden-f-b2-e1');
+      // A stale Boon pickup left on a Gold reward, which has no source role: it acts on no item.
+      const raw = JSON.parse(encodeProjectDocument(loadCheckpoint('underworld-fg')));
+      const stored = raw.route.biomes
+        .find((plan: { biomeKey: string }) => plan.biomeKey === 'F')
+        .topology.occurrences.find(
+          (candidate: { occurrenceId: string }) => candidate.occurrenceId === room.occurrenceId,
+        );
+      stored.state.reward = {
+        offer: { rewardType: 'RoomMoneyDrop' },
+        traitOffersByAcquisitionRole: {},
+        dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+      };
+      stored.roomActions.order = [pickup];
+      const stale = decodeProjectDocument(raw, catalog);
+      // An edit of the biome stamps the rows it can; the stale one keeps none.
+      const edited = applyProjectCommand(stale, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: {
+          kind: 'incomingReward',
+          routeKey: 'Underworld',
+          biomeKey: 'F',
+          occurrenceId: room.occurrenceId,
+        },
+        value: { rewardType: 'MaxManaDrop' },
+      });
+      expect(roomOf(edited, room).roomActions.order).toEqual([pickup]);
     });
   });
 

@@ -343,11 +343,7 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source",
-                    "content": [
-                      "native",
-                      "WeaponUpgrade"
-                    ]
+                    "acquisitionRole": "source"
                   }
                 ]
               },

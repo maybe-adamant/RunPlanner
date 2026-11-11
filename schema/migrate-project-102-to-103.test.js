@@ -190,7 +190,7 @@ describe('schema 102 to 103 migration', () => {
     const fight = host.encounters.customizationByLockedExit.exit2;
     delete host.encounters.customizationByLockedExit;
     host.roomActions.order.find((row) => row.kind === 'unlockExit').customization = fight;
-    assert.deepEqual(step.liftProjectDocument(saved), current);
+    assert.deepEqual(step.liftProjectDocument(saved, engine.catalog), current);
     const migrated = migrate(saved);
     assert.deepEqual(gHost(migrated).encounters.customizationByLockedExit, { exit2: fight });
     assert.deepEqual(
@@ -325,6 +325,15 @@ describe('schema 102 to 103 migration', () => {
       kind: 'purchaseStygianWellOffer',
       generationKey: 'initial:secondLeft',
     });
+    // A pickup of a role its reward never has acts on no item: it stays without content.
+    const lifted = step.liftProjectDocument(at102(checkpoint('underworld-fg')), engine.catalog);
+    const stale = lifted.route.biomes
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((occurrence) => occurrence.occurrenceId === 'golden-g-b1-e1')
+      .roomActions.order.find(
+        (action) => action.kind === 'interactIncomingReward' && action.acquisitionRole === 'source',
+      );
+    assert.deepEqual(JSON.stringify(stale), stalePickup);
   });
 
   it('lifts by the version alone a plan its settlement leaves as it was', () => {
@@ -339,11 +348,14 @@ describe('schema 102 to 103 migration', () => {
     const legacy = at102(checkpoint('underworld-fg'));
     const catalog = { ...engine.catalog, heroMaxStats: undefined };
     assert.doesNotThrow(() =>
-      engine.parseProjectDocument(JSON.stringify(step.liftProjectDocument(legacy)), catalog),
+      engine.parseProjectDocument(
+        JSON.stringify(step.liftProjectDocument(legacy, catalog)),
+        catalog,
+      ),
     );
     assert.deepEqual(
       step.migrateProjectDocument(legacy, { catalog }),
-      step.liftProjectDocument(legacy),
+      step.liftProjectDocument(legacy, catalog),
     );
   });
 });

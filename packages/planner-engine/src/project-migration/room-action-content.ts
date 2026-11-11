@@ -16,6 +16,15 @@ function rawRecord(value: unknown): RawRecord | undefined {
     : undefined;
 }
 
+/** Whether some producer acquires a reward of this type in this role. */
+function rewardHasRole(catalog: Catalog, rewardType: string, role: unknown): boolean {
+  return Object.values(catalog.rewards.producerLifecycles.byKey).some((lifecycle) =>
+    (lifecycle.rewardTypes.byKey[rewardType]?.acquisitionLifecycle ?? []).some(
+      (binding) => binding.role === role,
+    ),
+  );
+}
+
 /** The content a stored row gets, or none when its item or its own shape cannot say. */
 function storedContent(
   source: RoomActionContentSource,
@@ -29,11 +38,17 @@ function storedContent(
       action as unknown as RoomActionReference,
     );
     // A malformed item stays for strict decoding to reject, unstamped.
-    return content !== null &&
-      content.length > 0 &&
-      content.every((value) => typeof value === 'string' && value.trim().length > 0)
-      ? content
-      : undefined;
+    if (
+      content === null ||
+      content.length === 0 ||
+      !content.every((value) => typeof value === 'string' && value.trim().length > 0)
+    )
+      return undefined;
+    // A stale pickup of a role its reward never has acts on no item and records none.
+    return action.kind === 'interactIncomingReward' &&
+      !rewardHasRole(source.catalog, content[1]!, action.acquisitionRole)
+      ? undefined
+      : content;
   } catch {
     return undefined;
   }

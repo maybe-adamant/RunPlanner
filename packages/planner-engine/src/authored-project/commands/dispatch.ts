@@ -1,5 +1,5 @@
 import { reconcileDerivedItems } from '../acquisition/derived-items';
-import { contentTouchedBiomeKeys, stampRoomActionContent } from '../room-actions/item-content';
+import { contentTouchedBiomeKeys, stampRoomActionContent } from '../room-actions/content-stamping';
 import type { Catalog } from '../../catalog-schema';
 import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
