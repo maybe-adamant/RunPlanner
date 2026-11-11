@@ -77,7 +77,7 @@ describe('removed actions announcement', () => {
     expect(removedActionsLead(1)).toBe('1 action removed at');
   });
 
-  it('counts the replaced items whose rolls and choices a room lost', () => {
+  it('counts the items whose rolls and choices a room lost apart from its removals', () => {
     const shrine = createOccurrenceAddress(surfaceO, createOccurrenceId('surface-o-combat07'));
     const host = createOccurrenceAddress(surfaceO, createOccurrenceId('surface-o-devotion'));
     // Restocking the Shrine slot replaces the countdown delivery due at the Devotion room.
@@ -104,9 +104,9 @@ describe('removed actions announcement', () => {
     expect(others).toEqual([]);
     expect(room).toMatchObject({ count: 1, doors: 0, items: 1, selection: { origin: host } });
     expect(removedActionsLead(room!.count, room!.doors, room!.items)).toBe(
-      '1 action and 1 replaced item removed at',
+      '1 action removed and 1 item reset at',
     );
-    expect(removedActionsLead(0, 0, 2)).toBe('2 replaced items removed at');
-    expect(removedActionsLead(1, 1, 1)).toBe('1 action, 1 door and 1 replaced item removed at');
+    expect(removedActionsLead(0, 0, 2)).toBe('2 items reset at');
+    expect(removedActionsLead(1, 1, 1)).toBe('1 action and 1 door removed, 1 item reset at');
   });
 });
