@@ -716,8 +716,8 @@ exactly when it also holds its one `{ kind: 'rushHermesShrineOffer',
 generationKey }` reference, the later interaction with the bought item; no
 purchase state is persisted beside them. The codec rejects a purchase action
 whose item is not stocked, a rush without its purchase, and a same-room Shrine
-pickup without its rush; a rush that does not directly follow its purchase
-is kept with its ordering finding. Its rushed or delayed delivery owns concrete acquisition
+pickup without its rush; a rush ordered before its purchase is kept with its
+ordering finding. Its rushed or delayed delivery owns concrete acquisition
 payload. A Stygian Well or Pool of Purging holds what the game rolled on it,
 with no interaction flag: its initial stock, where a blank slot stays native,
 a pinned one is assessed, and a slot becomes required only once a purchase or
@@ -887,15 +887,15 @@ deliveries while retaining delivery payload. `PurchaseHermesShrineOffer`
 instead appends the purchase of one unbought item at the end of the room's
 actions, first stocking a blank Travel Deal refill when given its reward, as
 one Undo step. `SetHermesShrineRush` rushes one bought item, inserting its rush
-action directly after its purchase, the only index it accepts, or un-rushes it,
-removing that action and retracting its optional same-room pickup; a rushed
-item's pickup is the owner's to place. The rush settles with its purchase, so
-the pair stays adjacent: moving the purchase carries its rush, generic Room
-Action insertion and removal reject the rush reference, and an insertion or
-move that parts the pair is refused. When any of these commands changes the
-first rushed initial purchase, the refill's purchase, its rush and its pickup
-are rescheduled after that purchase's rush; when no rushed initial purchase
-remains, the refill's pickup is retracted.
+action directly after its purchase or at any structurally authorable index
+after it in the same room, or un-rushes it, removing that action and retracting
+its optional same-room pickup; a rushed item's pickup is the owner's to place.
+The rush settles at its own row, so it and its purchase move independently,
+each judged by the prefix rule; generic Room Action insertion and removal
+reject the rush reference. When any of these commands changes the
+first initial rush, the refill's purchase, its rush and its pickup are
+rescheduled after that rush; when no initial rush remains, the refill's pickup
+is retracted.
 
 `MoveRoomAction` changes one ranked action's position within the complete
 chronology; `ReplaceAcquisitionEntryOffer` edits only a declaration-compatible
