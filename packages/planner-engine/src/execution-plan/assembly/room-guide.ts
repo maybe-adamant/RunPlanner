@@ -7,6 +7,7 @@ import { hermesShrineRushAction } from '../../authored-project/hermes-shrine-del
 import { hermesShrineInitialSlotKey, type RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
+import { performedRoomActions } from '../../simulation/room-actions';
 import { rerollGuideDescription } from './rerolls';
 import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type {
@@ -212,7 +213,7 @@ function descriptionFor(
         rewardType: offer.rewardType,
         rushed:
           hermesShrineRushAction(
-            room.roomActionRoster.rows.map((row) => row.reference),
+            performedRoomActions(room.roomActionRoster),
             reference.generationKey,
           ) !== undefined,
       });

@@ -28,6 +28,7 @@ import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model'
 import type { Catalog } from '../../catalog-schema';
 import { chaosGateSpawnPoint } from '../../authored-project/chaos-gate-position';
 import { fieldsSpatialPositions } from '../../simulation/fields/spatial';
+import { performedRoomActions } from '../../simulation/room-actions';
 import { roomObjectAnchorPositions } from '../../simulation/room-layout/object-anchor-positions';
 import { resolvedEncounterPhaseForDefinition } from '../../simulation/encounters/resolve';
 import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
@@ -539,7 +540,9 @@ function shrinePurchase(
     : {
         deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, generationKey),
         purchase: Object.freeze({
-          rushed: hermesShrineRushAction(order, generationKey) !== undefined,
+          rushed:
+            hermesShrineRushAction(performedRoomActions(room.roomActionRoster), generationKey) !==
+            undefined,
         }),
       };
 }
@@ -600,9 +603,7 @@ function executionWellOffers(
   rollKey: string,
 ): readonly ExecutionWellOffer[] {
   const view = wellOccurrenceView(room);
-  const purchased = stygianWellPurchasedGenerationKeys(
-    room.roomActionRoster.rows.flatMap((row) => (row.rank === null ? [] : [row.reference])),
-  );
+  const purchased = stygianWellPurchasedGenerationKeys(performedRoomActions(room.roomActionRoster));
   return Object.freeze(
     STYGIAN_WELL_SLOT_KEYS.flatMap((slotKey) => {
       const generationKey = stygianWellGenerationKey(rollKey, slotKey);

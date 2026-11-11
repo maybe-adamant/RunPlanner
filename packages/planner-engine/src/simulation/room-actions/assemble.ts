@@ -290,6 +290,15 @@ export function assembleRoomActionRoster(options: {
   });
 }
 
+/**
+ * The actions the walk performs, in rank order: every ranked row that is not
+ * stale. The walk and execution publication read a room's purchases and rushes
+ * from this one input.
+ */
+export function performedRoomActions(roster: RoomActionRoster): readonly RoomActionReference[] {
+  return roster.rows.flatMap((row) => (row.stale || row.rank === null ? [] : [row.reference]));
+}
+
 /** Restrict execution to an engine-assessed active phase prefix without mutating authorship. */
 export function scopeRoomActionRoster(
   roster: RoomActionRoster,

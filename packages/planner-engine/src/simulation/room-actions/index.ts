@@ -1,6 +1,7 @@
 export {
   assessRoomActionPlacements,
   assembleRoomActionRoster,
+  performedRoomActions,
   scopeRoomActionRoster,
 } from './assemble';
 export {

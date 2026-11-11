@@ -12,7 +12,7 @@ import { createBiomeAddress, createRoomActionAddress } from '../../authored-proj
 import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import { roomLifecycleWindowOrdinal } from '../../authored-project/room-actions/lifecycle-structure';
-import type { RoomActionRoster, RoomActionRow } from '../room-actions';
+import { performedRoomActions, type RoomActionRoster, type RoomActionRow } from '../room-actions';
 import { purgingPoolSalePoint } from '../commerce/feature-rolls';
 
 type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];
@@ -1219,15 +1219,13 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   });
 }
 
-/** The Shrine generations whose rush row stands in the room's actions. */
+/** The Shrine generations whose rush the walk performs. */
 function rushedShrineGenerations(
   roster: RoomActionRoster,
 ): ReadonlySet<import('../../authored-project/model').HermesShrineGenerationKey> {
   return new Set(
-    roster.rows.flatMap((row) =>
-      row.reference.kind === 'rushHermesShrineOffer' && !row.stale && row.rank !== null
-        ? [row.reference.generationKey]
-        : [],
+    performedRoomActions(roster).flatMap((reference) =>
+      reference.kind === 'rushHermesShrineOffer' ? [reference.generationKey] : [],
     ),
   );
 }

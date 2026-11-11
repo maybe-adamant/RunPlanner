@@ -195,7 +195,9 @@ transactions nor participate in Timeline dependencies, obligations, or
 conformance; unavailable or desynchronized room state hides the presentation.
 A Shrine purchase row is informational on the wire and carries its generation,
 reward type and rush; the authored rush row publishes through it, never as a
-row of its own. The module shows it as `Shrine: X` and, when rushed, a
+row of its own. A purchase counts as rushed, and a Well generation as bought,
+exactly when the walk performs that row (a ranked, non-stale row), the same
+input the simulation settles them from. The module shows it as `Shrine: X` and, when rushed, a
 following `Rush: X`, and hides each step from the native Shrine options
 (`Purchased` marks a purchase; a rush removes the option). A delivered Shrine
 pickup is the ordinary acquisition row; outside its rushed purchase room it
