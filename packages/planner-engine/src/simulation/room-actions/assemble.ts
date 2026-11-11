@@ -5,6 +5,10 @@ import {
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
 import { roomActionKey } from '../../authored-project/room-actions/state';
+import {
+  roomActionContentMatches,
+  roomActionReferenceContent,
+} from '../../authored-project/room-actions/item-content';
 import type { RoomActionReference } from '../../authored-project/model';
 import type { AcquisitionEntrySourceFamily } from '../../authored-project/acquisition/entry-source-family';
 import {
@@ -66,6 +70,10 @@ export function assembleRoomActionRoster(options: {
   );
   const rows: RoomActionRow[] = options.order.map((reference, index) => {
     const entry = active.get(roomActionKey(reference));
+    // The row was placed for content its item no longer holds: a replaced item.
+    const itemReplaced =
+      entry !== undefined &&
+      !roomActionContentMatches(reference, roomActionReferenceContent(entry.reference) ?? null);
     const sourceFamily =
       entry === undefined
         ? options.retainedSourceFamilies?.get(roomActionKey(reference))
@@ -86,7 +94,8 @@ export function assembleRoomActionRoster(options: {
       ...(sourceFamily === undefined ? {} : { sourceFamily }),
       rank: index + 1,
       stale: entry === undefined,
-      executable: entry !== undefined && !issueKeys.has(roomActionKey(reference)),
+      ...(itemReplaced ? { itemReplaced: true as const } : {}),
+      executable: entry !== undefined && !itemReplaced && !issueKeys.has(roomActionKey(reference)),
     });
   });
   for (const action of actions) {
@@ -286,17 +295,19 @@ export function assembleRoomActionRoster(options: {
       nodes: frozen(timelineNodes),
       dependencies: frozen(timelineDependencies),
     }),
-    valid: issues.length === 0,
+    valid: issues.length === 0 && !rows.some((row) => row.itemReplaced === true),
   });
 }
 
 /**
- * The actions the walk performs, in rank order: every ranked row that is not
- * stale. The walk and execution publication read a room's purchases and rushes
+ * The actions the walk performs, in rank order: every ranked row that is
+ * neither stale nor on a replaced item. The walk and execution publication read a room's purchases and rushes
  * from this one input.
  */
 export function performedRoomActions(roster: RoomActionRoster): readonly RoomActionReference[] {
-  return roster.rows.flatMap((row) => (row.stale || row.rank === null ? [] : [row.reference]));
+  return roster.rows.flatMap((row) =>
+    row.stale || row.itemReplaced === true || row.rank === null ? [] : [row.reference],
+  );
 }
 
 /** Restrict execution to an engine-assessed active phase prefix without mutating authorship. */

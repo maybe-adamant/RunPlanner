@@ -717,6 +717,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'echoGoldPickupPlacementRequired':
       return presented('acquisition', finding);
     case 'roomActionOrderUnavailable':
+    case 'roomActionItemReplaced':
     case 'roomActionPlacementRequired':
       return presented('generic', finding);
     case 'hermesShrineInventoryMissing':

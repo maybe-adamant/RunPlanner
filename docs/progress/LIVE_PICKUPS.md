@@ -238,10 +238,6 @@ Draft or the run import depend on that C2 changes.
   stays with its `rerolledRewardMismatch` finding, its pickup rows go
   (announced from a Hub edit), and the first draw is live once the pick is
   dropped.
-  Only a swap that changes the keyed role set removes rows: a row is keyed
-  by kind, producer point and acquisition role, so a same-key swap (Zeus Boon
-  to Hera Boon at the same point and role) keeps its row today; item-keyed
-  rows are planned for C5.
 - **Wheel candidates.** `rewardWheelStore`, `rewardWheelOfferCount` and the
   Ship encounter-count candidates answer for a wheel opened at Wheels open
   whose choice is unplaced (they threw before); its acquisition is projected

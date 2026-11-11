@@ -127,7 +127,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "AphroditeUpgrade"
+                    ]
                   }
                 ]
               },
@@ -185,7 +190,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "WeaponUpgrade"
+                    ]
                   }
                 ]
               },
@@ -476,7 +485,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "AphroditeUpgrade"
+                    ]
                   }
                 ]
               },
@@ -593,7 +607,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "DemeterUpgrade"
+                    ]
                   }
                 ]
               },
@@ -667,7 +686,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxHealthDrop"
+                    ]
                   }
                 ]
               },
@@ -738,7 +761,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "HeraUpgrade"
+                    ]
                   }
                 ]
               },
@@ -809,7 +837,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "ZeusUpgrade"
+                    ]
                   }
                 ]
               },
@@ -855,7 +888,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "AirBoost"
+                    ]
                   }
                 ]
               },
@@ -925,7 +962,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxHealthDropBig"
+                    ]
                   },
                   {
                     "kind": "interactEncounter",
@@ -1230,11 +1271,19 @@
                 "order": [
                   {
                     "kind": "interactShopOffer",
-                    "offerKey": "MajorNonBoon"
+                    "offerKey": "MajorNonBoon",
+                    "content": [
+                      "ArmorBoost",
+                      "ArmorBoost"
+                    ]
                   },
                   {
                     "kind": "interactShopOffer",
-                    "offerKey": "Boon"
+                    "offerKey": "Boon",
+                    "content": [
+                      "BlindBoxLoot",
+                      "BlindBoxLoot"
+                    ]
                   }
                 ]
               },
@@ -1709,7 +1758,13 @@
                   },
                   {
                     "kind": "interactWheelReward",
-                    "wheelKey": "wheel1"
+                    "wheelKey": "wheel1",
+                    "content": [
+                      "offer1",
+                      "native",
+                      "Boon",
+                      "ZeusUpgrade"
+                    ]
                   }
                 ]
               },
@@ -1794,12 +1849,24 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "beforeCombat",
-                    "acquisitionRole": "chosenSource"
+                    "acquisitionRole": "chosenSource",
+                    "content": [
+                      "native",
+                      "Devotion",
+                      "ZeusUpgrade",
+                      "HeraUpgrade"
+                    ]
                   },
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "afterCombat",
-                    "acquisitionRole": "spurnedSource"
+                    "acquisitionRole": "spurnedSource",
+                    "content": [
+                      "native",
+                      "Devotion",
+                      "ZeusUpgrade",
+                      "HeraUpgrade"
+                    ]
                   }
                 ]
               },
@@ -1841,7 +1908,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "GiftDrop"
+                    ]
                   },
                   {
                     "kind": "useFountain"
@@ -1849,7 +1920,11 @@
                   {
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "[\"acquisitionSite\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"e4162a2e-23bb-4b61-bede-9a3c21ea7d01\\\"]\",\"artificerSource:%5B%22incomingReward%22%2C%22Surface%22%2C%22O%22%2C%22e4162a2e-23bb-4b61-bede-9a3c21ea7d01%22%5D\"]",
-                    "entryKey": "artificer:%5B%22incomingReward%22%2C%22Surface%22%2C%22O%22%2C%22e4162a2e-23bb-4b61-bede-9a3c21ea7d01%22%5D:self"
+                    "entryKey": "artificer:%5B%22incomingReward%22%2C%22Surface%22%2C%22O%22%2C%22e4162a2e-23bb-4b61-bede-9a3c21ea7d01%22%5D:self",
+                    "content": [
+                      "Boon",
+                      "HeraUpgrade"
+                    ]
                   }
                 ]
               },
@@ -1952,7 +2027,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "ZeusUpgrade"
+                    ]
                   }
                 ]
               },
@@ -2138,7 +2218,13 @@
                   },
                   {
                     "kind": "interactWheelReward",
-                    "wheelKey": "wheel1"
+                    "wheelKey": "wheel1",
+                    "content": [
+                      "offer1",
+                      "native",
+                      "Boon",
+                      "DemeterUpgrade"
+                    ]
                   },
                   {
                     "kind": "chooseRewardWheel",
@@ -2146,7 +2232,12 @@
                   },
                   {
                     "kind": "interactWheelReward",
-                    "wheelKey": "wheel2"
+                    "wheelKey": "wheel2",
+                    "content": [
+                      "offer1",
+                      "native",
+                      "HermesUpgrade"
+                    ]
                   }
                 ]
               },
@@ -2213,7 +2304,11 @@
                 "order": [
                   {
                     "kind": "interactShopOffer",
-                    "offerKey": "Boon"
+                    "offerKey": "Boon",
+                    "content": [
+                      "BlindBoxLoot",
+                      "BlindBoxLoot"
+                    ]
                   }
                 ]
               },
@@ -2324,7 +2419,10 @@
                   },
                   {
                     "kind": "purchaseHermesShrineOffer",
-                    "generationKey": "initial:secondLeft"
+                    "generationKey": "initial:secondLeft",
+                    "content": [
+                      "BlindBoxLoot"
+                    ]
                   }
                 ]
               },
@@ -2596,7 +2694,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxManaDrop"
+                    ]
                   }
                 ]
               },
@@ -2684,7 +2786,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "RoomMoneyDrop"
+                    ]
                   }
                 ]
               },
@@ -2760,7 +2866,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "TrialUpgrade"
+                    ]
                   }
                 ]
               },
@@ -2806,7 +2916,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "WeaponUpgrade"
+                    ]
                   }
                 ]
               },

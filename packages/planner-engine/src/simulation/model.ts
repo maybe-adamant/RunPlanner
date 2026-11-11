@@ -33,6 +33,8 @@ export type RoomGenerationFindingCode =
 
 export type EncounterResolutionFindingCode =
   | 'roomActionOrderUnavailable'
+  /** A ranked row whose item was replaced since it was placed. */
+  | 'roomActionItemReplaced'
   | 'encounterSlotActivationUnavailable'
   | 'encounterUnavailable'
   | 'encounterCustomizationUnavailable'

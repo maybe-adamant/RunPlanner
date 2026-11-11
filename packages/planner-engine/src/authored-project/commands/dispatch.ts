@@ -1,4 +1,5 @@
 import { reconcileDerivedItems } from '../acquisition/derived-items';
+import { stampRoomActionContent } from '../room-actions/item-content';
 import type { Catalog } from '../../catalog-schema';
 import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
@@ -449,10 +450,14 @@ export function applyProjectCommand(
     );
     // Generated detours can delete occurrences after the direct command.
     // Close route-owned references against that final topology.
+    // A row placed before its item was observed records the content observed since.
     return decodeProjectDocument(
-      reconcilePlanEndTopology(
-        reconcileResourcePlacementTopology(reconciled),
-        command.kind === 'ClearTopology' ? command.biome.biomeKey : undefined,
+      stampRoomActionContent(
+        document,
+        reconcilePlanEndTopology(
+          reconcileResourcePlacementTopology(reconciled),
+          command.kind === 'ClearTopology' ? command.biome.biomeKey : undefined,
+        ),
       ),
       catalog,
     );

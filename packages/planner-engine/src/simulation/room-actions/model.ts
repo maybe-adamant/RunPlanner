@@ -46,6 +46,11 @@ export interface RoomActionRow {
    */
   readonly sourceFamily?: import('../../authored-project/acquisition/entry-source-family').AcquisitionEntrySourceFamily;
   readonly stale: boolean;
+  /**
+   * A ranked row placed for an item whose content has since changed: never
+   * executed, carrying a finding, its item unplaced until settlement removes it.
+   */
+  readonly itemReplaced?: true;
   readonly executable: boolean;
 }
 

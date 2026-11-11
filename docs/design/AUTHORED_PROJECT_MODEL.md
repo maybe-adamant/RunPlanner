@@ -957,6 +957,37 @@ document unchanged. A Timeline
 banner is not an address: the engine's reset query maps each Timeline entry
 to its command, a banner to the ranked actions before it.
 
+### Item content on rows
+
+A row that acts on an item (picking up a room, cage, optional or wheel reward,
+a Shop, Pedestal or refill purchase, a Well purchase, a Shrine purchase or
+rush, a Pool sale, an acquisition entry's pickup) may carry an optional
+`content`: the identity-bearing observation of that item when the row was
+placed. It is never part of the row's key, so owners, finding and Undo
+addresses and the published plan do not see it. The engine derives it per
+kind:
+
+| Row                                           | Content                                                                                         |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Room reward, cage reward                      | the press that drew it (`native`, or the last reroll's id) and its reward                       |
+| Fields optional reward                        | its reward                                                                                      |
+| Wheel reward                                  | the picked offer, its press and its reward                                                      |
+| Shop, Pedestal or Travel Deal refill purchase | the option and its reward                                                                       |
+| Well purchase                                 | the generation's item                                                                           |
+| Shrine purchase or rush                       | the stocked reward type                                                                         |
+| Pool sale                                     | the slot's trait in its list                                                                    |
+| Acquisition entry                             | its payload's reward; a Nemesis result also its event kind, a switch claim the switch's variant |
+
+A reward is named by its type and the gods its payload names (a Devotion
+pair's chosen and spurned gods both). An item not observed yet (an unpinned
+Well or Pool slot, an unset reward, a payload not authored, Echo's replays)
+has no content. Every command stamps the rows of the biomes it changed that
+recorded none once their item is observed, and engine-built references (the
+roster's, the live product's) carry it; `InsertRoomAction` refuses a
+reference whose content its item does not hold. The codec accepts any
+recorded content; a row whose item holds other content is
+[an item-replaced row](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
+
 ### Room layout and positions
 
 Whether something exists is never optional; where an existing thing stands is

@@ -3,6 +3,7 @@ import type {
   HermesShrineGenerationKey,
   OccurrenceId,
   RerollTarget,
+  RoomActionContent,
   RoomActionReference,
   RoomActionState,
 } from '../../model';
@@ -59,6 +60,26 @@ function decodeRerollTarget(value: unknown, path: string): RerollTarget {
   failProjectDocument(`${path}.kind`, `unknown reroll target ${kind}`);
 }
 
+/** The item content a row recorded: a non-empty list of non-blank strings. */
+function decodeRoomActionContent(value: unknown, path: string): RoomActionContent {
+  const content = expectArray(value, path);
+  if (content.length === 0) failProjectDocument(path, 'must name the item content');
+  return Object.freeze(
+    content.map((entry, index) => expectNonBlankString(entry, `${path}.${index}`)),
+  );
+}
+
+/** The optional `content` key a row acting on an item may carry, and its decoded value. */
+function contentField(reference: Record<string, unknown>, path: string) {
+  const hasContent = Object.hasOwn(reference, 'content');
+  return {
+    keys: hasContent ? ['content'] : [],
+    value: hasContent
+      ? { content: decodeRoomActionContent(reference.content, `${path}.content`) }
+      : {},
+  };
+}
+
 function decodeRoomActionReference(
   value: unknown,
   catalog: Catalog,
@@ -71,11 +92,15 @@ function decodeRoomActionReference(
     kind === 'useFountain' ||
     kind === 'interactKeepsakeRack' ||
     kind === 'interactEris' ||
-    kind === 'interactChallengeSwitch' ||
-    kind === 'interactInfernalContractPedestal'
+    kind === 'interactChallengeSwitch'
   ) {
     expectExactKeys(reference, ['kind'], path);
     return Object.freeze({ kind });
+  }
+  const content = contentField(reference, path);
+  if (kind === 'interactInfernalContractPedestal') {
+    expectExactKeys(reference, ['kind', ...content.keys], path);
+    return Object.freeze({ kind, ...content.value });
   }
   if (kind === 'completeFieldsCage' || kind === 'interactEncounter' || kind === 'interactGorgon') {
     expectExactKeys(reference, ['kind', 'phaseKey'], path);
@@ -85,49 +110,61 @@ function decodeRoomActionReference(
     });
   }
   if (kind === 'interactIncomingReward') {
-    expectExactKeys(reference, ['kind', 'producerPoint', 'acquisitionRole'], path);
+    expectExactKeys(reference, ['kind', 'producerPoint', 'acquisitionRole', ...content.keys], path);
     return Object.freeze({
       kind,
       producerPoint: expectNonBlankString(reference.producerPoint, `${path}.producerPoint`),
       acquisitionRole: expectNonBlankString(reference.acquisitionRole, `${path}.acquisitionRole`),
+      ...content.value,
     });
   }
   if (kind === 'interactLocalReward') {
-    expectExactKeys(reference, ['kind', 'groupKey', 'slotKey'], path);
+    expectExactKeys(reference, ['kind', 'groupKey', 'slotKey', ...content.keys], path);
     return Object.freeze({
       kind,
       groupKey: expectNonBlankString(reference.groupKey, `${path}.groupKey`),
       slotKey: expectNonBlankString(reference.slotKey, `${path}.slotKey`),
+      ...content.value,
     });
   }
-  if (kind === 'chooseRewardWheel' || kind === 'interactWheelReward') {
+  if (kind === 'chooseRewardWheel') {
     expectExactKeys(reference, ['kind', 'wheelKey'], path);
     return Object.freeze({
       kind,
       wheelKey: expectNonBlankString(reference.wheelKey, `${path}.wheelKey`),
     });
   }
+  if (kind === 'interactWheelReward') {
+    expectExactKeys(reference, ['kind', 'wheelKey', ...content.keys], path);
+    return Object.freeze({
+      kind,
+      wheelKey: expectNonBlankString(reference.wheelKey, `${path}.wheelKey`),
+      ...content.value,
+    });
+  }
   if (kind === 'interactShopOffer') {
-    expectExactKeys(reference, ['kind', 'offerKey'], path);
+    expectExactKeys(reference, ['kind', 'offerKey', ...content.keys], path);
     if (reference.offerKey === 'travelDealRefill')
       failProjectDocument(path, 'Travel Deal uses its roomExit acquisition entry participation');
     return Object.freeze({
       kind,
       offerKey: expectNonBlankString(reference.offerKey, `${path}.offerKey`),
+      ...content.value,
     });
   }
   if (kind === 'purchaseStygianWellOffer') {
-    expectExactKeys(reference, ['kind', 'generationKey'], path);
+    expectExactKeys(reference, ['kind', 'generationKey', ...content.keys], path);
     return Object.freeze({
       kind,
       generationKey: decodeStygianWellGenerationKey(
         reference.generationKey,
         `${path}.generationKey`,
       ),
+      ...content.value,
     });
   }
   if (kind === 'purchaseHermesShrineOffer' || kind === 'rushHermesShrineOffer') {
-    expectExactKeys(reference, ['kind', 'generationKey'], path);
+    expectExactKeys(reference, ['kind', 'generationKey', ...content.keys], path);
     const generationKey = expectNonBlankString(reference.generationKey, `${path}.generationKey`);
     if (
       !['initial:first', 'initial:secondLeft', 'initial:secondRight', 'travelDealRefill'].includes(
@@ -138,11 +175,16 @@ function decodeRoomActionReference(
     return Object.freeze({
       kind,
       generationKey: generationKey as HermesShrineGenerationKey,
+      ...content.value,
     });
   }
   if (kind === 'sellPurgingPoolTrait') {
     const hasRollKey = Object.hasOwn(reference, 'rollKey');
-    expectExactKeys(reference, ['kind', 'slotKey', ...(hasRollKey ? ['rollKey'] : [])], path);
+    expectExactKeys(
+      reference,
+      ['kind', 'slotKey', ...(hasRollKey ? ['rollKey'] : []), ...content.keys],
+      path,
+    );
     const slotKey = expectNonBlankString(reference.slotKey, `${path}.slotKey`);
     if (slotKey !== 'left' && slotKey !== 'middle' && slotKey !== 'right')
       failProjectDocument(`${path}.slotKey`, 'must be a declared Pool slot key');
@@ -151,13 +193,20 @@ function decodeRoomActionReference(
       kind,
       slotKey,
       ...(hasRollKey ? { rollKey: decodeRerollId(reference.rollKey, `${path}.rollKey`) } : {}),
+      ...content.value,
     });
   }
   if (kind === 'interactAcquisitionEntry') {
     const hasEncounterPhaseKey = Object.hasOwn(reference, 'encounterPhaseKey');
     expectExactKeys(
       reference,
-      ['kind', 'siteKey', 'entryKey', ...(hasEncounterPhaseKey ? ['encounterPhaseKey'] : [])],
+      [
+        'kind',
+        'siteKey',
+        'entryKey',
+        ...(hasEncounterPhaseKey ? ['encounterPhaseKey'] : []),
+        ...content.keys,
+      ],
       path,
     );
     return Object.freeze({
@@ -172,6 +221,7 @@ function decodeRoomActionReference(
             ),
           }
         : {}),
+      ...content.value,
     });
   }
   if (kind === 'unlockExit') {

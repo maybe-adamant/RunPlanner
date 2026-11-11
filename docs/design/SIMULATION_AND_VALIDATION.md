@@ -756,7 +756,8 @@ Instance identity belongs in the address, not the code. Messages and display
 labels are application products. An actual lifecycle action block retains each
 matching dependency or window violation as invalid ordering; a missing required
 action remains incomplete. Stale roster rows are never executed and create no
-findings; a Purging Pool sale of a trait the game cannot sell is an active,
+findings; a row on a replaced item is never executed and stops the walk with
+its own finding; a Purging Pool sale of a trait the game cannot sell is an active,
 invalid row with its finding, like a Shop purchase past the god cap.
 The walk enforces the [roster's](ROOM_LIFECYCLE_MODEL.md#roster) required-first
 order as placement does: a row ranked before a required action of an earlier

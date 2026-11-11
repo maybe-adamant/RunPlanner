@@ -1,4 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
+import { roomActionContentMatches, roomActionReferenceContent } from '../room-actions/item-content';
 import type { ProjectDocument, RoomActionReference } from '../model';
 import { roomActionKey } from '../room-actions/state';
 import {
@@ -253,6 +254,13 @@ export function applyRoomActionCommand(
       if (!occurrenceIsActive || domain === undefined || contribution?.kind !== 'action') {
         failCommand(command, 'room action is not active for this occurrence');
       }
+      if (
+        !roomActionContentMatches(
+          command.reference,
+          roomActionReferenceContent(contribution.reference) ?? null,
+        )
+      )
+        failCommand(command, 'reference names content its item does not hold');
       if (existingIndex >= 0) failCommand(command, 'room action is already ordered');
       requireIndex(command, command.index, order.length, 'index');
       if (contribution.participation === 'required') {

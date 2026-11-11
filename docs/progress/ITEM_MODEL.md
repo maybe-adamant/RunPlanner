@@ -166,6 +166,27 @@ C5b-4, Sea Star proc as an observation (no schema change):
   branch) it returns true without placing anything, so an imported proc
   leaves its duplicate live; fix it in the consumer pass.
 
+C5b wave B, item content on rows (schema 103 shape):
+
+- Pickup, purchase and sale references carry an optional `content` (outside
+  the row key and the wire): build them from the roster or the live product,
+  which carry it, or leave it absent and let the command stamp it once the
+  item is observed; `InsertRoomAction` refuses a reference whose content its
+  item does not hold. `withItemContent` (engine test support) builds an
+  expected reference.
+- A value-to-value rewrite of an item (another reward at the same role, a
+  door, cage or wheel press, another Shop option, Well or Pool pin, Shrine
+  stock or wheel pick) removes its rows in settlement; the new item lies live
+  to be placed again. Run import's iterative rewrites (first draws after
+  rerolls, Artificer replacements) that change a placed item's value must
+  re-place the row from the live product; unknown-to-value is a refinement and
+  keeps it.
+- A row on a replaced item that an edit does not settle (an unsettled
+  `applyProjectCommand`, a hand-edited file) stays ranked as an
+  item-replaced row: not executed, `roomActionItemReplaced` at the walk.
+  Builders that swap a reward after placing its pickup must swap first or
+  settle.
+
 Wave A review follow-ups:
 
 - A Well or Pool reroll never takes an id the room's rows still name (a

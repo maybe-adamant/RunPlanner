@@ -298,9 +298,17 @@ export interface FieldsCombatState {
 }
 
 /**
+ * What a pickup, purchase or sale row acts on: the content of its item when
+ * the row was placed (see `roomActionItemContent`). Never part of the row's
+ * key; a row whose item now holds different content no longer applies.
+ */
+export type RoomActionContent = readonly string[];
+
+/**
  * One stable reference to a player-triggered interaction owned by a room
  * occurrence. Payload remains on the referenced semantic owner; this union
- * stores chronology identity only.
+ * stores chronology identity and, for a row acting on an item, that item's
+ * content.
  */
 export type RoomActionReference =
   | { readonly kind: 'collectRequiredReward' }
@@ -309,28 +317,48 @@ export type RoomActionReference =
       readonly kind: 'interactIncomingReward';
       readonly producerPoint: string;
       readonly acquisitionRole: string;
+      readonly content?: RoomActionContent;
     }
   | {
       readonly kind: 'interactLocalReward';
       readonly groupKey: string;
       readonly slotKey: string;
+      readonly content?: RoomActionContent;
     }
   | { readonly kind: 'chooseRewardWheel'; readonly wheelKey: string }
-  | { readonly kind: 'interactWheelReward'; readonly wheelKey: string }
-  | { readonly kind: 'interactShopOffer'; readonly offerKey: string }
-  | { readonly kind: 'interactInfernalContractPedestal' }
-  | { readonly kind: 'purchaseStygianWellOffer'; readonly generationKey: StygianWellGenerationKey }
+  | {
+      readonly kind: 'interactWheelReward';
+      readonly wheelKey: string;
+      readonly content?: RoomActionContent;
+    }
+  | {
+      readonly kind: 'interactShopOffer';
+      readonly offerKey: string;
+      readonly content?: RoomActionContent;
+    }
+  | { readonly kind: 'interactInfernalContractPedestal'; readonly content?: RoomActionContent }
+  | {
+      readonly kind: 'purchaseStygianWellOffer';
+      readonly generationKey: StygianWellGenerationKey;
+      readonly content?: RoomActionContent;
+    }
   | {
       readonly kind: 'purchaseHermesShrineOffer';
       readonly generationKey: HermesShrineGenerationKey;
+      readonly content?: RoomActionContent;
     }
   /** Rushing one bought Shrine item: it is delivered in this room, not counted down. */
-  | { readonly kind: 'rushHermesShrineOffer'; readonly generationKey: HermesShrineGenerationKey }
+  | {
+      readonly kind: 'rushHermesShrineOffer';
+      readonly generationKey: HermesShrineGenerationKey;
+      readonly content?: RoomActionContent;
+    }
   | {
       readonly kind: 'sellPurgingPoolTrait';
       readonly slotKey: PurgingPoolSlotKey;
       /** The sold list's reroll id; absent is the initial list. */
       readonly rollKey?: string;
+      readonly content?: RoomActionContent;
     }
   | { readonly kind: 'interactEncounter'; readonly phaseKey: string }
   | { readonly kind: 'interactGorgon'; readonly phaseKey: string }
@@ -340,6 +368,7 @@ export type RoomActionReference =
       readonly entryKey: string;
       /** Exact encounter end at which a cross-occurrence Shrine delivery matured. */
       readonly encounterPhaseKey?: string;
+      readonly content?: RoomActionContent;
     }
   | { readonly kind: 'useFountain' }
   | { readonly kind: 'interactKeepsakeRack' }

@@ -15,8 +15,11 @@ const checkpoint = (id) =>
       'utf8',
     ),
   );
+/** Schema 102 rows recorded no item content. */
+const withoutContent = (document) =>
+  JSON.parse(JSON.stringify(document, (key, value) => (key === 'content' ? undefined : value)));
 const at102 = (current, revision = 1) => ({
-  ...current,
+  ...withoutContent(current),
   schemaVersion: 102,
   schemaRevision: revision,
 });
@@ -26,7 +29,7 @@ const gOpening = (document) =>
   document.route.biomes
     .flatMap((biome) => biome.topology?.occurrences ?? [])
     .find((occurrence) => occurrence.occurrenceId === 'golden-g-b1-e1')
-    .roomActions.order.map((action) => JSON.stringify(action));
+    .roomActions.order.map((action) => JSON.stringify(withoutContent(action)));
 const stalePickup = JSON.stringify({
   kind: 'interactIncomingReward',
   producerPoint: 'roomRewardPickup',
@@ -262,6 +265,15 @@ describe('schema 102 to 103 migration', () => {
           : [action],
     );
 
+    // The Surface start is not this document's route start, so its pickup's content cannot
+    // be read here; it keeps the content it was saved with.
+    const surfaceStart = surface.route.biomes[0].topology.startOccurrenceId;
+    const startOf = (document) =>
+      document.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .find((occurrence) => occurrence.occurrenceId === surfaceStart);
+    startOf(stored).roomActions = structuredClone(startOf(current).roomActions);
+
     const lifted = step.liftProjectDocument(stored, engine.catalog);
     assert.deepEqual(lifted, current);
     // Each plan alone decodes strictly and migrates, settlement included, to its 103 form.
@@ -284,6 +296,35 @@ describe('schema 102 to 103 migration', () => {
         engine.parseProjectDocument(JSON.stringify(migrated), engine.catalog),
       );
     }
+  });
+
+  it('stamps each pickup, purchase and sale row with its item’s content, losslessly', () => {
+    for (const id of [
+      'underworld-world-shop-travel-deal',
+      'surface-shrine-travel-deal',
+      'surface-no',
+    ]) {
+      const current = checkpoint(id);
+      const stored = at102(current);
+      assert.ok(!JSON.stringify(stored).includes('"content"'));
+      assert.ok(JSON.stringify(current).includes('"content"'));
+      assert.deepEqual(step.liftProjectDocument(stored, engine.catalog), current);
+    }
+    // A row whose item is not observed stays without content, to be stamped once it is.
+    const current = checkpoint('underworld-f-stygian-well');
+    const stored = at102(current);
+    const well = (document) =>
+      document.route.biomes[0].topology.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === 'golden-f-preboss-shop:postboss',
+      );
+    well(stored).stygianWell.offerKeyBySlot.secondLeft = null;
+    const purchase = well(step.liftProjectDocument(stored, engine.catalog)).roomActions.order.find(
+      (action) => action.generationKey === 'initial:secondLeft',
+    );
+    assert.deepEqual(purchase, {
+      kind: 'purchaseStygianWellOffer',
+      generationKey: 'initial:secondLeft',
+    });
   });
 
   it('lifts by the version alone a plan its settlement leaves as it was', () => {

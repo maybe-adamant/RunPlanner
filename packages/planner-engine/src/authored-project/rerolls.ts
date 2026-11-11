@@ -334,7 +334,7 @@ export function hubRerolledOwners(
  */
 export function biomeRerolledOwners(
   biome: BiomeAddress,
-  topology: BiomeTopology,
+  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
 ): ReadonlyMap<string, OwnerRerolls> {
   const owners = new Map<string, OwnerRerolls>();
   for (const occurrence of topology.occurrences)

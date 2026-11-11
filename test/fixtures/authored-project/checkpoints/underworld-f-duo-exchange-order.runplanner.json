@@ -129,7 +129,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "WeaponUpgrade"
+                    ]
                   }
                 ]
               },
@@ -173,12 +177,19 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCardPointsCommonDrop"
+                    ]
                   },
                   {
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "[\"acquisitionSite\",\"Underworld\",\"F\",\"[\\\"occurrence\\\",\\\"Underworld\\\",\\\"F\\\",\\\"e9c1775e-a04b-4ed2-b749-7ef344614cbe\\\"]\",\"artificerSource:%5B%22incomingReward%22%2C%22Underworld%22%2C%22F%22%2C%22e9c1775e-a04b-4ed2-b749-7ef344614cbe%22%5D\"]",
-                    "entryKey": "artificer:%5B%22incomingReward%22%2C%22Underworld%22%2C%22F%22%2C%22e9c1775e-a04b-4ed2-b749-7ef344614cbe%22%5D:self"
+                    "entryKey": "artificer:%5B%22incomingReward%22%2C%22Underworld%22%2C%22F%22%2C%22e9c1775e-a04b-4ed2-b749-7ef344614cbe%22%5D:self",
+                    "content": [
+                      "HermesUpgrade"
+                    ]
                   }
                 ]
               },
@@ -285,7 +296,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "HeraUpgrade"
+                    ]
                   }
                 ]
               },
@@ -392,11 +408,19 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "HeraUpgrade"
+                    ]
                   },
                   {
                     "kind": "purchaseStygianWellOffer",
-                    "generationKey": "initial:secondLeft"
+                    "generationKey": "initial:secondLeft",
+                    "content": [
+                      "TemporaryBoonRarityTrait"
+                    ]
                   }
                 ]
               },
@@ -506,7 +530,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "RoomMoneyDrop"
+                    ]
                   },
                   {
                     "kind": "interactEncounter",
@@ -590,7 +618,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "ApolloUpgrade"
+                    ]
                   }
                 ]
               },
@@ -651,7 +684,12 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source"
+                    "acquisitionRole": "source",
+                    "content": [
+                      "native",
+                      "Boon",
+                      "PoseidonUpgrade"
+                    ]
                   }
                 ]
               },
@@ -762,12 +800,19 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MetaCurrencyDrop"
+                    ]
                   },
                   {
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "[\"acquisitionSite\",\"Underworld\",\"F\",\"[\\\"occurrence\\\",\\\"Underworld\\\",\\\"F\\\",\\\"f4adb787-5267-4ce6-8712-e53744e505ff\\\"]\",\"artificerSource:%5B%22incomingReward%22%2C%22Underworld%22%2C%22F%22%2C%22f4adb787-5267-4ce6-8712-e53744e505ff%22%5D\"]",
-                    "entryKey": "artificer:%5B%22incomingReward%22%2C%22Underworld%22%2C%22F%22%2C%22f4adb787-5267-4ce6-8712-e53744e505ff%22%5D:self"
+                    "entryKey": "artificer:%5B%22incomingReward%22%2C%22Underworld%22%2C%22F%22%2C%22f4adb787-5267-4ce6-8712-e53744e505ff%22%5D:self",
+                    "content": [
+                      "StackUpgrade"
+                    ]
                   }
                 ]
               },
@@ -906,12 +951,21 @@
                 "order": [
                   {
                     "kind": "interactShopOffer",
-                    "offerKey": "Boon"
+                    "offerKey": "Boon",
+                    "content": [
+                      "RandomLoot",
+                      "RandomLoot",
+                      "ApolloUpgrade"
+                    ]
                   },
                   {
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "roomExit",
-                    "entryKey": "travelDealRefill"
+                    "entryKey": "travelDealRefill",
+                    "content": [
+                      "BlindBoxLoot",
+                      "BlindBoxLoot"
+                    ]
                   }
                 ]
               },
@@ -1039,7 +1093,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "InfernalContractBoon"
+                    ]
                   }
                 ]
               },
@@ -1174,7 +1232,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "GiftDrop"
+                    ]
                   }
                 ]
               },
@@ -1225,7 +1287,11 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self"
+                    "acquisitionRole": "self",
+                    "content": [
+                      "native",
+                      "MaxManaDrop"
+                    ]
                   }
                 ]
               },
@@ -1318,12 +1384,24 @@
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "beforeCombat",
-                    "acquisitionRole": "chosenSource"
+                    "acquisitionRole": "chosenSource",
+                    "content": [
+                      "native",
+                      "Devotion",
+                      "ApolloUpgrade",
+                      "PoseidonUpgrade"
+                    ]
                   },
                   {
                     "kind": "interactIncomingReward",
                     "producerPoint": "afterCombat",
-                    "acquisitionRole": "spurnedSource"
+                    "acquisitionRole": "spurnedSource",
+                    "content": [
+                      "native",
+                      "Devotion",
+                      "ApolloUpgrade",
+                      "PoseidonUpgrade"
+                    ]
                   }
                 ]
               },
@@ -1471,16 +1549,30 @@
               "roomActions": {
                 "order": [
                   {
-                    "kind": "interactInfernalContractPedestal"
+                    "kind": "interactInfernalContractPedestal",
+                    "content": [
+                      "BlindBoxLoot",
+                      "BlindBoxLoot"
+                    ]
                   },
                   {
                     "kind": "interactShopOffer",
-                    "offerKey": "Boon"
+                    "offerKey": "Boon",
+                    "content": [
+                      "RandomLoot",
+                      "RandomLoot",
+                      "ApolloUpgrade"
+                    ]
                   },
                   {
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "roomExit",
-                    "entryKey": "travelDealRefill"
+                    "entryKey": "travelDealRefill",
+                    "content": [
+                      "RandomLoot",
+                      "RandomLoot",
+                      "HeraUpgrade"
+                    ]
                   }
                 ]
               },

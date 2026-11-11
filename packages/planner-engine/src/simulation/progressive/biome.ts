@@ -143,6 +143,16 @@ function lifecycleBlockFindings(
         : semanticAddressKey(candidate.owner) === semanticAddressKey(blockedAt),
     );
     if (row === undefined || row.stale) continue;
+    // A row for a replaced item is not performed, whatever else it lacks.
+    if (row.itemReplaced === true)
+      return Object.freeze([
+        Object.freeze({
+          code: 'roomActionItemReplaced',
+          phase: 'encounterResolution',
+          origin: blockedAt,
+          evidence: Object.freeze({}),
+        }),
+      ]);
     const issues = room.roomActionRoster.issues;
     // A required action of an earlier window ordered after the row stops the walk at the
     // row; that crossing is the row's one reason, not also a window issue of the later action.

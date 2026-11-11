@@ -46,6 +46,14 @@ export {
   seaStarDuplicateSourceIsActive,
 } from './acquisition/sea-star';
 export { activeRoomActionReferences } from './room-actions/state';
+export {
+  biomePlanContentSource,
+  roomActionContentMatches,
+  roomActionItemContent,
+  roomActionReferenceContent,
+  withRoomActionContent,
+  type RoomActionContentSource,
+} from './room-actions/item-content';
 export { directEncounterDefinitionKeyForSlot } from './room-state/encounter-envelope';
 export {
   resolveEntryDeclaration,
@@ -466,6 +474,7 @@ export {
   type ProjectDocument,
   type RoomOccurrence,
   type RoomLayout,
+  type RoomActionContent,
   type RoomActionReference,
   type RoomEncounterState,
   type ShopOfferState,

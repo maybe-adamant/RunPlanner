@@ -621,10 +621,23 @@ projects over a long edit history.
 | Hub board reroll, its slot closed or entered       | 4    | invalid                                 |
 | Trait drop, trait held but matures elsewhere       | 4    | invalid                                 |
 | Reward swapped, a pickup role it no longer has     | 1    | removed, silent; the new reward is live |
+| Item replaced: same key, different content         | 1    | removed; the new item is live           |
 
-A pickup row is keyed by its producer point and acquisition role, not its
-item, so a swap that keeps the role (Zeus Boon to Hera Boon at the same point)
-keeps the row today; keying rows by item is planned.
+A pickup, purchase or sale row records the content of the item it acts on
+([item content](AUTHORED_PROJECT_MODEL.md#item-content-on-rows)); its key does
+not. The row applies while it recorded no content, while its item is not
+observed, or while both hold the same content. Otherwise its item was
+replaced: a swap that keeps the key (Zeus Boon to Hera Boon at the same point
+and role, a door, cage or wheel reward redrawn by a press, a Shop option, a
+Well or Pool pin changed to another value, a Shrine restock, another wheel
+pick) leaves the row on an item that is no longer there. Such a row stays
+ranked in the roster as an **item-replaced** row: never executed, it stops
+the walk with its finding and its item counts as unplaced. It is context
+gone: the edit that replaces the item removes it, through the row's owning
+removal command, in every room of the plan whether or not the walk reaches
+it, silently in the room the edit addresses and announced in any other; one
+that a saved plan already held goes at the next edit of its room. Unpinning an
+item keeps its rows, since an unobserved item matches any content.
 
 ### Lifecycle structure and authoring timeline
 

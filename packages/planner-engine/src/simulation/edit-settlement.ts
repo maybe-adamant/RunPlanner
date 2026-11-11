@@ -32,6 +32,7 @@ import type {
   RoomOccurrence,
 } from '../authored-project/model';
 import { roomActionKey } from '../authored-project/room-actions/state';
+import { roomActionsOnReplacedItems } from '../authored-project/room-actions/item-content';
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import {
   discardRetainedHermesShrineDelivery,
@@ -204,6 +205,30 @@ function staleRowsToRemove(
     }
   }
   return removals;
+}
+
+/**
+ * Rows whose item the edit replaced, in every room of the plan, reached or
+ * not: each one the edit left on a replaced item, and in each room the edit
+ * changed, every one retained from before it. An upgrade removes every one.
+ */
+function replacedItemRowsToRemove(
+  before: ProjectDocument,
+  after: ProjectDocument,
+  upgrade: boolean,
+) {
+  const prior = upgrade
+    ? new Set<string>()
+    : new Set(
+        roomActionsOnReplacedItems(before).map(
+          ({ owner, reference }) => `${semanticAddressKey(owner)}|${roomActionKey(reference)}`,
+        ),
+      );
+  return roomActionsOnReplacedItems(after).filter(
+    ({ owner, reference }) =>
+      !prior.has(`${semanticAddressKey(owner)}|${roomActionKey(reference)}`) ||
+      roomEdited(before, after, owner),
+  );
 }
 
 type CandidateArtifacts = ReturnType<typeof candidateArtifactsForProjectEvaluationAssembly>;
@@ -923,6 +948,7 @@ function settleProject(options: {
     // A row with no context or source has nothing to repair: the edit that orphans it removes it.
     const stale = [
       ...staleRowsToRemove(before, beforeRosters, assembly, upgrade),
+      ...replacedItemRowsToRemove(before.project, assembly.project, upgrade),
       ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly, upgrade),
       ...cageGoneRerolls(before, assembly, upgrade),
       ...(upgrade ? sourceGonePickups(catalog, assembly, evaluate) : []),

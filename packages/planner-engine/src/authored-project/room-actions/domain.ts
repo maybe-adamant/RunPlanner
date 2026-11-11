@@ -70,6 +70,11 @@ import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import type { RewardProducerBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import { activeRoomActionReferences, roomActionKey } from './state';
+import {
+  roomActionContentSource,
+  roomActionItemContent,
+  withRoomActionContent,
+} from './item-content';
 import { unlockExitAction } from '../locked-exits';
 import {
   parseClockedTraitGeneratedPickupEntryKey,
@@ -1226,6 +1231,24 @@ export function assembleRoomActionDomain(options: {
       });
     });
   }
+  // Each action names the content its item holds now, so a placed row is judged against it.
+  const contentSource = roomActionContentSource(
+    options.biome,
+    options.topology,
+    options.incomingRewardState === undefined
+      ? undefined
+      : {
+          occurrenceId: options.occurrence.occurrenceId,
+          offer: options.incomingRewardState?.offer ?? null,
+        },
+  );
+  actions = actions.map((action) => {
+    const reference = withRoomActionContent(
+      action.reference,
+      roomActionItemContent(contentSource, options.occurrence, action.reference),
+    );
+    return reference === action.reference ? action : frozen({ ...action, reference });
+  });
   const contributions = frozen([
     ...actions,
     ...checkpoints(options.catalog, declaration, options.occurrence, lifecycleStructure),
