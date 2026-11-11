@@ -3,6 +3,7 @@ import {
   moveLockedDoorFightOntoDoor,
   moveWellPoolRollsOntoObjects,
   settleProjectUpgrade,
+  splitShrineRush,
 } from '@run-planner/engine/project-migration';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 
@@ -22,13 +23,16 @@ function record(value, label) {
  * Schema 103's item-model moves, in order: each a pure, lossless transform of
  * the raw plan from row state onto its item, which leaves a plan already in
  * that shape as it is and runs before strict decoding. The moves touch
- * disjoint fields, and any that adds rows to an order runs last.
+ * disjoint fields; the Shrine split, the only one that adds rows to an order,
+ * runs last.
  */
 const ITEM_MODEL_TRANSFORMS = Object.freeze([
   // Well and Pool rolls move from their reroll actions onto the Well and Pool.
   moveWellPoolRollsOntoObjects,
   // A locked door's fight moves from its press onto the door.
   moveLockedDoorFightOntoDoor,
+  // A rushed Shrine purchase becomes the purchase followed by its own rush.
+  splitShrineRush,
 ]);
 
 /** The version lift with schema 103's item-model moves; the catalog is for moves that read it. */

@@ -710,24 +710,26 @@ A present Shrine of Hermes persists its visible initial inventory, each
 stocked item (initial slot or Travel Deal refill) holding its reward type and
 the delay the game rolls with the stock, so an unbought item keeps its delay
 too. A generation is purchased exactly when `roomActions.order` holds its one
-`{ kind: 'purchaseHermesShrineOffer', generationKey, rushed }` reference, which
-owns its rush and its position among the Shrine's purchases; no purchase state
-is persisted beside it. The codec rejects a purchase action whose item is not
-stocked, and a same-room Shrine pickup without a rushed purchase action. Its
-rushed or delayed delivery owns concrete acquisition payload. A
-Stygian Well or Pool of Purging holds what the game rolled on it, with no
-interaction flag: its initial stock, where a blank slot stays native, a pinned
-one is assessed, and a slot becomes required only once a purchase or sale uses
-it; use follows from the room's actions. Each later roll is a repeatable
-`rerollStygianWell` or `rerollPurgingPool` room action that holds only its
-engine-allocated `rerollId`; the roll's optional slot pins live on the Well or
-Pool under that id (an unpinned slot stays native). A Well generation is
-bought exactly when the room's actions hold its one purchase, which names its
-roll and slot; the game rolls a Fateful Twist per bought generation, and its
-result lives on the Well under that generation. Pins and Twist results exist
-only for rolls the room holds, so removing a reroll takes them with it. Each Pool sale names its list
-(`rollKey`, absent for the initial list). A purchase or sale pins a blank
-slot in the same edit. Travel
+`{ kind: 'purchaseHermesShrineOffer', generationKey }` reference, and rushed
+exactly when it also holds its one `{ kind: 'rushHermesShrineOffer',
+generationKey }` reference, the later interaction with the bought item; no
+purchase state is persisted beside them. The codec rejects a purchase action
+whose item is not stocked, a rush without its purchase, and a same-room Shrine
+pickup without its rush; a rush ordered before its purchase is kept with its
+ordering finding. Its rushed or delayed delivery owns concrete acquisition
+payload. A Stygian Well or Pool of Purging holds what the game rolled on it,
+with no interaction flag: its initial stock, where a blank slot stays native,
+a pinned one is assessed, and a slot becomes required only once a purchase or
+sale uses it; use follows from the room's actions. Each later roll is a
+repeatable `rerollStygianWell` or `rerollPurgingPool` room action that holds
+only its engine-allocated `rerollId`; the roll's optional slot pins live on
+the Well or Pool under that id (an unpinned slot stays native). A Well
+generation is bought exactly when the room's actions hold its one purchase,
+which names its roll and slot; the game rolls a Fateful Twist per bought
+generation, and its result lives on the Well under that generation. Pins and
+Twist results exist only for rolls the room holds, so removing a reroll takes
+them with it. Each Pool sale names its list (`rollKey`, absent for the initial
+list). A purchase or sale pins a blank slot in the same edit. Travel
 Deal refill state is
 occurrence-local to its Shop, Shrine, or Well carrier. Pending deliveries,
 temporary effects, Spell reservations, and expiry remain derived simulation
@@ -827,10 +829,12 @@ unplaced until the owner picks them up, after the source acquisition or in the
 room-exit window for drops that settle there; clocked drops likewise, and a
 whole-route replacement keeps exactly the pickups it carries. Removing or
 replacing the source removes its drops with it. A Sea Star result owns at most one non-recursive duplicate
-entry at its normal source acquisition role; toggling that result adds or
-removes the entry and its ordinary Room Action as one semantic command and one
-undo step. A retained result that becomes inactive remains authored for repair
-but has no active child action. The persisted entry is ordinary
+entry at its normal source acquisition role. The proc is an observation:
+setting it adds the entry, whose duplicate then lies live for its owner to
+pick up through its ordinary Room Action, and clearing it removes the entry and
+any such action, each as one semantic command and one undo step. A retained
+result that becomes inactive remains authored for repair but has no active
+child action. The persisted entry is ordinary
 `AuthoredRewardState`, so no reward-copy tree or second timeline is needed.
 
 A Nemesis random event's site holds her offer as its one `result` entry: the
@@ -865,17 +869,18 @@ the same edit; an index without a new purchase is refused.
 `SetHermesShrineOfferDelay` sets the delay of one stocked Shrine item, initial
 slot or refill; stocking an empty slot gives it the default delay, and
 restocking keeps it. `SetHermesShrinePurchase` adds or clears one generation's
-purchase: a new purchase inserts its unrushed purchase action at its canonical
-position, and clearing removes that action, its pickup and placed deliveries
-while retaining delivery payload. `PurchaseHermesShrineOffer` instead appends
-the purchase of one unbought item at the end of the room's actions, bought or
-rushed, first stocking a blank Travel Deal refill when given its reward, as one
-Undo step.
-`SetHermesShrinePurchaseRush` changes rush on one exact purchase
-action, retracting its optional same-room pickup when the rush is undone; a
-rushed item's pickup is the owner's to place. When any of these
-commands changes the first rushed initial purchase, the refill's purchase
-action and pickup are rescheduled after it; when no rushed initial purchase
+purchase: a new purchase inserts its purchase action at its canonical
+position, and clearing removes that action, its rush, its pickup and placed
+deliveries while retaining delivery payload. `PurchaseHermesShrineOffer`
+instead appends the purchase of one unbought item at the end of the room's
+actions, first stocking a blank Travel Deal refill when given its reward, as
+one Undo step. `SetHermesShrineRush` rushes one bought item, inserting its rush
+action directly after its purchase or at a chosen index, or un-rushes it,
+removing that action and retracting its optional same-room pickup; a rushed
+item's pickup is the owner's to place. Generic Room Action insertion and
+removal reject the rush reference too. When any of these commands changes the
+first rushed initial purchase, the refill's purchase, its rush and its pickup
+are rescheduled after that purchase's rush; when no rushed initial purchase
 remains, the refill's pickup is retracted.
 
 `MoveRoomAction` changes one ranked action's position within the complete
@@ -1188,8 +1193,7 @@ placement finding, proven invalid placements retain this explicit repair, and
 due-contact validation continues to require that delivery before
 publication. Same-room rushed deliveries are
 optional actions the owner places and removes through
-`RemoveRoomAction`, never unplaced; a rushed purchase may stand without its
-pickup. Source reactivation uses the existing exact placement support rather
+`RemoveRoomAction`, never unplaced; a rush may stand without its pickup. Source reactivation uses the existing exact placement support rather
 than guessing a replacement host.
 
 Retained clocked-pickup payload alone does not create an optional action. The

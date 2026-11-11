@@ -1283,6 +1283,11 @@ export const galleryCases: readonly GalleryCase[] = [
         kind: 'PurchaseHermesShrineOffer',
         occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
         generationKey: 'initial:first',
+      }),
+      (project) => ({
+        kind: 'SetHermesShrineRush',
+        occurrence: occurrenceAddress(project, 'O', 'surface-o-combat02'),
+        generationKey: 'initial:first',
         rushed: true,
       }),
     ],

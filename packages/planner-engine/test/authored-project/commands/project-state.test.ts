@@ -1,7 +1,4 @@
-import {
-  purchaseTestHermesShrineOffer,
-  testHermesShrinePurchaseAction,
-} from '@run-planner/test-fixtures/shared';
+import { purchaseTestHermesShrineOffer } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -226,8 +223,10 @@ describe('authored-project project-state commands', () => {
     expect(postboss?.roomActions.order).toContainEqual({
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'initial:first',
-      rushed: false,
     });
+    expect(postboss?.roomActions.order).not.toContainEqual(
+      expect.objectContaining({ kind: 'rushHermesShrineOffer' }),
+    );
     expect(postboss?.roomActions.order).not.toContainEqual(
       expect.objectContaining({ siteKey: 'hermesShrineDelivery' }),
     );
@@ -250,8 +249,9 @@ describe('authored-project project-state commands', () => {
 
     expect(() =>
       applyProjectCommand(purchased, catalog, {
-        kind: 'SetHermesShrinePurchaseRush',
-        action: testHermesShrinePurchaseAction(occurrence, 'initial:first'),
+        kind: 'SetHermesShrineRush',
+        occurrence,
+        generationKey: 'initial:first',
         rushed: 'no' as never,
       }),
     ).toThrow(ProjectCommandContractError);
@@ -300,9 +300,8 @@ describe('authored-project project-state commands', () => {
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     );
     expect(rushedPostboss?.roomActions.order).toContainEqual({
-      kind: 'purchaseHermesShrineOffer',
+      kind: 'rushHermesShrineOffer',
       generationKey: 'travelDealRefill',
-      rushed: true,
     });
     expect(rushedPostboss?.acquisitionSites?.hermesShrineDelivery?.pickupEntries).toHaveProperty(
       hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
@@ -416,14 +415,39 @@ describe('authored-project project-state commands', () => {
         'must be 2 through 8',
       );
 
+      const isRush = (reference: Record<string, unknown>) =>
+        reference.kind === 'rushHermesShrineOffer';
       const unrushedPickup = encoded();
-      editOrder(unrushedPickup, (order) =>
-        order.map((reference) =>
-          isPurchase(reference) ? { ...reference, rushed: false } : reference,
+      editOrder(unrushedPickup, (order) => order.filter((reference) => !isRush(reference)));
+      expect(() => decodeProjectDocument(unrushedPickup, catalog), name).toThrow(
+        'same-room Shrine delivery actions require their rush',
+      );
+
+      // A rush belongs to a bought item; one ordered before it keeps its finding.
+      const unboughtRush = encoded();
+      editOrder(unboughtRush, (order) =>
+        order.filter(
+          (reference) => !isPurchase(reference) || reference.generationKey !== 'initial:first',
         ),
       );
-      expect(() => decodeProjectDocument(unrushedPickup, catalog), name).toThrow(
-        'same-room Shrine delivery actions require their rushed purchase',
+      expect(() => decodeProjectDocument(unboughtRush, catalog), name).toThrow(
+        'Shrine rush actions require their purchase',
+      );
+      const earlyRush = encoded();
+      editOrder(earlyRush, (order) => [
+        ...order.filter(isRush),
+        ...order.filter((reference) => !isRush(reference)),
+      ]);
+      expect(() => decodeProjectDocument(earlyRush, catalog), name).not.toThrow();
+
+      const legacyRushed = encoded();
+      editOrder(legacyRushed, (order) =>
+        order.map((reference) =>
+          isPurchase(reference) ? { ...reference, rushed: true } : reference,
+        ),
+      );
+      expect(() => decodeProjectDocument(legacyRushed, catalog), name).toThrow(
+        'is not a project document field',
       );
 
       const phasedPurchase = encoded();
@@ -460,7 +484,6 @@ describe('authored-project project-state commands', () => {
         (occurrence.roomActions as { order: unknown[] }).order.push({
           kind: 'purchaseHermesShrineOffer',
           generationKey: 'travelDealRefill',
-          rushed: false,
         });
       });
       expect(() => decodeProjectDocument(nullRefillPurchase, catalog), name).toThrow(

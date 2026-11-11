@@ -1415,6 +1415,7 @@ function addedFromEntry({
     reference.kind === 'interactShopOffer' ||
     reference.kind === 'interactInfernalContractPedestal' ||
     reference.kind === 'purchaseHermesShrineOffer' ||
+    reference.kind === 'rushHermesShrineOffer' ||
     sourceFamily?.kind === 'shopTravelDealRefill'
   );
 }
@@ -1488,6 +1489,14 @@ function shopPurchaseRowProducts(
           }),
         };
       case 'purchaseHermesShrineOffer':
+        return removal({
+          kind: 'SetHermesShrinePurchase',
+          occurrence: owner,
+          generationKey: reference.generationKey,
+          purchased: false,
+        });
+      // The rush that triggers the Travel Deal refill carries its line.
+      case 'rushHermesShrineOffer':
         return {
           ...(shrineRefill !== undefined &&
           shrineRefill.sourceGenerationKey === reference.generationKey
@@ -1499,10 +1508,10 @@ function shopPurchaseRowProducts(
               }
             : {}),
           ...removal({
-            kind: 'SetHermesShrinePurchase',
+            kind: 'SetHermesShrineRush',
             occurrence: owner,
             generationKey: reference.generationKey,
-            purchased: false,
+            rushed: false,
           }),
         };
       default:

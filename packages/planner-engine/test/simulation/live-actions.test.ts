@@ -121,6 +121,7 @@ const POSITIONED: ReadonlySet<string> = new Set([
   'PurchaseShopTravelDealRefill',
   'SetStygianWellPurchase',
   'PurchaseHermesShrineOffer',
+  'SetHermesShrineRush',
   'PlaceHermesShrineDelivery',
   'PlaceClockedTraitPickup',
   'PlaceEchoGoldPickup',
@@ -173,8 +174,6 @@ function auditRoom(
       const key = roomActionKey(action.reference);
       offeredGaps.set(key, (offeredGaps.get(key) ?? new Set()).add(gap.index));
       if (POSITIONED.has(action.command.kind)) {
-        // A rushed Shrine item's pickup moves with its purchase; the plain purchase stands for both.
-        if (action.command.kind === 'PurchaseHermesShrineOffer' && action.command.rushed) continue;
         const { index: _index, ...command } = action.command as ProjectCommand & { index?: number };
         void _index;
         positioned.set(key, command as ProjectCommand);

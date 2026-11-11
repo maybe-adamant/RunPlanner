@@ -53,8 +53,9 @@ describe('purchasedOfferFor', () => {
     travelDealRefill: { offer: { rewardType: 'MaxManaDrop', delay: 2 } },
   };
   const order = [
-    { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft', rushed: false },
-    { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill', rushed: true },
+    { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft' },
+    { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill' },
+    { kind: 'rushHermesShrineOffer', generationKey: 'travelDealRefill' },
   ] as const;
 
   it('reads the item, with its delay, of a bought slot or Travel Deal refill', () => {

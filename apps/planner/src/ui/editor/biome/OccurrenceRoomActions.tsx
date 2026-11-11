@@ -107,6 +107,7 @@ const objectOfReference = (
     case 'interactShopOffer':
       return 'worldShop';
     case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer':
       return 'hermesShrine';
     case 'purchaseStygianWellOffer':
     case 'rerollStygianWell':

@@ -43,10 +43,13 @@ generation key. The Well's `purchasedGenerationKeys` goes: its purchase
 actions, which the codec held equal to it, are its purchases. A locked door's
 fight customization moves from its `unlockExit` press to the door, in the
 room's `encounters.customizationByLockedExit` keyed by exit key; the press
-keeps only its `exitKey`. The migration accepts schema 102 through its final
-revision 1, lifts the version, makes those moves (losslessly, before strict
-decoding; a press stood only at a locked door, once per door) and settles the
-plan once, silently, removing
+keeps only its `exitKey`. A Shrine rush is its own room action: a stored
+`rushed: true` purchase becomes the purchase directly followed by its
+`rushHermesShrineOffer` action, and every purchase loses the flag. The
+migration accepts schema 102 through its final revision 1, lifts the version,
+makes those moves (losslessly, before strict decoding; a press stood only at
+a locked door, once per door; the moves touch disjoint fields) and settles
+the plan once, silently, removing
 only what the saved plan shows had its source or context and lost it: stale
 room-action rows; a Gold Gold Gold duplicate that a purchase stands before
 while no Echo produces it; a matured trait drop whose producing trait a walk

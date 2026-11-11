@@ -15,6 +15,8 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
+  createRoomActionAddress,
+  roomActionKey,
   seaStarDuplicateSiteKey,
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateSourceIsActive,
@@ -340,7 +342,7 @@ describe('authored-project incoming reward commands', () => {
     expect(state.reward.dispositionByAcquisitionRole).toEqual({ source: { kind: 'timePiece' } });
   });
 
-  it('authors one source-scoped Sea Star child and removes it again with one Undoable command', () => {
+  it('observes one source-scoped Sea Star child, left live, and removes it again with one Undoable command', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     const acquisition = createAcquisitionRoleAddress(reward, 'self');
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -361,11 +363,13 @@ describe('authored-project incoming reward commands', () => {
     expect(occurrence?.acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
       SEA_STAR_DUPLICATE_ENTRY_KEY,
     );
-    expect(occurrence?.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
+    // The proc is an observation: the duplicate lies live for its owner to pick up.
+    const duplicateAction = {
+      kind: 'interactAcquisitionEntry' as const,
       siteKey,
       entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
-    });
+    };
+    expect(occurrence?.roomActions.order).not.toContainEqual(duplicateAction);
     if (occurrence === undefined) throw new Error('Sea Star source occurrence is missing');
     const domain = assembleRoomActionDomain({
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
@@ -400,17 +404,40 @@ describe('authored-project incoming reward commands', () => {
     expect(
       decodeProjectDocument(JSON.parse(encodeProjectDocument(procced.present)), catalog),
     ).toEqual(procced.present);
-    const cleared = applyProjectHistoryCommand(procced, catalog, {
+    const picked = applyProjectHistoryCommand(procced, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        goldenFOccurrenceId(1, 1),
+        roomActionKey(duplicateAction),
+      ),
+      reference: duplicateAction,
+      index: occurrence.roomActions.order.length,
+    });
+    const roomOf = (document: typeof project) =>
+      document.route!.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+      );
+    expect(roomOf(picked.present)?.roomActions.order.at(-1)).toEqual(duplicateAction);
+    // Proccing again keeps the owner's pickup where it stands.
+    expect(
+      applyProjectCommand(picked.present, catalog, {
+        kind: 'ReplaceSeaStarResult',
+        acquisition,
+        procced: true,
+      }).route.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+      )?.roomActions.order,
+    ).toEqual(roomOf(picked.present)?.roomActions.order);
+    // Clearing the proc takes the duplicate and its pickup in one step.
+    const cleared = applyProjectHistoryCommand(picked, catalog, {
       kind: 'ReplaceSeaStarResult',
       acquisition,
       procced: false,
     });
-    expect(
-      cleared.present.route!.biomes[0]!.topology!.occurrences.find(
-        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
-      )?.acquisitionSites?.[siteKey],
-    ).toBeUndefined();
-    expect(undoProjectHistory(cleared).present).toBe(procced.present);
+    expect(roomOf(cleared.present)?.acquisitionSites?.[siteKey]).toBeUndefined();
+    expect(roomOf(cleared.present)?.roomActions.order).not.toContainEqual(duplicateAction);
+    expect(undoProjectHistory(cleared).present).toBe(picked.present);
   });
 
   it('keeps a retained Sea Star child dormant while its parent uses Time Piece', () => {

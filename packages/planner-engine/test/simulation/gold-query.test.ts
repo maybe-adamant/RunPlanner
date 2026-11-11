@@ -97,18 +97,19 @@ describe('gold ledger query', () => {
     ).toEqual([106, 40]);
   });
 
-  it('prices a Shrine buy-and-rush from its Travel Deal order and repriced rush', () => {
+  it('prices a Shrine buy at its Travel Deal order and its rush at the repriced Shrine', () => {
     const gold = ledger(surfaceShrineTravelDealProject());
     expect(
       [
-        { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first', rushed: true },
-        { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill', rushed: false },
+        { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first' },
+        { kind: 'rushHermesShrineOffer', generationKey: 'initial:first' },
+        { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill' },
       ].map((reference) =>
         price(gold.purchaseAt(action(n, shrineRoomId, reference as RoomActionReference))),
       ),
       // Order round(round(76.5) x 1.2) = 92, rush round(135) - round(90 x 1.2) = 27;
       // the restocked Armor ordered at round(40 x 1.2).
-    ).toEqual([119, 48]);
+    ).toEqual([92, 27, 48]);
   });
 
   it('leaves purchases and rooms past the assessment stop unavailable, never zero', () => {

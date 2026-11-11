@@ -85,6 +85,7 @@ export interface WorkspaceRoomObjectActionRequirement {
         | 'ReplaceShopPurchaseParticipation'
         | 'PurchaseShopTravelDealRefill'
         | 'PurchaseHermesShrineOffer'
+        | 'SetHermesShrineRush'
         | 'SetInfernalContractPedestalCollected'
         | 'ReplaceLockedExit'
         | 'InsertRoomAction';

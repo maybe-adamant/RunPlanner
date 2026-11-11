@@ -199,6 +199,93 @@ describe('schema 102 to 103 migration', () => {
     );
   });
 
+  it('splits a stored Shrine rush into the purchase and its own rush right after it', () => {
+    const current = checkpoint('surface-shrine-travel-deal');
+    // Schema 102 stored a rush as a flag on its purchase.
+    const stored = JSON.parse(JSON.stringify(at102(current)));
+    for (const biome of stored.route.biomes)
+      for (const occurrence of biome.topology?.occurrences ?? []) {
+        const order = occurrence.roomActions.order;
+        const rushed = new Set(
+          order.flatMap((action) =>
+            action.kind === 'rushHermesShrineOffer' ? [action.generationKey] : [],
+          ),
+        );
+        occurrence.roomActions.order = order.flatMap((action) =>
+          action.kind === 'rushHermesShrineOffer'
+            ? []
+            : action.kind === 'purchaseHermesShrineOffer'
+              ? [{ ...action, rushed: rushed.has(action.generationKey) }]
+              : [action],
+        );
+      }
+    assert.ok(JSON.stringify(stored).includes('"rushed":true'));
+    assert.deepEqual(step.liftProjectDocument(stored), current);
+    assert.deepEqual(migrate(stored), current);
+  });
+
+  it('moves Well rolls, a locked-door fight and a Shrine rush through one lift, losslessly', () => {
+    // No route holds all three (the Well and locked doors are Underworld's, the
+    // Shrine the Surface's); the raw moves read no route, so one document
+    // carries both plans' biomes, and each plan alone decodes strictly.
+    const underworld = lockedDoorFight(checkpoint('underworld-fg'));
+    const shop = (document) =>
+      document.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .find((occurrence) => occurrence.occurrenceId === 'golden-f-preboss-shop:postboss');
+    shop(underworld).stygianWell.rerollOfferKeyBySlot = { r1: { healing: 'HealDropRange' } };
+    shop(underworld).roomActions.order.push({ kind: 'rerollStygianWell', rerollId: 'r1' });
+    const surface = checkpoint('surface-shrine-travel-deal');
+    const current = {
+      ...underworld,
+      route: { ...underworld.route, biomes: [...underworld.route.biomes, ...surface.route.biomes] },
+    };
+
+    const stored = at102(structuredClone(current));
+    const well = shop(stored).stygianWell;
+    delete well.rerollOfferKeyBySlot;
+    well.purchasedGenerationKeys = [];
+    shop(stored).roomActions.order.at(-1).offerKeyBySlot = { healing: 'HealDropRange' };
+    shop(stored).roomActions.order.at(-1).twistResultKeyBySlot = {};
+    const host = gHost(stored);
+    const fight = host.encounters.customizationByLockedExit.exit2;
+    delete host.encounters.customizationByLockedExit;
+    host.roomActions.order.find((row) => row.kind === 'unlockExit').customization = fight;
+    const shrine = stored.route.biomes
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .find((occurrence) => occurrence.occurrenceId === 'surface-n-preboss:postboss');
+    shrine.roomActions.order = shrine.roomActions.order.flatMap((action) =>
+      action.kind === 'rushHermesShrineOffer'
+        ? []
+        : action.kind === 'purchaseHermesShrineOffer'
+          ? [{ ...action, rushed: action.generationKey === 'initial:first' }]
+          : [action],
+    );
+
+    const lifted = step.liftProjectDocument(stored, engine.catalog);
+    assert.deepEqual(lifted, current);
+    // Each plan alone decodes strictly and migrates, settlement included, to its 103 form.
+    const split = underworld.route.biomes.length;
+    const halves = (document) => [
+      {
+        ...document,
+        route: { ...underworld.route, biomes: document.route.biomes.slice(0, split) },
+      },
+      { ...document, route: { ...surface.route, biomes: document.route.biomes.slice(split) } },
+    ];
+    const [storedUnderworld, storedSurface] = halves(stored);
+    for (const [saved, plan] of [
+      [storedUnderworld, underworld],
+      [storedSurface, surface],
+    ]) {
+      const migrated = migrate(saved);
+      assert.deepEqual(migrated, { ...plan, projectId: current.projectId, name: current.name });
+      assert.doesNotThrow(() =>
+        engine.parseProjectDocument(JSON.stringify(migrated), engine.catalog),
+      );
+    }
+  });
+
   it('lifts by the version alone a plan its settlement leaves as it was', () => {
     const current = checkpoint('surface-n');
     assert.deepEqual(migrate(at102(current)), current);

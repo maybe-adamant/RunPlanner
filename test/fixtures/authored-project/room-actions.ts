@@ -11,6 +11,8 @@ import {
   roomActionDomainForOccurrence,
   roomActionKey,
   scheduleRequiredRoomActions,
+  seaStarDuplicateSiteKey,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
   structurallyActiveOccurrenceIds,
   type AcquisitionRoleAddress,
   type AuthoredRewardState,
@@ -247,7 +249,7 @@ export function authorTestArtificerReplacement(
   return document;
 }
 
-/** Purchases one Shrine generation, or clears it, and sets its purchase action's rush. */
+/** Purchases one Shrine generation, or clears it, and rushes it right after when asked. */
 export function purchaseTestHermesShrineOffer(
   initial: ProjectDocument,
   catalog: Catalog,
@@ -272,8 +274,9 @@ export function purchaseTestHermesShrineOffer(
   });
   if (purchase === null) return purchased;
   return applyProjectCommand(purchased, catalog, {
-    kind: 'SetHermesShrinePurchaseRush',
-    action: testHermesShrinePurchaseAction(occurrence, generationKey),
+    kind: 'SetHermesShrineRush',
+    occurrence,
+    generationKey,
     rushed: purchase.rushed,
   });
 }
@@ -286,7 +289,19 @@ export function testHermesShrinePurchaseAction(
   return createRoomActionAddress(
     createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
     occurrence.occurrenceId,
-    roomActionKey({ kind: 'purchaseHermesShrineOffer', generationKey, rushed: false }),
+    roomActionKey({ kind: 'purchaseHermesShrineOffer', generationKey }),
+  );
+}
+
+/** The room-action address of one Shrine generation's rush. */
+export function testHermesShrineRushAction(
+  occurrence: ReturnType<typeof createOccurrenceAddress>,
+  generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
+) {
+  return createRoomActionAddress(
+    createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+    occurrence.occurrenceId,
+    roomActionKey({ kind: 'rushHermesShrineOffer', generationKey }),
   );
 }
 
@@ -334,4 +349,41 @@ export function scheduleTestRequiredRoomActions(
     }
   }
   return document;
+}
+
+/**
+ * Procs Sea Star on one acquisition and picks up its live duplicate where the
+ * room's actions end, as the owner would.
+ */
+export function procTestSeaStar(
+  initial: ProjectDocument,
+  catalog: Catalog,
+  occurrence: ReturnType<typeof createOccurrenceAddress>,
+  acquisition: AcquisitionRoleAddress,
+): ProjectDocument {
+  const procced = applyProjectCommand(initial, catalog, {
+    kind: 'ReplaceSeaStarResult',
+    acquisition,
+    procced: true,
+  });
+  const reference: RoomActionReference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey: seaStarDuplicateSiteKey(acquisition),
+    entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+  };
+  const order =
+    procced.route.biomes
+      .find((biome) => biome.biomeKey === occurrence.biomeKey)
+      ?.topology?.occurrences.find((room) => room.occurrenceId === occurrence.occurrenceId)
+      ?.roomActions.order ?? [];
+  return applyProjectCommand(procced, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(
+      createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+      occurrence.occurrenceId,
+      roomActionKey(reference),
+    ),
+    reference,
+    index: order.length,
+  });
 }

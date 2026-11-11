@@ -221,6 +221,7 @@ export interface WorkspaceRoomActionRow {
           | 'ReplaceShopPurchaseParticipation'
           | 'SetInfernalContractPedestalCollected'
           | 'SetHermesShrinePurchase'
+          | 'SetHermesShrineRush'
           | 'SetStygianWellPurchase'
           | 'RemoveRoomAction';
       }

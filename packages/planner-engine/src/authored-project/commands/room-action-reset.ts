@@ -71,6 +71,13 @@ export function roomActionRemovalCommand(
         generationKey: reference.generationKey,
         purchased: false,
       };
+    case 'rushHermesShrineOffer':
+      return {
+        kind: 'SetHermesShrineRush',
+        occurrence,
+        generationKey: reference.generationKey,
+        rushed: false,
+      };
     case 'purchaseStygianWellOffer':
       return {
         kind: 'SetStygianWellPurchase',

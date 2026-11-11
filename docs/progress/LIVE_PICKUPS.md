@@ -217,7 +217,7 @@ Draft or the run import depend on that C2 changes.
   - taking a trait no longer places its optional same-room drops (Quick Buck,
     Buried Treasure, Narcissus, a switch claim);
   - rushing a Shrine purchase no longer places its same-room pickup;
-    `PurchaseHermesShrineOffer { rushed: true, index }` moves only the purchase;
+    `SetHermesShrineRush { rushed: true, index? }` places only the rush row;
   - `settleProjectEdit` no longer places due Hermes deliveries
     (`PlaceHermesShrineDelivery`) or Gold Gold Gold duplicates
     (`PlaceEchoGoldPickup`), and a displaced delivery is only unplaced.

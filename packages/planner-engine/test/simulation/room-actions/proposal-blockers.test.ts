@@ -176,7 +176,6 @@ describe('room action proposal blockers', () => {
     const staleShrine: RoomActionReference = {
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'initial:first',
-      rushed: false,
     };
     const roster = assembleRoomActionRoster({
       owner,

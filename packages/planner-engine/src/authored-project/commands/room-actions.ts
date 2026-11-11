@@ -218,6 +218,9 @@ export function applyRoomActionCommand(
       if (command.reference.kind === 'purchaseHermesShrineOffer') {
         failCommand(command, 'Shrine purchases use SetHermesShrinePurchase');
       }
+      if (command.reference.kind === 'rushHermesShrineOffer') {
+        failCommand(command, 'Shrine rushes use SetHermesShrineRush');
+      }
       if (command.reference.kind === 'purchaseStygianWellOffer') {
         failCommand(command, 'Well purchases use SetStygianWellPurchase');
       }
@@ -302,6 +305,9 @@ export function applyRoomActionCommand(
       }
       if (order[existingIndex]?.kind === 'purchaseHermesShrineOffer') {
         failCommand(command, 'Shrine purchases use SetHermesShrinePurchase');
+      }
+      if (order[existingIndex]?.kind === 'rushHermesShrineOffer') {
+        failCommand(command, 'Shrine rushes use SetHermesShrineRush');
       }
       if (order[existingIndex]?.kind === 'purchaseStygianWellOffer') {
         failCommand(command, 'Well purchases use SetStygianWellPurchase');

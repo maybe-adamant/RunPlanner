@@ -21,6 +21,8 @@ export {
   replaceTestShopOfferActions,
   scheduleTestRequiredRoomActions,
   testHermesShrinePurchaseAction,
+  testHermesShrineRushAction,
+  procTestSeaStar,
 } from './room-actions';
 export { hubVisitActions } from './hub-actions';
 export {

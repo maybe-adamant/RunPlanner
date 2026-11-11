@@ -711,7 +711,7 @@ export type HermesShrineCommand =
       readonly delay: import('../model').HermesShrineDelay;
     }
   | {
-      /** A new purchase starts unrushed at its canonical timeline position. */
+      /** A new purchase enters at its canonical timeline position. */
       readonly kind: 'SetHermesShrinePurchase';
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').HermesShrineGenerationKey;
@@ -720,25 +720,27 @@ export type HermesShrineCommand =
       readonly index?: number;
     }
   | {
-      /** Rushing delivers the item in the Shrine room and offers its optional pickup. */
-      readonly kind: 'SetHermesShrinePurchaseRush';
-      readonly action: RoomActionSemanticAddress;
+      /**
+       * Rushes or un-rushes one bought item: a rush delivers it in the Shrine
+       * room and makes its optional pickup live; a new rush follows its purchase.
+       */
+      readonly kind: 'SetHermesShrineRush';
+      readonly occurrence: OccurrenceAddress;
+      readonly generationKey: import('../model').HermesShrineGenerationKey;
       readonly rushed: boolean;
+      /** Where a new rush enters instead: any structurally legal index. */
+      readonly index?: number;
     }
   | {
       /**
-       * Buys or rushes one unbought generation at the end of the room's
-       * actions; `rewardType` first stocks a blank Travel Deal refill.
+       * Buys one unbought generation at the end of the room's actions;
+       * `rewardType` first stocks a blank Travel Deal refill.
        */
       readonly kind: 'PurchaseHermesShrineOffer';
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').HermesShrineGenerationKey;
-      readonly rushed: boolean;
       readonly rewardType?: string;
-      /**
-       * Where the purchase enters instead of the end: any structurally legal
-       * index; a rushed item's pickup then follows it directly.
-       */
+      /** Where the purchase enters instead of the end: any structurally legal index. */
       readonly index?: number;
     }
   | {

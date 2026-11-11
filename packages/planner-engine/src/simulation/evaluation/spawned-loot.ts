@@ -918,7 +918,7 @@ export function spawnedLootForProjectEvaluationAssembly(
         break;
       }
       case 'hermesShrineDelivery': {
-        // A rushed item spawns in its Shrine's own room as the purchase settles.
+        // A rushed item spawns in its Shrine's own room as the rush settles.
         const delivery = parseHermesShrineDeliveryEntryKey(reference.entryKey);
         if (
           delivery === undefined ||
@@ -927,13 +927,12 @@ export function spawnedLootForProjectEvaluationAssembly(
           delivery.sourceOccurrenceId !== occurrence.occurrenceId
         )
           break;
-        const purchase = row.dependencies.find(
+        const rush = row.dependencies.find(
           (dependency) =>
-            dependency.kind === 'afterAction' &&
-            dependency.action.kind === 'purchaseHermesShrineOffer',
+            dependency.kind === 'afterAction' && dependency.action.kind === 'rushHermesShrineOffer',
         );
-        if (purchase?.kind === 'afterAction' && rowByKey.has(roomActionKey(purchase.action)))
-          addActionSpawn(purchase.action, fromRow(row, { kind: 'generated', family }));
+        if (rush?.kind === 'afterAction' && rowByKey.has(roomActionKey(rush.action)))
+          addActionSpawn(rush.action, fromRow(row, { kind: 'generated', family }));
         break;
       }
       // A Travel Deal refill is a purchase, not spawned loot.

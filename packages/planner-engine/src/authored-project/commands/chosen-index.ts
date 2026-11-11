@@ -28,6 +28,7 @@ export type PositionedCommand = Extract<
       | 'PurchaseShopTravelDealRefill'
       | 'SetStygianWellPurchase'
       | 'SetHermesShrinePurchase'
+      | 'SetHermesShrineRush'
       | 'PurchaseHermesShrineOffer'
       | 'PlaceHermesShrineDelivery'
       | 'PlaceClockedTraitPickup'
@@ -108,14 +109,15 @@ function placedActions(placed: ProjectDocument, command: PositionedCommand): Pla
     case 'SetHermesShrinePurchase':
     case 'PurchaseHermesShrineOffer': {
       keys = [
-        roomActionKey({
-          kind: 'purchaseHermesShrineOffer',
-          generationKey: command.generationKey,
-          rushed: false,
-        }),
+        roomActionKey({ kind: 'purchaseHermesShrineOffer', generationKey: command.generationKey }),
       ];
       break;
     }
+    case 'SetHermesShrineRush':
+      keys = [
+        roomActionKey({ kind: 'rushHermesShrineOffer', generationKey: command.generationKey }),
+      ];
+      break;
   }
   return Object.freeze({ document: placed, occurrence, keys: Object.freeze(keys) });
 }

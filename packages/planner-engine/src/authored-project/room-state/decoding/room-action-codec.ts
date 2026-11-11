@@ -11,7 +11,6 @@ import { decodeStygianWellGenerationKey } from './well-codec';
 import { roomActionKey } from '../../room-actions/state';
 import {
   expectArray,
-  expectBoolean,
   expectExactKeys,
   expectNonBlankString,
   expectRecord,
@@ -127,8 +126,8 @@ function decodeRoomActionReference(
       ),
     });
   }
-  if (kind === 'purchaseHermesShrineOffer') {
-    expectExactKeys(reference, ['kind', 'generationKey', 'rushed'], path);
+  if (kind === 'purchaseHermesShrineOffer' || kind === 'rushHermesShrineOffer') {
+    expectExactKeys(reference, ['kind', 'generationKey'], path);
     const generationKey = expectNonBlankString(reference.generationKey, `${path}.generationKey`);
     if (
       !['initial:first', 'initial:secondLeft', 'initial:secondRight', 'travelDealRefill'].includes(
@@ -139,7 +138,6 @@ function decodeRoomActionReference(
     return Object.freeze({
       kind,
       generationKey: generationKey as HermesShrineGenerationKey,
-      rushed: expectBoolean(reference.rushed, `${path}.rushed`),
     });
   }
   if (kind === 'sellPurgingPoolTrait') {

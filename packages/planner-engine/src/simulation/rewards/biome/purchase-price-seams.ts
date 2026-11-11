@@ -162,7 +162,10 @@ export function withWellPurchasePrice(
   });
 }
 
-/** A Hermes Shrine purchase's price context, read before it settles. */
+/**
+ * A Hermes Shrine purchase's price context, read before it settles; a rush,
+ * settling with its purchase, is priced right after it on its own row.
+ */
 export function withHermesShrinePurchasePrice(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
@@ -177,13 +180,12 @@ export function withHermesShrinePurchasePrice(
       owner: undefined,
       resolution: contractFailure('a Shrine purchase has no authored room'),
     });
-  const owner = rankedRow(
-    room,
-    (reference) =>
-      reference.kind === 'purchaseHermesShrineOffer' &&
-      reference.generationKey === event.generationKey,
-  );
-  const resolution = ((): PurchaseResolution => {
+  const owner = (kind: 'purchaseHermesShrineOffer' | 'rushHermesShrineOffer') =>
+    rankedRow(
+      room,
+      (reference) => reference.kind === kind && reference.generationKey === event.generationKey,
+    );
+  const resolution = (stage: 'order' | 'rush'): PurchaseResolution => {
     const shrine = room.hermesShrine;
     if (shrine === undefined) return unresolvedItem;
     const slotKey = hermesShrineInitialSlotKey(event.generationKey);
@@ -197,15 +199,24 @@ export function withHermesShrinePurchasePrice(
       .find((option) => option.rewardType === offer.rewardType)?.key;
     return itemKey === undefined
       ? contractFailure(`the Shrine declares no option for ${offer.rewardType}`)
-      : priced({ kind: 'hermesShrine', itemKey, delay: offer.delay, rushed: event.rushed });
-  })();
-  return withPurchasePrice(context, state, {
+      : priced({ kind: 'hermesShrine', itemKey, delay: offer.delay, stage });
+  };
+  const ordered = withPurchasePrice(context, state, {
     sequence: event.sequence,
     room: room.origin,
     paid: true,
-    owner,
-    resolution,
+    owner: owner('purchaseHermesShrineOffer'),
+    resolution: resolution('order'),
   });
+  return event.rushed
+    ? withPurchasePrice(context, ordered, {
+        sequence: event.sequence,
+        room: room.origin,
+        paid: true,
+        owner: owner('rushHermesShrineOffer'),
+        resolution: resolution('rush'),
+      })
+    : ordered;
 }
 
 /**

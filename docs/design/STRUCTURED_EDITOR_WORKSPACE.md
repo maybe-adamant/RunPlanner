@@ -489,7 +489,7 @@ engine announces once the walk reaches it, brought about by the rows before
 it, so it can host choices but cannot be inserted, moved or deleted.
 
 A label is the action's verb (Buy for paid World Shop, Shrine and Well items
-and refills, Rush for rushed Shrine purchases, Collect for pickups including
+and refills, Rush for a bought Shrine item's rush, Collect for pickups including
 Contract items and Echo-generated pickups, Sell for Pool sales, Reroll for
 rerolls) followed by what it takes. A reward is shown by its icon, with its
 name as the icon's accessible name and a mark for a Boosted variant; tags name
@@ -516,9 +516,11 @@ be held just before the purchase, with its spread; no banner repeats a running
 balance. Narrow timelines move a row's decisions to a second line.
 
 Purchase and collect rows carry no inner checkbox; their delete control
-removes the action. The purchase row that triggers Travel Deal renders the refill's inventory controls as its second line, a Restock line: for a
-Shrine, the engine's refill source (the first rushed initial purchase made
-with Travel Deal); for a Well, its first purchase; for a World Shop, the
+removes the action, and a Rush row's delete control undoes only the rush. The
+row that triggers Travel Deal renders the refill's inventory controls as its
+second line, a Restock line: for a Shrine, the rush of the engine's refill
+source (the first rushed initial purchase made with Travel Deal); for a Well,
+its first purchase; for a World Shop, the
 purchase the refill entry names as its source. The line has no placeholder. A
 purchased refill that no line hosts keeps its own purchase row with a bound
 removal, and refill findings route to the line's control or to that row.
@@ -539,7 +541,8 @@ or Pool offers buy or sell for each offered slot (a blank initial slot takes
 its item or trait in the same pick) and Reroll with its cost, disabled with a
 hint when screen rerolls are not enabled, nothing is left to reroll or the
 pool cannot pay. A World Shop offers each unbought item; a Shrine offers Buy
-or Rush for each unbought item, one pick and one Undo step either way; once
+for each unbought item and Rush for each bought one not yet rushed, one pick
+and one Undo step each; once
 its Travel Deal item is live, either offers to buy it, a blank one taking its
 item in the same pick; a Pedestal offers its collect. Every entry is
 shown while its object is present and is disabled with the reason when nothing

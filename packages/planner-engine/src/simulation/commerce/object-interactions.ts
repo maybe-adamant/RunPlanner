@@ -30,21 +30,31 @@ export interface WorldShopInteraction {
   };
 }
 
-/** One Hermes Shrine item that can be bought or rushed there. */
+/** One unbought Hermes Shrine item that can be bought there. */
 export interface HermesShrineInteractionOffer {
   readonly generationKey: HermesShrineGenerationKey;
   /** Null only for a blank Travel Deal refill; the pick then adds its chosen `rewardType`. */
   readonly rewardType: string | null;
   readonly delay: HermesShrineDelay | null;
   readonly buy: CommandOf<'PurchaseHermesShrineOffer'>;
-  readonly rush: CommandOf<'PurchaseHermesShrineOffer'>;
 }
 
-/** What can be bought at the end of a Hermes Shrine's authored sequence. */
+/** One bought, unrushed Hermes Shrine item that can be rushed there. */
+export interface HermesShrineInteractionRush {
+  readonly generationKey: HermesShrineGenerationKey;
+  readonly rewardType: string;
+  readonly delay: HermesShrineDelay;
+  /** Appends the rush where the room's actions end. */
+  readonly rush: CommandOf<'SetHermesShrineRush'>;
+}
+
+/** What can be bought or rushed at the end of a Hermes Shrine's authored sequence. */
 export interface HermesShrineInteraction {
   readonly historySequence: number;
   /** Each stocked initial item not yet bought, in slot order. */
   readonly offers: readonly HermesShrineInteractionOffer[];
+  /** Each bought item not yet rushed, initial slots in slot order then the refill. */
+  readonly rushes: readonly HermesShrineInteractionRush[];
   /** A rush made with Travel Deal has refilled its slot at the reached state. */
   readonly travelDealRefillLive: boolean;
   /** The live refill while it is unbought, with the rewards the reached state can stock. */

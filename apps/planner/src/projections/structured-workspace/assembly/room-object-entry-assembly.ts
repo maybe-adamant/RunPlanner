@@ -208,43 +208,49 @@ export function assembleRoomObjectEntries(input: {
     ];
     for (const { offer, candidates } of offers) {
       const blank = offer.rewardType === null;
-      for (const rushed of [false, true]) {
-        const key = `${rushed ? 'rush' : 'buy'}:${offer.generationKey}`;
-        const rowLabel = labelParts({
-          kind: 'purchaseHermesShrineOffer',
-          generationKey: offer.generationKey,
-          rushed,
-        });
-        parts!.options.push(
-          Object.freeze({
-            key,
-            label: blank ? `${rowLabel.label}…` : rowLabel.label,
-            ...optionReward(rowLabel),
-            ...(blank ? { needsChoice: true as const } : {}),
-          }),
-        );
-        const command = rushed ? offer.rush : offer.buy;
-        parts!.bound.push(
-          Object.freeze({
-            key,
-            command,
-            ...(blank && candidates !== undefined
-              ? {
-                  choices: Object.freeze(
-                    candidates.map((rewardType) =>
-                      Object.freeze({
-                        key: rewardType,
-                        label: rewardLabel(rewardType),
-                        rewardType,
-                        command: Object.freeze({ ...command, rewardType }),
-                      }),
-                    ),
+      const key = `buy:${offer.generationKey}`;
+      const rowLabel = labelParts({
+        kind: 'purchaseHermesShrineOffer',
+        generationKey: offer.generationKey,
+      });
+      parts!.options.push(
+        Object.freeze({
+          key,
+          label: blank ? `${rowLabel.label}…` : rowLabel.label,
+          ...optionReward(rowLabel),
+          ...(blank ? { needsChoice: true as const } : {}),
+        }),
+      );
+      parts!.bound.push(
+        Object.freeze({
+          key,
+          command: offer.buy,
+          ...(blank && candidates !== undefined
+            ? {
+                choices: Object.freeze(
+                  candidates.map((rewardType) =>
+                    Object.freeze({
+                      key: rewardType,
+                      label: rewardLabel(rewardType),
+                      rewardType,
+                      command: Object.freeze({ ...offer.buy, rewardType }),
+                    }),
                   ),
-                }
-              : {}),
-          }),
-        );
-      }
+                ),
+              }
+            : {}),
+        }),
+      );
+    }
+    // A bought item can be rushed later in the visit.
+    for (const rush of shrine?.rushes ?? []) {
+      const key = `rush:${rush.generationKey}`;
+      const rowLabel = labelParts({
+        kind: 'rushHermesShrineOffer',
+        generationKey: rush.generationKey,
+      });
+      parts!.options.push(Object.freeze({ key, label: rowLabel.label, ...optionReward(rowLabel) }));
+      parts!.bound.push(Object.freeze({ key, command: rush.rush }));
     }
     add('hermesShrine', parts, 'allBought');
   }

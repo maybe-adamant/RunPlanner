@@ -308,7 +308,7 @@ function applyUnchecked(
     case 'ReplaceHermesShrineOffer':
     case 'SetHermesShrineOfferDelay':
     case 'SetHermesShrinePurchase':
-    case 'SetHermesShrinePurchaseRush':
+    case 'SetHermesShrineRush':
     case 'PurchaseHermesShrineOffer':
     case 'ReplaceHermesShrineTravelDealRefill':
       return applyOccurrenceCommand(

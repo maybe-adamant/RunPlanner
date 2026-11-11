@@ -134,6 +134,30 @@ C5b-2, locked-door fight on the door:
   import authors it with `ReplaceLockedExitCustomization`, before or after the
   press.
 
+C5b-3, Shrine rush as its own row (schema 103 shape):
+
+- `purchaseHermesShrineOffer` loses `rushed`; a rush is a
+  `rushHermesShrineOffer { generationKey }` row after its purchase
+  (authoring-only dependency, post-outgoing window), and a same-room pickup
+  follows the rush. `SetHermesShrinePurchaseRush` is replaced by
+  `SetHermesShrineRush { occurrence, generationKey, rushed, index? }`
+  (default: directly after the purchase); `PurchaseHermesShrineOffer` loses
+  `rushed` and only buys. The Shrine object interaction lists `offers` (Buy)
+  and `rushes` (Rush, appended where the room's actions end); the live product
+  offers `rush` on a bought, unrushed item. Gold prices the order on the
+  purchase row and the rush on the rush row. The rush settles with its
+  purchase, so the walk and the wire are unchanged. Import: `commerce.ts`
+  rushes with the new command; `action-order.ts` reads the rush row.
+
+C5b-4, Sea Star proc as an observation (no schema change):
+
+- A procced `ReplaceSeaStarResult` only adds the duplicate's site; its pickup
+  lies live for the owner (or Collect all required) to place, and clearing the
+  proc still removes a placed pickup. Import: `features.ts`
+  `placeSeaStarDuplicate` must place the duplicate's pickup itself (an
+  `InsertRoomAction` right after its source) instead of moving a row the
+  command no longer appends.
+
 ## Inventory (summary of existence-vs-interaction)
 
 Item identity today is (reward owner address, acquisition role); every
@@ -148,7 +172,7 @@ Artificer) is the item's `dispositionByAcquisitionRole`, not a row kind.
 | Fields cage                                                                                        | unlock (starts its fight)     | none                                                               |
 | Ship wheel                                                                                         | choose, reroll                | `pickedOfferIndex` on the wheel, no row                            |
 | Fountain, keepsake rack                                                                            | use                           | the occurrence (Phial target, rack keepsake)                       |
-| Challenge switch, locked door                                                                      | press, unlock (start a fight) | observation; door customization on the row                         |
+| Challenge switch, locked door                                                                      | press, unlock (start a fight) | observation; door customization on the door                        |
 | World Shop, Shrine, Well, Pedestal                                                                 | buy, rush, take               | the stock slot; membership = bought                                |
 | Pool                                                                                               | sell, reroll                  | sale presence; the rolled list on the row                          |
 | Door, cage, wheel reroll                                                                           | reroll                        | the reward on the row, mirrored into the target                    |

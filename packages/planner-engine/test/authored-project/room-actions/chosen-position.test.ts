@@ -180,6 +180,15 @@ describe('placing actions at a chosen index', () => {
           kind: 'PurchaseHermesShrineOffer',
           occurrence: shrine,
           generationKey: 'initial:secondRight',
+        },
+      ],
+      [
+        oShrine,
+        shrine.occurrenceId,
+        {
+          kind: 'SetHermesShrineRush',
+          occurrence: shrine,
+          generationKey: 'initial:secondLeft',
           rushed: true,
         },
       ],
@@ -290,43 +299,43 @@ describe('placing actions at a chosen index', () => {
     ).toEqual([]);
   });
 
-  it('places a rushed Shrine purchase before or after the refill trigger without its pickup', () => {
-    const project = loadSurfaceShrineTravelDealCheckpoint();
+  it('places a Shrine rush before or after the refill trigger without its pickup', () => {
+    const loaded = loadSurfaceShrineTravelDealCheckpoint();
     const postboss = 'surface-n-preboss:postboss';
     const source = createOccurrenceAddress(
-      createBiomeAddress(project.route.routeKey, 'N'),
+      createBiomeAddress(loaded.route.routeKey, 'N'),
       createOccurrenceId(postboss),
     );
-    const before = order(project, postboss);
-    // [fountain, rack, rushed first (the trigger), refill, first's pickup]
-    expect(before.map((reference) => reference.kind)).toEqual([
+    // [fountain, rack, first, its rush (the trigger), refill, first's pickup]
+    expect(order(loaded, postboss).map((reference) => reference.kind)).toEqual([
       'useFountain',
       'interactKeepsakeRack',
       'purchaseHermesShrineOffer',
+      'rushHermesShrineOffer',
       'purchaseHermesShrineOffer',
       'interactAcquisitionEntry',
     ]);
+    // Bought before the first item, its rush settles with it as the first rush, so
+    // it may stand anywhere after its purchase and before the refill it triggers.
+    const project = applyProjectCommand(loaded, catalog, {
+      kind: 'PurchaseHermesShrineOffer',
+      occurrence: source,
+      generationKey: 'initial:secondLeft',
+      index: 2,
+    });
+    const before = order(project, postboss);
     const command = {
-      kind: 'PurchaseHermesShrineOffer' as const,
+      kind: 'SetHermesShrineRush' as const,
       occurrence: source,
       generationKey: 'initial:secondLeft' as const,
       rushed: true,
     };
-    expect(positionedCommandInsertionIndexes(project, catalog, command)).toEqual([1, 2, 3, 4, 5]);
+    expect(positionedCommandInsertionIndexes(project, catalog, command)).toEqual([3, 4, 5]);
     const placed = (index: number) =>
       order(applyProjectCommand(project, catalog, { ...command, index }), postboss);
-    const purchase = { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft' };
-    // Before the trigger it becomes the first rush; the refill still follows it.
-    expect(placed(2)).toEqual([
-      ...before.slice(0, 2),
-      expect.objectContaining(purchase),
-      ...before.slice(2),
-    ]);
-    // After the refill's purchase it changes nothing about the trigger.
-    expect(placed(4)).toEqual([
-      ...before.slice(0, 4),
-      expect.objectContaining(purchase),
-      before[4],
-    ]);
+    const rush = { kind: 'rushHermesShrineOffer', generationKey: 'initial:secondLeft' };
+    expect(placed(3)).toEqual([...before.slice(0, 3), rush, ...before.slice(3)]);
+    expect(placed(5)).toEqual([...before.slice(0, 5), rush, ...before.slice(5)]);
+    expect(() => placed(6)).toThrow(/index 6 is not a legal position/);
   });
 });

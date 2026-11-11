@@ -46,6 +46,7 @@ const executionDispositions = {
     interactInfernalContractPedestal: 'covered',
     purchaseStygianWellOffer: 'covered',
     purchaseHermesShrineOffer: 'covered',
+    rushHermesShrineOffer: 'covered',
     sellPurgingPoolTrait: 'intentionally-omitted',
     interactEncounter: 'covered',
     interactGorgon: 'covered',

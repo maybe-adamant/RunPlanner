@@ -177,7 +177,6 @@ describe('Shrine purchases after the doors open', () => {
       roomActionKey({
         kind: 'purchaseHermesShrineOffer',
         generationKey: 'initial:secondLeft',
-        rushed: false,
       }),
     );
     const reward = roomActionKey({
@@ -206,6 +205,7 @@ describe('Shrine purchases after the doors open', () => {
       '[cleanup]',
       'interactKeepsakeRack',
       'purchaseHermesShrineOffer',
+      'rushHermesShrineOffer',
       'purchaseHermesShrineOffer',
       'interactAcquisitionEntry',
     ]);
@@ -290,7 +290,6 @@ describe('Shrine purchases after the doors open', () => {
     const purchase: RoomActionReference = {
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'initial:secondLeft',
-      rushed: false,
     };
     expect(timeline(evaluatedRoom(project, 'O', host.occurrenceId)).slice(-4)).toEqual([
       'interactIncomingReward',
@@ -349,10 +348,11 @@ describe('Shrine purchases after the doors open', () => {
 
   it('renders an O Ship rushed purchase after Doors open without moving exit usability', () => {
     const room = evaluatedRoom(loadSurfaceNOHermesShrineDeliveryCheckpoint(), 'O', oShrineId);
-    expect(timeline(room).slice(-5)).toEqual([
+    expect(timeline(room).slice(-6)).toEqual([
       'interactWheelReward',
       '[cleanup]',
       'purchaseHermesShrineOffer',
+      'rushHermesShrineOffer',
       'purchaseHermesShrineOffer',
       'interactAcquisitionEntry',
     ]);
@@ -365,9 +365,13 @@ describe('Shrine purchases after the doors open', () => {
     ).toBe(wheelRewardRank);
     expect(
       room.roomActionRoster.rows
-        .filter((row) => row.reference.kind === 'purchaseHermesShrineOffer')
+        .filter(
+          (row) =>
+            row.reference.kind === 'purchaseHermesShrineOffer' ||
+            row.reference.kind === 'rushHermesShrineOffer',
+        )
         .map((row) => row.participation),
-    ).toEqual(['optional', 'optional']);
+    ).toEqual(['optional', 'optional', 'optional']);
   });
 });
 

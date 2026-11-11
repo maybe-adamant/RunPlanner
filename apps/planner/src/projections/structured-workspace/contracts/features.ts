@@ -107,7 +107,7 @@ export type WorkspaceRoomFeature =
         readonly offerInteractionKey: string;
         /** The delay rolled with the stocked item; null while unstocked. */
         readonly delay: import('@run-planner/engine/authored-project').HermesShrineDelay | null;
-        /** The rushed purchase that triggers the refill; absent while Travel Deal does not apply. */
+        /** The rushed item whose rush triggers the refill; absent while Travel Deal does not apply. */
         readonly sourceGenerationKey?: import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
       };
     }
@@ -379,6 +379,7 @@ type RoomObjectCommand = Extract<
       | 'ReplaceShopPurchaseParticipation'
       | 'PurchaseShopTravelDealRefill'
       | 'PurchaseHermesShrineOffer'
+      | 'SetHermesShrineRush'
       | 'SetInfernalContractPedestalCollected'
       | 'ReplaceLockedExit'
       | 'InsertRoomAction';

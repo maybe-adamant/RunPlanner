@@ -15,7 +15,6 @@ const buy = {
   kind: 'PurchaseHermesShrineOffer' as const,
   occurrence: owner,
   generationKey: 'travelDealRefill' as const,
-  rushed: false,
 };
 
 it('appends an entry option’s command, or a blank item’s chosen command', () => {

@@ -66,6 +66,7 @@ import {
   purchaseTestHermesShrineOffer,
   supportedTraitOffer,
   testHermesShrinePurchaseAction,
+  testHermesShrineRushAction,
 } from '@run-planner/test-fixtures/shared';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
@@ -94,7 +95,7 @@ import {
 } from '../support/arcana-fear';
 import { reachedFrontier } from '../support/reward-frontier';
 
-/** Picks up a rushed Shrine purchase's item right after its purchase. */
+/** Picks up a rushed Shrine item right after its rush. */
 function takeRushedItem(
   project: ProjectDocument,
   host: ReturnType<typeof createOccurrenceAddress>,
@@ -105,11 +106,11 @@ function takeRushedItem(
       .find((biome) => biome.biomeKey === host.biomeKey)
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === host.occurrenceId)
       ?.roomActions.order ?? [];
-  const purchase = order.findIndex(
+  const rush = order.findIndex(
     (reference) =>
-      reference.kind === 'purchaseHermesShrineOffer' && reference.generationKey === generationKey,
+      reference.kind === 'rushHermesShrineOffer' && reference.generationKey === generationKey,
   );
-  if (purchase < 0) throw new Error(`${generationKey} is not purchased`);
+  if (rush < 0) throw new Error(`${generationKey} is not rushed`);
   const reference = {
     kind: 'interactAcquisitionEntry' as const,
     siteKey: 'hermesShrineDelivery',
@@ -123,7 +124,7 @@ function takeRushedItem(
       roomActionKey(reference),
     ),
     reference,
-    index: purchase + 1,
+    index: rush + 1,
   });
 }
 
@@ -1598,7 +1599,6 @@ describe('Hermes Shrine Travel Deal generation', () => {
       roomActionKey({
         kind: 'purchaseHermesShrineOffer',
         generationKey: 'travelDealRefill',
-        rushed: false,
       }),
     );
     const evaluate = (project: ReturnType<typeof surfaceShrineTravelDealProject>) => {
@@ -1621,15 +1621,23 @@ describe('Hermes Shrine Travel Deal generation', () => {
         { delay: 3, rushed: true },
       );
 
-    it('refills the slot of the first rushed purchase action, not the first slot', () => {
+    it('refills the slot of the first rush, not the first slot', () => {
       const project = withSecondRush();
       expect(evaluate(project).sources).toBe('initial:first');
 
-      const moved = applyProjectCommand(project, catalog, {
-        kind: 'MoveRoomAction',
-        action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
-        toIndex: 1,
-      });
+      const moved = applyProjectCommand(
+        applyProjectCommand(project, catalog, {
+          kind: 'MoveRoomAction',
+          action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
+          toIndex: 1,
+        }),
+        catalog,
+        {
+          kind: 'MoveRoomAction',
+          action: testHermesShrineRushAction(shrine, 'initial:secondLeft'),
+          toIndex: 2,
+        },
+      );
       // The stored first-group refill is kept and reported against the new
       // source slot's group, which blocks the room's assessment.
       const reordered = evaluate(moved);
@@ -1697,7 +1705,8 @@ describe('Hermes Shrine Travel Deal generation', () => {
         });
         for (const [action, toIndex] of [
           [testHermesShrinePurchaseAction(shrine, 'initial:secondRight'), 1],
-          [hermesPickup, 2],
+          [testHermesShrineRushAction(shrine, 'initial:secondRight'), 2],
+          [hermesPickup, 3],
         ] as const)
           project = applyProjectCommand(project, catalog, {
             kind: 'MoveRoomAction',
@@ -1749,8 +1758,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
 
     it('reports a refill purchase with no rushed purchase to create it', () => {
       const project = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
-        kind: 'SetHermesShrinePurchaseRush',
-        action: testHermesShrinePurchaseAction(shrine, 'initial:first'),
+        kind: 'SetHermesShrineRush',
+        occurrence: shrine,
+        generationKey: 'initial:first',
         rushed: false,
       });
       expect(evaluate(project).findings).toContainEqual(
@@ -1769,8 +1779,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
       );
       const project = applyProjectCommand(
         applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
-          kind: 'SetHermesShrinePurchaseRush',
-          action: refillPurchase,
+          kind: 'SetHermesShrineRush',
+          occurrence: shrine,
+          generationKey: 'travelDealRefill',
           rushed: true,
         }),
         catalog,

@@ -335,7 +335,7 @@ describe('converted and copied loot', () => {
     ]);
   });
 
-  it('lists a rushed Shrine item under the purchase that rushes it', () => {
+  it('lists a rushed Shrine item under its rush', () => {
     const actions = galleryRoom(
       'shrine-rush-travel-deal',
       'N',
@@ -343,7 +343,7 @@ describe('converted and copied loot', () => {
     ).roomActions!;
     const rush = actions.rows.find(
       (row) =>
-        row.reference.kind === 'purchaseHermesShrineOffer' &&
+        row.reference.kind === 'rushHermesShrineOffer' &&
         row.reference.generationKey === 'initial:first',
     )!;
     const spawn = actions.actionSpawns?.find((entry) => entry.sourceActionKey === rush.key);
@@ -356,7 +356,7 @@ describe('converted and copied loot', () => {
     const actions = room.roomActions!;
     const pickup = actions.rows.find((row) => row.sourceFamily?.kind === 'hermesShrineDelivery')!;
     expect(pickup.rank).toBeNull();
-    const rush = actions.rows.find((row) => row.reference.kind === 'purchaseHermesShrineOffer')!;
+    const rush = actions.rows.find((row) => row.reference.kind === 'rushHermesShrineOffer')!;
     const spawn = actions.actionSpawns!.find((entry) => entry.sourceActionKey === rush.key)!;
     const item = items(spawn.groups)[0]!;
     expect(item.actionKey).toBe(pickup.key);

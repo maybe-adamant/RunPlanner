@@ -194,7 +194,8 @@ visible unless native Shrine progress completes them. Guide rows neither add
 transactions nor participate in Timeline dependencies, obligations, or
 conformance; unavailable or desynchronized room state hides the presentation.
 A Shrine purchase row is informational on the wire and carries its generation,
-reward type and rush. The module shows it as `Shrine: X` and, when rushed, a
+reward type and rush; the authored rush row publishes through it, never as a
+row of its own. The module shows it as `Shrine: X` and, when rushed, a
 following `Rush: X`, and hides each step from the native Shrine options
 (`Purchased` marks a purchase; a rush removes the option). A delivered Shrine
 pickup is the ordinary acquisition row; outside its rushed purchase room it

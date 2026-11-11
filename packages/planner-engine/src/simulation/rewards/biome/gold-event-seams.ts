@@ -132,6 +132,13 @@ function rowSettledBy(event: HistoryEvent, row: RoomActionRow): boolean {
         event.kind === 'hermesShrinePurchaseReached' &&
         event.generationKey === reference.generationKey
       );
+    // A rush settles with its purchase.
+    case 'rushHermesShrineOffer':
+      return (
+        event.kind === 'hermesShrinePurchaseReached' &&
+        event.rushed &&
+        event.generationKey === reference.generationKey
+      );
     case 'unlockExit':
       return (
         event.kind === 'exitUnlocked' &&

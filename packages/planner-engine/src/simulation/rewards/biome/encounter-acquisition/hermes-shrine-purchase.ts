@@ -5,7 +5,7 @@ import {
   createTravelDealRefillRealizationAddress,
 } from '../../../../authored-project/addresses';
 import {
-  firstRushedInitialPurchase,
+  firstInitialRush,
   hermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
 import type { HermesShrineGenerationKey } from '../../../../authored-project/model';
@@ -78,8 +78,8 @@ function supportedRefill(
 }
 
 /**
- * Settles one ranked Shrine purchase. The first rushed initial purchase made
- * while Travel Deal is held refills its slot (`FirstSpeedUpPurchase`);
+ * Settles one ranked Shrine purchase with its rush. The first initial rush
+ * made while Travel Deal is held refills its slot (`FirstSpeedUpPurchase`);
  * a rush without the trait leaves the refill available to a later rush.
  */
 export function applyHermesShrinePurchaseReachedTransition(inputs: {
@@ -125,7 +125,7 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
       addFinding('hermesShrineTravelDealRefillUnavailable', row.owner, {
         generationKey: 'travelDealRefill',
         reason:
-          firstRushedInitialPurchase(
+          firstInitialRush(
             room.roomActionRoster.rows.flatMap((ranked) =>
               ranked.rank === null ? [] : [ranked.reference],
             ),

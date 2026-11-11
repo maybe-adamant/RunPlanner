@@ -16,9 +16,10 @@ import {
 import { createOccurrenceAddress, semanticAddressKey } from '../addresses';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import {
-  firstRushedInitialPurchase,
+  firstInitialRush,
   hermesShrineDeliverySourceAddress,
   hermesShrinePurchaseAction,
+  hermesShrineRushAction,
   isDeliveryFlushHost,
   isSameRoomDelivery,
   parseHermesShrineDeliveryEntryKey,
@@ -293,7 +294,7 @@ export function activeRoomActionReferences(
       references.push(Object.freeze({ kind: 'purchaseStygianWellOffer', generationKey }));
   }
   if (occurrence.hermesShrine !== undefined) {
-    // A purchase participates by its action, which owns its rush.
+    // A purchase participates by its action; its rush, by its own on the bought item.
     for (const generationKey of [
       'initial:first',
       'initial:secondLeft',
@@ -301,7 +302,10 @@ export function activeRoomActionReferences(
       'travelDealRefill',
     ] as const) {
       const action = hermesShrinePurchaseAction(occurrence.roomActions.order, generationKey);
-      if (action !== undefined) references.push(action);
+      if (action === undefined) continue;
+      references.push(action);
+      const rush = hermesShrineRushAction(occurrence.roomActions.order, generationKey);
+      if (rush !== undefined) references.push(rush);
     }
   }
   for (const phase of envelopeSlots) {
@@ -435,11 +439,10 @@ export function activeRoomActionReferences(
           continue;
         if (sourceIsCurrent) {
           const order = occurrence.roomActions.order;
-          if (hermesShrinePurchaseAction(order, shrineDelivery.generationKey)?.rushed !== true)
-            continue;
+          if (hermesShrineRushAction(order, shrineDelivery.generationKey) === undefined) continue;
           if (
             shrineDelivery.generationKey === 'travelDealRefill' &&
-            firstRushedInitialPurchase(order) === undefined
+            firstInitialRush(order) === undefined
           )
             continue;
         }

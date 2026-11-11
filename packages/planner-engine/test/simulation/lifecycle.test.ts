@@ -123,13 +123,15 @@ function eventKinds(executionInput: RoomLifecycleExecutionInput) {
   return executeRoomLifecycle(catalog, executionInput).events.map((event) => event.kind);
 }
 
-function firstShrinePurchase(rushed: boolean): RoomActionReference {
-  return Object.freeze({
-    kind: 'purchaseHermesShrineOffer',
-    generationKey: 'initial:first',
-    rushed,
-  });
-}
+const firstShrinePurchase: RoomActionReference = Object.freeze({
+  kind: 'purchaseHermesShrineOffer',
+  generationKey: 'initial:first',
+});
+
+const firstShrineRush: RoomActionReference = Object.freeze({
+  kind: 'rushHermesShrineOffer',
+  generationKey: 'initial:first',
+});
 
 function actionRoster(
   actionOrigin: typeof origin,
@@ -272,10 +274,10 @@ describe('single-room lifecycle execution', () => {
         },
         roomActionRoster: actionRoster(
           sideOrigin,
-          [firstShrinePurchase(false)],
+          [firstShrinePurchase],
           [
             {
-              reference: firstShrinePurchase(false),
+              reference: firstShrinePurchase,
               participation: 'required',
               window: { kind: 'postOutgoing' },
               dependencies: [],
@@ -331,11 +333,17 @@ describe('single-room lifecycle execution', () => {
         },
         roomActionRoster: actionRoster(
           sideOrigin,
-          [firstShrinePurchase(true), delivery],
+          [firstShrinePurchase, firstShrineRush, delivery],
           [
             {
-              reference: firstShrinePurchase(true),
+              reference: firstShrinePurchase,
               participation: 'required',
+              window: { kind: 'postOutgoing' },
+              dependencies: [],
+            },
+            {
+              reference: firstShrineRush,
+              participation: 'optional',
               window: { kind: 'postOutgoing' },
               dependencies: [],
             },

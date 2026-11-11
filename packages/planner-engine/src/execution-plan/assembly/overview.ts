@@ -22,6 +22,7 @@ import {
 import {
   hermesShrineDeliveryEntryKey,
   hermesShrinePurchaseAction,
+  hermesShrineRushAction,
 } from '../../authored-project/hermes-shrine-delivery';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
@@ -532,15 +533,14 @@ function shrinePurchase(
   readonly deliverySourceKey?: string;
   readonly purchase?: { readonly rushed: boolean };
 } {
-  const action = hermesShrinePurchaseAction(
-    room.roomActionRoster.rows.map((row) => row.reference),
-    generationKey,
-  );
-  return action === undefined
+  const order = room.roomActionRoster.rows.map((row) => row.reference);
+  return hermesShrinePurchaseAction(order, generationKey) === undefined
     ? {}
     : {
         deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, generationKey),
-        purchase: Object.freeze({ rushed: action.rushed }),
+        purchase: Object.freeze({
+          rushed: hermesShrineRushAction(order, generationKey) !== undefined,
+        }),
       };
 }
 

@@ -1664,7 +1664,8 @@ describe('shop-like purchase rows', () => {
         delay: 2,
         rushed,
       });
-    // Timeline order, not slot order, decides which rushed purchase triggers the refill.
+    // Timeline order, not slot order, decides which rushed purchase triggers the refill;
+    // a rush settles with its purchase.
     project = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
       action: testHermesShrinePurchaseAction(shrineOwner, 'initial:secondLeft'),
@@ -1680,7 +1681,9 @@ describe('shop-like purchase rows', () => {
   function purchaseRows(
     project: ProjectDocument,
     occurrenceId: string,
-    kind: 'purchaseHermesShrineOffer' | 'purchaseStygianWellOffer',
+    kinds: readonly (
+      'purchaseHermesShrineOffer' | 'rushHermesShrineOffer' | 'purchaseStygianWellOffer'
+    )[],
   ) {
     const node = projectStructuredWorkspaceFixture(project)
       .workspace.route.biomes.flatMap((biome) => biome.nodes)
@@ -1690,26 +1693,46 @@ describe('shop-like purchase rows', () => {
       );
     if (node?.kind !== 'occurrenceWorkbench') throw new Error(`${occurrenceId} is missing`);
     return (node.room.roomActions?.rows ?? [])
-      .filter((row) => row.reference.kind === kind)
+      .filter((row) => (kinds as readonly string[]).includes(row.reference.kind))
       .sort((left, right) => (left.rank ?? Infinity) - (right.rank ?? Infinity));
   }
   const shrineRows = (project: ProjectDocument) =>
-    purchaseRows(project, shrineId, 'purchaseHermesShrineOffer');
+    purchaseRows(project, shrineId, ['purchaseHermesShrineOffer', 'rushHermesShrineOffer']);
 
-  it('reads Shrine rush on the row and carries the refill line on the first rushed purchase in timeline order', () => {
+  it('reads a Shrine rush as its own row and carries the refill line on the rush of the first rushed purchase', () => {
     const rows = shrineRows(travelDealShrine(true));
+    const rushOf = (generationKey: string) =>
+      rows.find(
+        (row) =>
+          row.reference.kind === 'rushHermesShrineOffer' &&
+          row.reference.generationKey === generationKey,
+      );
     expect(
       rows.map((row) => [
-        row.reference.kind === 'purchaseHermesShrineOffer' && row.reference.generationKey,
-        row.label.startsWith('Rush '),
+        row.reference.kind,
+        'generationKey' in row.reference && row.reference.generationKey,
+        row.label.split(' ')[0],
         row.travelDealLine?.kind,
       ]),
     ).toEqual([
-      ['initial:secondLeft', true, 'hermesShrine'],
-      ['initial:first', true, undefined],
+      ['purchaseHermesShrineOffer', 'initial:secondLeft', 'Buy', undefined],
+      ['purchaseHermesShrineOffer', 'initial:first', 'Buy', undefined],
+      ['rushHermesShrineOffer', 'initial:first', 'Rush', undefined],
+      ['rushHermesShrineOffer', 'initial:secondLeft', 'Rush', 'hermesShrine'],
     ]);
-    expect(rows[0]?.travelDealLine).toMatchObject({
+    expect(rushOf('initial:secondLeft')?.travelDealLine).toMatchObject({
       refill: { rewardType: 'ArmorBoost', sourceGenerationKey: 'initial:secondLeft' },
+    });
+    // A rush is undone on its own row, keeping the purchase.
+    expect(rushOf('initial:first')).toMatchObject({
+      purchaseRemoval: {
+        command: {
+          kind: 'SetHermesShrineRush',
+          occurrence: shrineOwner,
+          generationKey: 'initial:first',
+          rushed: false,
+        },
+      },
     });
   });
 
@@ -1742,7 +1765,7 @@ describe('shop-like purchase rows', () => {
     const wellId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const wellOwner = createOccurrenceAddress(goldenFBiome, wellId);
     const wellRows = (project: ProjectDocument) =>
-      purchaseRows(project, wellId, 'purchaseStygianWellOffer');
+      purchaseRows(project, wellId, ['purchaseStygianWellOffer']);
     const checkpoint = authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint());
     const hosted = wellRows(checkpoint).filter((row) => row.travelDealLine !== undefined);
     expect(hosted).toHaveLength(1);

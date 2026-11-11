@@ -299,8 +299,7 @@
                   },
                   {
                     "kind": "purchaseHermesShrineOffer",
-                    "generationKey": "initial:secondLeft",
-                    "rushed": false
+                    "generationKey": "initial:secondLeft"
                   }
                 ]
               },

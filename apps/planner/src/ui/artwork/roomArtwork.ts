@@ -84,6 +84,7 @@ export function roomActionIcon(
     case 'rerollStygianWell':
       return roomObjectIcon('stygianWell');
     case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer':
       return roomObjectIcon('hermesShrine');
     case 'sellPurgingPoolTrait':
     case 'rerollPurgingPool':
