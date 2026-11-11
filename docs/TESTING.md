@@ -26,6 +26,18 @@ fixtures, checkpoints and the listed route builders with the committed
 `packages/planner-engine/test/equivalence/baseline.json`. `EQUIVALENCE_WRITE=1`
 rewrites the baseline, only for an intended product change.
 
+## Lifecycle snapshots
+
+Five checked-in snapshots witness the room lifecycle inside the correctness
+lane: the catalog's compiled lifecycle operations
+(`packages/hades2-catalog/test/catalog/lifecycles/`) and, over the equivalence
+corpus, each room's roster proposals, published contacts, walk and Timeline
+order, and the live placement indices of its deliveries and clocked drops
+(under `packages/planner-engine/test/`). Identical rooms are grouped across
+corpus entries, and a failure names each changed line. Only for an intended
+change, `LIFECYCLE_SNAPSHOT_WRITE=1` rewrites the corpus snapshots and
+`vitest run -u` the catalog's.
+
 ## Draft corpus
 
 `npm run test:draft-corpus` drafts a fixed corpus of specs and seeds, prints
