@@ -18,6 +18,7 @@ import {
   assessRoomActionOrder,
   assessRoomActionPlacement,
 } from '../../../src/authored-project/room-actions/order-assessment';
+import { gateFreeGraphEvents } from '../../support/event-graph';
 
 const owner = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
@@ -28,13 +29,7 @@ const structure: RoomEventGraph = {
   profileKey: 'StandardRewardRoom',
   activeEncounterSlotKeys: ['Encounter'],
   phases: [{ phaseKey: 'Encounter' }],
-  points: [
-    { kind: 'roomEntered', key: 'roomEntered' },
-    { kind: 'encounterStart', key: 'encounterStart:Encounter', phaseKey: 'Encounter' },
-    { kind: 'encounterEnd', key: 'encounterEnd:Encounter', phaseKey: 'Encounter' },
-    { kind: 'outgoingGeneration', key: 'outgoingGeneration' },
-    { kind: 'cleanup', key: 'cleanup' },
-  ],
+  events: gateFreeGraphEvents(['Encounter'], true),
 };
 
 /** Required, before combat. */

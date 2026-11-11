@@ -23,8 +23,7 @@ import {
 import type { OrdinaryBatchGenerationAssessment } from '../generation/model';
 import { biomeHistoryThrough, type BiomeHistoryPrefix, type HistoryEvent } from '../history';
 import type { ReachedHistoryRoomAction } from '../history/model';
-import { roomOverviewOperationCount } from '../lifecycle';
-import { roomLifecycleOperations } from '../../authored-project/room-actions/lifecycle-operations';
+import { roomOverviewStepCount, roomWalkSteps } from '../lifecycle';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { RoomStopCoverage } from '../evaluation/evaluation-products';
 import {
@@ -262,9 +261,7 @@ function positionRoom(
   const declaration = catalog.rooms.byKey[owner.room.gameName];
   if (declaration === undefined)
     throw new BiomeMaterializationContractError(`${owner.room.gameName} has no room declaration`);
-  const overviewEnd = roomOverviewOperationCount(
-    roomLifecycleOperations(catalog, profile, declaration),
-  );
+  const overviewEnd = roomOverviewStepCount(roomWalkSteps(catalog, profile, declaration));
   const roomEvents = history.events.filter(
     (candidate): candidate is LifecycleEvent =>
       lifecycleEvent(candidate) && key(candidate.origin) === roomKey,
@@ -866,12 +863,14 @@ function roomStop(
   const declaration = catalog.rooms.byKey[room.gameName];
   if (declaration === undefined)
     throw new BiomeMaterializationContractError(`${room.gameName} has no room declaration`);
-  const operations = roomLifecycleOperations(catalog, profile, declaration);
-  const generation = operations.findIndex(
-    (operation) => operation.kind === 'generateOutgoingBatch',
+  const steps = roomWalkSteps(catalog, profile, declaration);
+  const generation = steps.findIndex(
+    (step) => step.kind === 'operation' && step.operation.kind === 'generateOutgoingBatch',
   );
-  const exitWork = operations.findIndex(
-    (operation) => operation.kind === 'settleAcquisitionPoint' || operation.kind === 'commitRoom',
+  const exitWork = steps.findIndex(
+    (step) =>
+      step.kind === 'operation' &&
+      (step.operation.kind === 'settleAcquisitionPoint' || step.operation.kind === 'commitRoom'),
   );
   const generated = generation >= 0 && passed.some((event) => event.operationIndex >= generation);
   const phaseEvent = (kind: HistoryEvent['kind'], phaseKey: string, event: HistoryEvent) =>

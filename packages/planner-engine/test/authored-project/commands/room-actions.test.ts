@@ -564,7 +564,7 @@ describe('room-action commands', () => {
         .filter((entry) => entry.kind === 'action')
         .map((entry) => entry.action.rank);
       const cleanup = timeline.entries.findIndex(
-        (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+        (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'doorsOpened',
       );
       const lastAction = timeline.entries.reduce(
         (index, entry, entryIndex) => (entry.kind === 'action' ? entryIndex : index),

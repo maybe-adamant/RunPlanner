@@ -19,6 +19,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
+import { testGraphEvents } from '../support/event-graph';
 
 const origin = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
@@ -229,49 +230,18 @@ function actionRoster(
           })),
         ]
       : phaseKeys.map((phaseKey) => ({ phaseKey }));
-  const points: RoomEventGraph['points'][number][] = [
-    Object.freeze({ kind: 'roomEntered', key: 'roomEntered' }),
-  ];
-  phasesForStructure.forEach((phase, index) => {
-    if (phase.rewardWheelKey !== undefined && index > 0) {
-      points.push(
-        Object.freeze({
-          kind: 'wheelsOpen',
-          key: `wheelsOpen:${phase.rewardWheelKey}`,
-          wheelKey: phase.rewardWheelKey,
-        }),
-        Object.freeze({
-          kind: 'nextPhase',
-          key: `nextPhase:${phase.rewardWheelKey}`,
-          wheelKey: phase.rewardWheelKey,
-        }),
-      );
-    }
-    points.push(
-      Object.freeze({
-        kind: 'encounterStart',
-        key: `encounterStart:${phase.phaseKey}`,
-        phaseKey: phase.phaseKey,
-      }),
-      Object.freeze({
-        kind: 'encounterEnd',
-        key: `encounterEnd:${phase.phaseKey}`,
-        phaseKey: phase.phaseKey,
-      }),
-    );
+  const events = testGraphEvents(phasesForStructure, {
+    cages: profileKey === 'FieldsCombatRoom',
+    generatesOutgoing:
+      catalog.roomLifecycleProfiles.byKey[profileKey]?.steps.some(
+        (step) => step.kind === 'generateOutgoingBatch',
+      ) === true,
   });
-  if (
-    catalog.roomLifecycleProfiles.byKey[profileKey]?.steps.some(
-      (step) => step.kind === 'generateOutgoingBatch',
-    )
-  )
-    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
-  points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
   const eventGraph: RoomEventGraph = Object.freeze({
     profileKey,
     activeEncounterSlotKeys: Object.freeze(phaseKeys),
     phases: Object.freeze(phasesForStructure),
-    points: Object.freeze(points),
+    events: Object.freeze(events),
   });
   return assembleRoomActionRoster({
     owner: actionOrigin,

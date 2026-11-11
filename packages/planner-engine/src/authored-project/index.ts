@@ -75,7 +75,6 @@ export type {
   RoomEventGraphPhase,
   RoomEventTrigger,
 } from './room-actions/event-graph';
-export { roomLifecycleOperations } from './room-actions/lifecycle-operations';
 export { assembleRoomActionDomain, type RoomActionDomain } from './room-actions/domain';
 export {
   assessRoomActionInsertion,

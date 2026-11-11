@@ -1304,7 +1304,7 @@ describe('route-detour simulation', () => {
       .find((room) => room.occurrenceId === contract);
     expect(contractRoom?.lifecycleProfileKey).toBe('StandardRewardRoom');
     expect(
-      contractRoom?.roomLifecycleTimeline.structure.points.map((point) => point.kind),
+      contractRoom?.roomLifecycleTimeline.graph.events.map((event) => event.kind),
     ).not.toContain('bossDefeated');
     // The Contract room's fixed reward is a required collect the owner places.
     expect(

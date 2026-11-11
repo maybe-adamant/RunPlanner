@@ -55,10 +55,22 @@ function withKeepsake(keepsakeKey: string): ProjectDocument {
   });
 }
 
+/** An outcome observed at its phase's Combat. */
+const atCombat = (phaseKey: string) => ({
+  kind: 'combat' as const,
+  eventKey: `encounterStarted:${phaseKey}`,
+});
+
+/** A Nemesis random event's outcome, observed at her talk row. */
+const herTalk = (phaseKey: string) => ({
+  kind: 'interaction' as const,
+  action: { kind: 'interactEncounter' as const, phaseKey },
+});
+
 describe('Encounter outcome', () => {
   it('hosts the Aetos wave only while the fight can field it', () => {
     expect(outcomes(loadSurfaceNOPProject(), 'P', pCombat03)).toEqual([
-      { phaseKey: 'Combat', choices: ['aetos'] },
+      { phaseKey: 'Combat', host: atCombat('Combat'), choices: ['aetos'] },
     ]);
     // An Aetos already placed this biome leaves a later fight's outcome with nothing to host.
     const fixture = reachedPOutdoorIcarusFixture();
@@ -72,7 +84,7 @@ describe('Encounter outcome', () => {
 
   it('pairs the Gorgon condition with Aetos when the Amulet is pending', () => {
     expect(outcomes(withKeepsake('AthenaEncounterKeepsake'), 'P', pCombat03)).toEqual([
-      { phaseKey: 'Combat', choices: ['aetos', 'gorgonCondition'] },
+      { phaseKey: 'Combat', host: atCombat('Combat'), choices: ['aetos', 'gorgonCondition'] },
     ]);
   });
 
@@ -93,13 +105,13 @@ describe('Encounter outcome', () => {
       value: 2,
     });
     expect(outcomes(authored, 'P', pCombat03)).toEqual([
-      { phaseKey: 'Combat', choices: ['aetos'] },
+      { phaseKey: 'Combat', host: atCombat('Combat'), choices: ['aetos'] },
     ]);
   });
 
   it("hosts a Nemesis event's result, alone, as answering her ends it", () => {
     expect(outcomes(loadNemesisPomSeaStarCheckpoint(), 'F', 'golden-f-b5-e1')).toEqual([
-      { phaseKey: 'Encounter', choices: ['nemesisEvent'] },
+      { phaseKey: 'Encounter', host: herTalk('Encounter'), choices: ['nemesisEvent'] },
     ]);
   });
 
@@ -130,7 +142,7 @@ describe('Encounter outcome', () => {
       { rewardType: 'RoomRewardConsolationPrize' },
     );
     expect(outcomes(contest, 'F', room)).toEqual([
-      { phaseKey: 'Encounter', choices: ['nemesisEvent'] },
+      { phaseKey: 'Encounter', host: herTalk('Encounter'), choices: ['nemesisEvent'] },
     ]);
   });
 
@@ -149,10 +161,11 @@ describe('Encounter outcome', () => {
       ),
     ).toEqual([
       'roomEntered',
-      'encounterStart:Encounter',
+      'encounterBegun:Encounter',
+      'encounterStarted:Encounter',
       'bossDefeated:Encounter',
       'encounterEnd:Encounter',
-      'cleanup',
+      'doorsOpened',
     ]);
     expect(encounterOutcomesForProjectEvaluationAssembly(catalog, assembly, boss.origin)).toEqual(
       [],

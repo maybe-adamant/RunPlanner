@@ -68,7 +68,7 @@ import {
 } from '../room-state/encounter-envelope';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import type { RewardProducerBinding } from '../../reward-kernel/bindings';
-import type { ResolvedRewardOffer } from '../../reward-kernel/model';
+import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../reward-kernel/model';
 import { activeRoomActionReferences, roomActionKey } from './state';
 import {
   roomActionContentSource,
@@ -84,9 +84,13 @@ import {
   acquisitionEntrySourceFamily,
   type AcquisitionEntrySourceFamily,
 } from '../acquisition/entry-source-family';
-import { assembleRoomEventGraph, type RoomActionWindow, type RoomEventGraph } from './event-graph';
+import {
+  assembleRoomEventGraph,
+  producerPointsBeforeCombat,
+  type RoomActionWindow,
+  type RoomEventGraph,
+} from './event-graph';
 import { authoredRoomLifecycleProfileKey } from './lifecycle-profile';
-import { roomLifecycleOperations } from './lifecycle-operations';
 
 export type RoomActionParticipation = 'required' | 'optional';
 
@@ -209,20 +213,18 @@ function contribution(
  * unlock. Where the room opens no outgoing doors (Preboss) they span the room;
  * elsewhere purchases follow outgoing generation.
  */
-function shopPurchaseWindow(
-  catalog: Catalog,
-  declaration: RoomDeclaration,
-  lifecycleProfileKey: string,
-): RoomActionWindow {
+function shopPurchaseWindow(catalog: Catalog, lifecycleProfileKey: string): RoomActionWindow {
   const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
   return profile !== undefined &&
-    !roomLifecycleOperations(catalog, profile, declaration).some(
-      (operation) => operation.kind === 'generateOutgoingBatch',
-    )
+    !profile.steps.some((step) => step.kind === 'generateOutgoingBatch')
     ? frozen({ kind: 'standard', phase: 'afterCombat' })
     : frozen({ kind: 'postOutgoing' });
 }
 
+/**
+ * A gate pickup and the reward before combat are taken before a single
+ * encounter's combat; a multi-encounter room's reward follows its fights.
+ */
 function producerWindow(
   catalog: Catalog,
   declaration: RoomDeclaration,
@@ -230,16 +232,14 @@ function producerWindow(
   producerPoint: string,
 ): RoomActionWindow {
   const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
-  const operations =
-    profile === undefined ? [] : roomLifecycleOperations(catalog, profile, declaration);
-  const startIndex = operations.findIndex((operation) => operation.kind === 'startEncounter');
-  const producerIndex = operations.findIndex(
-    (operation) => operation.kind === 'advanceProducer' && operation.point === producerPoint,
-  );
   return frozen({
     kind: 'standard',
     phase:
-      startIndex >= 0 && producerIndex >= 0 && producerIndex < startIndex
+      profile !== undefined &&
+      catalog.encounterEnvelopes.byKey[declaration.encounterEnvelopeKey]?.slots.length === 1 &&
+      producerPointsBeforeCombat(catalog, profile, declaration).has(
+        producerPoint as ProducerLifecyclePointKey,
+      )
         ? 'beforeCombat'
         : 'afterCombat',
   });
@@ -642,7 +642,7 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
-        shopPurchaseWindow(catalog, declaration, lifecycleProfileKey),
+        shopPurchaseWindow(catalog, lifecycleProfileKey),
         [],
         owner,
       );
@@ -667,7 +667,7 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
-        shopPurchaseWindow(catalog, declaration, lifecycleProfileKey),
+        shopPurchaseWindow(catalog, lifecycleProfileKey),
         [],
         owner,
       );
@@ -837,7 +837,7 @@ function baseContribution(
                     producer.source.owner.kind === 'shopOffer') ||
                   reference.siteKey === 'roomExit'
                 ? occurrence.state.kind === 'shop'
-                  ? shopPurchaseWindow(catalog, declaration, lifecycleProfileKey)
+                  ? shopPurchaseWindow(catalog, lifecycleProfileKey)
                   : frozen({ kind: 'postOutgoing' })
                 : frozen({ kind: 'standard', phase: 'afterCombat' }),
         [
@@ -969,15 +969,6 @@ export function assembleRoomActionDomain(options: {
   const declaration = resolveEntryDeclaration(rawDeclaration, options.routePosition);
   const lifecycleProfileKey =
     options.lifecycleProfileKey ?? authoredRoomLifecycleProfileKey(declaration, options.occurrence);
-  const eventGraph = assembleRoomEventGraph({
-    catalog: options.catalog,
-    declaration,
-    occurrence: options.occurrence,
-    lifecycleProfileKey,
-    ...(options.activeEncounterSlotKeys === undefined
-      ? {}
-      : { activeEncounterSlotKeys: options.activeEncounterSlotKeys }),
-  });
   const structuralReferences = activeRoomActionReferences(
     options.catalog,
     options.biome,
@@ -1033,6 +1024,18 @@ export function assembleRoomActionDomain(options: {
       ...(options.entryActive === undefined ? {} : { entryActive: options.entryActive }),
     },
   );
+  const eventGraph = assembleRoomEventGraph({
+    catalog: options.catalog,
+    declaration,
+    occurrence: options.occurrence,
+    lifecycleProfileKey,
+    incomingRewardPickups: structuralReferences.filter(
+      (reference) => reference.kind === 'interactIncomingReward',
+    ),
+    ...(options.activeEncounterSlotKeys === undefined
+      ? {}
+      : { activeEncounterSlotKeys: options.activeEncounterSlotKeys }),
+  });
   let actions = structuralReferences.map((reference) =>
     baseContribution(
       options.catalog,

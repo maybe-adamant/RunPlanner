@@ -8,7 +8,6 @@ import {
   resolveBiomeStart,
   resolveEntryDeclaration,
   resolveEntryRoom,
-  roomLifecycleOperations,
   type ResolvedRoutePosition,
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
@@ -18,6 +17,7 @@ import type {
   RoomLifecycleOperation,
   RoomLifecycleProfile,
 } from '@run-planner/engine/catalog-schema';
+import { roomWalkSteps, type RoomWalkStep } from '@run-planner/engine/simulation';
 
 const snapshotPath = './compiled-operations.snapshot.json';
 
@@ -27,10 +27,12 @@ function operationText(operation: RoomLifecycleOperation): string {
       ? ` ${operation.offerPoint}`
       : operation.kind === 'settleAcquisitionPoint' || operation.kind === 'advanceProducer'
         ? ` ${operation.point}`
-        : operation.kind === 'startEncounter' || operation.kind === 'completeEncounter'
-          ? ` ${operation.encounter.kind}`
-          : '';
+        : '';
   return `${operation.kind}${subject}: ${operation.effects.join(', ')}`;
+}
+
+function stepText(step: RoomWalkStep): string {
+  return step.kind === 'operation' ? operationText(step.operation) : step.kind;
 }
 
 /** The fields an encounter's lifecycle reads: its kind, start, outcome and end. */
@@ -203,9 +205,7 @@ function profileOperations(
     if (selection.profileKey !== profile.key) continue;
     if (!profile.encounterEnvelopeKeys.includes(selection.declaration.encounterEnvelopeKey))
       throw new Error(`${selection.label} selects ${profile.key} for its envelope`);
-    const operations = roomLifecycleOperations(catalog, profile, selection.declaration).map(
-      operationText,
-    );
+    const operations = roomWalkSteps(catalog, profile, selection.declaration).map(stepText);
     const key = JSON.stringify(operations);
     const group = byList.get(key) ?? { operations, labels: [] };
     group.labels.push(selection.label);
@@ -304,27 +304,23 @@ describe('compiled room lifecycle operations', () => {
       const positions = all
         .filter((selection) => selection.profileKey === profile.key)
         .map((selection) => {
-          const operations = roomLifecycleOperations(catalog, profile, selection.declaration);
+          const steps = roomWalkSteps(catalog, profile, selection.declaration);
+          const kind = (step: RoomWalkStep) =>
+            step.kind === 'operation' ? step.operation.kind : step.kind;
           return {
             label: selection.label,
-            count: operations.length,
-            outgoing: operations.findIndex(
-              (operation) => operation.kind === 'generateOutgoingBatch',
+            count: steps.length,
+            outgoing: steps.findIndex((step) => kind(step) === 'generateOutgoingBatch'),
+            overviewEnd: steps.findIndex(
+              (step) =>
+                kind(step) !== 'prepareRoom' &&
+                kind(step) !== 'materializeOfferPoint' &&
+                kind(step) !== 'enterRoom',
             ),
-            overviewEnd: operations.findIndex(
-              (operation) =>
-                operation.kind !== 'prepareRoom' &&
-                operation.kind !== 'materializeOfferPoint' &&
-                operation.kind !== 'enterRoom',
-            ),
-            steps: operations.flatMap((operation, index) =>
-              operation.kind === 'advanceProducer' ||
-              operation.kind === 'startEncounter' ||
-              operation.kind === 'completeEncounter' ||
-              operation.kind === 'runEncounterSequence' ||
-              operation.kind === 'runRewardEncounterSequence'
+            steps: steps.flatMap((step, index) =>
+              step.kind !== 'operation' || step.operation.kind === 'advanceProducer'
                 ? []
-                : [`${index} ${operation.kind}`],
+                : [`${index} ${step.operation.kind}`],
             ),
           };
         });

@@ -946,15 +946,18 @@ describe('H Fields materialization', () => {
           }),
     );
     const cleanup = entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'doorsOpened',
     );
     expect(cleanup).toBeGreaterThan(finalCageEnd);
     expect(firstPickup).toBeLessThan(cleanup);
     const firstCageEnd = entries.findIndex(
       (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterEnd:Cage01',
     );
+    // The next cage's row begins its fight.
     const nextCageStart = entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStart:Cage02',
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.action.key === roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage02' }),
     );
     expect(firstCageEnd).toBeGreaterThanOrEqual(0);
     expect(firstPickup).toBeGreaterThan(firstCageEnd);
@@ -992,21 +995,21 @@ describe('H Fields materialization', () => {
       .flatMap((batch) => batch.targets.map((target) => target.room))
       .find((candidate) => candidate.occurrenceId === occurrenceId);
     if (room === undefined) throw new Error('Fields blocker room is missing');
-    expect(room.roomActionRoster.eventGraph).toBe(room.roomLifecycleTimeline.structure);
+    expect(room.roomActionRoster.eventGraph).toBe(room.roomLifecycleTimeline.graph);
     expect(
       room.roomLifecycleTimeline.boundaries.map((boundary) =>
         'phaseKey' in boundary ? `${boundary.kind}:${boundary.phaseKey}` : boundary.kind,
       ),
     ).toEqual([
       'roomEntered',
-      'encounterStart:Cage01',
-      // A cage fight can host the Gorgon condition at its outcome.
-      'encounterOutcome:Cage01',
+      // A cage fight can host the Gorgon condition at its Combat.
+      'encounterBegun:Cage01',
+      'encounterStarted:Cage01',
       'encounterEnd:Cage01',
-      'encounterStart:Cage02',
-      'encounterOutcome:Cage02',
+      'encounterBegun:Cage02',
+      'encounterStarted:Cage02',
       'encounterEnd:Cage02',
-      'cleanup',
+      'doorsOpened',
     ]);
   });
 

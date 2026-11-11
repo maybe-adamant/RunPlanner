@@ -599,7 +599,7 @@ describe('canonical I Clockwork materialization and history', () => {
     expect(storyTarget?.room.clockworkReward).toBeUndefined();
     expect(
       storyTarget?.room.roomLifecycleTimeline.boundaries.map((boundary) => boundary.kind),
-    ).toEqual(['roomEntered', 'cleanup']);
+    ).toEqual(['roomEntered', 'doorsOpened']);
     expect(
       storyTarget?.room.roomLifecycleTimeline.entries.some(
         (entry) => entry.kind === 'action' && entry.action.reference.kind === 'interactEncounter',

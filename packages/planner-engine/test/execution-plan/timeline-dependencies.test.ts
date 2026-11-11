@@ -41,6 +41,7 @@ import {
 } from '../../src/simulation/traits/history/fold';
 import type { TraitHistoryEvent } from '../../src/simulation/traits/history/model';
 import { executionFixtures } from './support/execution-fixtures';
+import { gateFreeGraphEvents } from '../support/event-graph';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const occurrenceId = createOccurrenceId('fence-room');
@@ -54,12 +55,7 @@ const structure: RoomEventGraph = {
   profileKey: 'Combat',
   activeEncounterSlotKeys: ['Encounter'],
   phases: [{ phaseKey: 'Encounter' }],
-  points: [
-    { kind: 'roomEntered', key: 'roomEntered' },
-    { kind: 'encounterStart', key: 'encounterStart:Encounter', phaseKey: 'Encounter' },
-    { kind: 'encounterEnd', key: 'encounterEnd:Encounter', phaseKey: 'Encounter' },
-    { kind: 'outgoingGeneration', key: 'outgoingGeneration' },
-  ],
+  events: gateFreeGraphEvents(['Encounter'], true),
 };
 
 type Kind = 'screen' | 'pickup' | 'native' | 'phialFountain' | RoomActionReference['kind'];

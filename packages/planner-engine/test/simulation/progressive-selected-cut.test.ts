@@ -1549,7 +1549,7 @@ describe('room stop', () => {
           },
         }),
       'P',
-      { room: prebossShop, kind: 'overview', at: 'before', entry: 'cleanup' },
+      { room: prebossShop, kind: 'overview', at: 'before', entry: 'doorsOpened' },
     ],
     [
       'a Timeline row: the first row of the blocking product',
@@ -1566,7 +1566,7 @@ describe('room stop', () => {
       'an unplaced required pickup: where the walk stopped, at its spawn after the encounter',
       () => withRoomActions(loadUnderworldFGCheckpoint(), 'F', 'golden-f-b1-e1', () => false),
       'F',
-      { room: 'golden-f-b1-e1', kind: 'timeline', at: 'before', entry: 'cleanup' },
+      { room: 'golden-f-b1-e1', kind: 'timeline', at: 'before', entry: 'doorsOpened' },
     ],
     [
       'an unplaced Fields cage: the walk stops before that cage starts',
@@ -1589,7 +1589,7 @@ describe('room stop', () => {
         room: 'golden-h-combat02',
         kind: 'timeline',
         at: 'before',
-        entry: 'encounterStart:Cage03',
+        entry: 'encounterBegun:Cage03',
       },
     ],
     [
@@ -1601,7 +1601,7 @@ describe('room stop', () => {
           value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
         }),
       'F',
-      { room: 'golden-f-start', kind: 'timeline', at: 'entry', entry: 'cleanup' },
+      { room: 'golden-f-start', kind: 'timeline', at: 'entry', entry: 'doorsOpened' },
     ],
     [
       'a phase-start contact: its own entry, reached (Fig Leaf)',
@@ -1616,7 +1616,7 @@ describe('room stop', () => {
         room: 'golden-f-b3-e1',
         kind: 'timeline',
         at: 'entry',
-        entry: 'encounterStart:Encounter',
+        entry: 'encounterStarted:Encounter',
       },
     ],
     [
@@ -1636,7 +1636,7 @@ describe('room stop', () => {
         room: nLocalOccurrenceId('combat02', 'sideDoor1'),
         kind: 'timeline',
         at: 'entry',
-        entry: 'encounterStart:Encounter',
+        entry: 'encounterStarted:Encounter',
       },
     ],
     [
@@ -1647,7 +1647,7 @@ describe('room stop', () => {
         room: pOccurrenceId('P_Combat03', 1, 1),
         kind: 'timeline',
         at: 'entry',
-        entry: 'encounterOutcome:Combat',
+        entry: 'encounterStarted:Combat',
       },
     ],
     [
@@ -1658,7 +1658,7 @@ describe('room stop', () => {
         room: pOccurrenceId('P_Combat03', 1, 1),
         kind: 'timeline',
         at: 'entry',
-        entry: 'encounterOutcome:Combat',
+        entry: 'encounterStarted:Combat',
       },
     ],
     [
@@ -1692,7 +1692,7 @@ describe('room stop', () => {
       "a Ship wheel offer: its Wheels open, reached; the wheel's later choice row is not",
       partialWheel,
       'O',
-      { room: oOccurrenceIds.combat07, kind: 'timeline', at: 'entry', entry: 'wheelsOpen' },
+      { room: oOccurrenceIds.combat07, kind: 'timeline', at: 'entry', entry: 'wheelsOpen:Combat1' },
     ],
     [
       // The replacement's row comes later; the walk stops inside the source's settlement.
@@ -1737,13 +1737,13 @@ describe('room stop', () => {
       "an encounter end's due Shrine delivery not placed: its deadline, the doors opening",
       shrineDeliveryUnplaced,
       'O',
-      { room: 'surface-o-devotion', kind: 'timeline', at: 'before', entry: 'cleanup' },
+      { room: 'surface-o-devotion', kind: 'timeline', at: 'before', entry: 'doorsOpened' },
     ],
     [
       "the doors' store unavailable at generation: the doors opening, reached (Chaos)",
       chaosTimePiece,
       'F',
-      { room: 'fixture-chaos-room', kind: 'timeline', at: 'entry', entry: 'cleanup' },
+      { room: 'fixture-chaos-room', kind: 'timeline', at: 'entry', entry: 'doorsOpened' },
     ],
     [
       'a Well Twist result unset: its purchase row',

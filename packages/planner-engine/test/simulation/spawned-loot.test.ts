@@ -306,10 +306,10 @@ describe('spawned loot', () => {
     expect(stop?.room.occurrenceId).not.toBe('golden-f-b5-e1');
   });
 
-  it('spawns an H miniboss reward caged at its encounter start, freed at its end', () => {
+  it('spawns an H miniboss reward caged as its encounter begins, freed at its end', () => {
     const { spawned } = loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-miniboss01');
     expect(moments(spawned)).toEqual([
-      ['encounterStart:Encounter', ['roomReward required #1 locked:encounterEnd:Encounter']],
+      ['encounterBegun:Encounter', ['roomReward required #1 locked:encounterEnd:Encounter']],
     ]);
     expect(unlocks(spawned)).toEqual([
       ['encounterEnd:Encounter', ['roomReward required #1 locked:encounterEnd:Encounter']],
@@ -505,6 +505,13 @@ describe('spawned loot', () => {
   const actionSpawns = (spawned: RoomSpawnedLoot) =>
     spawned.actionSpawns.map((spawn) => [spawn.source.kind, spawn.items.map(describeItem)]);
 
+  /** Each source action's kind with what its items spawn as. */
+  const actionSpawnRewards = (spawned: RoomSpawnedLoot) =>
+    spawned.actionSpawns.map((spawn) => [
+      spawn.source.kind,
+      spawn.items.map((item) => item.reward),
+    ]);
+
   it('lists the Artificer’s replacement under the reward it transforms', () => {
     const project = underworldCheckpointArtifacts['underworld-f-trait-order-checks'].load();
     const { spawned } = loot(project, 'F', 'e9c1775e-a04b-4ed2-b749-7ef344614cbe');
@@ -533,9 +540,14 @@ describe('spawned loot', () => {
   it('lists Sea Star’s copy under the pickup it copies once that pickup settles', () => {
     // The Nemesis Pom's own level is unset: the walk stops at its pickup, which copies nothing yet.
     const unresolved = loadNemesisPomSeaStarCheckpoint();
-    expect(actionSpawns(loot(unresolved, 'F', 'golden-f-b5-e1').spawned)).toEqual([]);
+    const herResult = [
+      'interactEncounter',
+      [expect.stringMatching(/^nemesisEvent required #\d+$/)],
+    ] as const;
+    expect(actionSpawns(loot(unresolved, 'F', 'golden-f-b5-e1').spawned)).toEqual([herResult]);
     const { spawned } = loot(authorLegalPomResolutions(unresolved), 'F', 'golden-f-b5-e1');
     expect(actionSpawns(spawned)).toEqual([
+      herResult,
       ['interactAcquisitionEntry', [expect.stringMatching(/^seaStar required #\d+$/)]],
     ]);
   });
@@ -583,24 +595,24 @@ describe('spawned loot', () => {
       });
     };
 
-    it('spawns at her outcome when the outcome decides it: an accepted trade', () => {
+    it('spawns under her talk row, where her answer decides it: an accepted trade', () => {
       const { spawned } = loot(loadNemesisPomSeaStarCheckpoint(), 'F', 'golden-f-b5-e1');
-      expect(moments(spawned)).toEqual([
-        ['encounterOutcome:Encounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
+      expect(moments(spawned)).toEqual([]);
+      expect(actionSpawns(spawned)).toEqual([
+        ['interactEncounter', [expect.stringMatching(/^nemesisEvent required #\d+$/)]],
       ]);
-      expect(spawned.actionSpawns).toEqual([]);
     });
 
-    it('spawns at her outcome when the outcome decides it: a contest', () => {
+    it('spawns under her talk row, where her answer decides it: a contest', () => {
       const { spawned } = loot(
         answered({ kind: 'damageContest', result: 'failure' }, 'RoomRewardConsolationPrize'),
         'F',
         nemesisRoom,
       );
-      expect(moments(spawned)).toEqual([
-        ['encounterOutcome:Encounter', [expect.stringMatching(/^nemesisEvent optional #\d+$/)]],
+      expect(moments(spawned)).toEqual([]);
+      expect(actionSpawns(spawned)).toEqual([
+        ['interactEncounter', [expect.stringMatching(/^nemesisEvent optional #\d+$/)]],
       ]);
-      expect(spawned.actionSpawns).toEqual([]);
     });
 
     it('spawns the planned item from a won contest and Consolation from a lost one', () => {
@@ -609,17 +621,15 @@ describe('spawned loot', () => {
         'F',
         nemesisRoom,
       ).spawned;
-      expect(momentRewards(won)).toEqual([
-        ['encounterOutcome:Encounter', [offer('MaxHealthDrop')]],
-      ]);
+      expect(actionSpawnRewards(won)).toEqual([['interactEncounter', [offer('MaxHealthDrop')]]]);
       // Losing keeps the planned item as the offer; Consolation is what spawns.
       const lost = loot(
         answered({ kind: 'damageContest', result: 'failure' }, 'MaxHealthDrop'),
         'F',
         nemesisRoom,
       );
-      expect(momentRewards(lost.spawned)).toEqual([
-        ['encounterOutcome:Encounter', [offer('RoomRewardConsolationPrize')]],
+      expect(actionSpawnRewards(lost.spawned)).toEqual([
+        ['interactEncounter', [offer('RoomRewardConsolationPrize')]],
       ]);
       expect(lost.assembly.evaluation.findings).toEqual([]);
     });
@@ -639,8 +649,8 @@ describe('spawned loot', () => {
       );
       const { assembly, spawned } = loot(project, 'F', nemesisRoom);
       expect(assembly.evaluation.findings).toEqual([]);
-      expect(momentRewards(spawned)).toEqual([
-        ['encounterOutcome:Encounter', [offer('RoomRewardConsolationPrize')]],
+      expect(actionSpawnRewards(spawned)).toEqual([
+        ['interactEncounter', [offer('RoomRewardConsolationPrize')]],
       ]);
     });
 

@@ -827,29 +827,19 @@ export type EncounterSlotBinding =
     };
 
 export type RoomLifecycleEffectKind =
-  | 'advanceEncounterDepth'
   | 'advanceRoomCounters'
   | 'recordAppearance'
   | 'recordCommit'
   | 'recordEncounter'
-  | 'recordEncounterCompletion'
-  | 'recordEncounterStart'
   | 'recordEnteredRewardStore'
   | 'recordExit'
   | 'recordOfferPoint'
-  | 'recordPhaseOfferPoint'
   | 'recordOutgoingGeneration'
   | 'recordPreparation'
   | 'recordProducerPoint'
   | 'recordRequiredObjectCompletions'
   | 'recordRequiredObjectSpawns'
   | 'recordAcquisitionPoint';
-
-interface OnlyEncounterSlotSelector {
-  readonly kind: 'only';
-}
-
-type EncounterSlotSelector = OnlyEncounterSlotSelector;
 
 interface RoomLifecycleOperationBase {
   readonly effects: readonly RoomLifecycleEffectKind[];
@@ -863,17 +853,7 @@ export type RoomLifecycleOperation =
     })
   | (RoomLifecycleOperationBase & { readonly kind: 'enterRoom' })
   | (RoomLifecycleOperationBase & { readonly kind: 'spawnRequiredObjects' })
-  | (RoomLifecycleOperationBase & {
-      readonly kind: 'startEncounter';
-      readonly encounter: EncounterSlotSelector;
-    })
-  | (RoomLifecycleOperationBase & {
-      readonly kind: 'completeEncounter';
-      readonly encounter: EncounterSlotSelector;
-    })
   | (RoomLifecycleOperationBase & { readonly kind: 'completeRequiredObjects' })
-  | (RoomLifecycleOperationBase & { readonly kind: 'runEncounterSequence' })
-  | (RoomLifecycleOperationBase & { readonly kind: 'runRewardEncounterSequence' })
   | (RoomLifecycleOperationBase & {
       readonly kind: 'advanceProducer';
       readonly point: ProducerLifecyclePointKey;

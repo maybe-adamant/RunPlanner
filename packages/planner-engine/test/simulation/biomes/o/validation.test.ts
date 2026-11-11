@@ -646,14 +646,15 @@ describe('selected O validation', () => {
     expect(
       timeline.slice(
         timeline.indexOf('encounterEnd:Intro'),
-        timeline.indexOf('encounterStart:Combat1') + 1,
+        timeline.indexOf('encounterStarted:Combat1') + 1,
       ),
     ).toEqual([
       'encounterEnd:Intro',
       'wheelsOpen:wheel1',
+      'encounterBegun:Combat1',
       'delivery',
       'choose',
-      'encounterStart:Combat1',
+      'encounterStarted:Combat1',
     ]);
   });
 
@@ -832,7 +833,7 @@ describe('selected O validation', () => {
         entry.action.reference.siteKey === 'hermesShrineDelivery',
     );
     const combat2Start = entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStart:Combat2',
+      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStarted:Combat2',
     );
     expect(deliveryEntry).toBeGreaterThanOrEqual(0);
     expect(combat2Start).toBeGreaterThanOrEqual(0);

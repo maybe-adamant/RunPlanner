@@ -38,6 +38,7 @@ import type {
   CanonicalBiome,
   MaterializedBiomePrefix,
 } from '../../../src/simulation/materialization';
+import { gateFreeGraphEvents } from '../../support/event-graph';
 
 const sideRoomId = nLocalOccurrenceId('combat11', 'sideDoor1');
 const nPostbossId = 'surface-n-preboss:postboss';
@@ -123,21 +124,13 @@ describe('post-outgoing window without outgoing generation', () => {
     profileKey: 'EphyraSideRoom',
     activeEncounterSlotKeys: ['Encounter'],
     phases: [{ phaseKey: 'Encounter' }],
-    points: [
-      { kind: 'roomEntered', key: 'roomEntered' },
-      { kind: 'encounterStart', key: 'encounterStart:Encounter', phaseKey: 'Encounter' },
-      { kind: 'encounterEnd', key: 'encounterEnd:Encounter', phaseKey: 'Encounter' },
-      { kind: 'cleanup', key: 'cleanup' },
-    ],
+    events: gateFreeGraphEvents(['Encounter'], false),
   };
   const postboss: RoomEventGraph = {
     profileKey: 'PostBossRoom',
     activeEncounterSlotKeys: [],
     phases: [],
-    points: [
-      { kind: 'roomEntered', key: 'roomEntered' },
-      { kind: 'cleanup', key: 'cleanup' },
-    ],
+    events: gateFreeGraphEvents([], false),
   };
 
   it.each([
@@ -156,10 +149,11 @@ describe('Shrine purchases after the doors open', () => {
     expect(room.roomActionRoster.issues).toEqual([]);
     expect(timeline(room)).toEqual([
       '[roomEntered]',
-      '[encounterStart]',
+      '[encounterBegun]',
+      '[encounterStarted]',
       '[encounterEnd]',
       'interactIncomingReward',
-      '[cleanup]',
+      '[doorsOpened]',
       'purchaseHermesShrineOffer',
     ]);
   });
@@ -202,7 +196,7 @@ describe('Shrine purchases after the doors open', () => {
     expect(timeline(evaluatedRoom(project, 'N', nPostbossId))).toEqual([
       '[roomEntered]',
       'useFountain',
-      '[cleanup]',
+      '[doorsOpened]',
       'interactKeepsakeRack',
       'purchaseHermesShrineOffer',
       'rushHermesShrineOffer',
@@ -294,7 +288,7 @@ describe('Shrine purchases after the doors open', () => {
     expect(timeline(evaluatedRoom(project, 'O', host.occurrenceId)).slice(-4)).toEqual([
       'interactIncomingReward',
       'useFountain',
-      '[cleanup]',
+      '[doorsOpened]',
       'purchaseHermesShrineOffer',
     ]);
     expect(simulateProject(catalog, project).findings).toEqual([]);
@@ -350,7 +344,7 @@ describe('Shrine purchases after the doors open', () => {
     const room = evaluatedRoom(loadSurfaceNOHermesShrineDeliveryCheckpoint(), 'O', oShrineId);
     expect(timeline(room).slice(-6)).toEqual([
       'interactWheelReward',
-      '[cleanup]',
+      '[doorsOpened]',
       'purchaseHermesShrineOffer',
       'rushHermesShrineOffer',
       'purchaseHermesShrineOffer',

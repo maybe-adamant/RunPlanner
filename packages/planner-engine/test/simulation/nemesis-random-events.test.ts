@@ -73,7 +73,7 @@ function evaluatedRoom(project: ProjectDocument, biomeKey: string, occurrenceId:
   return room;
 }
 
-/** Positions of the event's encounter seams, its interaction and its result pickup. */
+/** Positions of any encounter markers for the event, its interaction and its result pickup. */
 function eventTimeline(room: CanonicalAuthoredRoom, phaseKey: string) {
   const entries = room.roomLifecycleTimeline.entries;
   const boundary = (key: string) =>
@@ -81,9 +81,9 @@ function eventTimeline(room: CanonicalAuthoredRoom, phaseKey: string) {
   const action = (key: string) =>
     entries.findIndex((entry) => entry.kind === 'action' && entry.action.key === key);
   return {
-    start: boundary(`encounterStart:${phaseKey}`),
+    begun: boundary(`encounterBegun:${phaseKey}`),
+    start: boundary(`encounterStarted:${phaseKey}`),
     interaction: action(roomActionKey({ kind: 'interactEncounter', phaseKey })),
-    outcome: boundary(`encounterOutcome:${phaseKey}`),
     end: boundary(`encounterEnd:${phaseKey}`),
     result: action(
       roomActionKey({
@@ -259,17 +259,15 @@ describe('Nemesis random events', () => {
           ),
         ),
       ).toBe(true);
-      // Answering Nemesis ends the event: her interaction sits inside its encounter, its
-      // outcome follows it and the result she drops follows the encounter end.
+      // No encounter runs for her: her talk row hosts the event, and the result she
+      // drops follows it.
       const timeline = eventTimeline(
         evaluatedRoom(project, goldenFBiome.biomeKey, goldenFOccurrenceId(5, 1)),
         'Encounter',
       );
-      expect(timeline.start).toBeGreaterThan(0);
-      expect(timeline.interaction).toBeGreaterThan(timeline.start);
-      expect(timeline.outcome).toBe(timeline.interaction + 1);
-      expect(timeline.end).toBe(timeline.outcome + 1);
-      expect(timeline.result).toBeGreaterThan(timeline.end);
+      expect([timeline.begun, timeline.start, timeline.end]).toEqual([-1, -1, -1]);
+      expect(timeline.interaction).toBeGreaterThan(0);
+      expect(timeline.result).toBeGreaterThan(timeline.interaction);
       if (removedTraitKey !== undefined) {
         expect(
           reachedFrontier(f.rewards).every(
@@ -639,12 +637,11 @@ describe('Nemesis random events', () => {
       expect(assembly.evaluation.findings).toContainEqual(
         expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: action }),
       );
-      // The Passive event brackets its interaction wherever it sits among the cages.
+      // The Passive event has no markers wherever her row sits among the cages.
       const room = evaluatedRoom(project, goldenHBiome.biomeKey, occurrenceId);
       const timeline = eventTimeline(room, 'Passive');
-      expect(timeline.interaction).toBe(timeline.start + 1);
-      expect(timeline.outcome).toBe(timeline.interaction + 1);
-      expect(timeline.end).toBe(timeline.outcome + 1);
+      expect(timeline.interaction).toBeGreaterThan(0);
+      expect([timeline.begun, timeline.start, timeline.end]).toEqual([-1, -1, -1]);
       expect(room.roomActionRoster.issues).toEqual([]);
     }
 

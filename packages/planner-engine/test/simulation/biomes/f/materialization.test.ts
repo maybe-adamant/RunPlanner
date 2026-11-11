@@ -139,20 +139,20 @@ describe('F takeover materialization', () => {
           }),
     );
     const start = entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterStart',
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterStarted',
     );
     const end = entries.findIndex(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd',
     );
 
     expect(opening.lifecycleProfileKey).toBe('OpeningRewardRoom');
-    expect(opening.roomActionRoster.eventGraph).toBe(opening.roomLifecycleTimeline.structure);
-    expect(opening.roomLifecycleTimeline.structure.points.map((point) => point.kind)).toEqual([
+    expect(opening.roomActionRoster.eventGraph).toBe(opening.roomLifecycleTimeline.graph);
+    expect(opening.roomLifecycleTimeline.graph.events.map((event) => event.kind)).toEqual([
       'roomEntered',
-      'encounterStart',
+      'encounterBegun',
+      'encounterStarted',
       'encounterEnd',
-      'outgoingGeneration',
-      'cleanup',
+      'doorsOpened',
     ]);
     expect(pickup).toBeGreaterThanOrEqual(0);
     expect(pickup).toBeLessThan(start);
@@ -195,10 +195,9 @@ describe('F takeover materialization', () => {
     expect(opening.encounterPhases).toMatchObject([
       { authoredChoiceKey: 'OpeningEmpty', slotKey: 'Encounter' },
     ]);
-    expect(opening.roomLifecycleTimeline.structure.points.map((point) => point.kind)).toEqual([
+    expect(opening.roomLifecycleTimeline.graph.events.map((event) => event.kind)).toEqual([
       'roomEntered',
-      'outgoingGeneration',
-      'cleanup',
+      'doorsOpened',
     ]);
   });
 

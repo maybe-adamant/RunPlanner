@@ -651,7 +651,12 @@ describe('live actions at a gap', () => {
     const entries = room.roomLifecycleTimeline.entries;
     const stopEntry = entries[stop!.entryIndex]!;
     const previous = entries[stop!.entryIndex - 1]!;
-    expect(previous.kind === 'boundary' && previous.boundary.key).toBe('wheelsOpen:wheel1');
+    // Wheel 1's encounter begins as its wheels open.
+    expect(previous.kind === 'boundary' && previous.boundary.key).toBe('encounterBegun:Combat1');
+    expect(
+      entries[stop!.entryIndex - 2]?.kind === 'boundary' &&
+        (entries[stop!.entryIndex - 2] as { boundary: { key: string } }).boundary.key,
+    ).toBe('wheelsOpen:wheel1');
     expect(stopEntry.kind === 'action' && stopEntry.action.reference.kind).toBe(
       'chooseRewardWheel',
     );

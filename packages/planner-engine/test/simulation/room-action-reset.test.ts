@@ -51,7 +51,7 @@ describe('room action resets', () => {
       ['roomEntered', null],
       [fountain, fountain],
       // Doors open follows the fountain that opens them.
-      ['cleanup', fountain],
+      ['doorsOpened', fountain],
       [rack, rack],
       [purchase('initial:secondLeft'), purchase('initial:secondLeft')],
       [purchase('initial:secondRight'), purchase('initial:secondRight')],

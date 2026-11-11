@@ -11,6 +11,7 @@ import type {
 } from '../../../src/authored-project/room-actions/event-graph';
 import { roomActionKey } from '../../../src/authored-project/room-actions/state';
 import { assembleRoomActionRoster } from '../../../src/simulation/room-actions/assemble';
+import { gateFreeGraphEvents } from '../../support/event-graph';
 
 const owner = {
   kind: 'occurrence' as const,
@@ -27,12 +28,7 @@ const structure: RoomEventGraph = {
   profileKey: 'StandardRewardRoom',
   activeEncounterSlotKeys: ['first'],
   phases: [{ phaseKey: 'first' }],
-  points: [
-    { kind: 'roomEntered', key: 'roomEntered' },
-    { kind: 'encounterStart', key: 'start', phaseKey: 'first' },
-    { kind: 'encounterEnd', key: 'end', phaseKey: 'first' },
-    { kind: 'cleanup', key: 'cleanup' },
-  ],
+  events: gateFreeGraphEvents(['first'], false),
 };
 function action(
   reference: RoomActionReference,

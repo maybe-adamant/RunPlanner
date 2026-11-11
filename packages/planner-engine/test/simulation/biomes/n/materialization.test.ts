@@ -153,7 +153,7 @@ describe('canonical N Hub materialization', () => {
           }),
     );
     const start = entries.findIndex(
-      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterStart',
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterStarted',
     );
     const end = entries.findIndex(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd',

@@ -8,19 +8,13 @@ import {
   assembleRoomActionRoster,
   scopeRoomActionRoster,
 } from '../../../src/simulation/room-actions/assemble';
+import { gateFreeGraphEvents } from '../../support/event-graph';
 
 const structure: RoomEventGraph = {
   profileKey: 'FieldsCombatRoom',
   activeEncounterSlotKeys: ['Cage01', 'Cage02'],
   phases: [{ phaseKey: 'Cage01' }, { phaseKey: 'Cage02' }],
-  points: [
-    { kind: 'roomEntered', key: 'roomEntered' },
-    { kind: 'encounterStart', key: 'start1', phaseKey: 'Cage01' },
-    { kind: 'encounterEnd', key: 'end1', phaseKey: 'Cage01' },
-    { kind: 'encounterStart', key: 'start2', phaseKey: 'Cage02' },
-    { kind: 'encounterEnd', key: 'end2', phaseKey: 'Cage02' },
-    { kind: 'cleanup', key: 'cleanup' },
-  ],
+  events: gateFreeGraphEvents(['Cage01', 'Cage02'], false),
 };
 function row(
   reference: RoomActionRow['reference'],
@@ -88,10 +82,7 @@ describe('required action scope', () => {
           profileKey: 'OpeningRoom',
           activeEncounterSlotKeys: [],
           phases: [],
-          points: [
-            { kind: 'roomEntered', key: 'roomEntered' },
-            { kind: 'cleanup', key: 'cleanup' },
-          ],
+          events: gateFreeGraphEvents([], false),
         },
       )[0]?.requiredScope,
     ).toBe('room');
