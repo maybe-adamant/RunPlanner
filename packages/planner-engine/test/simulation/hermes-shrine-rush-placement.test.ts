@@ -4,14 +4,19 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectHistory,
   createRoomActionAddress,
+  createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
   positionedCommandInsertionIndexes,
   roomActionKey,
+  semanticAddressKey,
   undoProjectHistory,
   type HermesShrineGenerationKey,
   type ProjectDocument,
@@ -19,11 +24,17 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   goldLedgerForProjectEvaluationAssembly,
+  simulateProject,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
+  type GoldPurchaseAvailability,
 } from '@run-planner/engine/simulation';
-import { withItemContents } from '@run-planner/test-fixtures/shared';
-import { surfaceShrineTravelDealProject } from '@run-planner/test-fixtures/surface';
+import {
+  authorTestTraitsAndRequiredItems,
+  purchaseTestHermesShrineOffer,
+  withItemContents,
+} from '@run-planner/test-fixtures/shared';
+import { nOccurrenceId, surfaceShrineTravelDealProject } from '@run-planner/test-fixtures/surface';
 
 const n = createBiomeAddress('Surface', 'N');
 const shrine = createOccurrenceAddress(n, createOccurrenceId('surface-n-preboss:postboss'));
@@ -295,5 +306,100 @@ describe('Hermes Shrine rush placement', () => {
     // Order round(round(76.5) x 1.2) = 92 and rush round(135) - round(90 x 1.2) = 27, as adjacent.
     expect(prices(adjacent)).toEqual(prices(later));
     expect(prices(later)[2]).toBe(27);
+  });
+
+  it("judges a purchase before a later rush with that rush's gold not yet spent", () => {
+    const adjacent = buySecondLeft(firstRushedOnly());
+    const later = move(adjacent, rushOf('initial:first'), 4);
+    const quote = (project: ProjectDocument, reference: RoomActionReference) => {
+      const availability: GoldPurchaseAvailability = goldLedgerForProjectEvaluationAssembly(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).purchaseAt(action(reference));
+      if (availability.availability !== 'available') throw new Error('purchase is unpriced');
+      const before = availability.purchase.balanceBefore;
+      if (before.availability !== 'available') throw new Error('balance is unavailable');
+      return {
+        balance: before.balance.mean,
+        price: availability.purchase.price.mean,
+        affordable: availability.purchase.affordableProbability ?? -1,
+      };
+    };
+    const rush = quote(adjacent, rushOf('initial:first'));
+    const boughtAfterRush = quote(adjacent, purchase('initial:secondLeft'));
+    const boughtBeforeRush = quote(later, purchase('initial:secondLeft'));
+    // Ahead of the rush, the second item is judged with the rush's 27 gold still held.
+    expect(boughtBeforeRush.balance - boughtAfterRush.balance).toBe(rush.price);
+    expect(boughtBeforeRush.affordable).toBeGreaterThanOrEqual(boughtAfterRush.affordable);
+    // The rush itself then pays from what the second purchase left.
+    expect(quote(later, rushOf('initial:first')).balance).toBe(
+      boughtBeforeRush.balance - boughtBeforeRush.price,
+    );
+  });
+
+  it('defers the refill to a later rush made with Travel Deal when the first rush had none', () => {
+    // No Hermes boon before the Shrine: its own rushed Hermes boon grants Travel Deal.
+    let project = authorTestTraitsAndRequiredItems(
+      applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(n, nOccurrenceId('combat09')),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+      }),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: shrine,
+      slotKey: 'secondRight',
+      value: { rewardType: 'ShopHermesUpgrade' },
+    });
+    project = purchaseTestHermesShrineOffer(project, catalog, shrine, 'initial:secondRight', {
+      delay: 2,
+      rushed: true,
+    });
+    const hermesEntry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(shrine, 'hermesShrineDelivery'),
+      hermesShrineDeliveryEntryKey(shrine, 'initial:secondRight'),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: action(pickup('initial:secondRight')),
+      reference: pickup('initial:secondRight'),
+      index: order(project).length,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(hermesEntry, 'hermes'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'RestockBoon', rarity: 'Common' },
+          { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+          { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    // [fountain, buy second right, rush it, take its Hermes boon, rack, buy first, rush first, ...]
+    project = move(project, purchase('initial:secondRight'), 1);
+    project = move(project, rushOf('initial:secondRight'), 2);
+    project = move(project, pickup('initial:secondRight'), 3);
+    expect(at(project, rushOf('initial:secondRight'))).toBeLessThan(
+      at(project, rushOf('initial:first')),
+    );
+    const evaluation = simulateProject(catalog, project);
+    const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (biome === undefined || !('rewards' in biome)) throw new Error('N rewards are missing');
+    expect(
+      evaluation.findings.filter(
+        (finding) => 'biomeKey' in finding.origin && finding.origin.biomeKey === 'N',
+      ),
+    ).toEqual([]);
+    // The earlier rush, made before Travel Deal, leaves the refill to the first item's rush.
+    expect(
+      biome.rewards.hermesShrineAssessments.find(
+        (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(shrine),
+      )?.assessment.travelDealRefill?.sourceGenerationKey,
+    ).toBe('initial:first');
   });
 });
