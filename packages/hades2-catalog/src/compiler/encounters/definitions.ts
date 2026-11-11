@@ -28,7 +28,7 @@ const encounterPhaseKinds = new Set<EncounterPhaseKind>([
   'story',
 ]);
 
-const scriptFlags = ['waitReadyBeforeEnd', 'skipShipsEncounterSetup'] as const;
+const scriptFlags = ['waitReadyBeforeEnd'] as const;
 
 function normalizeGate(raw: EncounterGate | undefined, path: string): EncounterGate {
   if (raw === undefined) return Object.freeze({ kind: 'none' });
@@ -66,7 +66,6 @@ function normalizeScript(raw: RawEncounterDefinitionDeclaration, path: string): 
   return Object.freeze({
     gate: normalizeGate(script.gate, `${path}.gate`),
     waitReadyBeforeEnd: script.waitReadyBeforeEnd === true,
-    skipShipsEncounterSetup: script.skipShipsEncounterSetup === true,
     endsByInteraction: raw.nemesisRandomEvent !== undefined,
     hostsOutcome: Object.freeze(hostsOutcome),
   });

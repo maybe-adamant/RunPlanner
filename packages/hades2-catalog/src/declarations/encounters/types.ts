@@ -54,7 +54,6 @@ export interface RawEncounterEnvelopeDeclaration {
 export interface RawEncounterScriptDeclaration {
   readonly gate?: EncounterGate;
   readonly waitReadyBeforeEnd?: true;
-  readonly skipShipsEncounterSetup?: true;
 }
 
 export interface RawEncounterDefinitionDeclaration {

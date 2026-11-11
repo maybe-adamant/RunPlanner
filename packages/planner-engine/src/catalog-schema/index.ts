@@ -534,8 +534,6 @@ export interface EncounterScript {
   readonly gate: EncounterGate;
   /** The event list ends by waiting for every required object (`WaitForNextEncounterReady`). */
   readonly waitReadyBeforeEnd: boolean;
-  /** `SkipShipsEncounterSetup`: the phase opens no wheels. */
-  readonly skipShipsEncounterSetup: boolean;
   /** No fight: answering the encounter's NPC resolves it and unlocks the exits. */
   readonly endsByInteraction: boolean;
   /** Outcomes this encounter can host; Aetos needs an Outdoor room, Gorgon a room that allows it. */

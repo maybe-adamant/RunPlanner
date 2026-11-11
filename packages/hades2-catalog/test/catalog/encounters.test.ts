@@ -2064,28 +2064,24 @@ describe('encounter scripts', () => {
       GeneratedF: {
         gate: { kind: 'none' },
         waitReadyBeforeEnd: false,
-        skipShipsEncounterSetup: false,
         endsByInteraction: false,
         hostsOutcome: ['gorgon'],
       },
       GeneratedO_Intro01: {
         gate: { kind: 'none' },
         waitReadyBeforeEnd: true,
-        skipShipsEncounterSetup: true,
         endsByInteraction: false,
         hostsOutcome: [],
       },
       HeraclesCombatO: {
         gate: { kind: 'none' },
         waitReadyBeforeEnd: true,
-        skipShipsEncounterSetup: true,
         endsByInteraction: false,
         hostsOutcome: [],
       },
       NemesisRandomEvent: {
         gate: { kind: 'none' },
         waitReadyBeforeEnd: false,
-        skipShipsEncounterSetup: false,
         endsByInteraction: true,
         hostsOutcome: ['nemesisRandomEvent'],
       },

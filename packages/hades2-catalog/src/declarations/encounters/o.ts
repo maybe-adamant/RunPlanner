@@ -14,8 +14,8 @@ import { devotionMoneyStore, godCombatMoneyStore, thessalyMoneyStore } from './m
 export const oEncounterDefinitions = [
   {
     key: 'GeneratedO_Intro01',
-    // Inherits the Ships event list ending in WaitForNextEncounterReady and skips its wheel setup (EncounterData_Generated.lua:924, 945; EncounterSets.lua:490).
-    script: { waitReadyBeforeEnd: true, skipShipsEncounterSetup: true },
+    // Inherits the Ships event list ending in WaitForNextEncounterReady (EncounterData_Generated.lua:924; EncounterSets.lua:490).
+    script: { waitReadyBeforeEnd: true },
     moneyStore: thessalyMoneyStore,
     customization: [generatedEncounterChoices.GeneratedO_Intro01],
     label: 'Ship intro',
@@ -38,8 +38,8 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatO',
-    // Skips its wheel setup and starts at BeginHeraclesEncounter; the list ends in WaitForNextEncounterReady (EncounterData_Heracles.lua:118-120; EncounterSets.lua:593).
-    script: { waitReadyBeforeEnd: true, skipShipsEncounterSetup: true },
+    // Starts at BeginHeraclesEncounter; the list ends in WaitForNextEncounterReady (EncounterData_Heracles.lua:118; EncounterSets.lua:593).
+    script: { waitReadyBeforeEnd: true },
     killBounty: heraclesKillBounty,
     moneyStore: thessalyMoneyStore,
     customization: [generatedEncounterChoices.HeraclesCombatO],
