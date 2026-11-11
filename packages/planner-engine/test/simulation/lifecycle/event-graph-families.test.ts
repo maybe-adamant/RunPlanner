@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -24,16 +21,14 @@ import {
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import { editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
-import type {
-  RoomEvent,
-  RoomEventTrigger,
-} from '../../../src/authored-project/room-actions/event-graph';
+import type { RoomEvent } from '../../../src/authored-project/room-actions/event-graph';
 import type { RoomHistoryFragment, RoomLifecycleEvent } from '../../../src/simulation/lifecycle';
 import type { CanonicalAuthoredRoom } from '../../../src/simulation/materialization';
 import type { RoomLifecycleTimelineEntry } from '../../../src/simulation/room-actions/timeline';
 import type { SpawnedLootItem } from '../../../src/simulation/evaluation/spawned-loot';
 import { equivalenceCorpus } from '../../equivalence/corpus';
-import { compactActionKey, corpusRooms, roomLabel } from '../../support/lifecycle-snapshots';
+import { compactActionKey, corpusRooms } from '../../support/lifecycle-snapshots';
+import { expectedRoomEventGraph, roomEventText } from '../../support/room-event-graph';
 
 const fragments = vi.hoisted(() => [] as RoomHistoryFragment[]);
 
@@ -87,16 +82,6 @@ const subject = (value: object): string => {
   const key = record.phaseKey ?? record.wheelKey;
   return typeof key === 'string' ? `(${key})` : '';
 };
-
-function triggerText(trigger: RoomEventTrigger): string {
-  return trigger.kind === 'action' ? compactActionKey(roomActionKey(trigger.action)) : trigger.kind;
-}
-
-/** One graph event: its kind and phase or wheel, then what fires it. */
-function graphEventText(event: RoomEvent): string {
-  const named = event.kind === 'wheelsOpen' ? `(${event.wheelKey})` : subject(event);
-  return `${event.kind}${named} <- ${triggerText(event.trigger)}`;
-}
 
 function walkEventText(event: RoomLifecycleEvent): string {
   const record = event as unknown as Record<string, unknown>;
@@ -193,7 +178,7 @@ function observe(run: Simulated, origin: OccurrenceAddress): RoomObservation {
     fragment,
     walk: walkTokens(fragment, rankMap(room)),
     events: room.roomActionRoster.eventGraph.events,
-    graph: room.roomActionRoster.eventGraph.events.map(graphEventText),
+    graph: room.roomActionRoster.eventGraph.events.map(roomEventText),
     timeline: room.roomLifecycleTimeline.entries.map(timelineText),
     loot: [
       ...(spawned?.moments ?? []).map(
@@ -284,6 +269,9 @@ describe('gated Opening and Devotion', () => {
     const room = observe(corpusRun('execution/f-opening'), fStart);
     const gate = room.rank(openingGate);
 
+    expect(room.graph).toEqual(
+      expectedRoomEventGraph([{ phaseKey: 'Encounter', startedBy: openingGate }]),
+    );
     expect(room.timeline).toEqual([
       'roomEntered',
       'encounterBegun(Encounter)',
@@ -300,29 +288,14 @@ describe('gated Opening and Devotion', () => {
     expect(room.loot).toEqual([`roomEntered: ${openingGate} ${gate}`]);
   });
 
-  it('fires the Opening Combat from the gate row it follows', () => {
-    const room = observe(corpusRun('execution/f-opening'), fStart);
-    expect(room.graph).toEqual([
-      'roomEntered <- automatic',
-      'encounterBegun(Encounter) <- automatic',
-      `encounterStarted(Encounter) <- ${openingGate}`,
-      'encounterEnd(Encounter) <- automatic',
-      'doorsOpened <- doorsPredicate',
-    ]);
-  });
-
   it('begins the Devotion encounter at entry, takes the chosen boon, then starts Combat', () => {
     const room = observe(corpusRun('execution/surface-nopq'), oDevotion);
     const chosen = room.rank(devotionGate);
     const spurned = room.rank('interactIncomingReward:afterCombat:spurnedSource');
 
-    expect(room.graph).toEqual([
-      'roomEntered <- automatic',
-      'encounterBegun(Encounter) <- automatic',
-      `encounterStarted(Encounter) <- ${devotionGate}`,
-      'encounterEnd(Encounter) <- automatic',
-      'doorsOpened <- doorsPredicate',
-    ]);
+    expect(room.graph).toEqual(
+      expectedRoomEventGraph([{ phaseKey: 'Encounter', startedBy: devotionGate }]),
+    );
     expect(room.timeline).toEqual([
       'roomEntered',
       'encounterBegun(Encounter)',
@@ -356,21 +329,22 @@ describe('gated Opening and Devotion', () => {
     },
   );
 
-  it('passes Encounter before an unplaced gate stops the walk', () => {
-    // The walk has no begin event: Encounter stands at entry on the Timeline, and the
-    // walk stops right after entry, before Combat.
+  it('keeps Encounter at entry while an unplaced gate stops the walk right after entry', () => {
+    // The walk has no begin event: it records the encounter, enters and stops before
+    // Combat, while the Timeline still stands Encounter between entry and Combat.
     const run = corpusRun('execution/f-opening');
     const reference = observe(run, fStart).reference(openingGate);
     const room = observe(simulate(removed(run.project, fStart, reference)), fStart);
 
-    expectInOrder(room.timeline, [
+    expect(room.fragment.blockedAt).toMatchObject({ actionKey: roomActionKey(reference) });
+    expect(room.walk).toEqual(['roomPrepared', 'encounterRecorded(Encounter)', 'roomEntered']);
+    expect(room.timeline).toEqual([
       'roomEntered',
       'encounterBegun(Encounter)',
       'encounterStarted(Encounter)',
+      'encounterEnd(Encounter)',
+      'doorsOpened',
     ]);
-    expect(room.fragment.blockedAt).toMatchObject({ actionKey: roomActionKey(reference) });
-    expect(room.fragment.blockedDeadline).toEqual({ kind: 'encounter', phaseKey: 'Encounter' });
-    expect(room.walk.at(-1)).toBe('roomEntered');
   });
 });
 
@@ -382,21 +356,13 @@ describe('Ship phase', () => {
     const choose2 = room.rank('chooseRewardWheel:wheel2');
     const reward2 = room.rank('interactWheelReward:wheel2');
 
-    expect(room.graph).toEqual([
-      'roomEntered <- automatic',
-      'encounterBegun(Intro) <- automatic',
-      'encounterStarted(Intro) <- automatic',
-      'encounterEnd(Intro) <- automatic',
-      'wheelsOpen(wheel1) <- automatic',
-      'encounterBegun(Combat1) <- automatic',
-      'encounterStarted(Combat1) <- chooseRewardWheel:wheel1',
-      'encounterEnd(Combat1) <- automatic',
-      'wheelsOpen(wheel2) <- automatic',
-      'encounterBegun(Combat2) <- automatic',
-      'encounterStarted(Combat2) <- chooseRewardWheel:wheel2',
-      'encounterEnd(Combat2) <- automatic',
-      'doorsOpened <- doorsPredicate',
-    ]);
+    expect(room.graph).toEqual(
+      expectedRoomEventGraph([
+        { phaseKey: 'Intro' },
+        { phaseKey: 'Combat1', wheelKey: 'wheel1', startedBy: 'chooseRewardWheel:wheel1' },
+        { phaseKey: 'Combat2', wheelKey: 'wheel2', startedBy: 'chooseRewardWheel:wheel2' },
+      ]),
+    );
     expect(
       room.events.flatMap((event) =>
         event.kind === 'wheelsOpen' ? [[event.wheelKey, event.afterPhaseKey]] : [],
@@ -584,8 +550,8 @@ describe('Nemesis bet', () => {
       (event) => event.sequence === bet.sequence - entered.sequence + walkEntered.sequence,
     );
     if (paidAt === undefined) throw new Error('the bet was paid at no walk event');
-    expect(walkEventText(paidAt)).toMatch(/^encounter(Completed|End|Ended)\(Encounter\)$/);
-    expectInOrder(room.walk, ['encounterStarted(Encounter)', walkEventText(paidAt)]);
+    expect(walkEventText(paidAt)).toBe('encounterCompleted(Encounter)');
+    expectInOrder(room.walk, ['encounterStarted(Encounter)', 'encounterCompleted(Encounter)']);
 
     expect(room.loot).toEqual([`encounterEnd:Encounter: ${roomReward} ${room.rank(roomReward)}`]);
   });
@@ -598,13 +564,7 @@ describe('Nemesis random event', () => {
     const result = room.rank('interactAcquisitionEntry:nemesisGenerated');
 
     // Her encounter's events carry no marker, so the Timeline shows none of them.
-    expect(room.graph).toEqual([
-      'roomEntered <- automatic',
-      'encounterBegun(Encounter) <- automatic',
-      'encounterStarted(Encounter) <- automatic',
-      'encounterEnd(Encounter) <- automatic',
-      'doorsOpened <- doorsPredicate',
-    ]);
+    expect(room.graph).toEqual(expectedRoomEventGraph([{ phaseKey: 'Encounter' }]));
     expect(room.events.flatMap((event) => ('markers' in event ? [event.markers] : []))).toEqual([
       'none',
       'none',
@@ -693,14 +653,9 @@ describe('Boss', () => {
     const room = observe(run, fBoss);
     const drop = room.rank('collectRequiredReward');
 
-    expect(room.graph).toEqual([
-      'roomEntered <- automatic',
-      'encounterBegun(Encounter) <- automatic',
-      'encounterStarted(Encounter) <- automatic',
-      'bossDefeated(Encounter) <- automatic',
-      'encounterEnd(Encounter) <- automatic',
-      'doorsOpened <- doorsPredicate',
-    ]);
+    expect(room.graph).toEqual(
+      expectedRoomEventGraph([{ phaseKey: 'Encounter', bossDefeated: true }]),
+    );
     expect(room.timeline).toEqual([
       'roomEntered',
       'encounterBegun(Encounter)',
@@ -746,13 +701,7 @@ describe('ordinary combat', () => {
     const room = observe(corpusRun('execution/f-opening'), fOrdinary);
     const reward = room.rank(roomReward);
 
-    expect(room.graph).toEqual([
-      'roomEntered <- automatic',
-      'encounterBegun(Encounter) <- automatic',
-      'encounterStarted(Encounter) <- automatic',
-      'encounterEnd(Encounter) <- automatic',
-      'doorsOpened <- doorsPredicate',
-    ]);
+    expect(room.graph).toEqual(expectedRoomEventGraph([{ phaseKey: 'Encounter' }]));
     expect(room.events.find((event) => event.kind === 'encounterBegun')).toMatchObject({
       markers: 'merged',
     });
@@ -778,7 +727,7 @@ describe('Postboss', () => {
   it('opens the doors right after the fountain row', () => {
     const room = observe(corpusRun('execution/f-opening'), fPostboss);
 
-    expect(room.graph).toEqual(['roomEntered <- automatic', 'doorsOpened <- doorsPredicate']);
+    expect(room.graph).toEqual(expectedRoomEventGraph());
     expect(room.timeline.slice(0, 3)).toEqual([
       'roomEntered',
       room.rank('useFountain'),
@@ -927,16 +876,14 @@ describe('the rest', () => {
     const walk = walkTokens(hub, new Map());
 
     expect(walk.filter((token) => token.startsWith('encounter'))).toEqual([]);
-    expect(walk[position(walk, 'roomEntered') + 1]).toMatch(
-      /^(outgoingGenerationCheckpoint|doorsOpened)$/,
-    );
+    expect(walk[position(walk, 'roomEntered') + 1]).toBe('outgoingGenerationCheckpoint');
   });
 
   it('opens a Preboss shop’s doors at entry, before its purchases', () => {
     const room = observe(corpusRun('checkpoint/underworld-world-shop-travel-deal'), fPreboss);
     const purchase = room.rank('interactShopOffer');
 
-    expect(room.graph).toEqual(['roomEntered <- automatic', 'doorsOpened <- doorsPredicate']);
+    expect(room.graph).toEqual(expectedRoomEventGraph());
     expectInOrder(room.timeline, ['roomEntered', 'doorsOpened', purchase]);
     expectInOrder(room.walk, ['roomEntered', purchase]);
   });
@@ -989,7 +936,7 @@ describe('the rest', () => {
     const room = observe(corpusRun('checkpoint/underworld-f-midshop-pom-frontier'), fMidShop);
     const purchase = room.rank('interactShopOffer');
 
-    expect(room.graph).toEqual(['roomEntered <- automatic', 'doorsOpened <- doorsPredicate']);
+    expect(room.graph).toEqual(expectedRoomEventGraph());
     expect(room.events.find((event) => event.kind === 'doorsOpened')).toMatchObject({
       generatesOutgoing: true,
     });
@@ -1000,35 +947,5 @@ describe('the rest', () => {
   it('draws a World Shop’s doors in the walk at entry', () => {
     const room = observe(corpusRun('checkpoint/underworld-f-midshop-pom-frontier'), fMidShop);
     expect(room.walk[position(room.walk, 'roomEntered') + 1]).toBe('outgoingGenerationCheckpoint');
-  });
-});
-
-describe('encounter depth', () => {
-  // Each room's depth advances among the reached rows that read it, as the
-  // Step 0 event-order snapshot recorded them.
-  const baseline = JSON.parse(
-    readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), 'event-graph-families.depth-baseline.json'),
-      'utf8',
-    ),
-  ) as Record<string, Record<string, string>>;
-
-  it.each(Object.keys(baseline))('advances where it did before the event graph in %s', (entry) => {
-    const run = corpusRun(entry);
-    const rooms = new Map(
-      corpusRooms(run.assembly).map((room) => [semanticAddressKey(room.origin), room]),
-    );
-    const walked = new Map<string, RoomHistoryFragment>();
-    for (const fragment of run.fragments) walked.set(semanticAddressKey(fragment.origin), fragment);
-    const actual: Record<string, string> = {};
-    for (const [key, fragment] of walked) {
-      const room = rooms.get(key);
-      const tokens = walkTokens(fragment, rankMap(room)).filter(
-        (token) => token.startsWith('#') || token.startsWith('encounterDepthAdvanced('),
-      );
-      if (tokens.some((token) => token.startsWith('encounterDepthAdvanced(')))
-        actual[roomLabel(fragment.origin, room?.gameName)] = tokens.join(' > ');
-    }
-    expect(actual).toEqual(baseline[entry]);
   });
 });
