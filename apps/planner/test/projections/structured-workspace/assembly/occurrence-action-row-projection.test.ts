@@ -1665,7 +1665,7 @@ describe('shop-like purchase rows', () => {
         rushed,
       });
     // Timeline order, not slot order, decides which rushed purchase triggers the refill;
-    // a rush settles with its purchase.
+    // a rush settles with its purchase, which carries it when moved.
     project = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
       action: testHermesShrinePurchaseAction(shrineOwner, 'initial:secondLeft'),
@@ -1716,9 +1716,9 @@ describe('shop-like purchase rows', () => {
       ]),
     ).toEqual([
       ['purchaseHermesShrineOffer', 'initial:secondLeft', 'Buy', undefined],
+      ['rushHermesShrineOffer', 'initial:secondLeft', 'Rush', 'hermesShrine'],
       ['purchaseHermesShrineOffer', 'initial:first', 'Buy', undefined],
       ['rushHermesShrineOffer', 'initial:first', 'Rush', undefined],
-      ['rushHermesShrineOffer', 'initial:secondLeft', 'Rush', 'hermesShrine'],
     ]);
     expect(rushOf('initial:secondLeft')?.travelDealLine).toMatchObject({
       refill: { rewardType: 'ArmorBoost', sourceGenerationKey: 'initial:secondLeft' },
