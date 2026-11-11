@@ -18,6 +18,7 @@ import type {
   AuthoredAnvilResult,
   AuthoredHexActivation,
   AuthoredRewardState,
+  RerolledRewardState,
   HexActivationsByAcquisitionRole,
 } from '../../model';
 import { createUnresolvedAnvilResults, hexActivationRoles } from '../../acquisition/reward-state';
@@ -1064,12 +1065,29 @@ function decodeLevelResolutions(
  * The effective rewards of rerolled owners, keyed by a declared owner key;
  * present only with at least one entry.
  */
+/**
+ * One rerolled reward: its reward state as `decodeEntry` reads it, and the
+ * press that drew it when recorded.
+ */
+export function decodeRerolledRewardState(
+  value: unknown,
+  path: string,
+  decodeEntry: (raw: unknown, path: string) => AuthoredRewardState,
+): RerolledRewardState {
+  const raw = expectRecord(value, path);
+  if (!Object.hasOwn(raw, 'pressId')) return decodeEntry(raw, path);
+  const { pressId, ...rest } = raw;
+  if (typeof pressId !== 'string' || pressId.length === 0)
+    failProjectDocument(`${path}.pressId`, 'must be a reroll id');
+  return Object.freeze({ ...decodeEntry(rest, path), pressId });
+}
+
 export function decodeRerolledRewards(
   value: unknown,
   keys: readonly string[],
   path: string,
   decodeEntry: (raw: unknown, path: string) => AuthoredRewardState,
-): Readonly<Record<string, AuthoredRewardState>> {
+): Readonly<Record<string, RerolledRewardState>> {
   const raw = expectRecord(value, path);
   const entries = Object.keys(raw);
   if (entries.length === 0) failProjectDocument(path, 'must name at least one rerolled reward');
@@ -1078,7 +1096,9 @@ export function decodeRerolledRewards(
   return Object.freeze(
     Object.fromEntries(
       keys.flatMap((key) =>
-        Object.hasOwn(raw, key) ? [[key, decodeEntry(raw[key], `${path}.${key}`)] as const] : [],
+        Object.hasOwn(raw, key)
+          ? [[key, decodeRerolledRewardState(raw[key], `${path}.${key}`, decodeEntry)] as const]
+          : [],
       ),
     ),
   );

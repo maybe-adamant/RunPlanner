@@ -35,6 +35,11 @@ import { roomActionKey } from '../authored-project/room-actions/state';
 import { roomActionsOnReplacedItems } from '../authored-project/room-actions/replaced-items';
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import {
+  rerolledRewardsOffTheirPress,
+  type RerolledRewardOwner,
+} from '../authored-project/rerolls';
+import { resetRerolledRewardsOffTheirPress } from '../authored-project/commands/rerolls';
+import {
   discardRetainedHermesShrineDelivery,
   HERMES_SHRINE_DELIVERY_SITE_KEY,
   hermesShrineDeliverySourceAddress,
@@ -161,7 +166,7 @@ function enteredRosters(assembly: ProjectEvaluationAssembly) {
 /** The occurrence as authored, without the item content its rows record. */
 function withoutRecordedContent(occurrence: RoomOccurrence | undefined): string {
   return JSON.stringify(occurrence, (key, value: unknown) =>
-    key === 'content' ? undefined : value,
+    key === 'content' || key === 'pressId' ? undefined : value,
   );
 }
 
@@ -663,6 +668,41 @@ function replacedDeliveryPayloads(
   return replaced;
 }
 
+/**
+ * Rerolled rewards an edit left off their press: the press each recorded is no
+ * longer its owner's effective one, so its outcomes belong to a replaced item.
+ * Judged in every room, as a row on a replaced item is: one the plan held off
+ * its press before the edit goes only with an edit of its room.
+ */
+function rerolledRewardsReplaced(
+  before: ProjectDocument,
+  after: ProjectDocument,
+  upgrade: boolean,
+): RerolledRewardOwner[] {
+  const offPress = (project: ProjectDocument) =>
+    project.route.biomes.flatMap((plan) =>
+      plan.topology == null
+        ? []
+        : rerolledRewardsOffTheirPress(
+            createBiomeAddress(project.route.routeKey, plan.biomeKey),
+            plan.topology,
+          ),
+    );
+  const prior = new Set(upgrade ? [] : offPress(before).map(semanticAddressKey));
+  return offPress(after).filter(
+    (owner) =>
+      !prior.has(semanticAddressKey(owner)) ||
+      roomEdited(
+        before,
+        after,
+        createOccurrenceAddress(
+          createBiomeAddress(owner.routeKey, owner.biomeKey),
+          owner.occurrenceId,
+        ),
+      ),
+  );
+}
+
 /** Such rows a structural command took out of the rooms that remain. */
 function sourcedRowsTaken(before: ProjectDocument, after: ProjectDocument) {
   const taken: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];
@@ -1052,6 +1092,23 @@ function settleProject(options: {
         removedStale.push(...rowsTaken(previous, project));
         discardedObservations.push({ owner, item: address });
       }
+      assembly = evaluate(project);
+      continue;
+    }
+    const offPress = rerolledRewardsReplaced(before.project, assembly.project, upgrade);
+    if (offPress.length > 0) {
+      for (const owner of offPress) {
+        const fault = consume(`rerolledReward:${semanticAddressKey(owner)}`, owner);
+        if (fault !== undefined) return settled(assembly, fault);
+        discardedObservations.push({
+          owner: createOccurrenceAddress(
+            createBiomeAddress(owner.routeKey, owner.biomeKey),
+            owner.occurrenceId,
+          ),
+          item: owner,
+        });
+      }
+      project = resetRerolledRewardsOffTheirPress(project, catalog, offPress);
       assembly = evaluate(project);
       continue;
     }

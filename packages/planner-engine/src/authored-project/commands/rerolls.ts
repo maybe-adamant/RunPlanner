@@ -8,6 +8,7 @@ import type {
   HubAction,
   HubDecision,
   ProjectDocument,
+  RerolledRewardState,
   RerollRoomAction,
   RerollTarget,
   RoomOccurrence,
@@ -26,7 +27,13 @@ import { requireShipCombatWheels } from '../room-state/declaration';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import { createUnresolvedAcquisitionRewardState } from '../traits/state';
 import type { ResolvedRoutePosition } from '../route-context';
-import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
+import {
+  failCommand,
+  locateConfiguredBiome,
+  requireOccurrence,
+  requireTopology,
+  type LocatedBiome,
+} from './contract';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
 import type { RerollCommand } from './types';
 
@@ -89,6 +96,25 @@ function unresolvedRerolledReward(
       );
 }
 
+/** The unresolved acquisition of the reward an owner's effective press drew, recording that press. */
+function unresolvedPressedReward(
+  catalog: Catalog,
+  routePosition: ResolvedRoutePosition,
+  occurrence: RoomOccurrence,
+  owner: RerolledRewardOwner,
+  press: { readonly rerollId: string; readonly reward: ResolvedRewardOffer },
+): RerolledRewardState | undefined {
+  const reward = unresolvedRerolledReward(catalog, routePosition, occurrence, owner, press.reward);
+  return reward === undefined ? undefined : Object.freeze({ ...reward, pressId: press.rerollId });
+}
+
+/** The rerolled reward without the press it records. */
+function withoutPress(reward: RerolledRewardState): AuthoredRewardState {
+  const { pressId: _pressId, ...rest } = reward;
+  void _pressId;
+  return rest;
+}
+
 function ownerOccurrenceId(owner: RerolledRewardOwner) {
   return owner.occurrenceId;
 }
@@ -114,18 +140,22 @@ function reconcileRerolledRewards(
     );
     if (occurrence === undefined) continue;
     const existing = rerolledRewardOf(occurrence, owner);
-    const offer = effective.get(semanticAddressKey(owner))?.effectiveOffer;
+    const press = effective.get(semanticAddressKey(owner))?.rerolls.at(-1);
     const unauthored =
       existing !== undefined &&
-      canonicalJson(existing) ===
+      canonicalJson(withoutPress(existing)) ===
         canonicalJson(
           unresolvedRerolledReward(catalog, routePosition, occurrence, owner, existing.offer),
         );
     let reward = existing;
-    if (offer === undefined) {
+    if (press === undefined) {
       if (unauthored) reward = undefined;
-    } else if (existing === undefined || (unauthored && !sameOffer(existing.offer, offer))) {
-      reward = unresolvedRerolledReward(catalog, routePosition, occurrence, owner, offer);
+    } else if (
+      existing === undefined ||
+      (unauthored &&
+        (!sameOffer(existing.offer, press.reward) || existing.pressId !== press.rerollId))
+    ) {
+      reward = unresolvedPressedReward(catalog, routePosition, occurrence, owner, press);
     }
     if (reward !== existing)
       next = replaceOccurrence(next, withRerolledReward(occurrence, owner, reward));
@@ -309,17 +339,17 @@ export function applyRerollCommand(
           replaceOccurrence(topology, withRerolledReward(occurrence, command.owner, undefined)),
         );
       }
-      const offer = biomeRerolledOwners(biome, topology).get(
-        semanticAddressKey(command.owner),
-      )?.effectiveOffer;
-      if (offer === undefined) failCommand(command, 'owner has no reroll');
-      if (existing !== undefined && sameOffer(existing.offer, offer)) return document;
-      const reward = unresolvedRerolledReward(
+      const press = biomeRerolledOwners(biome, topology)
+        .get(semanticAddressKey(command.owner))
+        ?.rerolls.at(-1);
+      if (press === undefined) failCommand(command, 'owner has no reroll');
+      if (existing !== undefined && sameOffer(existing.offer, press.reward)) return document;
+      const reward = unresolvedPressedReward(
         catalog,
         located.routePosition,
         occurrence,
         command.owner,
-        offer,
+        press,
       );
       if (reward === undefined) failCommand(command, 'owner draws no rerollable reward');
       return updateOccurrenceTopology(
@@ -372,4 +402,41 @@ export function reconcileRemovedOrMovedReroll(
   return reconciled === topology
     ? document
     : updateOccurrenceTopology(document, { ...located, plan }, reconciled);
+}
+
+/**
+ * Resets each rerolled reward whose recorded press is no longer its owner's
+ * effective one to the unresolved acquisition of the reward the effective
+ * press drew, or drops it when no press remains: its outcomes belonged to the
+ * replaced item. The same document when none is off its press.
+ */
+export function resetRerolledRewardsOffTheirPress(
+  document: ProjectDocument,
+  catalog: Catalog,
+  owners: readonly RerolledRewardOwner[],
+): ProjectDocument {
+  let next = document;
+  for (const owner of owners) {
+    const located = locateConfiguredBiome(next, catalog, owner.biomeKey);
+    const topology = located?.plan.topology;
+    if (located === undefined || topology === null || topology === undefined) continue;
+    const biome = createBiomeAddress(located.routeKey, located.plan.biomeKey);
+    const occurrence = topology.occurrences.find(
+      (candidate) => candidate.occurrenceId === owner.occurrenceId,
+    );
+    if (occurrence === undefined) continue;
+    const press = biomeRerolledOwners(biome, topology)
+      .get(semanticAddressKey(owner))
+      ?.rerolls.at(-1);
+    const reward =
+      press === undefined
+        ? undefined
+        : unresolvedPressedReward(catalog, located.routePosition, occurrence, owner, press);
+    next = updateOccurrenceTopology(
+      next,
+      located,
+      replaceOccurrence(topology, withRerolledReward(occurrence, owner, reward)),
+    );
+  }
+  return next;
 }

@@ -131,6 +131,51 @@ describe('rerolled rewards', () => {
     expect(occurrence(project, target).rerolledIncomingReward).toBeUndefined();
   });
 
+  it('record the press that drew them, stamp one that records none, and decode it strictly', () => {
+    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    project = applyProjectCommand(project, catalog, insertReroll(project, zeus));
+    expect(occurrence(project, target).rerolledIncomingReward).toMatchObject({
+      offer: zeus,
+      pressId: 'r1',
+    });
+    const encoded = JSON.parse(encodeProjectDocument(project)) as {
+      route: { biomes: { topology: { occurrences: Record<string, unknown>[] } }[] };
+    };
+    const room = encoded.route.biomes[0]!.topology.occurrences.find(
+      (entry) => entry.occurrenceId === target,
+    )!;
+    const rerolled = room.rerolledIncomingReward as Record<string, unknown>;
+    expect(decodeProjectDocument(encoded as never, catalog)).toEqual(project);
+    // A press recorded by no id is refused; an absent one is unknown until a command stamps it.
+    rerolled.pressId = '';
+    expect(() => decodeProjectDocument(encoded as never, catalog)).toThrow('pressId');
+    delete rerolled.pressId;
+    const unknown = decodeProjectDocument(encoded as never, catalog);
+    expect(occurrence(unknown, target).rerolledIncomingReward?.pressId).toBeUndefined();
+    const stamped = applyProjectCommand(unknown, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: {
+        kind: 'traitOffer',
+        routeKey: 'Underworld',
+        biomeKey: 'F',
+        owner,
+        acquisitionRole: 'source',
+      },
+      value: {
+        kind: 'traits',
+        giverKey: 'Zeus',
+        options: [
+          { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+          { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    expect(occurrence(stamped, target).rerolledIncomingReward?.pressId).toBe('r1');
+  });
+
   it('keep an authored acquisition when its reroll leaves, until it is dropped', () => {
     let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
     project = applyProjectCommand(project, catalog, insertReroll(project, zeus));

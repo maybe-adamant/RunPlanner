@@ -67,6 +67,14 @@ export interface AuthoredRewardState {
 
 export type AuthoredStartingRewardAcquisition = Omit<AuthoredRewardState, 'offer'>;
 
+/**
+ * A rerolled owner's effective reward with its acquisition, and the press that
+ * drew it (its reroll id) once known: its outcomes belong to that press's item.
+ */
+export interface RerolledRewardState extends AuthoredRewardState {
+  readonly pressId?: string;
+}
+
 /** The narrow loadout surface consumed by room/reward materialization. */
 export interface RouteWeaponAspectLoadout {
   /** Null only on a fresh profile, whose fixed aspectless Staff is not a selection. */
@@ -291,7 +299,7 @@ export interface FieldsCombatState {
   /** Each cage's first native draw, the reward its door showed when the doors unlocked. */
   readonly cages: Readonly<Record<string, AuthoredRewardState | null>>;
   /** A rerolled cage's effective reward and its acquisition; see `rerolledIncomingReward`. */
-  readonly rerolledCages?: Readonly<Record<string, AuthoredRewardState>>;
+  readonly rerolledCages?: Readonly<Record<string, RerolledRewardState>>;
   readonly optionalRewardCount: number;
   readonly optionalRewards: Readonly<Record<string, AuthoredRewardState | null>>;
   readonly spatial: FieldsSpatialState;
@@ -445,7 +453,7 @@ export interface RewardWheelState {
   /** Each offer's first native draw. */
   readonly offers: Readonly<Record<string, AuthoredRewardState | null>>;
   /** A rerolled offer's effective reward and its acquisition; see `rerolledIncomingReward`. */
-  readonly rerolledOffers?: Readonly<Record<string, AuthoredRewardState>>;
+  readonly rerolledOffers?: Readonly<Record<string, RerolledRewardState>>;
   readonly pickedOfferIndex: number;
 }
 
@@ -666,9 +674,9 @@ export interface RoomOccurrence {
    * The reward entered after its door's rerolls, with its acquisition. The
    * state's own reward stays the door's first native draw, inert while this is
    * present. Its offer should equal the last reroll's; a mismatch is kept for
-   * repair, never rewritten.
+   * repair, never rewritten, while the press it records stays effective.
    */
-  readonly rerolledIncomingReward?: AuthoredRewardState;
+  readonly rerolledIncomingReward?: RerolledRewardState;
   /** Where the room stands as entered; absent fields leave the game to decide. */
   readonly layout?: RoomLayout;
 }

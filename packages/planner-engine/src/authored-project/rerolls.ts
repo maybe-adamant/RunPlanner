@@ -19,12 +19,12 @@ import {
   type SemanticAddress,
 } from './addresses';
 import type {
-  AuthoredRewardState,
   BiomeTopology,
   HubDecision,
   HubRerollAction,
   OccurrenceId,
   ProjectDocument,
+  RerolledRewardState,
   RerollRoomAction,
   RerollTarget,
   RoomOccurrence,
@@ -349,7 +349,7 @@ export function biomeRerolledOwners(
 export function rerolledRewardOf(
   occurrence: RoomOccurrence,
   owner: SemanticAddress,
-): AuthoredRewardState | undefined {
+): RerolledRewardState | undefined {
   switch (owner.kind) {
     case 'incomingReward':
       return owner.occurrenceId === occurrence.occurrenceId
@@ -386,7 +386,7 @@ function withoutKey<V>(
 export function withRerolledReward(
   occurrence: RoomOccurrence,
   owner: RerolledRewardOwner,
-  reward: AuthoredRewardState | undefined,
+  reward: RerolledRewardState | undefined,
 ): RoomOccurrence {
   switch (owner.kind) {
     case 'incomingReward': {
@@ -427,6 +427,108 @@ export function withRerolledReward(
       });
     }
   }
+}
+
+/** Every rerolled reward a topology holds, by owner, with the room holding it. */
+function heldRerolledRewards(
+  biome: BiomeAddress,
+  topology: Pick<BiomeTopology, 'occurrences'>,
+): { readonly owner: RerolledRewardOwner; readonly reward: RerolledRewardState }[] {
+  const held: { owner: RerolledRewardOwner; reward: RerolledRewardState }[] = [];
+  for (const occurrence of topology.occurrences) {
+    if (occurrence.rerolledIncomingReward !== undefined)
+      held.push({
+        owner: createIncomingRewardAddress(biome, occurrence.occurrenceId),
+        reward: occurrence.rerolledIncomingReward,
+      });
+    if (occurrence.state.kind === 'fieldsCombat')
+      for (const [slotKey, reward] of Object.entries(occurrence.state.rerolledCages ?? {}))
+        held.push({
+          owner: createLocalRewardAddress(
+            biome,
+            occurrence.occurrenceId,
+            FIELDS_CAGE_GROUP_KEY,
+            slotKey,
+          ),
+          reward,
+        });
+    if (occurrence.state.kind === 'shipCombat')
+      for (const [wheelKey, wheel] of Object.entries(occurrence.state.wheels))
+        for (const [offerKey, reward] of Object.entries(wheel.rerolledOffers ?? {}))
+          held.push({
+            owner: createRewardWheelOfferAddress(
+              biome,
+              occurrence.occurrenceId,
+              wheelKey,
+              offerKey,
+            ),
+            reward,
+          });
+  }
+  return held;
+}
+
+function sameRewardOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boolean {
+  const canonical = (value: unknown) =>
+    JSON.stringify(value, (_key, entry: unknown) =>
+      entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+        ? Object.fromEntries(
+            Object.entries(entry as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
+          )
+        : entry,
+    );
+  return canonical(left) === canonical(right);
+}
+
+/**
+ * The topology with each rerolled reward that records no press stamped with
+ * its owner's effective press, while it holds that press's reward; the same
+ * topology when none changes. A reward that matches no press stays unknown.
+ */
+export function withStampedRerolledPresses(
+  biome: BiomeAddress,
+  topology: BiomeTopology,
+): BiomeTopology {
+  const held = heldRerolledRewards(biome, topology).filter(
+    ({ reward }) => reward.pressId === undefined,
+  );
+  if (held.length === 0) return topology;
+  const owners = biomeRerolledOwners(biome, topology);
+  let occurrences = topology.occurrences;
+  for (const { owner, reward } of held) {
+    const press = owners.get(semanticAddressKey(owner))?.rerolls.at(-1);
+    if (press === undefined || !sameRewardOffer(press.reward, reward.offer)) continue;
+    occurrences = occurrences.map((occurrence) =>
+      occurrence.occurrenceId === owner.occurrenceId
+        ? withRerolledReward(
+            occurrence,
+            owner,
+            Object.freeze({ ...reward, pressId: press.rerollId }),
+          )
+        : occurrence,
+    );
+  }
+  return occurrences === topology.occurrences
+    ? topology
+    : Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) });
+}
+
+/**
+ * The rerolled rewards whose recorded press is no longer their owner's
+ * effective one (a later press, an earlier one again, or none): another item,
+ * whose outcomes these are not.
+ */
+export function rerolledRewardsOffTheirPress(
+  biome: BiomeAddress,
+  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
+): readonly RerolledRewardOwner[] {
+  const owners = biomeRerolledOwners(biome, topology);
+  return heldRerolledRewards(biome, topology).flatMap(({ owner, reward }) =>
+    reward.pressId !== undefined &&
+    owners.get(semanticAddressKey(owner))?.rerolls.at(-1)?.rerollId !== reward.pressId
+      ? [owner]
+      : [],
+  );
 }
 
 /** The smallest reroll id none of the ids still in use takes. */

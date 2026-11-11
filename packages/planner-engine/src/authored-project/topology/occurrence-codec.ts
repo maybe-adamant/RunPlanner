@@ -89,6 +89,7 @@ import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import {
   decodeCountedOffer,
+  decodeRerolledRewardState,
   decodeRewardState,
 } from '../room-state/decoding/reward-acquisition-codec';
 import { requireCountedBinding } from '../room-state/declaration';
@@ -622,16 +623,18 @@ export function decodeRoomOccurrence(input: {
     ? (() => {
         const path = `${rawOccurrence.path}.rerolledIncomingReward`;
         const binding = requireCountedBinding(contextualRoom, path);
-        const reward = decodeRewardState(
-          rawOccurrence.rerolledIncomingReward,
-          catalog,
-          path,
-          { kind: 'producerLifecycle', key: binding.producerLifecycleKey },
-          routeKey,
-        );
-        return Object.freeze({
-          ...reward,
-          offer: decodeCountedOffer(reward.offer, catalog, binding, `${path}.offer`),
+        return decodeRerolledRewardState(rawOccurrence.rerolledIncomingReward, path, (raw) => {
+          const reward = decodeRewardState(
+            raw,
+            catalog,
+            path,
+            { kind: 'producerLifecycle', key: binding.producerLifecycleKey },
+            routeKey,
+          );
+          return Object.freeze({
+            ...reward,
+            offer: decodeCountedOffer(reward.offer, catalog, binding, `${path}.offer`),
+          });
         });
       })()
     : undefined;

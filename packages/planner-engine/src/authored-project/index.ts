@@ -437,6 +437,7 @@ export {
   type AuthoredBiomePlan,
   type AuthoredRoomState,
   type AuthoredRewardState,
+  type RerolledRewardState,
   type AuthoredAnvilResult,
   type AuthoredHexActivation,
   type AuthoredNemesisBetOutcome,

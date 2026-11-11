@@ -18,7 +18,12 @@ import type {
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { Catalog } from '../../catalog-schema';
 import { encounterEnvelopeSlots } from '../room-state/encounter-envelope';
-import { biomeRerolledOwners, FIELDS_CAGE_GROUP_KEY, type OwnerRerolls } from '../rerolls';
+import {
+  biomeRerolledOwners,
+  FIELDS_CAGE_GROUP_KEY,
+  withStampedRerolledPresses,
+  type OwnerRerolls,
+} from '../rerolls';
 import {
   purgingPoolRollTraitKey,
   purgingPoolSaleRollKey,
@@ -405,12 +410,15 @@ function stampedPlan(
     if (stamped !== occurrence) changed = true;
     return stamped;
   });
-  return changed
-    ? Object.freeze({
-        ...plan,
-        topology: Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) }),
-      })
-    : plan;
+  const rowsStamped = changed
+    ? Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) })
+    : topology;
+  // A rerolled reward records the press it was drawn by, as a row records its item.
+  const pressesStamped = withStampedRerolledPresses(
+    createBiomeAddress(document.route.routeKey, plan.biomeKey),
+    rowsStamped,
+  );
+  return pressesStamped === topology ? plan : Object.freeze({ ...plan, topology: pressesStamped });
 }
 
 /**
