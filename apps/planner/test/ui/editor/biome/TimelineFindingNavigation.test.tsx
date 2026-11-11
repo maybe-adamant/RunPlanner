@@ -116,9 +116,10 @@ it.each([
       </Provider>,
     );
     await view.user.click(findings.container.querySelector('button')!);
+    // A Ship delivery due as the Intro ends waits on the Intro's tab, before Combat 1's wheel.
     expect(
       screen
-        .getByRole('tab', { name: kind === 'ship' ? 'Combat 1 Timeline' : 'Room Timeline' })
+        .getByRole('tab', { name: kind === 'ship' ? 'Intro Timeline' : 'Room Timeline' })
         .getAttribute('aria-selected'),
     ).toBe('true');
     const destination = workspace.focusByOwner.get(semanticAddressKey(issue!.owner))!;
@@ -153,10 +154,11 @@ it.each([
       expect(target?.hasAttribute('data-has-findings')).toBe(false);
       await view.user.click(repair);
       expect(screen.queryByRole('button', { name: 'Restore delivery' })).toBeNull();
+      // The placed delivery is due as the Intro ends, before its wheel's choice.
       expect(
         screen
           .getByRole('tab', {
-            name: kind === 'ship' ? 'Combat 1 Timeline' : 'Room Timeline',
+            name: kind === 'ship' ? 'Intro Timeline' : 'Room Timeline',
           })
           .getAttribute('aria-selected'),
       ).toBe('true');

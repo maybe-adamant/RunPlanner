@@ -49,7 +49,6 @@ import {
   hubStaysForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
   encounterOutcomesForProjectEvaluationAssembly,
-  roomLifecycleTimelineForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -406,16 +405,6 @@ export function createStructuredWorkspaceProjection(
         (occurrence) => {
           try {
             return encounterOutcomesForProjectEvaluationAssembly(catalog, assembly, occurrence);
-          } catch (error) {
-            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
-              return undefined;
-            }
-            throw error;
-          }
-        },
-        (occurrence) => {
-          try {
-            return roomLifecycleTimelineForProjectEvaluationAssembly(catalog, assembly, occurrence);
           } catch (error) {
             if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
               return undefined;

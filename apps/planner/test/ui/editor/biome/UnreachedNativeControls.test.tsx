@@ -152,7 +152,7 @@ describe('native settings whose candidate context is unreached, on first render'
       return decodeProjectDocument(raw, catalog);
     })();
     renderOccurrenceWorkbench(frontier, 'Surface', 'O', occurrenceById(occurrenceId));
-    openRoomTab('Combat 1 Timeline');
+    openRoomTab('Intro Timeline');
     const count = screen.getByRole('button', { name: 'Offers' }) as HTMLButtonElement;
     expect(count.disabled).toBe(false);
     const upstream = withInvalidEncounter(

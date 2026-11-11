@@ -69,7 +69,7 @@ describe('Encounter Timeline banner', () => {
     expect(skip.hasAttribute('data-semantic-owner')).toBe(true);
   });
 
-  it('hosts how the fight ended on its Combat, not where it begins or ends', async () => {
+  it('hosts the Gorgon condition on its encounter and the kill race on its Combat', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -93,16 +93,14 @@ describe('Encounter Timeline banner', () => {
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    // The encounter's begin names it and hosts no choice.
+    // The encounter's marker names it and hosts the Gorgon condition.
     const start = banner('Encounter');
-    expect(within(start).queryByRole('button', { name: 'No Death Defiance' })).toBeNull();
+    expect(within(start).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
     expect(within(start).queryByRole('button', { name: /^Outcome/ })).toBeNull();
-    // The Gorgon condition and the kill race are observed at its Combat.
-    const outcome = within(banner('Combat')).getByRole('group', {
-      name: / outcome choices$/,
-    });
-    expect(within(outcome).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
-    expect(within(outcome).getByRole('button', { name: /^Outcome/ })).toBeTruthy();
+    // The kill race is observed at its Combat.
+    const combat = banner('Combat');
+    expect(within(combat).queryByRole('button', { name: 'No Death Defiance' })).toBeNull();
+    expect(within(combat).getByRole('button', { name: /^Outcome/ })).toBeTruthy();
     // The end announces what spawns and hosts no choice.
     const ended = screen.queryByLabelText('Encounter ended');
     expect(ended === null || within(ended).queryByRole('group') === null).toBe(true);

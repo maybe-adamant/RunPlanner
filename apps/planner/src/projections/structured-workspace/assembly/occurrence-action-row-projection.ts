@@ -120,8 +120,6 @@ export interface WorkspaceOccurrenceActionsInput {
   readonly spawnedLoot?: import('@run-planner/engine/simulation').RoomSpawnedLoot;
   /** Each phase's Encounter outcome that hosts a choice. */
   readonly encounterOutcomes?: readonly import('@run-planner/engine/simulation').EncounterOutcome[];
-  /** The room's Timeline with each encounter's settled markers. */
-  readonly roomLifecycleTimeline?: import('@run-planner/engine/simulation').RoomLifecycleTimeline;
 }
 
 /** The Phial target control for one fountain use; pending until the engine requires a target. */
@@ -187,7 +185,7 @@ function roomActionsForOccurrence(
           createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
           evaluatedRoster,
         );
-  const lifecycleTimeline = input.roomLifecycleTimeline;
+  const lifecycleTimeline = input.evaluatedRoom?.roomLifecycleTimeline;
   if (
     roster === undefined ||
     lifecycleTimeline === undefined ||
@@ -238,43 +236,46 @@ function roomActionsForOccurrence(
       : undefined) ??
     encounterPhases.find((phase) => phase.address.phaseKey === key)?.label ??
     key;
-  const wheelPhaseLabel = (key: string) =>
-    phaseLabel(
-      roster.eventGraph.phases.find((phase) => phase.rewardWheelKey === key)?.phaseKey ?? key,
-    );
   const checkpointLabel = (key: string): string => {
     if (key.startsWith('combat:')) return `${phaseLabel(key.slice('combat:'.length))} complete`;
     if (key === 'outgoingGeneration') return 'the next rooms are generated';
     if (key === 'exitUsable') return 'the doors can be used';
     return roster.checkpoints.find((entry) => entry.checkpointKey === key)?.label ?? key;
   };
-  const windowLabel = (
-    window: import('@run-planner/engine/simulation').RoomActionWindow,
-  ): string => {
-    switch (window.kind) {
-      case 'standard':
-        return window.phase === 'beforeCombat' ? 'before combat' : 'after combat';
-      case 'encounterEnd': {
-        // In a Ship room a phase's end-effect pickups are due before the next wheel's choice.
-        const phases = roster.eventGraph.phases;
-        const wheelKey =
-          phases[phases.findIndex((phase) => phase.phaseKey === window.phaseKey) + 1]
-            ?.rewardWheelKey;
-        return wheelKey === undefined || roster.eventGraph.profileKey !== 'ShipCombatRoom'
-          ? `after ${phaseLabel(window.phaseKey)} ends`
-          : `after ${phaseLabel(window.phaseKey)} ends, before choosing the ${wheelPhaseLabel(wheelKey)} wheel`;
-      }
-      case 'postOutgoing':
+  const timingLabel = (timing: RoomActionRow['label']): string => {
+    switch (timing.kind) {
+      case 'beforeCombat':
+        return 'before combat';
+      case 'afterCombat':
+        return 'after combat';
+      case 'afterEncounterEnd':
+        return timing.beforeWheelChoicePhaseKey === undefined
+          ? `after ${phaseLabel(timing.phaseKey)} ends`
+          : `after ${phaseLabel(timing.phaseKey)} ends, before choosing the ${phaseLabel(timing.beforeWheelChoicePhaseKey)} wheel`;
+      case 'afterDoorsOpen':
         return 'after the next rooms are generated';
       case 'fields':
         return 'during the Fields room';
-      case 'shipPreCombat':
-        return `before ${wheelPhaseLabel(window.wheelKey)}`;
-      case 'shipWheelsOpen':
-        return `before choosing the ${wheelPhaseLabel(window.wheelKey)} wheel`;
-      case 'shipPostCombat':
-        return `after ${wheelPhaseLabel(window.wheelKey)}`;
+      case 'beforeWheelPhase':
+        return `before ${phaseLabel(timing.phaseKey ?? timing.wheelKey)}`;
+      case 'beforeWheelChoice':
+        return `before choosing the ${phaseLabel(timing.phaseKey ?? timing.wheelKey)} wheel`;
+      case 'afterWheelPhase':
+        return `after ${phaseLabel(timing.phaseKey ?? timing.wheelKey)}`;
     }
+  };
+  // A blocker names its rows; each row carries when the engine places it.
+  const timingOf = (reference: RoomActionReference): RoomActionRow['label'] => {
+    const key = roomActionKey(reference);
+    const row = roster.rows.find(
+      (candidate) =>
+        candidate.key === key ||
+        (candidate.itemReference !== undefined && roomActionKey(candidate.itemReference) === key),
+    );
+    if (row === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(`Room action blocker ${key} has no row`);
+    }
+    return row.label;
   };
   const requiredKeys = new Set(
     roster.rows.flatMap((row) => (row.participation === 'required' ? [row.key] : [])),
@@ -372,7 +373,8 @@ function roomActionsForOccurrence(
     let explanation: string;
     if (blocker.kind === 'window') {
       const movedPreceding = roomActionKey(blocker.precedingAction) === proposedKey;
-      explanation = `${movedPreceding ? actionLabel(blocker.precedingAction) : label} belongs ${windowLabel(movedPreceding ? blocker.precedingWindow : blocker.window)}.`;
+      const subject = movedPreceding ? blocker.precedingAction : blocker.reference;
+      explanation = `${movedPreceding ? actionLabel(subject) : label} belongs ${timingLabel(timingOf(subject))}.`;
     } else if (blocker.kind === 'requiredFirst') {
       explanation = `${requiredFirstTitle(actionLabel(blocker.requiredAction))}.`;
     } else if (blocker.dependency.kind === 'afterAction') {
@@ -698,7 +700,8 @@ function roomActionsForOccurrence(
           ? {}
           : { placementAssessment: row.placementAssessment }),
         stale: row.stale,
-        window: row.window,
+        ...(row.phaseKey === undefined ? {} : { phaseKey: row.phaseKey }),
+        timing: row.label,
         ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
         ...(fountainRarity === undefined ? {} : { fountainRarity }),
         ...(stygianWellTwist === undefined ? {} : { stygianWellTwist }),
@@ -795,11 +798,12 @@ function roomActionsForOccurrence(
           }),
           rank: null,
           stale: false,
-          window:
+          // Delivered as its phase's encounter ends, or else once the doors open.
+          timing:
             capability.encounterPhaseKey === undefined
-              ? Object.freeze({ kind: 'postOutgoing' as const })
+              ? Object.freeze({ kind: 'afterDoorsOpen' as const })
               : Object.freeze({
-                  kind: 'encounterEnd' as const,
+                  kind: 'afterEncounterEnd' as const,
                   phaseKey: capability.encounterPhaseKey,
                 }),
           executable: false,
@@ -894,8 +898,8 @@ function roomActionsForOccurrence(
           }),
           rank: null,
           stale: false,
-          window: Object.freeze({
-            kind: 'encounterEnd' as const,
+          timing: Object.freeze({
+            kind: 'afterEncounterEnd' as const,
             phaseKey: capability.encounterPhaseKey,
           }),
           executable: false,
@@ -967,7 +971,7 @@ function roomActionsForOccurrence(
               }),
               rank: null,
               stale: false,
-              window: Object.freeze({ kind: 'postOutgoing' as const }),
+              timing: Object.freeze({ kind: 'afterDoorsOpen' as const }),
               executable: false,
             }),
           ];
@@ -1158,7 +1162,6 @@ function roomActionsForOccurrence(
             key: checkpoint.checkpointKey,
             label: checkpoint.label,
             afterRank: checkpoint.afterRank,
-            window: checkpoint.window,
           }),
         ),
     ),

@@ -1,4 +1,5 @@
-import type { LiHTMLAttributes, ReactNode } from 'react';
+import { useContext, type LiHTMLAttributes, type ReactNode } from 'react';
+import { TimelineMapStageContext } from './timelineMapStage';
 
 export type TimelineRowKind =
   'action' | 'boundary' | 'checkpoint' | 'continuation' | 'effect' | 'insertion';
@@ -33,10 +34,12 @@ export function TimelineRow({
   readonly notice?: boolean;
 }) {
   const classes = ['timeline-row', notice ? 'timeline-row-notice' : undefined, className];
+  const mapStage = useContext(TimelineMapStageContext);
   return (
     <li
       {...item}
       className={classes.filter((name) => name !== undefined).join(' ')}
+      {...(mapStage === undefined ? {} : { 'data-map-stage': mapStage })}
       data-timeline-row-kind={kind}
     >
       <span className="timeline-cell-handle" data-timeline-cell="handle">

@@ -568,7 +568,10 @@ export interface WorkspaceShipPhasePresentation {
   readonly encounter?: WorkspaceEncounterPhase;
   readonly key: string;
   readonly label: string;
-  /** Engine-ordered lifecycle entries owned by this phase, including automatic effects. */
+  /**
+   * Engine-ordered lifecycle entries on this phase's tab, including automatic effects: from
+   * its Combat (the Intro from room entry) through the gate row of the next phase's Combat.
+   */
   readonly timeline: readonly WorkspaceRoomLifecycleTimelineEntry[];
   /** This phase's authored rows past the room's stop, waiting until the walk reaches them. */
   readonly notReached?: WorkspaceRoomActions['timeline']['notReached'];
@@ -578,7 +581,7 @@ export interface WorkspaceShipPhasePresentation {
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
   /** The room objects' entries, on the last phase, where a new action is appended. */
   readonly objectEntries?: readonly import('./contracts/features').WorkspaceRoomObjectEntry[];
-  /** The phase's active wheel, opened as its encounter begins and chosen to start its combat. */
+  /** The active wheel the next phase's combat is chosen at, opened and taken on this tab. */
   readonly wheel?: WorkspaceRewardWheelDescriptor;
   /** The wheel's offer rerolls, where it can or did reroll. */
   readonly wheelRerolls?: import('./contracts/structure').WorkspaceRoomRerolls;

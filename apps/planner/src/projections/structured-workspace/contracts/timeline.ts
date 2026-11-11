@@ -11,7 +11,7 @@ import type {
   TranscendentEmbryoOutcomeAddress,
 } from '@run-planner/engine/authored-project';
 import type { ChaosNumericOperand } from '@run-planner/engine/catalog-schema';
-import type { RoomActionWindow } from '@run-planner/engine/simulation';
+import type { RoomActionRow } from '@run-planner/engine/simulation';
 import type { CandidateProjectionEvaluation } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceMarker } from './navigation';
@@ -171,8 +171,10 @@ export interface WorkspaceRoomActionRow {
   readonly blockingProduct?: true;
   readonly stale: boolean;
 
-  /** Engine-owned lifecycle window used by closed presentation groupings. */
-  readonly window: RoomActionWindow;
+  /** The engine phase the row belongs to; absent when the room plays none it names. */
+  readonly phaseKey?: string;
+  /** When in the room the engine places the row's use. */
+  readonly timing: RoomActionRow['label'];
   /** Exact encounter/Gorgon payload settled by this action. */
   readonly traitOffer?: WorkspaceTraitOfferControl;
   /** Exact Phial target control nested under this occurrence-owned fountain action. */
@@ -247,8 +249,6 @@ export interface WorkspaceRoomActions {
     readonly key: string;
     readonly label: string;
     readonly afterRank: number;
-    /** Engine-owned lifecycle window used by closed presentation groupings. */
-    readonly window: RoomActionWindow;
   }[];
   readonly interactionKey: string;
   readonly owner: OccurrenceAddress;
@@ -377,7 +377,10 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly runState?: WorkspaceRunStateLauncher;
       /** Exact projected encounter controls this banner hosts. */
       readonly supplement?: WorkspaceEncounterEvents;
-      /** The marker where its phase's encounter begins: its Encounter, or its Combat shown as one with it. */
+      /**
+       * The marker that leads its phase: its Encounter, or its Combat where the begin shows
+       * with it or, in a Ship, as its Wheels open.
+       */
       readonly beginsEncounter?: true;
       /** Read-only identity of the cage assigned to this encounter cycle. */
       readonly fieldsCage?: WorkspaceFieldsCageLabel;
@@ -578,6 +581,8 @@ export interface WorkspaceRoomLifecycleTimeline {
   /** The walk stops in this room before its doors: their picks and Leave row wait. */
   readonly doorsWait?: true;
   readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
+  /** The doors open after this many ranked rows. */
+  readonly doorsAfterRank: number;
   /** Checkpoints represented by lifecycle boundary rows rather than duplicate list items. */
   readonly suppressedCheckpointKeys: readonly string[];
 }

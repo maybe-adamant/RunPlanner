@@ -562,7 +562,7 @@ describe('structured workspace actions assembly', () => {
         expect.objectContaining({
           participation: 'optional',
           rank: null,
-          window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+          timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
           placement: {
             command: expect.objectContaining({
               kind: 'PlaceClockedTraitPickup',
@@ -691,7 +691,7 @@ describe('structured workspace actions assembly', () => {
         reward: { offer: { rewardType: 'MixerFBossDrop' }, boosted: false },
       },
       participation: 'required',
-      window: { kind: 'standard', phase: 'afterCombat' },
+      timing: { kind: 'afterCombat' },
     });
     if (collect === undefined) throw new Error('expected the Boss reward action');
     expect(entryKeys.indexOf('Encounter ended')).toBeLessThan(entryKeys.indexOf(collect.key));
@@ -969,7 +969,7 @@ describe('structured workspace actions assembly', () => {
       participation: 'required',
       rank: null,
       reference: { encounterPhaseKey: 'Encounter' },
-      window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+      timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
     });
     expect(dueRow?.placement?.command).toEqual({
       kind: 'PlaceHermesShrineDelivery',
@@ -995,7 +995,7 @@ describe('structured workspace actions assembly', () => {
       sourceFamily: { kind: 'hermesShrineDelivery' },
       labelParts: { origin: 'Delivered from the Hermes Shrine' },
       participation: 'required',
-      window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+      timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
     });
     expect(placedRow?.rank).not.toBeNull();
     expect(placedRow?.placement).toBeUndefined();
@@ -1190,17 +1190,17 @@ describe('structured workspace actions assembly', () => {
         expect.objectContaining({
           key: 'Intro',
           label: 'Intro',
+          wheel: ship.node.room.roomLocal.wheels[0],
         }),
         expect.objectContaining({
           key: 'Combat1',
           label: 'Combat 1',
-          wheel: ship.node.room.roomLocal.wheels[0],
         }),
       ],
       repairRows: [],
     });
     if (ship.node.room.workbench.kind !== 'ship') throw new Error('Ship workbench is missing');
-    expect(ship.node.room.workbench.phases[0]?.wheel).toBeUndefined();
+    expect(ship.node.room.workbench.phases[1]?.wheel).toBeUndefined();
     const shipActions = ship.node.room.roomActions;
     if (shipActions === undefined) throw new Error('Ship room actions are withheld');
     expect(

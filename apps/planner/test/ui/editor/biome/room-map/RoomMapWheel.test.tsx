@@ -103,7 +103,7 @@ function render(project: ProjectDocument) {
 }
 
 describe('room map ship wheel', () => {
-  it('puts one offer on the wheel and two on its left and right spots, and the doors once they open', async () => {
+  it('puts one offer on the wheel and two on its left and right spots, and the doors in the last phase', async () => {
     const { phases, room } = shipRoom(cardHolder());
     const intro = phases.find((phase) => phase.wheel?.key === 'wheel1')!;
     const spots = wheelSpots(room.gameName);
@@ -115,15 +115,6 @@ describe('room map ship wheel', () => {
     expect(wheelOffers().map(placed)).toEqual([spots.wheel]);
     expect(mapPoints().some((point) => point.getAttribute('aria-label')?.startsWith('Door'))).toBe(
       false,
-    );
-    // The wheel's phase is the room's last: from its Doors open the map shows the doors.
-    expect(phases.at(-1)).toBe(intro);
-    await one.user.click(
-      timelineRows().find((row) => row.matches('[data-boundary-kind="doorsOpened"]'))!,
-    );
-    expect(wheelOffers()).toEqual([]);
-    expect(mapPoints().some((point) => point.getAttribute('aria-label')?.startsWith('Door'))).toBe(
-      true,
     );
     cleanup();
 
@@ -141,6 +132,15 @@ describe('room map ship wheel', () => {
         ['L Offer', spots.left],
         ['R Offer', spots.right],
       ],
+    );
+
+    // The last phase opens no wheel: its map shows the doors.
+    const last = phases.at(-1)!;
+    expect(last).not.toBe(intro);
+    await two.user.click(screen.getByRole('tab', { name: `${last.label} Timeline` }));
+    expect(wheelOffers()).toEqual([]);
+    expect(mapPoints().some((point) => point.getAttribute('aria-label')?.startsWith('Door'))).toBe(
+      true,
     );
   });
 

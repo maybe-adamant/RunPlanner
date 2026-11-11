@@ -32,7 +32,6 @@ import {
   blockedOccurrenceRoomForProjectEvaluationAssembly,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   encounterOutcomesForProjectEvaluationAssembly,
-  roomLifecycleTimelineForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   fieldsBatchFacts,
@@ -121,8 +120,6 @@ function biomeSource(
     undefined,
     (occurrence) =>
       encounterOutcomesForProjectEvaluationAssembly(sourceCatalog, assembly, occurrence),
-    (occurrence) =>
-      roomLifecycleTimelineForProjectEvaluationAssembly(sourceCatalog, assembly, occurrence),
   ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
@@ -228,7 +225,6 @@ export function assemble(
       ? { startingReward: source.startingReward }
       : {}),
     runState: source.runState,
-    roomLifecycleTimeline: source.roomLifecycleTimeline,
   });
   return { assembly, markers, source };
 }
