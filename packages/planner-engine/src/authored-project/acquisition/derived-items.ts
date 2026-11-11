@@ -71,8 +71,11 @@ function sourcesByKey(
   );
 }
 
-/** The occurrence without the given derived items and the pickup rows that take them. */
-function withoutItems(occurrence: RoomOccurrence, items: readonly DerivedItem[]): RoomOccurrence {
+/** The occurrence without the given items and the pickup rows that take them. */
+function withoutItems(
+  occurrence: RoomOccurrence,
+  items: readonly Pick<DerivedItem, 'siteKey' | 'entryKey'>[],
+): RoomOccurrence {
   const removed = new Set(items.map((item) => `${item.siteKey} ${item.entryKey}`));
   const sites: Record<string, AuthoredAcquisitionSiteState> = {};
   for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {
@@ -236,6 +239,34 @@ export function withoutItemsDerivedFromEntry(
   return replacedSources.size === 0
     ? occurrence
     : withoutStaleDerivedItems(biome, occurrence, occurrence, { replacedSources });
+}
+
+/**
+ * Discards what one acquisition entry observed, as a replaced item: its payload
+ * with its outcomes becomes unobserved and the items derived from it go, with
+ * the pickup rows that take it unless `keepPickup` (a row placed for the item
+ * it takes now).
+ */
+export function withoutAcquisitionEntryObservation(
+  biome: BiomeAddress,
+  occurrence: RoomOccurrence,
+  siteKey: string,
+  entryKey: string,
+  keepPickup: boolean,
+): RoomOccurrence {
+  const derived = withoutItemsDerivedFromEntry(biome, occurrence, siteKey, entryKey);
+  const without = keepPickup ? derived : withoutItems(derived, [{ siteKey, entryKey }]);
+  const site = without.acquisitionSites?.[siteKey];
+  return Object.freeze({
+    ...without,
+    acquisitionSites: Object.freeze({
+      ...without.acquisitionSites,
+      [siteKey]: Object.freeze({
+        ...site,
+        pickupEntries: Object.freeze({ ...site?.pickupEntries, [entryKey]: null }),
+      }),
+    }),
+  });
 }
 
 /**

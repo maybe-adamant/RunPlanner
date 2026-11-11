@@ -1,4 +1,8 @@
-import { withoutDormantArtificerReplacementsInProject } from '../authored-project/acquisition/derived-items';
+import {
+  withoutAcquisitionEntryObservation,
+  withoutDormantArtificerReplacementsInProject,
+} from '../authored-project/acquisition/derived-items';
+import { sameRewardOffer } from '../reward-kernel';
 import type { Catalog } from '../catalog-schema';
 import {
   createAcquisitionEntryAddress,
@@ -48,7 +52,10 @@ import {
   parseHermesShrineDeliveryEntryKey,
   purchasedOfferFor,
 } from '../authored-project/hermes-shrine-delivery';
-import { parseClockedTraitGeneratedPickupEntryKey } from '../authored-project/acquisition/pickup-producers';
+import {
+  parseClockedTraitGeneratedPickupEntryKey,
+  parseEchoLastRewardPickupEntryKey,
+} from '../authored-project/acquisition/pickup-producers';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
@@ -560,6 +567,15 @@ function withPickupPayload(
       }),
     }),
   });
+  return withOccurrence(project, owner, restored);
+}
+
+/** The plan with one room's occurrence replaced. */
+function withOccurrence(
+  project: ProjectDocument,
+  owner: OccurrenceAddress,
+  next: RoomOccurrence,
+): ProjectDocument {
   return Object.freeze({
     ...project,
     route: Object.freeze({
@@ -574,7 +590,7 @@ function withPickupPayload(
                   ...plan.topology,
                   occurrences: Object.freeze(
                     plan.topology.occurrences.map((candidate) =>
-                      candidate === occurrence ? restored : candidate,
+                      candidate.occurrenceId === owner.occurrenceId ? next : candidate,
                     ),
                   ),
                 }),
@@ -583,6 +599,33 @@ function withPickupPayload(
       ),
     }),
   });
+}
+
+/**
+ * Echo replays the walk reached holding another reward than the walk's last
+ * reward there: the replay is a replaced item. One whose reward was never
+ * authored is not judged, nor one in a room the walk does not reach.
+ */
+function replacedEchoReplays(
+  assembly: ProjectEvaluationAssembly,
+  artifacts: CandidateArtifacts,
+): { owner: OccurrenceAddress; entryKey: string }[] {
+  const replaced: { owner: OccurrenceAddress; entryKey: string }[] = [];
+  for (const { owner, occurrence } of occurrences(assembly.project)) {
+    const entries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
+    if (entries === undefined) continue;
+    const reached = artifacts
+      .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
+      ?.derivedAcquisitionEntries.entriesAt(createAcquisitionSiteAddress(owner, 'roomExit'));
+    for (const [entryKey, payload] of Object.entries(entries)) {
+      if (payload == null || parseEchoLastRewardPickupEntryKey(entryKey) === undefined) continue;
+      const capability = reached?.find((entry) => entry.address.entryKey === entryKey)?.capability;
+      if (capability?.kind !== 'echoLastReward' || capability.fixedReward === undefined) continue;
+      if (!sameRewardOffer(payload.offer, capability.fixedReward.offer))
+        replaced.push({ owner, entryKey });
+    }
+  }
+  return replaced;
 }
 
 /**
@@ -1089,6 +1132,49 @@ function settleProject(options: {
           throw error;
         }
         project = discardRetainedHermesShrineDelivery(catalog, project, entryKey, owner);
+        removedStale.push(...rowsTaken(previous, project));
+        discardedObservations.push({ owner, item: address });
+      }
+      assembly = evaluate(project);
+      continue;
+    }
+    const replays = replacedEchoReplays(assembly, artifacts);
+    if (replays.length > 0) {
+      for (const { owner, entryKey } of replays) {
+        const address = createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(owner, 'roomExit'),
+          entryKey,
+        );
+        const fault = consume(`echoReplay:${semanticAddressKey(address)}`, address);
+        if (fault !== undefined) return settled(assembly, fault);
+        const occurrence = occurrenceAt(project, owner);
+        if (occurrence === undefined) continue;
+        // A pickup the edit itself placed takes the replay the walk has now.
+        const placedByEdit =
+          occurrence.roomActions.order.some(
+            (reference) =>
+              reference.kind === 'interactAcquisitionEntry' &&
+              reference.siteKey === 'roomExit' &&
+              reference.entryKey === entryKey,
+          ) &&
+          !(occurrenceAt(before.project, owner)?.roomActions.order ?? []).some(
+            (reference) =>
+              reference.kind === 'interactAcquisitionEntry' &&
+              reference.siteKey === 'roomExit' &&
+              reference.entryKey === entryKey,
+          );
+        const previous = project;
+        project = withOccurrence(
+          project,
+          owner,
+          withoutAcquisitionEntryObservation(
+            createBiomeAddress(owner.routeKey, owner.biomeKey),
+            occurrence,
+            'roomExit',
+            entryKey,
+            placedByEdit,
+          ),
+        );
         removedStale.push(...rowsTaken(previous, project));
         discardedObservations.push({ owner, item: address });
       }
