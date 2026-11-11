@@ -23,15 +23,16 @@ export class HistoryLifecycleInputContractError extends Error {
 /**
  * The one owner of "which store did entering this room count with". Callers
  * that only hold a materialized room and its declaration use
- * `declaredEnteredStoreKey`; this wrapper adds the lifecycle-only Clockwork
- * goal exclusion and the contract error, which the support reader cannot
- * raise because it evaluates rooms that were never entered.
+ * `declaredEnteredStoreKey`; this wrapper adds the lifecycle-only forced-reward
+ * exclusion and the contract error, which the support reader cannot raise
+ * because it evaluates rooms that were never entered.
  */
 function enteredStoreKey(
   policy: EnteredRewardStoreHistoryPolicy,
   room: CanonicalLifecycleRoom,
 ): string | undefined {
-  if (room.kind === 'authored' && room.clockworkReward === 'goal') {
+  // A forced reward is chosen before any store draw.
+  if (room.kind === 'authored' && room.forcedRewardType !== undefined) {
     return undefined;
   }
   if (room.kind !== 'authored') return policy.kind === 'fixed' ? policy.storeKey : undefined;
@@ -64,7 +65,7 @@ export function lacksEnteredStoreProvenance(
   const policy = declaration.enteredRewardStoreHistory;
   if (policy.kind !== 'resolvedOffer') return false;
   if (room.kind !== 'authored') return false;
-  if (room.clockworkReward === 'goal') return false;
+  if (room.forcedRewardType !== undefined) return false;
   return declaredEnteredStoreKey(room, policy) === undefined;
 }
 

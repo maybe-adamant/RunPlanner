@@ -1,6 +1,7 @@
 import type {
   RoomLifecycleProducerPolicy,
   RoomLifecycleStep,
+  RoomRoleLifecycleProfileKeys,
 } from '@run-planner/engine/catalog-schema';
 
 export interface RawRoomLifecycleProfileDeclaration {
@@ -18,13 +19,8 @@ export type RawRoomTemplateLifecycleDeclaration =
   | {
       readonly kind: 'fixed';
       readonly profileKeys: readonly string[];
-      /** The lifecycle when an Ephyra hub enters the room as a local visit. */
-      readonly localVisitProfileKey?: string;
-    }
-  | {
-      readonly kind: 'clockworkGoal';
-      readonly goalProfileKey: string;
-      readonly rewardProfileKey: string;
+      /** The lifecycles when an Ephyra Hub enters the room as a board target or local visit. */
+      readonly roleProfileKeys?: RoomRoleLifecycleProfileKeys;
     }
   | {
       readonly kind: 'prebossOffer';

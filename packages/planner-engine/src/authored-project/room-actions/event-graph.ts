@@ -150,10 +150,11 @@ const DOORS_PREDICATE = frozen({ kind: 'doorsPredicate' as const });
 function gateRolePoint(
   catalog: Catalog,
   profile: RoomLifecycleProfile,
+  producer: boolean,
   role: string,
   gameName: string,
 ): ProducerLifecyclePointKey | undefined {
-  if (profile.producer.kind === 'none') return undefined;
+  if (!producer || profile.producer.kind === 'none') return undefined;
   const points = new Set<ProducerLifecyclePointKey>();
   for (const key of profile.producer.lifecycleProfileKeys)
     for (const reward of catalog.rewards.producerLifecycles.byKey[key]?.rewardTypes.values ?? [])
@@ -173,9 +174,10 @@ export function producerPointsBeforeCombat(
   catalog: Catalog,
   profile: RoomLifecycleProfile,
   declaration: RoomDeclaration,
+  producer: boolean,
 ): ReadonlySet<ProducerLifecyclePointKey> {
   const points = new Set<ProducerLifecyclePointKey>();
-  if (profile.producer.kind === 'none') return points;
+  if (!producer || profile.producer.kind === 'none') return points;
   const keys = declaration.encounterSlotBindings.flatMap((binding) =>
     binding.kind === 'set'
       ? (catalog.encounterSets.byKey[binding.encounterSetKey]?.encounterDefinitionKeys ?? [])
@@ -192,7 +194,7 @@ export function producerPointsBeforeCombat(
   for (const key of keys) {
     const gate = catalog.encounterDefinitions.byKey[key]?.script.gate;
     if (gate?.kind !== 'useItemRole') continue;
-    const point = gateRolePoint(catalog, profile, gate.role, declaration.gameName);
+    const point = gateRolePoint(catalog, profile, producer, gate.role, declaration.gameName);
     if (point !== undefined) points.add(point);
   }
   for (const point of profile.producer.points) if (point === 'beforeCombat') points.add(point);
@@ -224,6 +226,8 @@ export function assembleRoomEventGraph(options: {
   readonly declaration: RoomDeclaration;
   readonly occurrence: RoomOccurrence;
   readonly lifecycleProfileKey: string;
+  /** Whether the room's reward runs a producer. */
+  readonly producer: boolean;
   readonly activeEncounterSlotKeys?: readonly string[];
   /** The room reward's pickups, whose role at a gate's point is the row using it. */
   readonly incomingRewardPickups?: readonly RoomActionReference[];
@@ -413,7 +417,13 @@ export function assembleRoomEventGraph(options: {
         : AUTOMATIC;
     const gatePoint =
       gate.kind === 'useItemRole'
-        ? gateRolePoint(options.catalog, profile, gate.role, options.occurrence.gameName)
+        ? gateRolePoint(
+            options.catalog,
+            profile,
+            options.producer,
+            gate.role,
+            options.occurrence.gameName,
+          )
         : undefined;
     const startedTrigger: RoomEventTrigger =
       gate.kind === 'useItemRole' && gatePoint !== undefined

@@ -18,7 +18,7 @@ export interface RoomLifecycleInput {
 
 export type RoomLifecycleFacts = Pick<
   RoomDeclaration,
-  'lifecycleProfile' | 'localVisitLifecycleProfileKey'
+  'lifecycleProfile' | 'roleLifecycleProfileKeys'
 >;
 
 /**
@@ -37,13 +37,6 @@ export function normalizeRoomLifecycleFacts(
       fail(at, `${key} does not support the room encounter envelope`);
     return key;
   };
-  if (room.lifecycleProfileKey !== undefined)
-    return Object.freeze({
-      lifecycleProfile: Object.freeze({
-        kind: 'fixed',
-        profileKey: requireProfile(room.lifecycleProfileKey, `${path}.lifecycleProfileKey`),
-      }),
-    });
   const templatePath =
     room.mode.kind === 'authored'
       ? `roomTemplateLifecycles.${room.mode.templateKey}`
@@ -51,6 +44,11 @@ export function normalizeRoomLifecycleFacts(
   const template =
     room.mode.kind === 'authored' ? input.templates[room.mode.templateKey] : input.derived;
   const selection = ((): RoomLifecycleProfileSelection => {
+    if (room.lifecycleProfileKey !== undefined)
+      return {
+        kind: 'fixed',
+        profileKey: requireProfile(room.lifecycleProfileKey, `${path}.lifecycleProfileKey`),
+      };
     switch (template.kind) {
       case 'fixed': {
         const admitting = template.profileKeys.filter((key) =>
@@ -63,12 +61,6 @@ export function normalizeRoomLifecycleFacts(
           );
         return { kind: 'fixed', profileKey: requireProfile(admitting[0]!, templatePath) };
       }
-      case 'clockworkGoal':
-        return {
-          kind: 'clockworkGoal',
-          goalProfileKey: requireProfile(template.goalProfileKey, templatePath),
-          rewardProfileKey: requireProfile(template.rewardProfileKey, templatePath),
-        };
       case 'prebossOffer':
         return {
           kind: 'prebossOffer',
@@ -77,11 +69,20 @@ export function normalizeRoomLifecycleFacts(
         };
     }
   })();
-  const localVisit = template.kind === 'fixed' ? template.localVisitProfileKey : undefined;
+  const roles = template.kind === 'fixed' ? template.roleProfileKeys : undefined;
   return Object.freeze({
     lifecycleProfile: Object.freeze(selection),
-    ...(localVisit === undefined
+    ...(roles === undefined
       ? {}
-      : { localVisitLifecycleProfileKey: requireProfile(localVisit, templatePath) }),
+      : {
+          roleLifecycleProfileKeys: Object.freeze(
+            Object.fromEntries(
+              Object.entries(roles).map(([role, key]) => [
+                role,
+                requireProfile(key, `${templatePath}.roleProfileKeys.${role}`),
+              ]),
+            ),
+          ),
+        }),
   });
 }

@@ -168,7 +168,6 @@ describe('World Shop inventory generation reads god pickups', () => {
       }),
       role: 'ordinary',
       entered: true,
-      lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
     const inventory = processShopInventory(branch, {

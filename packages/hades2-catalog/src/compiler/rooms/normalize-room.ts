@@ -241,7 +241,7 @@ const overlaidRoomFields = [
   'mode',
   'lifecycleProfileKey',
   'lifecycleProfile',
-  'localVisitLifecycleProfileKey',
+  'roleLifecycleProfileKeys',
   'incomingReward',
   'offerRewardBinding',
   'encounterSlotBindings',
@@ -299,8 +299,8 @@ function normalizeRoomRouteOverlay(
     offerRewardBinding: overlaid.offerRewardBinding,
     encounterSlotBindings: overlaid.encounterSlotBindings,
     lifecycleProfile: overlaid.lifecycleProfile,
-    ...(overlaid.localVisitLifecycleProfileKey === undefined
+    ...(overlaid.roleLifecycleProfileKeys === undefined
       ? {}
-      : { localVisitLifecycleProfileKey: overlaid.localVisitLifecycleProfileKey }),
+      : { roleLifecycleProfileKeys: overlaid.roleLifecycleProfileKeys }),
   });
 }

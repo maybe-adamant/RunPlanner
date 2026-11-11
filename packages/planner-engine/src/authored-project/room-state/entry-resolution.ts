@@ -41,7 +41,6 @@ export interface ResolvedEntryRoom {
   /** Whether this entry binds the route-owned run-start reward. */
   readonly runStartReward: boolean;
   readonly incomingRewardBinding: RewardProducerBinding;
-  readonly lifecycleProfileKey?: string;
   /** The run-start producer's resolved store; it is not an entered-store history record. */
   readonly incomingRewardStoreKey?: string;
   /** The resolved run-start offer contributes only when the entry declaration participates. */
@@ -83,10 +82,6 @@ export function resolveEntryRoom(
       declaration: contextualDeclaration,
       runStartReward: false,
       incomingRewardBinding: contextualDeclaration.incomingReward,
-      lifecycleProfileKey:
-        contextualDeclaration.encounterEnvelopeKey === 'EmptyEncounter'
-          ? 'RewardlessRoom'
-          : 'RewardlessCombatRoom',
       ...(entersStore ? { enteredRewardStoreKey: storeKey } : {}),
       unspawnedRunStartRoll: Object.freeze({ binding, storeKey }),
     });
@@ -101,23 +96,11 @@ export function resolveEntryRoom(
           : contextualDeclaration,
       runStartReward: false,
       incomingRewardBinding: contextualDeclaration.incomingReward,
-      ...(entry
-        ? {
-            lifecycleProfileKey:
-              contextualDeclaration.encounterEnvelopeKey === 'EmptyEncounter'
-                ? 'RewardlessRoom'
-                : 'RewardlessCombatRoom',
-          }
-        : {}),
     });
   return Object.freeze({
     declaration: contextualDeclaration,
     runStartReward: true,
     incomingRewardBinding: binding,
-    lifecycleProfileKey:
-      contextualDeclaration.encounterEnvelopeKey === 'EmptyEncounter'
-        ? 'OpeningRewardNoEncounterRoom'
-        : 'OpeningRewardRoom',
     incomingRewardStoreKey: storeKey,
     ...(entersStore ? { enteredRewardStoreKey: storeKey } : {}),
   });

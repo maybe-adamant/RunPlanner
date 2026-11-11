@@ -122,21 +122,6 @@ export const specializedRewardRoomLifecycleProfiles = [
     ],
   },
   {
-    key: 'RewardlessRoom',
-    encounterEnvelopeKeys: ['EmptyEncounter'],
-    producer: { kind: 'none' },
-    steps: [
-      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
-      { kind: 'enterRoom', effects: ['recordAppearance'] },
-      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
-      {
-        kind: 'commitRoom',
-        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
-      },
-      { kind: 'exitRoom', effects: ['recordExit'] },
-    ],
-  },
-  {
     key: 'DevotionRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
     producer: {

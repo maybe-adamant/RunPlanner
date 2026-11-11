@@ -235,9 +235,11 @@ describe('F takeover materialization', () => {
     if (opening === undefined) throw new Error('Dream fixture did not materialize F opening');
 
     expect(opening).toMatchObject({
-      lifecycleProfileKey: 'RewardlessCombatRoom',
+      lifecycleProfileKey: 'OpeningRewardRoom',
       incomingRewardBinding: { kind: 'none' },
     });
+    expect(opening.incomingReward).toBeUndefined();
+    expect(opening.unresolvedIncomingReward).toBeUndefined();
     expect(opening.encounterPhases).toMatchObject([
       { authoredChoiceKey: 'OpeningEmpty', slotKey: 'Encounter' },
     ]);

@@ -78,12 +78,12 @@ export function routeRoomDeclaration<Room extends RoomDeclaration | undefined>(
   const declared: RoomDeclaration = room;
   const {
     lifecycleProfileKey: _lifecycle,
-    localVisitLifecycleProfileKey: _localVisit,
+    roleLifecycleProfileKeys: _roles,
     routeOverlays: _overlays,
     ...base
   } = declared;
   void _lifecycle;
-  void _localVisit;
+  void _roles;
   void _overlays;
   const routed: RoomDeclaration = Object.freeze({
     ...base,
@@ -94,9 +94,9 @@ export function routeRoomDeclaration<Room extends RoomDeclaration | undefined>(
     offerRewardBinding: overlay.offerRewardBinding,
     encounterSlotBindings: overlay.encounterSlotBindings,
     lifecycleProfile: overlay.lifecycleProfile,
-    ...(overlay.localVisitLifecycleProfileKey === undefined
+    ...(overlay.roleLifecycleProfileKeys === undefined
       ? {}
-      : { localVisitLifecycleProfileKey: overlay.localVisitLifecycleProfileKey }),
+      : { roleLifecycleProfileKeys: overlay.roleLifecycleProfileKeys }),
   });
   const byRoute = routeOverlaidRooms.get(declared) ?? new Map<string, RoomDeclaration>();
   byRoute.set(routeKey, routed);

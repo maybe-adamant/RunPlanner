@@ -68,7 +68,7 @@ export {
   authoredAcquisitionSources,
   type AuthoredAcquisitionSource,
 } from './acquisition/acquisition-sources';
-export { roomLifecycleProfileKey } from './room-actions/lifecycle-profile';
+export { roomLifecycleProfileKey, type RoomLifecycleRole } from './room-actions/lifecycle-profile';
 export type {
   RoomEvent,
   RoomEventGraph,

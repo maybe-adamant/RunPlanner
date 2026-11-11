@@ -463,8 +463,9 @@ biome-scoped; imported occurrence IDs are not rewritten.
 Entry declarations are intrinsically rewardless. Shared entry resolution first
 applies the room's route overlay, if its declaration names the route, then
 binds the route-owned reward only at the first itinerary entry, applies narrow
-contextual encounter rules, and selects the lifecycle and entered-store
-participation consumed by defaults, decoding and simulation. An overlaid room
+contextual encounter rules, and selects the entered-store participation
+consumed by defaults, decoding and simulation. The entry runs its declared
+lifecycle either way; only the run-start reward gives it a producer. An overlaid room
 is decoded and constructed as its realized room. Later entries remain
 rewardless. Multi-choice entry identity belongs to biome Overview at every
 ordinal; the starting offer belongs to Loadout, and its acquisition

@@ -428,7 +428,8 @@ function resolveExecutionContext(
       `${declaration.gameName} does not declare ${envelope.key}`,
     );
   }
-  const steps = roomWalkSteps(catalog, profile, declaration);
+  const producer = input.producer;
+  const steps = roomWalkSteps(catalog, profile, declaration, producer !== undefined);
   const selectedPhases = input.encounterPhases ?? Object.freeze([]);
   if (
     selectedPhases.length > envelope.slots.length ||
@@ -487,15 +488,10 @@ function resolveExecutionContext(
       `${profile.key} required-object operations do not match lifecycle input`,
     );
   }
-  if (profile.producer.kind === 'none') {
-    if (input.producer !== undefined) {
-      throw new LifecycleExecutionContractError(`${profile.key} does not accept a producer`);
-    }
+  if (producer === undefined)
     return { catalog, input, profile, steps, encounterPhases: Object.freeze([...selectedPhases]) };
-  }
-  const producer = input.producer;
-  if (producer === undefined) {
-    throw new LifecycleExecutionContractError(`${profile.key} requires a producer`);
+  if (profile.producer.kind === 'none') {
+    throw new LifecycleExecutionContractError(`${profile.key} does not accept a producer`);
   }
   if (!profile.producer.lifecycleProfileKeys.includes(producer.lifecycleProfileKey)) {
     throw new LifecycleExecutionContractError(

@@ -193,6 +193,7 @@ function roomActionDomainContext(
   loadout: ProjectDocument['route']['loadout'],
 ): {
   readonly lifecycleProfileKey: string;
+  readonly producer: boolean;
   readonly incomingRewardBinding?: import('../../reward-kernel/bindings').RewardProducerBinding;
   readonly incomingRewardState?: import('../model').AuthoredRewardState | null;
   readonly activeEncounterSlotKeys?: readonly string[];
@@ -205,19 +206,28 @@ function roomActionDomainContext(
       : resolveEntryRoom(catalog, rawDeclaration, routePosition, entry);
   const declaration = resolved?.declaration;
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
-  if (declaration === undefined || layout === undefined) {
+  if (resolved === undefined || declaration === undefined || layout === undefined) {
     throw new Error(`missing Room Action declaration context for ${occurrence.gameName}`);
   }
-  const isLocalVisit = topology.decisions.some(
+  const role = topology.decisions.some(
     (decision) =>
       decision.kind === 'localVisit' &&
       Object.values(decision.targetsBySlot).some(
         (target) => target.occurrenceId === occurrence.occurrenceId,
       ),
-  );
-  const lifecycleProfileKey =
-    resolved?.lifecycleProfileKey ??
-    roomLifecycleProfileKey(declaration, occurrence, isLocalVisit ? 'localVisit' : 'ordinary');
+  )
+    ? 'localVisit'
+    : topology.decisions.some(
+          (decision) =>
+            decision.kind === 'hub' &&
+            decision.openTargets.some((target) => target.occurrenceId === occurrence.occurrenceId),
+        )
+      ? 'hubTarget'
+      : 'ordinary';
+  const lifecycle = Object.freeze({
+    lifecycleProfileKey: roomLifecycleProfileKey(declaration, role, occurrence),
+    producer: resolved.incomingRewardBinding.kind !== 'none',
+  });
   const startingReward =
     entry && routePosition.isFirst
       ? composeStartingReward(loadout.startingReward, occurrence.startingRewardAcquisition)
@@ -226,18 +236,18 @@ function roomActionDomainContext(
     startingReward === undefined
       ? {}
       : {
-          incomingRewardBinding: resolved!.incomingRewardBinding,
+          incomingRewardBinding: resolved.incomingRewardBinding,
           incomingRewardState: startingReward,
         };
   if (declaration.mode.kind !== 'authored' || declaration.mode.templateKey !== 'FieldsCombat') {
-    return frozen({ lifecycleProfileKey, ...entryRewardContext });
+    return frozen({ ...lifecycle, ...entryRewardContext });
   }
   const decision = topology.decisions.find(
     (candidate) =>
       candidate.kind === 'exit' &&
       candidate.normal.targets.some((target) => target.occurrenceId === occurrence.occurrenceId),
   );
-  if (decision?.kind !== 'exit') return frozen({ lifecycleProfileKey, ...entryRewardContext });
+  if (decision?.kind !== 'exit') return frozen({ ...lifecycle, ...entryRewardContext });
   const activeCageCount = fieldsDefaultActiveCageCount({
     catalog,
     layout,
@@ -246,12 +256,12 @@ function roomActionDomainContext(
     room: declaration,
     replacingOccurrenceId: occurrence.occurrenceId,
   });
-  if (activeCageCount === undefined) return frozen({ lifecycleProfileKey, ...entryRewardContext });
+  if (activeCageCount === undefined) return frozen({ ...lifecycle, ...entryRewardContext });
   const slots = encounterEnvelopeSlots(catalog, declaration, occurrence.gameName);
   const passive = slots.filter((phase) => phase.rewardAttachment?.kind !== 'localReward');
   const cages = slots.filter((phase) => phase.rewardAttachment?.kind === 'localReward');
   return frozen({
-    lifecycleProfileKey,
+    ...lifecycle,
     ...entryRewardContext,
     activeEncounterSlotKeys: frozen([
       ...passive.map((phase) => phase.key),

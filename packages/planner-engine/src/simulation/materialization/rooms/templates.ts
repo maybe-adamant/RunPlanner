@@ -41,6 +41,7 @@ import type { ResolvedRoutePosition } from '../../../authored-project/route-cont
 import { composeStartingReward } from '../../../authored-project/room-state/starting-reward';
 import { INFERNAL_CONTRACT_ENTRY_KEY } from '../../../authored-project/infernal-contract-pedestal';
 import type { ResolvedEntryRoom } from '../../../authored-project/room-state/entry-resolution';
+import type { RoomLifecycleRole } from '../../../authored-project/room-actions/lifecycle-profile';
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -83,8 +84,15 @@ export interface AuthoredRoomMaterializationContext {
   readonly entered: boolean;
   readonly batchStoreKey?: string;
   readonly activeCageCount?: number;
-  readonly clockworkReward?: 'goal' | 'nonGoal';
-  readonly lifecycleProfileKey?: string;
+  /** The Hub role the room is entered in; an ordinary room by default. */
+  readonly lifecycleRole?: RoomLifecycleRole;
+  /**
+   * The reward its door forces (`ForcedFirstReward`, `ForcedRewards`): a
+   * Clockwork Goal, which takes a counted choice's place and spawns no pickup.
+   */
+  readonly forcedRewardType?: string;
+  /** Its reward, spawned through a Clockwork batch's door, counts toward the next forced Goal. */
+  readonly countsTowardClockworkGoal?: true;
   readonly loadout?: RouteWeaponAspectLoadout | BiomeMaterializationLoadout;
   readonly configuredRivalsRank?: number;
   readonly entry?: boolean;
@@ -132,7 +140,6 @@ function acquiredReward(
 }
 
 export interface MaterializedRoomLeaf {
-  readonly lifecycleProfileKey: string;
   readonly activeEncounterSlotKeys?: readonly string[];
   readonly encounterPhases?: readonly MaterializedEncounterPhase[];
   readonly incomingReward?: CanonicalResolvedIncomingReward;
@@ -144,7 +151,6 @@ export interface MaterializedRoomLeaf {
   readonly unresolvedFieldsOptionalRewards?: CanonicalAuthoredRoom['unresolvedFieldsOptionalRewards'];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
-  readonly clockworkReward?: 'goal' | 'nonGoal';
   /** A rerolled door's acquired reward, which the room's actions and pickups follow. */
   readonly rerolledIncomingAcquisition?: AuthoredRewardState;
 }
@@ -279,8 +285,6 @@ export function materializeRouteStartEntry(
     ? composeStartingReward(loadout.startingReward, context.occurrence.startingRewardAcquisition)
     : null;
   return Object.freeze({
-    lifecycleProfileKey:
-      resolvedEntry.lifecycleProfileKey ?? fail(`${context.room.gameName} entry has no lifecycle`),
     ...(resolvedEntry.runStartReward && binding.kind === 'countedChoice'
       ? materializedIncomingReward(
           Object.freeze({
@@ -337,18 +341,13 @@ function materializeCountedRoom(context: AuthoredRoomMaterializationContext): Ma
   if (binding.kind !== 'countedChoice') {
     fail(`${context.room.gameName} counted template has ${binding.kind} producer`);
   }
-  return Object.freeze({
-    lifecycleProfileKey:
-      context.lifecycleProfileKey ??
-      context.room.lifecycleProfileKey ??
-      (context.room.encounterEnvelopeKey === 'PEncounter' ? 'PCombatRoom' : 'StandardRewardRoom'),
-    ...materializedIncomingReward(
-      context,
-      'countedChoice',
-      binding.producerLifecycleKey,
-      state.reward,
-    ),
-  });
+  if (context.forcedRewardType !== undefined) return Object.freeze({});
+  return materializedIncomingReward(
+    context,
+    'countedChoice',
+    binding.producerLifecycleKey,
+    state.reward,
+  );
 }
 
 /**
@@ -370,7 +369,6 @@ function materializeAnomaly(context: AuthoredRoomMaterializationContext): Materi
     state.reward,
   );
   return Object.freeze({
-    lifecycleProfileKey: 'StandardRewardRoom',
     ...('incomingReward' in incoming && incoming.incomingReward !== undefined
       ? {
           incomingReward: Object.freeze({
@@ -382,25 +380,6 @@ function materializeAnomaly(context: AuthoredRoomMaterializationContext): Materi
   });
 }
 
-function materializeClockworkCombat(
-  context: AuthoredRoomMaterializationContext,
-): MaterializedRoomLeaf {
-  requireStateKind(context, 'counted');
-  if (context.clockworkReward === undefined) {
-    fail(`${context.room.gameName} has no derived Clockwork reward`);
-  }
-  if (context.clockworkReward === 'goal') {
-    return Object.freeze({
-      lifecycleProfileKey: 'ClockworkGoalRoom',
-      clockworkReward: 'goal',
-    });
-  }
-  return Object.freeze({
-    ...materializeCountedRoom(context),
-    clockworkReward: 'nonGoal',
-  });
-}
-
 function materializeEphyraCombat(
   context: AuthoredRoomMaterializationContext,
 ): MaterializedRoomLeaf {
@@ -409,15 +388,12 @@ function materializeEphyraCombat(
   if (binding.kind !== 'countedChoice') {
     fail(`${context.room.gameName} Ephyra combat has ${binding.kind} producer`);
   }
-  return Object.freeze({
-    lifecycleProfileKey: context.lifecycleProfileKey ?? 'EphyraMainRoom',
-    ...materializedIncomingReward(
-      context,
-      'countedChoice',
-      binding.producerLifecycleKey,
-      state.reward,
-    ),
-  });
+  return materializedIncomingReward(
+    context,
+    'countedChoice',
+    binding.producerLifecycleKey,
+    state.reward,
+  );
 }
 
 function materializeFixedRoom(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
@@ -426,17 +402,7 @@ function materializeFixedRoom(context: AuthoredRoomMaterializationContext): Mate
   if (binding.kind !== 'fixed') {
     fail(`${context.room.gameName} fixed template has ${binding.kind} producer`);
   }
-  return Object.freeze({
-    lifecycleProfileKey: context.lifecycleProfileKey ?? 'StandardRewardRoom',
-    ...materializedIncomingReward(context, 'fixed', binding.producerLifecycleKey, state.reward),
-  });
-}
-
-function materializeDevotion(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
-  return Object.freeze({
-    ...materializeFixedRoom(context),
-    lifecycleProfileKey: 'DevotionRoom',
-  });
+  return materializedIncomingReward(context, 'fixed', binding.producerLifecycleKey, state.reward);
 }
 
 function materializeRewardlessRoom(
@@ -446,12 +412,7 @@ function materializeRewardlessRoom(
   if (context.room.incomingReward.kind !== 'none') {
     fail(`${context.room.gameName} rewardless template has a reward producer`);
   }
-  return Object.freeze({
-    lifecycleProfileKey:
-      context.room.encounterEnvelopeKey === 'EmptyEncounter'
-        ? 'RewardlessRoom'
-        : 'RewardlessCombatRoom',
-  });
+  return Object.freeze({});
 }
 
 function materializeFieldsCombat(
@@ -584,7 +545,6 @@ function materializeFieldsCombat(
         ],
   );
   return Object.freeze({
-    lifecycleProfileKey: 'FieldsCombatRoom',
     activeEncounterSlotKeys: Object.freeze([
       passive.key,
       ...activeCageSlots.map((slot) => slot.key),
@@ -745,7 +705,6 @@ function materializeShipCombat(context: AuthoredRoomMaterializationContext): Mat
     loadout,
   );
   return Object.freeze({
-    lifecycleProfileKey: 'ShipCombatRoom',
     encounterPhases: ship.encounterPhases,
     rewardWheels: ship.rewardWheels,
   });
@@ -884,10 +843,7 @@ export function materializeInfernalContractPedestal(
   });
 }
 
-function materializeShopRoom(
-  context: AuthoredRoomMaterializationContext,
-  lifecycleProfileKey: 'PrebossShopRoom' | 'WorldShopRoom' = 'WorldShopRoom',
-): MaterializedRoomLeaf {
+function materializeShopRoom(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
   const state = requireStateKind(context, 'shop');
   const binding = context.room.incomingReward;
   if (binding.kind !== 'shop') {
@@ -897,7 +853,6 @@ function materializeShopRoom(
     fail(`${context.room.gameName} entered shop has no entry state`);
   }
   return Object.freeze({
-    lifecycleProfileKey,
     incomingReward: fixedIncomingReward(
       context,
       'shop',
@@ -912,7 +867,7 @@ function materializeShopRoom(
 
 function materializePreboss(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
   if (context.role === 'prebossShop') {
-    return materializeShopRoom(context, 'PrebossShopRoom');
+    return materializeShopRoom(context);
   }
   if (context.role !== 'prebossFreeReward') {
     fail(`${context.room.gameName} has no declaration-derived Preboss role`);
@@ -922,28 +877,21 @@ function materializePreboss(context: AuthoredRoomMaterializationContext): Materi
   if (policy?.kind !== 'takeOverNormalDoors' || policy.remainingOffers.kind !== 'counted') {
     fail(`${context.room.gameName} has no counted remaining-offer policy`);
   }
-  return Object.freeze({
-    lifecycleProfileKey: 'PrebossFreeRewardRoom',
-    ...materializedIncomingReward(
-      context,
-      'freeReward',
-      policy.remainingOffers.reward.producerLifecycleKey,
-      state.reward,
-    ),
-  });
+  return materializedIncomingReward(
+    context,
+    'freeReward',
+    policy.remainingOffers.reward.producerLifecycleKey,
+    state.reward,
+  );
 }
 
 const authoredTemplateMaterializers = Object.freeze({
   Anomaly: materializeAnomaly,
-  Boss: (context) =>
-    Object.freeze({
-      ...materializeRewardlessRoom(context),
-      lifecycleProfileKey: 'BossRoom',
-    }),
+  Boss: materializeRewardlessRoom,
   Chaos: materializeFixedRoom,
-  ClockworkCombat: materializeClockworkCombat,
+  ClockworkCombat: materializeCountedRoom,
   ContractBoss: materializeFixedRoom,
-  Devotion: materializeDevotion,
+  Devotion: materializeFixedRoom,
   EphyraCombat: materializeEphyraCombat,
   EphyraSideRoom: materializeCountedRoom,
   FixedIntro: materializeRewardlessRoom,
@@ -952,27 +900,13 @@ const authoredTemplateMaterializers = Object.freeze({
   FieldsCombat: materializeFieldsCombat,
   Fountain: materializeCountedRoom,
   Miniboss: materializeCountedRoom,
-  RewardlessCombat: (context) =>
-    Object.freeze({
-      ...materializeRewardlessRoom(context),
-      lifecycleProfileKey: 'RewardlessCombatRoom',
-    }),
+  RewardlessCombat: materializeRewardlessRoom,
   Shop: materializeShopRoom,
   Preboss: materializePreboss,
-  PostBoss: (context) =>
-    Object.freeze({
-      ...materializeRewardlessRoom(context),
-      lifecycleProfileKey: 'PostBossRoom',
-    }),
+  PostBoss: materializeRewardlessRoom,
   ShipCombat: materializeShipCombat,
   StandardCombat: materializeCountedRoom,
-  Story: (context) =>
-    Object.freeze({
-      ...materializeFixedRoom(context),
-      ...(context.room.lifecycleProfileKey === undefined
-        ? {}
-        : { lifecycleProfileKey: context.room.lifecycleProfileKey }),
-    }),
+  Story: materializeFixedRoom,
 }) satisfies Readonly<Record<AuthoredTemplateKey, AuthoredTemplateMaterializer>>;
 
 export function authoredMaterializer(

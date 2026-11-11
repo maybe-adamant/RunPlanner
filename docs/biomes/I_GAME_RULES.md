@@ -104,10 +104,13 @@ source room's own Goal is already counted, because its decrement
 (`SpawnClockworkGoalReward`) precedes exit unlock; every Goal door in one batch
 shows the same count, and a Preboss door previews zero.
 
-Goal and NonGoal are derived realizations of one occurrence-owned room state,
-not alternate persisted topology. `ClockworkDoorBatch` derives each combat
-target's realization from physical reward order, prior Goal offers in that
-batch and the non-goal cap. Every combat occurrence owns one complete potential
+Goal and NonGoal are derived door rewards over one occurrence-owned room state,
+not alternate persisted topology or lifecycles. `ClockworkDoorBatch` derives
+each combat target's reward from physical reward order, prior Goal offers in
+that batch and the non-goal cap. A Goal is the room's forced reward
+(`ForcedFirstReward`, `ForcedRewards`): its room runs the ordinary combat
+lifecycle with no pickup, records no entered store and binds the Goal
+encounter. Every combat occurrence owns one complete potential
 resolved offer from `TartarusRewards`, with its declaration filters applied:
 under `Goal` it is dormant and emits no offer or bag mutation, under `NonGoal`
 it becomes the target's concrete counted offer. A dormant non-goal leaf survives while the

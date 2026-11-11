@@ -921,6 +921,13 @@ behind**.
 
 ## Canonical Lifecycle Profiles
 
+A room runs the profile its declaration names for its role: an ordinary room,
+an Ephyra Hub board target, or a Hub side room on its local visit. Only a
+Preboss chooses by occurrence state, between its shop and its free reward.
+Whether the room takes the profile's producer points follows from its reward:
+a room without a pickable reward, such as an entry without the run-start
+reward or a Clockwork Goal door's room, runs the same steps with none.
+
 ### Standard Reward Room
 
 ```text

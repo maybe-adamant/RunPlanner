@@ -876,6 +876,10 @@ export type RoomLifecycleOperation =
   | (RoomLifecycleOperationBase & { readonly kind: 'commitRoom' })
   | (RoomLifecycleOperationBase & { readonly kind: 'exitRoom' });
 
+/**
+ * The producer a room's pickable reward runs under. Whether the room has one
+ * follows from its reward: a room without a pickable reward runs no producer.
+ */
 export type RoomLifecycleProducerPolicy =
   | { readonly kind: 'none' }
   | {
@@ -1173,28 +1177,30 @@ export interface RoomRouteOverlay {
   readonly encounterSlotBindings: readonly EncounterSlotBinding[];
   /** The overlaid room's own lifecycle selection, from its overlaid template. */
   readonly lifecycleProfile: RoomLifecycleProfileSelection;
-  readonly localVisitLifecycleProfileKey?: string;
+  readonly roleLifecycleProfileKeys?: RoomRoleLifecycleProfileKeys;
 }
 
 /**
- * The lifecycle profile a room runs. Two families choose by occurrence state: a
- * Clockwork room without a reward runs its goal, and a Preboss room runs its
- * shop or its free reward.
+ * The lifecycle profile a room runs. A Preboss room chooses by occurrence
+ * state: it runs its shop or its free reward.
  */
 export type RoomLifecycleProfileSelection =
   | { readonly kind: 'fixed'; readonly profileKey: string }
-  | {
-      readonly kind: 'clockworkGoal';
-      /** Selected when the counted occurrence has no reward. */
-      readonly goalProfileKey: string;
-      readonly rewardProfileKey: string;
-    }
   | {
       readonly kind: 'prebossOffer';
       /** Selected when the occurrence hosts the shop. */
       readonly shopProfileKey: string;
       readonly freeRewardProfileKey: string;
     };
+
+/**
+ * An Ephyra Hub's rooms in their Hub roles: a board target, or a side room
+ * entered as a local visit.
+ */
+export interface RoomRoleLifecycleProfileKeys {
+  readonly hubTarget?: string;
+  readonly localVisit?: string;
+}
 
 /**
  * A required reward's resource drop (`ConsumableData`): it adds `amount` of one
@@ -1235,8 +1241,8 @@ export interface RoomDeclaration {
   readonly lifecycleProfileKey?: string;
   /** The lifecycle the room runs, from its declared specialization or its template. */
   readonly lifecycleProfile: RoomLifecycleProfileSelection;
-  /** The lifecycle the room runs when an Ephyra hub enters it as a local visit. */
-  readonly localVisitLifecycleProfileKey?: string;
+  /** The lifecycles the room runs when an Ephyra Hub enters it in another role. */
+  readonly roleLifecycleProfileKeys?: RoomRoleLifecycleProfileKeys;
   readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];

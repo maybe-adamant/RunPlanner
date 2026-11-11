@@ -155,7 +155,7 @@ export interface EncounterResolutionReachedFacts {
 
 /** Narrow retained facts needed to resolve contextual encounter identity. */
 export interface EncounterResolutionRoomFacts {
-  readonly clockworkReward?: 'goal' | 'nonGoal';
+  readonly forcedRewardType?: string;
   readonly incomingReward?: { readonly offer: { readonly rewardType: string } };
   readonly unresolvedIncomingReward?: unknown;
 }
@@ -167,8 +167,8 @@ export function encounterResolutionContext(
   reached?: EncounterResolutionReachedFacts,
 ): EncounterResolutionContext {
   const facts = reached === undefined ? { routeKey } : { routeKey, reached };
-  if (room.clockworkReward === 'goal') {
-    return Object.freeze({ ...facts, kind: 'knownReward', rewardType: 'ClockworkGoal' });
+  if (room.forcedRewardType !== undefined) {
+    return Object.freeze({ ...facts, kind: 'knownReward', rewardType: room.forcedRewardType });
   }
   if (room.incomingReward !== undefined) {
     return Object.freeze({

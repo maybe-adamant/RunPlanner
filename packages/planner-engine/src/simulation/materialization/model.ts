@@ -299,7 +299,13 @@ export interface CanonicalAuthoredRoom {
   readonly fieldsCageOrder?: import('../../authored-project/room-actions/domain').FieldsCageOrderState;
   readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
-  readonly clockworkReward?: 'goal' | 'nonGoal';
+  /**
+   * The reward its door forces in place of a counted choice: a Clockwork Goal,
+   * which spawns no pickup and draws from no store.
+   */
+  readonly forcedRewardType?: string;
+  /** Its reward, spawned through a Clockwork batch's door, counts toward the next forced Goal. */
+  readonly countsTowardClockworkGoal?: true;
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly unresolvedIncomingReward?: Omit<
     CanonicalResolvedIncomingReward,

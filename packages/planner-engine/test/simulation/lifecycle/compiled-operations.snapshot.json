@@ -16,7 +16,33 @@
         "exitRoom: recordExit"
       ]
     },
+    "StandardRewardRoom (Dream I_Combat01 no producer, Dream I_Combat02 no producer, Dream I_Combat03 no producer, Dream I_Combat04 no producer, Dream I_Combat05 no producer, Dream I_Combat06 no producer, Dream I_Combat07 no producer, Dream I_Combat08 no producer, Dream I_Combat09 no producer, Dream I_Combat10 no producer, Dream I_Combat11 no producer, Dream I_Combat12 no producer, Dream I_Combat13 no producer, Dream I_Combat14 no producer, Dream I_Combat15 no producer, Dream I_Combat16 no producer, Dream I_Combat17 no producer, Dream I_Combat18 no producer, Dream I_Combat19 no producer, Dream I_Combat20 no producer, Dream I_Combat21 no producer, Dream I_Combat22 no producer, Dream I_Combat23 no producer, Dream I_Combat24 no producer, FreshFile I_Combat01 no producer, FreshFile I_Combat02 no producer, FreshFile I_Combat03 no producer, FreshFile I_Combat04 no producer, FreshFile I_Combat05 no producer, FreshFile I_Combat06 no producer, FreshFile I_Combat07 no producer, FreshFile I_Combat08 no producer, FreshFile I_Combat09 no producer, FreshFile I_Combat10 no producer, FreshFile I_Combat11 no producer, FreshFile I_Combat12 no producer, FreshFile I_Combat13 no producer, FreshFile I_Combat14 no producer, FreshFile I_Combat15 no producer, FreshFile I_Combat16 no producer, FreshFile I_Combat17 no producer, FreshFile I_Combat18 no producer, FreshFile I_Combat19 no producer, FreshFile I_Combat20 no producer, FreshFile I_Combat21 no producer, FreshFile I_Combat22 no producer, FreshFile I_Combat23 no producer, FreshFile I_Combat24 no producer, Surface I_Combat01 no producer, Surface I_Combat02 no producer, Surface I_Combat03 no producer, Surface I_Combat04 no producer, Surface I_Combat05 no producer, Surface I_Combat06 no producer, Surface I_Combat07 no producer, Surface I_Combat08 no producer, Surface I_Combat09 no producer, Surface I_Combat10 no producer, Surface I_Combat11 no producer, Surface I_Combat12 no producer, Surface I_Combat13 no producer, Surface I_Combat14 no producer, Surface I_Combat15 no producer, Surface I_Combat16 no producer, Surface I_Combat17 no producer, Surface I_Combat18 no producer, Surface I_Combat19 no producer, Surface I_Combat20 no producer, Surface I_Combat21 no producer, Surface I_Combat22 no producer, Surface I_Combat23 no producer, Surface I_Combat24 no producer, Underworld I_Combat01 no producer, Underworld I_Combat02 no producer, Underworld I_Combat03 no producer, Underworld I_Combat04 no producer, Underworld I_Combat05 no producer, Underworld I_Combat06 no producer, Underworld I_Combat07 no producer, Underworld I_Combat08 no producer, Underworld I_Combat09 no producer, Underworld I_Combat10 no producer, Underworld I_Combat11 no producer, Underworld I_Combat12 no producer, Underworld I_Combat13 no producer, Underworld I_Combat14 no producer, Underworld I_Combat15 no producer, Underworld I_Combat16 no producer, Underworld I_Combat17 no producer, Underworld I_Combat18 no producer, Underworld I_Combat19 no producer, Underworld I_Combat20 no producer, Underworld I_Combat21 no producer, Underworld I_Combat22 no producer, Underworld I_Combat23 no producer, Underworld I_Combat24 no producer)": {
+      "envelopes": "SingleEncounter",
+      "producer": "required RoomReward",
+      "operations": [
+        "prepareRoom: recordPreparation, recordEncounter",
+        "enterRoom: recordAppearance",
+        "encounters",
+        "encounterEnds",
+        "generateOutgoingBatch: recordOutgoingGeneration",
+        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
+        "exitRoom: recordExit"
+      ]
+    },
     "OpeningRewardRoom": {
+      "envelopes": "SingleEncounter",
+      "producer": "required RoomReward",
+      "operations": [
+        "prepareRoom: recordPreparation, recordEncounter",
+        "enterRoom: recordAppearance",
+        "encounters",
+        "encounterEnds",
+        "generateOutgoingBatch: recordOutgoingGeneration",
+        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
+        "exitRoom: recordExit"
+      ]
+    },
+    "OpeningRewardRoom (Surface N_Opening01 start, Underworld F_Opening01 start, Underworld F_Opening02 start, Underworld F_Opening03 start)": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward",
       "operations": [
@@ -45,6 +71,17 @@
       ]
     },
     "OpeningRewardNoEncounterRoom": {
+      "envelopes": "EmptyEncounter",
+      "producer": "required RoomReward",
+      "operations": [
+        "prepareRoom: recordPreparation, recordEncounter",
+        "enterRoom: recordAppearance",
+        "generateOutgoingBatch: recordOutgoingGeneration",
+        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
+        "exitRoom: recordExit"
+      ]
+    },
+    "OpeningRewardNoEncounterRoom (Dream G_Intro start, Dream H_Intro start, Dream I_Intro start, Dream O_Intro start, Dream Q_Intro start)": {
       "envelopes": "EmptyEncounter",
       "producer": "required RoomReward",
       "operations": [
@@ -128,19 +165,6 @@
         "exitRoom: recordExit"
       ]
     },
-    "ClockworkGoalRoom": {
-      "envelopes": "SingleEncounter",
-      "producer": "none",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "encounters",
-        "encounterEnds",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
-    },
     "StoryPickupRoom": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward",
@@ -154,17 +178,6 @@
         "advanceProducer roomRewardPickup: recordProducerPoint",
         "generateOutgoingBatch: recordOutgoingGeneration",
         "settleAcquisitionPoint roomExit: recordAcquisitionPoint",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
-    },
-    "RewardlessRoom": {
-      "envelopes": "EmptyEncounter",
-      "producer": "none",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "generateOutgoingBatch: recordOutgoingGeneration",
         "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
         "exitRoom: recordExit"
       ]

@@ -248,8 +248,24 @@ describe('batch materialization', () => {
       [0, 0, 3],
     ]);
     expect(
-      clockwork.flatMap((batch) => batch.targets).map((target) => target.room.clockworkReward),
-    ).toEqual(['goal', 'goal', undefined, 'goal', 'nonGoal', 'goal', 'goal', 'goal', 'nonGoal']);
+      clockwork
+        .flatMap((batch) => batch.targets)
+        .map(
+          (target) =>
+            target.room.forcedRewardType ??
+            (target.room.countsTowardClockworkGoal === true ? 'counted' : undefined),
+        ),
+    ).toEqual([
+      'ClockworkGoal',
+      'ClockworkGoal',
+      undefined,
+      'ClockworkGoal',
+      'counted',
+      'ClockworkGoal',
+      'ClockworkGoal',
+      'ClockworkGoal',
+      'counted',
+    ]);
   });
 
   it('preserves N prehub as a declaration-owned physical exit', () => {

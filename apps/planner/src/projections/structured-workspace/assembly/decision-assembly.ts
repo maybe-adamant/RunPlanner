@@ -51,6 +51,7 @@ import {
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { compareAuthoredTargetsInPhysicalOrder, requiredNormalExitOrdinal } from './ordering';
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
+import { clockworkRewardFacet } from './occurrence-room-facts';
 import { workspaceRoomRetainsNormalPeers, workspaceRoomTakesOverNormalDoors } from './room-policy';
 import { workspaceRewardStoreLabel } from './reward-labels';
 import { presentRunState } from '../presentation/run-state';
@@ -513,9 +514,7 @@ function projectAuthoredTargetWithOverlay(
     roomControls: occurrenceAssembly.roomControls,
     rewardControls: occurrenceAssembly.rewardControls,
     target: Object.freeze({
-      ...(evaluatedTarget?.room.clockworkReward === undefined
-        ? {}
-        : { clockworkReward: evaluatedTarget.room.clockworkReward }),
+      ...clockworkRewardFacet(evaluatedTarget?.room),
       door,
       exitKey: target.exitKey,
       ...(exitTypeLabel === undefined ? {} : { exitTypeLabel }),

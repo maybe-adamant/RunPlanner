@@ -35,22 +35,24 @@ function advance(point: ProducerLifecyclePointKey): RoomLifecycleOperation {
   });
 }
 
-const cache = new WeakMap<
-  RoomLifecycleProfile,
-  WeakMap<RoomDeclaration, readonly RoomWalkStep[]>
->();
+const caches = {
+  producer: new WeakMap<RoomLifecycleProfile, WeakMap<RoomDeclaration, readonly RoomWalkStep[]>>(),
+  none: new WeakMap<RoomLifecycleProfile, WeakMap<RoomDeclaration, readonly RoomWalkStep[]>>(),
+};
 
 /**
  * The room's walk: its profile's room-level steps with its encounters in place
- * of the script step. The room reward's points a gate's pickup or the reward
- * before combat take precede the encounters; the rest follow them and any
- * pylon completion.
+ * of the script step. A room whose reward runs a producer takes its points: a
+ * gate's pickup and the reward before combat precede the encounters, the rest
+ * follow them and any pylon completion.
  */
 export function roomWalkSteps(
   catalog: Catalog,
   profile: RoomLifecycleProfile,
   declaration: RoomDeclaration,
+  producer: boolean,
 ): readonly RoomWalkStep[] {
+  const cache = producer ? caches.producer : caches.none;
   let byDeclaration = cache.get(profile);
   if (byDeclaration === undefined) {
     byDeclaration = new WeakMap();
@@ -59,8 +61,8 @@ export function roomWalkSteps(
   const cached = byDeclaration.get(declaration);
   if (cached !== undefined) return cached;
   const envelope = catalog.encounterEnvelopes.byKey[declaration.encounterEnvelopeKey];
-  const points = profile.producer.kind === 'none' ? [] : profile.producer.points;
-  const beforeCombat = producerPointsBeforeCombat(catalog, profile, declaration);
+  const points = !producer || profile.producer.kind === 'none' ? [] : profile.producer.points;
+  const beforeCombat = producerPointsBeforeCombat(catalog, profile, declaration, producer);
   const before = points.filter((point) => beforeCombat.has(point));
   const after = points.filter((point) => !before.includes(point));
   const operation = (value: RoomLifecycleOperation): RoomWalkStep =>

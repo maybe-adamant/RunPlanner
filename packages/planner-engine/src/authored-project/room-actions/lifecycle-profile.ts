@@ -2,30 +2,34 @@ import type { RoomDeclaration } from '../../catalog-schema';
 import type { RoomOccurrence } from '../model';
 
 /**
- * The lifecycle the room declares, settled by the occurrence's state where the
- * declaration names two: a Clockwork room without a reward runs its goal, and
- * a Preboss room its shop or free reward. An Ephyra local visit runs the
- * room's local-visit lifecycle.
+ * The role a room is entered in: an ordinary room (a Hub's board room among
+ * them), an Ephyra Hub board target, or a Hub side room's local visit.
+ */
+export type RoomLifecycleRole = 'ordinary' | 'hubTarget' | 'localVisit';
+
+/**
+ * The lifecycle the room runs: its declared lifecycle for its role, a Preboss
+ * room settling it by occurrence state as its shop or free reward. Whether the
+ * room's reward runs a producer follows from the reward, never from this
+ * choice.
  */
 export function roomLifecycleProfileKey(
   declaration: RoomDeclaration,
-  occurrence: RoomOccurrence,
-  role: 'ordinary' | 'localVisit' = 'ordinary',
+  role: RoomLifecycleRole,
+  occurrence?: Pick<RoomOccurrence, 'state'>,
 ): string {
-  if (role === 'localVisit') {
-    if (declaration.localVisitLifecycleProfileKey === undefined)
-      throw new Error(`${declaration.gameName} declares no local-visit lifecycle`);
-    return declaration.localVisitLifecycleProfileKey;
+  if (role !== 'ordinary') {
+    const key = declaration.roleLifecycleProfileKeys?.[role];
+    if (key === undefined) throw new Error(`${declaration.gameName} declares no ${role} lifecycle`);
+    return key;
   }
   const selection = declaration.lifecycleProfile;
   switch (selection.kind) {
     case 'fixed':
       return selection.profileKey;
-    case 'clockworkGoal':
-      return occurrence.state.kind === 'counted' && occurrence.state.reward === null
-        ? selection.goalProfileKey
-        : selection.rewardProfileKey;
     case 'prebossOffer':
+      if (occurrence === undefined)
+        throw new Error(`${declaration.gameName} chooses its lifecycle by occurrence state`);
       return occurrence.state.kind === 'shop'
         ? selection.shopProfileKey
         : selection.freeRewardProfileKey;

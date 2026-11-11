@@ -50,9 +50,7 @@ describe('room lifecycle catalog', () => {
       'EphyraMainRoom',
       'EphyraSideRoom',
       'EphyraHubRoom',
-      'ClockworkGoalRoom',
       'StoryPickupRoom',
-      'RewardlessRoom',
       'DevotionRoom',
       'FieldsCombatRoom',
       'ShipCombatRoom',
@@ -69,7 +67,7 @@ describe('room lifecycle catalog', () => {
     });
     expect(catalog.rooms.byKey.F_Opening01?.lifecycleProfileKey).toBeUndefined();
     expect(catalog.rooms.byKey.N_Opening01?.lifecycleProfileKey).toBeUndefined();
-    expect(catalog.roomLifecycleProfiles.byKey.ClockworkGoalRoom?.producer).toEqual({
+    expect(catalog.roomLifecycleProfiles.byKey.RewardlessCombatRoom?.producer).toEqual({
       kind: 'none',
     });
     expect(Object.isFrozen(catalog.roomLifecycleProfiles.values)).toBe(true);

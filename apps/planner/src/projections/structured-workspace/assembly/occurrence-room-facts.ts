@@ -54,6 +54,14 @@ export interface WorkspaceOccurrenceRoomInput extends WorkspaceOccurrenceRewardA
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
 }
 
+/** A Clockwork door's derived reward on its room: the forced Goal, or a counted reward. */
+export function clockworkRewardFacet(
+  room: Pick<CanonicalAuthoredRoom, 'forcedRewardType' | 'countsTowardClockworkGoal'> | undefined,
+): { readonly clockworkReward?: 'goal' | 'nonGoal' } {
+  if (room?.forcedRewardType === 'ClockworkGoal') return { clockworkReward: 'goal' };
+  return room?.countsTowardClockworkGoal === true ? { clockworkReward: 'nonGoal' } : {};
+}
+
 export interface WorkspaceOccurrenceRewardLocalAssembly {
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
   readonly roomLocal: WorkspaceRoomLocal;
@@ -66,7 +74,7 @@ function encounterResolutionFacts(
 ) {
   if (input.evaluatedRoom !== undefined) return input.evaluatedRoom;
   if (roomLocal.kind === 'incomingReward' && roomLocal.clockworkReward === 'goal')
-    return Object.freeze({ clockworkReward: 'goal' as const });
+    return Object.freeze({ forcedRewardType: 'ClockworkGoal' });
   const offer =
     roomLocal.kind === 'incomingReward'
       ? roomLocal.control.offer
@@ -410,9 +418,7 @@ function roomLocalForOccurrence(
           control.offer === null
             ? 'Choose reward'
             : summarizeRewardOffer(input.catalog, control.offer),
-        ...(input.evaluatedRoom?.clockworkReward === undefined
-          ? {}
-          : { clockworkReward: input.evaluatedRoom.clockworkReward }),
+        ...clockworkRewardFacet(input.evaluatedRoom),
       });
     }
     case 'ephyraCombat': {

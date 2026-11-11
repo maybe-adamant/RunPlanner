@@ -230,6 +230,7 @@ function producerWindow(
   catalog: Catalog,
   declaration: RoomDeclaration,
   lifecycleProfileKey: string,
+  producer: boolean,
   producerPoint: string,
 ): RoomActionWindow {
   const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
@@ -240,7 +241,7 @@ function producerWindow(
       profile !== undefined &&
       envelope !== undefined &&
       runsOneEncounter(envelope) &&
-      producerPointsBeforeCombat(catalog, profile, declaration).has(
+      producerPointsBeforeCombat(catalog, profile, declaration, producer).has(
         producerPoint as ProducerLifecyclePointKey,
       )
         ? 'beforeCombat'
@@ -399,6 +400,7 @@ function baseContribution(
   routePosition: ResolvedRoutePosition,
   declaration: RoomDeclaration,
   lifecycleProfileKey: string,
+  producer: boolean,
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
   routeStartIncoming?: AuthoredRewardState,
@@ -487,7 +489,13 @@ function baseContribution(
         occurrence,
         reference,
         'required',
-        producerWindow(catalog, declaration, lifecycleProfileKey, reference.producerPoint),
+        producerWindow(
+          catalog,
+          declaration,
+          lifecycleProfileKey,
+          producer,
+          reference.producerPoint,
+        ),
         [],
         createAcquisitionRoleAddress(
           createIncomingRewardAddress(biome, occurrence.occurrenceId),
@@ -956,6 +964,8 @@ export function assembleRoomActionDomain(options: {
   readonly occurrence: RoomOccurrence;
   readonly routePosition: ResolvedRoutePosition;
   readonly lifecycleProfileKey?: string;
+  /** Whether the room's reward runs a producer; by default its incoming binding's. */
+  readonly producer?: boolean;
   readonly activeEncounterSlotKeys?: readonly string[];
   readonly activeRewardWheelKeys?: readonly string[];
   /** Evaluated producer disposition from canonical materialization. */
@@ -971,7 +981,11 @@ export function assembleRoomActionDomain(options: {
   if (rawDeclaration === undefined) throw new Error(`unknown room ${options.occurrence.gameName}`);
   const declaration = resolveEntryDeclaration(rawDeclaration, options.routePosition);
   const lifecycleProfileKey =
-    options.lifecycleProfileKey ?? roomLifecycleProfileKey(declaration, options.occurrence);
+    options.lifecycleProfileKey ??
+    roomLifecycleProfileKey(declaration, 'ordinary', options.occurrence);
+  const producer =
+    options.producer ??
+    (options.incomingRewardBinding ?? declaration.incomingReward).kind !== 'none';
   const structuralReferences = activeRoomActionReferences(
     options.catalog,
     options.biome,
@@ -1032,6 +1046,7 @@ export function assembleRoomActionDomain(options: {
     declaration,
     occurrence: options.occurrence,
     lifecycleProfileKey,
+    producer,
     incomingRewardPickups: structuralReferences.filter(
       (reference) => reference.kind === 'interactIncomingReward',
     ),
@@ -1046,6 +1061,7 @@ export function assembleRoomActionDomain(options: {
       options.routePosition,
       declaration,
       lifecycleProfileKey,
+      producer,
       options.occurrence,
       reference,
       options.incomingRewardState ?? undefined,

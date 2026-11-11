@@ -675,7 +675,6 @@ export function echoGoldShop(
     occurrence,
     role: room.gameName === 'I_PreBoss02' ? 'prebossShop' : 'ordinary',
     entered: true,
-    lifecycleProfileKey: 'WorldShopRoom',
     loadout,
   });
   const echoTraits = echoGoldHistory();

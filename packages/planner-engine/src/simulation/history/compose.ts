@@ -451,10 +451,10 @@ function postOutgoingAcquisitionOption(catalog: Catalog, room: CanonicalAuthored
 }
 
 /**
- * Clockwork Goal/NonGoal acquisition belongs to the entered source room and
- * therefore precedes its outgoing generation checkpoint. Complete decisions
- * and progressive frontiers must replay that same lifecycle even when the
- * outgoing batch has no targets yet.
+ * A Clockwork door's derived reward settles in the entered room before its
+ * outgoing generation: a forced Goal on entry, a counted reward as it spawns.
+ * Complete decisions and progressive frontiers must replay that same
+ * lifecycle even when the outgoing batch has no targets yet.
  */
 function appendClockworkAwareRoomLifecycle(
   writer: HistorySegmentWriter,
@@ -462,11 +462,13 @@ function appendClockworkAwareRoomLifecycle(
   room: CanonicalAuthoredRoom,
   options: ClockworkAwareLifecycleOptions = {},
 ): void {
+  const goal = room.forcedRewardType === 'ClockworkGoal';
+  const counted = room.countsTowardClockworkGoal === true;
   let emitted = false;
   const emitClockworkReward = (eventWriter: HistorySegmentWriter): void => {
     if (emitted) fail(`${room.gameName} has multiple Clockwork reward points`);
     eventWriter.append(
-      room.clockworkReward === 'goal'
+      goal
         ? { kind: 'clockworkGoalAcquired', origin: room.origin }
         : { kind: 'clockworkNonGoalRewardSpawned', origin: room.origin },
     );
@@ -487,7 +489,7 @@ function appendClockworkAwareRoomLifecycle(
     beforeEvent(beforeWriter, event) {
       options.beforeEvent?.(beforeWriter, event);
       if (
-        room.clockworkReward === 'nonGoal' &&
+        counted &&
         room.incomingReward?.offer.rewardType === 'Devotion' &&
         event.kind === 'producerRoleAdvanced' &&
         event.lifecyclePoint === 'beforeCombat'
@@ -496,20 +498,18 @@ function appendClockworkAwareRoomLifecycle(
       }
     },
     afterEvent(afterWriter, event) {
-      if (room.clockworkReward !== undefined) {
-        if (
-          (room.clockworkReward === 'goal' && event.kind === 'roomEntered') ||
-          (room.clockworkReward === 'nonGoal' &&
-            room.incomingReward?.offer.rewardType !== 'Devotion' &&
-            event.kind === 'encounterCompleted')
-        ) {
-          emitClockworkReward(afterWriter);
-        }
+      if (
+        (goal && event.kind === 'roomEntered') ||
+        (counted &&
+          room.incomingReward?.offer.rewardType !== 'Devotion' &&
+          event.kind === 'encounterCompleted')
+      ) {
+        emitClockworkReward(afterWriter);
       }
       options.afterEvent?.(afterWriter, event);
     },
   });
-  if (room.clockworkReward !== undefined && !emitted) {
+  if ((goal || counted) && !emitted) {
     fail(`${room.gameName} has no Clockwork reward point`);
   }
 }

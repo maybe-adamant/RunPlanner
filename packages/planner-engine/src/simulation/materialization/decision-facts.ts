@@ -137,7 +137,7 @@ export function clockworkDoorGoalsRemaining(
   batch: CanonicalBatch,
   target: CanonicalTarget,
 ): number | undefined {
-  if (batch.batchState.kind !== 'clockwork' || target.room.clockworkReward !== 'goal') {
+  if (batch.batchState.kind !== 'clockwork' || target.room.forcedRewardType !== 'ClockworkGoal') {
     return undefined;
   }
   return batch.batchState.goalsRemaining;

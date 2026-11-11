@@ -596,7 +596,8 @@ describe('canonical I Clockwork materialization and history', () => {
         incomingReward: { offer: { rewardType: 'Story' } },
       },
     });
-    expect(storyTarget?.room.clockworkReward).toBeUndefined();
+    expect(storyTarget?.room.forcedRewardType).toBeUndefined();
+    expect(storyTarget?.room.countsTowardClockworkGoal).toBeUndefined();
     expect(
       storyTarget?.room.roomLifecycleTimeline.boundaries.map((boundary) => boundary.kind),
     ).toEqual(['roomEntered', 'doorsOpened']);

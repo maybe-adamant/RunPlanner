@@ -75,6 +75,13 @@ export function executionKeepsakeEquipResults(
   });
 }
 
+/** The plan's producer label for a forced reward, which runs no producer. */
+function forcedRewardWireProducer(rewardType: string): string {
+  if (rewardType !== 'ClockworkGoal')
+    throw new Error(`forced reward ${rewardType} has no published producer label`);
+  return 'ClockworkGoalRoom';
+}
+
 /**
  * A room's incoming reward: as its door first offers it (`generated`), or as
  * it is entered after the door's rerolls (`acquired`).
@@ -83,10 +90,10 @@ export function executionReward(
   room: CanonicalAuthoredRoom,
   view: 'generated' | 'acquired' = 'acquired',
 ): ExecutionReward | undefined {
-  if (room.clockworkReward === 'goal') {
+  if (room.forcedRewardType !== undefined) {
     return Object.freeze({
-      rewardType: 'ClockworkGoal',
-      producerLifecycleKey: 'ClockworkGoalRoom',
+      rewardType: room.forcedRewardType,
+      producerLifecycleKey: forcedRewardWireProducer(room.forcedRewardType),
     });
   }
   const incoming =

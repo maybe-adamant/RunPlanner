@@ -2246,7 +2246,7 @@ describe('H Fields materialization', () => {
 
     expect(snapshot.entryRoom).toMatchObject({
       gameName: 'H_Intro',
-      lifecycleProfileKey: 'RewardlessRoom',
+      lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
       entered: true,
     });
     expect(takeover.targets).toHaveLength(2);

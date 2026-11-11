@@ -239,24 +239,29 @@ export function initialClockworkState(
   });
 }
 
-function clockworkReward(
+/**
+ * A Clockwork door's derived reward, in door order (`ForcedFirstReward`,
+ * `ForcedRewards`): the Preboss and the first combat door the leaving room
+ * offers get the Goal, as does every combat door once the non-goal rewards
+ * reach their cap; any other reward but a Story counts toward that cap.
+ */
+type ClockworkDoorReward = 'goal' | 'counted' | undefined;
+
+function clockworkDoorReward(
   room: RoomDeclaration,
   state: ClockworkState,
   goalAlreadyOffered: boolean,
-): 'goal' | 'nonGoal' | undefined {
+): ClockworkDoorReward {
   if (room.kind === 'Preboss') return 'goal';
   if (room.kind === 'Story') return undefined;
-  if (room.kind !== 'Combat') return 'nonGoal';
+  if (room.kind !== 'Combat') return 'counted';
   return (state.goalsRemaining > 0 && !goalAlreadyOffered) ||
     state.nonGoalRewardsAcquired >= state.maxNonGoalRewards
     ? 'goal'
-    : 'nonGoal';
+    : 'counted';
 }
 
-function advanceClockworkState(
-  state: ClockworkState,
-  reward: 'goal' | 'nonGoal' | undefined,
-): ClockworkState {
+function advanceClockworkState(state: ClockworkState, reward: ClockworkDoorReward): ClockworkState {
   if (reward === undefined) return state;
   return reward === 'goal'
     ? Object.freeze({ ...state, goalsRemaining: Math.max(0, state.goalsRemaining - 1) })
@@ -313,7 +318,7 @@ function materializeTarget(
   selectedExitKey: string | undefined,
   batchStore: string | undefined,
   batchState: CanonicalBatchState,
-  clockworkRewardValue: 'goal' | 'nonGoal' | undefined,
+  clockworkReward: ClockworkDoorReward,
   physicalExit: CanonicalPhysicalExit,
   rerolledOwners: ReadonlyMap<string, OwnerRerolls> | undefined,
   loadout?: RouteWeaponAspectLoadout,
@@ -337,7 +342,8 @@ function materializeTarget(
       entered: picked,
       ...(batchStore === undefined ? {} : { batchStoreKey: batchStore }),
       ...(batchState.kind === 'fields' ? { activeCageCount: batchState.doorCageRewardCount } : {}),
-      ...(clockworkRewardValue === undefined ? {} : { clockworkReward: clockworkRewardValue }),
+      ...(clockworkReward === 'goal' ? { forcedRewardType: 'ClockworkGoal' } : {}),
+      ...(clockworkReward === 'counted' ? { countsTowardClockworkGoal: true as const } : {}),
       ...(loadout === undefined ? {} : { loadout }),
       ...(rerolledOwners === undefined ? {} : { rerolledOwners }),
     }),
@@ -466,10 +472,10 @@ export function materializeBatch(
     batchStoreKey(sourceAuthoredRoom, normal.rewardStore),
   );
   let goalAlreadyOffered = false;
-  const rewards = new Map<string, 'goal' | 'nonGoal' | undefined>();
+  const rewards = new Map<string, ClockworkDoorReward>();
   if (batchState.kind === 'clockwork') {
     for (const target of ordered) {
-      const reward = clockworkReward(
+      const reward = clockworkDoorReward(
         requireRoom(catalog, layout, topology, requireOccurrence(occurrences, target.occurrenceId)),
         batchState,
         goalAlreadyOffered,

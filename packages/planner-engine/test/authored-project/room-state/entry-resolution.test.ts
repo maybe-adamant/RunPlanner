@@ -109,7 +109,7 @@ describe('contextual entry resolution', () => {
     );
   });
 
-  it('binds opening lifecycle/store authority only at a route-first entry', () => {
+  it('binds the run-start reward and its store only at a route-first entry', () => {
     expect(resolveEntryDeclaration(room('G_Intro'), dreamPosition('G', true))).toMatchObject({
       incomingReward: { kind: 'none' },
       enteredRewardStoreHistory: { kind: 'resolvedOffer' },
@@ -117,7 +117,7 @@ describe('contextual entry resolution', () => {
     expect(
       resolveEntryRoom(catalog, room('G_Intro'), dreamPosition('G', true), true),
     ).toMatchObject({
-      lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
+      runStartReward: true,
       incomingRewardBinding: { kind: 'countedChoice' },
       incomingRewardStoreKey: 'RunProgress',
       enteredRewardStoreKey: 'RunProgress',

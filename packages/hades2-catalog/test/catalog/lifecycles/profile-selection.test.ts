@@ -16,9 +16,20 @@ describe('declared room lifecycle selection', () => {
     expect(sideRooms.length).toBeGreaterThan(0);
     expect(
       catalog.rooms.values
-        .filter((room) => room.localVisitLifecycleProfileKey !== undefined)
+        .filter((room) => room.roleLifecycleProfileKeys?.localVisit !== undefined)
         .map((room) => room.gameName),
     ).toEqual(sideRooms.map((room) => room.gameName));
+  });
+
+  it('declares the Hub board and target lifecycles', () => {
+    expect(catalog.rooms.byKey.N_Hub!.lifecycleProfile).toEqual({
+      kind: 'fixed',
+      profileKey: 'EphyraHubRoom',
+    });
+    for (const gameName of ['N_Combat01', 'N_MiniBoss01', 'N_MiniBoss02', 'N_Story01'])
+      expect(catalog.rooms.byKey[gameName]!.roleLifecycleProfileKeys?.hubTarget).toBe(
+        'EphyraMainRoom',
+      );
   });
 
   it('gives a route overlay its own template lifecycle', () => {
@@ -50,17 +61,17 @@ describe('declared room lifecycle selection', () => {
           ...declarations,
           roomTemplateLifecycles: {
             ...declarations.roomTemplateLifecycles,
-            ClockworkCombat: {
-              kind: 'clockworkGoal',
-              goalProfileKey: 'PCombatRoom',
-              rewardProfileKey: 'StandardRewardRoom',
+            Preboss: {
+              kind: 'prebossOffer',
+              shopProfileKey: 'PCombatRoom',
+              freeRewardProfileKey: 'PrebossFreeRewardRoom',
             },
           },
         }),
       ),
     ).toThrowError(
       new CatalogContractError(
-        'roomTemplateLifecycles.ClockworkCombat',
+        'roomTemplateLifecycles.Preboss',
         'PCombatRoom does not support the room encounter envelope',
       ),
     );

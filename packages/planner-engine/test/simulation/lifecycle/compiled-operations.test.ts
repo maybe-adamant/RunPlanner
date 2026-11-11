@@ -101,24 +101,18 @@ function roomText(room: RoomDeclaration): string {
 
 /**
  * Fixture: the occurrence states `roomLifecycleProfileKey` distinguishes
- * (Clockwork goal, Preboss shop); every room is selected under each.
+ * (Preboss shop or free reward); every room is selected under each.
  */
-const occurrenceStateFixtures = [
-  { state: { kind: 'none' } },
-  { state: { kind: 'counted', reward: null } },
-  { state: { kind: 'shop' } },
-].map((occurrence) => occurrence as unknown as RoomOccurrence);
+const occurrenceStateFixtures = [{ state: { kind: 'none' } }, { state: { kind: 'shop' } }].map(
+  (occurrence) => occurrence as unknown as RoomOccurrence,
+);
 
-/**
- * Fixture: profiles the Ephyra hub materialization assigns outside the
- * template selection (simulation/materialization/hub.ts): the Hub room, and a
- * side room on a local visit.
- */
-function hubMaterializationProfileKeys(room: RoomDeclaration): readonly string[] {
-  if (room.mode.kind === 'derived' && room.mode.classification === 'hub') return ['EphyraHubRoom'];
-  if (room.mode.kind === 'authored' && room.mode.templateKey === 'EphyraSideRoom')
-    return [roomLifecycleProfileKey(room, occurrenceStateFixtures[0]!, 'localVisit')];
-  return [];
+/** Fixture: whether a room's reward runs a producer; a Clockwork Goal door's room runs none. */
+function producerFixtures(room: RoomDeclaration): readonly boolean[] {
+  if (room.incomingReward.kind === 'none') return [false];
+  return room.mode.kind === 'authored' && room.mode.templateKey === 'ClockworkCombat'
+    ? [true, false]
+    : [true];
 }
 
 /**
@@ -135,6 +129,7 @@ function routeStartBiomeKeys(route: (typeof catalog.routes.values)[number]): Rea
 
 interface Selection {
   readonly profileKey: string;
+  readonly producer: boolean;
   readonly declaration: RoomDeclaration;
   readonly label: string;
 }
@@ -147,8 +142,9 @@ function requireRoom(gameName: string): RoomDeclaration {
 
 /**
  * Every route's realized room declarations with each profile production
- * selects for them: a biome start room through `resolveEntryRoom`, every other
- * room through `roomLifecycleProfileKey` and the hub fixture.
+ * selects for them through `roomLifecycleProfileKey`, in every Hub role they
+ * declare, and whether their reward runs a producer: a biome start room's
+ * from `resolveEntryRoom`.
  */
 function selections(): readonly Selection[] {
   const result: Selection[] = [];
@@ -170,9 +166,8 @@ function selections(): readonly Selection[] {
           true,
         );
         result.push({
-          profileKey:
-            entry.lifecycleProfileKey ??
-            roomLifecycleProfileKey(entry.declaration, occurrenceStateFixtures[0]!),
+          profileKey: roomLifecycleProfileKey(entry.declaration, 'ordinary'),
+          producer: entry.incomingRewardBinding.kind !== 'none',
           declaration: entry.declaration,
           label: `${route.key} ${gameName}${isFirst ? ' start' : ''}`,
         });
@@ -180,11 +175,19 @@ function selections(): readonly Selection[] {
     for (const room of catalog.rooms.values.filter((room) => !startRooms.has(room.gameName))) {
       const routed = resolveEntryDeclaration(room, { routeKey: route.key, isFirst: false });
       const keys = new Set([
-        ...occurrenceStateFixtures.map((occurrence) => roomLifecycleProfileKey(routed, occurrence)),
-        ...hubMaterializationProfileKeys(routed),
+        ...occurrenceStateFixtures.map((occurrence) =>
+          roomLifecycleProfileKey(routed, 'ordinary', occurrence),
+        ),
+        ...Object.values(routed.roleLifecycleProfileKeys ?? {}),
       ]);
       for (const profileKey of keys)
-        result.push({ profileKey, declaration: routed, label: `${route.key} ${room.gameName}` });
+        for (const producer of producerFixtures(routed))
+          result.push({
+            profileKey,
+            producer,
+            declaration: routed,
+            label: `${route.key} ${room.gameName}${producer ? '' : ' no producer'}`,
+          });
     }
   }
   return result;
@@ -203,7 +206,12 @@ function profileOperations(
     if (selection.profileKey !== profile.key) continue;
     if (!profile.encounterEnvelopeKeys.includes(selection.declaration.encounterEnvelopeKey))
       throw new Error(`${selection.label} selects ${profile.key} for its envelope`);
-    const operations = roomWalkSteps(catalog, profile, selection.declaration).map(stepText);
+    const operations = roomWalkSteps(
+      catalog,
+      profile,
+      selection.declaration,
+      selection.producer,
+    ).map(stepText);
     const key = JSON.stringify(operations);
     const group = byList.get(key) ?? { operations, labels: [] };
     group.labels.push(selection.label);
@@ -294,41 +302,48 @@ describe('compiled room lifecycle operations', () => {
     await expect(text).toMatchFileSnapshot(snapshotPath);
   });
 
-  // Chronology cuts read a room's operation positions from its declared room
-  // (progressive/selected-cut.ts); every routed variant must keep them.
+  // Chronology cuts read a room's operation positions from its declared room and
+  // its producer (progressive/selected-cut.ts); every routed variant must keep them.
   it("keep every room-level step at one position across a profile's routed variants", () => {
     const all = selections();
-    for (const profile of catalog.roomLifecycleProfiles.values) {
-      const positions = all
-        .filter((selection) => selection.profileKey === profile.key)
-        .map((selection) => {
-          const steps = roomWalkSteps(catalog, profile, selection.declaration);
-          const kind = (step: RoomWalkStep) =>
-            step.kind === 'operation' ? step.operation.kind : step.kind;
-          return {
-            label: selection.label,
-            count: steps.length,
-            outgoing: steps.findIndex((step) => kind(step) === 'generateOutgoingBatch'),
-            overviewEnd: steps.findIndex(
-              (step) =>
-                kind(step) !== 'prepareRoom' &&
-                kind(step) !== 'materializeOfferPoint' &&
-                kind(step) !== 'enterRoom',
-            ),
-            steps: steps.flatMap((step, index) =>
-              step.kind !== 'operation' || step.operation.kind === 'advanceProducer'
-                ? []
-                : [`${index} ${step.operation.kind}`],
-            ),
-          };
-        });
-      const [first, ...rest] = positions;
-      if (first === undefined) throw new Error(`${profile.key} is selected by no room`);
-      for (const variant of rest)
-        expect(
-          { ...variant, label: first.label },
-          `${variant.label} places the ${profile.key} steps`,
-        ).toEqual(first);
-    }
+    for (const profile of catalog.roomLifecycleProfiles.values)
+      for (const producer of [true, false]) {
+        const positions = all
+          .filter(
+            (selection) => selection.profileKey === profile.key && selection.producer === producer,
+          )
+          .map((selection) => {
+            const steps = roomWalkSteps(
+              catalog,
+              profile,
+              selection.declaration,
+              selection.producer,
+            );
+            const kind = (step: RoomWalkStep) =>
+              step.kind === 'operation' ? step.operation.kind : step.kind;
+            return {
+              label: selection.label,
+              count: steps.length,
+              outgoing: steps.findIndex((step) => kind(step) === 'generateOutgoingBatch'),
+              overviewEnd: steps.findIndex(
+                (step) =>
+                  kind(step) !== 'prepareRoom' &&
+                  kind(step) !== 'materializeOfferPoint' &&
+                  kind(step) !== 'enterRoom',
+              ),
+              steps: steps.flatMap((step, index) =>
+                step.kind !== 'operation' || step.operation.kind === 'advanceProducer'
+                  ? []
+                  : [`${index} ${step.operation.kind}`],
+              ),
+            };
+          });
+        const [first, ...rest] = positions;
+        for (const variant of rest)
+          expect(
+            { ...variant, label: first!.label },
+            `${variant.label} places the ${profile.key} steps`,
+          ).toEqual(first);
+      }
   });
 });

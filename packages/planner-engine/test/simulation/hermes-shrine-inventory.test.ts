@@ -698,7 +698,6 @@ describe('Hermes Shrine delayed deliveries', () => {
       occurrence,
       role: 'prebossShop',
       entered: true,
-      lifecycleProfileKey: 'PrebossShopRoom',
       loadout: project.route.loadout,
     });
     // This is a room-entry transition witness, not a complete-route fixture.

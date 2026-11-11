@@ -1425,6 +1425,14 @@ describe('single-room lifecycle execution', () => {
     },
   );
 
+  it('runs a reward room without its producer points when its reward has no pickup', () => {
+    const kinds = executeRoomLifecycle(catalog, inputWithoutProducer()).events.map(
+      (event) => event.kind,
+    );
+    expect(kinds).not.toContain('producerPointReached');
+    expect(kinds).toContain('outgoingGenerationCheckpoint');
+  });
+
   it('fails unknown and incompatible execution references at the executor boundary', () => {
     const cases: readonly [RoomLifecycleExecutionInput, string][] = [
       [input({ lifecycleProfileKey: 'Missing' }), 'unknown room lifecycle profile Missing'],
@@ -1434,7 +1442,6 @@ describe('single-room lifecycle execution', () => {
         'EmptyEncounter is incompatible with StandardRewardRoom',
       ],
       [input({ enteredRewardStoreKey: 'Missing' }), 'unknown entered reward store Missing'],
-      [inputWithoutProducer(), 'StandardRewardRoom requires a producer'],
       [
         input({
           lifecycleProfileKey: 'EphyraMainRoom',

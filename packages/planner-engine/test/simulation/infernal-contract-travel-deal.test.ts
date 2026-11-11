@@ -490,7 +490,6 @@ function settle(options: {
     occurrence,
     role: 'prebossShop',
     entered: true,
-    lifecycleProfileKey: 'PrebossShopRoom',
     loadout,
   });
   const facts = (

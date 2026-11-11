@@ -55,30 +55,31 @@ import {
   type MaterializedRoomLeaf,
 } from './templates';
 import { resolveEntryRoom } from '../../../authored-project/room-state/entry-resolution';
+import { roomLifecycleProfileKey } from '../../../authored-project/room-actions/lifecycle-profile';
 
 function fail(detail: string): never {
   throw new Error(detail);
 }
 
+/** The room's lifecycle, which admits its envelope and the producer its reward runs, if any. */
 function requireLifecycleSelection(
   catalog: Catalog,
   room: RoomDeclaration,
   leaf: MaterializedRoomLeaf,
-  encounterEnvelopeKey: string,
+  lifecycleProfileKey: string,
 ): void {
-  const profile = catalog.roomLifecycleProfiles.byKey[leaf.lifecycleProfileKey];
+  const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
   if (profile === undefined) {
-    fail(`${room.gameName} selected unknown lifecycle ${leaf.lifecycleProfileKey}`);
+    fail(`${room.gameName} selected unknown lifecycle ${lifecycleProfileKey}`);
   }
-  if (!profile.encounterEnvelopeKeys.includes(encounterEnvelopeKey)) {
-    fail(`${room.gameName} envelope ${encounterEnvelopeKey} is incompatible with ${profile.key}`);
+  if (!profile.encounterEnvelopeKeys.includes(room.encounterEnvelopeKey)) {
+    fail(
+      `${room.gameName} envelope ${room.encounterEnvelopeKey} is incompatible with ${profile.key}`,
+    );
   }
   const producer = leaf.incomingReward ?? leaf.unresolvedIncomingReward;
-  if (producer === undefined) {
-    if (profile.producer.kind !== 'none') {
-      fail(`${room.gameName} lifecycle ${profile.key} requires a producer`);
-    }
-  } else if (
+  if (producer === undefined) return;
+  if (
     profile.producer.kind !== 'required' ||
     !profile.producer.lifecycleProfileKeys.includes(producer.producerLifecycleKey)
   ) {
@@ -147,7 +148,11 @@ export function materializeAuthoredRoom(
             configuredRivalsRank: context.configuredRivalsRank,
           },
     );
-  const clockworkReward = leaf.clockworkReward ?? context.clockworkReward;
+  const lifecycleProfileKey = roomLifecycleProfileKey(
+    context.room,
+    context.lifecycleRole ?? 'ordinary',
+    context.occurrence,
+  );
   const infernalContractPedestal = materializeInfernalContractPedestal(context);
   const authoredPhantomExit = context.occurrence.phantomExit;
   const phantomExit =
@@ -158,7 +163,7 @@ export function materializeAuthoredRoom(
           placeholderRoomGameName: authoredPhantomExit.placeholderRoomGameName,
           rewardType: authoredPhantomExit.rewardType,
         });
-  requireLifecycleSelection(context.catalog, context.room, leaf, context.room.encounterEnvelopeKey);
+  requireLifecycleSelection(context.catalog, context.room, leaf, lifecycleProfileKey);
   const pickupProducers = activeSelectedPickupProducers(
     context.catalog,
     context.biome,
@@ -273,7 +278,7 @@ export function materializeAuthoredRoom(
     ...(context.room.unmodeledEncounterKeys === undefined
       ? {}
       : { unmodeledEncounterKeys: context.room.unmodeledEncounterKeys }),
-    lifecycleProfileKey: leaf.lifecycleProfileKey,
+    lifecycleProfileKey,
     counterEffects: context.room.counters,
     entered: context.entered,
     entry: context.entry === true,
@@ -369,7 +374,12 @@ export function materializeAuthoredRoom(
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
     ...(pickupProducers.length === 0 ? {} : { pickupProducers }),
-    ...(clockworkReward === undefined ? {} : { clockworkReward }),
+    ...(context.forcedRewardType === undefined
+      ? {}
+      : { forcedRewardType: context.forcedRewardType }),
+    ...(context.countsTowardClockworkGoal === undefined
+      ? {}
+      : { countsTowardClockworkGoal: context.countsTowardClockworkGoal }),
   }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster' | 'roomLifecycleTimeline'>;
   const structuralEncounterIdentities = base.encounterPhases.flatMap((phase) => {
     const resolutionContext = encounterResolutionContext(
@@ -403,6 +413,7 @@ export function materializeAuthoredRoom(
     occurrence: context.occurrence,
     routePosition: context.routePosition,
     lifecycleProfileKey: base.lifecycleProfileKey,
+    producer: base.incomingReward !== undefined || base.unresolvedIncomingReward !== undefined,
     incomingRewardActive: base.incomingReward?.acquisitionEnabled !== false,
     // The producer acquires the materialized reward; a retained rerolled reward
     // that no current press draws stays authored for repair, its rows dormant.

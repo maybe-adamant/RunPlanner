@@ -126,7 +126,7 @@ describe('G generation and takeover', () => {
     expect(g.validity).toBe('valid');
     expect(g.snapshot.entryRoom).toMatchObject({
       gameName: 'G_Intro',
-      lifecycleProfileKey: 'RewardlessRoom',
+      lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
     });
     expect(g.snapshot.fixedRoomLinks.map((link) => link.target.gameName)).toEqual([
       'G_Boss01',
