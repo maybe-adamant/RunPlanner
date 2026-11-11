@@ -137,14 +137,74 @@ export function withoutStaleDerivedItems(
       if (was === undefined) return false;
       if (is === undefined) return true;
       if (JSON.stringify(was.reward.offer) !== JSON.stringify(is.reward.offer)) return true;
-      return (
-        item.kind === 'artificer' &&
-        is.reward.dispositionByAcquisitionRole[is.acquisition.acquisitionRole]?.kind !== 'artificer'
-      );
+      // Only the edit that takes the source off the Artificer discards its replacement.
+      return item.kind === 'artificer' && convertsWithArtificer(was) && !convertsWithArtificer(is);
     });
     if (stale.length === 0) return current;
     current = withoutItems(current, stale);
   }
+}
+
+function convertsWithArtificer(source: AuthoredAcquisitionSource): boolean {
+  return (
+    source.reward.dispositionByAcquisitionRole[source.acquisition.acquisitionRole]?.kind ===
+    'artificer'
+  );
+}
+
+/**
+ * Drops each Artificer replacement, with its pickup, whose source does not
+ * convert with the Artificer: leftover state an earlier schema kept dormant.
+ */
+export function withoutDormantArtificerReplacements(
+  biome: BiomeAddress,
+  occurrence: RoomOccurrence,
+  startIncoming?: AuthoredRewardState,
+): RoomOccurrence {
+  const items = derivedItems(occurrence).filter((item) => item.kind === 'artificer');
+  if (items.length === 0) return occurrence;
+  const sources = sourcesByKey(biome, occurrence, startIncoming);
+  const dormant = items.filter((item) => {
+    const source = sources.get(item.source);
+    return source === undefined || !convertsWithArtificer(source);
+  });
+  return dormant.length === 0 ? occurrence : withoutItems(occurrence, dormant);
+}
+
+/** {@link withoutDormantArtificerReplacements} in every occurrence of the plan. */
+export function withoutDormantArtificerReplacementsInProject(
+  document: ProjectDocument,
+  catalog: Catalog,
+): ProjectDocument {
+  const route = document.route;
+  let changed = false;
+  const biomes = route.biomes.map((plan) => {
+    if (plan.topology === null) return plan;
+    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
+    let occurrencesChanged = false;
+    const occurrences = plan.topology.occurrences.map((occurrence) => {
+      const cleaned = withoutDormantArtificerReplacements(
+        biome,
+        occurrence,
+        routeStartIncomingReward(document, routePosition, occurrence) ?? undefined,
+      );
+      if (cleaned !== occurrence) occurrencesChanged = true;
+      return cleaned;
+    });
+    if (!occurrencesChanged) return plan;
+    changed = true;
+    return Object.freeze({
+      ...plan,
+      topology: Object.freeze({ ...plan.topology, occurrences: Object.freeze(occurrences) }),
+    });
+  });
+  return changed
+    ? Object.freeze({
+        ...document,
+        route: Object.freeze({ ...route, biomes: Object.freeze(biomes) }),
+      })
+    : document;
 }
 
 /** Discards the items derived from one acquisition entry, whose source the edit replaced. */

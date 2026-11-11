@@ -1,3 +1,4 @@
+import { withoutDormantArtificerReplacementsInProject } from '../authored-project/acquisition/derived-items';
 import type { Catalog } from '../catalog-schema';
 import {
   createAcquisitionEntryAddress,
@@ -659,18 +660,21 @@ interface ProjectUpgradeSettlementOptions {
  * have left it: the policy for rows whose context or source is gone applies
  * to every row the walk reaches, as though each had just lost it, and every
  * batch settles its doors. Rows that policy keeps invalid stay with their
- * findings, and rows the walk does not reach stay untouched. Run only by the
- * schema 102 -> 103 migration. Total like an edit's settlement.
+ * findings, and rows the walk does not reach stay untouched; an Artificer
+ * replacement whose source does not convert with the Artificer goes with its
+ * pickup. Run only by the schema 102 -> 103 migration. Total like an edit's settlement.
  */
 export function settleProjectUpgrade(
   options: ProjectUpgradeSettlementOptions,
 ): ProjectEditSettlement {
   const evaluate = exactEvaluation(options.evaluate);
-  const before = evaluate(options.project);
+  // An earlier schema kept an Artificer replacement dormant once its source left the Artificer.
+  const project = withoutDormantArtificerReplacementsInProject(options.project, options.catalog);
+  const before = evaluate(project);
   return settleProject({
     catalog: options.catalog,
     before,
-    project: options.project,
+    project,
     command: undefined,
     evaluate,
   });

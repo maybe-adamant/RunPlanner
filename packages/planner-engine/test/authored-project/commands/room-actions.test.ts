@@ -45,7 +45,9 @@ import {
   assembleRoomActionRoster,
   assembleRoomLifecycleTimeline,
   materializeBiomePrefix,
+  simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { settleProjectUpgrade } from '@run-planner/engine/project-migration';
 import {
   createCompleteFGProject,
   replaceNemesisRandomEventInteraction,
@@ -1340,6 +1342,57 @@ describe('room-action commands', () => {
     });
     expect(occurrence(left).acquisitionSites?.[siteKey]).toBeUndefined();
     expect(occurrence(left).roomActions.order).toEqual([reward]);
+
+    // An earlier schema kept the replacement dormant once its source left the Artificer.
+    const dormant = decodeProjectDocument(
+      JSON.parse(
+        JSON.stringify({
+          ...left,
+          route: {
+            ...left.route,
+            biomes: left.route.biomes.map((plan, index) =>
+              index !== 0 || plan.topology === null
+                ? plan
+                : {
+                    ...plan,
+                    topology: {
+                      ...plan.topology,
+                      occurrences: plan.topology.occurrences.map((room, roomIndex) =>
+                        roomIndex === 0
+                          ? {
+                              ...room,
+                              acquisitionSites: occurrence(active).acquisitionSites,
+                              roomActions: { order: [reward, replacement] },
+                            }
+                          : room,
+                      ),
+                    },
+                  },
+            ),
+          },
+        }),
+      ),
+      catalog,
+    );
+    expect(occurrence(dormant).roomActions.order).toEqual([reward, replacement]);
+    // An unrelated edit to the room keeps it; the edit never changed its source.
+    const unrelated = applyProjectCommand(dormant, catalog, {
+      kind: 'MoveRoomAction',
+      action: action(replacement),
+      toIndex: 0,
+    });
+    expect(occurrence(unrelated).acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
+      entryKey,
+    );
+    expect(occurrence(unrelated).roomActions.order).toEqual([replacement, reward]);
+    // The 102 -> 103 upgrade drops it once, with its pickup.
+    const upgraded = settleProjectUpgrade({
+      catalog,
+      project: dormant,
+      evaluate: (document) => simulateProjectAssembly(catalog, document),
+    }).assembly.project;
+    expect(occurrence(upgraded).acquisitionSites?.[siteKey]).toBeUndefined();
+    expect(occurrence(upgraded).roomActions.order).toEqual([reward]);
     expect(() =>
       applyProjectCommand(left, catalog, {
         kind: 'InsertRoomAction',
