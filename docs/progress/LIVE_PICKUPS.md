@@ -59,10 +59,9 @@ You either interact with pickups or active objects.
   - W8 rekey: deleted (owner, 2026-11-10); a reward swap replaces the item.
 
   Open items, temporary limits of today's walk and scope:
-  - Not offered: a new door, cage, wheel, Well or Pool reroll, a Pool sale of a
-    slot not yet chosen and a rack keepsake, each needing its own choice
-    first; their rows are. Owner to decide whether the live row offers them
-    (with the choice still to make) or they stay on their objects.
+  - A new door, cage, wheel, Well or Pool reroll, a Pool sale of a slot not
+    yet chosen and a rack keepsake are offered as verbs with their picker
+    since C5a ([ITEM_MODEL](ITEM_MODEL.md)).
   - Gold Gold Gold's duplicate follows its source, the room's first World
     Shop purchase or Travel Deal refill whose item it can duplicate (C2); the
     witness pins that the walk refuses it earlier.

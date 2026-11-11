@@ -825,6 +825,29 @@ completion are actions on objects. An object's new purchases are read where
 the room's reached actions end, which is the same set at every gap, since an
 item bought earlier is a row; a room stopped in its Overview offers none.
 
+Each item also lists its **verbs** at the gap: the distinct interactions
+(pick up, goldify, transform, buy, rush, sell, reroll, choose, talk to,
+unlock, use, press), each with its participation, its deadline when
+required, and the commands that perform it there as one edit, or the picker
+it needs. A legal action is one verb; the row standing at the gap is its
+standing verb. A standing row acquiring one role the walk reached also offers
+the other ways of taking it that the capability captured at its contact
+supports, so a paid item is never goldified or transformed and Time Piece
+needs a charge. Verbs whose row a choice creates are offered where the
+engine already reads them: a door, cage or wheel reroll press at its
+surface's append point, and a Well or Pool reroll and an unpinned Pool
+slot's sale where the room's reached actions end, each only while a held
+card enables it and the reroll pool pays. A picker comes **before** a verb
+whose commands it supplies (a reroll press's reward, a Pool sale's trait, a
+blank Travel Deal item) or **after** one that applies as is (a Pom's level,
+a rerolled list, the rack's keepsake, the Artificer's replacement).
+
+At the frontier the room publishes its **progression**: leaving, once the
+walk passes the room with nothing required live, or choosing the next Ship
+wheel when that choice is the only required thing live. Once the walk passes
+the room, the optional pickups still live at its last gap are **left
+behind**.
+
 ## Canonical Lifecycle Profiles
 
 ### Standard Reward Room
