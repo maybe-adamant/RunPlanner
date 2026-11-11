@@ -45,8 +45,10 @@ import {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   editTestRoomActionOrder,
+  replaceTestPlacedItem,
   settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
+import { withItemContent } from '../support/room-action-content';
 import {
   createEchoTalentDropReplayProject,
   createGoldenFGHProject,
@@ -262,12 +264,13 @@ function replaceLatestGoldenRewardWithConsumable(project = selectGoldenBridge())
     'cages',
     'cage1',
   );
-  const swappedSibling = applyProjectCommand(project, catalog, {
+  // Each swap is a new item, which the owner picks up again.
+  const swappedSibling = replaceTestPlacedItem(project, {
     kind: 'ReplaceLocalReward',
     reward: siblingReward,
     value: { rewardType: 'WeaponUpgrade' },
   });
-  const replaced = applyProjectCommand(swappedSibling, catalog, {
+  const replaced = replaceTestPlacedItem(swappedSibling, {
     kind: 'ReplaceLocalReward',
     reward: selectedReward,
     value: { rewardType: 'MaxHealthDrop' },
@@ -2626,7 +2629,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
       (candidate) =>
         candidate.kind === 'interactAcquisitionEntry' && candidate.entryKey === echoReplayEntryKey,
     );
-    expect(bridgeOrder[replayIndex + 1]).toEqual(reference);
+    expect(bridgeOrder[replayIndex + 1]).toEqual(
+      withItemContent(project, createOccurrenceAddress(goldenHBiome, bridgeId), reference),
+    );
     expect(
       project
         .route!.biomes.find((biome) => biome.biomeKey === 'H')!
@@ -2674,7 +2679,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
     expect(restored.acquisitionSites?.[siteKey]).toMatchObject({
       pickupEntries: { quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } } },
     });
-    expect(restored.roomActions.order).toContainEqual(reference);
+    expect(restored.roomActions.order).toContainEqual(
+      withItemContent(project, createOccurrenceAddress(goldenHBiome, bridgeId), reference),
+    );
   });
 
   it('supports Time Piece through the shared required replay acquisition role', () => {
