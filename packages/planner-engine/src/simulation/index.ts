@@ -347,6 +347,7 @@ export {
 export { roomActionResetsForProjectEvaluationAssembly } from './evaluation/room-action-reset';
 export {
   encounterOutcomesForProjectEvaluationAssembly,
+  roomLifecycleTimelineForProjectEvaluationAssembly,
   type EncounterOutcome,
   type EncounterOutcomeChoice,
   type EncounterOutcomeHost,
