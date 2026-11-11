@@ -60,7 +60,7 @@ export type LiveVerbKind =
   | 'transform'
   /** Buy a World Shop, Travel Deal, Hermes Shrine or Stygian Well item. */
   | 'buy'
-  /** Buy a Hermes Shrine item rushed. */
+  /** Rush a bought Hermes Shrine item. */
   | 'rush'
   /** Sell a trait at a Pool of Purging. */
   | 'sell'
@@ -157,7 +157,9 @@ export function liveVerbKind(reference: RoomActionReference): LiveVerbKind {
     case 'purchaseStygianWellOffer':
       return 'buy';
     case 'purchaseHermesShrineOffer':
-      return reference.rushed ? 'rush' : 'buy';
+      return 'buy';
+    case 'rushHermesShrineOffer':
+      return 'rush';
     case 'sellPurgingPoolTrait':
       return 'sell';
     case 'reroll':

@@ -306,8 +306,9 @@ export type RoomActionReference =
   | {
       readonly kind: 'purchaseHermesShrineOffer';
       readonly generationKey: HermesShrineGenerationKey;
-      readonly rushed: boolean;
     }
+  /** Rushing one bought Shrine item: it is delivered in this room, not counted down. */
+  | { readonly kind: 'rushHermesShrineOffer'; readonly generationKey: HermesShrineGenerationKey }
   | {
       readonly kind: 'sellPurgingPoolTrait';
       readonly slotKey: PurgingPoolSlotKey;

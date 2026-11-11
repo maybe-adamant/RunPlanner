@@ -127,7 +127,7 @@ describe('Hermes Shrine interaction', () => {
     createOccurrenceId('surface-n-preboss:postboss'),
   );
 
-  it('offers Buy and Rush for each unbought item and reports the live refill', () => {
+  it('offers Buy for each unbought item, Rush for each bought one, and reports the live refill', () => {
     const project = surfaceShrineTravelDealProject();
     const interaction = interactionsAt(project, shrine)?.hermesShrine;
     expect(interaction?.travelDealRefillLive).toBe(true);
@@ -137,25 +137,42 @@ describe('Hermes Shrine interaction', () => {
       'initial:secondLeft',
       'initial:secondRight',
     ]);
+    // The first item is rushed already; the bought refill is not.
+    expect(interaction?.rushes.map((rush) => rush.generationKey)).toEqual(['travelDealRefill']);
     const [left] = interaction!.offers;
     expect(left).toMatchObject({
       rewardType: expect.any(String),
       delay: expect.any(Number),
-      buy: {
-        kind: 'PurchaseHermesShrineOffer',
-        generationKey: 'initial:secondLeft',
-        rushed: false,
-      },
-      rush: {
-        kind: 'PurchaseHermesShrineOffer',
-        generationKey: 'initial:secondLeft',
-        rushed: true,
-      },
+      buy: { kind: 'PurchaseHermesShrineOffer', generationKey: 'initial:secondLeft' },
     });
-    const bought = apply(project, left!.rush);
+    const bought = apply(project, left!.buy);
+    const after = interactionsAt(bought, shrine)?.hermesShrine;
+    expect(after?.offers.map((offer) => offer.generationKey)).toEqual(['initial:secondRight']);
+    const rush = after!.rushes.find(
+      (candidate) => candidate.generationKey === 'initial:secondLeft',
+    );
+    const order = (document: typeof project) =>
+      document.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .find((occurrence) => occurrence.occurrenceId === shrine.occurrenceId)!.roomActions.order;
+    // The rush appends where the room's actions end.
+    expect(rush?.rush).toEqual({
+      kind: 'SetHermesShrineRush',
+      occurrence: shrine,
+      generationKey: 'initial:secondLeft',
+      rushed: true,
+      index: order(bought).length,
+    });
+    const rushed = apply(bought, rush!.rush);
+    expect(order(rushed).at(-1)).toEqual({
+      kind: 'rushHermesShrineOffer',
+      generationKey: 'initial:secondLeft',
+    });
     expect(
-      interactionsAt(bought, shrine)?.hermesShrine?.offers.map((offer) => offer.generationKey),
-    ).toEqual(['initial:secondRight']);
+      interactionsAt(rushed, shrine)?.hermesShrine?.rushes.map(
+        (candidate) => candidate.generationKey,
+      ),
+    ).toEqual(['travelDealRefill']);
   });
 
   it('offers the unbought refill with its candidates while a Travel Deal rush realizes it', () => {
@@ -169,22 +186,15 @@ describe('Hermes Shrine interaction', () => {
     expect(refill).toMatchObject({
       generationKey: 'travelDealRefill',
       rewardType: 'ArmorBoost',
-      buy: { generationKey: 'travelDealRefill', rushed: false },
+      buy: { generationKey: 'travelDealRefill' },
     });
     expect(refill!.candidateRewardTypes).toContain('ArmorBoost');
 
     // Without the rush, nothing refills.
     const unrushed = apply(cleared, {
-      kind: 'SetHermesShrinePurchaseRush',
-      action: createRoomActionAddress(
-        surfaceNBiome,
-        shrine.occurrenceId,
-        roomActionKey({
-          kind: 'purchaseHermesShrineOffer',
-          generationKey: 'initial:first',
-          rushed: false,
-        }),
-      ),
+      kind: 'SetHermesShrineRush',
+      occurrence: shrine,
+      generationKey: 'initial:first',
       rushed: false,
     });
     const unlive = interactionsAt(unrushed, shrine)?.hermesShrine;

@@ -31,11 +31,15 @@ npm run test:schema:migrate
 
 ## History
 
-Schema 103 changes no saved shape: it marks the plans saved after the settlement
+Schema 103 marks the plans saved after the settlement
 rules for [rows whose context or source is gone](../docs/design/ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
 and [exit capacity](../docs/design/AUTHORED_PROJECT_MODEL.md#exit-capacity)
-covered every edit. The migration accepts schema 102 through its final
-revision 1, lifts the version and settles the plan once, silently, removing
+covered every edit, and moves outcomes and observations onto their items. A
+Shrine rush is its own room action: a stored `rushed: true` purchase becomes the
+purchase directly followed by its `rushHermesShrineOffer` action, and every
+purchase loses the flag, losslessly. The migration accepts schema 102 through
+its final revision 1, lifts the version, applies each such reshaping to the raw
+plan before the strict parse, and settles the plan once, silently, removing
 only what the saved plan shows had its source or context and lost it: stale
 room-action rows; a Gold Gold Gold duplicate that a purchase stands before
 while no Echo produces it; a matured trait drop whose producing trait a walk

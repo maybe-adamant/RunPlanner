@@ -710,11 +710,14 @@ A present Shrine of Hermes persists its visible initial inventory, each
 stocked item (initial slot or Travel Deal refill) holding its reward type and
 the delay the game rolls with the stock, so an unbought item keeps its delay
 too. A generation is purchased exactly when `roomActions.order` holds its one
-`{ kind: 'purchaseHermesShrineOffer', generationKey, rushed }` reference, which
-owns its rush and its position among the Shrine's purchases; no purchase state
-is persisted beside it. The codec rejects a purchase action whose item is not
-stocked, and a same-room Shrine pickup without a rushed purchase action. Its
-rushed or delayed delivery owns concrete acquisition payload. A
+`{ kind: 'purchaseHermesShrineOffer', generationKey }` reference, and rushed
+exactly when it also holds its one `{ kind: 'rushHermesShrineOffer',
+generationKey }` reference, the later interaction with the bought item; no
+purchase state is persisted beside them. The codec rejects a purchase action
+whose item is not stocked, a rush without its purchase, and a same-room Shrine
+pickup without its rush; a rush ordered before its purchase is kept with its
+ordering finding. Its rushed or delayed delivery owns concrete acquisition
+payload. A
 Stygian Well or Pool of Purging holds its initial stock with no interaction
 flag: a blank slot stays native, a pinned one is assessed, and a slot becomes
 required only once a purchase or sale uses it; use follows from the room's
@@ -855,17 +858,18 @@ the same edit; an index without a new purchase is refused.
 `SetHermesShrineOfferDelay` sets the delay of one stocked Shrine item, initial
 slot or refill; stocking an empty slot gives it the default delay, and
 restocking keeps it. `SetHermesShrinePurchase` adds or clears one generation's
-purchase: a new purchase inserts its unrushed purchase action at its canonical
-position, and clearing removes that action, its pickup and placed deliveries
-while retaining delivery payload. `PurchaseHermesShrineOffer` instead appends
-the purchase of one unbought item at the end of the room's actions, bought or
-rushed, first stocking a blank Travel Deal refill when given its reward, as one
-Undo step.
-`SetHermesShrinePurchaseRush` changes rush on one exact purchase
-action, retracting its optional same-room pickup when the rush is undone; a
-rushed item's pickup is the owner's to place. When any of these
-commands changes the first rushed initial purchase, the refill's purchase
-action and pickup are rescheduled after it; when no rushed initial purchase
+purchase: a new purchase inserts its purchase action at its canonical
+position, and clearing removes that action, its rush, its pickup and placed
+deliveries while retaining delivery payload. `PurchaseHermesShrineOffer`
+instead appends the purchase of one unbought item at the end of the room's
+actions, first stocking a blank Travel Deal refill when given its reward, as
+one Undo step. `SetHermesShrineRush` rushes one bought item, inserting its rush
+action directly after its purchase or at a chosen index, or un-rushes it,
+removing that action and retracting its optional same-room pickup; a rushed
+item's pickup is the owner's to place. Generic Room Action insertion and
+removal reject the rush reference too. When any of these commands changes the
+first rushed initial purchase, the refill's purchase, its rush and its pickup
+are rescheduled after that purchase's rush; when no rushed initial purchase
 remains, the refill's pickup is retracted.
 
 `MoveRoomAction` changes one ranked action's position within the complete
@@ -1178,8 +1182,7 @@ placement finding, proven invalid placements retain this explicit repair, and
 due-contact validation continues to require that delivery before
 publication. Same-room rushed deliveries are
 optional actions the owner places and removes through
-`RemoveRoomAction`, never unplaced; a rushed purchase may stand without its
-pickup. Source reactivation uses the existing exact placement support rather
+`RemoveRoomAction`, never unplaced; a rush may stand without its pickup. Source reactivation uses the existing exact placement support rather
 than guessing a replacement host.
 
 Retained clocked-pickup payload alone does not create an optional action. The

@@ -33,8 +33,9 @@ import {
   parseArtificerReplacementEntryKey,
 } from '../acquisition/artificer';
 import {
-  firstRushedInitialPurchase,
+  firstInitialRush,
   hermesShrinePurchaseAction,
+  hermesShrineRushAction,
   isDeliveryFlushHost,
   parseHermesShrineDeliveryEntryKey,
 } from '../hermes-shrine-delivery';
@@ -276,8 +277,8 @@ function travelDealSourceAction(
 }
 
 /**
- * A rushed Shrine pickup follows its purchase; the refill purchase follows the
- * first rushed initial purchase, the earliest rush that can create it.
+ * A rush follows its purchase and a rushed Shrine pickup its rush; the refill
+ * purchase follows the first initial rush, the earliest rush that can create it.
  */
 function hermesShrinePurchaseDependencies(
   occurrence: RoomOccurrence,
@@ -287,11 +288,13 @@ function hermesShrinePurchaseDependencies(
   const order = occurrence.roomActions.order;
   const source =
     sameRoomDelivery !== undefined
-      ? hermesShrinePurchaseAction(order, sameRoomDelivery)
-      : reference.kind === 'purchaseHermesShrineOffer' &&
-          reference.generationKey === 'travelDealRefill'
-        ? firstRushedInitialPurchase(order)
-        : undefined;
+      ? hermesShrineRushAction(order, sameRoomDelivery)
+      : reference.kind === 'rushHermesShrineOffer'
+        ? hermesShrinePurchaseAction(order, reference.generationKey)
+        : reference.kind === 'purchaseHermesShrineOffer' &&
+            reference.generationKey === 'travelDealRefill'
+          ? firstInitialRush(order)
+          : undefined;
   return source === undefined
     ? []
     : [frozen({ kind: 'afterAction' as const, action: source, authoringOnly: true as const })];
@@ -453,6 +456,7 @@ function baseContribution(
         ],
       );
     case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer':
       return contribution(
         biome,
         occurrence,

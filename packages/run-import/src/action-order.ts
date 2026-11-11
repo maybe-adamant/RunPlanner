@@ -80,8 +80,15 @@ function actionTraits(
       const key = occurrence.keepsakeRack?.keepsakeKey;
       return { gained: key === undefined || key === null ? [] : [key], upgraded: [] };
     }
-    case 'purchaseHermesShrineOffer':
-      return { gained: reference.rushed ? [] : ['StorePendingDeliveryItem'], upgraded: [] };
+    case 'purchaseHermesShrineOffer': {
+      // A rushed purchase is delivered in the room; only a delayed one is pending.
+      const rushed = occurrence.roomActions.order.some(
+        (candidate) =>
+          candidate.kind === 'rushHermesShrineOffer' &&
+          candidate.generationKey === reference.generationKey,
+      );
+      return { gained: rushed ? [] : ['StorePendingDeliveryItem'], upgraded: [] };
+    }
     case 'interactEncounter': {
       const offers = occurrence.encounters.traitOffersByPhase?.[reference.phaseKey] ?? {};
       return {

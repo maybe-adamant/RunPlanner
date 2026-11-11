@@ -12,7 +12,11 @@ import {
 } from '../../../authored-project/locked-exits';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
 import type { PreparedUnlockExitEncounter } from '../../encounters/unlock-exit';
-import { hermesShrinePurchaseAction } from '../../../authored-project/hermes-shrine-delivery';
+import {
+  hermesShrinePurchaseAction,
+  hermesShrineRushAction,
+  offerFor,
+} from '../../../authored-project/hermes-shrine-delivery';
 import {
   hermesShrineInitialGenerationKey,
   type HermesShrineGenerationKey,
@@ -205,19 +209,15 @@ function shrineOffer(
   generationKey: HermesShrineGenerationKey,
   offer: HermesShrineInventoryOffer | null | undefined,
 ): HermesShrineInteractionOffer {
-  const command = (rushed: boolean) =>
-    Object.freeze({
-      kind: 'PurchaseHermesShrineOffer' as const,
-      occurrence: room.origin,
-      generationKey,
-      rushed,
-    });
   return Object.freeze({
     generationKey,
     rewardType: offer?.rewardType ?? null,
     delay: offer?.delay ?? null,
-    buy: command(false),
-    rush: command(true),
+    buy: Object.freeze({
+      kind: 'PurchaseHermesShrineOffer' as const,
+      occurrence: room.origin,
+      generationKey,
+    }),
   });
 }
 
@@ -238,11 +238,38 @@ function hermesShrineInteraction(
       ? []
       : [shrineOffer(room, generationKey, offer)];
   });
+  // A bought item can be rushed later in the visit, once.
+  const rushes = [
+    ...SHRINE_SLOT_KEYS.map(hermesShrineInitialGenerationKey),
+    'travelDealRefill' as const,
+  ].flatMap((generationKey) => {
+    const offer = offerFor(shrine, generationKey);
+    return unbought(generationKey) ||
+      hermesShrineRushAction(order, generationKey) !== undefined ||
+      offer === undefined ||
+      offer === null
+      ? []
+      : [
+          Object.freeze({
+            generationKey,
+            rewardType: offer.rewardType,
+            delay: offer.delay,
+            rush: Object.freeze({
+              kind: 'SetHermesShrineRush' as const,
+              occurrence: room.origin,
+              generationKey,
+              rushed: true,
+              index: order.length,
+            }),
+          }),
+        ];
+  });
   // The first rush made with Travel Deal realizes the refill.
   const live = realized !== undefined;
   return Object.freeze({
     historySequence,
     offers: Object.freeze(offers),
+    rushes: Object.freeze(rushes),
     travelDealRefillLive: live,
     ...(!live || !unbought('travelDealRefill')
       ? {}

@@ -485,8 +485,8 @@ Shop, Shrine or Well at a chosen position accepts exactly the authorable
 indices and the command's own default, and refuses any other with a contract
 error; a generic optional insertion, such as a challenge switch press or a
 locked door press, still accepts any index and reports a bad position as a
-finding. A rushed Shrine item's optional pickup follows its purchase, since
-the item spawns as the Shrine closes. A purchase and
+finding. A Shrine rush follows its purchase, and a rushed item's optional
+pickup follows its rush, since the item spawns as the rush closes the Shrine. A purchase and
 a generated pickup's placement share one rule: the command places its action
 by default, then moves it to the chosen index, judged by that index's prefix.
 An engine authoring query publishes each such command's authorable indices by
@@ -604,23 +604,23 @@ never removed from a distance, only marked. Removal and return as side
 effects of unrelated edits are hidden behaviour, and retained dead rows bloat
 projects over a long edit history.
 
-| Case                                                | Step | Outcome                                 |
-| --------------------------------------------------- | ---- | --------------------------------------- |
-| Phase or wheel the room no longer plays             | 1    | removed, silent                         |
-| Artificer replacement, reward set back to normal    | 2    | removed, silent                         |
-| Refill or rushed Shrine pickup, its purchase undone | 2    | removed, silent                         |
-| Hermes delivery, its Shrine purchase undone         | 2    | removed, announced in the delivery room |
-| Artificer card unequipped upstream                  | 3    | transform invalid                       |
-| Travel Deal no longer held                          | 3    | refill purchase invalid                 |
-| Gold Gold Gold duplicate, boon swapped away         | 3    | removed, announced in the shop room     |
-| Matured trait drop, trait lost                      | 3    | removed, announced                      |
-| Door or cage reroll, the reward it rerolls gone     | 1    | removed, silent                         |
-| Door its source room no longer has, not taken       | 1    | removed, announced in the source room   |
-| Door its source room no longer has, taken           | 4    | invalid                                 |
-| Reroll of a door the game refuses or not available  | 4    | invalid                                 |
-| Hub board reroll, its slot closed or entered        | 4    | invalid                                 |
-| Trait drop, trait held but matures elsewhere        | 4    | invalid                                 |
-| Reward swapped, a pickup role it no longer has      | 1    | removed, silent; the new reward is live |
+| Case                                               | Step | Outcome                                 |
+| -------------------------------------------------- | ---- | --------------------------------------- |
+| Phase or wheel the room no longer plays            | 1    | removed, silent                         |
+| Artificer replacement, reward set back to normal   | 2    | removed, silent                         |
+| Refill or rushed Shrine pickup, its rush undone    | 2    | removed, silent                         |
+| Hermes delivery, its Shrine purchase undone        | 2    | removed, announced in the delivery room |
+| Artificer card unequipped upstream                 | 3    | transform invalid                       |
+| Travel Deal no longer held                         | 3    | refill purchase invalid                 |
+| Gold Gold Gold duplicate, boon swapped away        | 3    | removed, announced in the shop room     |
+| Matured trait drop, trait lost                     | 3    | removed, announced                      |
+| Door or cage reroll, the reward it rerolls gone    | 1    | removed, silent                         |
+| Door its source room no longer has, not taken      | 1    | removed, announced in the source room   |
+| Door its source room no longer has, taken          | 4    | invalid                                 |
+| Reroll of a door the game refuses or not available | 4    | invalid                                 |
+| Hub board reroll, its slot closed or entered       | 4    | invalid                                 |
+| Trait drop, trait held but matures elsewhere       | 4    | invalid                                 |
+| Reward swapped, a pickup role it no longer has     | 1    | removed, silent; the new reward is live |
 
 A pickup row is keyed by its producer point and acquisition role, not its
 item, so a swap that keeps the role (Zeus Boon to Hera Boon at the same point)
@@ -730,7 +730,7 @@ spawning at the encounter's end.
 Loot an action's settlement spawns (a boon's own drops, Echo's last reward and
 Gold Gold Gold duplicate, a Nemesis free item, Eris's gift, a challenge switch's claim,
 the Artificer's replacement under the converted pickup, Sea Star's copy under
-the pickup it copies, a rushed Shrine item under its purchase in the Shrine's
+the pickup it copies, a rushed Shrine item under its rush in the Shrine's
 own room) is listed under that source action instead. Each item carries its reward owner,
 what it spawns as (its reward, which for a Nemesis result is the one her
 outcome spawns, or the concrete pickup where that differs: one role of a
@@ -1095,23 +1095,29 @@ regenerates the list.
 
 Well purchases settle immediately as paid effects and never invoke free-pickup
 alternatives. A purchased Shrine generation, including a purchased Travel Deal
-refill, gains one required `purchaseHermesShrineOffer` row in the room's
-post-outgoing purchase window (an Ephyra side room, having no outgoing
-generation, opens with it). The row authors that purchase's rush and its order
-among the Shrine's purchases; the walk still schedules every initial Shrine
-purchase together at the Shrine checkpoint, while each row's position settles
-the Travel Deal refill and the refill's own purchase. Shrine purchase rows never become timeline
-transactions: each stocked item's delay, bought or not, and each purchase's
-rush publish through the room Overview inventory, and the execution room guide
-carries the row only as an informational reminder.
+refill, gains one `purchaseHermesShrineOffer` row in the room's post-outgoing
+purchase window (an Ephyra side room, having no outgoing generation, opens with
+it), and a rushed one a `rushHermesShrineOffer` row in the same window after
+it. The game offers the rush as a second press of the bought item, any time
+later in the same visit: the room keeps its Shrine store, and the rush finds the
+pending order only while the run depth is the purchase's
+(`SurfaceShopLogic.lua:317-363, 521-540`). The rush settles with its purchase:
+the walk still schedules every initial Shrine purchase together at the Shrine
+checkpoint, while each purchase row's position, with its rush, settles the
+Travel Deal refill and the refill's own purchase. Shrine purchase and rush rows
+never become timeline transactions: each stocked item's delay, bought or not,
+and each purchase's rush publish through the room Overview inventory, and the
+execution room guide carries the purchase row, with its rush, only as an
+informational reminder.
 
-A rushed Shrine purchase, including a Travel Deal replacement, ranks one
-optional same-room pickup at the post-outgoing action rank; the author may
-remove it, and an item left behind vanishes at room exit. A rushed pickup
-follows its purchase row, and the refill's purchase row follows the first rushed
-initial purchase row; both dependencies constrain authoring only and are not
-published. The [Reward Model](REWARD_MODEL.md#refills) owns which purchase
-triggers the refill.
+A rush, including one of a Travel Deal replacement, makes one optional
+same-room pickup live at the post-outgoing action rank; the author may place
+and remove it, and an item left behind vanishes at room exit. A rush follows
+its purchase row, a rushed pickup its rush, and the refill's purchase row the
+rush of the first rushed initial purchase; these dependencies constrain
+authoring only and are not published. The
+[Reward Model](REWARD_MODEL.md#refills) owns which purchase triggers the
+refill.
 
 A delayed purchase is scheduled at source cleanup without consuming a delay use
 and derives a later required pickup at the reached encounter-end host. At the
@@ -1522,7 +1528,7 @@ state to their sequence.
 | Eris interacted (Room Action)                           | Eris's curse.                                                                                                                                                                                                     |
 | Well purchase (Room Action)                             | Stygian Well purchase and refill realization.                                                                                                                                                                     |
 | Shrine deliveries scheduled (Room Action)               | Hermes Shrine initial delivery scheduling.                                                                                                                                                                        |
-| Shrine purchase reached (Room Action)                   | The Travel Deal refill realization at a rush made with the trait, and the refill purchase's delivery.                                                                                                             |
+| Shrine purchase reached (Room Action)                   | The purchase with its rush: the Travel Deal refill realization at a rush made with the trait, and the refill purchase's delivery.                                                                                 |
 
 After the last event the walk captures the Hub frontier's Run State,
 evaluates every boss-door store, then records the blank exit-decision

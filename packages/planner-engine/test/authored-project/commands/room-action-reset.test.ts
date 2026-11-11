@@ -277,17 +277,17 @@ describe('ResetRoomActionsAfter', () => {
       createOccurrenceId('surface-n-preboss:postboss'),
     );
     const project = surfaceShrineTravelDealProject();
-    const rushed: RoomActionReference = {
+    const bought: RoomActionReference = {
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'initial:first',
-      rushed: true,
     };
-    expect(order(project, shrine).slice(0, 3)).toEqual([
+    expect(order(project, shrine).slice(0, 4)).toEqual([
       roomActionKey(fountain),
       roomActionKey(rack),
-      roomActionKey(rushed),
+      roomActionKey(bought),
+      roomActionKey({ kind: 'rushHermesShrineOffer', generationKey: 'initial:first' }),
     ]);
-    expect(order(project, shrine)).toHaveLength(5);
+    expect(order(project, shrine)).toHaveLength(6);
     expect(order(applyProjectCommand(project, catalog, reset(shrine, rack)), shrine)).toEqual([
       roomActionKey(fountain),
       roomActionKey(rack),

@@ -2,4 +2,5 @@
 // Only the migration runs them; nothing in evaluation, authoring or publication does.
 export { fillNemesisBetOutcomeWins } from './nemesis-bet-outcome-wins';
 export { exchangeBlockedWheelOffers, type WheelSideOrderBlock } from './wheel-side-order';
+export { splitShrineRush } from './split-shrine-rush';
 export { settleProjectUpgrade } from '../simulation/edit-settlement';

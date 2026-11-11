@@ -823,18 +823,22 @@ pre-acquisition context, not the refill-generation context.
 
 A Shrine of Hermes refill is caused by the first rushed initial
 `purchaseHermesShrineOffer` in timeline order made while Travel Deal is held,
-when it closes the Shrine screen, not by collecting the rushed
-item; a rush without the trait leaves the refill to a later rush. The refill is
-realized at that purchase, replaces its slot, and removing the optional rushed
-pickup leaves the refill and its own delivery intact. Reordering or re-rushing
+when its rush closes the Shrine screen, not by collecting the rushed item; a
+rush without the trait leaves the refill to a later rush. A rush is its own
+`rushHermesShrineOffer` row on the bought item, which the game allows any time
+later in the same visit, but it settles with its purchase: the walk and the
+published plan perform the two together at the purchase, so a rush row placed
+apart from its purchase changes nothing the walk reads. The refill is realized
+at that purchase, replaces its slot, and removing the optional rushed pickup
+leaves the refill and its own delivery intact. Reordering or re-rushing
 purchases, or gaining Travel Deal earlier or later in the room, can change the
 source; a retained refill item outside the new source's group is kept and
 reported `hermesShrineTravelDealRefillUnavailable` at the refill offer. A
 purchased refill ranked before any rushed initial purchase, or before any rush
 made with Travel Deal, keeps its item and reports the same finding at its
 purchase row with reason `noRushedPurchase` or `travelDealInactive`. Authoring
-keeps the refill purchase after the first rushed initial purchase only, since
-trait state is a simulation product.
+keeps the refill purchase after the first rushed initial purchase's rush only,
+since trait state is a simulation product.
 
 Refill activity comes from the reached simulation capability, not the presence
 of retained authored refill detail. Clearing the triggering Shop/Well purchase,
@@ -869,7 +873,8 @@ the shop reprices without it afterwards. Nothing else changes a price.
 - A Shrine order rounds the shop price, then rounds again after the factor of
   its delivery delay. A rush pays the impatience multiple of the base price,
   less what the order cost, at the multiplier after the room's first purchase;
-  a buy-and-rush is one action paying both.
+  the order is priced on its purchase row and the rush on its rush row, both
+  where the purchase settles.
 - A Fateful Twist that grants a Voucher outside the room's Travel Deal
   purchase multiplies the rounded prices of the Well items still on show and
   rounds again. After the Travel Deal purchase the Well reprices from base, as

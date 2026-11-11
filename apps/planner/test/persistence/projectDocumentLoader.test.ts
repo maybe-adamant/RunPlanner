@@ -1020,9 +1020,11 @@ describe('project document loader', () => {
     expect(occurrence?.roomActions.order).toEqual([
       { kind: 'useFountain' },
       { kind: 'interactKeepsakeRack' },
-      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first', rushed: true },
-      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondRight', rushed: true },
-      { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill', rushed: false },
+      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first' },
+      { kind: 'rushHermesShrineOffer', generationKey: 'initial:first' },
+      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondRight' },
+      { kind: 'rushHermesShrineOffer', generationKey: 'initial:secondRight' },
+      { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill' },
       {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',

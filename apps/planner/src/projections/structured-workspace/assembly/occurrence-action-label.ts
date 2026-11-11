@@ -413,7 +413,8 @@ export function occurrenceActionLabelParts(
         ? parts
         : withReward(parts, Object.freeze({ rewardType: well.rewardType }), false, well.itemKey);
     }
-    case 'purchaseHermesShrineOffer': {
+    case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer': {
       const slotKey = hermesShrineInitialSlotKey(reference.generationKey);
       const slot =
         slotKey === undefined
@@ -428,7 +429,7 @@ export function occurrenceActionLabelParts(
           ? occurrence.hermesShrine?.travelDealRefill?.offer
           : occurrence.hermesShrine?.offerBySlot[slotKey];
       // A rushed item is delivered in the Shrine room.
-      const verb = reference.rushed ? 'Rush' : 'Buy';
+      const verb = reference.kind === 'rushHermesShrineOffer' ? 'Rush' : 'Buy';
       const item =
         offer === null || offer === undefined
           ? undefined

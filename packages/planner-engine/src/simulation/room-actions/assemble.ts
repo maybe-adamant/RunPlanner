@@ -380,12 +380,13 @@ export function assessRoomActionPlacements(
   });
 }
 
-/** Shop, Shrine and Well purchases and the Pedestal change only through their feature's command. */
+/** Shop, Shrine and Well purchases, Shrine rushes and the Pedestal change only through their feature's command. */
 function participationOwnedByFeature(reference: RoomActionReference): boolean {
   return (
     reference.kind === 'interactShopOffer' ||
     reference.kind === 'interactInfernalContractPedestal' ||
     reference.kind === 'purchaseHermesShrineOffer' ||
+    reference.kind === 'rushHermesShrineOffer' ||
     reference.kind === 'purchaseStygianWellOffer'
   );
 }

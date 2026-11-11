@@ -66,7 +66,6 @@ import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench
 import {
   findTimelineRow,
   queryTimelineRow,
-  slotRow,
   timelineRow,
 } from '@planner-test/support/timeline-rows';
 
@@ -153,7 +152,7 @@ describe('Hermes Shrine workbench', () => {
     );
   });
 
-  it('projects purchase detail and attaches rushed pickup resolution to its one timeline row', async () => {
+  it('projects purchase detail and attaches rushed pickup resolution under its rush row', async () => {
     const application = createApplication();
     const view = renderOccurrenceWorkbench(
       completeOrdinaryShrine(),
@@ -180,15 +179,22 @@ describe('Hermes Shrine workbench', () => {
       screen.getByRole('button', { name: 'Hermes Shrine Offer 1 delivery delay' }).textContent,
     ).toContain('8');
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
+    // A bought item is rushed with a second pick, its own row.
+    await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Buy Big Heal');
     await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Big Heal');
-    const purchaseRow = timelineRow('Rush Big Heal');
+    const purchaseRow = timelineRow('Buy Big Heal');
+    const rushRow = timelineRow('Rush Big Heal');
     // The slot is a badge on the row icon; the row's accessible text keeps it.
     expect(purchaseRow.textContent).toContain('slot 1');
-    // The row reads as the rush and deletes the purchase; no inner Rush checkbox.
-    expect(within(purchaseRow).queryByRole('checkbox')).toBeNull();
-    expect(
-      within(purchaseRow).getByRole('button', { name: /^Remove .* from timeline$/ }),
-    ).toHaveProperty('disabled', false);
+    expect(rushRow.textContent).toContain('slot 1');
+    // Each row deletes its own act; no inner Rush checkbox.
+    for (const row of [purchaseRow, rushRow]) {
+      expect(within(row).queryByRole('checkbox')).toBeNull();
+      expect(within(row).getByRole('button', { name: /^Remove .* from timeline$/ })).toHaveProperty(
+        'disabled',
+        false,
+      );
+    }
 
     const room = occurrence(oOccurrenceIds.combat07)(
       workspaceBiome(application, 'Surface', 'O'),
@@ -241,11 +247,7 @@ describe('Hermes Shrine workbench', () => {
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
         )?.roomActions.order,
-    ).toContainEqual({
-      kind: 'purchaseHermesShrineOffer',
-      generationKey: 'initial:first',
-      rushed: true,
-    });
+    ).toContainEqual({ kind: 'rushHermesShrineOffer', generationKey: 'initial:first' });
   });
 
   it('authors Mystery Boon identity in inventory and its god only at rushed acquisition', async () => {
@@ -276,6 +278,7 @@ describe('Hermes Shrine workbench', () => {
     expect(screen.queryByText('Eventual God')).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
+    await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Buy Mystery Boon');
     await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Mystery Boon');
     // The rushed item is picked up from where it spawned.
     await view.user.click(
@@ -824,7 +827,7 @@ describe('Hermes Shrine workbench', () => {
     expect(queryTimelineRow(/Travel Deal Offer$/)).toBeNull();
   });
 
-  it('authors the refill on the first rushed purchase row only while Travel Deal applies', async () => {
+  it('authors the refill on the source rush row only while Travel Deal applies', async () => {
     const postbossId = createOccurrenceId('surface-n-preboss:postboss');
     const owner = createOccurrenceAddress(nBiome, postbossId);
     let project = withFourthBoardGodBeforeCombat05(loadSurfaceNOProject());
@@ -878,8 +881,9 @@ describe('Hermes Shrine workbench', () => {
     openOverview();
     expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    // The slot shows as a badge on the row icon; the row's accessible text keeps it.
-    const sourceRow = () => slotRow(1);
+    // The refill's source is the rush of the first rushed initial purchase.
+    const sourceRow = () => timelineRow(/^Rush /);
+    expect(sourceRow().textContent).toContain('slot 1');
     const travelDealLine = () => screen.getByRole('listitem', { name: 'Restock' });
     const line = travelDealLine();
     expect(line.previousElementSibling).toBe(sourceRow());
@@ -905,7 +909,7 @@ describe('Hermes Shrine workbench', () => {
       expect.objectContaining({ generationKey: 'travelDealRefill' }),
     );
 
-    // Without the rushed source purchase Travel Deal does not apply.
+    // Without the source's rush Travel Deal does not apply.
     const sourceAction = within(sourceRow())
       .getByRole('button', { name: /^Reorder / })
       .getAttribute('aria-label')!

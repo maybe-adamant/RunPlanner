@@ -1393,13 +1393,15 @@
                   },
                   {
                     "kind": "purchaseHermesShrineOffer",
-                    "generationKey": "initial:first",
-                    "rushed": true
+                    "generationKey": "initial:first"
+                  },
+                  {
+                    "kind": "rushHermesShrineOffer",
+                    "generationKey": "initial:first"
                   },
                   {
                     "kind": "purchaseHermesShrineOffer",
-                    "generationKey": "travelDealRefill",
-                    "rushed": false
+                    "generationKey": "travelDealRefill"
                   },
                   {
                     "kind": "interactAcquisitionEntry",

@@ -179,7 +179,10 @@ export type RoomLifecycleEvent =
       }[];
     })
   | (RoomLifecycleEventBase & {
-      /** One ranked Shrine purchase, where its rush can trigger the Travel Deal refill. */
+      /**
+       * One ranked Shrine purchase with its rush, which settles with it and can
+       * trigger the Travel Deal refill.
+       */
       readonly kind: 'hermesShrinePurchaseReached';
       readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
       readonly rushed: boolean;

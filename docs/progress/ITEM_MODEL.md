@@ -93,6 +93,23 @@ Gaps left for C5b (the engine cannot derive them today):
 - No new verb exports on `./simulation` yet; they land with the first
   consumer (the planner's live row in D).
 
+## C5b contract changes
+
+Changes Draft and the run import must absorb; each slice compiles them only.
+
+- **Shrine rush as its own row** (schema 103). `purchaseHermesShrineOffer`
+  loses `rushed`; a rush is a `rushHermesShrineOffer { generationKey }` row
+  after its purchase (authoring-only dependency, post-outgoing window), and a
+  same-room pickup follows the rush. `SetHermesShrinePurchaseRush` is replaced
+  by `SetHermesShrineRush { occurrence, generationKey, rushed, index? }`
+  (default: directly after the purchase); `PurchaseHermesShrineOffer` loses
+  `rushed` and only buys. The Shrine object interaction lists `offers` (Buy)
+  and `rushes` (Rush, appended where the room's actions end); the live product
+  offers `rush` on a bought, unrushed item. Gold prices the order on the
+  purchase row and the rush on the rush row. The rush settles with its
+  purchase, so the walk and the wire are unchanged. Import: `commerce.ts`
+  rushes with the new command; `action-order.ts` reads the rush row.
+
 ## Inventory (summary of existence-vs-interaction)
 
 Item identity today is (reward owner address, acquisition role); every

@@ -187,7 +187,7 @@ export function assembleOccurrenceRewardLocal(
                   )
                     return [];
                 }
-                // A rushed delivery's control is its Shrine purchase's own, below.
+                // A rushed delivery's control is its Shrine rush's own, below.
                 if (isSameRoomHermesShrineDeliveryEntry(createAcquisitionEntryAddress(site, key)))
                   return [];
                 if (
@@ -319,12 +319,12 @@ export function assembleOccurrenceRewardLocal(
   // Same-room rushed deliveries are active before the lifecycle has published
   // a derived host capability. Their source-owned entry remains the one
   // acquisition control; delayed host entries above consume the exact derived
-  // capability instead of looking back to a purchase row.
+  // capability instead of looking back to a rush row.
   const rushedShrineRewardControls = Object.freeze(
     input.occurrence.hermesShrine === undefined
       ? []
       : input.occurrence.roomActions.order.flatMap((reference) => {
-          if (reference.kind !== 'purchaseHermesShrineOffer' || !reference.rushed) return [];
+          if (reference.kind !== 'rushHermesShrineOffer') return [];
           const generationKey = reference.generationKey;
           const slotKey = hermesShrineInitialSlotKey(generationKey);
           const inventoryOffer =

@@ -77,7 +77,7 @@ export type HermesShrinePurchaseAction = Extract<
   { readonly kind: 'purchaseHermesShrineOffer' }
 >;
 
-/** The timeline purchase action of one Shrine generation, which owns its rush. */
+/** The timeline purchase action of one Shrine generation. */
 export function hermesShrinePurchaseAction(
   order: readonly RoomActionReference[],
   generationKey: HermesShrineGenerationKey,
@@ -88,19 +88,40 @@ export function hermesShrinePurchaseAction(
   );
 }
 
-/**
- * The first rushed initial purchase in timeline order: the earliest rush that can
- * refill with Travel Deal. Simulation finds the first rush made with the trait.
- */
-export function firstRushedInitialPurchase(
+export type HermesShrineRushAction = Extract<
+  RoomActionReference,
+  { readonly kind: 'rushHermesShrineOffer' }
+>;
+
+/** The rush of one bought Shrine generation, a later interaction with its item. */
+export function hermesShrineRushAction(
   order: readonly RoomActionReference[],
-): HermesShrinePurchaseAction | undefined {
+  generationKey: HermesShrineGenerationKey,
+): HermesShrineRushAction | undefined {
   return order.find(
-    (reference): reference is HermesShrinePurchaseAction =>
-      reference.kind === 'purchaseHermesShrineOffer' &&
-      reference.rushed &&
-      reference.generationKey !== 'travelDealRefill',
+    (reference): reference is HermesShrineRushAction =>
+      reference.kind === 'rushHermesShrineOffer' && reference.generationKey === generationKey,
   );
+}
+
+/**
+ * The rush of the first rushed initial purchase in timeline order: the
+ * earliest rush that can refill with Travel Deal, since a rush settles with
+ * its purchase. Simulation finds the first one made with the trait.
+ */
+export function firstInitialRush(
+  order: readonly RoomActionReference[],
+): HermesShrineRushAction | undefined {
+  for (const reference of order) {
+    if (
+      reference.kind !== 'purchaseHermesShrineOffer' ||
+      reference.generationKey === 'travelDealRefill'
+    )
+      continue;
+    const rush = hermesShrineRushAction(order, reference.generationKey);
+    if (rush !== undefined) return rush;
+  }
+  return undefined;
 }
 
 /** The visible inventory offer behind one Shrine generation; `null` is an empty slot. */

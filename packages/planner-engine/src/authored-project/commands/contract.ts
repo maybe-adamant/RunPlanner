@@ -169,6 +169,7 @@ function commandContractAddress(
     case 'ReplaceHermesShrineOffer':
     case 'SetHermesShrineOfferDelay':
     case 'SetHermesShrinePurchase':
+    case 'SetHermesShrineRush':
     case 'PurchaseHermesShrineOffer':
     case 'ReplaceHermesShrineTravelDealRefill':
       return command.occurrence;
@@ -176,7 +177,6 @@ function commandContractAddress(
     case 'UnplaceGeneratedDelivery':
     case 'RemoveRoomAction':
     case 'MoveRoomAction':
-    case 'SetHermesShrinePurchaseRush':
     case 'ReplaceRerollReward':
     case 'ReplaceStygianWellRollOffer':
     case 'ReplacePurgingPoolRollSlot':

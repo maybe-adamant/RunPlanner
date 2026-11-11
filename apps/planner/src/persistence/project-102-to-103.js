@@ -1,5 +1,5 @@
 import { encodeProjectDocument, parseProjectDocument } from '@run-planner/engine/authored-project';
-import { settleProjectUpgrade } from '@run-planner/engine/project-migration';
+import { settleProjectUpgrade, splitShrineRush } from '@run-planner/engine/project-migration';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 
 export const SOURCE_SCHEMA_VERSION = 102;
@@ -14,7 +14,13 @@ function record(value, label) {
   return value;
 }
 
-/** Schema 103 keeps schema 102's shape, so the lift changes only the version. */
+/**
+ * The item-model slice transforms, in order: each rewrites the raw lifted plan
+ * into schema 103's shape before the strict parse.
+ */
+const SLICE_TRANSFORMS = [splitShrineRush];
+
+/** Lifts the version, then applies the slice transforms that reshape schema 102's plan. */
 export function liftProjectDocument(value) {
   const source = record(value, 'project document');
   if (source.schemaVersion !== SOURCE_SCHEMA_VERSION)
@@ -32,7 +38,10 @@ export function liftProjectDocument(value) {
     );
   const copy = JSON.parse(JSON.stringify(source));
   delete copy.schemaRevision;
-  return { ...copy, schemaVersion: OUTPUT_SCHEMA_VERSION };
+  return SLICE_TRANSFORMS.reduce((lifted, transform) => transform(lifted), {
+    ...copy,
+    schemaVersion: OUTPUT_SCHEMA_VERSION,
+  });
 }
 
 /**

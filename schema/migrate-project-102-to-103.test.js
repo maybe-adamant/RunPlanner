@@ -48,7 +48,7 @@ describe('schema 102 to 103 migration', () => {
   });
   const migrate = (document) => step.migrateProjectDocument(document, { catalog: engine.catalog });
 
-  it('lifts by the version alone', () => {
+  it('lifts by the version alone a plan without a stored Shrine rush', () => {
     const current = checkpoint('underworld-fg');
     const lifted = step.liftProjectDocument(at102(current));
     assert.equal(lifted.schemaVersion, 103);
@@ -84,6 +84,31 @@ describe('schema 102 to 103 migration', () => {
     }
     // The offline tool runs the same chain.
     assert.deepEqual(migrateProjectDocumentTo(at102(current)), migrate(at102(current)));
+  });
+
+  it('splits a stored Shrine rush into the purchase and its own rush right after it', () => {
+    const current = checkpoint('surface-shrine-travel-deal');
+    // Schema 102 stored a rush as a flag on its purchase.
+    const stored = JSON.parse(JSON.stringify(at102(current)));
+    for (const biome of stored.route.biomes)
+      for (const occurrence of biome.topology?.occurrences ?? []) {
+        const order = occurrence.roomActions.order;
+        const rushed = new Set(
+          order.flatMap((action) =>
+            action.kind === 'rushHermesShrineOffer' ? [action.generationKey] : [],
+          ),
+        );
+        occurrence.roomActions.order = order.flatMap((action) =>
+          action.kind === 'rushHermesShrineOffer'
+            ? []
+            : action.kind === 'purchaseHermesShrineOffer'
+              ? [{ ...action, rushed: rushed.has(action.generationKey) }]
+              : [action],
+        );
+      }
+    assert.ok(JSON.stringify(stored).includes('"rushed":true'));
+    assert.deepEqual(step.liftProjectDocument(stored), current);
+    assert.deepEqual(migrate(stored), current);
   });
 
   it('lifts by the version alone a plan its settlement leaves as it was', () => {

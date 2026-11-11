@@ -1134,7 +1134,6 @@ function importShrinePurchase(
       roomActionAddress(context, biomeKey, occurrenceId, {
         kind: 'purchaseHermesShrineOffer',
         generationKey,
-        rushed: false,
       }),
     ],
     { kind: 'SetHermesShrinePurchase', occurrence: address, generationKey, purchased: false },
@@ -1149,15 +1148,11 @@ function importShrinePurchase(
       record: record(visit.roomIndex),
     });
   if (purchase.delivery !== 'rushed') return;
-  const reference: RoomActionReference = {
-    kind: 'purchaseHermesShrineOffer',
-    generationKey,
-    rushed: false,
-  };
   if (
     !context.applyValid({
-      kind: 'SetHermesShrinePurchaseRush',
-      action: roomActionAddress(context, biomeKey, occurrenceId, reference),
+      kind: 'SetHermesShrineRush',
+      occurrence: address,
+      generationKey,
       rushed: true,
     })
   ) {

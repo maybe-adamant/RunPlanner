@@ -1458,13 +1458,15 @@
                   },
                   {
                     "kind": "purchaseHermesShrineOffer",
-                    "generationKey": "initial:first",
-                    "rushed": true
+                    "generationKey": "initial:first"
+                  },
+                  {
+                    "kind": "rushHermesShrineOffer",
+                    "generationKey": "initial:first"
                   },
                   {
                     "kind": "purchaseHermesShrineOffer",
-                    "generationKey": "initial:secondLeft",
-                    "rushed": false
+                    "generationKey": "initial:secondLeft"
                   },
                   {
                     "kind": "interactAcquisitionEntry",
@@ -2410,13 +2412,15 @@
                   },
                   {
                     "kind": "purchaseHermesShrineOffer",
-                    "generationKey": "initial:first",
-                    "rushed": true
+                    "generationKey": "initial:first"
+                  },
+                  {
+                    "kind": "rushHermesShrineOffer",
+                    "generationKey": "initial:first"
                   },
                   {
                     "kind": "purchaseHermesShrineOffer",
-                    "generationKey": "initial:secondLeft",
-                    "rushed": false
+                    "generationKey": "initial:secondLeft"
                   },
                   {
                     "kind": "interactAcquisitionEntry",

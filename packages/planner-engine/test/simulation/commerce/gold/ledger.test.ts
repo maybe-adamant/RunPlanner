@@ -97,28 +97,29 @@ describe('gold prices', () => {
     ).toEqual([23]);
   });
 
-  it('rounds a Shrine order twice and charges a rush the impatience price at the repriced shop', () => {
-    const heal = (delay: number, rushed: boolean): PurchasePriceVenue => ({
+  it('rounds a Shrine order twice and charges a later rush the impatience surcharge at the repriced shop', () => {
+    const heal = (delay: number, stage: 'order' | 'rush'): PurchasePriceVenue => ({
       kind: 'hermesShrine',
       itemKey: 'HealBigDrop',
       delay,
-      rushed,
+      stage,
     });
     expect(
       prices([
         // round(90 x 1.2)
-        purchase(heal(2, false)),
+        purchase(heal(2, 'order')),
         // round(90 x 0.6)
-        purchase(heal(8, false)),
+        purchase(heal(8, 'order')),
         // round(round(90 x 1.4) x 0.9) = round(113.4)
-        purchase(heal(5, false), { vowRank: 1 }),
-        // Ordered and rushed without Travel Deal: round(90 x 1.5).
-        purchase(heal(2, true)),
-        // Common Travel Deal: order round(round(85.5) x 1.2) = 103, rush 135 - 108.
-        purchase(heal(2, true), { first: true, travelDeal: 'Common' }),
-        purchase(heal(2, false), { first: true, travelDeal: 'Common' }),
+        purchase(heal(5, 'order'), { vowRank: 1 }),
+        // A rush without Travel Deal: round(90 x 1.5) - 108.
+        purchase(heal(2, 'rush')),
+        // Travel Deal discounts only the order: the rush is still 135 - 108.
+        purchase(heal(2, 'rush'), { first: true, travelDeal: 'Common' }),
+        // Common Travel Deal: order round(round(85.5) x 1.2) = 103.
+        purchase(heal(2, 'order'), { first: true, travelDeal: 'Common' }),
       ]),
-    ).toEqual([108, 54, 113, 135, 130, 103]);
+    ).toEqual([108, 54, 113, 27, 27, 103]);
   });
 
   it('prices a rolled Well item over its roll, its end amounts half as likely', () => {

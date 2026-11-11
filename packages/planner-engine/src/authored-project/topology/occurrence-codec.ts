@@ -57,6 +57,7 @@ import { decodeGeneratedEncounterCustomization } from '../room-state/decoding/ge
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import {
   hermesShrinePurchaseAction,
+  hermesShrineRushAction,
   isDeliveryFlushHost,
   offerFor,
   parseHermesShrineDeliveryEntryKey,
@@ -345,6 +346,14 @@ function assertHermesShrineDeliveryActionClosure(
       (offerFor(shrine, reference.generationKey) ?? null) === null
     )
       failProjectDocument(path, 'Shrine purchase actions require a stocked Shrine offer');
+  // A rush is an interaction with a bought item; one ordered before its
+  // purchase is kept with its ordering finding.
+  for (const reference of roomActions.order)
+    if (
+      reference.kind === 'rushHermesShrineOffer' &&
+      hermesShrinePurchaseAction(roomActions.order, reference.generationKey) === undefined
+    )
+      failProjectDocument(path, 'Shrine rush actions require their purchase');
   const finalPrebossHost = isDeliveryFlushHost(catalog.rooms.byKey[source.gameName], routePosition);
   for (const reference of roomActions.order) {
     if (
@@ -368,13 +377,13 @@ function assertHermesShrineDeliveryActionClosure(
         path,
         'cross-occurrence Shrine deliveries must preserve their due encounter phase',
       );
-    // A rushed item is optional loot: its purchase may have no ranked pickup,
-    // but a same-room pickup always belongs to one rushed purchase action.
+    // A rushed item is optional loot: its rush may have no ranked pickup,
+    // but a same-room pickup always belongs to one rush action.
     if (
       sourceIsCurrent &&
-      hermesShrinePurchaseAction(roomActions.order, parsed.generationKey)?.rushed !== true
+      hermesShrineRushAction(roomActions.order, parsed.generationKey) === undefined
     )
-      failProjectDocument(path, 'same-room Shrine delivery actions require their rushed purchase');
+      failProjectDocument(path, 'same-room Shrine delivery actions require their rush');
   }
 }
 

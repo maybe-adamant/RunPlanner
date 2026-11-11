@@ -695,17 +695,14 @@ describe('spawned loot', () => {
     });
   });
 
-  it('lists a rushed Shrine item under its purchase in the Shrine’s own room', () => {
+  it('lists a rushed Shrine item under its rush in the Shrine’s own room', () => {
     const { spawned } = loot(
       loadSurfaceShrineTravelDealCheckpoint(),
       'N',
       'surface-n-preboss:postboss',
     );
     expect(actionSpawns(spawned)).toEqual([
-      [
-        'purchaseHermesShrineOffer',
-        [expect.stringMatching(/^hermesShrineDelivery optional #\d+$/)],
-      ],
+      ['rushHermesShrineOffer', [expect.stringMatching(/^hermesShrineDelivery optional #\d+$/)]],
     ]);
     expect(spawned.moments).toEqual([]);
   });
@@ -810,6 +807,11 @@ describe('spawned loot', () => {
       kind: 'PurchaseHermesShrineOffer',
       occurrence: shrine,
       generationKey: 'initial:first',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrineRush',
+      occurrence: shrine,
+      generationKey: 'initial:first',
       rushed: true,
     });
     // Its other offers unset, the walk stops at the room's Overview, before the purchase.
@@ -826,7 +828,7 @@ describe('spawned loot', () => {
       });
     // Rushing places no pickup: the item is listed for the owner to take.
     expect(actionSpawns(loot(project, 'O', combat02).spawned)).toEqual([
-      ['purchaseHermesShrineOffer', ['hermesShrineDelivery optional unplaced:InsertRoomAction']],
+      ['rushHermesShrineOffer', ['hermesShrineDelivery optional unplaced:InsertRoomAction']],
     ]);
   });
 });

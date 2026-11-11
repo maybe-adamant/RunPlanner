@@ -195,6 +195,7 @@ function objectOf(
         owner: createInfernalContractPedestalAddress(biome, occurrence.occurrenceId),
       });
     case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer':
       return own('hermesShrine');
     case 'purchaseStygianWellOffer':
     case 'rerollStygianWell':
@@ -254,17 +255,10 @@ function purchaseReference(command: PositionedCommand): RoomActionReference {
     case 'SetStygianWellPurchase':
       return frozen({ kind: 'purchaseStygianWellOffer', generationKey: command.generationKey });
     case 'SetHermesShrinePurchase':
-      return frozen({
-        kind: 'purchaseHermesShrineOffer',
-        generationKey: command.generationKey,
-        rushed: false,
-      });
     case 'PurchaseHermesShrineOffer':
-      return frozen({
-        kind: 'purchaseHermesShrineOffer',
-        generationKey: command.generationKey,
-        rushed: command.rushed,
-      });
+      return frozen({ kind: 'purchaseHermesShrineOffer', generationKey: command.generationKey });
+    case 'SetHermesShrineRush':
+      return frozen({ kind: 'rushHermesShrineOffer', generationKey: command.generationKey });
     case 'PlaceHermesShrineDelivery':
     case 'PlaceClockedTraitPickup':
       return frozen({
@@ -297,7 +291,7 @@ interface ObjectPurchase {
 /**
  * The purchases a room's objects offer that are not yet rows: a World Shop's
  * unbought items and live Travel Deal item, a Shrine's unbought items to buy
- * or rush, a Well's unbought stocked items, and an uncollected Pedestal, which
+ * and bought ones to rush, a Well's unbought stocked items, and an uncollected Pedestal, which
  * only appends.
  */
 function objectPurchases(
@@ -353,16 +347,24 @@ function objectPurchases(
           },
         ]),
   ];
-  for (const { offer, candidate } of shrineItems)
-    for (const command of [offer.buy, offer.rush]) {
-      if (offer.rewardType !== null) positioned('hermesShrine', command);
-      // A blank refill is stocked by the purchase; its positions do not depend on the reward.
-      else if (candidate !== undefined)
-        positioned('hermesShrine', command, 'travelDealItem', {
-          ...command,
-          rewardType: candidate,
-        });
-    }
+  for (const { offer, candidate } of shrineItems) {
+    const command = offer.buy;
+    if (offer.rewardType !== null) positioned('hermesShrine', command);
+    // A blank refill is stocked by the purchase; its positions do not depend on the reward.
+    else if (candidate !== undefined)
+      positioned('hermesShrine', command, 'travelDealItem', {
+        ...command,
+        rewardType: candidate,
+      });
+  }
+  // A bought item's rush, wherever its rush row may enter.
+  for (const { rush } of shrine?.rushes ?? [])
+    positioned('hermesShrine', {
+      kind: rush.kind,
+      occurrence: rush.occurrence,
+      generationKey: rush.generationKey,
+      rushed: rush.rushed,
+    });
   const pedestal = interactions?.championItem?.collect;
   if (pedestal !== undefined && 'command' in pedestal)
     purchases.push(
