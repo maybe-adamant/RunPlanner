@@ -41,6 +41,7 @@ import {
   pBiome,
   pOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
+import { replaceTestPlacedItem } from '@run-planner/test-fixtures/shared';
 import { createApplication } from '@planner/composition/createApplication';
 
 const combat10Reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
@@ -104,12 +105,12 @@ describe('application editor-session reconciliation', () => {
         kind: 'hermesShrineOffer',
         generationKey: 'initial:secondLeft',
       });
-      let source = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      let source = replaceTestPlacedItem(loadSurfaceNOProject(), {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
         value: { rewardType: 'MaxHealthDropBig' },
       });
-      source = applyProjectCommand(source, catalog, {
+      source = replaceTestPlacedItem(source, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat01')),
         value: { rewardType: 'SpellDrop' },

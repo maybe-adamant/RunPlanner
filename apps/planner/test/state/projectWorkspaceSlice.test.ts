@@ -66,6 +66,7 @@ import {
   echoShopRows,
   swapEchoAway,
 } from '@planner-test/support/removed-actions';
+import { withItemContent } from '@planner-test/support/room-action-content';
 
 function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>
@@ -499,18 +500,19 @@ describe('project workspace application state', () => {
         encounterPhaseKey: 'Encounter',
       }),
     );
-    const boss = holders(presentProject(store.getState()))?.find(
-      (occurrence) => occurrence.gameName === 'N_Boss01',
-    );
+    const placed = presentProject(store.getState());
+    const boss = holders(placed)?.find((occurrence) => occurrence.gameName === 'N_Boss01');
     expect(boss?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]).toEqual(
       retained,
     );
-    expect(boss?.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
-      entryKey,
-      encounterPhaseKey: 'Encounter',
-    });
+    expect(boss?.roomActions.order).toContainEqual(
+      withItemContent(placed, createOccurrenceAddress(nBiome, boss!.occurrenceId), {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey,
+        encounterPhaseKey: 'Encounter',
+      }),
+    );
     expect(dueFinding()).toBeUndefined();
 
     store.dispatch(authoredProjectUndoRequested());

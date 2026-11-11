@@ -43,6 +43,8 @@ import {
   collectTestRequiredItems,
   editTestRoomActionOrder,
   hubVisitActions,
+  replaceTestPlacedItem,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHProject,
@@ -337,7 +339,7 @@ function staleTravelDealShopProject(): {
       selectedOptionKey: 'option1',
     },
   });
-  document = applyProjectCommand(document, catalog, {
+  document = replaceTestPlacedItem(document, {
     kind: 'ReplaceIncomingReward',
     reward: incoming,
     value: { rewardType: 'HermesUpgrade' },
@@ -543,7 +545,8 @@ describe('workspace inspector destinations', () => {
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
     let document = createUnderworldFWellCheckpoint(false);
-    document = applyProjectCommand(document, catalog, {
+    // The restocked slot's purchase goes with its old item; the new item is bought below.
+    document = settleTestEdit(document, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: owner,
       slotKey: 'secondLeft',
@@ -1461,7 +1464,7 @@ describe('workspace inspector destinations', () => {
       inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
       selectedRailKey: sideParentVisit.marker.focusKey,
     });
-    const sideProject = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    const sideProject = replaceTestPlacedItem(loadSurfaceNOPQProject(), {
       kind: 'ReplaceIncomingReward',
       reward: sideReward,
       value: { rewardType: 'StackUpgrade' },

@@ -16,6 +16,7 @@ import {
 import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { goldenFBiome, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import { presentFinding } from '@planner/projections/evaluationProjection';
+import { replaceTestPlacedItem } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 
 const shopId = createOccurrenceId('zagreus-contract-preboss-shop');
@@ -158,7 +159,8 @@ describe('Contract pedestal editor', () => {
   });
 
   it('resolves a collected Mystery item on the Timeline', () => {
-    let project = applyProjectCommand(loadUnderworldZagreusContractCheckpoint(), catalog, {
+    // The restocked Pedestal's Mystery item is taken again.
+    let project = replaceTestPlacedItem(loadUnderworldZagreusContractCheckpoint(), {
       kind: 'ReplaceInfernalContractPedestalOffer',
       pedestal: shopPedestal,
       value: { rewardType: 'BlindBoxLoot' },

@@ -21,6 +21,9 @@ import {
   decodeProjectDocument,
   semanticAddressKey,
   roomActionKey,
+  type BiomeAddress,
+  type OccurrenceId,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -83,8 +86,23 @@ import {
 } from '@planner-test/support/occurrence-workbench';
 
 import { hintOf, queryByHint } from '@planner-test/support/hints';
+import { withItemContents } from '@planner-test/support/room-action-content';
 
 /** An element's text as read aloud: icons by their names, tags after a separator. */
+/** The references as the engine records them for the room's items in the view's present project. */
+function recordedIn(
+  view: ReturnType<typeof renderOccurrenceWorkbench>,
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+  references: readonly RoomActionReference[],
+): readonly RoomActionReference[] {
+  return withItemContents(
+    view.application.store.getState().projectWorkspace.history!.present,
+    createOccurrenceAddress(biome, occurrenceId),
+    references,
+  );
+}
+
 function spokenText(element: Element): string {
   const parts: string[] = [];
   const walk = (node: Node): void => {
@@ -669,11 +687,11 @@ describe('OccurrenceRoomActions', () => {
           reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
         ),
       ).toEqual(['Cage01', 'Cage02', 'Cage03']);
-      expect(order?.[2]).toEqual({
-        groupKey: 'cages',
-        kind: 'interactLocalReward',
-        slotKey: 'cage1',
-      });
+      expect(order?.[2]).toEqual(
+        recordedIn(view, goldenHBiome, occurrenceId, [
+          { groupKey: 'cages', kind: 'interactLocalReward', slotKey: 'cage1' },
+        ])[0],
+      );
     });
     expect(within(actions).getByRole('region', { name: 'Optional actions' })).toBeTruthy();
 
@@ -1072,11 +1090,11 @@ describe('OccurrenceRoomActions', () => {
           'H',
           occurrenceId,
         )?.[0],
-      ).toEqual({
-        groupKey: 'optionalRewards',
-        kind: 'interactLocalReward',
-        slotKey: 'optional1',
-      }),
+      ).toEqual(
+        recordedIn(view, goldenHBiome, occurrenceId, [
+          { groupKey: 'optionalRewards', kind: 'interactLocalReward', slotKey: 'optional1' },
+        ])[0],
+      ),
     );
   });
 
@@ -1140,17 +1158,17 @@ describe('OccurrenceRoomActions', () => {
         .getState()
         .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions.order;
-    await sell(new RegExp(`^Sell ${leftTraitLabel}`));
-    await waitFor(() =>
-      expect(poolActionOrder()).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
-    );
-    await sell(/^Sell /);
-    const sold = [
+    const poolActionKeys = () => poolActionOrder()?.map(roomActionKey);
+    const sold = recordedIn(view, goldenFBiome, postbossId, [
       { kind: 'useFountain' },
       { kind: 'interactKeepsakeRack' },
       { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
       { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
-    ];
+    ]);
+    const leftSaleRow = sold[2]!;
+    await sell(new RegExp(`^Sell ${leftTraitLabel}`));
+    await waitFor(() => expect(poolActionOrder()).toContainEqual(leftSaleRow));
+    await sell(/^Sell /);
     await waitFor(() => expect(poolActionOrder()).toEqual(sold));
 
     openRoomTab('Room Timeline');
@@ -1172,9 +1190,8 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Pool of Purging Offer 1 Item' }));
     await view.user.click(screen.getByRole('option', { name: 'Unresolved' }));
-    await waitFor(() =>
-      expect(poolActionOrder()).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
-    );
+    // Unpinning the slot refines nothing away: the sale keeps the trait it was placed for.
+    await waitFor(() => expect(poolActionOrder()).toContainEqual(leftSaleRow));
 
     const leftSale = createRoomActionAddress(
       goldenFBiome,
@@ -1191,12 +1208,7 @@ describe('OccurrenceRoomActions', () => {
     await view.user.click(
       within(stale).getByRole('button', { name: 'Remove Sell left Pool trait from timeline' }),
     );
-    await waitFor(() =>
-      expect(poolActionOrder()).not.toContainEqual({
-        kind: 'sellPurgingPoolTrait',
-        slotKey: 'left',
-      }),
-    );
+    await waitFor(() => expect(poolActionKeys()).not.toContain(roomActionKey(leftSaleRow)));
     expect(
       view.application.store
         .getState()
@@ -1706,10 +1718,12 @@ describe('OccurrenceRoomActions', () => {
         'F',
         occurrenceId,
       ),
-    ).toEqual([
-      { kind: 'interactShopOffer', offerKey: 'Minor' },
-      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
-    ]);
+    ).toEqual(
+      recordedIn(view, goldenFBiome, occurrenceId, [
+        { kind: 'interactShopOffer', offerKey: 'Minor' },
+        { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+      ]),
+    );
     const order = () =>
       occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history!.present,
@@ -1718,14 +1732,19 @@ describe('OccurrenceRoomActions', () => {
         occurrenceId,
       );
     await view.user.click(screen.getByRole('button', { name: 'Remove Buy Heal from timeline' }));
-    expect(order()).toEqual([{ kind: 'interactShopOffer', offerKey: 'Minor' }]);
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(order()).toEqual([
+    const minorOnly = recordedIn(view, goldenFBiome, occurrenceId, [
       { kind: 'interactShopOffer', offerKey: 'Minor' },
-      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
     ]);
+    expect(order()).toEqual(minorOnly);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(order()).toEqual(
+      recordedIn(view, goldenFBiome, occurrenceId, [
+        { kind: 'interactShopOffer', offerKey: 'Minor' },
+        { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+      ]),
+    );
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
-    expect(order()).toEqual([{ kind: 'interactShopOffer', offerKey: 'Minor' }]);
+    expect(order()).toEqual(minorOnly);
   });
 
   it('reuses the ranked pointer language for Room Action peers and keeps unranked actions below a boundary', async () => {
@@ -1796,10 +1815,12 @@ describe('OccurrenceRoomActions', () => {
           'F',
           occurrenceId,
         ),
-      ).toEqual([
-        { kind: 'interactShopOffer', offerKey: 'Minor' },
-        { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
-      ]),
+      ).toEqual(
+        recordedIn(view, goldenFBiome, occurrenceId, [
+          { kind: 'interactShopOffer', offerKey: 'Minor' },
+          { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+        ]),
+      ),
     );
     expect(document.querySelector('.room-action-drag-preview')).toBeNull();
   });
@@ -1833,11 +1854,13 @@ describe('OccurrenceRoomActions', () => {
     expect(options).toEqual(['Buy Apollo', 'Buy Max Magick', 'Buy Travel Deal item']);
     expect(options).not.toContain('Buy Heal');
     await view.user.click(screen.getByRole('option', { name: 'Buy Travel Deal item' }));
-    expect(order()?.at(-1)).toEqual(reference);
+    expect(order()?.at(-1)).toEqual(recordedIn(view, goldenFBiome, shopId, [reference])[0]);
     const stocked = order()?.length ?? 0;
     await pickRoomObjectAction(view.user, 'World Shop', 'Buy Max Magick');
     expect(order()).toHaveLength(stocked + 1);
-    expect(order()?.at(-1)).toEqual({ kind: 'interactShopOffer', offerKey: 'Minor' });
+    expect(order()?.at(-1)).toEqual(
+      recordedIn(view, goldenFBiome, shopId, [{ kind: 'interactShopOffer', offerKey: 'Minor' }])[0],
+    );
   });
 
   it('stocks and buys a blank Travel Deal item in one pick from the World Shop entry', async () => {
@@ -1872,11 +1895,11 @@ describe('OccurrenceRoomActions', () => {
     expect(room().roomActions.order).toHaveLength(before);
     await view.user.click(screen.getAllByRole('option')[0]!);
     expect(room().roomActions.order).toHaveLength(before + 1);
-    expect(room().roomActions.order.at(-1)).toEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'roomExit',
-      entryKey: 'travelDealRefill',
-    });
+    expect(room().roomActions.order.at(-1)).toEqual(
+      recordedIn(view, goldenFBiome, shopId, [
+        { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: 'travelDealRefill' },
+      ])[0],
+    );
     const state = room().state;
     expect(state.kind === 'shop' && state.shop?.travelDealRefill?.optionKey).toEqual(
       expect.any(String),

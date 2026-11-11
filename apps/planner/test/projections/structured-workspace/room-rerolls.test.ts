@@ -14,6 +14,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/underworld';
+import { replaceTestPlacedItem } from '@run-planner/test-fixtures/shared';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   requireWorkspaceBiome,
@@ -89,14 +90,19 @@ async function possibleRewards(resolver: WorkspaceRewardOfferResolver) {
     .map((item) => item.value);
 }
 
-/** Appends a press through the bound list, with the first reward its picker offers. */
-async function append(project: ProjectDocument, targetKey: string, skip = 0) {
+/** The bound list's command appending a press, with the first reward its picker offers. */
+async function appendCommand(project: ProjectDocument, targetKey: string, skip = 0) {
   const { interaction } = rerollsOf(projectStructuredWorkspaceFixture(project));
   const rewards = (await possibleRewards(interaction.pendingReward(targetKey))).filter(
     (reward) => reward.payload === undefined,
   );
   const reward = rewards[skip] as ResolvedRewardOffer;
-  return applyProjectCommand(project, catalog, interaction.appendIntent(targetKey, reward).command);
+  return interaction.appendIntent(targetKey, reward).command;
+}
+
+/** Appends a press through the bound list, with the first reward its picker offers. */
+async function append(project: ProjectDocument, targetKey: string, skip = 0) {
+  return applyProjectCommand(project, catalog, await appendCommand(project, targetKey, skip));
 }
 
 /** A room press's action address. */
@@ -332,7 +338,11 @@ describe('Room door rerolls', () => {
 
   it("collects a rerolled door's final reward with its own details", async () => {
     // Door 1 rerolled into a Pom: the next room collects the Pom and resolves it.
-    const project = await append(base, doorKey(doorTo), 1);
+    const project = replaceTestPlacedItem(
+      base,
+      await appendCommand(base, doorKey(doorTo), 1),
+      createOccurrenceAddress(f, doorTo),
+    );
     const reroll = project.route.biomes[0]!.topology!.occurrences.find(
       (occurrence) => occurrence.occurrenceId === source,
     )!.roomActions.order.find((action) => action.kind === 'reroll');

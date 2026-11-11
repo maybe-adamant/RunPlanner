@@ -15,6 +15,7 @@ import {
   requireWorkspaceBiome,
 } from '@planner-test/fixtures/structuredWorkspace';
 import type { WorkspaceRoomFeature } from '@planner/projections/structured-workspace';
+import { withItemContent } from '@planner-test/support/room-action-content';
 
 const f = createBiomeAddress('Underworld', 'F');
 const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
@@ -353,9 +354,9 @@ describe('Pool of Purging Interact', () => {
       traitKey,
       index: order(blank).length,
     });
-    expect(order(apply(blank, command)).at(-1)).toEqual({
-      kind: 'sellPurgingPoolTrait',
-      slotKey: 'left',
-    });
+    const sold = apply(blank, command);
+    expect(order(sold).at(-1)).toEqual(
+      withItemContent(sold, room, { kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
+    );
   });
 });

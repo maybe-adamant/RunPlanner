@@ -45,6 +45,7 @@ import {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   replaceTestShopOfferActions,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGAnomalyProject,
@@ -97,6 +98,7 @@ import {
 
 import { getAllByHint, getByHint, hintOf, queryByHint } from '@planner-test/support/hints';
 import { dialogFinding } from '@planner-test/support/editor-dialog';
+import { withItemContent, withItemContents } from '@planner-test/support/room-action-content';
 
 afterEach(() => {
   cleanup();
@@ -1520,10 +1522,16 @@ describe('OccurrenceEncounterWorkbench', () => {
         traitOffersByAcquisitionRole: { hiddenSource: null },
       }),
     );
-    expect(authoredOccurrence()?.roomActions.order).toEqual([
-      { kind: 'interactEncounter', phaseKey: 'Encounter' },
-      { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
-    ]);
+    expect(authoredOccurrence()?.roomActions.order).toEqual(
+      withItemContents(
+        view.application.store.getState().projectWorkspace.history!.present,
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        [
+          { kind: 'interactEncounter', phaseKey: 'Encounter' },
+          { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
+        ],
+      ),
+    );
 
     const hiddenSource = workspaceProjection(view.application).interactions.traitOffers.get(
       semanticAddressKey(createTraitOfferAddress(mysteryBoon, 'hiddenSource')),
@@ -1573,11 +1581,13 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     ).toBe(false);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: narcissusSite,
-      entryKey: 'mysteryBoon',
-    });
+    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual(
+      withItemContent(
+        view.application.store.getState().projectWorkspace.history!.present,
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
+      ),
+    );
     expect(hasAcquiredMysteryBoon()).toBe(true);
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     expect(hasAcquiredMysteryBoon()).toBe(false);
@@ -1712,11 +1722,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(queryTimelineRow(/^Collect Psyche/)).toBeNull();
     expect(screen.queryByRole('button', { name: /^How to take Psyche/ })).toBeNull();
     await addOptionalAction(view.user, /^Psyche/);
-    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: narcissusSite,
-      entryKey: 'psyche',
-    });
+    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual(
+      withItemContent(
+        view.application.store.getState().projectWorkspace.history!.present,
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'psyche' },
+      ),
+    );
     const orderedPsycheRow = timelineRow(/^Collect Psyche/);
     expect(within(orderedPsycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
     // The Time Piece conversion is the row's verb choice.
@@ -1808,19 +1820,21 @@ describe('OccurrenceEncounterWorkbench', () => {
     // Adding appends the pickup at its last legal position.
     await addOptionalAction(view.user, /^Max Magick/);
 
+    const present = view.application.store.getState().projectWorkspace.history!.present;
     expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'G')
+      present.route?.biomes
+        .find((biome) => biome.biomeKey === 'G')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         )
         ?.roomActions.order.at(-1),
-    ).toEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: narcissusSite,
-      entryKey: 'maxMana',
-    });
+    ).toEqual(
+      withItemContent(present, createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId), {
+        kind: 'interactAcquisitionEntry',
+        siteKey: narcissusSite,
+        entryKey: 'maxMana',
+      }),
+    );
   });
 
   it('keeps the incoming reward in the room banner across tabs without another editor', () => {
@@ -2296,27 +2310,27 @@ describe('OccurrenceEncounterWorkbench', () => {
 
   it('keeps Ship offer identity on the wheel and acquisition children on its Room Action row', () => {
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNOPQProject(), {
       kind: 'ReplaceRewardWheelStore',
       wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
       storeKey: 'MetaProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
       encounterCount: 3,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelStore',
       wheel,
       storeKey: 'RunProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
       value: {
@@ -2324,12 +2338,13 @@ describe('OccurrenceEncounterWorkbench', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelPicked',
       wheel,
       pickedOfferIndex: 1,
     });
-    project = authorLegalTraitOffers(project);
+    // Each swap takes its placed pickup with it; the new rewards are picked up again.
+    project = authorTestTraitsAndRequiredItems(project);
 
     const view = renderOccurrenceWorkbench(
       project,
@@ -2647,22 +2662,22 @@ describe('OccurrenceEncounterWorkbench', () => {
       'wheel1',
       'offer2',
     );
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNOPQProject(), {
       kind: 'ReplaceRewardWheelStore',
       wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
       storeKey: 'MetaProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelStore',
       wheel,
       storeKey: 'RunProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
       value: {
@@ -2670,7 +2685,8 @@ describe('OccurrenceEncounterWorkbench', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    project = authorLegalTraitOffers(project);
+    // Each swap takes its placed pickup with it; the new rewards are picked up again.
+    project = authorTestTraitsAndRequiredItems(project);
     const view = renderOccurrenceWorkbench(
       project,
       'Surface',

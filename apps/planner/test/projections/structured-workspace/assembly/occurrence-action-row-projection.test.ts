@@ -1,6 +1,7 @@
 import {
   authorLegalTraitOffers,
   collectTestRequiredItems,
+  replaceTestPlacedItem,
   purchaseTestHermesShrineOffer,
   testHermesShrinePurchaseAction,
 } from '@run-planner/test-fixtures/shared';
@@ -1628,13 +1629,13 @@ describe('shop-like purchase rows', () => {
   const shrineOwner = createOccurrenceAddress(nBiome, shrineId);
 
   function travelDealShrine(rushed: boolean): ProjectDocument {
-    let project = applyProjectCommand(withFourthBoardGodBeforeCombat05(loadSurfaceNO()), catalog, {
+    let project = replaceTestPlacedItem(withFourthBoardGodBeforeCombat05(loadSurfaceNO()), {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat05')),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
     });
     const hermes = createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat09'));
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: hermes,
       value: { rewardType: 'HermesUpgrade' },
@@ -1960,7 +1961,8 @@ describe('room Timeline block', () => {
       value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
     project = authorLegalTraitOffers(project);
-    return applyProjectCommand(project, catalog, {
+    // The swapped refill is bought again, now with no offer authored.
+    return replaceTestPlacedItem(project, {
       kind: 'ReplaceShopOffer',
       offer: refill,
       value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
