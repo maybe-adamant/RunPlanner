@@ -609,6 +609,12 @@ export function assembleWorkspaceOccurrence(
   const lockedDoorsProduct = input.facts.detailsActive
     ? input.roomObjectInteractions?.(address)?.lockedDoors
     : undefined;
+  const unlockEncounters = assembleUnlockExitEncounters(
+    input.catalog,
+    address,
+    occurrence,
+    lockedDoorsProduct,
+  );
   const lockedDoors = !input.facts.detailsActive
     ? undefined
     : assembleLockedDoors({
@@ -617,12 +623,8 @@ export function assembleWorkspaceOccurrence(
         address,
         markerDestinations: input.markerDestinations,
         product: lockedDoorsProduct,
+        fights: unlockEncounters,
       });
-  const unlockEncounters = assembleUnlockExitEncounters(
-    input.catalog,
-    occurrence,
-    lockedDoorsProduct,
-  );
   // The switch's use row carries the fight's outcome control; a door's press, its fight.
   const switchOutcome = challengeSwitch?.outcome;
   const assembledRoomActions =

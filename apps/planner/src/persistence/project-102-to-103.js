@@ -1,5 +1,6 @@
 import { encodeProjectDocument, parseProjectDocument } from '@run-planner/engine/authored-project';
 import {
+  moveLockedDoorFightOntoDoor,
   moveWellPoolRollsOntoObjects,
   settleProjectUpgrade,
 } from '@run-planner/engine/project-migration';
@@ -18,16 +19,19 @@ function record(value, label) {
 }
 
 /**
- * Raw transforms that reshape a schema 102 plan into schema 103's shape, in
- * order. Each is lossless, leaves a plan already in that shape as it is, and
- * runs before strict decoding.
+ * Schema 103's item-model moves, in order: each a pure, lossless transform of
+ * the raw plan from row state onto its item, which leaves a plan already in
+ * that shape as it is and runs before strict decoding. The moves touch
+ * disjoint fields, and any that adds rows to an order runs last.
  */
-const SHAPE_TRANSFORMS = Object.freeze([
+const ITEM_MODEL_TRANSFORMS = Object.freeze([
   // Well and Pool rolls move from their reroll actions onto the Well and Pool.
   moveWellPoolRollsOntoObjects,
+  // A locked door's fight moves from its press onto the door.
+  moveLockedDoorFightOntoDoor,
 ]);
 
-/** The version lift with schema 103's shape transforms; the catalog is for transforms that read it. */
+/** The version lift with schema 103's item-model moves; the catalog is for moves that read it. */
 export function liftProjectDocument(value, catalog) {
   const source = record(value, 'project document');
   if (source.schemaVersion !== SOURCE_SCHEMA_VERSION)
@@ -45,7 +49,7 @@ export function liftProjectDocument(value, catalog) {
     );
   const copy = JSON.parse(JSON.stringify(source));
   delete copy.schemaRevision;
-  return SHAPE_TRANSFORMS.reduce((document, transform) => transform(document, catalog), {
+  return ITEM_MODEL_TRANSFORMS.reduce((document, transform) => transform(document, catalog), {
     ...copy,
     schemaVersion: OUTPUT_SCHEMA_VERSION,
   });

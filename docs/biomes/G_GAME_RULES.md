@@ -119,10 +119,10 @@ is too late for the room's own doors but moves every later room's
 eligibility, including G's early and late combat pools.
 
 The planner authors the observation: a lock host's `lockedExits` lists the
-doors that locked (never the first; never beside a switch), each pressed door
+doors that locked (never the first; never beside a switch), each locked door
+may carry its fight's customization whether pressed or not, each pressed door
 is an optional `unlockExit` action in the doors-open window after the room's
-required actions, carrying its fight's customization, and a reroll of a
-locked door follows its press. The press folds the fight's start and
+required actions, and a reroll of a locked door follows its press. The press folds the fight's start and
 completion, its depth rise and its kill gold; no record, no end effect, no
 reward. Leaving through a door still locked is a finding on the exit
 selection. The lock rolls themselves are chance, never simulated.

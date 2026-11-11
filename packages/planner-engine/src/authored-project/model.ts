@@ -353,13 +353,11 @@ export type RoomActionReference =
 /**
  * Pressing one of the room's locked doors: it starts the door's fight, and
  * once that is fought out the door opens. One per locked exit; the fight's
- * explicit encounter decisions travel with the press, keyed as a room
- * phase's `customizationByPhase` entry.
+ * observed rolls belong to the door, in `customizationByLockedExit`.
  */
 export interface UnlockExitRoomAction {
   readonly kind: 'unlockExit';
   readonly exitKey: string;
-  readonly customization?: Readonly<Record<string, AuthoredEncounterCustomization>>;
 }
 
 /**
@@ -539,6 +537,13 @@ export interface RoomEncounterState {
   readonly nemesisBetOutcomeByPhase: Readonly<Record<string, AuthoredNemesisBetOutcome>>;
   /** Sparse explicit decisions keyed by stable phase and declaration decision key. */
   readonly customizationByPhase?: Readonly<
+    Record<string, Readonly<Record<string, AuthoredEncounterCustomization>>>
+  >;
+  /**
+   * Sparse explicit decisions of each locked door's fight, keyed by the door's
+   * exit key and the fight's decision key; only a door in `lockedExits`.
+   */
+  readonly customizationByLockedExit?: Readonly<
     Record<string, Readonly<Record<string, AuthoredEncounterCustomization>>>
   >;
 }

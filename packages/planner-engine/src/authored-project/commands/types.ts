@@ -672,7 +672,7 @@ export type ChallengeSwitchCommand =
 /** Edits the doors a lock host observed locked and the fights that open them. */
 export type ExtraExitLockCommand =
   | {
-      /** Locks or opens one door; opening it also drops its press. */
+      /** Locks or opens one door; opening it also drops its press and its fight. */
       readonly kind: 'ReplaceLockedExit';
       readonly occurrence: OccurrenceAddress;
       readonly exitKey: string;
@@ -680,11 +680,12 @@ export type ExtraExitLockCommand =
     }
   | {
       /**
-       * One decision of a pressed locked door's fight, as
+       * One decision of a locked door's fight, pressed or not, as
        * `ReplaceEncounterCustomization` for a room phase; null restores native.
        */
-      readonly kind: 'ReplaceUnlockExitCustomization';
-      readonly action: RoomActionSemanticAddress;
+      readonly kind: 'ReplaceLockedExitCustomization';
+      readonly occurrence: OccurrenceAddress;
+      readonly exitKey: string;
       readonly decisionKey: string;
       readonly value: import('../model').AuthoredEncounterCustomization | null;
     };

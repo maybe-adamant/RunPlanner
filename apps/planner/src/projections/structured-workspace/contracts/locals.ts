@@ -106,7 +106,7 @@ export interface WorkspaceEncounterCustomizationInteraction {
         readonly kind:
           | 'ReplaceEncounterCustomization'
           | 'ReplaceChallengeSwitchCustomization'
-          | 'ReplaceUnlockExitCustomization';
+          | 'ReplaceLockedExitCustomization';
       }
     >
   >;

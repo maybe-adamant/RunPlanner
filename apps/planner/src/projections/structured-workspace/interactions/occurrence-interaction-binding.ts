@@ -903,8 +903,9 @@ export function bindOccurrenceLocalInteractions(
             intentFor: (decisionKey, value) =>
               Object.freeze({
                 command: Object.freeze({
-                  kind: 'ReplaceUnlockExitCustomization' as const,
-                  action: encounter.address,
+                  kind: 'ReplaceLockedExitCustomization' as const,
+                  occurrence: encounter.occurrence,
+                  exitKey: encounter.exitKey,
                   decisionKey,
                   value,
                 }),

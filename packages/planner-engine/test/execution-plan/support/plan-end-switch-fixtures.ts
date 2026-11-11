@@ -209,8 +209,12 @@ function composedUnlock(
   );
   if (capability === undefined) throw new Error(`${occurrenceId} has no composable fight`);
   return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceUnlockExitCustomization',
-    action,
+    kind: 'ReplaceLockedExitCustomization',
+    occurrence: createOccurrenceAddress(
+      createBiomeAddress(project.route.routeKey, biomeKey),
+      createOccurrenceId(occurrenceId),
+    ),
+    exitKey,
     decisionKey: capability.decisionKey,
     value: capability.initialize() as never,
   });

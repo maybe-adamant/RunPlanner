@@ -41,6 +41,8 @@ export function assembleLockedDoors(input: {
   readonly address: OccurrenceAddress;
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly product: LockedDoorsInteraction | undefined;
+  /** Each locked door's fight, by its press's action key. */
+  readonly fights: ReadonlyMap<string, WorkspaceUnlockExitEncounter>;
 }):
   | {
       readonly lockedDoors: WorkspaceLockedDoors;
@@ -53,8 +55,13 @@ export function assembleLockedDoors(input: {
   const address = createRoomFeatureAddress(input.address, { kind: 'lockedExits' });
   const interactionKey = semanticAddressKey(address);
   const locked = occurrence.lockedExits ?? [];
-  const doors = (product?.doors ?? exitKeys.map((exitKey) => ({ exitKey }))).map((door) =>
-    Object.freeze({
+  const unpressedFight = (exitKey: string) => {
+    const unlock = product?.unlocks?.find((candidate) => candidate.exitKey === exitKey);
+    return unlock?.append === undefined ? undefined : input.fights.get(unlock.action.actionKey);
+  };
+  const doors = (product?.doors ?? exitKeys.map((exitKey) => ({ exitKey }))).map((door) => {
+    const fight = unpressedFight(door.exitKey);
+    return Object.freeze({
       exitKey: door.exitKey,
       label: doorLabel(door.exitKey),
       locked: locked.includes(door.exitKey),
@@ -63,8 +70,9 @@ export function assembleLockedDoors(input: {
         : 'lock' in door && door.lock !== undefined
           ? { lock: door.lock }
           : {}),
-    }),
-  );
+      ...(fight === undefined ? {} : { fight }),
+    });
+  });
   const toggles: EntryRequirement = Object.freeze({
     kind: 'roomObjectActions' as const,
     owner: input.address,
@@ -116,9 +124,13 @@ export function assembleLockedDoors(input: {
   });
 }
 
-/** Each pressed door's fight, as the engine prepared it at the press, by its press's action key. */
+/**
+ * Each locked door's fight as the engine prepared it, at its press or where
+ * its press would append, by its press's action key.
+ */
 export function assembleUnlockExitEncounters(
   catalog: Catalog,
+  address: OccurrenceAddress,
   occurrence: RoomOccurrence,
   product: LockedDoorsInteraction | undefined,
 ): ReadonlyMap<string, WorkspaceUnlockExitEncounter> {
@@ -131,6 +143,8 @@ export function assembleUnlockExitEncounters(
       unlock.action.actionKey,
       Object.freeze({
         address: unlock.action,
+        occurrence: address,
+        exitKey: unlock.exitKey,
         interactionKey: semanticAddressKey(unlock.action),
         definitionKey: encounter.selectedEncounterDefinitionKey,
         label: encounter.label,

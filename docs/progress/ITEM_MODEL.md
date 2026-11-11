@@ -117,6 +117,23 @@ C5b-1, Well and Pool rolls on their objects (schema 103 shape):
 - A live Well or Pool reroll verb now carries the `reference` of the row its
   command creates.
 
+C5b-2, locked-door fight on the door:
+
+- `UnlockExitRoomAction` is thin (`kind`, `exitKey`); the fight's decisions
+  live in `encounters.customizationByLockedExit[exitKey]`.
+  `ReplaceUnlockExitCustomization {action}` is replaced by
+  `ReplaceLockedExitCustomization {occurrence, exitKey, decisionKey, value}`,
+  accepted for any locked door, pressed or not.
+- `ReplaceLockedExit locked:false` drops that door's fight; removing the press
+  keeps it.
+- The live `lockedDoors.unlocks[].encounter` and
+  `unlockExitEncounterSupportForProjectEvaluationAssembly` now also answer for
+  an unpressed locked door, prepared where its press would append.
+- Run import (`locked-doors.ts`): no change; it locks and presses doors and
+  never authors the fight, so an imported fight stays native. A later fight
+  import authors it with `ReplaceLockedExitCustomization`, before or after the
+  press.
+
 ## Inventory (summary of existence-vs-interaction)
 
 Item identity today is (reward owner address, acquisition role); every

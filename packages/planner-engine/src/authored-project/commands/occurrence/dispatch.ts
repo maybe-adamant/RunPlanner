@@ -1,7 +1,7 @@
 import type { Catalog } from '../../../catalog-schema';
 import { routeErisHost, routeRoomShop } from '../../route-profile';
 import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
-import type { ProjectDocument } from '../../model';
+import type { ProjectDocument, RoomEncounterState } from '../../model';
 
 import type { LocatedBiome } from '../contract';
 import { applyEncounterOccurrenceCommand } from './encounter';
@@ -682,6 +682,10 @@ export function applyOccurrenceCommand(
         : occurrence.roomActions.order.filter(
             (reference) => reference.kind !== 'unlockExit' || reference.exitKey !== command.exitKey,
           );
+      // An opened door is no longer an item: its press and its fight go with it.
+      const encounters = command.locked
+        ? occurrence.encounters
+        : withLockedExitCustomization(occurrence.encounters, command.exitKey, undefined);
       return updateOccurrence(
         document,
         located,
@@ -690,18 +694,15 @@ export function applyOccurrenceCommand(
           ...(exitKeys.length === 0
             ? {}
             : { lockedExits: orderedLockedExits(catalog, occurrence.gameName, exitKeys) }),
+          encounters,
           roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
         }),
       );
     }
-    case 'ReplaceUnlockExitCustomization': {
-      const occurrence = requireOccurrence(located.plan, command.action.occurrenceId, command);
-      const index = occurrence.roomActions.order.findIndex(
-        (reference) => roomActionKey(reference) === command.action.actionKey,
-      );
-      const current = occurrence.roomActions.order[index];
-      if (current?.kind !== 'unlockExit')
-        failCommand(command, 'action does not press a locked door');
+    case 'ReplaceLockedExitCustomization': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      if (!(occurrence.lockedExits ?? []).includes(command.exitKey))
+        failCommand(command, `${command.exitKey} is not locked`);
       if (command.value !== null) {
         const issue = unlockExitCustomizationIssue(
           catalog,
@@ -711,29 +712,25 @@ export function applyOccurrenceCommand(
         );
         if (issue !== undefined) failCommand(command, issue);
       }
-      const decisions: Record<string, AuthoredEncounterCustomization> = {
-        ...(current.customization ?? {}),
-      };
+      const current = occurrence.encounters.customizationByLockedExit?.[command.exitKey];
+      const decisions: Record<string, AuthoredEncounterCustomization> = { ...(current ?? {}) };
       if (command.value === null) delete decisions[command.decisionKey];
       else
         decisions[command.decisionKey] = decodeGeneratedEncounterCustomization(
           command.value,
           command.decisionKey,
         );
-      if (JSON.stringify(decisions) === JSON.stringify(current.customization ?? {}))
-        return document;
-      const order = [...occurrence.roomActions.order];
-      order[index] = Object.freeze({
-        kind: 'unlockExit' as const,
-        exitKey: current.exitKey,
-        ...(Object.keys(decisions).length === 0 ? {} : { customization: Object.freeze(decisions) }),
-      });
+      if (JSON.stringify(decisions) === JSON.stringify(current ?? {})) return document;
       return updateOccurrence(
         document,
         located,
         Object.freeze({
           ...occurrence,
-          roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
+          encounters: withLockedExitCustomization(
+            occurrence.encounters,
+            command.exitKey,
+            Object.keys(decisions).length === 0 ? undefined : Object.freeze(decisions),
+          ),
         }),
       );
     }
@@ -1146,5 +1143,22 @@ function withStygianWellInitialItem(
       }),
       (key) => key === generation,
     ),
+  });
+}
+
+/** The room's encounters with one locked door's fight decisions replaced, or dropped when undefined. */
+function withLockedExitCustomization(
+  encounters: RoomEncounterState,
+  exitKey: string,
+  decisions: Readonly<Record<string, AuthoredEncounterCustomization>> | undefined,
+): RoomEncounterState {
+  const { customizationByLockedExit: previous, ...rest } = encounters;
+  if (decisions === undefined && previous?.[exitKey] === undefined) return encounters;
+  const doors = { ...(previous ?? {}) };
+  if (decisions === undefined) delete doors[exitKey];
+  else doors[exitKey] = decisions;
+  return Object.freeze({
+    ...rest,
+    ...(Object.keys(doors).length === 0 ? {} : { customizationByLockedExit: Object.freeze(doors) }),
   });
 }

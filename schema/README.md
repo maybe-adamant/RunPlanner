@@ -34,16 +34,19 @@ npm run test:schema:migrate
 Schema 103 marks the plans saved after the settlement rules for
 [rows whose context or source is gone](../docs/design/ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
 and [exit capacity](../docs/design/AUTHORED_PROJECT_MODEL.md#exit-capacity)
-covered every edit, and moves what the game rolled from room actions onto the
-objects that hold it. A Well or Pool reroll action keeps only its `rerollId`:
-its pins move to the Well's `rerollOfferKeyBySlot` or the Pool's
-`rerollTraitKeyBySlot` under that id, and every Fateful Twist result, the
-initial roll's and the Travel Deal restock's included, to the Well's
-`twistResultKeyByGeneration` under its generation key. The Well's
-`purchasedGenerationKeys` goes: its purchase actions, which the codec held
-equal to it, are its purchases. The migration accepts schema 102 through its
-final revision 1, lifts the version, moves those rolls (losslessly, before
-strict decoding) and settles the plan once, silently, removing
+covered every edit, and moves row state onto the item that holds it. A Well
+or Pool reroll action keeps only its `rerollId`: its pins move to the Well's
+`rerollOfferKeyBySlot` or the Pool's `rerollTraitKeyBySlot` under that id,
+and every Fateful Twist result, the initial roll's and the Travel Deal
+restock's included, to the Well's `twistResultKeyByGeneration` under its
+generation key. The Well's `purchasedGenerationKeys` goes: its purchase
+actions, which the codec held equal to it, are its purchases. A locked door's
+fight customization moves from its `unlockExit` press to the door, in the
+room's `encounters.customizationByLockedExit` keyed by exit key; the press
+keeps only its `exitKey`. The migration accepts schema 102 through its final
+revision 1, lifts the version, makes those moves (losslessly, before strict
+decoding; a press stood only at a locked door, once per door) and settles the
+plan once, silently, removing
 only what the saved plan shows had its source or context and lost it: stale
 room-action rows; a Gold Gold Gold duplicate that a purchase stands before
 while no Echo produces it; a matured trait drop whose producing trait a walk
@@ -58,7 +61,7 @@ reroll whose reward is gone, and a taken door its room lost; a removal in the
 same settlement, such as a stale purchase's, can still take a refill or
 duplicate with its trigger. Rows the walk does not reach stay untouched. A plan
 that does not decode, or whose settlement throws or faults, keeps the lift
-without settlement. The plan wire's schema pair becomes 103.0.
+with its moves, without settlement. The plan wire's schema pair becomes 103.0.
 
 Revision 102.1 gives every unset position a meaning: a rolled flip, an entry
 the game picks among ties, an anchor object's anchor, a Fields cage, optional
