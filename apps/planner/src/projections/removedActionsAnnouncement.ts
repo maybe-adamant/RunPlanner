@@ -12,7 +12,11 @@ export interface RemovedActionsRoom {
   readonly count: number;
   /** Doors the room lost because it no longer has them. */
   readonly doors: number;
-  /** Items whose recorded rolls and choices the room lost; the items themselves stay or return. */
+  /**
+   * Items whose recorded rolls and choices the room lost: most stay or return as
+   * a new item, while one whose source is gone, such as a delivery whose
+   * purchase or rush was undone, goes with them.
+   */
   readonly items: number;
   /** The room's link, such as "Location 40" with its room name on hover. */
   readonly place: PlaceName;
