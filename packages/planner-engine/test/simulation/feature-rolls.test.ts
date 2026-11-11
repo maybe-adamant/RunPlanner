@@ -6,6 +6,8 @@ import {
   createOccurrenceAddress,
   createRoomActionAddress,
   createRoomFeatureAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   roomActionDomainForOccurrence,
   roomActionKey,
   semanticAddressKey,
@@ -278,7 +280,7 @@ describe('Stygian Well rolls', () => {
     expect(findings(partial)).toEqual([]);
   });
 
-  it('keep a purchase from a replaced or removed roll with its finding', () => {
+  it('keep a purchase from a replaced roll with its finding, and remove one with its roll', () => {
     let project = appendWellReroll(base());
     const secondRight = actionAt({
       kind: 'purchaseStygianWellOffer',
@@ -306,30 +308,49 @@ describe('Stygian Well rolls', () => {
       generationKey: 'r1:healing',
       purchased: true,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveRoomAction',
-      action: wellReroll('r1'),
+    const healing = { kind: 'purchaseStygianWellOffer', generationKey: 'r1:healing' } as const;
+    expect(order(project).map(roomActionKey)).toContain(roomActionKey(healing));
+    const removal: ProjectCommand = { kind: 'RemoveRoomAction', action: wellReroll('r1') };
+    // The removed reroll's pins and the purchases of its roll leave with it.
+    for (const removed of [
+      applyProjectCommand(project, catalog, removal),
+      settle(project, removal),
+    ]) {
+      expect(occurrenceOf(removed).stygianWell?.rerollOfferKeyBySlot).toBeUndefined();
+      expect(order(removed).map(roomActionKey)).not.toContain(roomActionKey(healing));
+      expect(order(removed).map(roomActionKey)).toContain(secondRight.actionKey);
+    }
+    // A reset from before the reroll takes the reroll, its roll's purchase and every row after.
+    const rerollIndex = order(project).findIndex(
+      (reference) => reference.kind === 'rerollStygianWell',
+    );
+    const reset = applyProjectCommand(project, catalog, {
+      kind: 'ResetRoomActionsAfter',
+      occurrence: room,
+      afterActionKey: roomActionKey(order(project)[rerollIndex - 1]!),
     });
-    const healing = actionAt({ kind: 'purchaseStygianWellOffer', generationKey: 'r1:healing' });
-    // The removed reroll's pins leave with it.
-    expect(occurrenceOf(project).stygianWell?.rerollOfferKeyBySlot).toBeUndefined();
-    expect(order(project)).toContainEqual({
-      kind: 'purchaseStygianWellOffer',
-      generationKey: 'r1:healing',
-    });
-    expect(findings(project)).toContainEqual({
+    expect(occurrenceOf(reset).stygianWell?.rerollOfferKeyBySlot).toBeUndefined();
+    expect(order(reset)).toEqual(order(project).slice(0, rerollIndex));
+    // A saved purchase of a roll no longer held stays with its finding, and a
+    // new reroll never takes the id it names.
+    const orphaned = (() => {
+      const raw = JSON.parse(encodeProjectDocument(project));
+      const shop = raw.route.biomes[0].topology.occurrences.find(
+        (candidate: { occurrenceId: string }) => candidate.occurrenceId === postboss,
+      );
+      shop.roomActions.order = shop.roomActions.order.filter(
+        (reference: RoomActionReference) => reference.kind !== 'rerollStygianWell',
+      );
+      delete shop.stygianWell.rerollOfferKeyBySlot;
+      return decodeProjectDocument(raw, catalog);
+    })();
+    expect(findings(orphaned)).toContainEqual({
       code: 'rollOfferUnavailable',
-      origin: semanticAddressKey(healing),
+      origin: semanticAddressKey(actionAt(healing)),
       evidence: { reason: 'missing' },
     });
-    // A new reroll never takes the id the kept purchase names, which stays invalid.
-    const rerolled = appendWellReroll(project);
+    const rerolled = appendWellReroll(orphaned);
     expect(order(rerolled).at(-1)).toMatchObject({ rerollId: 'r2' });
-    expect(findings(rerolled)).toContainEqual({
-      code: 'rollOfferUnavailable',
-      origin: semanticAddressKey(healing),
-      evidence: { reason: 'missing' },
-    });
   });
 
   it('refuse a reroll past the pool and report one with nothing left', () => {
@@ -462,18 +483,22 @@ describe('Pool of Purging rolls', () => {
     });
     expect(order(sold).slice(-2)).toEqual([
       { kind: 'rerollPurgingPool', rerollId: 'r1' },
-      { kind: 'sellPurgingPoolTrait', slotKey: 'right', rollKey: 'r1' },
+      { kind: 'sellPurgingPoolTrait', slotKey: 'right', rollKey: 'r1', content: [traitKey] },
     ]);
     expect(occurrenceOf(sold).purgingPool?.rerollTraitKeyBySlot).toEqual({
       r1: { right: traitKey },
     });
-    // Removing the reroll takes its list with it; the sale keeps its finding.
+    // Removing the reroll takes its list and the list's sales with it.
     const removed = applyProjectCommand(sold, catalog, {
       kind: 'RemoveRoomAction',
       action: poolReroll('r1'),
     });
     expect(occurrenceOf(removed).purgingPool?.rerollTraitKeyBySlot).toBeUndefined();
+    expect(order(removed).map(roomActionKey)).not.toContain(
+      roomActionKey({ kind: 'sellPurgingPoolTrait', slotKey: 'right', rollKey: 'r1' }),
+    );
     expect(findings(sold)).toEqual([]);
+    expect(findings(removed)).toEqual([]);
   });
 
   it('pin and sell a blank initial slot in one edit, and refuse a slot already sold', () => {

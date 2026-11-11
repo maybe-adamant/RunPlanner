@@ -2,6 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import { roomActionContentMatches, roomActionReferenceContent } from '../room-actions/item-content';
 import type { ProjectDocument, RoomActionReference } from '../model';
 import { roomActionKey } from '../room-actions/state';
+import { parseStygianWellGenerationKey } from '../feature-rolls';
 import {
   roomActionDomainForOccurrence,
   scheduleRequiredRoomActions,
@@ -87,6 +88,24 @@ function purchaseShopTravelDealRefill(
     index: occurrence.roomActions.order.length,
   });
   return withChosenIndex(bought, catalog, command);
+}
+
+/**
+ * Whether a row buys or sells from the list a removed Well or Pool reroll
+ * drew: that list is gone with its reroll, so its purchases and sales go too.
+ */
+function boughtFromRemovedRoll(
+  removed: RoomActionReference,
+  reference: RoomActionReference,
+): boolean {
+  if (removed.kind === 'rerollStygianWell')
+    return (
+      reference.kind === 'purchaseStygianWellOffer' &&
+      parseStygianWellGenerationKey(reference.generationKey)?.rollKey === removed.rerollId
+    );
+  if (removed.kind === 'rerollPurgingPool')
+    return reference.kind === 'sellPurgingPoolTrait' && reference.rollKey === removed.rerollId;
+  return false;
 }
 
 export function applyRoomActionCommand(
@@ -330,7 +349,10 @@ export function applyRoomActionCommand(
         failCommand(command, 'the Contract pedestal uses SetInfernalContractPedestalCollected');
       }
       // A required row may leave too: its item is live again and the walk shows its finding.
-      nextOrder = order.filter((_, index) => index !== existingIndex);
+      nextOrder = order.filter(
+        (reference, index) =>
+          index !== existingIndex && !boughtFromRemovedRoll(order[existingIndex]!, reference),
+      );
       break;
     case 'MoveRoomAction':
       if (existingIndex < 0) failCommand(command, 'room action is not ordered');
