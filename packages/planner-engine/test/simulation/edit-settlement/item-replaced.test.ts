@@ -7,7 +7,15 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateSiteKey,
+  createAcquisitionSiteAddress,
+  createHubRerollAddress,
   createRewardWheelAddress,
+  createRoomActionAddress,
+  roomActionDomainForOccurrence,
   createShopOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -17,14 +25,21 @@ import {
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
-import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
+import {
+  liveActionsForProjectEvaluationAssembly,
+  settleProjectEdit,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import { loadCheckpoint } from '@run-planner/test-fixtures/checkpoints/registry';
 
 import {
   candidateBiome,
   candidateBiomeRooms,
 } from '../../../src/simulation/candidates/evaluated-biome';
-import { withArcana } from '../../support/rerolls';
+import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
+import { roomActionsOnReplacedItems } from '../../../src/authored-project/room-actions/replaced-items';
+import { withArcana, withGoldenUnderworldJudgments, withJudgment } from '../../support/rerolls';
+import { liveInteractionsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/live-interactions';
 
 const f = createBiomeAddress('Underworld', 'F');
 const g = createBiomeAddress('Underworld', 'G');
@@ -256,6 +271,408 @@ describe('rows on a replaced item in edit settlement', () => {
       ]);
       // The saved one is kept, with its finding, until its own room is edited.
       expect(holds(settled.assembly.project, at(f, 'golden-f-b2-e1'), pickup)).toBe(true);
+    });
+  });
+
+  it('stamps a row of an observed item before an edit swaps it, so the swap replaces it', () => {
+    // A saved row that recorded no content, on an item already observed as Zeus.
+    const room = at(f, 'golden-f-b2-e1');
+    const raw = JSON.parse(encodeProjectDocument(loadCheckpoint('underworld-fg')));
+    delete raw.route.biomes[0].topology.occurrences.find(
+      (candidate: { occurrenceId: string }) => candidate.occurrenceId === room.occurrenceId,
+    ).roomActions.order[0].content;
+    const unstamped = decodeProjectDocument(raw, catalog);
+    expect(order(unstamped, room)[0]).toEqual(pickup);
+    const swap: ProjectCommand = {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(f, room.occurrenceId),
+      value: boon('HeraUpgrade'),
+    };
+    const swapped = applyProjectCommand(unstamped, catalog, swap);
+    expect(order(swapped, room)[0]).toEqual({
+      ...pickup,
+      content: ['native', 'Boon', 'ZeusUpgrade'],
+    });
+    expect(rosterRow(swapped, room, pickup)).toMatchObject({ itemReplaced: true });
+    expect(holds(settle(unstamped, swap).assembly.project, room, pickup)).toBe(false);
+  });
+
+  describe('in the live product', () => {
+    const room = at(f, 'golden-f-b2-e1');
+    const swapped = () =>
+      applyProjectCommand(loadCheckpoint('underworld-fg'), catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(f, room.occurrenceId),
+        value: boon('HeraUpgrade'),
+      });
+    const current = { ...pickup, content: ['native', 'Boon', 'HeraUpgrade'] };
+
+    it('is its current item, unplaced with its place verb, never placed or standing', () => {
+      const project = swapped();
+      const assembly = evaluate(project);
+      const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, room)!;
+      const actions = live.gaps.flatMap((gap) =>
+        gap.items.flatMap((item) =>
+          item.actions.filter(
+            (action) => roomActionKey(action.reference) === roomActionKey(pickup),
+          ),
+        ),
+      );
+      expect(actions.some((action) => action.kind === 'placed')).toBe(false);
+      expect(actions.length).toBeGreaterThan(0);
+      for (const action of actions) {
+        expect(action).toMatchObject({ kind: 'place', reference: current });
+        expect(action.kind === 'place' && action.command).toMatchObject({
+          kind: 'InsertRoomAction',
+          reference: current,
+        });
+      }
+      // The Timeline's reward entry offers placing the new reward, never a standing row.
+      const verbs = liveInteractionsForProjectEvaluationAssembly(
+        catalog,
+        assembly,
+        room,
+      )!.gaps.flatMap((gap) =>
+        gap.items.flatMap((item) =>
+          item.verbs.filter(
+            (verb) =>
+              verb.reference !== undefined &&
+              roomActionKey(verb.reference) === roomActionKey(pickup),
+          ),
+        ),
+      );
+      expect(verbs.length).toBeGreaterThan(0);
+      expect(verbs.some((verb) => verb.standing === true)).toBe(false);
+      // Placing it takes the replaced row's place.
+      const place = actions.find((action) => action.kind === 'place');
+      const placed = applyProjectCommand(
+        project,
+        catalog,
+        place!.kind === 'place' ? place!.command : swap(),
+      );
+      expect(order(placed, room)).toEqual([current]);
+      expect(
+        evaluate(placed).evaluation.findings.some(
+          (finding) => finding.code === 'roomActionItemReplaced',
+        ),
+      ).toBe(false);
+    });
+
+    function swap(): ProjectCommand {
+      throw new Error('no place action');
+    }
+  });
+
+  describe('presses', () => {
+    const fBase = () => withArcana(loadCheckpoint('underworld-fg'), ['DoorReroll']);
+    const source = at(f, 'golden-f-b5-e1');
+    const target = at(f, 'golden-f-b6-e1');
+    const pressOf = (project: ProjectDocument, rewardType = 'RoomMoneyDrop'): ProjectCommand => ({
+      kind: 'InsertReroll',
+      occurrence: source,
+      target: { kind: 'door', exitKey: 'exit1', occurrenceId: target.occurrenceId },
+      reward: { rewardType },
+      index: order(project, source).length,
+    });
+    /** Places the target's current pickups, as the live product does. */
+    const placeTarget = (project: ProjectDocument) => {
+      const domain = roomActionDomainForOccurrence(project, catalog, f, target.occurrenceId)!;
+      return domain.domain.contributions.reduce(
+        (current, entry) =>
+          entry.kind === 'action' && entry.reference.kind === 'interactIncomingReward'
+            ? applyProjectCommand(current, catalog, {
+                kind: 'InsertRoomAction',
+                action: createRoomActionAddress(
+                  f,
+                  target.occurrenceId,
+                  roomActionKey(entry.reference),
+                ),
+                reference: entry.reference,
+                index: order(current, target).length,
+              })
+            : current,
+        project,
+      );
+    };
+    const pressRows = (project: ProjectDocument) =>
+      order(project, source).filter((reference) => reference.kind === 'reroll');
+    const twoPresses = () => {
+      let project = settle(fBase(), pressOf(fBase())).assembly.project;
+      project = settle(project, pressOf(project, 'MaxManaDrop')).assembly.project;
+      return placeTarget(project);
+    };
+    const targetPickups = (project: ProjectDocument) =>
+      order(project, target).filter((reference) => reference.kind === 'interactIncomingReward');
+
+    it('removing the last press returns its target to the earlier press: a new item', () => {
+      const project = twoPresses();
+      expect(targetPickups(project)).not.toEqual([]);
+      const last = pressRows(project).at(-1)!;
+      const settled = settle(project, {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(f, source.occurrenceId, roomActionKey(last)),
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(targetPickups(settled.assembly.project)).toEqual([]);
+      expect(settled.removedStaleActions).toEqual([
+        { occurrence: target, actions: targetPickups(project) },
+      ]);
+    });
+
+    it('reordering two presses changes which is effective: a new item', () => {
+      const project = twoPresses();
+      const first = pressRows(project)[0]!;
+      const settled = settle(project, {
+        kind: 'MoveRoomAction',
+        action: createRoomActionAddress(f, source.occurrenceId, roomActionKey(first)),
+        toIndex: order(project, source).length - 1,
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(targetPickups(settled.assembly.project)).toEqual([]);
+      expect(settled.removedStaleActions).toEqual([
+        { occurrence: target, actions: targetPickups(project) },
+      ]);
+    });
+
+    it('a cage press replaces the cage reward', () => {
+      const h = createBiomeAddress('Underworld', 'H');
+      const intro = at(h, 'golden-h-intro');
+      const combat02 = at(h, 'golden-h-combat02');
+      const project = withGoldenUnderworldJudgments(
+        withArcana(loadCheckpoint('nemesis-h-fields'), ['DoorReroll']),
+      );
+      const cage1 = { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' } as const;
+      expect(holds(project, combat02, cage1)).toBe(true);
+      const settled = settle(project, {
+        kind: 'InsertReroll',
+        occurrence: intro,
+        target: {
+          kind: 'cage',
+          exitKey: 'exit1',
+          occurrenceId: combat02.occurrenceId,
+          slotKey: 'cage1',
+        },
+        reward: { rewardType: 'RoomMoneyDrop' },
+        index: order(project, intro).length,
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(holds(settled.assembly.project, combat02, cage1)).toBe(false);
+      expect(settled.removedStaleActions).toEqual([
+        { occurrence: combat02, actions: [{ ...cage1, content: ['native', 'MaxHealthDrop'] }] },
+      ]);
+    });
+
+    it('a wheel press replaces the picked offer, silently in its own room', () => {
+      const o = createBiomeAddress('Surface', 'O');
+      const ship = at(o, 'surface-o-combat04');
+      const project = withJudgment(
+        withArcana(loadCheckpoint('surface-no'), ['DoorReroll']),
+        'N',
+        'surface-n-preboss:boss',
+        ['ScreenReroll', 'TradeOff', 'StartingGold', 'HealthRegen', 'BonusDodge'],
+      );
+      const reward = { kind: 'interactWheelReward', wheelKey: 'wheel1' } as const;
+      expect(holds(project, ship, reward)).toBe(true);
+      const settled = settle(project, {
+        kind: 'InsertReroll',
+        occurrence: ship,
+        target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
+        reward: { rewardType: 'MaxManaDrop' },
+        index: order(project, ship).findIndex(
+          (reference) => reference.kind === 'chooseRewardWheel',
+        ),
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(holds(settled.assembly.project, ship, reward)).toBe(false);
+      expect(settled.removedStaleActions).toBeUndefined();
+    });
+
+    it('a Hub press replaces its board room’s reward, announced', () => {
+      const n = createBiomeAddress('Surface', 'N');
+      const combat05 = at(n, 'surface-n-combat05');
+      const project = withArcana(loadCheckpoint('surface-n'), ['DoorReroll']);
+      const hubPickup = { ...pickup, acquisitionRole: 'self' } as const;
+      expect(holds(project, combat05, hubPickup)).toBe(true);
+      const settled = settle(project, {
+        kind: 'InsertHubReroll',
+        hub: { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' },
+        hubSlotKey: 'combat05',
+        reward: { rewardType: 'MaxHealthDrop' },
+        index: 0,
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(holds(settled.assembly.project, combat05, hubPickup)).toBe(false);
+      expect(settled.removedStaleActions).toEqual([
+        { occurrence: combat05, actions: [{ ...hubPickup, content: ['native', 'HermesUpgrade'] }] },
+      ]);
+      void createHubRerollAddress;
+    });
+  });
+
+  it('removes a derived entry’s pickup whose payload is redrawn as another item', () => {
+    const h = createBiomeAddress('Underworld', 'H');
+    const combat05 = at(h, 'golden-h-combat05');
+    const result = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'nemesisGenerated:Passive',
+      entryKey: 'result',
+    } as const;
+    const project = loadCheckpoint('nemesis-h-fields');
+    expect(holds(project, combat05, result)).toBe(true);
+    const edit: ProjectCommand = {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(combat05, result.siteKey),
+        result.entryKey,
+      ),
+      value: { rewardType: 'HealDrop' },
+    };
+    // The command keeps the row; the replaced pass removes it.
+    expect(holds(applyProjectCommand(project, catalog, edit), combat05, result)).toBe(true);
+    const settled = settle(project, edit);
+    expect(settled.fault).toBeUndefined();
+    expect(holds(settled.assembly.project, combat05, result)).toBe(false);
+  });
+
+  it('judges a Sea Star duplicate’s pickup by its payload, as the replaced pass does', () => {
+    const room = at(f, 'golden-f-b1-e1');
+    const reward = createIncomingRewardAddress(f, room.occurrenceId);
+    const acquisition = createAcquisitionRoleAddress(reward, 'self');
+    const duplicate = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: seaStarDuplicateSiteKey(acquisition),
+      entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+    } as const;
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition,
+      procced: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(f, room.occurrenceId, roomActionKey(duplicate)),
+      reference: duplicate,
+      index: order(project, room).length,
+    });
+    expect(order(project, room)).toContainEqual({ ...duplicate, content: ['RoomMoneyDrop'] });
+    // Saved for another item: the roster and the replaced pass judge it alike.
+    const raw = JSON.parse(encodeProjectDocument(project));
+    for (const reference of raw.route.biomes[0].topology.occurrences.find(
+      (candidate: { occurrenceId: string }) => candidate.occurrenceId === room.occurrenceId,
+    ).roomActions.order)
+      if (reference.entryKey === duplicate.entryKey) reference.content = ['MaxHealthDrop'];
+    const saved = decodeProjectDocument(raw, catalog);
+    expect(rosterRow(saved, room, duplicate)).toMatchObject({ itemReplaced: true });
+    expect(
+      roomActionsOnReplacedItems(saved, catalog).flatMap(({ owner, reference }) =>
+        owner.occurrenceId === room.occurrenceId ? [roomActionKey(reference)] : [],
+      ),
+    ).toContain(roomActionKey(duplicate));
+    expect(
+      roomActionsOnReplacedItems(project, catalog).map(({ reference }) => roomActionKey(reference)),
+    ).not.toContain(roomActionKey(duplicate));
+  });
+
+  it('[Wave C] keeps today’s delivery handling when a Shrine restock replaces its purchase', () => {
+    const o = createBiomeAddress('Surface', 'O');
+    const shrine = at(o, 'surface-o-combat07');
+    const host = at(o, 'surface-o-devotion');
+    const project = loadCheckpoint('surface-no-hermes-shrine-delivery');
+    const purchase = {
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:secondLeft',
+    } as const;
+    const delivery = order(project, host).find(
+      (reference) =>
+        reference.kind === 'interactAcquisitionEntry' &&
+        reference.siteKey === 'hermesShrineDelivery',
+    )!;
+    const settled = settle(project, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: shrine,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'HealBigDrop' },
+    });
+    expect(settled.fault).toBeUndefined();
+    expect(holds(settled.assembly.project, shrine, purchase)).toBe(false);
+    // Pinned for the Wave C delivery repair: what happens to the delivery row and its payload today.
+    const hostRoom = settled.assembly.project.route.biomes
+      .find((plan) => plan.biomeKey === 'O')!
+      .topology!.occurrences.find((candidate) => candidate.occurrenceId === host.occurrenceId)!;
+    expect({
+      row: holds(settled.assembly.project, host, delivery),
+      payload:
+        delivery.kind === 'interactAcquisitionEntry' &&
+        hostRoom.acquisitionSites?.[delivery.siteKey]?.pickupEntries?.[delivery.entryKey] !==
+          undefined,
+      announced: settled.removedStaleActions,
+    }).toMatchSnapshot();
+  });
+
+  describe('agree with the roster on what is replaced', () => {
+    /** A saved plan with a row of the F Well room on a replaced item, and these hand edits. */
+    const saved = (edit: (raw: { route: { biomes: unknown[] } }) => void) => {
+      const raw = JSON.parse(encodeProjectDocument(loadCheckpoint('underworld-fg')));
+      edit(raw);
+      return decodeProjectDocument(raw, catalog);
+    };
+    const roomIn = (raw: { route: { biomes: unknown[] } }, biome: number, id: string) =>
+      (
+        raw.route.biomes[biome] as {
+          topology: {
+            occurrences: {
+              occurrenceId: string;
+              roomActions: { order: Record<string, unknown>[] };
+            }[];
+          };
+        }
+      ).topology.occurrences.find((candidate) => candidate.occurrenceId === id)!;
+    const elsewhere: ProjectCommand = {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(f, createOccurrenceId('golden-f-b6-e2')),
+      value: boon('AresUpgrade'),
+    };
+
+    it('keeps a saved replaced row when an edit only stamps its room', () => {
+      const well = at(f, 'golden-f-preboss-shop:postboss');
+      const raw = JSON.parse(encodeProjectDocument(loadCheckpoint('underworld-f-stygian-well')));
+      for (const reference of roomIn(raw, 0, well.occurrenceId).roomActions.order) {
+        // A purchase saved for another item, and one that recorded nothing yet.
+        if (reference.generationKey === 'initial:secondLeft')
+          reference.content = ['ExtendedShopTrait'];
+        if (reference.generationKey === 'initial:secondRight') delete reference.content;
+      }
+      const project = decodeProjectDocument(raw, catalog);
+      const bought = (generationKey: string) =>
+        ({ kind: 'purchaseStygianWellOffer', generationKey }) as RoomActionReference;
+      const settled = settle(project, elsewhere);
+      expect(settled.fault).toBeUndefined();
+      const after = settled.assembly.project;
+      expect(
+        order(after, well).find(
+          (reference) => roomActionKey(reference) === roomActionKey(bought('initial:secondRight')),
+        ),
+      ).toMatchObject({ content: ['LimitedSwapTraitDrop'] });
+      expect(holds(after, well, bought('initial:secondLeft'))).toBe(true);
+    });
+
+    it('leaves a stale row to the stale rules, whatever content it recorded', () => {
+      // The G opening keeps a pickup of a role its reward lost: stale, not replaced.
+      const opening = at(g, 'golden-g-b1-e1');
+      const project = saved((raw) => {
+        for (const reference of roomIn(raw, 1, opening.occurrenceId).roomActions.order)
+          if (reference.acquisitionRole === 'source') reference.content = ['native', 'Elsewhere'];
+      });
+      expect(rosterRow(project, opening, pickup)).toMatchObject({ stale: true });
+      expect(rosterRow(project, opening, pickup)?.itemReplaced).toBeUndefined();
+      const settled = settle(project, elsewhere);
+      expect(settled.fault).toBeUndefined();
+      expect(holds(settled.assembly.project, opening, pickup)).toBe(true);
     });
   });
 });

@@ -51,6 +51,8 @@ export interface RoomActionRow {
    * executed, carrying a finding, its item unplaced until settlement removes it.
    */
   readonly itemReplaced?: true;
+  /** For a row on a replaced item: the reference placing the item it holds now. */
+  readonly itemReference?: RoomActionReference;
   readonly executable: boolean;
 }
 

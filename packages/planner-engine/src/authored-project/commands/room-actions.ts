@@ -280,31 +280,40 @@ export function applyRoomActionCommand(
         )
       )
         failCommand(command, 'reference names content its item does not hold');
-      if (existingIndex >= 0) failCommand(command, 'room action is already ordered');
+      // A row on a replaced item gives its place to the item it holds now.
+      const replacing =
+        existingIndex >= 0 &&
+        !roomActionContentMatches(
+          order[existingIndex]!,
+          roomActionReferenceContent(contribution.reference) ?? null,
+        );
+      if (existingIndex >= 0 && !replacing) failCommand(command, 'room action is already ordered');
       requireIndex(command, command.index, order.length, 'index');
+      const rest = replacing ? order.filter((_, index) => index !== existingIndex) : order;
+      const index = replacing && command.index > existingIndex ? command.index - 1 : command.index;
       if (contribution.participation === 'required') {
         // Any structurally legal index; the canonical default is always accepted.
         const canonical = scheduleRequiredRoomActions({
           catalog,
           domain,
-          order,
+          order: rest,
           requiredKeys: new Set([command.action.actionKey]),
         });
         const canonicalIndex = canonical.findIndex(
           (reference) => roomActionKey(reference) === command.action.actionKey,
         );
-        if (command.index !== canonicalIndex) {
+        if (index !== canonicalIndex) {
           const refusal = roomActionInsertionRefusal(
-            order,
+            rest,
             command.reference,
-            command.index,
+            index,
             roomActionOrderContextForOccurrence(domain, occurrence),
           );
           if (refusal !== undefined) failCommand(command, refusal);
         }
       }
-      nextOrder = [...order];
-      nextOrder.splice(command.index, 0, command.reference);
+      nextOrder = [...rest];
+      nextOrder.splice(index, 0, command.reference);
       break;
     }
     case 'UnplaceGeneratedDelivery': {

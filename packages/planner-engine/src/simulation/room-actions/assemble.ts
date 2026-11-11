@@ -94,7 +94,7 @@ export function assembleRoomActionRoster(options: {
       ...(sourceFamily === undefined ? {} : { sourceFamily }),
       rank: index + 1,
       stale: entry === undefined,
-      ...(itemReplaced ? { itemReplaced: true as const } : {}),
+      ...(itemReplaced ? { itemReplaced: true as const, itemReference: entry.reference } : {}),
       executable: entry !== undefined && !itemReplaced && !issueKeys.has(roomActionKey(reference)),
     });
   });
@@ -161,6 +161,44 @@ export function assembleRoomActionRoster(options: {
         }),
       );
     }
+    // A row on a replaced item leaves its item unplaced: placing the item
+    // there takes the row's place, so each index is judged without the row.
+    if (
+      row.itemReplaced === true &&
+      row.itemReference !== undefined &&
+      row.rank !== null &&
+      !participationOwnedByFeature(row.reference)
+    ) {
+      const fromIndex = row.rank - 1;
+      const rest = options.order.filter((_, index) => index !== fromIndex);
+      const canonicalIndex =
+        row.participation === 'required'
+          ? options.canonicalRequiredInsertions?.find(
+              (candidate) => candidate.actionKey === row.key,
+            )?.toIndex
+          : undefined;
+      for (let toIndex = 0; toIndex <= options.order.length; toIndex += 1) {
+        const assessment = assessRoomActionInsertion(
+          rest,
+          row.itemReference,
+          toIndex > fromIndex ? toIndex - 1 : toIndex,
+          context,
+        );
+        if (assessment.followsTerminal) continue;
+        const canonical = toIndex === canonicalIndex;
+        proposals.push(
+          frozen({
+            kind: 'insert',
+            reference: row.itemReference,
+            toIndex,
+            order: assessment.order,
+            structurallyAuthorable: canonical || assessment.structurallyAuthorable,
+            ...(canonical ? { canonical: true as const } : {}),
+            blockers: canonical ? frozen([]) : assessment.blockers,
+          }),
+        );
+      }
+    }
     if (!authoredKeys.has(row.key) && !participationOwnedByFeature(row.reference)) {
       // A required row may be inserted wherever its window and dependencies
       // allow; its canonical insertion stays authorable as the default restore.
@@ -208,6 +246,8 @@ export function assembleRoomActionRoster(options: {
   for (let fromIndex = 0; fromIndex < options.order.length; fromIndex += 1) {
     const reference = options.order[fromIndex]!;
     if (!active.has(roomActionKey(reference))) continue;
+    // A row on a replaced item is not moved; its item is placed instead.
+    if (rows[fromIndex]?.itemReplaced === true) continue;
     for (let toIndex = 0; toIndex < options.order.length; toIndex += 1) {
       if (fromIndex === toIndex) continue;
       const assessment = assessRoomActionMove(options.order, fromIndex, toIndex, context);
@@ -308,6 +348,17 @@ export function performedRoomActions(roster: RoomActionRoster): readonly RoomAct
   return roster.rows.flatMap((row) =>
     row.stale || row.itemReplaced === true || row.rank === null ? [] : [row.reference],
   );
+}
+
+/**
+ * The row as the live product reads it: a row on a replaced item is not
+ * placed or standing; it is its current item, unplaced, placed by the
+ * roster's insertions that take the row's place.
+ */
+export function asUnplacedWhenReplaced(row: RoomActionRow): RoomActionRow {
+  return row.itemReplaced === true && row.itemReference !== undefined
+    ? frozen({ ...row, reference: row.itemReference, rank: null })
+    : row;
 }
 
 /** Restrict execution to an engine-assessed active phase prefix without mutating authorship. */

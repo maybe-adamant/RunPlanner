@@ -25,7 +25,12 @@ import { roomActionKey } from '../../authored-project/room-actions/key';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../authored-project/shop';
 import type { Catalog } from '../../catalog-schema';
 import type { CanonicalAuthoredRoom } from '../materialization';
-import type { RoomActionParticipation, RoomActionRow, RoomActionWindow } from '../room-actions';
+import {
+  asUnplacedWhenReplaced,
+  type RoomActionParticipation,
+  type RoomActionRow,
+  type RoomActionWindow,
+} from '../room-actions';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import { roomObjectInteractionsForProjectEvaluationAssembly } from './project-evaluation-assembly';
 import {
@@ -447,7 +452,7 @@ export function liveActionsForProjectEvaluationAssembly(
   const biome = createBiomeAddress(occurrence.routeKey, occurrence.biomeKey);
   const roster = room.roomActionRoster;
   const entries = room.roomLifecycleTimeline.entries;
-  const liveRows = roster.rows.filter((row) => !row.stale);
+  const liveRows = roster.rows.filter((row) => !row.stale).map(asUnplacedWhenReplaced);
   const orderLength = roster.rows.filter((row) => row.rank !== null).length;
   const rowByKey = new Map(liveRows.map((row) => [row.key, row]));
   const actionAddress = (reference: RoomActionReference) =>

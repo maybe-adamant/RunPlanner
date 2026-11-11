@@ -33,10 +33,11 @@ import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import { candidateBiome, candidateBiomeRooms } from '../candidates/evaluated-biome';
 import type { CanonicalAuthoredRoom } from '../materialization';
-import type {
-  RoomActionParticipation,
-  RoomActionRow,
-  RoomLifecycleTimelineEntry,
+import {
+  asUnplacedWhenReplaced,
+  type RoomActionParticipation,
+  type RoomActionRow,
+  type RoomLifecycleTimelineEntry,
 } from '../room-actions';
 import type { ProjectEvaluationAssembly, RoomStopCoverage } from './evaluation-products';
 import {
@@ -501,7 +502,7 @@ export function spawnedLootForProjectEvaluationAssembly(
   const structure = roster.lifecycleStructure;
   const actionAddress = (reference: RoomActionReference) =>
     createRoomActionAddress(biome, occurrence.occurrenceId, roomActionKey(reference));
-  const liveRows = roster.rows.filter((row) => !row.stale);
+  const liveRows = roster.rows.filter((row) => !row.stale).map(asUnplacedWhenReplaced);
   const rowByKey = new Map(liveRows.map((row) => [row.key, row]));
 
   const fromRow = (

@@ -23,6 +23,10 @@ import { seaStarDuplicateSourceIsActive } from '../../../authored-project/acquis
 import { assembleRoomActionDomain } from '../../../authored-project/room-actions/domain';
 import { scheduleRequiredRoomActions } from '../../../authored-project/room-actions/defaults';
 import { roomActionKey } from '../../../authored-project/room-actions/state';
+import {
+  roomActionContentMatches,
+  roomActionReferenceContent,
+} from '../../../authored-project/room-actions/item-content';
 import { resolveRequiredRewardDrop } from './required-reward';
 import {
   alwaysActiveEncounterSlotKeys,
@@ -424,28 +428,29 @@ export function materializeAuthoredRoom(
     retainedSourceFamilies: roomActionDomain.retainedSourceFamilies,
     lifecycleStructure: roomActionDomain.lifecycleStructure,
     canonicalRequiredInsertions: roomActionDomain.contributions.flatMap((entry) => {
-      if (
-        entry.kind !== 'action' ||
-        entry.participation !== 'required' ||
-        base.roomActions.order.some(
-          (reference) => roomActionKey(reference) === roomActionKey(entry.reference),
-        )
-      ) {
-        return [];
-      }
+      if (entry.kind !== 'action' || entry.participation !== 'required') return [];
       const actionKey = roomActionKey(entry.reference);
+      const placedIndex = base.roomActions.order.findIndex(
+        (reference) => roomActionKey(reference) === actionKey,
+      );
+      // A row on a replaced item leaves its item to place, judged without the row.
+      const replaced =
+        placedIndex >= 0 &&
+        !roomActionContentMatches(
+          base.roomActions.order[placedIndex]!,
+          roomActionReferenceContent(entry.reference) ?? null,
+        );
+      if (placedIndex >= 0 && !replaced) return [];
       const order = scheduleRequiredRoomActions({
         catalog: context.catalog,
         domain: roomActionDomain,
-        order: base.roomActions.order,
+        order: replaced
+          ? base.roomActions.order.filter((_, index) => index !== placedIndex)
+          : base.roomActions.order,
         requiredKeys: new Set([actionKey]),
       });
-      return [
-        {
-          actionKey,
-          toIndex: order.findIndex((reference) => roomActionKey(reference) === actionKey),
-        },
-      ];
+      const index = order.findIndex((reference) => roomActionKey(reference) === actionKey);
+      return [{ actionKey, toIndex: replaced && index > placedIndex ? index + 1 : index }];
     }),
   });
   const roomLifecycleTimeline = assembleRoomLifecycleTimeline({
