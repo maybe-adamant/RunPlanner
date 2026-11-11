@@ -822,21 +822,21 @@ child exists only while purchased and resolves against the later
 pre-acquisition context, not the refill-generation context.
 
 A Shrine of Hermes refill is caused by the first initial
-`rushHermesShrineOffer` in timeline order made while Travel Deal is held,
-when it closes the Shrine screen, not by collecting the rushed item; a
-rush without the trait leaves the refill to a later rush. A rush is its own
-row on the bought item, which the game allows any time later in the same
-visit, and the walk settles it at that row; the published plan still performs
-it with its purchase. The refill is realized at that rush, replaces its slot, and removing the optional rushed pickup
-leaves the refill and its own delivery intact. Reordering or re-rushing
-purchases, or gaining Travel Deal earlier or later in the room, can change the
-source; a retained refill item outside the new source's group is kept and
-reported `hermesShrineTravelDealRefillUnavailable` at the refill offer. A
-purchased refill ranked before any initial rush, or before any rush
-made with Travel Deal, keeps its item and reports the same finding at its
-purchase row with reason `noRushedPurchase` or `travelDealInactive`. Authoring
-keeps the refill purchase after the first initial rush only,
-since trait state is a simulation product.
+`rushHermesShrineOffer` in timeline order made while Travel Deal is held, when
+it closes the Shrine screen, not by collecting the rushed item; a rush without
+the trait leaves the refill to a later rush. A rush is its own row on the
+bought item, which the game allows any time later in the same visit, and the
+walk settles it at that row; the published plan still performs it with its
+purchase. The refill is realized at that rush, replaces its slot, and removing
+the optional rushed pickup leaves the refill and its own delivery intact.
+Reordering or re-rushing purchases, or gaining Travel Deal earlier or later in
+the room, can change the source; a retained refill item outside the new
+source's group is kept and reported `hermesShrineTravelDealRefillUnavailable`
+at the refill offer. A purchased refill ranked before any initial rush, or
+before any rush made with Travel Deal, keeps its item and reports the same
+finding at its purchase row with reason `noRushedPurchase` or
+`travelDealInactive`. Authoring keeps the refill purchase after the first
+initial rush only, since trait state is a simulation product.
 
 Refill activity comes from the reached simulation capability, not the presence
 of retained authored refill detail. Clearing the triggering Shop/Well purchase,
