@@ -105,6 +105,7 @@ export {
   type RoomActionRosterContribution,
   type RoomActionRosterIssue,
   type RoomActionRow,
+  type RoomActionRowLabel,
   type RoomActionWindow,
 } from './room-actions';
 export {

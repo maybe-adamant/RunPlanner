@@ -23,6 +23,7 @@ export type {
   RoomActionRosterContribution,
   RoomActionRosterIssue,
   RoomActionRow,
+  RoomActionRowLabel,
   RoomActionWindow,
 } from './model';
 export type {

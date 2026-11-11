@@ -11,7 +11,7 @@ import type {
   TranscendentEmbryoOutcomeAddress,
 } from '@run-planner/engine/authored-project';
 import type { ChaosNumericOperand } from '@run-planner/engine/catalog-schema';
-import type { RoomActionRow } from '@run-planner/engine/simulation';
+import type { RoomActionRowLabel } from '@run-planner/engine/simulation';
 import type { CandidateProjectionEvaluation } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceMarker } from './navigation';
@@ -174,7 +174,7 @@ export interface WorkspaceRoomActionRow {
   /** The engine phase the row belongs to; absent when the room plays none it names. */
   readonly phaseKey?: string;
   /** When in the room the engine places the row's use. */
-  readonly timing: RoomActionRow['label'];
+  readonly timing: RoomActionRowLabel;
   /** Exact encounter/Gorgon payload settled by this action. */
   readonly traitOffer?: WorkspaceTraitOfferControl;
   /** Exact Phial target control nested under this occurrence-owned fountain action. */

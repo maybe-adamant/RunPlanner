@@ -40,9 +40,7 @@ function timelineRows(): HTMLElement[] {
 }
 
 const doorsOpenRow = () =>
-  timelineRows().find((row) =>
-    row.matches('[data-doors-open], [data-boundary-kind="doorsOpened"]'),
-  )!;
+  timelineRows().find((row) => row.getAttribute('data-map-stage') === 'open')!;
 
 function mapDoor(doorIndex: number): HTMLElement {
   const map = screen

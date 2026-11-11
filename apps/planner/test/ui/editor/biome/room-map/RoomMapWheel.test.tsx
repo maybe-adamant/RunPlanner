@@ -107,7 +107,8 @@ describe('room map ship wheel', () => {
     const { phases, room } = shipRoom(cardHolder());
     const intro = phases.find((phase) => phase.wheel?.key === 'wheel1')!;
     const spots = wheelSpots(room.gameName);
-    const wheelsOpenRow = () => timelineRows().find((row) => row.hasAttribute('data-wheels-open'))!;
+    const wheelsOpenRow = () =>
+      timelineRows().find((row) => row.getAttribute('data-map-stage') === 'open')!;
 
     const one = render(cardHolder());
     await one.user.click(screen.getByRole('tab', { name: `${intro.label} Timeline` }));
@@ -173,7 +174,7 @@ describe('room map ship wheel', () => {
     await user.click(screen.getByRole('tab', { name: `${intro.label} Timeline` }));
     const face = () => wheelOffers()[0]!.querySelector('.room-map-door-face')?.innerHTML;
 
-    await user.click(timelineRows().find((row) => row.hasAttribute('data-wheels-open'))!);
+    await user.click(timelineRows().find((row) => row.getAttribute('data-map-stage') === 'open')!);
     const firstDraw = face();
     const pressRow = timelineRows().find((row) => row.hasAttribute('data-door-press'))!;
     const pressedFace = within(pressRow)

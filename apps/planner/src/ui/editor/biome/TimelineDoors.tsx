@@ -129,7 +129,6 @@ export function DoorsOpenBanner({
     <TimelineMapStageContext.Provider value="open">
       <TimelineRow
         aria-label={label}
-        {...(doors.noun === 'offer' ? { 'data-wheels-open': '' } : { 'data-doors-open': '' })}
         kind="boundary"
         label={
           <>

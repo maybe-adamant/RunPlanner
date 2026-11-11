@@ -39,6 +39,7 @@ import type {
   GoldLedger,
   GoldMoments,
   RoomActionRow,
+  RoomActionRowLabel,
 } from '@run-planner/engine/simulation';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
@@ -242,7 +243,7 @@ function roomActionsForOccurrence(
     if (key === 'exitUsable') return 'the doors can be used';
     return roster.checkpoints.find((entry) => entry.checkpointKey === key)?.label ?? key;
   };
-  const timingLabel = (timing: RoomActionRow['label']): string => {
+  const timingLabel = (timing: RoomActionRowLabel): string => {
     switch (timing.kind) {
       case 'beforeCombat':
         return 'before combat';
@@ -265,7 +266,7 @@ function roomActionsForOccurrence(
     }
   };
   // A blocker names its rows; each row carries when the engine places it.
-  const timingOf = (reference: RoomActionReference): RoomActionRow['label'] => {
+  const timingOf = (reference: RoomActionReference): RoomActionRowLabel => {
     const key = roomActionKey(reference);
     const row = roster.rows.find(
       (candidate) =>
