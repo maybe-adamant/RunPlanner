@@ -39,6 +39,7 @@ import {
 } from '../../../src/simulation/candidates/evaluated-biome';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { createSurfaceOSameRoomHermesDeliveriesCheckpoint } from '@run-planner/test-fixtures/surface';
+import { placeTestLivePickupsAtSite } from '@run-planner/test-fixtures/shared';
 import { roomActionsOnReplacedItems } from '../../../src/authored-project/room-actions/replaced-items';
 import { withArcana, withGoldenUnderworldJudgments, withJudgment } from '../../support/rerolls';
 import { liveInteractionsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/live-interactions';
@@ -71,6 +72,27 @@ const rosterRow = (
         candidate.origin.occurrenceId === room.occurrenceId,
     )
     ?.roomActionRoster.rows.find((row) => row.key === roomActionKey(reference));
+};
+const roomOf = (project: ProjectDocument, room: OccurrenceAddress) =>
+  project.route.biomes
+    .find((plan) => plan.biomeKey === room.biomeKey)!
+    .topology!.occurrences.find((candidate) => candidate.occurrenceId === room.occurrenceId)!;
+/** The F Combat switch observed as a hitless Max Health PerfectClear, used and its claim picked up. */
+const withSwitchClaimed = () => {
+  const room = at(f, 'golden-f-b5-e1');
+  let project = applyProjectCommand(loadCheckpoint('underworld-fghi'), catalog, {
+    kind: 'ReplaceChallengeSwitch',
+    occurrence: room,
+    variantKey: 'PerfectClearChallengeSwitch_MaxHealth',
+  });
+  const press = { kind: 'interactChallengeSwitch' } as const;
+  project = applyProjectCommand(project, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(f, room.occurrenceId, roomActionKey(press)),
+    reference: press,
+    index: order(project, room).length,
+  });
+  return placeTestLivePickupsAtSite(project, room, 'challengeSwitch');
 };
 const pickup = {
   kind: 'interactIncomingReward',
@@ -534,6 +556,95 @@ describe('rows on a replaced item in edit settlement', () => {
     const settled = settle(project, edit);
     expect(settled.fault).toBeUndefined();
     expect(holds(settled.assembly.project, combat05, result)).toBe(false);
+    // The new result is the entry's observation: it stays, live to be picked up.
+    expect(
+      roomOf(settled.assembly.project, combat05).acquisitionSites?.[result.siteKey]?.pickupEntries
+        ?.result?.offer,
+    ).toEqual({ rewardType: 'HealDrop' });
+  });
+
+  describe('keeps each derived entry’s new observation when its pickup goes', () => {
+    it('an Artificer replacement', () => {
+      const project = loadCheckpoint('underworld-f-duo-exchange-order');
+      const room = at(f, 'f4adb787-5267-4ce6-8712-e53744e505ff');
+      const row = order(project, room).find(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.entryKey.startsWith('artificer:'),
+      );
+      if (row?.kind !== 'interactAcquisitionEntry') throw new Error('Artificer pickup is missing');
+      const value = { rewardType: 'MaxManaDrop' } as const;
+      const settled = settle(project, {
+        kind: 'ReplaceAcquisitionEntryOffer',
+        // The row names the site by its storage key, whose last part is its point.
+        entry: createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(room, (JSON.parse(row.siteKey) as string[]).at(-1)!),
+          row.entryKey,
+        ),
+        value,
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(holds(settled.assembly.project, room, row)).toBe(false);
+      expect(
+        roomOf(settled.assembly.project, room).acquisitionSites?.[row.siteKey]?.pickupEntries?.[
+          row.entryKey
+        ],
+      ).toMatchObject({ offer: value });
+    });
+
+    it('a Travel Deal refill', () => {
+      const project = loadCheckpoint('underworld-world-shop-travel-deal');
+      const shop = at(f, 'golden-f-preboss-shop');
+      const refill = {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: 'travelDealRefill',
+      } as const;
+      expect(holds(project, shop, refill)).toBe(true);
+      const value = { rewardType: 'MaxManaDrop' } as const;
+      const settled = settle(project, {
+        kind: 'ReplaceShopOffer',
+        offer: createShopOfferAddress(f, shop.occurrenceId, 'travelDealRefill'),
+        value,
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(holds(settled.assembly.project, shop, refill)).toBe(false);
+      const state = roomOf(settled.assembly.project, shop).state;
+      expect(state.kind === 'shop' && state.shop?.travelDealRefill?.reward?.offer).toEqual(value);
+      // No stale refill payload is put back beside the Shop's own.
+      expect(
+        roomOf(settled.assembly.project, shop).acquisitionSites?.roomExit?.pickupEntries?.[
+          refill.entryKey
+        ],
+      ).toBeUndefined();
+    });
+
+    it('a challenge switch claim', () => {
+      const project = withSwitchClaimed();
+      const room = at(f, 'golden-f-b5-e1');
+      const claim = order(project, room).find(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' && reference.siteKey === 'challengeSwitch',
+      );
+      if (claim?.kind !== 'interactAcquisitionEntry') throw new Error('switch claim is missing');
+      const before = roomOf(project, room).acquisitionSites?.challengeSwitch?.pickupEntries?.[
+        claim.entryKey
+      ];
+      expect(before?.offer).toEqual({ rewardType: 'MaxHealthDrop' });
+      const settled = settle(project, {
+        kind: 'ReplaceChallengeSwitch',
+        occurrence: room,
+        variantKey: 'PerfectClearChallengeSwitch_Pom',
+      });
+      expect(settled.fault).toBeUndefined();
+      expect(holds(settled.assembly.project, room, claim)).toBe(false);
+      // The old variant's reward is not put back; the new variant's claim is its own.
+      expect(
+        roomOf(settled.assembly.project, room).acquisitionSites?.challengeSwitch?.pickupEntries?.[
+          claim.entryKey
+        ]?.offer,
+      ).not.toEqual({ rewardType: 'MaxHealthDrop' });
+    });
   });
 
   it('judges a Sea Star duplicate’s pickup by its payload, as the replaced pass does', () => {
