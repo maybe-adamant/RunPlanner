@@ -26,7 +26,8 @@ import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
 function lifecycleBoundaryLabel(
   boundary: WorkspaceRoomLifecycleBoundary,
-  beginsEncounter: boolean,
+  mergedWithBegin: boolean,
+  phaseLabel: string | undefined,
 ): string {
   switch (boundary.kind) {
     case 'roomEntered':
@@ -34,13 +35,14 @@ function lifecycleBoundaryLabel(
     case 'encounterBegun':
       return 'Encounter';
     case 'encounterStarted':
-      return beginsEncounter ? 'Encounter' : 'Combat';
+      return mergedWithBegin ? 'Encounter' : 'Combat';
     case 'encounterEnd':
       return 'Encounter ended';
     case 'bossDefeated':
       return 'Boss defeated';
+    // Wheels open names the phase whose combat its wheel starts.
     case 'wheelsOpen':
-      return 'Wheels open';
+      return phaseLabel === undefined ? 'Wheels open' : `Wheels open · ${phaseLabel}`;
     case 'doorsOpened':
       return 'Doors open';
   }
@@ -277,8 +279,18 @@ function projectRoomLifecycleTimeline(
         : [],
     ),
   );
+  // A Ship phase's encounter begins as its wheels open, so its Wheels open stands for its begin.
+  const wheelPhaseKeys = new Set(
+    timeline.entries.flatMap((entry) =>
+      entry.kind === 'boundary' && entry.boundary.kind === 'wheelsOpen'
+        ? [entry.boundary.phaseKey]
+        : [],
+    ),
+  );
+  const beginHidden = (phaseKey: string) =>
+    mergedPhaseKeys.has(phaseKey) || wheelPhaseKeys.has(phaseKey);
   const shown = (boundary: WorkspaceRoomLifecycleBoundary) =>
-    boundary.kind !== 'encounterBegun' || !mergedPhaseKeys.has(boundary.phaseKey);
+    boundary.kind !== 'encounterBegun' || !beginHidden(boundary.phaseKey);
   const beginsEncounter = (
     boundary: WorkspaceRoomLifecycleBoundary,
   ): boundary is Extract<
@@ -286,7 +298,11 @@ function projectRoomLifecycleTimeline(
     { readonly kind: 'encounterBegun' | 'encounterStarted' }
   > =>
     boundary.kind === 'encounterBegun' ||
-    (boundary.kind === 'encounterStarted' && mergedPhaseKeys.has(boundary.phaseKey));
+    (boundary.kind === 'encounterStarted' && beginHidden(boundary.phaseKey));
+  const phaseLabel = (boundary: WorkspaceRoomLifecycleBoundary) =>
+    roomLocal.kind === 'ship' && boundary.kind === 'wheelsOpen'
+      ? roomLocal.phases.find((phase) => phase.key === boundary.phaseKey)?.label
+      : undefined;
   const cageLabelByBoundaryKey = new Map(
     timeline.entries
       .flatMap((entry) =>
@@ -442,7 +458,11 @@ function projectRoomLifecycleTimeline(
         Object.freeze({
           kind: 'boundary' as const,
           boundary: boundary,
-          label: lifecycleBoundaryLabel(boundary, beginsEncounter(boundary)),
+          label: lifecycleBoundaryLabel(
+            boundary,
+            boundary.kind === 'encounterStarted' && mergedPhaseKeys.has(boundary.phaseKey),
+            phaseLabel(boundary),
+          ),
           ...(beginsEncounter(boundary) ? { beginsEncounter: true as const } : {}),
           checkpointKey: lifecycleBoundaryCheckpointKey(boundary),
           dropIndex: Math.max(0, entry.rank - (entry.placement === 'before' ? 1 : 0)),

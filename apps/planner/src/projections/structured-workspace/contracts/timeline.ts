@@ -377,7 +377,10 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly runState?: WorkspaceRunStateLauncher;
       /** Exact projected encounter controls this banner hosts. */
       readonly supplement?: WorkspaceEncounterEvents;
-      /** The marker where its phase's encounter begins: its Encounter, or its Combat shown as one with it. */
+      /**
+       * The marker that leads its phase: its Encounter, or its Combat where the begin shows
+       * with it or, in a Ship, as its Wheels open.
+       */
       readonly beginsEncounter?: true;
       /** Read-only identity of the cage assigned to this encounter cycle. */
       readonly fieldsCage?: WorkspaceFieldsCageLabel;

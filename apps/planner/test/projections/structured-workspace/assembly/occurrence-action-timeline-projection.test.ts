@@ -561,7 +561,7 @@ describe('a room whose walk stops in it', () => {
     ).toEqual(['roomEntered']);
   });
 
-  it("stops a Ship room at a wheel in the wheel's own phase, where its wheels open", () => {
+  it('stops a Ship room at a wheel on the tab its wheels open on, before its combat', () => {
     const entry = galleryCases.find((candidate) => candidate.id === 'ship-phase-waiting')!;
     const workbench = roomOf(
       buildGalleryProject(entry),
@@ -570,14 +570,14 @@ describe('a room whose walk stops in it', () => {
     if (workbench.kind !== 'ship') throw new Error('Not a Ship room');
     expect(workbench.phases.map((phase) => [phase.label, phase.waitsOn])).toEqual([
       ['Intro', undefined],
-      ['Combat 1', undefined],
+      ['Combat 1', { kind: 'phase', phaseLabel: 'Intro' }],
     ]);
-    const combat = workbench.phases[1]!;
-    expect(combat.wheel?.key).toBe('wheel1');
-    expect(combat.timeline[0]).toMatchObject({
-      kind: 'boundary',
-      boundary: { kind: 'wheelsOpen' },
-    });
+    const intro = workbench.phases[0]!;
+    expect(intro.wheel?.key).toBe('wheel1');
+    expect(
+      intro.timeline.flatMap((entry) => (entry.kind === 'boundary' ? [entry.boundary.kind] : [])),
+    ).toContain('wheelsOpen');
+    expect(workbench.phases[1]!.timeline).toEqual([]);
   });
 
   it('shows every phase of a room the walk passes', () => {

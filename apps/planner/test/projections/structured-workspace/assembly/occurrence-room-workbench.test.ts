@@ -117,10 +117,11 @@ describe('occurrence room workbench', () => {
       ['Combat1', 'Combat 1'],
       ['Combat2', 'Combat 2'],
     ]);
+    // Each tab shows the wheel the next combat is chosen at; the last its doors.
     expect(ship.workbench.phases.map((phase) => phase.wheel?.key)).toEqual([
-      undefined,
       'wheel1',
       'wheel2',
+      undefined,
     ]);
     expect(
       ship.workbench.phases
