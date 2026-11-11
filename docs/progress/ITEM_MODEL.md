@@ -2,8 +2,9 @@
 
 Status: owner model approved (2026-11-10); schema 103 scope expanded for
 the later slices. C5a delivered on `live-pickups`; C5b waves A, B, C and D
-merged; wave E (C5b-4, reroll results on the rerolled item) delivered,
-awaiting review; C5c and C5d not started. Temporary plan; delete at delivery after promoting durable
+merged; wave E (C5b-4, reroll results on the rerolled item) delivered and
+reviewed. C5c (same-key swap) landed inside C5b through item content on rows.
+C5d not started. Temporary plan; delete at delivery after promoting durable
 results. Follows [LIVE_PICKUPS](LIVE_PICKUPS.md) step C.
 
 Investigations (read-only, 2026-11-10):
@@ -31,7 +32,7 @@ Investigations (read-only, 2026-11-10):
   change, equivalence unchanged.
 - **C5b** observations and outcomes onto items, thin rows, the 102 → 103
   conversion.
-- **C5c** same-key swap: rows keyed by item, so a same-role swap (Zeus Boon
+- **C5c** (delivered inside C5b) same-key swap: rows keyed by item, so a same-role swap (Zeus Boon
   to Hera Boon) removes the old row like any other swap.
 - **C5d** lifecycle events as triggered consequences, with encounter begin
   (depth) split from combat start (`StartEncounterEffects`).
