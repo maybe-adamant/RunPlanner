@@ -15,6 +15,7 @@ import type {
   AuthoredRoomState,
   AuthoredRewardState,
   BiomeTopology,
+  RerolledRewardState,
   RoomOccurrence,
   RouteWeaponAspectLoadout,
   ShopState,
@@ -93,43 +94,39 @@ export interface AuthoredRoomMaterializationContext {
 
 /**
  * The reward an owner's acquisition settles and its reroll products. A
- * rerolled owner acquires its authored rerolled reward when that matches the
- * effective offer, else the effective offer unresolved; a rerolled reward that
- * does not match, or outlived its rerolls, is reported for repair.
+ * rerolled owner acquires its effective press's item: the outcomes its record
+ * holds for that press, else that press's reward unresolved.
  */
 function acquiredReward(
   catalog: Catalog,
   routeKey: string,
   producerLifecycleKey: string,
   firstDraw: AuthoredRewardState,
-  rerolled: AuthoredRewardState | undefined,
+  rerolled: RerolledRewardState | undefined,
   rerolls: OwnerRerolls | undefined,
 ): {
   readonly reward: AuthoredRewardState;
   readonly products: CanonicalRerollableReward;
 } {
   if (rerolls === undefined)
-    return Object.freeze({
-      reward: firstDraw,
-      products: Object.freeze(
-        rerolled === undefined ? {} : { rerolledRewardMismatch: true as const },
-      ),
-    });
+    return Object.freeze({ reward: firstDraw, products: Object.freeze({}) });
   const effective = rerolls.effectiveOffer;
-  const matches =
-    rerolled !== undefined && JSON.stringify(rerolled.offer) === JSON.stringify(effective);
+  const held =
+    rerolled?.acquisition !== undefined && rerolled.pressId === rerolls.rerolls.at(-1)?.rerollId
+      ? rerolled.acquisition
+      : undefined;
   return Object.freeze({
-    reward: matches
-      ? rerolled
-      : createUnresolvedAcquisitionRewardState(
-          catalog,
-          effective,
-          { kind: 'producerLifecycle', key: producerLifecycleKey },
-          routeKey,
-        ),
+    reward:
+      held === undefined
+        ? createUnresolvedAcquisitionRewardState(
+            catalog,
+            effective,
+            { kind: 'producerLifecycle', key: producerLifecycleKey },
+            routeKey,
+          )
+        : Object.freeze({ offer: effective, ...held }),
     products: Object.freeze({
       reroll: Object.freeze({ generatedOffer: firstDraw.offer }),
-      ...(rerolled !== undefined && !matches ? { rerolledRewardMismatch: true as const } : {}),
     }),
   });
 }
@@ -652,7 +649,8 @@ export function materializeShipCombatState(
   ) {
     fail(`${room.gameName} cannot materialize ${state.encounterCount} encounters`);
   }
-  const wheelRerolls = sourceRerolledOwners(biome, occurrence);
+  // A wheel's presses and their results are this room's own.
+  const wheelRerolls = sourceRerolledOwners(biome, { occurrences: [occurrence] }, occurrence);
   const rewardWheels: CanonicalRewardWheel[] = encounterPhases.flatMap((phase) => {
     const descriptor = phase.rewardAttachment;
     if (descriptor?.kind !== 'rewardWheel') {

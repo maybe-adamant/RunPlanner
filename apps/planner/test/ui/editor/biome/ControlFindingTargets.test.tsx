@@ -7,11 +7,8 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
-  createHubRerollAddress,
-  createIncomingRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceId,
-  createTraitOfferAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -24,9 +21,6 @@ import {
 import {
   createStaleSurfaceHermesDeliveryPlacement,
   loadSurfaceNEntryFrontierResolvedProject,
-  loadSurfaceNProject,
-  nBiome,
-  nOccurrenceId,
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import {
@@ -44,14 +38,12 @@ import {
   artemisSourceAnomalyProject,
   cageBeforeAthenaProject,
 } from '@planner-test/support/finding-states';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, expect, it } from 'vitest';
 import { renderWorkspace, workspaceProjection } from '@planner-test/support/biome-workbench';
 import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { semanticFindingKey } from '@planner/projections/evaluationProjection';
-import { findingSelected } from '@planner/state/editorSessionSlice';
 import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
@@ -219,68 +211,6 @@ it('marks the next visit’s room picker for an incomplete Hub visit order', asy
   expect(picker.dataset.selectedFinding).toBe('true');
   expect(paintedFindings()).toEqual([picker]);
   await waitFor(() => expect(document.activeElement).toBe(picker));
-});
-
-it('marks the visit reward’s repair for a rerolled reward its Hub rerolls no longer reach', async () => {
-  const hub = createHubDecisionAddress(nBiome, 'hub');
-  const reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
-  const held = applyProjectCommand(loadSurfaceNProject(), catalog, {
-    kind: 'ReplaceManualArcanaSelection',
-    route: { kind: 'route', routeKey: 'Surface' },
-    arcanaKeys: ['DoorReroll'],
-  });
-  const pressed = applyProjectCommand(held, catalog, {
-    kind: 'InsertHubReroll',
-    hub,
-    hubSlotKey: 'combat05',
-    reward: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
-    index: 0,
-  });
-  const picked = applyProjectCommand(pressed, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait: createTraitOfferAddress(reward, 'source'),
-    value: {
-      kind: 'traits',
-      giverKey: 'Ares',
-      options: [
-        { traitKey: 'AresWeaponBoon', rarity: 'Common' },
-        { traitKey: 'AresSpecialBoon', rarity: 'Common' },
-        { traitKey: 'AresCastBoon', rarity: 'Common' },
-      ],
-      selectedOptionKey: 'option1',
-      rarificationActions: [],
-    },
-  });
-  // A loaded plan whose press went without settling keeps the pick for repair.
-  const view = renderWorkspace(
-    applyProjectCommand(picked, catalog, {
-      kind: 'RemoveHubReroll',
-      reroll: createHubRerollAddress(nBiome, 'hub', 'r1'),
-    }),
-    'Surface',
-    'N',
-  );
-  const finding = view.application.store
-    .getState()
-    .projectWorkspace.assembly!.evaluation.findings.find(
-      (candidate) => candidate.code === 'rerolledRewardMismatch',
-    );
-  if (finding === undefined) throw new Error('the rerolled reward finding is missing');
-  expect(finding.origin).toEqual(reward);
-  act(() =>
-    view.application.store.dispatch(
-      findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
-    ),
-  );
-  expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
-    'true',
-  );
-  const visits = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
-  const repair = within(visits).getByRole('button', {
-    name: /^Drop rerolled reward for Combat 05/,
-  });
-  expect(paintedFindings()).toEqual([repair]);
-  await waitFor(() => expect(document.activeElement).toBe(repair));
 });
 
 it('marks Restore on an Anomaly its source cannot produce', async () => {

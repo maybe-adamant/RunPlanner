@@ -1,7 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import { createBiomeAddress } from '../addresses';
 import type { AuthoredBiomePlan, ProjectDocument, RoomOccurrence } from '../model';
-import { withStampedRerolledPresses } from '../rerolls';
 import { roomActionDomainForOccurrence } from './defaults';
 import {
   biomePlanContentSource,
@@ -60,15 +58,12 @@ function stampedPlan(
     if (stamped !== occurrence) changed = true;
     return stamped;
   });
-  const rowsStamped = changed
-    ? Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) })
-    : topology;
-  // A rerolled reward records the press it was drawn by, as a row records its item.
-  const pressesStamped = withStampedRerolledPresses(
-    createBiomeAddress(document.route.routeKey, plan.biomeKey),
-    rowsStamped,
-  );
-  return pressesStamped === topology ? plan : Object.freeze({ ...plan, topology: pressesStamped });
+  return changed
+    ? Object.freeze({
+        ...plan,
+        topology: Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) }),
+      })
+    : plan;
 }
 
 /**

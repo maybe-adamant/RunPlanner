@@ -1,3 +1,4 @@
+import { resolvedRoomRerollPresses } from '../../../authored-project/rerolls';
 import {
   INITIAL_ROLL_KEY,
   STYGIAN_WELL_SLOT_KEYS,
@@ -457,12 +458,18 @@ export function materializeAuthoredRoom(
     owner: base.origin,
     roomActionRoster,
   });
+  const rerollPresses = context.occurrence.roomActions.order.some(
+    (reference) => reference.kind === 'reroll',
+  )
+    ? resolvedRoomRerollPresses(context.biome, context.topology, context.occurrence)
+    : undefined;
   return Object.freeze({
     ...base,
     ...(structuralEncounterIdentities.length === 0
       ? {}
       : { structuralEncounterIdentities: Object.freeze(structuralEncounterIdentities) }),
     roomActionRoster,
+    ...(rerollPresses === undefined ? {} : { rerollPresses }),
     ...(roomActionDomain.fieldsCageOrder === undefined
       ? {}
       : { fieldsCageOrder: roomActionDomain.fieldsCageOrder }),

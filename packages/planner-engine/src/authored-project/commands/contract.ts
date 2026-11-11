@@ -195,9 +195,6 @@ function commandContractAddress(
     case 'ReplaceHubRerollReward':
     case 'RemoveHubReroll':
       return command.reroll;
-    case 'DropRerolledReward':
-    case 'AdoptRerolledReward':
-      return command.owner;
     case 'ReplaceShopPurchaseParticipation':
       return command.offer;
     case 'PurchaseShopTravelDealRefill':

@@ -4,18 +4,14 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createIncomingRewardAddress,
-  createLevelResolutionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createRoomActionAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
+import { type PlannerApplication } from '@planner/composition/createApplication';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { openLeavePicker, renderWorkspace } from '@planner-test/support/biome-workbench';
 
@@ -23,7 +19,6 @@ afterEach(cleanup);
 
 const f = createBiomeAddress('Underworld', 'F');
 const source = createOccurrenceId('golden-f-b2-e1');
-const doorTo = createOccurrenceId('golden-f-b3-e1');
 
 function withArcana(project: ProjectDocument, arcanaKeys: readonly string[]): ProjectDocument {
   return applyProjectCommand(project, catalog, {
@@ -31,13 +26,6 @@ function withArcana(project: ProjectDocument, arcanaKeys: readonly string[]): Pr
     route: { kind: 'route', routeKey: project.route.routeKey },
     arcanaKeys,
   });
-}
-
-function occurrenceOf(application: PlannerApplication, occurrenceId: string) {
-  return application.store
-    .getState()
-    .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')!
-    .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)!;
 }
 
 function presses(application: PlannerApplication) {
@@ -189,54 +177,5 @@ describe('RoomRerolls', () => {
       ).getByRole('option', { name: /^Door 2 ·/ });
     await view.user.click(await exitDoor());
     expect((await exitDoor()).getAttribute('data-selected-value')).toBe('true');
-  });
-
-  it("repairs a door row's stale kept rerolled reward from its last reroll", async () => {
-    // Door 1 rerolled into a Pom whose kept resolution is authored, then the press changes.
-    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
-    const occurrence = createOccurrenceAddress(f, source);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'InsertReroll',
-      occurrence,
-      target: { kind: 'door', exitKey: 'exit1', occurrenceId: doorTo },
-      reward: { rewardType: 'StackUpgrade' },
-      index: project.route.biomes[0]!.topology!.occurrences.find(
-        (candidate) => candidate.occurrenceId === source,
-      )!.roomActions.order.length,
-    });
-    const owner = createIncomingRewardAddress(f, doorTo);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceLevelResolution',
-      levelResolution: createLevelResolutionAddress(owner, 'self'),
-      value: { kind: 'choice', offeredTraitKeys: ['ZeusSpecialBoon'], selectedTraitKey: null },
-    });
-    const press = project.route.biomes[0]!.topology!.occurrences.find(
-      (candidate) => candidate.occurrenceId === source,
-    )!.roomActions.order.find((action) => action.kind === 'reroll');
-    if (press?.kind !== 'reroll') throw new Error('Door 1 has no reroll press');
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceRerollReward',
-      action: createRoomActionAddress(f, source, JSON.stringify(['reroll', press.rerollId])),
-      reward: { rewardType: 'RoomMoneyDrop' },
-    });
-    const application = createApplication();
-    const dispatch = vi.spyOn(application.store, 'dispatch');
-    const view = renderWorkspace(project, 'Underworld', 'F', application);
-    await openDoors(view);
-
-    await view.user.click(screen.getByRole('button', { name: 'Use last reroll for Door 1' }));
-
-    expect(
-      dispatch.mock.calls
-        .map(([action]) => action)
-        .filter(authoredProjectCommandDispatched.match)
-        .map((action) => action.payload),
-    ).toEqual([{ kind: 'AdoptRerolledReward', owner }]);
-    expect(occurrenceOf(application, doorTo).rerolledIncomingReward?.offer).toEqual({
-      rewardType: 'RoomMoneyDrop',
-    });
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Use last reroll for Door 1' })).toBeNull(),
-    );
   });
 });

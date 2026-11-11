@@ -84,29 +84,6 @@ export interface RoomActionContentSource {
   };
 }
 
-const rerolledOwnersByTopology = new WeakMap<object, ReadonlyMap<string, OwnerRerolls>>();
-
-/**
- * A biome's rerolled owners, memoized only for a frozen topology: a decoded
- * one cannot change under its identity, while a raw one being migrated can.
- */
-function rerolledOwnersOf(
-  biome: BiomeAddress,
-  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
-): ReadonlyMap<string, OwnerRerolls> {
-  const immutable =
-    Object.isFrozen(topology) &&
-    Object.isFrozen(topology.occurrences) &&
-    Object.isFrozen(topology.decisions);
-  if (!immutable) return biomeRerolledOwners(biome, topology);
-  let owners = rerolledOwnersByTopology.get(topology);
-  if (owners === undefined) {
-    owners = biomeRerolledOwners(biome, topology);
-    rerolledOwnersByTopology.set(topology, owners);
-  }
-  return owners;
-}
-
 /** The content source of one biome topology. */
 export function roomActionContentSource(
   catalog: Catalog,
@@ -114,7 +91,7 @@ export function roomActionContentSource(
   topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
   routeStart?: RoomActionContentSource['routeStart'],
 ): RoomActionContentSource {
-  const rerolledOwners = rerolledOwnersOf(biome, topology);
+  const rerolledOwners = biomeRerolledOwners(biome, topology);
   return Object.freeze({
     catalog,
     biome,
@@ -150,8 +127,10 @@ function pressedContent(
   owner: Parameters<typeof semanticAddressKey>[0],
   native: ResolvedRewardOffer | null | undefined,
 ): RoomActionContent | null {
-  const last = source.rerolledOwners.get(semanticAddressKey(owner))?.rerolls.at(-1);
-  if (last !== undefined) return [last.rerollId, ...rewardOfferToken(last.reward)];
+  const rerolled = source.rerolledOwners.get(semanticAddressKey(owner));
+  const last = rerolled?.rerolls.at(-1);
+  if (rerolled !== undefined && last !== undefined)
+    return [last.rerollId, ...rewardOfferToken(rerolled.effectiveOffer)];
   return native === null || native === undefined ? null : ['native', ...rewardOfferToken(native)];
 }
 

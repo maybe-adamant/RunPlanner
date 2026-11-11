@@ -4,7 +4,7 @@ import type {
   RoomActionReference,
   RoomActionState,
 } from '../model';
-import { missingRerollTarget } from '../rerolls';
+import { biomeRerolledOwners, missingRerollTarget } from '../rerolls';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RewardProducerBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
@@ -13,7 +13,11 @@ import {
   encounterEnvelopeSlots,
   directEncounterDefinitionKeyForSlot,
 } from '../room-state/encounter-envelope';
-import { createOccurrenceAddress, semanticAddressKey } from '../addresses';
+import {
+  createIncomingRewardAddress,
+  createOccurrenceAddress,
+  semanticAddressKey,
+} from '../addresses';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import {
   firstInitialRush,
@@ -138,14 +142,20 @@ export function activeRoomActionReferences(
         );
     }
   }
-  // A rerolled door's room acquires its rerolled reward; its first draw is inert.
+  // A rerolled door's room acquires its effective press's reward; its first draw is inert.
+  const rerolled =
+    occurrence.rerolledIncomingReward === undefined
+      ? undefined
+      : biomeRerolledOwners(biome, topology).get(
+          semanticAddressKey(createIncomingRewardAddress(biome, occurrence.occurrenceId)),
+        )?.effectiveOffer;
   const stateReward =
     occurrence.state.kind === 'counted' ||
     occurrence.state.kind === 'fixed' ||
     occurrence.state.kind === 'anomaly' ||
     occurrence.state.kind === 'ephyraCombat' ||
     occurrence.state.kind === 'freeReward'
-      ? (occurrence.rerolledIncomingReward ?? occurrence.state.reward)
+      ? (rerolled ?? occurrence.state.reward)
       : undefined;
   const reward =
     scope?.incomingRewardState !== undefined
@@ -217,7 +227,7 @@ export function activeRoomActionReferences(
     if (
       reference.target.kind === 'wheelOffer'
         ? !activeWheels.has(reference.target.wheelKey)
-        : missingRerollTarget(topology, occurrence.occurrenceId, reference.target) !== undefined
+        : missingRerollTarget(topology, occurrence.occurrenceId, reference) !== undefined
     )
       continue;
     references.push(reference);

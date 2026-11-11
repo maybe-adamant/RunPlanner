@@ -585,9 +585,9 @@ source and lost it:
 every stale row the walk reaches; a Gold Gold Gold duplicate that a purchase
 stands before while no Echo produces it; a matured trait drop whose producing
 trait a walk without it never holds and that reaches the plan's end; a
-countdown delivery whose purchase is gone; and the replaced deliveries and
-Echo replays below, as the saved plan and its walk show them, with no
-announcement: an Echo replay the walk reaches holding another reward than the
+countdown delivery whose purchase is gone; and the replaced deliveries,
+rerolled rewards and Echo replays below, as the saved plan and its walk show
+them, with no announcement: an Echo replay the walk reaches holding another reward than the
 walk's last goes there, its pickup with it. Every batch's doors settle as
 above. Whatever the plan cannot show had its source stays with its finding,
 as the never-removed list keeps it: a Travel Deal refill or a duplicate the
@@ -624,7 +624,8 @@ projects over a long edit history.
 | Door its source room no longer has, not taken      | 1    | removed, announced in the source room   |
 | Door its source room no longer has, taken          | 4    | invalid                                 |
 | Reroll of a door the game refuses or not available | 4    | invalid                                 |
-| Hub board reroll, its slot closed or entered       | 4    | invalid                                 |
+| Hub board reroll, its slot closed                  | 1    | removed with the slot, silent           |
+| Hub board reroll, its slot entered                 | 4    | invalid                                 |
 | Trait drop, trait held but matures elsewhere       | 4    | invalid                                 |
 | Reward swapped, a pickup role it no longer has     | 1    | removed, silent; the new reward is live |
 | Item replaced: same key, different content         | 1    | removed; the new item is live           |
@@ -668,12 +669,12 @@ items beside the removed rows:
   the walk has the delivery due at another, judged only where the walk
   reaches. A placed delivery the edit displaces is unplaced first and then
   judged the same way.
-- **A rerolled reward's outcomes** once the press that drew it is no longer its
-  owner's effective press (a later press, an earlier one again, or none): they
-  reset to the unresolved acquisition of the effective press's reward, or go
-  when no press remains. A rerolled reward records the press that drew it; one
-  recorded before that, whose press is unknown, is stamped by the next edit of
-  its biome while it holds the effective press's reward.
+- **A rerolled reward's outcomes** once the press whose item they are is no
+  longer its owner's effective press (a later press, an earlier one again, or
+  none), or once that press's result changes in place: they reset to the
+  unresolved acquisition of the effective press's reward, or go while no press
+  is effective. The rerolled item records that press beside each press's
+  result, so the walk needs no content to judge it.
 - **An Echo replay** the walk reaches holding another reward than the walk's
   last reward there. Its recorded reward is discarded and the replay is
   unobserved again; a pickup placed by the same edit takes the new replay and

@@ -93,6 +93,7 @@ function decodeRewardWheel(
   const rerolledOffers = hasRerolledOffers
     ? decodeRerolledRewards(
         wheel.rerolledOffers,
+        catalog,
         descriptor.offerKeys,
         `${path}.rerolledOffers`,
         (raw, rewardPath) => {
@@ -110,6 +111,7 @@ function decodeRewardWheel(
             );
           return reward;
         },
+        (offer) => descriptor.reward.allowedRewardTypes.includes(offer.rewardType),
       )
     : undefined;
   const pickedOfferIndex = expectPositiveInteger(

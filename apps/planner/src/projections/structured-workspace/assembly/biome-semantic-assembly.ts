@@ -56,7 +56,7 @@ import {
 } from './decision-assembly';
 import { assembleWorkspaceHub } from './hub-assembly';
 import { workspaceRewardStoreLabel } from './reward-labels';
-import { workspaceDoorRerollTargetLabel } from './reroll-assembly';
+import { workspaceDoorRerollTargetLabel, workspaceRoomPress } from './reroll-assembly';
 import { biomeFieldLabel } from './biome-field-labels';
 import {
   appendUniqueBatchInteractionRequirements,
@@ -593,12 +593,23 @@ export function assembleWorkspaceBiomeSemantics(
       pastPlanEndAt: source.pastPlanEndAt,
       findingsFor: source.findingsFor,
       rerollSource: source,
-      rerollTargetLabel: (target) =>
-        workspaceDoorRerollTargetLabel(
-          { biome, catalog, layout: source.layout, plan: source.plan },
-          request.occurrence.occurrenceId,
-          target,
-        ),
+      rerollTargetLabel: (reference) => {
+        const press = workspaceRoomPress(source, request.occurrence.occurrenceId, reference);
+        return press === undefined
+          ? undefined
+          : {
+              reward: press.reward,
+              ...(press.target.kind === 'wheelOffer'
+                ? {}
+                : {
+                    subject: workspaceDoorRerollTargetLabel(
+                      { biome, catalog, layout: source.layout, plan: source.plan },
+                      request.occurrence.occurrenceId,
+                      press.target,
+                    ),
+                  }),
+            };
+      },
       ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
       catalog,

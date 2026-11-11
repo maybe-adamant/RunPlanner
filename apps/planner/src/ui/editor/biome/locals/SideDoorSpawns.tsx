@@ -16,7 +16,7 @@ import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { roomKindIcon } from '../roomIcon';
-import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from '../DoorRewardEditor';
+import { DoorRewardEditor, DoorRewardHiddenTag } from '../DoorRewardEditor';
 import { DoorRow, DoorRowsHeader } from '../DecisionWorkbench';
 import { DoorRows } from '../DoorRows';
 import { RoomFeatureMapLegend, RoomFeatureMapPoints } from '../room-map/RoomMapPoints';
@@ -133,17 +133,7 @@ function SideDoorRow({
           <span className="visually-hidden">{slot.label}</span>
         </>
       }
-      secondary={
-        generated ? (
-          <>
-            <RerolledRewardRepairs
-              rewards={slot.door.offerRewardSurface.rewards}
-              target={slot.label}
-            />
-            <DoorRewardHiddenTag door={slot.door} />
-          </>
-        ) : null
-      }
+      secondary={generated ? <DoorRewardHiddenTag door={slot.door} /> : null}
       selection={<OpenControl interactions={interactions} slot={slot} />}
       state={{ available: generated, picked: slot.entered }}
     />

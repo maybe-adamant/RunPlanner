@@ -22,13 +22,18 @@ import { workspaceAcquisitionRoleLabel } from './occurrence-reward-assembly';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 
-/** Names a door or cage reroll target as the room's doors do. */
+/**
+ * A room's door or cage press as its row names it: its target as the room's
+ * doors do, and the reward it drew; neither while its target holds no result.
+ */
 export type WorkspaceDoorRerollTargetLabel = (
-  target: Exclude<
-    import('@run-planner/engine/authored-project').RerollTarget,
-    { readonly kind: 'wheelOffer' }
-  >,
-) => string;
+  press: import('@run-planner/engine/authored-project').RerollRoomAction,
+) =>
+  | {
+      readonly subject?: string;
+      readonly reward: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+    }
+  | undefined;
 
 function timelineRewardName(catalog: Catalog, rewardType: string): string {
   switch (rewardType) {
@@ -578,6 +583,7 @@ export function occurrenceActionLabelParts(
     }
     case 'reroll': {
       const target = reference.target;
+      const press = rerollTargetLabel?.(reference);
       const subject =
         target.kind === 'wheelOffer'
           ? roomLocal.kind === 'ship'
@@ -585,8 +591,9 @@ export function occurrenceActionLabelParts(
                 .find((wheel) => wheel.key === target.wheelKey)
                 ?.offers.find((offer) => offer.key === target.offerKey)?.label
             : undefined
-          : rerollTargetLabel?.(target);
-      const reward = timelineRewardLabel(catalog, reference.reward);
+          : press?.subject;
+      if (press === undefined) return plain(subject === undefined ? 'Reroll' : `Reroll ${subject}`);
+      const reward = timelineRewardLabel(catalog, press.reward);
       return plain(subject === undefined ? `Reroll → ${reward}` : `Reroll ${subject} → ${reward}`);
     }
   }

@@ -194,9 +194,6 @@ export const findingCopy = {
   phantomExitRewardUnavailable: {
     title: 'Hidden door reward unavailable',
   },
-  rerolledRewardMismatch: {
-    title: 'Rerolled reward no longer matches last reroll',
-  },
   rerollUnavailable: {
     title: 'Rerolls are not available here',
   },

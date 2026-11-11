@@ -682,7 +682,15 @@ function recordCageOfSlots(
   );
   const held = fields.cages.map((_cage, index) => {
     const slotKey = `cage${index + 1}`;
-    const delivered = state?.rerolledCages?.[slotKey] ?? state?.cages[slotKey];
+    const occurrence = authoredOccurrence(context.assembly().project, biomeKey, occurrenceId);
+    const delivered =
+      state === undefined || occurrence === undefined
+        ? undefined
+        : deliveredCageReward(
+            createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+            occurrence,
+            slotKey,
+          );
     return delivered === null || delivered === undefined
       ? undefined
       : JSON.stringify(delivered.offer);
@@ -1249,7 +1257,7 @@ function convertFieldsPickups(
     ...slots(state.cages, 'cage').map((slotKey) => ({
       groupKey: 'cages',
       slotKey,
-      reward: deliveredCageReward(occurrence, slotKey),
+      reward: deliveredCageReward(biome, occurrence, slotKey),
       gone: false,
     })),
     ...slots(state.optionalRewards, 'optional').map((slotKey) => ({

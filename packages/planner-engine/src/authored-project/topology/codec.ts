@@ -4,6 +4,7 @@ import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ResolvedRoutePosition } from '../route-context';
 import { decodeRoomOccurrence } from './occurrence-codec';
 import { decodeTopologyStructure } from './decoding/coordinator';
+import { validateRerollResults } from './decoding/reroll-results';
 
 export function decodeBiomeTopology(
   value: unknown,
@@ -14,7 +15,7 @@ export function decodeBiomeTopology(
   path: string,
 ): BiomeTopology {
   const structure = decodeTopologyStructure(value, catalog, layout, routePosition, path);
-  return Object.freeze({
+  const topology: BiomeTopology = Object.freeze({
     startOccurrenceId: structure.startOccurrenceId,
     occurrences: Object.freeze(
       structure.occurrences.map((occurrence) =>
@@ -32,4 +33,6 @@ export function decodeBiomeTopology(
     decisions: structure.decisions,
     fixedRoomLinks: structure.fixedRoomLinks,
   });
+  validateRerollResults(catalog, routePosition, layout.biomeKey, topology, path);
+  return topology;
 }

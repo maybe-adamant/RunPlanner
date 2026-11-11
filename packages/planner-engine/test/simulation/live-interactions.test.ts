@@ -347,6 +347,8 @@ describe('live interactions at a gap', () => {
         {
           verb: 'reroll',
           participation: 'optional',
+          // The press's row takes the room's next reroll id; the picker names its target.
+          rerollId: 'r1',
           choice: {
             picker: 'rerollPress',
             timing: 'before',
@@ -381,6 +383,7 @@ describe('live interactions at a gap', () => {
       index: press!.gap,
     });
     const reroll = roomOrder(inserted, ship)[press!.gap]!;
+    expect(reroll).toMatchObject({ kind: 'reroll', rerollId: press!.verb.rerollId });
     const action = createRoomActionAddress(oBiome, oOccurrenceIds.combat04, roomActionKey(reroll));
     const picked: ProjectCommand[] = [
       {

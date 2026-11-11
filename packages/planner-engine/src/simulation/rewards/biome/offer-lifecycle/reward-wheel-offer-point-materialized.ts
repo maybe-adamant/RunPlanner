@@ -129,14 +129,6 @@ export function applyRewardWheelOfferPointMaterialization(
   }
 
   const findings = new Map<string, FindingRegionEntry>();
-  for (const offer of ownedWheel?.offers ?? [])
-    if (offer.rerolledRewardMismatch === true)
-      addRewardFinding(
-        findings,
-        rewardFinding('rerolledRewardMismatch', offer.origin, {}),
-        ownerRegion(wheel.origin),
-        historyFindingChronology(event.sequence),
-      );
   const layout = catalog.biomeLayouts.byKey[room.origin.biomeKey];
   if (layout === undefined) {
     throw new BiomeRewardSimulationContractError(

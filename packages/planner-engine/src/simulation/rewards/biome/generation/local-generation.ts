@@ -99,13 +99,6 @@ export function generateLocalRewards(
   for (const ownedReward of context.localRewards) {
     // A rerolled cage still offers its first draw; its acquisition is the effective reward's.
     const localReward = forGeneration(ownedReward);
-    if (ownedReward.rerolledRewardMismatch === true)
-      addRewardFinding(
-        findings,
-        rewardFinding('rerolledRewardMismatch', ownedReward.origin, {}),
-        ownerRegion(ownedReward.origin),
-        historyFindingChronology(event.sequence),
-      );
     const frontier = branch;
     const chronology =
       event.source === 'localVisit'

@@ -328,10 +328,17 @@ export {
 export { phantomPlaceholderDraw, phantomPlaceholderRewardTypes } from './phantom-exit';
 export {
   biomeRerolledOwners,
+  effectiveRewardAt,
+  hubRerollOwner,
   hubStayRows,
   rerollAppendIndex,
+  rerolledRecordOf,
+  rerolledRewardOf,
+  rerollResult,
   rerollSurfaceKey,
   rerollTargetOwner,
+  resolveRerollTarget,
+  roomRerollOwner,
   sourceRerolledOwners,
   type HubStayRow,
   type HubStayRows,
@@ -485,6 +492,7 @@ export {
   type PurgingPoolRerollAction,
   type PurgingPoolSlotKey,
   type RerollTarget,
+  type ResolvedRerollTarget,
   type ShopState,
   hermesShrineInitialSlotKey,
 } from './model';

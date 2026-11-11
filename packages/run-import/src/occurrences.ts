@@ -1,6 +1,11 @@
 import {
+  createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceId,
+  effectiveRewardAt,
+  FIELDS_CAGE_GROUP_KEY,
   type AuthoredRewardState,
+  type BiomeAddress,
   type HubDecision,
   type OccurrenceId,
   type ProjectDocument,
@@ -226,18 +231,20 @@ export function recordHubStay(
 
 /** The reward a room's door delivers: its last reroll's, else its first draw. */
 export function deliveredIncomingReward(
+  biome: BiomeAddress,
   occurrence: RoomOccurrence,
 ): AuthoredRewardState | null | undefined {
-  if (occurrence.rerolledIncomingReward !== undefined) return occurrence.rerolledIncomingReward;
-  return 'reward' in occurrence.state ? occurrence.state.reward : undefined;
+  return effectiveRewardAt(occurrence, createIncomingRewardAddress(biome, occurrence.occurrenceId));
 }
 
 /** The reward a Fields cage delivers: its last reroll's, else its first draw. */
 export function deliveredCageReward(
+  biome: BiomeAddress,
   occurrence: RoomOccurrence,
   slotKey: string,
 ): AuthoredRewardState | null | undefined {
-  const state = occurrence.state;
-  if (state.kind !== 'fieldsCombat') return undefined;
-  return state.rerolledCages?.[slotKey] ?? state.cages[slotKey];
+  return effectiveRewardAt(
+    occurrence,
+    createLocalRewardAddress(biome, occurrence.occurrenceId, FIELDS_CAGE_GROUP_KEY, slotKey),
+  );
 }

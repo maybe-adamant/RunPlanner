@@ -24,7 +24,7 @@ import {
   type OccurrenceAddress,
   type ProjectCommand,
   type ProjectDocument,
-  type RerollTarget,
+  type ResolvedRerollTarget,
 } from '@run-planner/engine/authored-project';
 import {
   settleProjectUpgrade,
@@ -498,7 +498,7 @@ describe('upgrade settlement of a plan saved under earlier rules', () => {
     // The saved plan cannot show whether the press ever found its cage.
     const h = createBiomeAddress('Underworld', 'H');
     const intro = createOccurrenceAddress(h, createOccurrenceId('golden-h-intro'));
-    const cage3: RerollTarget = {
+    const cage3: ResolvedRerollTarget = {
       kind: 'cage',
       exitKey: 'exit1',
       occurrenceId: createOccurrenceId('golden-h-combat02'),

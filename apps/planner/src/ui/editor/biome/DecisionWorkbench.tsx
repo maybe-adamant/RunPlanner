@@ -38,12 +38,7 @@ import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
 import { roomKindIcon } from './roomIcon';
-import {
-  DoorRewardEditor,
-  DoorRewardHiddenTag,
-  FixedRewardChip,
-  RerolledRewardRepairs,
-} from './DoorRewardEditor';
+import { DoorRewardEditor, DoorRewardHiddenTag, FixedRewardChip } from './DoorRewardEditor';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { NotedText } from '@planner/ui/controls/NotedText';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
@@ -446,10 +441,6 @@ function TargetRow({
       }
       secondary={
         <>
-          <RerolledRewardRepairs
-            rewards={door.offerRewardSurface.rewards}
-            target={`Door ${target.index}`}
-          />
           <DoorRewardHiddenTag door={door} />
           {replaceWithAnomaly}
           {door.room.anomaly === undefined ? null : (

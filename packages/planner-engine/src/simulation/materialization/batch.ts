@@ -440,7 +440,7 @@ export function materializeBatch(
     rerollSource === undefined ||
     !rerollSource.roomActions.order.some((reference) => reference.kind === 'reroll')
       ? undefined
-      : sourceRerolledOwners(biome, rerollSource);
+      : sourceRerolledOwners(biome, topology, rerollSource);
   const source = sourceAddress(decision.source);
   const takeover = batchTakesOverNormalDoors(
     catalog,

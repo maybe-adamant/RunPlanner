@@ -761,7 +761,10 @@ function importSeaStar(
   // The room's own questions settle its pickups first; the duplicates wait for them.
   const issue = context.assembly().evaluation.issue?.reasons[0];
   if (
-    deliveredIncomingReward(occurrence) === null ||
+    deliveredIncomingReward(
+      createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+      occurrence,
+    ) === null ||
     wheelAuthoringWaits(context, roomIndex) ||
     (issue !== undefined && occurrenceIdOf(issue.origin) === occurrence.occurrenceId)
   )

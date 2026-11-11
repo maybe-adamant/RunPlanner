@@ -567,23 +567,7 @@ function projectHubNode(
       for (const mainReward of mainRewards) {
         redirectHubMainRewardFocus(markerDestinations, hubMarker, mainReward);
       }
-      // A kept pick its rerolls no longer match is repaired on its visit, in Timeline;
-      // Overview shows only the first draw.
-      const repaired = new Set(
-        door!.offerRewardSurface.rewards.flatMap((reward) =>
-          reward.rerolledRewardRepair === undefined
-            ? []
-            : [semanticAddressKey(reward.marker.address)],
-        ),
-      );
-      markerDestinations.setHubTab(
-        mainRewards.filter((marker) => !repaired.has(semanticAddressKey(marker.address))),
-        'overview',
-      );
-      markerDestinations.setHubTab(
-        mainRewards.filter((marker) => repaired.has(semanticAddressKey(marker.address))),
-        'timeline',
-      );
+      markerDestinations.setHubTab(mainRewards, 'overview');
       const mainRewardAcquisition = workspaceHubMainRewardAcquisitionMarkers(workbench.room);
       markerDestinations.redirect(mainRewardAcquisition, workbench.key);
       markerDestinations.setRoomTab(mainRewardAcquisition, 'actions');

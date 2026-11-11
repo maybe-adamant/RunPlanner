@@ -25,7 +25,6 @@ import type {
   OccurrenceAddress,
   PhantomExitAddress,
   ProjectCommand,
-  RerolledRewardOwner,
   RoomActionAddress,
   SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -67,14 +66,6 @@ export interface WorkspaceDoorReward {
   /** The reward the door offers after its rerolls, where it differs from the first draw. */
   readonly rerolledOffer?: ResolvedRewardOffer;
   readonly rerolledSummary?: string;
-  /**
-   * A kept rerolled reward that no longer matches: adopt the last reroll's
-   * reward, or drop it where no reroll remains.
-   */
-  readonly rerolledRewardRepair?: {
-    readonly owner: RerolledRewardOwner;
-    readonly repair: 'adopt' | 'drop';
-  };
   /** The reward's short mark among several on one door, such as C1. */
   readonly badge?: string;
   readonly control?: WorkspaceRewardControl;

@@ -370,7 +370,7 @@ interface HubDecision {
 type HubAction =
   | { kind: 'roomVisit'; hubSlotKey: string }
   | { kind: 'useFountain' }
-  | { kind: 'reroll'; rerollId: string; hubSlotKey: string; reward: ResolvedRewardOffer };
+  | { kind: 'reroll'; rerollId: string; hubSlotKey: string };
 ```
 
 An `ExitDecision` has at most one semantic source. Occurrence-sourced batches
@@ -649,10 +649,11 @@ Resetting an empty board is a no-op; Undo restores all cleared contents together
 
 The same order also holds board-door reroll presses (`InsertHubReroll`,
 `ReplaceHubRerollReward`, `RemoveHubReroll`): each names an open slot not yet
-entered and the reward its press drew, carries an engine-allocated `rerollId`,
-and may sit in any Hub stay, before the first visit or between later ones. A
-press placed after its slot's visit redraws nothing. The slot's target keeps
-its first native draw; see [Rerolls](#rerolls).
+entered, carries an engine-allocated `rerollId`, and may sit in any Hub stay,
+before the first visit or between later ones; the reward its press drew is
+the slot room's observation. A press placed after its slot's visit redraws
+nothing, and closing a slot removes its presses. The slot's target keeps its
+first native draw; see [Rerolls](#rerolls).
 
 The completed-Hub exit exists for the Hub's whole lifetime and is removed only
 with the Hub. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
@@ -1045,28 +1046,40 @@ never rendered ordinals.
 
 A door, Fields cage or ship-wheel reroll press is a repeatable `reroll` room
 action in the source room's order, identified by its engine-allocated
-`rerollId`, never by position. It names its target (an exit door and its
-occurrence, a cage door with the cage slot the game picks at random, or one
-offer of the room's own wheel) and the reward the redraw produced. Rerolls of
+`rerollId`, never by position. It names only its target: an exit door and its
+occurrence, a cage door, or one offer of the room's own wheel. What the
+redraw produced, and for a cage the slot the game picked at random, is an
+observation of the rerolled item (below). Rerolls of
 different targets interleave freely, because each press's candidates depend on
 every target's current reward at that moment; a per-target list could not
 represent them. Board-door presses are the Hub's own actions
 ([N Hub Progression](#n-hub-progression)).
 
 The target keeps its first native draw with its ordinary picker and meaning
-(the incoming reward, the cage or the wheel offer). The reward entered or
-collected after the presses, with its acquisition children, lives beside it in
-`rerolledIncomingReward`, `rerolledCages` or `rerolledOffers`; the first draw
-is inert while it is present, and records the press that drew it once known.
-Its offer should equal the last press's; a mismatch is retained for repair
-(`DropRerolledReward`, `AdoptRerolledReward`), never rewritten, while that
-press stays effective; once it is not, edit settlement resets the outcomes as
+(the incoming reward, the cage or the wheel offer). Beside it,
+`rerolledIncomingReward`, `rerolledCages[slot]` or `rerolledOffers[offer]`
+holds the rerolled item: `results`, the reward each press of this target
+drew, by its `rerollId` (room or Hub presses; a target has one source, so the
+ids are unique); `pressId`, the press whose item the owner acquires; and
+`acquisition`, that item's outcomes and acquisition children. The owner's
+effective press is its last press in its source's order (for a board door,
+before its slot's visit), and the owner acquires that press's reward; the
+first draw is inert while a press is effective. Decoding holds `results` to
+exactly the presses naming the target, every press whose target room stands
+to its result, `pressId` to one of them, and `acquisition` present exactly
+while a press is effective and the owner can draw the recorded press's
+reward. A press whose door or room is gone holds no result and is stale.
+
+Outcomes belong to one item. When the effective press changes (a later
+press, an earlier one again, none) or its result changes in place, the item
+is replaced: its outcomes reset to the effective press's unresolved defaults,
+or go while no press is effective, and edit settlement announces the reset as
 a [replaced item](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
-`InsertReroll` appends a press at an
-engine-supplied index (after the doors unlock, or among a wheel's offers
-before its use), `ReplaceRerollReward` changes its reward, and presses are
-removed and moved as ordinary room actions; a removal keeps later presses it
-invalidates.
+Outcomes still at their unresolved defaults simply follow the effective press.
+`InsertReroll` appends a press at an engine-supplied index (after the doors
+unlock, or among a wheel's offers before its use), naming a cage press's slot,
+`ReplaceRerollReward` changes its result, and presses are removed and moved as
+ordinary room actions; a removal keeps later presses it invalidates.
 
 A rerolled single-pick trait, Chaos or Pom level screen holds its earlier
 screens, oldest first, before the final screen that keeps the pick; the reroll

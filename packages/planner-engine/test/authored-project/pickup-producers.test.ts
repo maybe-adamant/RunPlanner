@@ -94,21 +94,26 @@ describe('authored pickup producers', () => {
     const rerolled = {
       ...room,
       rerolledIncomingReward: {
-        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
-        traitOffersByAcquisitionRole: {
-          source: {
-            kind: 'traits',
-            giverKey: 'Poseidon',
-            options: [
-              { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' },
-              { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
-              { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
-            ],
-            selectedOptionKey: 'option1',
-            rarificationActions: [],
-          },
+        results: {
+          r1: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
         },
-        dispositionByAcquisitionRole: { source: { kind: 'normal' } },
+        pressId: 'r1',
+        acquisition: {
+          traitOffersByAcquisitionRole: {
+            source: {
+              kind: 'traits',
+              giverKey: 'Poseidon',
+              options: [
+                { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' },
+                { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
+                { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+              ],
+              selectedOptionKey: 'option1',
+              rarificationActions: [],
+            },
+          },
+          dispositionByAcquisitionRole: { source: { kind: 'normal' } },
+        },
       },
     } as unknown as RoomOccurrence;
     const producers = (occurrence: RoomOccurrence) =>

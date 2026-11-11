@@ -121,9 +121,11 @@ export interface LiveVerb {
   readonly deadline?: number;
   /**
    * The row it stands as or places; absent for a new door, cage or wheel
-   * reroll press, whose row id the picker allocates.
+   * reroll press, whose target the picker chooses.
    */
   readonly reference?: RoomActionReference;
+  /** For a new door, cage or wheel reroll press: the reroll id its row takes. */
+  readonly rerollId?: string;
   /** The conversion's acquisition role, for a verb that sets one. */
   readonly acquisition?: AcquisitionRoleAddress;
   /** The row standing at this gap performs this verb: nothing to do. */
@@ -382,6 +384,18 @@ function objectChoiceVerbs(
     const wheel = createRewardWheelAddress(biome, occurrence.occurrenceId, phase.rewardWheelKey);
     surfaces.push({ object: 'rewardWheel', owner: wheel, surface: { kind: 'rewardWheel', wheel } });
   }
+  // A new press's id and index come from the authored room its command edits.
+  const authored = assembly.project.route.biomes
+    .find((biome) => biome.biomeKey === occurrence.biomeKey)
+    ?.topology?.occurrences.find((entry) => entry.occurrenceId === occurrence.occurrenceId);
+  const pressId =
+    authored === undefined
+      ? undefined
+      : nextRerollId(
+          authored.roomActions.order.flatMap((reference) =>
+            reference.kind === 'reroll' ? [reference.rerollId] : [],
+          ),
+        );
   for (const { object, owner, surface } of surfaces) {
     const settlement = rerollSurfaceForProjectEvaluationAssembly(assembly, surface);
     const gap = rerollAppendIndex(assembly.project, surface);
@@ -404,6 +418,7 @@ function objectChoiceVerbs(
         verb: frozen({
           verb: 'reroll' as const,
           participation: 'optional' as const,
+          ...(pressId === undefined ? {} : { rerollId: pressId }),
           choice: frozen({ picker: 'rerollPress' as const, timing: 'before' as const, surface }),
         }),
       }),
@@ -411,10 +426,6 @@ function objectChoiceVerbs(
   }
   // A Well's or Pool's interaction stands where the room's reached actions end.
   if (frontier !== orderLength) return frozen(verbs);
-  // The reroll's id and index come from the authored room its command edits.
-  const authored = assembly.project.route.biomes
-    .find((biome) => biome.biomeKey === occurrence.biomeKey)
-    ?.topology?.occurrences.find((entry) => entry.occurrenceId === occurrence.occurrenceId);
   const featureReroll = (
     object: 'stygianWell' | 'purgingPool',
     option: { readonly enabled: boolean; readonly available: boolean } | undefined,

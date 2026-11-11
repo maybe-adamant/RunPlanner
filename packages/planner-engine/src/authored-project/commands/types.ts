@@ -548,15 +548,14 @@ export type InfernalContractPedestalCommand =
     };
 /**
  * Door, cage, wheel and Hub board rerolls. The engine allocates each new
- * reroll's identity; room rerolls are removed and moved as room actions.
- * Rerolled-reward repairs are explicit: drop the effective reward, or adopt
- * an unresolved one for the current effective offer.
+ * reroll's identity and stores its reward on the target; room rerolls are
+ * removed and moved as room actions. A cage press names the slot it redrew.
  */
 export type RerollCommand =
   | {
       readonly kind: 'InsertReroll';
       readonly occurrence: OccurrenceAddress;
-      readonly target: import('../model').RerollTarget;
+      readonly target: import('../model').ResolvedRerollTarget;
       readonly reward: ResolvedRewardOffer;
       readonly index: number;
     }
@@ -577,15 +576,7 @@ export type RerollCommand =
       readonly reroll: import('../addresses').HubRerollAddress;
       readonly reward: ResolvedRewardOffer;
     }
-  | { readonly kind: 'RemoveHubReroll'; readonly reroll: import('../addresses').HubRerollAddress }
-  | {
-      readonly kind: 'DropRerolledReward';
-      readonly owner: import('../rerolls').RerolledRewardOwner;
-    }
-  | {
-      readonly kind: 'AdoptRerolledReward';
-      readonly owner: import('../rerolls').RerolledRewardOwner;
-    };
+  | { readonly kind: 'RemoveHubReroll'; readonly reroll: import('../addresses').HubRerollAddress };
 
 /** An Ephyra room's hidden return door: null fields are settled by the simulation. */
 export type PhantomExitCommand = {

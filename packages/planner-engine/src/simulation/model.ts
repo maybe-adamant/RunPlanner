@@ -48,7 +48,6 @@ export type RewardGenerationFindingCode =
   | 'rewardMissing'
   | 'phantomExitPlaceholderUnavailable'
   | 'phantomExitRewardUnavailable'
-  | 'rerolledRewardMismatch'
   | 'rerollUnavailable'
   | 'rerollTargetUnavailable'
   | 'rerollPoolExceeded'

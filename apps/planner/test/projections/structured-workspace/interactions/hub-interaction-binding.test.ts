@@ -116,7 +116,7 @@ describe('structured workspace interaction binding', () => {
     expect(
       visitOrder.proposalFor([
         { kind: 'roomVisit', hubSlotKey: selectedVisits[0]! },
-        { kind: 'reroll', rerollId: 'r1', hubSlotKey: 'combat03', reward: { rewardType: 'Boon' } },
+        { kind: 'reroll', rerollId: 'r1', hubSlotKey: 'combat03' },
       ]).choices[0]?.label,
     ).toBe(`${selectedVisits[0]} → Reroll combat03`);
     // Room-only edits keep the fountain where it is and carry no focus.
@@ -141,7 +141,6 @@ describe('structured workspace interaction binding', () => {
       kind: 'reroll' as const,
       rerollId,
       hubSlotKey: 'combat03',
-      reward: { rewardType: 'MaxHealthDropBig' },
     });
     // Two presses before the fountain used first: r1, r2, Fountain, then the visits.
     const project = [0, 1].reduce(

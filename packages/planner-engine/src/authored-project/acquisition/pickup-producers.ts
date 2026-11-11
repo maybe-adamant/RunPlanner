@@ -1,3 +1,4 @@
+import { effectiveRewardAt, rerolledRewardOf } from '../rerolls';
 import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../infernal-contract-pedestal';
 import {
   resolveTraitAcquisitionOrdinalEffect,
@@ -534,14 +535,20 @@ function traitPickupOffers(
       if (routeStartIncoming === undefined)
         addReward(
           createIncomingRewardAddress(biome, occurrence.occurrenceId),
-          occurrence.rerolledIncomingReward ?? occurrence.state.reward,
+          effectiveRewardAt(
+            occurrence,
+            createIncomingRewardAddress(biome, occurrence.occurrenceId),
+          ),
         );
       break;
     case 'fieldsCombat':
       for (const [slotKey, reward] of Object.entries(occurrence.state.cages))
         addReward(
           createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey),
-          occurrence.state.rerolledCages?.[slotKey] ?? reward,
+          rerolledRewardOf(
+            occurrence,
+            createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey),
+          ) ?? reward,
         );
       for (const [slotKey, reward] of Object.entries(occurrence.state.optionalRewards))
         addReward(
@@ -554,7 +561,10 @@ function traitPickupOffers(
         for (const [offerKey, reward] of Object.entries(wheel.offers))
           addReward(
             createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
-            wheel.rerolledOffers?.[offerKey] ?? reward,
+            rerolledRewardOf(
+              occurrence,
+              createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
+            ) ?? reward,
           );
       break;
     case 'shop':

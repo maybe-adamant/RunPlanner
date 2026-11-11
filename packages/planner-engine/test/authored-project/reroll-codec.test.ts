@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBiomeAddress,
+  createOccurrenceAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   loadUnderworldFGCheckpoint,
@@ -23,7 +26,18 @@ const source = 'golden-f-b2-e1';
 
 describe('reroll codec', () => {
   it('decodes room rerolls and screen counts strictly', () => {
-    const encoded = JSON.parse(encodeProjectDocument(loadUnderworldFGCheckpoint())) as Encoded;
+    const f = createBiomeAddress('Underworld', 'F');
+    const press = (project: ProjectDocument) =>
+      applyProjectCommand(project, catalog, {
+        kind: 'InsertReroll',
+        occurrence: createOccurrenceAddress(f, source as never),
+        target: { kind: 'door', exitKey: 'exit2', occurrenceId: 'golden-f-b3-e2' as never },
+        reward: { rewardType: 'RoomMoneyDrop' },
+        index: 0,
+      });
+    const pressed = press(press(loadUnderworldFGCheckpoint()));
+    const encoded = JSON.parse(encodeProjectDocument(pressed)) as Encoded;
+    expect(decodeProjectDocument(structuredClone(encoded) as never, catalog)).toEqual(pressed);
     const decodeWith = (edit: (room: Record<string, unknown>) => void) => {
       const copy = structuredClone(encoded);
       edit(
@@ -31,28 +45,38 @@ describe('reroll codec', () => {
       );
       return () => decodeProjectDocument(copy as never, catalog);
     };
-    const reroll = (rerollId: string) => ({
-      kind: 'reroll',
-      rerollId,
-      target: { kind: 'door', exitKey: 'exit2', occurrenceId: 'golden-f-b3-e2' },
-      reward: { rewardType: 'RoomMoneyDrop' },
-    });
+    const firstPress =
+      (edit: (row: Record<string, unknown>) => void) => (room: Record<string, unknown>) =>
+        edit((room.roomActions as { order: Record<string, unknown>[] }).order[0]!);
     const withOrder =
       (...actions: unknown[]) =>
       (room: Record<string, unknown>) => {
         const order = (room.roomActions as { order: unknown[] }).order;
         order.push(...actions);
       };
-    expect(decodeWith(withOrder(reroll('r1'), reroll('r2')))).not.toThrow();
-    expect(decodeWith(withOrder(reroll('first')))).toThrow('must be a reroll id');
-    expect(decodeWith(withOrder(reroll('r1'), reroll('r1')))).toThrow('duplicates room action');
+    expect(decodeWith(firstPress((row) => (row.rerollId = 'first')))).toThrow(
+      'must be a reroll id',
+    );
+    expect(
+      decodeWith((room) => withOrder((room.roomActions as { order: unknown[] }).order[0])(room)),
+    ).toThrow('duplicates room action');
+    // A press is its target alone: what it drew lives on the target, and a cage's slot too.
+    expect(decodeWith(firstPress((row) => (row.reward = { rewardType: 'RoomMoneyDrop' })))).toThrow(
+      'is not a project document field',
+    );
+    expect(
+      decodeWith(
+        firstPress(
+          (row) => (row.target = { ...(row.target as object), kind: 'cage', slotKey: 'cage1' }),
+        ),
+      ),
+    ).toThrow('is not a project document field');
     expect(
       decodeWith(
         withOrder({
           kind: 'reroll',
-          rerollId: 'r1',
+          rerollId: 'r3',
           target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
-          reward: { rewardType: 'RoomMoneyDrop' },
         }),
       ),
     ).toThrow('names no wheel offer of this room');

@@ -49,7 +49,10 @@ export function importDispositions(context: RunImportContext): void {
     const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
     const occurrenceId = context.occurrences.occurrenceOf(roomIndex);
     const occurrence = authoredOccurrence(project, biomeKey, occurrenceId);
-    const reward = occurrence === undefined ? undefined : deliveredIncomingReward(occurrence);
+    const reward =
+      occurrence === undefined
+        ? undefined
+        : deliveredIncomingReward(createBiomeAddress(project.route.routeKey, biomeKey), occurrence);
     if (reward === undefined || reward === null) continue;
     const acquisition = createAcquisitionRoleAddress(
       createIncomingRewardAddress(

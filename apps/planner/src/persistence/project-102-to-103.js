@@ -1,6 +1,7 @@
 import { encodeProjectDocument, parseProjectDocument } from '@run-planner/engine/authored-project';
 import {
   moveLockedDoorFightOntoDoor,
+  moveRerollResultsOntoItems,
   moveWellPoolRollsOntoObjects,
   settleProjectUpgrade,
   splitShrineRush,
@@ -24,8 +25,9 @@ function record(value, label) {
  * Schema 103's item-model moves, in order: each a pure, lossless transform of
  * the raw plan from row state onto its item, which leaves a plan already in
  * that shape as it is and runs before strict decoding. The moves touch
- * disjoint fields; the Shrine split adds rows to an order, and the content
- * stamp, which reads every row and item, runs after it, last.
+ * disjoint fields; the Shrine split adds rows to an order, the reroll move
+ * clears the content of rows whose item it adopts, and the content stamp,
+ * which reads every row and item, runs after them, last.
  */
 const ITEM_MODEL_TRANSFORMS = Object.freeze([
   // Well and Pool rolls move from their reroll actions onto the Well and Pool.
@@ -34,6 +36,8 @@ const ITEM_MODEL_TRANSFORMS = Object.freeze([
   moveLockedDoorFightOntoDoor,
   // A rushed Shrine purchase becomes the purchase followed by its own rush.
   splitShrineRush,
+  // Door, cage, wheel and Hub press results move onto the rerolled item.
+  moveRerollResultsOntoItems,
   // Each pickup, purchase and sale row records the content of the item it acts on.
   stampRoomActionItemContent,
 ]);

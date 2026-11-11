@@ -30,6 +30,7 @@ import {
   createTraitOfferAddress,
   materializeGorgonAthenaOffer,
   nemesisGeneratedPickupSiteKey,
+  rerolledRewardOf,
   semanticAddressKey,
   discoverAuthoredTraitCarrierChildren,
   type AcquisitionEntryAddress,
@@ -543,6 +544,7 @@ export function controlsForOccurrence(
       { readonly kind: 'anomaly' | 'counted' | 'ephyraCombat' | 'freeReward' }
     >,
   ) => {
+    const rerolled = rerolledRewardOf(occurrence, incoming);
     controls.push(
       withRerolledReward(
         rewardControl(
@@ -550,9 +552,9 @@ export function controlsForOccurrence(
           { kind: 'incomingReward', address: incoming },
           incomingRewardBinding(room, state),
           state.reward?.offer ?? null,
-          occurrence.rerolledIncomingReward ?? state.reward,
+          rerolled ?? state.reward,
         ),
-        occurrence.rerolledIncomingReward,
+        rerolled,
       ),
     );
   };
@@ -580,7 +582,7 @@ export function controlsForOccurrence(
           group.key,
           slotKey,
         );
-        const rerolled = occurrence.state.rerolledCages?.[slotKey];
+        const rerolled = rerolledRewardOf(occurrence, address);
         controls.push(
           withRerolledReward(
             rewardControl(
@@ -646,7 +648,7 @@ export function controlsForOccurrence(
             declaration.key,
             offerKey,
           );
-          const rerolled = wheel.rerolledOffers?.[offerKey];
+          const rerolled = rerolledRewardOf(occurrence, address);
           controls.push(
             withRerolledReward(
               rewardControl(

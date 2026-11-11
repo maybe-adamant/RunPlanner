@@ -824,9 +824,7 @@ export function isHubAction(value: unknown): value is HubAction {
     return (
       typeof action.rerollId === 'string' &&
       typeof action.hubSlotKey === 'string' &&
-      typeof action.reward === 'object' &&
-      action.reward !== null &&
-      keys.length === 4
+      keys.length === 3
     );
   return action.kind === 'roomVisit' && typeof action.hubSlotKey === 'string' && keys.length === 2;
 }

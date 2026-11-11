@@ -100,13 +100,6 @@ function codeControl(finding: SemanticFinding): WorkspaceFindingControl | undefi
     (finding.code === 'hexActivationMissing' || finding.code === 'hexActivationUnavailable')
   )
     return 'hexActivation';
-  if (
-    finding.code === 'rerolledRewardMismatch' &&
-    (finding.origin.kind === 'incomingReward' ||
-      finding.origin.kind === 'localReward' ||
-      finding.origin.kind === 'rewardWheelOffer')
-  )
-    return 'rerolledReward';
   // Stone findings arise only for a chosen proc or a required Stone, whose checkbox is fixed.
   if (
     finding.origin.kind === 'traitOffer' &&

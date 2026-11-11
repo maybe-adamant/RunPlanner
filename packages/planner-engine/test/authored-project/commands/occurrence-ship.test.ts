@@ -320,7 +320,10 @@ describe('authored-project Ship occurrence commands', () => {
       expect(left.offers.offer1?.traitOffersByAcquisitionRole.source).toMatchObject({
         selectedOptionKey: 'option2',
       });
-      expect(left.rerolledOffers?.offer2?.offer).toEqual({ rewardType: 'MaxManaDrop' });
+      expect(left.rerolledOffers?.offer2).toMatchObject({
+        results: { r1: { rewardType: 'MaxManaDrop' } },
+        pressId: 'r1',
+      });
       expect(actions(before)?.some((action) => action.kind === 'reroll')).toBe(true);
       const swapped = applyProjectCommand(before, catalog, swap);
       expect(shipState(swapped).wheels.wheel1).toEqual({

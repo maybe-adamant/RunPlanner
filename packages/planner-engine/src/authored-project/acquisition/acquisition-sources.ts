@@ -1,3 +1,4 @@
+import { effectiveRewardAt, rerolledRewardOf } from '../rerolls';
 import type { AcquisitionRoleAddress, BiomeAddress, TraitOfferOwnerAddress } from '../addresses';
 import {
   createAcquisitionEntryAddress,
@@ -125,14 +126,20 @@ export function authoredAcquisitionSources(
       if (routeStartIncoming === undefined)
         add(
           createIncomingRewardAddress(biome, occurrence.occurrenceId),
-          occurrence.rerolledIncomingReward ?? occurrence.state.reward,
+          effectiveRewardAt(
+            occurrence,
+            createIncomingRewardAddress(biome, occurrence.occurrenceId),
+          ),
         );
       break;
     case 'fieldsCombat':
       for (const [slotKey, reward] of Object.entries(occurrence.state.cages))
         add(
           createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey),
-          occurrence.state.rerolledCages?.[slotKey] ?? reward,
+          rerolledRewardOf(
+            occurrence,
+            createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey),
+          ) ?? reward,
         );
       for (const [slotKey, reward] of Object.entries(occurrence.state.optionalRewards))
         add(
@@ -145,7 +152,10 @@ export function authoredAcquisitionSources(
         for (const [offerKey, reward] of Object.entries(wheel.offers))
           add(
             createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
-            wheel.rerolledOffers?.[offerKey] ?? reward,
+            rerolledRewardOf(
+              occurrence,
+              createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
+            ) ?? reward,
           );
       break;
     case 'shop':

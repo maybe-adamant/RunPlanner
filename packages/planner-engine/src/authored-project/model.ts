@@ -68,11 +68,15 @@ export interface AuthoredRewardState {
 export type AuthoredStartingRewardAcquisition = Omit<AuthoredRewardState, 'offer'>;
 
 /**
- * A rerolled owner's effective reward with its acquisition, and the press that
- * drew it (its reroll id) once known: its outcomes belong to that press's item.
+ * A rerolled owner's redraws and the outcomes of its effective item. `results`
+ * holds each press of this owner's reward, by reroll id, from its room or Hub;
+ * `pressId` names the press whose item `acquisition` belongs to. The
+ * acquisition is absent exactly when the owner cannot draw that press's reward.
  */
-export interface RerolledRewardState extends AuthoredRewardState {
-  readonly pressId?: string;
+export interface RerolledRewardState {
+  readonly results: Readonly<Record<string, ResolvedRewardOffer>>;
+  readonly pressId: string;
+  readonly acquisition?: AuthoredStartingRewardAcquisition;
 }
 
 /** The narrow loadout surface consumed by room/reward materialization. */
@@ -298,7 +302,7 @@ export interface FieldsCombatState {
   readonly kind: 'fieldsCombat';
   /** Each cage's first native draw, the reward its door showed when the doors unlocked. */
   readonly cages: Readonly<Record<string, AuthoredRewardState | null>>;
-  /** A rerolled cage's effective reward and its acquisition; see `rerolledIncomingReward`. */
+  /** A rerolled cage's redraws and outcomes; see `rerolledIncomingReward`. */
   readonly rerolledCages?: Readonly<Record<string, RerolledRewardState>>;
   readonly optionalRewardCount: number;
   readonly optionalRewards: Readonly<Record<string, AuthoredRewardState | null>>;
@@ -418,29 +422,35 @@ export interface PurgingPoolRerollAction {
 
 /**
  * What one door, wheel or cage reroll redraws. A door and a cage name the
- * source room's exit and its target occurrence; a cage also names the cage
- * slot, which the game picks at random. A wheel offer is this room's own.
+ * source room's exit and its target occurrence; the cage slot the game picked
+ * is wherever the target holds the press's result. A wheel offer is this
+ * room's own.
  */
 export type RerollTarget =
   | { readonly kind: 'door'; readonly exitKey: string; readonly occurrenceId: OccurrenceId }
+  | { readonly kind: 'cage'; readonly exitKey: string; readonly occurrenceId: OccurrenceId }
+  | { readonly kind: 'wheelOffer'; readonly wheelKey: string; readonly offerKey: string };
+
+/** A press's target with the cage slot it redrew, as commands name it and the walk reads it. */
+export type ResolvedRerollTarget =
+  | Exclude<RerollTarget, { readonly kind: 'cage' }>
   | {
       readonly kind: 'cage';
       readonly exitKey: string;
       readonly occurrenceId: OccurrenceId;
       readonly slotKey: string;
-    }
-  | { readonly kind: 'wheelOffer'; readonly wheelKey: string; readonly offerKey: string };
+    };
 
 /**
  * One reroll press, a repeatable action identified by its persisted
- * `rerollId`, never by its position. It carries its target and the reward the
- * redraw produced; the target owner keeps its first native draw.
+ * `rerollId`, never by its position. It names its target; the reward its
+ * redraw produced is the target's observation, and the target owner keeps its
+ * first native draw.
  */
 export interface RerollRoomAction {
   readonly kind: 'reroll';
   readonly rerollId: string;
   readonly target: RerollTarget;
-  readonly reward: ResolvedRewardOffer;
 }
 
 export interface RoomActionState {
@@ -452,7 +462,7 @@ export interface RewardWheelState {
   readonly offerCount: number;
   /** Each offer's first native draw. */
   readonly offers: Readonly<Record<string, AuthoredRewardState | null>>;
-  /** A rerolled offer's effective reward and its acquisition; see `rerolledIncomingReward`. */
+  /** A rerolled offer's redraws and outcomes; see `rerolledIncomingReward`. */
   readonly rerolledOffers?: Readonly<Record<string, RerolledRewardState>>;
   readonly pickedOfferIndex: number;
 }
@@ -671,10 +681,8 @@ export interface RoomOccurrence {
   /** Present exactly where the room declares a phantom exit. */
   readonly phantomExit?: PhantomExitState;
   /**
-   * The reward entered after its door's rerolls, with its acquisition. The
-   * state's own reward stays the door's first native draw, inert while this is
-   * present. Its offer should equal the last reroll's; a mismatch is kept for
-   * repair, never rewritten, while the press it records stays effective.
+   * The door's redraws and its effective item's outcomes. The state's own
+   * reward stays the door's first native draw, inert while this is present.
    */
   readonly rerolledIncomingReward?: RerolledRewardState;
   /** Where the room stands as entered; absent fields leave the game to decide. */
@@ -816,12 +824,14 @@ export type HubAction =
   | { readonly kind: 'useFountain' }
   | HubRerollAction;
 
-/** One board-door reroll press; its slot's target keeps its first native draw. */
+/**
+ * One board-door reroll press; its result is the slot room's observation, and
+ * that room keeps its first native draw.
+ */
 export interface HubRerollAction {
   readonly kind: 'reroll';
   readonly rerollId: string;
   readonly hubSlotKey: string;
-  readonly reward: ResolvedRewardOffer;
 }
 
 export interface HubDecision {

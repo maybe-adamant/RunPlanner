@@ -9,7 +9,7 @@ import {
 } from '../../../../authored-project/addresses';
 import type { RerolledRewardOwner } from '../../../../authored-project/rerolls';
 import { rerollTargetOwner } from '../../../../authored-project/rerolls';
-import type { RerollTarget } from '../../../../authored-project/model';
+import type { ResolvedRerollTarget } from '../../../../authored-project/model';
 import type { CountedRewardBinding } from '../../../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import { rerollPoolRemaining, spendRerolls } from '../../../arcana-fear';
@@ -119,7 +119,7 @@ export function roomTargetContext(
   catalog: Catalog,
   source: CanonicalAuthoredRoom,
   batch: CanonicalBatch | undefined,
-  target: RerollTarget,
+  target: ResolvedRerollTarget,
   batchPeers: readonly OfferProcessingPeer[],
 ): RerollTargetContext | undefined {
   const resolved = resolveRoomTarget(catalog, source, batch, target, batchPeers);
@@ -135,7 +135,7 @@ export function resolveRoomTarget(
   catalog: Catalog,
   source: CanonicalAuthoredRoom,
   batch: CanonicalBatch | undefined,
-  target: RerollTarget,
+  target: ResolvedRerollTarget,
   batchPeers: readonly OfferProcessingPeer[],
 ): RerollTargetContext | 'cageNotPlayed' | undefined {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
@@ -414,10 +414,6 @@ export function applyRewardRerolledTransition(inputs: {
       findings: Object.freeze([]),
       producerFrontiers: Object.freeze([]),
     });
-  if (inputs.reward === undefined)
-    throw new BiomeRewardSimulationContractError(
-      `${semanticAddressKey(owner)} reached without its reroll`,
-    );
   if (inputs.refused === 'slotEntered')
     return blocked('rerollTargetUnavailable', { reason: 'slotEntered' });
   if (!inputs.flagged) return blocked('rerollUnavailable', { kind: 'doors' });
@@ -425,6 +421,10 @@ export function applyRewardRerolledTransition(inputs: {
     return blocked('rerollTargetUnavailable', { reason: 'cageNotPlayed' });
   if (target === undefined) return blocked('rerollTargetUnavailable', { reason: 'missing' });
   if (!target.rerollable) return blocked('rerollTargetUnavailable', { reason: 'notRerollable' });
+  if (inputs.reward === undefined)
+    throw new BiomeRewardSimulationContractError(
+      `${semanticAddressKey(owner)} reached without its reroll`,
+    );
   if (view === undefined)
     throw new BiomeRewardSimulationContractError(
       `${semanticAddressKey(owner)} has no history view`,

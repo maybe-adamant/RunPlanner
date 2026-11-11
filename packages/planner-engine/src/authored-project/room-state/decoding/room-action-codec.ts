@@ -7,7 +7,9 @@ import type {
   RoomActionReference,
   RoomActionState,
 } from '../../model';
-import { decodeResolvedRewardOffer } from './reward-acquisition-codec';
+import { decodeRerollId } from './reward-acquisition-codec';
+
+export { decodeRerollId };
 import { decodeStygianWellGenerationKey } from './well-codec';
 import { roomActionKey } from '../../room-actions/state';
 import {
@@ -19,35 +21,18 @@ import {
   failProjectDocument,
 } from '../../validation';
 
-/** A persisted reroll instance identity: `r` and a positive integer. */
-export function decodeRerollId(value: unknown, path: string): string {
-  const rerollId = expectNonBlankString(value, path);
-  if (!/^r[1-9][0-9]*$/.test(rerollId)) failProjectDocument(path, 'must be a reroll id');
-  return rerollId;
-}
-
 function decodeRerollTarget(value: unknown, path: string): RerollTarget {
   const target = expectRecord(value, path);
   const kind = expectString(target.kind, `${path}.kind`);
   if (kind === 'door' || kind === 'cage') {
-    expectExactKeys(
-      target,
-      ['kind', 'exitKey', 'occurrenceId', ...(kind === 'cage' ? ['slotKey'] : [])],
-      path,
-    );
+    // A cage press's slot is wherever its target holds its result.
+    expectExactKeys(target, ['kind', 'exitKey', 'occurrenceId'], path);
     const exitKey = expectNonBlankString(target.exitKey, `${path}.exitKey`);
     const occurrenceId = expectNonBlankString(
       target.occurrenceId,
       `${path}.occurrenceId`,
     ) as OccurrenceId;
-    return kind === 'door'
-      ? Object.freeze({ kind, exitKey, occurrenceId })
-      : Object.freeze({
-          kind,
-          exitKey,
-          occurrenceId,
-          slotKey: expectNonBlankString(target.slotKey, `${path}.slotKey`),
-        });
+    return Object.freeze({ kind, exitKey, occurrenceId });
   }
   if (kind === 'wheelOffer') {
     expectExactKeys(target, ['kind', 'wheelKey', 'offerKey'], path);
@@ -232,12 +217,11 @@ function decodeRoomActionReference(
     });
   }
   if (kind === 'reroll') {
-    expectExactKeys(reference, ['kind', 'rerollId', 'target', 'reward'], path);
+    expectExactKeys(reference, ['kind', 'rerollId', 'target'], path);
     return Object.freeze({
       kind,
       rerollId: decodeRerollId(reference.rerollId, `${path}.rerollId`),
       target: decodeRerollTarget(reference.target, `${path}.target`),
-      reward: decodeResolvedRewardOffer(reference.reward, catalog, `${path}.reward`),
     });
   }
   if (kind === 'rerollStygianWell' || kind === 'rerollPurgingPool') {

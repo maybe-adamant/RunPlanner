@@ -64,11 +64,6 @@ export interface CanonicalRewardReroll {
 /** Fields a rerollable reward owner carries beside its offer. */
 export interface CanonicalRerollableReward {
   readonly reroll?: CanonicalRewardReroll;
-  /**
-   * The authored rerolled acquisition does not match the effective offer, or
-   * no reroll remains for it; kept for repair and reported.
-   */
-  readonly rerolledRewardMismatch?: true;
 }
 
 /**
@@ -295,6 +290,11 @@ export interface CanonicalAuthoredRoom {
   /** Normalized catalog whitelist consumed by an Extended Well purchase. */
   readonly stygianWellExtendedDirectPurchaseItemKeys?: readonly string[];
   readonly roomActionRoster: import('../room-actions').RoomActionRoster;
+  /** The room's door, cage and wheel presses whose target holds their result, by reroll id. */
+  readonly rerollPresses?: ReadonlyMap<
+    string,
+    import('../../authored-project/rerolls').ResolvedRerollPress
+  >;
   /** Fields combat rooms only: the room-action domain's cage order state. */
   readonly fieldsCageOrder?: import('../../authored-project/room-actions/domain').FieldsCageOrderState;
   readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
@@ -554,7 +554,8 @@ export interface CanonicalHubDecision {
 export interface CanonicalHubReroll {
   readonly origin: import('../../authored-project/addresses').HubRerollAddress;
   readonly hubSlotKey: string;
-  readonly reward: ResolvedRewardOffer;
+  /** The reward the press drew; absent while its slot is closed. */
+  readonly reward?: ResolvedRewardOffer;
   /** Room visits completed, including their Hub returns, before the press. */
   readonly precedingVisitCount: number;
   /** Whether the Hub fountain use precedes the press in the same stay. */

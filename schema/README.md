@@ -45,7 +45,18 @@ fight customization moves from its `unlockExit` press to the door, in the
 room's `encounters.customizationByLockedExit` keyed by exit key; the press
 keeps only its `exitKey`. A Shrine rush is its own room action: a stored
 `rushed: true` purchase becomes the purchase directly followed by its
-`rushHermesShrineOffer` action, and every purchase loses the flag. The
+`rushHermesShrineOffer` action, and every purchase loses the flag. A door,
+cage, wheel or Hub reroll press keeps its `rerollId` and target, and a cage
+press loses its `slotKey`: each press's reward moves to the rerolled owner's
+`results` under its id (`rerolledIncomingReward`, `rerolledCages[slot]` or
+`rerolledOffers[offer]`), beside `pressId`, the press whose item it is, and
+that item's outcomes in `acquisition`. A rerolled reward that recorded its
+press keeps its outcomes on it, else on the owner's last press; an entered
+reward its press did not draw becomes that press's result, and the pickup
+rows of its owner are stamped again; a press with no entered reward starts
+its outcomes unresolved, and none are kept while no press of the owner is
+effective. A rerolled reward with no press, and a press whose door, room,
+cage or Hub slot is gone, are dropped. The
 migration accepts schema 102 through its final revision 1, lifts the version,
 makes those moves (losslessly, before strict decoding; a press stood only at
 a locked door, once per door; the moves touch disjoint fields) and settles
@@ -57,9 +68,9 @@ without it, reaching the plan's end, never holds; a countdown Hermes delivery, i
 payload with it, whose purchase is gone or whose Shrine slot stocks another
 reward; an Echo
 replay the walk reaches holding another reward than its last, silently, with
-its pickup; and an
-unselected door its source room no longer has, with the rooms behind it. A
-rerolled reward records no press: the next edit of its biome stamps it. A takeover batch gains the Preboss doors it
+its pickup; the outcomes of a rerolled reward whose recorded press is not its
+owner's effective one; and an
+unselected door its source room no longer has, with the rooms behind it. A takeover batch gains the Preboss doors it
 lacks, and a due delivery the plan lacks is placed, as any edit places it.
 Rows whose loss the plan cannot show stay with their findings: a Travel Deal
 refill or a duplicate the saved plan already shows unproduced, a drop whose
@@ -161,7 +172,7 @@ a door, a door's cage slot or a wheel offer, and the new `reward`) and a Hub
 `reroll` action (`rerollId`, `hubSlotKey`, `reward`) each record one press;
 the target keeps its first draw. A rerolled owner holds the reward it is
 entered with in `rerolledIncomingReward`, `rerolledCages` or
-`rerolledOffers`, with the optional `pressId` of the press that drew it. Trait (Fallback Gold included), Chaos and Pom choice screens hold optional
+`rerolledOffers`. Trait (Fallback Gold included), Chaos and Pom choice screens hold optional
 `rerolledScreens`: the screens shown before the final one, oldest first, each
 complete (trait rows with rarities and optional `persephoneLevelBonus`, an
 optional `rejectedOptionKey` and optional ordered `rarificationActions`, the

@@ -13,7 +13,7 @@ import {
   type RerollPressTarget,
   type RerollSurface,
 } from '../../../authored-project/rerolls';
-import type { RerollTarget } from '../../../authored-project/model';
+import type { ResolvedRerollTarget } from '../../../authored-project/model';
 import { rerollActionKey } from '../../../authored-project/room-actions/key';
 import type { ResolvedRewardOffer } from '../../../reward-kernel';
 import type { HistoryEvent } from '../../history';
@@ -204,7 +204,7 @@ function doorsCapture(
   batch: CanonicalBatch,
 ): RerollSurfaceCapture | undefined {
   const candidates = () =>
-    batch.targets.flatMap((door): RerollTarget[] => {
+    batch.targets.flatMap((door): ResolvedRerollTarget[] => {
       const cages = door.room.localRewards?.filter((reward) => reward.groupKey === 'cages') ?? [];
       return cages.length > 0
         ? cages.map((cage) => ({

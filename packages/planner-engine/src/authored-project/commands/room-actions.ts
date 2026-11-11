@@ -26,7 +26,6 @@ import { authoredShopOffer, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
 import type { RoomActionCommand } from './types';
-import { reconcileRemovedOrMovedReroll } from './rerolls';
 import {
   immediateFollowersInPlace,
   movedRoomActionOrder,
@@ -437,12 +436,5 @@ export function applyRoomActionCommand(
       ? withoutFeatureRerollObservations(Object.freeze(nextOccurrence), removed)
       : Object.freeze(nextOccurrence),
   );
-  // Removing or moving a reroll can change its target's effective reward.
-  const reroll =
-    command.kind === 'RemoveRoomAction' || command.kind === 'MoveRoomAction'
-      ? order[existingIndex]
-      : undefined;
-  return reroll?.kind === 'reroll'
-    ? reconcileRemovedOrMovedReroll(updated, catalog, located, occurrence, reroll)
-    : updated;
+  return updated;
 }

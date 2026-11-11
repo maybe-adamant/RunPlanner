@@ -1379,40 +1379,6 @@ select {
   color: var(--muted);
 }
 
-/* A kept-reward repair in a door row: the reroll die marked with its action. */
-.rerolled-repair-action {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.rerolled-repair-die {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-}
-
-.rerolled-repair-mark {
-  position: absolute;
-  right: 1px;
-  bottom: 1px;
-  display: grid;
-  width: 12px;
-  height: 12px;
-  place-items: center;
-  border-radius: 50%;
-  background: #1b1c22;
-  color: var(--text);
-}
-
-.rerolled-repair-mark > svg {
-  width: 10px;
-  height: 10px;
-}
-
-.rerolled-repair-action[data-repair='drop'] .rerolled-repair-mark {
-  color: #e0a0a0;
-}
-
 /* A rerolled reward's final draw: its icon, badged with the reroll die like a timeline slot. */
 .row-reward-rerolled {
   position: relative;

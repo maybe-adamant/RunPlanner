@@ -246,12 +246,12 @@ describe('rows on a replaced item in edit settlement', () => {
   });
 
   describe('across rooms', () => {
-    /** Presses the door into `target`, which redraws its reward: a new item. */
+    /** Presses the door into `target`, which redraws its Boon as another god's: a new item. */
     const press = (source: OccurrenceAddress, target: string): ProjectCommand => ({
       kind: 'InsertReroll',
       occurrence: source,
       target: { kind: 'door', exitKey: 'exit1', occurrenceId: createOccurrenceId(target) },
-      reward: { rewardType: 'RoomMoneyDrop' },
+      reward: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
       index: 0,
     });
     const withPressIndex = (project: ProjectDocument, command: ProjectCommand) =>

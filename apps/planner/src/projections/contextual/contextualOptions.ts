@@ -934,7 +934,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'reward', message: 'This room cannot fill the hidden door here.' };
     case 'phantomExitRewardUnavailable':
       return { kind: 'bag', message: 'This room’s pool cannot draw this reward here.' };
-    case 'rerolledRewardMismatch':
     case 'rerollUnavailable':
     case 'rerollTargetUnavailable':
     case 'rerollPoolExceeded':

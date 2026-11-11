@@ -20,7 +20,7 @@ import { CandidatePicker } from '../CandidatePicker';
 import { DoorChipOptions, DoorRow, DoorRowsHeader, RewardPoolLine } from '../DecisionWorkbench';
 import { DoorRows } from '../DoorRows';
 import { wheelOfferChips } from '../doorSummary';
-import { RerolledRewardRepairs, RowReward } from '../DoorRewardEditor';
+import { RowReward } from '../DoorRewardEditor';
 import { RoomRerolls } from '../RoomRerolls';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
@@ -167,7 +167,6 @@ export function RewardWheelWorkbench({
                     </span>
                   }
                   room={null}
-                  secondary={<RerolledRewardRepairs rewards={[offer]} target={offer.label} />}
                   {...(choosesOffer
                     ? {
                         selection: (

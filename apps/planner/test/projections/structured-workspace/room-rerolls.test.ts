@@ -4,9 +4,9 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
-  createLevelResolutionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  rerollResult,
   semanticAddressKey,
   type HubRerollAddress,
   type ProjectDocument,
@@ -301,41 +301,6 @@ describe('Room door rerolls', () => {
     ).toContain('Door 1 Cage 1');
   });
 
-  it('repairs a kept rerolled reward that no longer matches its last reroll', async () => {
-    const pom = await append(base, doorKey(doorTo), 1);
-    const resolved = applyProjectCommand(pom, catalog, {
-      kind: 'ReplaceLevelResolution',
-      levelResolution: createLevelResolutionAddress(createIncomingRewardAddress(f, doorTo), 'self'),
-      value: { kind: 'choice', offeredTraitKeys: ['ZeusSpecialBoon'], selectedTraitKey: null },
-    });
-    const [press] = rerollsOf(projectStructuredWorkspaceFixture(resolved)).rerolls.rows;
-    const changed = applyProjectCommand(resolved, catalog, {
-      kind: 'ReplaceRerollReward',
-      action: roomAction(press!.address),
-      reward: { rewardType: 'RoomMoneyDrop' },
-    });
-    const projected = projectStructuredWorkspaceFixture(changed);
-    const owner = createIncomingRewardAddress(f, doorTo);
-    expect(
-      batchOf(projected, 'F', source).targets[0]?.door.offerRewardSurface.rewards[0]
-        ?.rerolledRewardRepair,
-    ).toEqual({ owner, repair: 'adopt' });
-    expect(
-      projected.workspace.findingsByRepairTarget.has(findingControlKey(owner, 'rerolledReward')),
-    ).toBe(true);
-    // Without its reroll the kept reward is dropped instead.
-    const removed = projectStructuredWorkspaceFixture(
-      applyProjectCommand(resolved, catalog, {
-        kind: 'RemoveRoomAction',
-        action: roomAction(press!.address),
-      }),
-    );
-    expect(
-      batchOf(removed, 'F', source).targets[0]?.door.offerRewardSurface.rewards[0]
-        ?.rerolledRewardRepair,
-    ).toEqual({ owner, repair: 'drop' });
-  });
-
   it("collects a rerolled door's final reward with its own details", async () => {
     // Door 1 rerolled into a Pom: the next room collects the Pom and resolves it.
     const project = replaceTestPlacedItem(
@@ -346,7 +311,14 @@ describe('Room door rerolls', () => {
     const reroll = project.route.biomes[0]!.topology!.occurrences.find(
       (occurrence) => occurrence.occurrenceId === source,
     )!.roomActions.order.find((action) => action.kind === 'reroll');
-    expect(reroll?.kind === 'reroll' && reroll.reward).toEqual({ rewardType: 'StackUpgrade' });
+    expect(
+      reroll?.kind === 'reroll' &&
+        rerollResult(
+          project.route.biomes[0]!.topology!,
+          createIncomingRewardAddress(f, doorTo),
+          reroll.rerollId,
+        ),
+    ).toEqual({ rewardType: 'StackUpgrade' });
     const projected = projectStructuredWorkspaceFixture(project);
     const next = requireWorkspaceBiome(projected.workspace, 'F').nodes.find(
       (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === doorTo,

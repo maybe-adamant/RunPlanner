@@ -39,7 +39,6 @@ import {
   useFindingTarget,
   type FindingMarkProps,
 } from '@planner/ui/feedback/useFindingTarget';
-import { RerolledRewardRepairIcon } from './DoorRewardEditor';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 import { HubBoardMap, HubDoorFace, type HubMapDoor } from './hub-map/HubBoardMap';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
@@ -73,11 +72,9 @@ function moveLabel(move: WorkspaceHubRowMove): string {
 }
 
 /**
- * The visited door's reward as icons, first draw → final where rerolled, with
- * the repair of a kept pick its rerolls no longer match.
+ * The visited door's reward as icons, first draw → final where rerolled.
  */
 function VisitReward({ door }: { readonly door: WorkspaceDoorContract | undefined }) {
-  const findingAnchor = useFindingAnchor();
   if (door?.offerRewardSurface.visibility !== 'visible') return null;
   const rewards = door.offerRewardSurface.rewards;
   if (rewards.length === 0) return null;
@@ -88,12 +85,8 @@ function VisitReward({ door }: { readonly door: WorkspaceDoorContract | undefine
         : `${reward.summary} → ${reward.rerolledSummary}`,
     )
     .join(', ');
-  const repaired = rewards.find((reward) => reward.rerolledRewardRepair !== undefined);
   return (
-    <span
-      className="hub-segment-reward"
-      {...(repaired === undefined ? {} : findingAnchor(repaired.marker.address))}
-    >
+    <span className="hub-segment-reward">
       <span aria-label={name} className="hub-segment-reward" role="img">
         {rewards.map((reward) => (
           <span className="hub-segment-reward-draw" key={reward.key}>
@@ -115,17 +108,6 @@ function VisitReward({ door }: { readonly door: WorkspaceDoorContract | undefine
           </span>
         ))}
       </span>
-      {rewards.flatMap((reward) =>
-        reward.rerolledRewardRepair === undefined
-          ? []
-          : [
-              <RerolledRewardRepairIcon
-                key={reward.key}
-                repair={reward.rerolledRewardRepair}
-                target={door.room.label}
-              />,
-            ],
-      )}
     </span>
   );
 }

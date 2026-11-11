@@ -622,20 +622,31 @@ export function decodeRoomOccurrence(input: {
   const rerolledIncomingReward = rawOccurrence.hasRerolledIncomingReward
     ? (() => {
         const path = `${rawOccurrence.path}.rerolledIncomingReward`;
-        const binding = requireCountedBinding(contextualRoom, path);
-        return decodeRerolledRewardState(rawOccurrence.rerolledIncomingReward, path, (raw) => {
-          const reward = decodeRewardState(
-            raw,
-            catalog,
-            path,
-            { kind: 'producerLifecycle', key: binding.producerLifecycleKey },
-            routeKey,
-          );
-          return Object.freeze({
-            ...reward,
-            offer: decodeCountedOffer(reward.offer, catalog, binding, `${path}.offer`),
-          });
-        });
+        // A press may name a door whose room draws no counted reward; its item holds no outcomes.
+        const binding =
+          contextualRoom.incomingReward.kind === 'countedChoice'
+            ? contextualRoom.incomingReward
+            : undefined;
+        return decodeRerolledRewardState(
+          rawOccurrence.rerolledIncomingReward,
+          catalog,
+          path,
+          (raw, acquisitionPath) => {
+            const counted = requireCountedBinding(contextualRoom, acquisitionPath);
+            const reward = decodeRewardState(
+              raw,
+              catalog,
+              acquisitionPath,
+              { kind: 'producerLifecycle', key: counted.producerLifecycleKey },
+              routeKey,
+            );
+            return Object.freeze({
+              ...reward,
+              offer: decodeCountedOffer(reward.offer, catalog, counted, `${path}.offer`),
+            });
+          },
+          (offer) => binding?.allowedRewardTypes.includes(offer.rewardType) === true,
+        );
       })()
     : undefined;
   const roomActions = decodeRoomActionState(

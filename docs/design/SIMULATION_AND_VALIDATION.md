@@ -822,9 +822,9 @@ so its control stands reached.
 
 Reroll findings belong to the press, the roll or the screen that made the
 spend: an unavailable target, reward or roll at its press or roll action, an
-over-spend at the spend that exceeded the pool, a rerolled reward that no
-longer matches its last press at the rerolled owner, and an earlier-screen
-finding at that screen of the offer. A hidden return door's unavailable
+over-spend at the spend that exceeded the pool, and an earlier-screen finding
+at that screen of the offer. A rerolled owner acquires its effective press's
+result, so it has no finding of its own. A hidden return door's unavailable
 placeholder or reward belongs to its room's door.
 
 A Hub visit or side-room visit that enters a room visited before it, a

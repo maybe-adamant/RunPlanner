@@ -41,6 +41,110 @@ const gHost = (document) =>
     .flatMap((biome) => biome.topology?.occurrences ?? [])
     .find((occurrence) => occurrence.occurrenceId === 'golden-g-b1-e1');
 
+/** Every occurrence of a document, across its biomes. */
+const occurrencesOf = (document) =>
+  document.route.biomes.flatMap((biome) => biome.topology?.occurrences ?? []);
+const occurrenceOf = (document, occurrenceId) =>
+  occurrencesOf(document).find((occurrence) => occurrence.occurrenceId === occurrenceId);
+
+/**
+ * The same plan in the earlier reroll shape: each press carries the reward it
+ * drew and a cage press its slot, and a rerolled owner holds its effective
+ * reward with its outcomes, recording its press only when `pressIds` is set.
+ */
+function withEarlierRerolls(current, { pressIds = true } = {}) {
+  const document = structuredClone(current);
+  const records = [];
+  for (const occurrence of occurrencesOf(document)) {
+    if (occurrence.rerolledIncomingReward !== undefined)
+      records.push({
+        occurrence,
+        kind: 'incoming',
+        record: occurrence.rerolledIncomingReward,
+        set: (value) => {
+          if (value === undefined) delete occurrence.rerolledIncomingReward;
+          else occurrence.rerolledIncomingReward = value;
+        },
+      });
+    for (const [slotKey, record] of Object.entries(occurrence.state.rerolledCages ?? {}))
+      records.push({
+        occurrence,
+        kind: 'cage',
+        slotKey,
+        record,
+        set: (value) => {
+          if (value === undefined) delete occurrence.state.rerolledCages[slotKey];
+          else occurrence.state.rerolledCages[slotKey] = value;
+        },
+      });
+    for (const [wheelKey, wheel] of Object.entries(occurrence.state.wheels ?? {}))
+      for (const [offerKey, record] of Object.entries(wheel.rerolledOffers ?? {}))
+        records.push({
+          occurrence,
+          kind: 'wheel',
+          wheelKey,
+          offerKey,
+          record,
+          set: (value) => {
+            if (value === undefined) delete wheel.rerolledOffers[offerKey];
+            else wheel.rerolledOffers[offerKey] = value;
+          },
+        });
+  }
+  const resultOf = (rerollId, matches) =>
+    records.find((entry) => matches(entry) && Object.hasOwn(entry.record.results, rerollId));
+  for (const source of occurrencesOf(document))
+    for (const press of source.roomActions.order) {
+      if (press.kind !== 'reroll') continue;
+      const target = press.target;
+      const held = resultOf(press.rerollId, (entry) =>
+        target.kind === 'wheelOffer'
+          ? entry.kind === 'wheel' &&
+            entry.occurrence === source &&
+            entry.wheelKey === target.wheelKey &&
+            entry.offerKey === target.offerKey
+          : entry.kind === (target.kind === 'door' ? 'incoming' : 'cage') &&
+            entry.occurrence.occurrenceId === target.occurrenceId,
+      );
+      press.reward = held.record.results[press.rerollId];
+      if (target.kind === 'cage') target.slotKey = held.slotKey;
+    }
+  for (const biome of document.route.biomes)
+    for (const decision of biome.topology?.decisions ?? []) {
+      if (decision.kind !== 'hub') continue;
+      for (const press of decision.actions) {
+        if (press.kind !== 'reroll') continue;
+        const slot = decision.openTargets.find((open) => open.hubSlotKey === press.hubSlotKey);
+        press.reward = resultOf(
+          press.rerollId,
+          (entry) =>
+            entry.kind === 'incoming' && entry.occurrence.occurrenceId === slot.occurrenceId,
+        ).record.results[press.rerollId];
+      }
+    }
+  for (const { record, set } of records)
+    set(
+      record.acquisition === undefined
+        ? undefined
+        : {
+            offer: record.results[record.pressId],
+            ...record.acquisition,
+            ...(pressIds ? { pressId: record.pressId } : {}),
+          },
+    );
+  for (const occurrence of occurrencesOf(document)) {
+    if (occurrence.state.rerolledCages && Object.keys(occurrence.state.rerolledCages).length === 0)
+      delete occurrence.state.rerolledCages;
+    for (const wheel of Object.values(occurrence.state.wheels ?? {}))
+      if (wheel.rerolledOffers && Object.keys(wheel.rerolledOffers).length === 0)
+        delete wheel.rerolledOffers;
+  }
+  return document;
+}
+
+const zeus = { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } };
+const hera = { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } };
+
 describe('schema 102 to 103 migration', () => {
   let step;
   let engine;
@@ -334,6 +438,186 @@ describe('schema 102 to 103 migration', () => {
         (action) => action.kind === 'interactIncomingReward' && action.acquisitionRole === 'source',
       );
     assert.deepEqual(JSON.stringify(stale), stalePickup);
+  });
+
+  /** The plan with these edits settled, as its current-schema file. */
+  const commanded = (document, ...commands) => {
+    const evaluate = (project) => engine.simulateProjectAssembly(engine.catalog, project);
+    return JSON.parse(
+      engine.encodeProjectDocument(
+        commands.reduce(
+          (project, command) =>
+            engine.settleProjectEdit({
+              catalog: engine.catalog,
+              before: evaluate(project),
+              command,
+              evaluate,
+            }).assembly.project,
+          engine.parseProjectDocument(JSON.stringify(document), engine.catalog),
+        ),
+      ),
+    );
+  };
+  /** Underworld F's second room presses its first door, the one it takes, once, drawing `reward`. */
+  const doorPress = (reward, document = checkpoint('underworld-fg')) => {
+    const f = engine.createBiomeAddress('Underworld', 'F');
+    return commanded(document, {
+      kind: 'InsertReroll',
+      occurrence: engine.createOccurrenceAddress(f, engine.createOccurrenceId('golden-f-b2-e1')),
+      target: {
+        kind: 'door',
+        exitKey: 'exit1',
+        occurrenceId: engine.createOccurrenceId('golden-f-b3-e1'),
+      },
+      reward,
+      index: occurrenceOf(document, 'golden-f-b2-e1').roomActions.order.length,
+    });
+  };
+  /** The Zeus press with its Boon screen authored on the rerolled reward. */
+  const authoredZeus = () => {
+    const f = engine.createBiomeAddress('Underworld', 'F');
+    return commanded(doorPress(zeus), {
+      kind: 'ReplaceTraitOffer',
+      trait: engine.createTraitOfferAddress(
+        engine.createIncomingRewardAddress(f, engine.createOccurrenceId('golden-f-b3-e1')),
+        'source',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Zeus',
+        options: [
+          { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+          { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+  };
+  const target = (document) => occurrenceOf(document, 'golden-f-b3-e1');
+  const pressRows = (document, occurrenceId = 'golden-f-b2-e1') =>
+    occurrenceOf(document, occurrenceId).roomActions.order.filter((row) => row.kind === 'reroll');
+
+  it('moves door, cage and Hub press results onto the rerolled item, losslessly', () => {
+    const door = authoredZeus();
+    assert.deepEqual(target(door).rerolledIncomingReward.results, { r1: zeus });
+    // A recorded press keeps the outcomes on it; an unrecorded one takes the last press.
+    for (const pressIds of [true, false]) {
+      const stored = at102(withEarlierRerolls(door, { pressIds }));
+      assert.deepEqual(pressRows(stored)[0].reward, zeus);
+      assert.equal(target(stored).rerolledIncomingReward.offer.rewardType, 'Boon');
+      assert.deepEqual(step.liftProjectDocument(stored, engine.catalog), door);
+      assert.doesNotThrow(() =>
+        engine.parseProjectDocument(JSON.stringify(migrate(stored)), engine.catalog),
+      );
+    }
+    // A cage press's slot is wherever its cage holds its result.
+    const fields = checkpoint('nemesis-h-fields');
+    const h = engine.createBiomeAddress('Underworld', 'H');
+    const caged = commanded(fields, {
+      kind: 'InsertReroll',
+      occurrence: engine.createOccurrenceAddress(
+        h,
+        engine.createOccurrenceId('golden-h-miniboss01'),
+      ),
+      target: {
+        kind: 'cage',
+        exitKey: 'exit1',
+        occurrenceId: engine.createOccurrenceId('golden-h-combat05'),
+        slotKey: 'cage1',
+      },
+      reward: { rewardType: 'MaxHealthDrop' },
+      index: occurrenceOf(fields, 'golden-h-miniboss01').roomActions.order.length,
+    });
+    const storedCage = at102(withEarlierRerolls(caged));
+    assert.equal(pressRows(storedCage, 'golden-h-miniboss01')[0].target.slotKey, 'cage1');
+    assert.deepEqual(step.liftProjectDocument(storedCage, engine.catalog), caged);
+    assert.deepEqual(occurrenceOf(caged, 'golden-h-combat05').state.rerolledCages.cage1.results, {
+      r1: { rewardType: 'MaxHealthDrop' },
+    });
+    // A Hub press's result lives on its slot's room.
+    const board = commanded(checkpoint('surface-n'), {
+      kind: 'InsertHubReroll',
+      hub: engine.createHubDecisionAddress(engine.createBiomeAddress('Surface', 'N'), 'hub'),
+      hubSlotKey: 'combat05',
+      reward: { rewardType: 'MaxHealthDrop' },
+      index: 0,
+    });
+    const storedBoard = at102(withEarlierRerolls(board));
+    assert.deepEqual(step.liftProjectDocument(storedBoard, engine.catalog), board);
+    assert.deepEqual(occurrenceOf(board, 'surface-n-combat05').rerolledIncomingReward.results, {
+      r1: { rewardType: 'MaxHealthDrop' },
+    });
+  });
+
+  it('starts the item of a press with no entered reward unresolved', () => {
+    const pressed = doorPress(zeus);
+    const stored = at102(withEarlierRerolls(pressed));
+    delete target(stored).rerolledIncomingReward;
+    assert.deepEqual(step.liftProjectDocument(stored, engine.catalog), pressed);
+  });
+
+  it('adopts an entered reward its press did not draw, and restamps its pickup rows', () => {
+    // The plan entered Hera after a press that drew Zeus.
+    const entered = doorPress(hera);
+    const stored = at102(withEarlierRerolls(entered, { pressIds: false }));
+    pressRows(stored)[0].reward = zeus;
+    const lifted = step.liftProjectDocument(stored, engine.catalog);
+    assert.deepEqual(target(lifted).rerolledIncomingReward.results, { r1: hera });
+    assert.deepEqual(lifted, entered);
+    // A saved 103 plan's pickup rows recorded the press's own reward; the adopted one replaces it.
+    const pickup = {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source',
+    };
+    const saved = withEarlierRerolls(entered, { pressIds: false });
+    pressRows(saved)[0].reward = zeus;
+    target(saved).roomActions.order.push({ ...pickup, content: ['r1', 'Boon', 'ZeusUpgrade'] });
+    const restamped = engine.stampRoomActionItemContent(
+      engine.moveRerollResultsOntoItems(saved, engine.catalog),
+      engine.catalog,
+    );
+    assert.deepEqual(target(restamped).roomActions.order.at(-1), {
+      ...pickup,
+      content: ['r1', 'Boon', 'HeraUpgrade'],
+    });
+    // Without an adoption the recorded content stays.
+    const kept = withEarlierRerolls(entered);
+    target(kept).roomActions.order.push({ ...pickup, content: ['r1', 'Boon', 'HeraUpgrade'] });
+    assert.deepEqual(
+      target(engine.moveRerollResultsOntoItems(kept, engine.catalog)).roomActions.order.at(-1),
+      { ...pickup, content: ['r1', 'Boon', 'HeraUpgrade'] },
+    );
+  });
+
+  it('drops a rerolled reward with no press and a press whose target is gone', () => {
+    const current = checkpoint('underworld-fg');
+    // A rerolled reward kept after its last press went (OD4).
+    const orphaned = at102(withEarlierRerolls(authoredZeus()));
+    const source = occurrenceOf(orphaned, 'golden-f-b2-e1');
+    source.roomActions.order = source.roomActions.order.filter((row) => row.kind !== 'reroll');
+    assert.equal(target(orphaned).rerolledIncomingReward.offer.rewardType, 'Boon');
+    const lifted = step.liftProjectDocument(orphaned, engine.catalog);
+    assert.equal('rerolledIncomingReward' in target(lifted), false);
+    assert.doesNotThrow(() => engine.parseProjectDocument(JSON.stringify(lifted), engine.catalog));
+    // A press of a door its room no longer has (OD5) goes with its reward.
+    const doorless = at102(structuredClone(current));
+    occurrenceOf(doorless, 'golden-f-b2-e1').roomActions.order.push({
+      kind: 'reroll',
+      rerollId: 'r1',
+      target: { kind: 'door', exitKey: 'exit9', occurrenceId: 'golden-f-b3-e2' },
+      reward: zeus,
+    });
+    assert.deepEqual(step.liftProjectDocument(doorless, engine.catalog), current);
+    // So does a Hub press of a slot the board closed.
+    const board = checkpoint('surface-n');
+    const closed = at102(structuredClone(board));
+    closed.route.biomes[0].topology.decisions
+      .find((decision) => decision.kind === 'hub')
+      .actions.unshift({ kind: 'reroll', rerollId: 'r1', hubSlotKey: 'combat04', reward: zeus });
+    assert.deepEqual(step.liftProjectDocument(closed, engine.catalog), board);
   });
 
   it('lifts by the version alone a plan its settlement leaves as it was', () => {

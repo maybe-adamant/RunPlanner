@@ -19,14 +19,15 @@ import {
   type SemanticAddress,
 } from './addresses';
 import type {
+  AuthoredRewardState,
   BiomeTopology,
   HubDecision,
   HubRerollAction,
   OccurrenceId,
   ProjectDocument,
   RerolledRewardState,
+  ResolvedRerollTarget,
   RerollRoomAction,
-  RerollTarget,
   RoomOccurrence,
 } from './model';
 
@@ -58,7 +59,7 @@ export interface HubSlotRerollTarget {
 }
 
 /** What one press redraws: a room's door, cage or wheel offer, or a Hub board door. */
-export type RerollPressTarget = RerollTarget | HubSlotRerollTarget;
+export type RerollPressTarget = ResolvedRerollTarget | HubSlotRerollTarget;
 
 /** The room, wheel or Hub that owns a surface. */
 export function rerollSurfaceOwner(
@@ -200,16 +201,55 @@ export function rerollAppendIndex(
   return use < 0 ? order.length : use;
 }
 
+type RerollTopology = Pick<BiomeTopology, 'decisions' | 'occurrences'>;
+
+/** One press of a room or of a Hub. */
+export type RerollPress = RerollRoomAction | HubRerollAction;
+
+function occurrenceIn(
+  topology: Pick<BiomeTopology, 'occurrences'>,
+  occurrenceId: OccurrenceId,
+): RoomOccurrence | undefined {
+  return topology.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+}
+
+/** The cage slot of a Fields room whose redraws hold this press's result. */
+export function rerolledCageSlotOf(
+  occurrence: RoomOccurrence | undefined,
+  rerollId: string,
+): string | undefined {
+  if (occurrence?.state.kind !== 'fieldsCombat') return undefined;
+  return Object.entries(occurrence.state.rerolledCages ?? {}).find(([, record]) =>
+    Object.hasOwn(record.results, rerollId),
+  )?.[0];
+}
+
+/**
+ * A room press's target with the cage slot it redrew, read from where the
+ * target holds its result; undefined for a cage press no cage holds.
+ */
+export function resolveRerollTarget(
+  topology: Pick<BiomeTopology, 'occurrences'>,
+  press: RerollRoomAction,
+): ResolvedRerollTarget | undefined {
+  const target = press.target;
+  if (target.kind !== 'cage') return target;
+  const slotKey = rerolledCageSlotOf(occurrenceIn(topology, target.occurrenceId), press.rerollId);
+  return slotKey === undefined ? undefined : Object.freeze({ ...target, slotKey });
+}
+
 /**
  * What a door or cage reroll's target lacks in the authored topology: the
- * source's door into that room, or that room's cage slot. A wheel offer is the
- * source room's own.
+ * source's door into that room, or that room's cage slot holding the press's
+ * result. A wheel offer is the source room's own.
  */
 export function missingRerollTarget(
-  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
+  topology: RerollTopology,
   sourceOccurrenceId: OccurrenceId,
-  target: Exclude<RerollTarget, { readonly kind: 'wheelOffer' }>,
+  press: RerollRoomAction,
 ): 'door' | 'cage' | undefined {
+  const target = press.target;
+  if (target.kind === 'wheelOffer') return undefined;
   const exit = topology.decisions.find(
     (decision) =>
       decision.kind === 'exit' &&
@@ -225,11 +265,11 @@ export function missingRerollTarget(
   )
     return 'door';
   if (target.kind === 'door') return undefined;
-  const destination = topology.occurrences.find(
-    (candidate) => candidate.occurrenceId === target.occurrenceId,
-  );
+  const destination = occurrenceIn(topology, target.occurrenceId);
+  const slotKey = rerolledCageSlotOf(destination, press.rerollId);
   return destination?.state.kind === 'fieldsCombat' &&
-    Object.hasOwn(destination.state.cages, target.slotKey)
+    slotKey !== undefined &&
+    Object.hasOwn(destination.state.cages, slotKey)
     ? undefined
     : 'cage';
 }
@@ -238,7 +278,7 @@ export function missingRerollTarget(
 export function rerollTargetOwner(
   biome: BiomeAddress,
   sourceOccurrenceId: OccurrenceId,
-  target: RerollTarget,
+  target: ResolvedRerollTarget,
 ): RerolledRewardOwner {
   switch (target.kind) {
     case 'door':
@@ -260,23 +300,87 @@ export function rerollTargetOwner(
   }
 }
 
-/** One owner's rerolls in authored order: its effective offer is the last one's. */
+/** The owner a room press redraws, or none when no cage holds a cage press's result. */
+export function roomRerollOwner(
+  biome: BiomeAddress,
+  topology: Pick<BiomeTopology, 'occurrences'>,
+  sourceOccurrenceId: OccurrenceId,
+  press: RerollRoomAction,
+): RerolledRewardOwner | undefined {
+  const target = resolveRerollTarget(topology, press);
+  return target === undefined ? undefined : rerollTargetOwner(biome, sourceOccurrenceId, target);
+}
+
+/** The board-door room a Hub press redraws, or none while its slot is closed. */
+export function hubRerollOwner(
+  biome: BiomeAddress,
+  hub: Pick<HubDecision, 'openTargets'>,
+  press: HubRerollAction,
+): IncomingRewardAddress | undefined {
+  const target = hub.openTargets.find((candidate) => candidate.hubSlotKey === press.hubSlotKey);
+  return target === undefined ? undefined : createIncomingRewardAddress(biome, target.occurrenceId);
+}
+
+/** The reward a press drew, held by its owner; undefined while its target holds none. */
+export function rerollResult(
+  topology: Pick<BiomeTopology, 'occurrences'>,
+  owner: RerolledRewardOwner | undefined,
+  rerollId: string,
+): ResolvedRewardOffer | undefined {
+  if (owner === undefined) return undefined;
+  const occurrence = occurrenceIn(topology, owner.occurrenceId);
+  return occurrence === undefined
+    ? undefined
+    : rerolledRecordOf(occurrence, owner)?.results[rerollId];
+}
+
+/** One room press as the walk reads it: the target it redrew and the reward it drew. */
+export interface ResolvedRerollPress {
+  readonly target: ResolvedRerollTarget;
+  readonly result: ResolvedRewardOffer;
+}
+
+/** A room's presses whose target holds their result, by reroll id. */
+export function resolvedRoomRerollPresses(
+  biome: BiomeAddress,
+  topology: Pick<BiomeTopology, 'occurrences'>,
+  source: RoomOccurrence,
+): ReadonlyMap<string, ResolvedRerollPress> {
+  const presses = new Map<string, ResolvedRerollPress>();
+  for (const action of source.roomActions.order) {
+    if (action.kind !== 'reroll') continue;
+    const target = resolveRerollTarget(topology, action);
+    if (target === undefined) continue;
+    const owner = rerollTargetOwner(biome, source.occurrenceId, target);
+    const result = rerollResult(topology, owner, action.rerollId);
+    if (result !== undefined) presses.set(action.rerollId, Object.freeze({ target, result }));
+  }
+  return presses;
+}
+
+/** One owner's rerolls in authored order: its effective offer is the last one's result. */
 export interface OwnerRerolls {
   readonly owner: RerolledRewardOwner;
-  readonly rerolls: readonly (RerollRoomAction | HubRerollAction)[];
+  readonly rerolls: readonly RerollPress[];
   readonly effectiveOffer: ResolvedRewardOffer;
 }
 
-type RerollPress = RerollRoomAction | HubRerollAction;
-
 function collectOwners(
+  topology: Pick<BiomeTopology, 'occurrences'>,
   entries: readonly { readonly owner: RerolledRewardOwner; readonly reroll: RerollPress }[],
 ): ReadonlyMap<string, OwnerRerolls> {
-  const byOwner = new Map<string, { owner: RerolledRewardOwner; rerolls: RerollPress[] }>();
+  const byOwner = new Map<
+    string,
+    { owner: RerolledRewardOwner; rerolls: RerollPress[]; effectiveOffer: ResolvedRewardOffer }
+  >();
   for (const { owner, reroll } of entries) {
+    // A press its target holds no result for redraws nothing the walk reads.
+    const result = rerollResult(topology, owner, reroll.rerollId);
+    if (result === undefined) continue;
     const key = semanticAddressKey(owner);
-    const entry = byOwner.get(key) ?? { owner, rerolls: [] };
+    const entry = byOwner.get(key) ?? { owner, rerolls: [], effectiveOffer: result };
     entry.rerolls.push(reroll);
+    entry.effectiveOffer = result;
     byOwner.set(key, entry);
   }
   return new Map(
@@ -285,23 +389,28 @@ function collectOwners(
       Object.freeze({
         owner: entry.owner,
         rerolls: Object.freeze(entry.rerolls),
-        effectiveOffer: entry.rerolls.at(-1)!.reward,
+        effectiveOffer: entry.effectiveOffer,
       }),
     ]),
   );
 }
 
-/** The owners one room's rerolls redraw: its doors' rooms, their cages and its wheel offers. */
+/**
+ * The owners one room's rerolls redraw: its doors' rooms, their cages and its
+ * wheel offers, with each press's result read from its target.
+ */
 export function sourceRerolledOwners(
   biome: BiomeAddress,
+  topology: Pick<BiomeTopology, 'occurrences'>,
   source: RoomOccurrence,
 ): ReadonlyMap<string, OwnerRerolls> {
   return collectOwners(
-    source.roomActions.order.flatMap((action) =>
-      action.kind === 'reroll'
-        ? [{ owner: rerollTargetOwner(biome, source.occurrenceId, action.target), reroll: action }]
-        : [],
-    ),
+    topology,
+    source.roomActions.order.flatMap((action) => {
+      if (action.kind !== 'reroll') return [];
+      const owner = roomRerollOwner(biome, topology, source.occurrenceId, action);
+      return owner === undefined ? [] : [{ owner, reroll: action }];
+    }),
   );
 }
 
@@ -311,42 +420,96 @@ export function sourceRerolledOwners(
  */
 export function hubRerolledOwners(
   biome: BiomeAddress,
+  topology: Pick<BiomeTopology, 'occurrences'>,
   hub: HubDecision,
 ): ReadonlyMap<string, OwnerRerolls> {
   const entered = new Set<string>();
   return collectOwners(
+    topology,
     hub.actions.flatMap((action) => {
       if (action.kind === 'roomVisit') entered.add(action.hubSlotKey);
       if (action.kind !== 'reroll' || entered.has(action.hubSlotKey)) return [];
-      const target = hub.openTargets.find(
-        (candidate) => candidate.hubSlotKey === action.hubSlotKey,
-      );
-      return target === undefined
-        ? []
-        : [{ owner: createIncomingRewardAddress(biome, target.occurrenceId), reroll: action }];
+      const owner = hubRerollOwner(biome, hub, action);
+      return owner === undefined ? [] : [{ owner, reroll: action }];
     }),
   );
 }
 
+const rerolledOwnersByTopology = new WeakMap<object, ReadonlyMap<string, OwnerRerolls>>();
+
 /**
  * Every rerolled owner of one biome topology, keyed by owner. Structural only:
- * whether each press is legal is the simulation's question.
+ * whether each press is legal is the simulation's question. Memoized only for
+ * a frozen topology: a decoded one cannot change under its identity, while a
+ * raw one being migrated can.
  */
 export function biomeRerolledOwners(
   biome: BiomeAddress,
-  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
+  topology: RerollTopology,
 ): ReadonlyMap<string, OwnerRerolls> {
-  const owners = new Map<string, OwnerRerolls>();
-  for (const occurrence of topology.occurrences)
-    for (const [key, entry] of sourceRerolledOwners(biome, occurrence)) owners.set(key, entry);
-  for (const decision of topology.decisions)
-    if (decision.kind === 'hub')
-      for (const [key, entry] of hubRerolledOwners(biome, decision)) owners.set(key, entry);
+  const immutable =
+    Object.isFrozen(topology) &&
+    Object.isFrozen(topology.occurrences) &&
+    Object.isFrozen(topology.decisions);
+  if (!immutable) return collectBiomeRerolledOwners(biome, topology);
+  let owners = rerolledOwnersByTopology.get(topology);
+  if (owners === undefined) {
+    owners = collectBiomeRerolledOwners(biome, topology);
+    rerolledOwnersByTopology.set(topology, owners);
+  }
   return owners;
 }
 
-/** The occurrence-held rerolled reward of an owner, when one is authored. */
-export function rerolledRewardOf(
+function collectBiomeRerolledOwners(
+  biome: BiomeAddress,
+  topology: RerollTopology,
+): ReadonlyMap<string, OwnerRerolls> {
+  const owners = new Map<string, OwnerRerolls>();
+  for (const occurrence of topology.occurrences)
+    for (const [key, entry] of sourceRerolledOwners(biome, topology, occurrence))
+      owners.set(key, entry);
+  for (const decision of topology.decisions)
+    if (decision.kind === 'hub')
+      for (const [key, entry] of hubRerolledOwners(biome, topology, decision))
+        owners.set(key, entry);
+  return owners;
+}
+
+/**
+ * Every press naming each owner, by owner key, whatever its order: a room's
+ * presses whose target can hold a result, and a Hub's presses of open slots,
+ * entered or not. The results an owner holds name exactly these.
+ */
+export function biomeRerollPressesByOwner(
+  biome: BiomeAddress,
+  topology: RerollTopology,
+): ReadonlyMap<string, { readonly owner: RerolledRewardOwner; readonly rerollIds: string[] }> {
+  const byOwner = new Map<string, { owner: RerolledRewardOwner; rerollIds: string[] }>();
+  const add = (owner: RerolledRewardOwner, rerollId: string) => {
+    const key = semanticAddressKey(owner);
+    const entry = byOwner.get(key) ?? { owner, rerollIds: [] };
+    entry.rerollIds.push(rerollId);
+    byOwner.set(key, entry);
+  };
+  for (const source of topology.occurrences)
+    for (const action of source.roomActions.order) {
+      if (action.kind !== 'reroll') continue;
+      const owner = roomRerollOwner(biome, topology, source.occurrenceId, action);
+      if (owner !== undefined) add(owner, action.rerollId);
+    }
+  for (const decision of topology.decisions) {
+    if (decision.kind !== 'hub') continue;
+    for (const action of decision.actions) {
+      if (action.kind !== 'reroll') continue;
+      const owner = hubRerollOwner(biome, decision, action);
+      if (owner !== undefined) add(owner, action.rerollId);
+    }
+  }
+  return byOwner;
+}
+
+/** The redraws and outcomes an owner's room holds, when it was rerolled. */
+export function rerolledRecordOf(
   occurrence: RoomOccurrence,
   owner: SemanticAddress,
 ): RerolledRewardState | undefined {
@@ -371,6 +534,59 @@ export function rerolledRewardOf(
   }
 }
 
+/**
+ * A rerolled owner's effective item as a reward state: the reward its recorded
+ * press drew with that item's outcomes; undefined when it holds no outcomes.
+ */
+export function rerolledRewardOf(
+  occurrence: RoomOccurrence,
+  owner: SemanticAddress,
+): AuthoredRewardState | undefined {
+  const record = rerolledRecordOf(occurrence, owner);
+  const offer = record?.results[record.pressId];
+  return record?.acquisition === undefined || offer === undefined
+    ? undefined
+    : Object.freeze({ offer, ...record.acquisition });
+}
+
+/** An owner's first native draw, as its room holds it. */
+function nativeRewardOf(
+  occurrence: RoomOccurrence,
+  owner: RerolledRewardOwner,
+): AuthoredRewardState | null | undefined {
+  if (owner.occurrenceId !== occurrence.occurrenceId) return undefined;
+  const state = occurrence.state;
+  switch (owner.kind) {
+    case 'incomingReward':
+      return state.kind === 'counted' ||
+        state.kind === 'fixed' ||
+        state.kind === 'anomaly' ||
+        state.kind === 'ephyraCombat' ||
+        state.kind === 'freeReward'
+        ? state.reward
+        : undefined;
+    case 'localReward':
+      return state.kind === 'fieldsCombat' && owner.groupKey === FIELDS_CAGE_GROUP_KEY
+        ? state.cages[owner.slotKey]
+        : undefined;
+    case 'rewardWheelOffer':
+      return state.kind === 'shipCombat'
+        ? state.wheels[owner.wheelKey]?.offers[owner.offerKey]
+        : undefined;
+  }
+}
+
+/**
+ * The reward an owner acquires: its rerolled effective item when that holds
+ * outcomes, else its first native draw.
+ */
+export function effectiveRewardAt(
+  occurrence: RoomOccurrence,
+  owner: RerolledRewardOwner,
+): AuthoredRewardState | null | undefined {
+  return rerolledRewardOf(occurrence, owner) ?? nativeRewardOf(occurrence, owner);
+}
+
 function withoutKey<V>(
   record: Readonly<Record<string, V>> | undefined,
   key: string,
@@ -382,25 +598,25 @@ function withoutKey<V>(
   return Object.keys(next).length === 0 ? undefined : Object.freeze(next);
 }
 
-/** Sets or drops one owner's rerolled reward; other state is untouched. */
-export function withRerolledReward(
+/** Sets or drops one owner's rerolled record; other state is untouched. */
+export function withRerolledRecord(
   occurrence: RoomOccurrence,
   owner: RerolledRewardOwner,
-  reward: RerolledRewardState | undefined,
+  record: RerolledRewardState | undefined,
 ): RoomOccurrence {
   switch (owner.kind) {
     case 'incomingReward': {
       const { rerolledIncomingReward: _previous, ...rest } = occurrence;
       void _previous;
       return Object.freeze(
-        reward === undefined ? rest : { ...rest, rerolledIncomingReward: reward },
+        record === undefined ? rest : { ...rest, rerolledIncomingReward: record },
       );
     }
     case 'localReward': {
       if (occurrence.state.kind !== 'fieldsCombat') return occurrence;
       const { rerolledCages: _previous, ...state } = occurrence.state;
       void _previous;
-      const cages = withoutKey(occurrence.state.rerolledCages, owner.slotKey, reward);
+      const cages = withoutKey(occurrence.state.rerolledCages, owner.slotKey, record);
       return Object.freeze({
         ...occurrence,
         state: Object.freeze(cages === undefined ? state : { ...state, rerolledCages: cages }),
@@ -412,7 +628,7 @@ export function withRerolledReward(
       if (wheel === undefined) return occurrence;
       const { rerolledOffers: _previous, ...rest } = wheel;
       void _previous;
-      const offers = withoutKey(wheel.rerolledOffers, owner.offerKey, reward);
+      const offers = withoutKey(wheel.rerolledOffers, owner.offerKey, record);
       return Object.freeze({
         ...occurrence,
         state: Object.freeze({
@@ -429,20 +645,45 @@ export function withRerolledReward(
   }
 }
 
-/** Every rerolled reward a topology holds, by owner, with the room holding it. */
-function heldRerolledRewards(
+/** A rerolled record holding these outcomes for its effective item; the offer is its press's. */
+export function withRerolledAcquisition(
+  record: RerolledRewardState,
+  reward: AuthoredRewardState | undefined,
+): RerolledRewardState {
+  const { acquisition: _previous, ...rest } = record;
+  void _previous;
+  if (reward === undefined) return Object.freeze(rest);
+  const { offer: _offer, ...acquisition } = reward;
+  void _offer;
+  return Object.freeze({ ...rest, acquisition: Object.freeze(acquisition) });
+}
+
+/** Writes outcomes onto an owner's effective item; the same occurrence when it holds none. */
+export function withRerolledReward(
+  occurrence: RoomOccurrence,
+  owner: RerolledRewardOwner,
+  reward: AuthoredRewardState,
+): RoomOccurrence {
+  const record = rerolledRecordOf(occurrence, owner);
+  return record === undefined
+    ? occurrence
+    : withRerolledRecord(occurrence, owner, withRerolledAcquisition(record, reward));
+}
+
+/** Every rerolled record a topology holds, by owner. */
+export function heldRerolledRecords(
   biome: BiomeAddress,
   topology: Pick<BiomeTopology, 'occurrences'>,
-): { readonly owner: RerolledRewardOwner; readonly reward: RerolledRewardState }[] {
-  const held: { owner: RerolledRewardOwner; reward: RerolledRewardState }[] = [];
+): { readonly owner: RerolledRewardOwner; readonly record: RerolledRewardState }[] {
+  const held: { owner: RerolledRewardOwner; record: RerolledRewardState }[] = [];
   for (const occurrence of topology.occurrences) {
     if (occurrence.rerolledIncomingReward !== undefined)
       held.push({
         owner: createIncomingRewardAddress(biome, occurrence.occurrenceId),
-        reward: occurrence.rerolledIncomingReward,
+        record: occurrence.rerolledIncomingReward,
       });
     if (occurrence.state.kind === 'fieldsCombat')
-      for (const [slotKey, reward] of Object.entries(occurrence.state.rerolledCages ?? {}))
+      for (const [slotKey, record] of Object.entries(occurrence.state.rerolledCages ?? {}))
         held.push({
           owner: createLocalRewardAddress(
             biome,
@@ -450,11 +691,11 @@ function heldRerolledRewards(
             FIELDS_CAGE_GROUP_KEY,
             slotKey,
           ),
-          reward,
+          record,
         });
     if (occurrence.state.kind === 'shipCombat')
       for (const [wheelKey, wheel] of Object.entries(occurrence.state.wheels))
-        for (const [offerKey, reward] of Object.entries(wheel.rerolledOffers ?? {}))
+        for (const [offerKey, record] of Object.entries(wheel.rerolledOffers ?? {}))
           held.push({
             owner: createRewardWheelOfferAddress(
               biome,
@@ -462,70 +703,24 @@ function heldRerolledRewards(
               wheelKey,
               offerKey,
             ),
-            reward,
+            record,
           });
   }
   return held;
 }
 
-function sameRewardOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boolean {
-  const canonical = (value: unknown) =>
-    JSON.stringify(value, (_key, entry: unknown) =>
-      entry !== null && typeof entry === 'object' && !Array.isArray(entry)
-        ? Object.fromEntries(
-            Object.entries(entry as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
-          )
-        : entry,
-    );
-  return canonical(left) === canonical(right);
-}
-
 /**
- * The topology with each rerolled reward that records no press stamped with
- * its owner's effective press, while it holds that press's reward; the same
- * topology when none changes. A reward that matches no press stays unknown.
- */
-export function withStampedRerolledPresses(
-  biome: BiomeAddress,
-  topology: BiomeTopology,
-): BiomeTopology {
-  const held = heldRerolledRewards(biome, topology).filter(
-    ({ reward }) => reward.pressId === undefined,
-  );
-  if (held.length === 0) return topology;
-  const owners = biomeRerolledOwners(biome, topology);
-  let occurrences = topology.occurrences;
-  for (const { owner, reward } of held) {
-    const press = owners.get(semanticAddressKey(owner))?.rerolls.at(-1);
-    if (press === undefined || !sameRewardOffer(press.reward, reward.offer)) continue;
-    occurrences = occurrences.map((occurrence) =>
-      occurrence.occurrenceId === owner.occurrenceId
-        ? withRerolledReward(
-            occurrence,
-            owner,
-            Object.freeze({ ...reward, pressId: press.rerollId }),
-          )
-        : occurrence,
-    );
-  }
-  return occurrences === topology.occurrences
-    ? topology
-    : Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) });
-}
-
-/**
- * The rerolled rewards whose recorded press is no longer their owner's
+ * The rerolled records whose recorded press is no longer their owner's
  * effective one (a later press, an earlier one again, or none): another item,
  * whose outcomes these are not.
  */
 export function rerolledRewardsOffTheirPress(
   biome: BiomeAddress,
-  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
+  topology: RerollTopology,
 ): readonly RerolledRewardOwner[] {
   const owners = biomeRerolledOwners(biome, topology);
-  return heldRerolledRewards(biome, topology).flatMap(({ owner, reward }) =>
-    reward.pressId !== undefined &&
-    owners.get(semanticAddressKey(owner))?.rerolls.at(-1)?.rerollId !== reward.pressId
+  return heldRerolledRecords(biome, topology).flatMap(({ owner, record }) =>
+    owners.get(semanticAddressKey(owner))?.rerolls.at(-1)?.rerollId !== record.pressId
       ? [owner]
       : [],
   );

@@ -209,6 +209,7 @@ describe('room door surfaces', () => {
     const owner = [
       ...sourceRerolledOwners(
         f,
+        project.route.biomes[0]!.topology!,
         project.route.biomes[0]!.topology!.occurrences.find(
           (room) => room.occurrenceId === source,
         )!,

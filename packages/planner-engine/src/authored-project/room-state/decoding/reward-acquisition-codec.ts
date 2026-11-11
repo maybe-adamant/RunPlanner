@@ -1061,32 +1061,64 @@ function decodeLevelResolutions(
   return Object.freeze(result);
 }
 
+/** A persisted reroll instance identity: `r` and a positive integer. */
+export function decodeRerollId(value: unknown, path: string): string {
+  const rerollId = expectNonBlankString(value, path);
+  if (!/^r[1-9][0-9]*$/.test(rerollId)) failProjectDocument(path, 'must be a reroll id');
+  return rerollId;
+}
+
 /**
- * The effective rewards of rerolled owners, keyed by a declared owner key;
- * present only with at least one entry.
- */
-/**
- * One rerolled reward: its reward state as `decodeEntry` reads it, and the
- * press that drew it when recorded.
+ * One rerolled record: each press's result, by reroll id, the press whose item
+ * its outcomes belong to, and those outcomes, decoded with that press's reward
+ * by `decodeEntry`, only where `drawable` admits it. Whether outcomes must be
+ * held is the topology's question: they are, while a press of it is effective.
  */
 export function decodeRerolledRewardState(
   value: unknown,
+  catalog: Catalog,
   path: string,
   decodeEntry: (raw: unknown, path: string) => AuthoredRewardState,
+  drawable: (offer: ResolvedRewardOffer) => boolean,
 ): RerolledRewardState {
   const raw = expectRecord(value, path);
-  if (!Object.hasOwn(raw, 'pressId')) return decodeEntry(raw, path);
-  const { pressId, ...rest } = raw;
-  if (typeof pressId !== 'string' || pressId.length === 0)
-    failProjectDocument(`${path}.pressId`, 'must be a reroll id');
-  return Object.freeze({ ...decodeEntry(rest, path), pressId });
+  const hasAcquisition = Object.hasOwn(raw, 'acquisition');
+  expectExactKeys(raw, ['results', 'pressId', ...(hasAcquisition ? ['acquisition'] : [])], path);
+  const rawResults = expectRecord(raw.results, `${path}.results`);
+  const resultKeys = Object.keys(rawResults);
+  if (resultKeys.length === 0) failProjectDocument(`${path}.results`, 'must name a press');
+  const results = Object.freeze(
+    Object.fromEntries(
+      resultKeys.map((rerollId) => [
+        decodeRerollId(rerollId, `${path}.results.${rerollId}`),
+        decodeResolvedRewardOffer(rawResults[rerollId], catalog, `${path}.results.${rerollId}`),
+      ]),
+    ),
+  );
+  const pressId = decodeRerollId(raw.pressId, `${path}.pressId`);
+  const offer = results[pressId];
+  if (offer === undefined) failProjectDocument(`${path}.pressId`, 'must name one of its results');
+  if (!hasAcquisition) return Object.freeze({ results, pressId });
+  if (!drawable(offer))
+    failProjectDocument(`${path}.acquisition`, `${offer.rewardType} is not drawn here`);
+  const rawAcquisition = expectRecord(raw.acquisition, `${path}.acquisition`);
+  if (Object.hasOwn(rawAcquisition, 'offer'))
+    failProjectDocument(`${path}.acquisition.offer`, 'is its press result');
+  const { offer: _offer, ...acquisition } = decodeEntry(
+    { offer, ...rawAcquisition },
+    `${path}.acquisition`,
+  );
+  void _offer;
+  return Object.freeze({ results, pressId, acquisition: Object.freeze(acquisition) });
 }
 
 export function decodeRerolledRewards(
   value: unknown,
+  catalog: Catalog,
   keys: readonly string[],
   path: string,
   decodeEntry: (raw: unknown, path: string) => AuthoredRewardState,
+  drawable: (offer: ResolvedRewardOffer) => boolean,
 ): Readonly<Record<string, RerolledRewardState>> {
   const raw = expectRecord(value, path);
   const entries = Object.keys(raw);
@@ -1097,7 +1129,18 @@ export function decodeRerolledRewards(
     Object.fromEntries(
       keys.flatMap((key) =>
         Object.hasOwn(raw, key)
-          ? [[key, decodeRerolledRewardState(raw[key], `${path}.${key}`, decodeEntry)] as const]
+          ? [
+              [
+                key,
+                decodeRerolledRewardState(
+                  raw[key],
+                  catalog,
+                  `${path}.${key}`,
+                  decodeEntry,
+                  drawable,
+                ),
+              ] as const,
+            ]
           : [],
       ),
     ),

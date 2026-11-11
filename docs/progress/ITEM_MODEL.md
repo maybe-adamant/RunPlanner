@@ -1,9 +1,9 @@
 # Part 2, step C5: the item model
 
 Status: owner model approved (2026-11-10); schema 103 scope expanded for
-the later slices. C5a delivered on `live-pickups`; C5b waves A, B and D
-merged, wave C (walk-based settlement repairs) delivered, awaiting review;
-C5b-4's reroll storage move, C5c and C5d not started. Temporary plan; delete at delivery after promoting durable
+the later slices. C5a delivered on `live-pickups`; C5b waves A, B, C and D
+merged; wave E (C5b-4, reroll results on the rerolled item) delivered,
+awaiting review; C5c and C5d not started. Temporary plan; delete at delivery after promoting durable
 results. Follows [LIVE_PICKUPS](LIVE_PICKUPS.md) step C.
 
 Investigations (read-only, 2026-11-10):
@@ -253,6 +253,32 @@ Wave C review fixes (2026-11-11):
   effective item's outcomes survive a changed result today. The results
   storage must reset the acquisition when the effective press's result
   changes.
+
+C5b-4 wave E, reroll results on the rerolled item (schema 103 shape):
+
+- A door, cage or wheel `reroll` row is `{ kind, rerollId, target }`; a cage
+  target loses `slotKey`, and a Hub `reroll` action loses `reward`. What a
+  press drew is the rerolled item's `results[rerollId]`, on
+  `rerolledIncomingReward`, `rerolledCages[slot]` or `rerolledOffers[offer]`,
+  beside the required `pressId` and the optional `acquisition`
+  (`Omit<AuthoredRewardState, 'offer'>`, held while a press is effective and
+  the owner draws the recorded press's reward).
+- `InsertReroll` still takes the cage's `slotKey` (`ResolvedRerollTarget`);
+  `ReplaceRerollReward` and the Hub commands write `results`.
+  `DropRerolledReward`, `AdoptRerolledReward` and the
+  `rerolledRewardMismatch` finding are gone.
+- Read a press's result and target with `rerollResult(topology, owner,
+rerollId)`, `resolveRerollTarget(topology, press)`, `roomRerollOwner` and
+  `hubRerollOwner`; the reward an owner acquires with `effectiveRewardAt` (or
+  `rerolledRewardOf` for its rerolled item alone). Run import `rerolls.ts`
+  (press targets, a Hub press's earlier result) and `occurrences.ts`
+  (`deliveredIncomingReward` and `deliveredCageReward`, which now take the
+  biome) are re-pointed; compiled, not run.
+- A press's result changed in place, or another press made effective,
+  replaces the item: its outcomes reset (announced), so a consumer that
+  rewrites a press's reward after authoring its outcomes re-authors them.
+- `CloseHubSlot` removes the slot's presses.
+- A live door, cage or wheel press verb carries the `rerollId` its row takes.
 
 Wave A review follow-ups:
 

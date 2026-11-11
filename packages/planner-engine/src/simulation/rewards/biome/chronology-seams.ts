@@ -445,17 +445,21 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
   )?.reference;
   if (source === undefined || reroll?.kind !== 'reroll')
     throw new BiomeRewardSimulationContractError(`${ownerKey} reached without its reroll`);
-  const target = resolveRoomTarget(
-    context.catalog,
-    source,
-    context.prepared.batchesByParent.get(semanticAddressKey(source.origin)),
-    reroll.target,
-    state.peers,
-  );
+  const press = source.rerollPresses?.get(reroll.rerollId);
+  const target =
+    press === undefined
+      ? undefined
+      : resolveRoomTarget(
+          context.catalog,
+          source,
+          context.prepared.batchesByParent.get(semanticAddressKey(source.origin)),
+          press.target,
+          state.peers,
+        );
   const transition = applyRewardRerolledTransition({
     catalog: context.catalog,
     owner: event.owner,
-    reward: reroll.reward,
+    reward: press?.result,
     target: target === 'cageNotPlayed' ? undefined : target,
     ...(target === 'cageNotPlayed' ? { refused: target } : {}),
     flagged:

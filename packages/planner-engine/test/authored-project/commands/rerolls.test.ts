@@ -14,6 +14,7 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   hubActionOrderRefusal,
+  rerolledRewardOf,
   purgingPoolRollTraitKey,
   roomActionKey,
   stygianWellGenerationItemKey,
@@ -40,6 +41,11 @@ const owner = createIncomingRewardAddress(f, target as never);
 
 function occurrence(project: ProjectDocument, id: string) {
   return project.route.biomes[0]!.topology!.occurrences.find((room) => room.occurrenceId === id)!;
+}
+
+/** The reward the target room acquires after its door's presses, and that item's outcomes. */
+function effective(project: ProjectDocument) {
+  return rerolledRewardOf(occurrence(project, target), owner);
 }
 
 function rerollIds(project: ProjectDocument): readonly string[] {
@@ -109,74 +115,79 @@ describe('reroll room actions', () => {
 });
 
 describe('rerolled rewards', () => {
-  it('follow the effective offer while unauthored and leave with the last reroll', () => {
+  it('follow the effective press while unauthored and leave with the last reroll', () => {
     let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
     project = applyProjectCommand(
       project,
       catalog,
       insertReroll(project, { rewardType: 'StackUpgrade' }),
     );
-    expect(occurrence(project, target).rerolledIncomingReward?.offer).toEqual({
-      rewardType: 'StackUpgrade',
-    });
+    expect(effective(project)?.offer).toEqual({ rewardType: 'StackUpgrade' });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRerollReward',
       action: createRoomActionAddress(f, source as never, JSON.stringify(['reroll', 'r1'])),
       reward: { rewardType: 'RoomMoneyDrop' },
     });
-    expect(occurrence(project, target).rerolledIncomingReward?.offer).toEqual({
-      rewardType: 'RoomMoneyDrop',
-    });
+    expect(effective(project)?.offer).toEqual({ rewardType: 'RoomMoneyDrop' });
     project = applyProjectCommand(project, catalog, removeReroll('r1'));
     expect(occurrence(project, target).rerolledIncomingReward).toBeUndefined();
   });
 
-  it('record the press that drew them, stamp one that records none, and decode it strictly', () => {
+  it('hold each press result on the item, with the press its outcomes belong to, strictly', () => {
     let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
     project = applyProjectCommand(project, catalog, insertReroll(project, zeus));
+    expect(occurrence(project, source).roomActions.order.at(-1)).toEqual({
+      kind: 'reroll',
+      rerollId: 'r1',
+      target: { kind: 'door', exitKey: 'exit2', occurrenceId: target },
+    });
     expect(occurrence(project, target).rerolledIncomingReward).toMatchObject({
-      offer: zeus,
+      results: { r1: zeus },
       pressId: 'r1',
     });
-    const encoded = JSON.parse(encodeProjectDocument(project)) as {
-      route: { biomes: { topology: { occurrences: Record<string, unknown>[] } }[] };
+    const encode = () =>
+      JSON.parse(encodeProjectDocument(project)) as {
+        route: { biomes: { topology: { occurrences: Record<string, unknown>[] } }[] };
+      };
+    const rerolledOf = (encoded: ReturnType<typeof encode>) =>
+      encoded.route.biomes[0]!.topology.occurrences.find((entry) => entry.occurrenceId === target)!
+        .rerolledIncomingReward as Record<string, unknown>;
+    const pressOf = (encoded: ReturnType<typeof encode>) =>
+      (
+        encoded.route.biomes[0]!.topology.occurrences.find(
+          (entry) => entry.occurrenceId === source,
+        )!.roomActions as { order: Record<string, unknown>[] }
+      ).order.at(-1)!;
+    expect(decodeProjectDocument(encode() as never, catalog)).toEqual(project);
+    const refused = (change: (encoded: ReturnType<typeof encode>) => void, detail: string) => {
+      const encoded = encode();
+      change(encoded);
+      expect(() => decodeProjectDocument(encoded as never, catalog)).toThrow(detail);
     };
-    const room = encoded.route.biomes[0]!.topology.occurrences.find(
-      (entry) => entry.occurrenceId === target,
-    )!;
-    const rerolled = room.rerolledIncomingReward as Record<string, unknown>;
-    expect(decodeProjectDocument(encoded as never, catalog)).toEqual(project);
-    // A press recorded by no id is refused; an absent one is unknown until a command stamps it.
-    rerolled.pressId = '';
-    expect(() => decodeProjectDocument(encoded as never, catalog)).toThrow('pressId');
-    delete rerolled.pressId;
-    const unknown = decodeProjectDocument(encoded as never, catalog);
-    expect(occurrence(unknown, target).rerolledIncomingReward?.pressId).toBeUndefined();
-    const stamped = applyProjectCommand(unknown, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait: {
-        kind: 'traitOffer',
-        routeKey: 'Underworld',
-        biomeKey: 'F',
-        owner,
-        acquisitionRole: 'source',
-      },
-      value: {
-        kind: 'traits',
-        giverKey: 'Zeus',
-        options: [
-          { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
-          { traitKey: 'ZeusCastBoon', rarity: 'Common' },
-          { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
-        ],
-        selectedOptionKey: 'option1',
-        rarificationActions: [],
-      },
-    });
-    expect(occurrence(stamped, target).rerolledIncomingReward?.pressId).toBe('r1');
+    refused((encoded) => (rerolledOf(encoded).pressId = ''), 'pressId');
+    refused((encoded) => (rerolledOf(encoded).pressId = 'r2'), 'must name one of its results');
+    refused((encoded) => delete rerolledOf(encoded).acquisition, 'must hold its outcomes');
+    refused(
+      (encoded) => ((rerolledOf(encoded).acquisition as Record<string, unknown>).offer = zeus),
+      'is its press result',
+    );
+    refused(
+      (encoded) => (rerolledOf(encoded).results = { r1: zeus, r2: zeus }),
+      'which no press of it names',
+    );
+    refused((encoded) => (rerolledOf(encoded).results = {}), 'must name a press');
+    refused((encoded) => (pressOf(encoded).reward = zeus), 'reward');
+    // A press its target holds no result for is refused, while its door's room stands.
+    refused(
+      (encoded) =>
+        delete encoded.route.biomes[0]!.topology.occurrences.find(
+          (entry) => entry.occurrenceId === target,
+        )!.rerolledIncomingReward,
+      'has no result on its target',
+    );
   });
 
-  it('keep an authored acquisition when its reroll leaves, until it is dropped', () => {
+  it('go with their last press, and reset when their press draws another reward in place', () => {
     let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
     project = applyProjectCommand(project, catalog, insertReroll(project, zeus));
     project = applyProjectCommand(project, catalog, {
@@ -200,53 +211,29 @@ describe('rerolled rewards', () => {
         rarificationActions: [],
       },
     });
-    const authored = occurrence(project, target).rerolledIncomingReward;
-    expect(authored?.traitOffersByAcquisitionRole.source).toMatchObject({ giverKey: 'Zeus' });
+    expect(effective(project)?.traitOffersByAcquisitionRole.source).toMatchObject({
+      giverKey: 'Zeus',
+    });
     // The first draw keeps its own payload while rerolled.
     expect(occurrence(project, target).state).toEqual(
       occurrence(loadUnderworldFGCheckpoint(), target).state,
     );
-
-    const dormant = applyProjectCommand(project, catalog, removeReroll('r1'));
-    expect(occurrence(dormant, target).rerolledIncomingReward).toEqual(authored);
-    expect(() =>
-      applyProjectCommand(dormant, catalog, { kind: 'AdoptRerolledReward', owner }),
-    ).toThrow('owner has no reroll');
-    const dropped = applyProjectCommand(dormant, catalog, { kind: 'DropRerolledReward', owner });
-    expect(occurrence(dropped, target).rerolledIncomingReward).toBeUndefined();
-    expect(applyProjectCommand(dropped, catalog, { kind: 'DropRerolledReward', owner })).toBe(
-      dropped,
-    );
-  });
-
-  it('adopt the effective offer explicitly', () => {
-    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
-    project = applyProjectCommand(
-      project,
-      catalog,
-      insertReroll(project, { rewardType: 'RoomMoneyDrop' }),
-    );
-    const encoded = JSON.parse(encodeProjectDocument(project)) as {
-      route: { biomes: { topology: { occurrences: Record<string, unknown>[] } }[] };
+    const hera: ResolvedRewardOffer = {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
     };
-    const room = encoded.route.biomes[0]!.topology.occurrences.find(
-      (entry) => entry.occurrenceId === target,
-    )!;
-    (room.rerolledIncomingReward as { offer: unknown }).offer = { rewardType: 'MaxManaDrop' };
-    const mismatched = decodeProjectDocument(encoded as never, catalog);
-    expect(occurrence(mismatched, target).rerolledIncomingReward?.offer).toEqual({
-      rewardType: 'MaxManaDrop',
+    const redrawn = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRerollReward',
+      action: createRoomActionAddress(f, source as never, JSON.stringify(['reroll', 'r1'])),
+      reward: hera,
     });
-    const adopted = applyProjectCommand(mismatched, catalog, {
-      kind: 'AdoptRerolledReward',
-      owner,
+    expect(occurrence(redrawn, target).rerolledIncomingReward).toMatchObject({
+      results: { r1: hera },
+      pressId: 'r1',
     });
-    expect(occurrence(adopted, target).rerolledIncomingReward).toEqual(
-      occurrence(project, target).rerolledIncomingReward,
-    );
-    expect(applyProjectCommand(adopted, catalog, { kind: 'AdoptRerolledReward', owner })).toBe(
-      adopted,
-    );
+    expect(effective(redrawn)?.traitOffersByAcquisitionRole.source).toBeNull();
+    const removed = applyProjectCommand(project, catalog, removeReroll('r1'));
+    expect(occurrence(removed, target).rerolledIncomingReward).toBeUndefined();
   });
 });
 
@@ -314,9 +301,12 @@ describe('Hub rerolls', () => {
     );
     const combat09 = createIncomingRewardAddress(n, 'surface-n-combat09' as never);
     const rerolled = (project: ProjectDocument) =>
-      project.route.biomes[0]!.topology!.occurrences.find(
-        (room) => room.occurrenceId === combat09.occurrenceId,
-      )!.rerolledIncomingReward?.offer;
+      rerolledRewardOf(
+        project.route.biomes[0]!.topology!.occurrences.find(
+          (room) => room.occurrenceId === combat09.occurrenceId,
+        )!,
+        combat09,
+      )?.offer;
     expect(rerolled(pressed)).toEqual({ rewardType: 'MaxManaDropBig' });
     // Moving the later press after the visit leaves the earlier one effective.
     const actions = hubActions(pressed);
@@ -349,9 +339,12 @@ describe('Hub visit reset', () => {
     return decision;
   };
   const rerolled = (project: ProjectDocument, slot: string) =>
-    project.route.biomes[0]!.topology!.occurrences.find(
-      (room) => room.occurrenceId === `surface-n-${slot}`,
-    )!.rerolledIncomingReward?.offer;
+    rerolledRewardOf(
+      project.route.biomes[0]!.topology!.occurrences.find(
+        (room) => room.occurrenceId === `surface-n-${slot}`,
+      )!,
+      createIncomingRewardAddress(n, `surface-n-${slot}` as never),
+    )?.offer;
   const press = (hubSlotKey: string, reward: ResolvedRewardOffer, index: number) =>
     ({ kind: 'InsertHubReroll', hub, hubSlotKey, reward, index }) as const;
 

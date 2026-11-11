@@ -5,5 +5,6 @@ export { moveLockedDoorFightOntoDoor } from './locked-door-fight';
 export { exchangeBlockedWheelOffers, type WheelSideOrderBlock } from './wheel-side-order';
 export { splitShrineRush } from './split-shrine-rush';
 export { moveWellPoolRollsOntoObjects } from './well-pool-rolls';
+export { moveRerollResultsOntoItems } from './reroll-results';
 export { stampRoomActionItemContent } from './room-action-content';
 export { settleProjectUpgrade } from '../simulation/edit-settlement';

@@ -1,5 +1,6 @@
 import { reconcileDerivedItems } from '../acquisition/derived-items';
 import { contentTouchedBiomeKeys, stampRoomActionContent } from '../room-actions/content-stamping';
+import { closeRerolledRecords } from './rerolls';
 import type { Catalog } from '../../catalog-schema';
 import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
@@ -225,14 +226,7 @@ function applyUnchecked(
     case 'InsertHubReroll':
     case 'ReplaceHubRerollReward':
     case 'RemoveHubReroll':
-    case 'DropRerolledReward':
-    case 'AdoptRerolledReward':
-      return applyRerollCommand(
-        document,
-        catalog,
-        locateBiome(document, catalog, command),
-        command,
-      );
+      return applyRerollCommand(document, locateBiome(document, catalog, command), command);
     case 'ResetRoomActionsAfter':
       return applyRoomActionReset(
         document,
@@ -461,9 +455,20 @@ export function applyProjectCommand(
       reconcileResourcePlacementTopology(reconciled),
       command.kind === 'ClearTopology' ? command.biome.biomeKey : undefined,
     );
+    // A rerolled record names exactly its owner's presses, and its item follows them.
+    const rerollsClosed = closeRerolledRecords(
+      catalog,
+      document,
+      closed,
+      contentTouchedBiomeKeys(document, closed),
+    );
     // A row placed before its item was observed records the content observed since.
     return decodeProjectDocument(
-      stampRoomActionContent(catalog, closed, contentTouchedBiomeKeys(document, closed)),
+      stampRoomActionContent(
+        catalog,
+        rerollsClosed,
+        contentTouchedBiomeKeys(document, rerollsClosed),
+      ),
       catalog,
     );
   } catch (error) {

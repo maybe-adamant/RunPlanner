@@ -24,7 +24,7 @@ import {
   type OccurrenceAddress,
   type ProjectCommand,
   type ProjectDocument,
-  type RerollTarget,
+  type ResolvedRerollTarget,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
@@ -834,7 +834,11 @@ describe('stale room actions in edit settlement', () => {
     const rerolls = (project: ProjectDocument, source: OccurrenceAddress) =>
       order(project, source).filter((key) => key.startsWith('["reroll"'));
     /** Appends a press of the target to the source's doors and gives it a supported reward. */
-    const press = (project: ProjectDocument, source: OccurrenceAddress, target: RerollTarget) => {
+    const press = (
+      project: ProjectDocument,
+      source: OccurrenceAddress,
+      target: ResolvedRerollTarget,
+    ) => {
       const inserted = applyProjectCommand(project, catalog, {
         kind: 'InsertReroll',
         occurrence: source,
@@ -898,7 +902,7 @@ describe('stale room actions in edit settlement', () => {
       // The H intro's doors play Combat 2's third cage only at their maximum cage outcome.
       const intro = createOccurrenceAddress(h, createOccurrenceId('golden-h-intro'));
       const combat02 = createOccurrenceAddress(h, createOccurrenceId('golden-h-combat02'));
-      const cage3: RerollTarget = {
+      const cage3: ResolvedRerollTarget = {
         kind: 'cage',
         exitKey: 'exit1',
         occurrenceId: combat02.occurrenceId,
@@ -1071,7 +1075,7 @@ describe('stale room actions in edit settlement', () => {
       );
     });
 
-    it('leave a Hub reroll of a slot the board closes for repair', () => {
+    it('remove a Hub reroll with the slot the board closes', () => {
       const n = createBiomeAddress('Surface', 'N');
       const hub = {
         kind: 'hubDecision',
@@ -1102,13 +1106,11 @@ describe('stale room actions in edit settlement', () => {
         slot: createHubSlotAddress(n, 'hub', 'combat03'),
       });
       expect(settled.fault).toBeUndefined();
-      expect(hubRerolls(settled.assembly.project)).toEqual(hubRerolls(project));
+      // The press redrew the reward on the slot's door, which goes with it.
+      expect(hubRerolls(settled.assembly.project)).toEqual([]);
       expect(settled.removedStaleActions).toBeUndefined();
-      expect(settled.assembly.evaluation.findings).toContainEqual(
-        expect.objectContaining({
-          code: 'rerollTargetUnavailable',
-          origin: expect.objectContaining({ kind: 'hubReroll' }),
-        }),
+      expect(settled.assembly.evaluation.findings).not.toContainEqual(
+        expect.objectContaining({ origin: expect.objectContaining({ kind: 'hubReroll' }) }),
       );
     });
   });
