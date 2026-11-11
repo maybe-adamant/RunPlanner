@@ -592,6 +592,20 @@ describe('schema 102 to 103 migration', () => {
     );
   });
 
+  it('drops the outcomes of a recorded result its owner cannot draw', () => {
+    // The plan entered Surface Max Health on a Fields-route door, with Zeus's outcomes left over.
+    const stored = at102(withEarlierRerolls(authoredZeus()));
+    const undrawable = { rewardType: 'MaxHealthDropBig' };
+    pressRows(stored)[0].reward = undrawable;
+    target(stored).rerolledIncomingReward.offer = undrawable;
+    const lifted = step.liftProjectDocument(stored, engine.catalog);
+    assert.deepEqual(target(lifted).rerolledIncomingReward, {
+      results: { r1: undrawable },
+      pressId: 'r1',
+    });
+    assert.doesNotThrow(() => engine.parseProjectDocument(JSON.stringify(lifted), engine.catalog));
+  });
+
   it('drops a rerolled reward with no press and a press whose target is gone', () => {
     const current = checkpoint('underworld-fg');
     // A rerolled reward kept after its last press went (OD4).

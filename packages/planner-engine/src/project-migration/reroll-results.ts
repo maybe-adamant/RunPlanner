@@ -363,26 +363,26 @@ function moveBiome(
     );
     const effectivePress = owned.filter((entry) => entry.effective).at(-1);
     const last = (effectivePress ?? owned.at(-1))!.rerollId;
+    // The unresolved item the owner acquires from this result; none when it cannot draw it.
+    const drawn = (offer: unknown) => {
+      if (routePosition === undefined || effectivePress === undefined) return undefined;
+      try {
+        return unresolvedRerolledReward(
+          catalog,
+          routePosition,
+          occurrence as unknown as RoomOccurrence,
+          rewardOwner(place),
+          offer as ResolvedRewardOffer,
+        );
+      } catch {
+        return undefined;
+      }
+    };
     let next: RawRecord;
     let adopted = false;
     if (stored === undefined) {
       // A press with no entered reward: its item's outcomes start unresolved.
-      const unresolved =
-        routePosition === undefined || effectivePress === undefined
-          ? undefined
-          : (() => {
-              try {
-                return unresolvedRerolledReward(
-                  catalog,
-                  routePosition,
-                  occurrence as unknown as RoomOccurrence,
-                  rewardOwner(place),
-                  results[last] as ResolvedRewardOffer,
-                );
-              } catch {
-                return undefined;
-              }
-            })();
+      const unresolved = drawn(results[last]);
       const acquisition =
         unresolved === undefined
           ? undefined
@@ -400,11 +400,12 @@ function moveBiome(
         results[recorded] = offer;
         adopted = true;
       }
-      // With no effective press the owner acquires its first draw: the outcomes go.
+      // With no effective press the owner acquires its first draw, and a reward the
+      // owner cannot draw holds none: the outcomes go.
       next = {
         results,
         pressId: recorded,
-        ...(effectivePress === undefined ? {} : { acquisition }),
+        ...(drawn(results[recorded]) === undefined ? {} : { acquisition }),
       };
     }
     let updated = withRecordAt(occurrence, place, next);
@@ -433,7 +434,9 @@ function moveBiome(
  * recorded, else on the owner's last press; an entered reward that press did
  * not draw becomes its result (OD3), and its pickup rows are stamped again. A
  * press with no entered reward starts unresolved; a rerolled reward with no
- * press (OD4) and a press whose door, room, cage or Hub slot is gone (OD5) go.
+ * press (OD4) and a press whose door, room, cage or Hub slot is gone (OD5) go,
+ * as do the outcomes of a reward its owner cannot draw or whose presses are
+ * all Hub presses after their slot's visit.
  * A plan already in that shape passes unchanged.
  */
 export function moveRerollResultsOntoItems(raw: unknown, catalog: Catalog): unknown {

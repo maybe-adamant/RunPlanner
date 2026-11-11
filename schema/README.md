@@ -54,9 +54,10 @@ that item's outcomes in `acquisition`. A rerolled reward that recorded its
 press keeps its outcomes on it, else on the owner's last press; an entered
 reward its press did not draw becomes that press's result, and the pickup
 rows of its owner are stamped again; a press with no entered reward starts
-its outcomes unresolved, and none are kept while no press of the owner is
-effective. A rerolled reward with no press, and a press whose door, room,
-cage or Hub slot is gone, are dropped. The
+its outcomes unresolved. A rerolled reward with no press, and a press whose
+door, room, cage or Hub slot is gone, are dropped, and so, silently, are the
+outcomes of a rerolled reward its owner cannot draw, or whose presses are all
+Hub presses after their slot's visit, since no press of it is then effective. The
 migration accepts schema 102 through its final revision 1, lifts the version,
 makes those moves (losslessly, before strict decoding; a press stood only at
 a locked door, once per door; the moves touch disjoint fields) and settles
