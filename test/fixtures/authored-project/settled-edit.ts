@@ -1,6 +1,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
+  createRoomActionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   hermesShrineDeliveryEntryKey,
@@ -11,6 +13,7 @@ import {
   type ProjectCommand,
   type ProjectDocument,
   type SemanticAddress,
+  withRoomActionContent,
 } from '@run-planner/engine/authored-project';
 import {
   collectRequiredItems,
@@ -35,7 +38,9 @@ const PLACEMENT_FINDINGS: ReadonlySet<string> = new Set([
 ]);
 
 /** The room an address lies in: the nearest occurrence it names, in its nearest biome. */
-function occurrenceOfAddress(address: SemanticAddress): OccurrenceAddress | undefined {
+function occurrenceOfAddress(
+  address: SemanticAddress | ProjectCommand,
+): OccurrenceAddress | undefined {
   const queue: {
     readonly node: unknown;
     readonly route: string | undefined;
@@ -160,6 +165,84 @@ export function placeTestLivePickupsAtSite(
     placed.add(key);
     current = placeTestLivePickup(current, occurrence, key);
   }
+}
+
+function roomOrder(project: ProjectDocument, occurrence: OccurrenceAddress) {
+  return (
+    project.route.biomes
+      .find((biome) => biome.biomeKey === occurrence.biomeKey)
+      ?.topology?.occurrences.find((room) => room.occurrenceId === occurrence.occurrenceId)
+      ?.roomActions.order ?? []
+  );
+}
+
+/** The keys of the items the live row offers to pick up in a reached room. */
+function livePlaceableKeys(project: ProjectDocument, occurrence: OccurrenceAddress): Set<string> {
+  const live = liveActionsForProjectEvaluationAssembly(catalog, evaluate(project), occurrence);
+  return new Set(
+    (live?.gaps ?? []).flatMap((gap) =>
+      gap.items.flatMap((item) =>
+        item.actions.flatMap((action) =>
+          action.kind === 'place' ? [roomActionKey(action.reference)] : [],
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Replaces an item whose row is placed, as the owner would: the settled edit
+ * removes the old item's row, then Collect all required and the live row pick
+ * up the new item when the walk reaches its room. In a room the walk does not
+ * reach, the row is placed again where it stood, if the room still holds that
+ * item. The room is the one the command names unless given.
+ */
+export function replaceTestPlacedItem(
+  project: ProjectDocument,
+  command: ProjectCommand,
+  room?: OccurrenceAddress,
+): ProjectDocument {
+  const occurrence = room ?? occurrenceOfAddress(command);
+  if (occurrence === undefined) throw new Error(`${command.kind} names no room`);
+  const placed = roomOrder(project, occurrence);
+  const settled = evaluate(settleTestEdit(project, command));
+  const missing = (current: ProjectDocument) =>
+    placed.flatMap((row, index) =>
+      roomOrder(current, occurrence).some((kept) => roomActionKey(kept) === roomActionKey(row))
+        ? []
+        : [{ row, index }],
+    );
+  if (liveActionsForProjectEvaluationAssembly(catalog, settled, occurrence) !== undefined) {
+    const collected = collectRequiredItems({ catalog, before: settled, occurrence, evaluate });
+    if (collected.fault !== undefined)
+      throw new Error(`Collect all required faulted at ${collected.fault.key}`);
+    let current = collected.assembly.project;
+    for (const { row } of missing(current)) {
+      const actionKey = roomActionKey(row);
+      if (livePlaceableKeys(current, occurrence).has(actionKey))
+        current = placeTestLivePickup(current, occurrence, actionKey);
+    }
+    return current;
+  }
+  let current = settled.project;
+  for (const { row, index } of missing(current)) {
+    try {
+      current = applyProjectCommand(current, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(
+          createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+          occurrence.occurrenceId,
+          roomActionKey(row),
+        ),
+        reference: withRoomActionContent(row, null),
+        index: Math.min(index, roomOrder(current, occurrence).length),
+      });
+    } catch {
+      // The command decides whether the room still holds the row's item
+      // (an inactive room or another role holds none).
+    }
+  }
+  return current;
 }
 
 /** Picks up a rushed Shrine purchase's item in its own room. */

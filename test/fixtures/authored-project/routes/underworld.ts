@@ -49,6 +49,7 @@ import {
   replaceTestShopOfferActions,
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
+  replaceTestPlacedItem,
   settleTestEdit,
 } from '../shared';
 import { authorTestArtificerReplacement } from '../room-actions';
@@ -139,7 +140,7 @@ export function loadUnderworldFGProject(): ProjectDocument {
 /** Short F-only witness: Travel Deal refills a consequential forced Postboss Well. */
 export function createUnderworldFWellCheckpoint(configuredTail = true): ProjectDocument {
   let project = createCompleteFGProject();
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 2)),
     value: { rewardType: 'WeaponUpgrade' },
@@ -161,7 +162,7 @@ export function createUnderworldFWellCheckpoint(configuredTail = true): ProjectD
       selectedOptionKey: 'option1',
     },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 1)),
     value: { rewardType: 'HermesUpgrade' },
@@ -286,7 +287,7 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
       gameName: options.prebossSource,
     });
     if (options.prebossSource === 'G_Combat14') {
-      project = applyProjectCommand(project, catalog, {
+      project = replaceTestPlacedItem(project, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(
           goldenGBiome,
@@ -1227,7 +1228,7 @@ export function createFConversionFrontierProject(
 ): FConversionFrontierFixture {
   const occurrenceId = goldenFOccurrenceId(1, 1);
   const reward = createIncomingRewardAddress(goldenFBiome, occurrenceId);
-  let project = applyProjectCommand(createFConversionLoadoutProject(), catalog, {
+  let project = replaceTestPlacedItem(createFConversionLoadoutProject(), {
     kind: 'ReplaceIncomingReward',
     reward,
     value: { rewardType },
@@ -1256,12 +1257,12 @@ export function createFConversionFrontierProject(
 export function createFInvalidLaterConversionProject(): FConversionFrontierFixture {
   const reachedReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
   const blockedReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1));
-  let project = applyProjectCommand(createFConversionLoadoutProject(), catalog, {
+  let project = replaceTestPlacedItem(createFConversionLoadoutProject(), {
     kind: 'ReplaceIncomingReward',
     reward: reachedReward,
     value: { rewardType: 'MetaCurrencyDrop' },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: blockedReward,
     value: { rewardType: 'MetaCurrencyDrop' },
@@ -1447,7 +1448,7 @@ export function createEchoTalentDropReplayProject(): ProjectDocument {
     ['golden-h-combat02', 'cage1', 'SpellDrop'],
     ['golden-h-combat03', 'cage2', 'RoomMoneyDrop'],
   ] as const)
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceLocalReward',
       reward: cage(createOccurrenceId(occurrenceId), slotKey),
       value: { rewardType },
@@ -1455,7 +1456,7 @@ export function createEchoTalentDropReplayProject(): ProjectDocument {
   project = authorLegalTraitOffers(project);
   const talent = cage(combat09, 'cage2');
   project = editTestRoomActionOrder(
-    applyProjectCommand(project, catalog, {
+    replaceTestPlacedItem(project, {
       kind: 'ReplaceLocalReward',
       reward: talent,
       value: { rewardType: 'TalentDrop' },

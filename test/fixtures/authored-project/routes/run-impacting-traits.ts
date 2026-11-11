@@ -23,6 +23,7 @@ import {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   placeTestLivePickupsAtSite,
+  replaceTestPlacedItem,
 } from '../settled-edit';
 import { nBiome, nOccurrenceId, nOccurrenceIds } from './surface';
 
@@ -34,9 +35,8 @@ function replaceBoon(
 ): ProjectDocument {
   const reward = createIncomingRewardAddress(nBiome, occurrenceId);
   const value = { rewardType: 'Boon' as const, payload: { kind: 'BoonSource' as const, source } };
-  const withReward = applyProjectCommand(
+  const withReward = replaceTestPlacedItem(
     project,
-    catalog,
     occurrenceId === nOccurrenceIds.opening
       ? {
           kind: 'ReplaceStartingReward',
@@ -44,6 +44,7 @@ function replaceBoon(
           value,
         }
       : { kind: 'ReplaceIncomingReward', reward, value },
+    createOccurrenceAddress(nBiome, occurrenceId),
   );
   return applyProjectCommand(withReward, catalog, {
     kind: 'ReplaceTraitOffer',
@@ -59,9 +60,8 @@ function replaceDirectTrait(
   offer: AuthoredTraitOfferTraits,
 ): ProjectDocument {
   const reward = createIncomingRewardAddress(nBiome, occurrenceId);
-  const withReward = applyProjectCommand(
+  const withReward = replaceTestPlacedItem(
     project,
-    catalog,
     occurrenceId === nOccurrenceIds.opening
       ? {
           kind: 'ReplaceStartingReward',
@@ -69,6 +69,7 @@ function replaceDirectTrait(
           value: { rewardType },
         }
       : { kind: 'ReplaceIncomingReward', reward, value: { rewardType } },
+    createOccurrenceAddress(nBiome, occurrenceId),
   );
   return applyProjectCommand(withReward, catalog, {
     kind: 'ReplaceTraitOffer',
@@ -82,7 +83,7 @@ function replaceUnvisitedBoonSource(
   occurrenceId: ReturnType<typeof nOccurrenceId>,
   source: string,
 ): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
+  return replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, occurrenceId),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
@@ -245,7 +246,7 @@ export function createSurfaceNNaturalSelectionFrontier(): ProjectDocument {
   );
   // Combat01 is assigned first, so Combat05 repeats Demeter after four distinct board gods.
   project = replaceUnvisitedBoonSource(project, nOccurrenceId('combat01'), 'ApolloUpgrade');
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
     value: { rewardType: 'MaxHealthDropBig' },

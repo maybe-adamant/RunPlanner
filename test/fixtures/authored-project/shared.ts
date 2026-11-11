@@ -31,6 +31,7 @@ export {
   placeTestLivePickup,
   placeTestLivePickupsAtSite,
   placeTestRushedShrinePickup,
+  replaceTestPlacedItem,
   settleTestEdit,
 } from './settled-edit';
 export { catalogWithEmptyShopGroup } from './empty-shop-group';

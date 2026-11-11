@@ -362,18 +362,7 @@
                 "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
-                "order": [
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source",
-                    "content": [
-                      "native",
-                      "Boon",
-                      "ZeusUpgrade"
-                    ]
-                  }
-                ]
+                "order": []
               },
               "phantomExit": {
                 "placeholderRoomGameName": null,

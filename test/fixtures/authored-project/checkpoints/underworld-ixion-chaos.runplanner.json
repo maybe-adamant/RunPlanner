@@ -874,17 +874,7 @@
                 }
               },
               "roomActions": {
-                "order": [
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self",
-                    "content": [
-                      "native",
-                      "WeaponUpgrade"
-                    ]
-                  }
-                ]
+                "order": []
               },
               "additionalExits": []
             },

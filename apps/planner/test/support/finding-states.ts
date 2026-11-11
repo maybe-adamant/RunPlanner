@@ -16,6 +16,7 @@ import {
 import {
   authorLegalTraitOffers,
   collectTestRequiredItems,
+  replaceTestPlacedItem,
   prepareLegalPomTraitOffers,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
@@ -123,9 +124,8 @@ export function groupedOutcomeProject(
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: `${giver}Upgrade` },
     } as const;
-    project = applyProjectCommand(
+    project = replaceTestPlacedItem(
       project,
-      catalog,
       index === 0
         ? {
             kind: 'ReplaceStartingReward',
@@ -133,6 +133,7 @@ export function groupedOutcomeProject(
             value,
           }
         : { kind: 'ReplaceIncomingReward', reward, value },
+      createOccurrenceAddress(goldenFBiome, sites[index]!),
     );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
@@ -154,7 +155,7 @@ export function groupedOutcomeProject(
     });
   }
   const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1));
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: `${giverKey}Upgrade` } },

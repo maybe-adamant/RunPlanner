@@ -618,6 +618,9 @@ function freshFileRouteFrontierStart(): ProjectDocument {
       };
     else delete reward.levelResolutionsByAcquisitionRole;
   }
+  // The rewritten rewards are new items; their rows take the new content when a command stamps it.
+  for (const id of [...Object.keys(incoming), ...Object.keys(cages)])
+    for (const row of occurrence(id).roomActions.order) delete row.content;
   // Fresh gods and resource tiers; every trait offer is re-authored below.
   const legal = JSON.parse(
     JSON.stringify(biomes)

@@ -388,18 +388,7 @@
                 "nemesisBetOutcomeByPhase": {}
               },
               "roomActions": {
-                "order": [
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "source",
-                    "content": [
-                      "native",
-                      "Boon",
-                      "ApolloUpgrade"
-                    ]
-                  }
-                ]
+                "order": []
               },
               "phantomExit": {
                 "placeholderRoomGameName": null,

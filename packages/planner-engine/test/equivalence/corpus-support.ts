@@ -304,12 +304,23 @@ export function createOShipWheelPickupBeforeDeferredEndEffectsProject(): Project
 
 /** F's Postboss Travel Deal restocks a Boon rarity item the Well already sold: judged at the first purchase. */
 export function createFWellDuplicateRefillProject(): ProjectDocument {
-  return applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
-    kind: 'ReplaceStygianWellTravelDealRefill',
-    occurrence: createOccurrenceAddress(
-      goldenFBiome,
-      createOccurrenceId('golden-f-preboss-shop:postboss'),
-    ),
-    itemKey: 'TemporaryBoonRarityTrait',
-  });
+  const occurrence = createOccurrenceAddress(
+    goldenFBiome,
+    createOccurrenceId('golden-f-preboss-shop:postboss'),
+  );
+  // The restock is another item, so its purchase is made again.
+  return applyProjectCommand(
+    settleTestEdit(createUnderworldFWellCheckpoint(), {
+      kind: 'ReplaceStygianWellTravelDealRefill',
+      occurrence,
+      itemKey: 'TemporaryBoonRarityTrait',
+    }),
+    catalog,
+    {
+      kind: 'SetStygianWellPurchase',
+      occurrence,
+      generationKey: 'travelDealRefill',
+      purchased: true,
+    },
+  );
 }

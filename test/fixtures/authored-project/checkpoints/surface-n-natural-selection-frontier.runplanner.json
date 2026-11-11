@@ -363,7 +363,8 @@
                     "acquisitionRole": "source",
                     "content": [
                       "native",
-                      "MaxHealthDropBig"
+                      "Boon",
+                      "AphroditeUpgrade"
                     ]
                   }
                 ]
@@ -1110,8 +1111,7 @@
                     "acquisitionRole": "self",
                     "content": [
                       "native",
-                      "Boon",
-                      "ApolloUpgrade"
+                      "MaxHealthDropBig"
                     ]
                   }
                 ]

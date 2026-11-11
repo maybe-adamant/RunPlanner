@@ -43,6 +43,8 @@ import {
   replaceTestShopOfferActions,
   supportedTraitOffer,
   purchaseTestHermesShrineOffer,
+  replaceTestPlacedItem,
+  settleTestEdit,
 } from '../shared';
 import {
   loadSurfaceNCheckpoint,
@@ -273,7 +275,8 @@ export function createSurfaceOSameRoomHermesDeliveriesCheckpoint(): {
     [introSource, 5, introEntry, 'Intro', 'ApolloUpgrade'],
     [combatSource, 2, combatEntry, 'Combat1', 'HeraUpgrade'],
   ] as const) {
-    project = applyProjectCommand(project, catalog, {
+    // Another item in the slot: its earlier purchase goes, and it is bought again.
+    project = settleTestEdit(project, {
       kind: 'ReplaceHermesShrineOffer',
       occurrence,
       slotKey: 'secondLeft',
@@ -306,13 +309,12 @@ export function createSurfaceOSameRoomHermesDeliveriesCheckpoint(): {
  * first, so Combat05 repeats Combat11's Ares only after four distinct board gods.
  */
 export function withFourthBoardGodBeforeCombat05(project: ProjectDocument): ProjectDocument {
-  return applyProjectCommand(
-    applyProjectCommand(project, catalog, {
+  return replaceTestPlacedItem(
+    replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat01')),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } },
     }),
-    catalog,
     {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
@@ -329,12 +331,12 @@ export function surfaceShrineTravelDealProject(): ProjectDocument {
   const shrine = createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:postboss'));
   const travelDealSource = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
   let project = withFourthBoardGodBeforeCombat05(loadSurfaceNOProject());
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: travelDealSource,
     value: { rewardType: 'HermesUpgrade' },
@@ -821,7 +823,7 @@ export function authorSurfaceWorldShop(
 
 export function createRepresentativeNOPQShopTraitProject(): ProjectDocument {
   let project = loadSurfaceNOPQProject();
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat03')),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
@@ -854,16 +856,12 @@ export function surfaceTravelDealRefillAnvilProject(): ProjectDocument {
   const travelDealSource = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
   const shop = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
   const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
-  let project = applyProjectCommand(
-    withFourthBoardGodBeforeCombat05(loadSurfaceNOPQProject()),
-    catalog,
-    {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
-      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
-    },
-  );
-  project = applyProjectCommand(project, catalog, {
+  let project = replaceTestPlacedItem(withFourthBoardGodBeforeCombat05(loadSurfaceNOPQProject()), {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+  });
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: travelDealSource,
     value: { rewardType: 'HermesUpgrade' },
@@ -933,7 +931,7 @@ export function reachedPOutdoorIcarusFixture() {
       gameName: replacement,
     });
   }
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(pBiome, occurrenceId),
     value: { rewardType: 'TalentDrop' },

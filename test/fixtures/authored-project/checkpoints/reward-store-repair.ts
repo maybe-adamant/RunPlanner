@@ -1,6 +1,4 @@
-import { catalog } from '@run-planner/hades2-catalog';
 import {
-  applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
@@ -17,7 +15,7 @@ import type {
   ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { authorLegalTraitOffers } from '../shared';
+import { authorLegalTraitOffers, settleTestEdit } from '../shared';
 import type { AuthoredProjectCheckpointId } from './manifest';
 
 /**
@@ -369,7 +367,7 @@ export function applyRewardStoreRepair(
     current =
       step.kind === 'AuthorLegalTraitOffers'
         ? authorLegalTraitOffers(current)
-        : applyProjectCommand(current, catalog, step);
+        : settleTestEdit(current, step);
   }
   return current;
 }

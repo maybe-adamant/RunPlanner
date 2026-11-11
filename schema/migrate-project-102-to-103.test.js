@@ -203,7 +203,7 @@ describe('schema 102 to 103 migration', () => {
   });
 
   it('splits a stored Shrine rush into the purchase and its own rush right after it', () => {
-    const current = checkpoint('surface-shrine-travel-deal');
+    const current = checkpoint('surface-no-hermes-shrine-delivery');
     // Schema 102 stored a rush as a flag on its purchase.
     const stored = JSON.parse(JSON.stringify(at102(current)));
     for (const biome of stored.route.biomes)
@@ -238,7 +238,7 @@ describe('schema 102 to 103 migration', () => {
         .find((occurrence) => occurrence.occurrenceId === 'golden-f-preboss-shop:postboss');
     shop(underworld).stygianWell.rerollOfferKeyBySlot = { r1: { healing: 'HealDropRange' } };
     shop(underworld).roomActions.order.push({ kind: 'rerollStygianWell', rerollId: 'r1' });
-    const surface = checkpoint('surface-shrine-travel-deal');
+    const surface = checkpoint('surface-no-hermes-shrine-delivery');
     const current = {
       ...underworld,
       route: { ...underworld.route, biomes: [...underworld.route.biomes, ...surface.route.biomes] },
@@ -301,7 +301,7 @@ describe('schema 102 to 103 migration', () => {
   it('stamps each pickup, purchase and sale row with its item’s content, losslessly', () => {
     for (const id of [
       'underworld-world-shop-travel-deal',
-      'surface-shrine-travel-deal',
+      'surface-no-hermes-shrine-delivery',
       'surface-no',
     ]) {
       const current = checkpoint(id);
