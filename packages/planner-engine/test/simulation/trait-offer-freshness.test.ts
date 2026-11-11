@@ -18,6 +18,7 @@ import {
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
+import { collectTestRequiredItems, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { simulateProject } from '../../src/simulation';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
@@ -469,11 +470,14 @@ describe('ship wheel rewards', () => {
 
   /** A picked Apollo wheel reward with an engine-supported starting screen. */
   function wheelBoonProject(): ProjectDocument {
-    const withBoon = applyProjectCommand(loadSurfaceNOProject(), catalog, {
-      kind: 'ReplaceRewardWheelOffer',
-      offer: wheelOffer,
-      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
-    });
+    // The Boon is a new wheel item, which the owner picks up again.
+    const withBoon = collectTestRequiredItems(
+      settleTestEdit(loadSurfaceNOProject(), {
+        kind: 'ReplaceRewardWheelOffer',
+        offer: wheelOffer,
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      }),
+    );
     const outcome = evaluateBiome(shipFixture, withBoon)
       .artifacts.traitOffers.at(wheelBoon)
       ?.traitOfferStartingOutcome('Apollo');

@@ -32,6 +32,7 @@ import {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   scheduleTestRequiredRoomActions,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
@@ -64,7 +65,7 @@ function traitContext(project: ReturnType<typeof createProjectDocument>, routeKe
 function legalHFieldsProject() {
   const biome = createBiomeAddress('Underworld', 'H');
   let project = createGoldenFGHProject();
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(biome, createOccurrenceId('golden-h-miniboss01')),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
@@ -97,7 +98,7 @@ function legalOProject() {
       selectedOptionKey: 'option1',
     },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceRewardWheelOffer',
     offer: createRewardWheelOfferAddress(biome, oOccurrenceIds.combat02, 'wheel1', 'offer1'),
     value: { rewardType: 'HermesUpgrade' },
