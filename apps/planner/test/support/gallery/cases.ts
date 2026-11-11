@@ -1,4 +1,5 @@
 import {
+  applyProjectCommand,
   createAcquisitionRoleAddress,
   createAdditionalExitAddress,
   createBiomeAddress,
@@ -82,9 +83,16 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOPProject,
+  placeDueHermesShrineDeliveries,
   surfaceShrineDeliveriesProject,
+  surfaceShrineDeliverySources,
 } from '@run-planner/test-fixtures/surface';
-import { authorLegalPomResolutions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalPomResolutions,
+  authorLegalTraitOffers,
+  authorTestTraitsAndRequiredItems,
+  purchaseTestHermesShrineOffer,
+} from '@run-planner/test-fixtures/shared';
 import { createReachableNaturalChaosProject } from '../structured-workspace/interaction-binding.test-support';
 import {
   appendRoomAction,
@@ -98,6 +106,48 @@ import {
   type GalleryCase,
   type GalleryStep,
 } from './galleryCase';
+
+const surfaceO = createBiomeAddress('Surface', 'O');
+
+/** A three-phase O room where a Hermes Shrine delivery matures at Combat 1's end. */
+function shipNonFinalDeliveryProject() {
+  const { oShrine } = surfaceShrineDeliverySources;
+  const occurrenceId = createOccurrenceId('surface-o-combat02');
+  const occurrence = createOccurrenceAddress(surfaceO, occurrenceId);
+  let project = applyProjectCommand(surfaceShrineDeliveriesProject(), catalog, {
+    kind: 'ReplaceShipEncounterCount',
+    occurrence,
+    encounterCount: 3,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SelectEncounter',
+    phase: createEncounterPhaseAddress(surfaceO, occurrence, 'Combat1'),
+    encounterKey: 'IcarusCombatO',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHermesShrineOffer',
+    occurrence: oShrine,
+    slotKey: 'secondLeft',
+    value: { rewardType: 'MaxHealthDrop' },
+  });
+  project = purchaseTestHermesShrineOffer(project, catalog, oShrine, 'initial:secondLeft', {
+    delay: 5,
+    rushed: false,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceRewardWheelStore',
+    wheel: createRewardWheelAddress(surfaceO, occurrenceId, 'wheel2'),
+    storeKey: 'RunProgress',
+  });
+  project = authorTestTraitsAndRequiredItems(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(surfaceO, occurrenceId, 'wheel2', 'offer1'),
+      value: { rewardType: 'RoomMoneyDrop' },
+    }),
+  );
+  return authorLegalTraitOffers(placeDueHermesShrineDeliveries(project));
+}
 
 /** Adds an object on a free anchor through the engine's own placement command. */
 function placeAnchorObject(
@@ -777,6 +827,25 @@ export const galleryCases: readonly GalleryCase[] = [
     ],
     target: room('O', 'surface-o-combat04'),
   },
+  {
+    id: 'ship-two-phase-intro',
+    roomTab: 'shipIntroActions',
+    label: 'Ship room Intro: its fight, then the wheel Combat 1 is chosen at',
+    shows: ['ship phase', 'Wheels open', 'select wheel'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    target: room('O', 'surface-o-combat04'),
+  },
+  // A three-phase room whose Combat 1 matures a delivery, collected before Combat 2's wheel choice.
+  ...(['shipIntroActions', 'shipCombat1Actions', 'shipCombat2Actions'] as const).map(
+    (roomTab, index): GalleryCase => ({
+      id: `ship-three-phase-${index}`,
+      roomTab,
+      label: `Three-phase Ship room, tab ${index + 1}: one fight, then what comes next`,
+      shows: ['ship phase', 'Wheels open', 'select wheel', 'spawn notice', 'doors'],
+      project: shipNonFinalDeliveryProject,
+      target: room('O', 'surface-o-combat02'),
+    }),
+  ),
   {
     id: 'outcome-aetos-gorgon',
     label: 'P combat room: Aetos wave and Gorgon condition at Combat',
