@@ -18,6 +18,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectAddress,
+  createRoomActionAddress,
   createRoomFeatureAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
@@ -687,6 +688,79 @@ describe('timeline finding guidance', () => {
         evidence: { reason },
       }),
     ).toEqual({ title });
+  });
+});
+
+describe('a required item left unplaced', () => {
+  const room = createOccurrenceId('deadline-room');
+  const ownKey = roomActionKey({ kind: 'useFountain' });
+  const rows = new Map([
+    [ownKey, 'Use Fountain'],
+    [roomActionKey({ kind: 'interactEris' }), 'Talk to Eris'],
+    [roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'Combat1' }), 'Choose Combat 1 wheel'],
+    [roomActionKey({ kind: 'unlockExit', exitKey: 'Exit02' }), 'Unlock Door 2'],
+  ]);
+  const labels = {
+    ...catalogFindingLabels(catalog),
+    roomAction: (owner: SemanticAddress, actionKey: string) =>
+      owner.kind === 'roomAction' && owner.occurrenceId === room ? rows.get(actionKey) : undefined,
+  };
+  const required = (
+    code: FindingCode,
+    evidence: Record<string, FindingEvidenceValue>,
+  ): SemanticFinding => ({
+    code,
+    phase: 'completeness',
+    origin: createRoomActionAddress(biome, room, ownKey),
+    evidence,
+  });
+
+  it.each([
+    [{ deadline: 'doorsOpen' }, 'Use Fountain before the doors open'],
+    [{ deadline: 'leave' }, 'Use Fountain before leaving'],
+    [{ deadline: 'encounter', deadlinePhase: 'Combat1' }, 'Use Fountain before the fight'],
+    [{ deadline: 'phaseEnd', deadlinePhase: 'Combat1' }, 'Use Fountain before this phase ends'],
+    [
+      { deadline: 'action', deadlineAction: roomActionKey({ kind: 'interactEris' }) },
+      'Use Fountain before meeting Eris',
+    ],
+    [
+      {
+        deadline: 'action',
+        deadlineAction: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'Combat1' }),
+      },
+      'Use Fountain before choosing the Combat 1 wheel',
+    ],
+    [
+      {
+        deadline: 'action',
+        deadlineAction: roomActionKey({ kind: 'unlockExit', exitKey: 'Exit02' }),
+      },
+      'Use Fountain before unlocking Door 2',
+    ],
+  ])('names its row and when it falls due (%j)', (evidence, title) => {
+    expect(presentFinding(required('roomActionPlacementRequired', evidence), labels)).toEqual({
+      title,
+    });
+  });
+
+  it('names a delivery and a duplicate by their item, with no deadline the evidence lacks', () => {
+    expect(
+      presentFinding(
+        required('hermesShrineDeliveryPlacementRequired', { deadline: 'leave' }),
+        labels,
+      ).title,
+    ).toBe('Collect Shrine delivery before leaving');
+    expect(presentFinding(required('echoGoldPickupPlacementRequired', {}), labels).title).toBe(
+      'Collect Gold Gold Gold pickup',
+    );
+    // An unlabelled deadline row leaves the item named alone.
+    expect(
+      presentFinding(
+        required('echoGoldPickupPlacementRequired', { deadline: 'action', deadlineAction: 'gone' }),
+        labels,
+      ).title,
+    ).toBe('Collect Gold Gold Gold pickup');
   });
 });
 

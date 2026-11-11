@@ -714,15 +714,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'hermesShrinePlacementUnavailable':
       return { kind: 'generic', message: 'This ordinary Shrine is outside its placement window.' };
     case 'hermesShrineDeliveryPlacementRequired':
-      return {
-        kind: 'acquisition',
-        message: 'Collect this Shrine delivery in its due room.',
-      };
     case 'echoGoldPickupPlacementRequired':
-      return {
-        kind: 'acquisition',
-        message: 'Collect this Gold Gold Gold pickup on the Timeline.',
-      };
+      return presented('acquisition', finding);
     case 'roomActionOrderUnavailable':
     case 'roomActionPlacementRequired':
       return presented('generic', finding);

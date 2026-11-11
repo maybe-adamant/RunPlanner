@@ -529,7 +529,7 @@ export const findingCopy = {
     title: 'Collect Shrine delivery',
   },
   echoGoldPickupPlacementRequired: {
-    title: 'Collect Gold Gold Gold pickup before leaving',
+    title: 'Collect Gold Gold Gold pickup',
   },
   roomActionOrderUnavailable: {
     title: 'Action out of order',
@@ -899,15 +899,28 @@ function requiredFirstLabel(
   return actionKey === undefined ? undefined : labels?.roomAction?.(finding.origin, actionKey);
 }
 
-/** A Timeline row's label as the act it names, for "before …": Choose X wheel → choosing the X wheel. */
+/** A Timeline row's label as the act it names, for "before …": Talk to Nemesis → meeting Nemesis. */
 const DEADLINE_ACTS: Readonly<Record<string, string>> = {
+  Buy: 'buying',
   Choose: 'choosing the',
   Clear: 'clearing',
   Collect: 'collecting',
+  Reroll: 'rerolling',
+  Resolve: 'resolving',
+  Rush: 'rushing',
+  Sell: 'selling',
+  Unlock: 'unlocking',
   Use: 'using',
 };
 
+/** Two-word Timeline verbs, read as one act. */
+const DEADLINE_PHRASAL_ACTS: Readonly<Record<string, string>> = {
+  'Talk to': 'meeting',
+};
+
 function deadlineAct(label: string): string {
+  for (const [verb, act] of Object.entries(DEADLINE_PHRASAL_ACTS))
+    if (label.startsWith(`${verb} `)) return `${act} ${label.slice(verb.length + 1)}`;
   const [verb, ...rest] = label.split(' ');
   const act = verb === undefined ? undefined : DEADLINE_ACTS[verb];
   return act === undefined || rest.length === 0 ? label : `${act} ${rest.join(' ')}`;
