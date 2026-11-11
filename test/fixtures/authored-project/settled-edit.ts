@@ -14,6 +14,11 @@ import {
   type ProjectDocument,
   type SemanticAddress,
   withRoomActionContent,
+  biomePlanContentSource,
+  roomActionContentMatches,
+  roomActionItemContent,
+  roomActionReferenceContent,
+  ProjectCommandContractError,
 } from '@run-planner/engine/authored-project';
 import {
   collectRequiredItems,
@@ -191,11 +196,38 @@ function livePlaceableKeys(project: ProjectDocument, occurrence: OccurrenceAddre
 }
 
 /**
+ * The keys of the room's rows the command replaces the item of: rows whose
+ * recorded content their item no longer holds once the command applies.
+ */
+function rowsOnItemsReplacedBy(
+  project: ProjectDocument,
+  command: ProjectCommand,
+  occurrence: OccurrenceAddress,
+): ReadonlySet<string> {
+  const applied = applyProjectCommand(project, catalog, command);
+  const plan = applied.route.biomes.find((biome) => biome.biomeKey === occurrence.biomeKey);
+  const room = plan?.topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+  );
+  const source = plan === undefined ? undefined : biomePlanContentSource(catalog, applied, plan);
+  if (room === undefined || source === undefined) return new Set();
+  return new Set(
+    room.roomActions.order.flatMap((row) =>
+      roomActionReferenceContent(row) !== undefined &&
+      !roomActionContentMatches(row, roomActionItemContent(source, room, row))
+        ? [roomActionKey(row)]
+        : [],
+    ),
+  );
+}
+
+/**
  * Replaces an item whose row is placed, as the owner would: the settled edit
  * removes the old item's row, then Collect all required and the live row pick
  * up the new item when the walk reaches its room. In a room the walk does not
- * reach, the row is placed again where it stood, if the room still holds that
- * item. The room is the one the command names unless given.
+ * reach, each row the swap replaced is placed again where it stood, if the room
+ * still holds that row's item. The room is the one the command names unless
+ * given.
  */
 export function replaceTestPlacedItem(
   project: ProjectDocument,
@@ -225,7 +257,9 @@ export function replaceTestPlacedItem(
     return current;
   }
   let current = settled.project;
+  const replaced = rowsOnItemsReplacedBy(project, command, occurrence);
   for (const { row, index } of missing(current)) {
+    if (!replaced.has(roomActionKey(row))) continue;
     try {
       current = applyProjectCommand(current, catalog, {
         kind: 'InsertRoomAction',
@@ -237,9 +271,14 @@ export function replaceTestPlacedItem(
         reference: withRoomActionContent(row, null),
         index: Math.min(index, roomOrder(current, occurrence).length),
       });
-    } catch {
+    } catch (error) {
       // The command decides whether the room still holds the row's item
       // (an inactive room or another role holds none).
+      if (
+        !(error instanceof ProjectCommandContractError) ||
+        !error.message.includes('room action is not active')
+      )
+        throw error;
     }
   }
   return current;
