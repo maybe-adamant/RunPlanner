@@ -2575,15 +2575,41 @@ it('keeps an earlier proven same-room placement when a later sibling blocks', ()
       payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
     },
   } as const;
-  // Another payload is a new item: its pickup goes, and the owner places the delivery again
-  // at its Combat1 end with the Aphrodite payload, whose screen is still to be authored.
+  // Another payload is a new item: its pickup goes, the Aphrodite payload stays live and
+  // unplaced, and the owner places it again at its Combat1 end, its screen still to be authored.
   let project = settleTestEdit(complete, aphrodite);
+  const deliveryKey = roomActionKey({
+    kind: 'interactAcquisitionEntry',
+    siteKey: 'hermesShrineDelivery',
+    entryKey: combatEntry.entryKey,
+  });
+  const host = combatEntry.site.owner as ReturnType<typeof createOccurrenceAddress>;
+  const hostRoom = project.route.biomes
+    .find((biome) => biome.biomeKey === 'O')
+    ?.topology?.occurrences.find((room) => room.occurrenceId === host.occurrenceId);
+  expect(
+    hostRoom?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[combatEntry.entryKey]?.offer,
+  ).toEqual(aphrodite.value);
+  expect(hostRoom?.roomActions.order.map(roomActionKey)).not.toContain(deliveryKey);
+  const live = liveActionsForProjectEvaluationAssembly(
+    catalog,
+    simulateProjectAssembly(catalog, project),
+    host,
+  );
+  expect(
+    live?.gaps.some((gap) =>
+      gap.items.some((item) =>
+        item.actions.some(
+          (action) => action.kind === 'place' && roomActionKey(action.reference) === deliveryKey,
+        ),
+      ),
+    ),
+  ).toBe(true);
   project = applyProjectCommand(project, catalog, {
     kind: 'PlaceHermesShrineDelivery',
     entry: combatEntry,
     encounterPhaseKey: 'Combat1',
   });
-  project = applyProjectCommand(project, catalog, aphrodite);
   const assembly = simulateProjectAssembly(catalog, project);
   const evaluation = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
   if (evaluation === undefined || !('rewards' in evaluation))

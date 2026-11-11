@@ -561,14 +561,20 @@ describe('timed-effect edit settlement', () => {
         entry,
         encounterPhaseKey: 'Encounter',
       });
-      project = applyProjectCommand(project, catalog, {
+      const apollo = {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      } as const;
+      project = settleTestEdit(project, {
         kind: 'ReplaceAcquisitionEntryOffer',
         entry,
-        value: {
-          rewardType: 'BlindBoxLoot',
-          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-        },
+        value: apollo,
       });
+      // The payload is the delivery's own observation: settling its change keeps it.
+      expect(
+        occurrence(project, 'surface-o-devotion').acquisitionSites?.hermesShrineDelivery
+          ?.pickupEntries?.[entryKey]?.offer,
+      ).toEqual(apollo);
       const trait = createTraitOfferAddress(entry, 'hiddenSource');
       const value = supportedTraitOffer(project, trait, 'Apollo');
       if (value === undefined) throw new Error('Mystery source has no Apollo offer');

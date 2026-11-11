@@ -37,6 +37,7 @@ import {
   candidateBiomeRooms,
 } from '../../../src/simulation/candidates/evaluated-biome';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
+import { createSurfaceOSameRoomHermesDeliveriesCheckpoint } from '@run-planner/test-fixtures/surface';
 import { roomActionsOnReplacedItems } from '../../../src/authored-project/room-actions/replaced-items';
 import { withArcana, withGoldenUnderworldJudgments, withJudgment } from '../../support/rerolls';
 import { liveInteractionsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/live-interactions';
@@ -576,6 +577,61 @@ describe('rows on a replaced item in edit settlement', () => {
     expect(
       roomActionsOnReplacedItems(project, catalog).map(({ reference }) => roomActionKey(reference)),
     ).not.toContain(roomActionKey(duplicate));
+  });
+
+  describe('a Hermes delivery', () => {
+    /** The host's delivery entry and whether its pickup is placed. */
+    const deliveryAt = (
+      project: ProjectDocument,
+      entry: { site: { owner: unknown }; entryKey: string },
+    ) => {
+      const host = entry.site.owner as OccurrenceAddress;
+      const room = project.route.biomes
+        .find((plan) => plan.biomeKey === host.biomeKey)!
+        .topology!.occurrences.find((candidate) => candidate.occurrenceId === host.occurrenceId)!;
+      return {
+        offer: room.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entry.entryKey]?.offer,
+        placed: room.roomActions.order.some(
+          (reference) =>
+            reference.kind === 'interactAcquisitionEntry' && reference.entryKey === entry.entryKey,
+        ),
+      };
+    };
+
+    it('keeps a new payload as the live item when its pickup goes', () => {
+      const { project, combatEntry } = createSurfaceOSameRoomHermesDeliveriesCheckpoint();
+      const host = combatEntry.site.owner as OccurrenceAddress;
+      const aphrodite = {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+      } as const;
+      expect(deliveryAt(project, combatEntry).placed).toBe(true);
+      const settled = settle(project, {
+        kind: 'ReplaceAcquisitionEntryOffer',
+        entry: combatEntry,
+        value: aphrodite,
+      });
+      expect(settled.fault).toBeUndefined();
+      // Silent: the edit addresses the host.
+      expect(settled.removedStaleActions).toBeUndefined();
+      expect(deliveryAt(settled.assembly.project, combatEntry)).toEqual({
+        offer: aphrodite,
+        placed: false,
+      });
+      const key = roomActionKey({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey: combatEntry.entryKey,
+      });
+      const live = liveActionsForProjectEvaluationAssembly(catalog, settled.assembly, host)!;
+      const actions = live.gaps.flatMap((gap) =>
+        gap.items.flatMap((item) =>
+          item.actions.filter((action) => roomActionKey(action.reference) === key),
+        ),
+      );
+      expect(actions.length).toBeGreaterThan(0);
+      expect(actions.every((action) => action.kind === 'place')).toBe(true);
+    });
   });
 
   it('[Wave C] keeps today’s delivery handling when a Shrine restock replaces its purchase', () => {

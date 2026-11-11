@@ -958,9 +958,21 @@ function settleProject(options: {
       continue;
     }
     // A row with no context or source has nothing to repair: the edit that orphans it removes it.
+    const replaced = replacedItemRowsToRemove(
+      catalog,
+      before.project,
+      priorReplaced,
+      assembly.project,
+    );
+    // The entry of a row on a replaced item holds the new item's observation: only the row goes.
+    const replacedRows = new Set(
+      replaced.map(
+        ({ owner, reference }) => `${semanticAddressKey(owner)}|${roomActionKey(reference)}`,
+      ),
+    );
     const stale = [
       ...staleRowsToRemove(before, beforeRosters, assembly, upgrade),
-      ...replacedItemRowsToRemove(catalog, before.project, priorReplaced, assembly.project),
+      ...replaced,
       ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly, upgrade),
       ...cageGoneRerolls(before, assembly, upgrade),
       ...(upgrade ? sourceGonePickups(catalog, assembly, evaluate) : []),
@@ -981,14 +993,15 @@ function settleProject(options: {
       const fault = consume(`stale:${semanticAddressKey(address)}`, address);
       if (fault !== undefined) return settled(assembly, fault);
       const payload =
-        reference.kind === 'interactAcquisitionEntry' && sourcedShopRow(reference)
+        reference.kind === 'interactAcquisitionEntry' &&
+        (sourcedShopRow(reference) || replacedRows.has(`${semanticAddressKey(owner)}|${key}`))
           ? occurrenceAt(project, owner)?.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[
               reference.entryKey
             ]
           : undefined;
       try {
         project = applyProjectCommand(project, catalog, roomActionRemovalCommand(owner, reference));
-        // A source-gone Shop row leaves its payload with the Shop.
+        // A source-gone Shop row leaves its payload with the Shop, a replaced item's row with its item.
         if (payload !== undefined && reference.kind === 'interactAcquisitionEntry')
           project = withPickupPayload(project, owner, reference, payload);
       } catch (error) {
