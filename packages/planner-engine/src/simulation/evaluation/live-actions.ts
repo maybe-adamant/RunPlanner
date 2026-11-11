@@ -20,29 +20,13 @@ import {
   stygianWellRerolls,
 } from '../../authored-project/feature-rolls';
 import type { RoomActionReference } from '../../authored-project/model';
-import { rerollAppendIndex, type RerollSurface } from '../../authored-project/rerolls';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../authored-project/shop';
 import type { Catalog } from '../../catalog-schema';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { RoomActionParticipation, RoomActionRow, RoomActionWindow } from '../room-actions';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
-import {
-  purgingPoolCandidateForProjectEvaluationAssembly,
-  roomObjectInteractionsForProjectEvaluationAssembly,
-  stygianWellCandidateForProjectEvaluationAssembly,
-} from './project-evaluation-assembly';
-import {
-  rerollSpendAllowanceForProjectEvaluationAssembly,
-  rerollSurfaceForProjectEvaluationAssembly,
-} from './reroll-authoring';
-import {
-  liveVerbKind,
-  standingDispositionVerbs,
-  type LiveProgression,
-  type LiveVerb,
-  type LiveVerbChoice,
-} from './live-verbs';
+import { roomObjectInteractionsForProjectEvaluationAssembly } from './project-evaluation-assembly';
 import {
   authoredRoom,
   roomWalk,
@@ -143,8 +127,6 @@ export interface LivePickup extends LiveObligation {
   /** The unlock that frees it, while it is still locked at this gap. */
   readonly lockedUntil?: string;
   readonly actions: readonly LiveAction[];
-  /** Each interaction it allows at the gap. */
-  readonly verbs: readonly LiveVerb[];
 }
 
 /** An object usable at the gap, with each legal action on it. */
@@ -154,12 +136,6 @@ export interface LiveObject {
   /** The room for a room's own object; the phase, its Gorgon or the wheel otherwise. */
   readonly owner: SemanticAddress;
   readonly actions: readonly (LiveAction & LiveObligation)[];
-  /**
-   * Each interaction it allows at the gap: its actions' verbs, then the ones
-   * whose row a picker creates or the engine allocates (a reroll press, a Well
-   * or Pool reroll, a Pool sale).
-   */
-  readonly verbs: readonly LiveVerb[];
 }
 
 export type LiveItem = LivePickup | LiveObject;
@@ -182,13 +158,6 @@ export interface RoomLiveActions {
   readonly frontier: number;
   /** Every gap through the frontier, in order. */
   readonly gaps: readonly LiveGap[];
-  /** What lets the room progress at the frontier once nothing else required is live there. */
-  readonly progression?: LiveProgression;
-  /**
-   * The optional pickups still loose when the room is left: its last gap's,
-   * once the walk passes the room.
-   */
-  readonly leftBehind?: readonly LivePickup[];
 }
 
 function frozen<T>(value: T): T {
@@ -445,182 +414,6 @@ function isPositioned(command: ProjectCommand): command is PositionedCommand {
   );
 }
 
-/** The outcome a row of this kind takes from its own picker once it stands. */
-function rowChoice(reference: RoomActionReference): LiveVerbChoice | undefined {
-  switch (reference.kind) {
-    case 'interactKeepsakeRack':
-      return frozen({ picker: 'keepsake' as const, timing: 'after' as const });
-    case 'rerollStygianWell':
-      return frozen({ picker: 'stygianWellRoll' as const, timing: 'after' as const });
-    case 'rerollPurgingPool':
-      return frozen({ picker: 'purgingPoolRoll' as const, timing: 'after' as const });
-    default:
-      return undefined;
-  }
-}
-
-/** The verb an action performs, with the item's or action's obligation. */
-function actionVerb(action: LiveAction, obligation: LiveObligation): LiveVerb {
-  const base = {
-    verb: liveVerbKind(action.reference),
-    participation: obligation.participation,
-    ...(obligation.deadline === undefined ? {} : { deadline: obligation.deadline }),
-    reference: action.reference,
-  };
-  const choice = rowChoice(action.reference);
-  const withChoice = choice === undefined ? {} : { choice };
-  switch (action.kind) {
-    case 'placed':
-      return frozen({ ...base, standing: true as const, commands: frozen([]), ...withChoice });
-    case 'move':
-      return frozen({ ...base, commands: frozen([action.command]), ...withChoice });
-    case 'place':
-      if (action.needsChoice === 'travelDealItem')
-        return frozen({
-          ...base,
-          choice: frozen({ picker: 'travelDealItem' as const, timing: 'before' as const }),
-        });
-      return frozen({
-        ...base,
-        commands: frozen([action.command]),
-        ...(action.canonical === true ? { canonical: true as const } : {}),
-        ...(action.needsChoice === 'levelResolution'
-          ? { choice: frozen({ picker: 'levelResolution' as const, timing: 'after' as const }) }
-          : withChoice),
-      });
-  }
-}
-
-/** An object's verb whose row a picker creates or the engine allocates, at the one gap it takes. */
-interface ObjectVerb {
-  readonly object: LiveObjectKind;
-  readonly owner: SemanticAddress;
-  readonly gap: number;
-  readonly verb: LiveVerb;
-}
-
-/**
- * The verbs a room's objects allow whose row is not a roster row yet: a door,
- * cage or wheel reroll press at its surface's append point, and a Well or Pool
- * reroll and an unpinned Pool slot's sale where the room's reached actions
- * end. Each is offered only where its object is reached, a held card enables
- * it and the reroll pool there pays for it, the fixed budget edit settlement
- * enforces.
- */
-function objectChoiceVerbs(
-  assembly: ProjectEvaluationAssembly,
-  occurrence: OccurrenceAddress,
-  room: CanonicalAuthoredRoom,
-  orderLength: number,
-  frontier: number,
-): readonly ObjectVerb[] {
-  const biome = createBiomeAddress(occurrence.routeKey, occurrence.biomeKey);
-  const verbs: ObjectVerb[] = [];
-  const surfaces: {
-    readonly object: LiveObjectKind;
-    readonly owner: SemanticAddress;
-    readonly surface: RerollSurface;
-  }[] = [{ object: 'doorRerolls', owner: occurrence, surface: { kind: 'doors', occurrence } }];
-  for (const phase of room.roomActionRoster.lifecycleStructure.phases) {
-    if (phase.rewardWheelKey === undefined) continue;
-    const wheel = createRewardWheelAddress(biome, occurrence.occurrenceId, phase.rewardWheelKey);
-    surfaces.push({ object: 'rewardWheel', owner: wheel, surface: { kind: 'rewardWheel', wheel } });
-  }
-  for (const { object, owner, surface } of surfaces) {
-    const settlement = rerollSurfaceForProjectEvaluationAssembly(assembly, surface);
-    const gap = rerollAppendIndex(assembly.project, surface);
-    if (settlement === undefined || gap === undefined || gap > frontier) continue;
-    if (
-      !settlement.enabled ||
-      settlement.targets.every((target) => target.unavailable !== undefined)
-    )
-      continue;
-    const allowance = rerollSpendAllowanceForProjectEvaluationAssembly(assembly, {
-      kind: 'press',
-      surface,
-    });
-    if (allowance.kind !== 'reached' || !allowance.allowed) continue;
-    verbs.push(
-      frozen({
-        object,
-        owner,
-        gap,
-        verb: frozen({
-          verb: 'reroll' as const,
-          participation: 'optional' as const,
-          choice: frozen({ picker: 'rerollPress' as const, timing: 'before' as const, surface }),
-        }),
-      }),
-    );
-  }
-  // A Well's or Pool's interaction stands where the room's reached actions end.
-  if (frontier !== orderLength) return frozen(verbs);
-  const featureReroll = (
-    object: 'stygianWell' | 'purgingPool',
-    option: { readonly enabled: boolean; readonly available: boolean } | undefined,
-  ) => {
-    if (option === undefined || !option.enabled || !option.available) return;
-    const allowance = rerollSpendAllowanceForProjectEvaluationAssembly(assembly, {
-      kind: 'featureReroll',
-      occurrence,
-      feature: object,
-    });
-    if (allowance.kind !== 'reached' || !allowance.allowed) return;
-    const command: ProjectCommand =
-      object === 'stygianWell'
-        ? frozen({ kind: 'InsertStygianWellReroll' as const, occurrence, index: orderLength })
-        : frozen({ kind: 'InsertPurgingPoolReroll' as const, occurrence, index: orderLength });
-    verbs.push(
-      frozen({
-        object,
-        owner: occurrence,
-        gap: orderLength,
-        verb: frozen({
-          verb: 'reroll' as const,
-          participation: 'optional' as const,
-          commands: frozen([command]),
-          choice: frozen({
-            picker:
-              object === 'stygianWell'
-                ? ('stygianWellRoll' as const)
-                : ('purgingPoolRoll' as const),
-            timing: 'after' as const,
-          }),
-        }),
-      }),
-    );
-  };
-  featureReroll(
-    'stygianWell',
-    stygianWellCandidateForProjectEvaluationAssembly(assembly, occurrence)?.interaction?.reroll,
-  );
-  const pool = purgingPoolCandidateForProjectEvaluationAssembly(assembly, occurrence)?.interaction;
-  if (pool === undefined) return frozen(verbs);
-  featureReroll('purgingPool', pool.reroll);
-  // A pinned slot's sale is a roster row; an unpinned one waits on its trait.
-  for (const offer of pool.offers)
-    if (offer.traitKey === null)
-      verbs.push(
-        frozen({
-          object: 'purgingPool' as const,
-          owner: occurrence,
-          gap: orderLength,
-          verb: frozen({
-            verb: 'sell' as const,
-            participation: 'optional' as const,
-            reference: offer.sale,
-            choice: frozen({
-              picker: 'purgingPoolSale' as const,
-              timing: 'before' as const,
-              rollKey: pool.rollKey,
-              slotKey: offer.slotKey,
-            }),
-          }),
-        }),
-      );
-  return frozen(verbs);
-}
-
 /** Command with its index set to the gap. */
 function atIndex(command: ProjectCommand, index: number): ProjectCommand {
   return command.kind === 'SetInfernalContractPedestalCollected'
@@ -739,22 +532,6 @@ export function liveActionsForProjectEvaluationAssembly(
       : Math.max(...gaps.keys());
   };
 
-  /**
-   * An action's verbs: a standing row acquiring one reached role offers each
-   * way of taking it the walk's capability there supports; any other action
-   * performs its one verb.
-   */
-  const verbsOf = (action: LiveAction, obligation: LiveObligation): readonly LiveVerb[] =>
-    (action.kind === 'placed'
-      ? standingDispositionVerbs(
-          assembly,
-          occurrence,
-          action.reference,
-          obligation.participation,
-          obligation.deadline,
-        )
-      : undefined) ?? [actionVerb(action, obligation)];
-
   // Pickups, from the spawned loot, each with the gap it spawned at.
   interface PickupSpawn {
     readonly item: SpawnedLootItem;
@@ -831,10 +608,6 @@ export function liveActionsForProjectEvaluationAssembly(
       if (item.participation === 'required' && indexes.size > 0) deadline = Math.max(...indexes);
     }
     const unlockGap = item.lockedUntil === undefined ? undefined : unlockGaps.get(item.lockedUntil);
-    const obligation = {
-      participation: item.participation,
-      ...(deadline === undefined ? {} : { deadline }),
-    };
     return frozen({
       kind: 'pickup' as const,
       owner: item.owner,
@@ -853,7 +626,6 @@ export function liveActionsForProjectEvaluationAssembly(
         ? { lockedUntil: item.lockedUntil }
         : {}),
       actions: frozen(actions),
-      verbs: frozen(actions.flatMap((action) => verbsOf(action, obligation))),
     });
   };
 
@@ -863,7 +635,6 @@ export function liveActionsForProjectEvaluationAssembly(
     return object === undefined ? [] : [{ row, ...object }];
   });
   const purchases = objectPurchases(catalog, assembly, room, occurrence, orderLength);
-  const choiceVerbs = objectChoiceVerbs(assembly, occurrence, room, orderLength, frontier);
   const objectsAt = (gap: number): LiveObject[] => {
     const byObject = new Map<
       string,
@@ -871,23 +642,17 @@ export function liveActionsForProjectEvaluationAssembly(
         object: LiveObjectKind;
         owner: SemanticAddress;
         actions: (LiveAction & LiveObligation)[];
-        verbs: LiveVerb[];
       }
     >();
-    const entryOf = (object: LiveObjectKind, owner: SemanticAddress) => {
-      const key = `${object}:${semanticAddressKey(owner)}`;
-      const entry = byObject.get(key) ?? { object, owner, actions: [], verbs: [] };
-      byObject.set(key, entry);
-      return entry;
-    };
     const add = (
       object: LiveObjectKind,
       owner: SemanticAddress,
       action: LiveAction & LiveObligation,
     ) => {
-      const entry = entryOf(object, owner);
+      const key = `${object}:${semanticAddressKey(owner)}`;
+      const entry = byObject.get(key) ?? { object, owner, actions: [] };
       entry.actions.push(action);
-      entry.verbs.push(...verbsOf(action, action));
+      byObject.set(key, entry);
     };
     for (const { row, object, owner } of objectRows) {
       const action = rowAction(row, gap);
@@ -917,15 +682,12 @@ export function liveActionsForProjectEvaluationAssembly(
         }),
       );
     }
-    for (const { object, owner, gap: verbGap, verb } of choiceVerbs)
-      if (verbGap === gap) entryOf(object, owner).verbs.push(verb);
     return [...byObject.values()].map((entry) =>
       frozen({
         kind: 'object' as const,
         object: entry.object,
         owner: entry.owner,
         actions: frozen(entry.actions),
-        verbs: frozen(entry.verbs),
       }),
     );
   };
@@ -955,43 +717,5 @@ export function liveActionsForProjectEvaluationAssembly(
       }),
     );
   }
-  const atFrontier = gaps[frontier]?.items ?? [];
-  /** Each required thing live at the frontier, once: a pickup, or an object's required row. */
-  const required = new Map<string, { readonly item: LiveItem; readonly verb?: LiveVerb }>();
-  for (const item of atFrontier)
-    if (item.kind === 'pickup') {
-      if (item.participation === 'required') required.set(roomActionKey(item.reference), { item });
-    } else
-      for (const verb of item.verbs)
-        if (verb.participation === 'required' && verb.reference !== undefined)
-          required.set(roomActionKey(verb.reference), { item, verb });
-  const [only] = required.values();
-  const passed = frontier === orderLength && (stop === undefined || stop.kind === 'exit');
-  const progression: LiveProgression | undefined =
-    required.size === 0
-      ? passed
-        ? frozen({ kind: 'leaveRoom' as const })
-        : undefined
-      : required.size === 1 &&
-          only?.item.kind === 'object' &&
-          only.item.owner.kind === 'rewardWheel' &&
-          only.verb?.verb === 'choose' &&
-          only.verb.standing !== true
-        ? frozen({ kind: 'chooseWheel' as const, wheel: only.item.owner })
-        : undefined;
-  return frozen({
-    owner: room.origin,
-    frontier,
-    gaps: frozen(gaps),
-    ...(progression === undefined ? {} : { progression }),
-    ...(passed
-      ? {
-          leftBehind: frozen(
-            atFrontier.flatMap((item) =>
-              item.kind === 'pickup' && item.participation === 'optional' ? [item] : [],
-            ),
-          ),
-        }
-      : {}),
-  });
+  return frozen({ owner: room.origin, frontier, gaps: frozen(gaps) });
 }
