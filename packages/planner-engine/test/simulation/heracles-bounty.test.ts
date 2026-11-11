@@ -35,8 +35,10 @@ import {
   authorTestTraitsAndRequiredItems,
   editTestRoomActionOrder,
   procTestSeaStar,
+  replaceTestPlacedItem,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures/shared';
+import { withItemContents } from '../support/room-action-content';
 import {
   assembleExecutionProduct,
   compileExecutionPlan,
@@ -103,8 +105,9 @@ function withSeaStar(project: ProjectDocument): ProjectDocument {
     reward: createIncomingRewardAddress(nBiome, occurrenceId),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
   });
-  let current = applyProjectCommand(project, catalog, boon(nOccurrenceId('prehub')));
-  current = applyProjectCommand(current, catalog, boon(nOccurrenceId('combat10')));
+  // Each swap is a new item, which the owner picks up again.
+  let current = replaceTestPlacedItem(project, boon(nOccurrenceId('prehub')));
+  current = replaceTestPlacedItem(current, boon(nOccurrenceId('combat10')));
   return withTrait(current, nOccurrenceId('prehub'), 'source', 'Poseidon', 'DoubleRewardBoon');
 }
 
@@ -133,7 +136,7 @@ const bountyGains = (room: GoldRoomSpending) =>
 describe('Heracles’s bounty', () => {
   it('drops one required bounty pickup after his fight, which pays the bounty', () => {
     const project = withHeracles(loadSurfaceNCheckpoint());
-    expect(order(project)).toEqual([rewardRow, bountyRow]);
+    expect(order(project)).toEqual(withItemContents(project, room, [rewardRow, bountyRow]));
     const gold = spending(project);
     const [bounty] = bountyGains(gold);
     expect(bounty).toMatchObject({
@@ -201,7 +204,7 @@ describe('Heracles’s bounty', () => {
       phase,
       encounterKey: 'GeneratedN',
     });
-    expect(order(replaced)).not.toContainEqual(bountyRow);
+    expect(order(replaced).map(roomActionKey)).not.toContain(roomActionKey(bountyRow));
     const remaining = replaced.route.biomes
       .find((biome) => biome.biomeKey === 'N')!
       .topology!.occurrences.find((candidate) => candidate.occurrenceId === combat05)!;
