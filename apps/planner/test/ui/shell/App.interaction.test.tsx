@@ -1579,6 +1579,7 @@ describe('planner history interaction', () => {
     if (launcher === null) throw new Error('trait editor launcher is missing');
     await view.user.click(launcher);
     const dialog = await screen.findByRole('dialog');
+    const initialGiver = within(dialog).getByRole('heading', { level: 2 }).textContent;
     const traitTrigger = within(dialog).getByLabelText('option1 trait');
     expect(traitTrigger.textContent).toContain(
       application.catalog.traits.byKey[initialValue.options[0]?.traitKey ?? '']?.label,
@@ -1599,18 +1600,12 @@ describe('planner history interaction', () => {
       .interactions.traitOffers.get(semanticAddressKey(target));
     if (replacement === undefined) throw new Error('replacement trait interaction is missing');
     expect(replacement.value).toBeNull();
-    const replacementValue = replacement.traitOfferStartingOutcome?.();
-    if (replacementValue?.kind !== 'traits')
-      throw new Error('replacement trait interaction must provide a transient traits draft');
-    await waitFor(() =>
-      expect(within(dialog).getByLabelText('option1 trait').textContent).toContain(
-        application.catalog.traits.byKey[replacementValue.options[0]?.traitKey ?? '']?.label,
-      ),
-    );
-    expect(replacement.value).not.toEqual(initialValue);
-    expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe(
-      replacement.giver.label,
-    );
+    // The swap takes the pickup with it: the new reward's offer waits on its placement, so the
+    // editor closes rather than keep the old giver's options.
+    expect(replacement.contextReached).toBe(false);
+    expect(replacement.giver.label).not.toBe(initialGiver);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     const restored = application
@@ -1620,13 +1615,19 @@ describe('planner history interaction', () => {
     const restoredValue = restored.value;
     if (restoredValue?.kind !== 'traits')
       throw new Error('restored trait interaction must offer traits');
-    await waitFor(() =>
-      expect(within(dialog).getByLabelText('option1 trait').textContent).toContain(
-        application.catalog.traits.byKey[restoredValue.options[0]?.traitKey ?? '']?.label,
-      ),
-    );
     expect(restored.value).toEqual(initialValue);
-    expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe(
+    // Undo restores the reached offer; its editor reopens on the restored value.
+    const restoredLauncher = await waitFor(() => {
+      const found = document.getElementById(`trait-launcher-${semanticAddressKey(target)}`);
+      if (found === null) throw new Error('restored trait editor launcher is missing');
+      return found;
+    });
+    await view.user.click(restoredLauncher);
+    const restoredDialog = await screen.findByRole('dialog');
+    expect(within(restoredDialog).getByLabelText('option1 trait').textContent).toContain(
+      application.catalog.traits.byKey[restoredValue.options[0]?.traitKey ?? '']?.label,
+    );
+    expect(within(restoredDialog).getByRole('heading', { level: 2 }).textContent).toBe(
       restored.giver.label,
     );
   });
