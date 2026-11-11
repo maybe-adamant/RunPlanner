@@ -13,6 +13,7 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   rerollAppendIndex,
+  roomActionKey,
   semanticAddressKey,
   type AuthoredTraitOffer,
   type BiomeAddress,
@@ -53,6 +54,7 @@ import {
   withGuessedRerolledScreens,
 } from '../support/rerolls';
 import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
+import { withItemContent } from '../support/room-action-content';
 
 const f = createBiomeAddress('Underworld', 'F');
 const source = 'golden-f-b2-e1';
@@ -216,17 +218,37 @@ describe('door rerolls', () => {
       'golden-f-preboss-shop:boss',
       ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
     );
-    const first = settle(
-      base,
-      insertReroll(base, door('exit1', pickedTarget), { rewardType: 'RoomMoneyDrop' }),
-    );
+    const targetRoom = createOccurrenceAddress(f, pickedTarget as never);
+    const pickup = {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'self',
+    } as const;
+    const firstDraw = withItemContent(base, targetRoom, pickup);
+    const pressed = settleProjectEdit({
+      catalog,
+      before: evaluate(base),
+      command: insertReroll(base, door('exit1', pickedTarget), { rewardType: 'RoomMoneyDrop' }),
+      evaluate,
+    });
+    // The press redraws the target's reward as a new item: its first draw's pickup goes, announced there.
+    expect(occurrence(base, pickedTarget).roomActions.order).toEqual([firstDraw]);
+    expect(pressed.removedStaleActions).toEqual([{ occurrence: targetRoom, actions: [firstDraw] }]);
+    const first = pressed.assembly.project;
+    expect(occurrence(first, pickedTarget).roomActions.order).toEqual([]);
     expect(rerolls(first).map((reroll) => reroll.rerollId)).toEqual(['r1']);
     const reward = firstSupportedReroll(first, pressAt('r1'), 'RunProgress');
-    const project = settle(first, {
-      kind: 'ReplaceRerollReward',
-      action: pressAt('r1'),
-      reward,
-    });
+    // The new item is picked up once the reward is final.
+    const project = collectTestRequiredItems(
+      settle(first, {
+        kind: 'ReplaceRerollReward',
+        action: pressAt('r1'),
+        reward,
+      }),
+    );
+    expect(occurrence(project, pickedTarget).roomActions.order).toEqual([
+      withItemContent(project, targetRoom, pickup),
+    ]);
     const target = occurrence(project, pickedTarget);
     expect(target.state.kind === 'counted' && target.state.reward?.offer).toEqual({
       rewardType: 'MaxHealthDrop',
@@ -301,18 +323,17 @@ describe('reroll settlement', () => {
   const base = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
 
   function rerolledTo(from: string, target: RerollTarget, rewardType: string): ProjectDocument {
-    const inserted = applyProjectCommand(
-      base,
-      catalog,
-      insertReroll(base, target, undefined, from),
-    );
+    const inserted = settle(base, insertReroll(base, target, undefined, from));
     const reward = supportedRerollRewards(inserted, pressAt('r1', from), [rewardType])[0];
     if (reward === undefined) throw new Error(`${rewardType} is not supported`);
-    return applyProjectCommand(inserted, catalog, {
-      kind: 'ReplaceRerollReward',
-      action: pressAt('r1', from),
-      reward,
-    });
+    // The press removed the target's first draw; its new item is picked up.
+    return collectTestRequiredItems(
+      settle(inserted, {
+        kind: 'ReplaceRerollReward',
+        action: pressAt('r1', from),
+        reward,
+      }),
+    );
   }
 
   it('removes the redrawn reward from its store', () => {
@@ -387,7 +408,9 @@ describe('reroll settlement', () => {
       });
     expect(pendingSupported).toEqual([fallback]);
 
-    const pressed = settle(gift, insertReroll(gift, exit1, fallback, from));
+    const pressed = collectTestRequiredItems(
+      settle(gift, insertReroll(gift, exit1, fallback, from)),
+    );
     expect(rerollFindings(pressed)).toEqual([]);
     expect(occurrence(pressed, targetId).rerolledIncomingReward?.offer).toEqual(fallback);
     // The fallback draws nothing, so both appended sets stay in the bag.
@@ -526,18 +549,20 @@ describe('Fields cage rerolls', () => {
   it('redraw one cage of a door into a Fields room', () => {
     const from = 'golden-h-miniboss01';
     const target = 'golden-h-combat05';
-    const inserted = applyProjectCommand(
+    const inserted = settle(
       base,
-      catalog,
       insertReroll(base, cage('exit1', target, 'cage1'), undefined, from, h, 2),
     );
     const reroll = pressAt('r1', from, h);
     const reward = firstSupportedReroll(inserted, reroll, 'RunProgress');
-    const project = applyProjectCommand(inserted, catalog, {
-      kind: 'ReplaceRerollReward',
-      action: reroll,
-      reward,
-    });
+    // The press removed the cage's first draw; its new item is picked up.
+    const project = collectTestRequiredItems(
+      settle(inserted, {
+        kind: 'ReplaceRerollReward',
+        action: reroll,
+        reward,
+      }),
+    );
     const room = occurrence(project, target, 2);
     expect(room.state.kind === 'fieldsCombat' && room.state.rerolledCages?.cage1?.offer).toEqual(
       reward,
@@ -805,7 +830,8 @@ describe('Hub board rerolls', () => {
         producerPoint: 'roomRewardPickup',
         acquisitionRole: 'source',
       } as const;
-      expect(occurrence(picked, occurrenceId).roomActions.order).toContainEqual(sourceRow);
+      const pickedRow = withItemContent(picked, room, sourceRow);
+      expect(occurrence(picked, occurrenceId).roomActions.order).toContainEqual(pickedRow);
 
       // The visit enters the first draw again: the Boon pick stays for repair, its item goes.
       const settlement = settleProjectEdit({
@@ -818,9 +844,11 @@ describe('Hub board rerolls', () => {
       expect(occurrence(removed, occurrenceId).rerolledIncomingReward).toEqual(
         occurrence(picked, occurrenceId).rerolledIncomingReward,
       );
-      expect(occurrence(removed, occurrenceId).roomActions.order).not.toContainEqual(sourceRow);
+      expect(occurrence(removed, occurrenceId).roomActions.order.map(roomActionKey)).not.toContain(
+        roomActionKey(sourceRow),
+      );
       // A Hub edit addresses no single room, so the removal is announced.
-      expect(settlement.removedStaleActions).toEqual([{ occurrence: room, actions: [sourceRow] }]);
+      expect(settlement.removedStaleActions).toEqual([{ occurrence: room, actions: [pickedRow] }]);
       expect(rerollFindings(removed).map((finding) => [finding.code, finding.origin])).toEqual([
         ['rerolledRewardMismatch', incoming],
       ]);
@@ -839,7 +867,7 @@ describe('Hub board rerolls', () => {
       expect(items).toEqual([
         expect.objectContaining({
           reward: { kind: 'offer', offer: firstDraw },
-          reference: { ...sourceRow, acquisitionRole: 'self' },
+          reference: withItemContent(repaired, room, { ...sourceRow, acquisitionRole: 'self' }),
           placement: expect.objectContaining({ kind: 'unplaced' }),
         }),
       ]);
@@ -864,7 +892,7 @@ describe('ship wheel rerolls', () => {
       ['ScreenReroll', 'TradeOff', 'StartingGold', 'HealthRegen', 'BonusDodge'],
     );
     const ship = occurrence(base, 'surface-o-combat04', 1);
-    const inserted = applyProjectCommand(base, catalog, {
+    const inserted = settle(base, {
       kind: 'InsertReroll',
       occurrence: createOccurrenceAddress(o, ship.occurrenceId),
       target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
@@ -875,11 +903,14 @@ describe('ship wheel rerolls', () => {
     });
     const reroll = pressAt('r1', ship.occurrenceId, o);
     const reward = firstSupportedReroll(inserted, reroll, 'RunProgress');
-    const project = applyProjectCommand(inserted, catalog, {
-      kind: 'ReplaceRerollReward',
-      action: reroll,
-      reward,
-    });
+    // The press redrew the picked offer, so the wheel's pickup went; the new item is picked up.
+    const project = collectTestRequiredItems(
+      settle(inserted, {
+        kind: 'ReplaceRerollReward',
+        action: reroll,
+        reward,
+      }),
+    );
     expect(rerollSettlementForProjectEvaluationAssembly(evaluate(project), reroll)).toMatchObject({
       reward,
       // Door 3, Screen 3 and the Fates 4 at Epic, less this press.

@@ -37,7 +37,9 @@ import {
   authorTestTraitsAndRequiredItems,
   purchaseTestHermesShrineOffer,
   scheduleTestRequiredRoomActions,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
+import { withItemContents } from '../../../support/room-action-content';
 import {
   authorSurfaceWorldShop,
   placeDueHermesShrineDeliveries,
@@ -310,12 +312,14 @@ describe('selected O validation', () => {
       .find((candidate) => candidate.occurrenceId === oOccurrenceIds.combat07);
     if (room?.kind !== 'authored') throw new Error('Ship source room is missing');
 
-    expect(room.roomActionRoster.rows.map((row) => row.reference)).toEqual([
-      { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
-      { kind: 'interactWheelReward', wheelKey: 'wheel1' },
-      { kind: 'chooseRewardWheel', wheelKey: 'wheel2' },
-      { kind: 'interactWheelReward', wheelKey: 'wheel2' },
-    ]);
+    expect(room.roomActionRoster.rows.map((row) => row.reference)).toEqual(
+      withItemContents(project, createOccurrenceAddress(oBiome, oOccurrenceIds.combat07), [
+        { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
+        { kind: 'interactWheelReward', wheelKey: 'wheel1' },
+        { kind: 'chooseRewardWheel', wheelKey: 'wheel2' },
+        { kind: 'interactWheelReward', wheelKey: 'wheel2' },
+      ]),
+    );
     const authoredOccurrence = project.route.biomes
       .find((plan) => plan.biomeKey === 'O')
       ?.topology?.occurrences.find(
@@ -416,7 +420,8 @@ describe('selected O validation', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    const { biome } = evaluateValidO(authorTestTraitsAndRequiredItems(project));
+    project = authorTestTraitsAndRequiredItems(project);
+    const { biome } = evaluateValidO(project);
     const decisions = biome.snapshot.decisions.filter((decision) => decision.kind === 'batch');
     const sourceDecision = decisions.find(
       (decision) =>
@@ -435,10 +440,12 @@ describe('selected O validation', () => {
       throw new Error('two-phase Ship chronology is missing');
     }
 
-    expect(room.roomActionRoster.rows.map((row) => row.reference)).toEqual([
-      { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
-      { kind: 'interactWheelReward', wheelKey: 'wheel1' },
-    ]);
+    expect(room.roomActionRoster.rows.map((row) => row.reference)).toEqual(
+      withItemContents(project, createOccurrenceAddress(oBiome, oOccurrenceIds.combat07), [
+        { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
+        { kind: 'interactWheelReward', wheelKey: 'wheel1' },
+      ]),
+    );
     expect(
       room.roomActionRoster.checkpoints.some(
         (checkpoint) =>
@@ -515,32 +522,32 @@ describe('selected O validation', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const wheel1 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
     const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNOProject(), {
       kind: 'ReplaceRewardWheelStore',
       wheel: wheel1,
       storeKey: 'MetaProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelStore',
       wheel: wheel2,
       storeKey: 'MetaProgress',
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOfferCount',
       wheel: wheel2,
       offerCount: 1,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
@@ -583,7 +590,7 @@ describe('selected O validation', () => {
       'offer1',
     );
     project = authorTestTraitsAndRequiredItems(
-      applyProjectCommand(project, catalog, {
+      settleTestEdit(project, {
         kind: 'ReplaceRewardWheelOffer',
         offer: wheelOffer,
         value: { rewardType: 'HermesUpgrade' },
@@ -835,7 +842,7 @@ describe('selected O validation', () => {
   it('rerolls a wheel from Wheels open, each roll seeing the pickups ranked before it', () => {
     const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
     const project = authorTestTraitsAndRequiredItems(
-      applyProjectCommand(wheel2DeliveryProject({ rerolls: true }), catalog, {
+      settleTestEdit(wheel2DeliveryProject({ rerolls: true }), {
         kind: 'ReplaceRewardWheelOffer',
         offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel2', 'offer1'),
         value: { rewardType: 'MaxHealthDrop' },
@@ -854,7 +861,7 @@ describe('selected O validation', () => {
     );
     const reroll = (index: number, rewardType: string) =>
       authorTestTraitsAndRequiredItems(
-        applyProjectCommand(project, catalog, {
+        settleTestEdit(project, {
           kind: 'InsertReroll',
           occurrence: ship,
           target: { kind: 'wheelOffer', wheelKey: 'wheel2', offerKey: 'offer1' },
@@ -1674,7 +1681,7 @@ describe('selected O validation', () => {
   });
 
   it('keeps Combat2 authorable while exposing its newly active unresolved wheel leaf', () => {
-    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+    let project = settleTestEdit(loadSurfaceNOProject(), {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: {
