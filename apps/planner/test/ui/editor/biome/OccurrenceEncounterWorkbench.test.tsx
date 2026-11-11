@@ -97,6 +97,7 @@ import {
 
 import { getAllByHint, getByHint, hintOf, queryByHint } from '@planner-test/support/hints';
 import { dialogFinding } from '@planner-test/support/editor-dialog';
+import { withItemContent, withItemContents } from '@planner-test/support/room-action-content';
 
 afterEach(() => {
   cleanup();
@@ -1520,10 +1521,16 @@ describe('OccurrenceEncounterWorkbench', () => {
         traitOffersByAcquisitionRole: { hiddenSource: null },
       }),
     );
-    expect(authoredOccurrence()?.roomActions.order).toEqual([
-      { kind: 'interactEncounter', phaseKey: 'Encounter' },
-      { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
-    ]);
+    expect(authoredOccurrence()?.roomActions.order).toEqual(
+      withItemContents(
+        view.application.store.getState().projectWorkspace.history!.present,
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        [
+          { kind: 'interactEncounter', phaseKey: 'Encounter' },
+          { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
+        ],
+      ),
+    );
 
     const hiddenSource = workspaceProjection(view.application).interactions.traitOffers.get(
       semanticAddressKey(createTraitOfferAddress(mysteryBoon, 'hiddenSource')),
@@ -1573,11 +1580,13 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     ).toBe(false);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: narcissusSite,
-      entryKey: 'mysteryBoon',
-    });
+    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual(
+      withItemContent(
+        view.application.store.getState().projectWorkspace.history!.present,
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
+      ),
+    );
     expect(hasAcquiredMysteryBoon()).toBe(true);
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     expect(hasAcquiredMysteryBoon()).toBe(false);
@@ -1712,11 +1721,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(queryTimelineRow(/^Collect Psyche/)).toBeNull();
     expect(screen.queryByRole('button', { name: /^How to take Psyche/ })).toBeNull();
     await addOptionalAction(view.user, /^Psyche/);
-    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: narcissusSite,
-      entryKey: 'psyche',
-    });
+    expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual(
+      withItemContent(
+        view.application.store.getState().projectWorkspace.history!.present,
+        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+        { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'psyche' },
+      ),
+    );
     const orderedPsycheRow = timelineRow(/^Collect Psyche/);
     expect(within(orderedPsycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
     // The Time Piece conversion is the row's verb choice.
@@ -1808,19 +1819,21 @@ describe('OccurrenceEncounterWorkbench', () => {
     // Adding appends the pickup at its last legal position.
     await addOptionalAction(view.user, /^Max Magick/);
 
+    const present = view.application.store.getState().projectWorkspace.history!.present;
     expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'G')
+      present.route?.biomes
+        .find((biome) => biome.biomeKey === 'G')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         )
         ?.roomActions.order.at(-1),
-    ).toEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: narcissusSite,
-      entryKey: 'maxMana',
-    });
+    ).toEqual(
+      withItemContent(present, createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId), {
+        kind: 'interactAcquisitionEntry',
+        siteKey: narcissusSite,
+        entryKey: 'maxMana',
+      }),
+    );
   });
 
   it('keeps the incoming reward in the room banner across tabs without another editor', () => {

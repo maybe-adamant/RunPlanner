@@ -63,6 +63,7 @@ import {
 } from '@planner-test/support/biome-workbench';
 import { RouteShrinesPanel } from '@planner/ui/shell/RouteShrinesPanel';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
+import { withItemContent } from '@planner-test/support/room-action-content';
 import {
   findTimelineRow,
   queryTimelineRow,
@@ -240,14 +241,19 @@ describe('Hermes Shrine workbench', () => {
     expect(chip.hasAttribute('data-spawn-placed')).toBe(false);
     await view.user.click(chip);
     await waitFor(() => expect(timelineRow('Collect Big Heal')).toBeTruthy());
+    const present = application.store.getState().projectWorkspace.history!.present;
     expect(
-      application.store
-        .getState()
-        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'O')
+      present.route.biomes
+        .find((biome) => biome.biomeKey === 'O')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
         )?.roomActions.order,
-    ).toContainEqual({ kind: 'rushHermesShrineOffer', generationKey: 'initial:first' });
+    ).toContainEqual(
+      withItemContent(present, createOccurrenceAddress(oBiome, oOccurrenceIds.combat07), {
+        kind: 'rushHermesShrineOffer',
+        generationKey: 'initial:first',
+      }),
+    );
   });
 
   it('authors Mystery Boon identity in inventory and its god only at rushed acquisition', async () => {
@@ -674,20 +680,22 @@ describe('Hermes Shrine workbench', () => {
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Restore delivery' })).toBeNull(),
     );
-    const host = application.store
-      .getState()
-      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'O')
+    const present = application.store.getState().projectWorkspace.history!.present;
+    const host = present.route?.biomes
+      .find((biome) => biome.biomeKey === 'O')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === hostId);
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
     expect(host?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]).toMatchObject({
       offer: { rewardType: 'HealBigDrop' },
     });
-    expect(host?.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
-      entryKey,
-      encounterPhaseKey: 'Encounter',
-    });
+    expect(host?.roomActions.order).toContainEqual(
+      withItemContent(present, createOccurrenceAddress(oBiome, hostId), {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey,
+        encounterPhaseKey: 'Encounter',
+      }),
+    );
   });
 
   it('keeps a visited N side-room Shrine source and its empty later delivery host distinct', async () => {

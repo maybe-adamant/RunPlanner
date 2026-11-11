@@ -17,6 +17,7 @@ import {
   openRoomTab,
 } from '@planner-test/support/occurrence-workbench';
 import { hintOf } from '@planner-test/support/hints';
+import { withItemContent } from '@planner-test/support/room-action-content';
 
 afterEach(cleanup);
 
@@ -96,10 +97,13 @@ it('rerolls the Well from its Timeline entry and buys a restocked slot with its 
   const [item] = within(await screen.findByRole('listbox')).getAllByRole('option');
   await view.user.click(item!);
   await waitFor(() =>
-    expect(roomOrder(view.application).at(-1)).toEqual({
-      kind: 'purchaseStygianWellOffer',
-      generationKey: 'r1:healing',
-    }),
+    expect(roomOrder(view.application).at(-1)).toEqual(
+      withItemContent(
+        view.application.store.getState().projectWorkspace.history!.present,
+        createOccurrenceAddress(createBiomeAddress('Underworld', 'F'), postbossId),
+        { kind: 'purchaseStygianWellOffer', generationKey: 'r1:healing' },
+      ),
+    ),
   );
 
   // The item is pinned on the Well's roll in the same edit.

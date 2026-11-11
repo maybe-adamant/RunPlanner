@@ -34,6 +34,7 @@ import {
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { describe, expect, it } from 'vitest';
+import { withItemContent } from '@planner-test/support/room-action-content';
 import type {
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceRoomLifecycleTimelineEntry,
@@ -383,20 +384,21 @@ describe('engine-published row facts', () => {
   it('shows the gold the ledger attributes to a row on that row', () => {
     const occurrenceId = createOccurrenceId('golden-f-b10-e1');
     const { room, assembly } = projected(createGoldenFGHIProject(), occurrenceId);
-    const priced = goldLedgerForProjectEvaluationAssembly(catalog, assembly).roomAt(
-      createOccurrenceAddress(goldenFBiome, occurrenceId),
-    );
+    const address = createOccurrenceAddress(goldenFBiome, occurrenceId);
+    const priced = goldLedgerForProjectEvaluationAssembly(catalog, assembly).roomAt(address);
     if (priced.availability !== 'available') throw new Error('The room is not priced');
     const gain = priced.room.gains.find((candidate) => candidate.kind === 'moneyPickup');
     if (gain?.roomAction === undefined) throw new Error('The money pickup names no row');
     const row = room.roomActions?.rows.find(
       (candidate) => candidate.key === gain.roomAction!.actionKey,
     );
-    expect(row?.reference).toEqual({
-      kind: 'interactIncomingReward',
-      producerPoint: 'roomRewardPickup',
-      acquisitionRole: 'self',
-    });
+    expect(row?.reference).toEqual(
+      withItemContent(assembly.project, address, {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      }),
+    );
     expect(row?.key).toBe(roomActionKey(row!.reference));
     expect(row?.goldGained).toEqual({ label: '+100' });
   });

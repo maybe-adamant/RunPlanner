@@ -5,7 +5,9 @@ import {
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createHubDecisionAddress,
+  createBiomeAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
   DEFAULT_PROJECT_NAME,
@@ -21,6 +23,7 @@ import { liftProjectDocument as migrate102To103 } from '@planner/persistence/pro
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { withItemContents } from '@planner-test/support/room-action-content';
 import {
   createGoldenFGHIProject,
   echoGoldIPrebossShopId,
@@ -1017,25 +1020,31 @@ describe('project document loader', () => {
     expect(occurrence?.hermesShrine?.offerBySlot.first?.delay).toBe(2);
     expect(occurrence?.hermesShrine?.offerBySlot.secondRight?.delay).toBe(5);
     expect(occurrence?.hermesShrine?.travelDealRefill?.offer?.delay).toBe(2);
-    expect(occurrence?.roomActions.order).toEqual([
-      { kind: 'useFountain' },
-      { kind: 'interactKeepsakeRack' },
-      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first' },
-      { kind: 'rushHermesShrineOffer', generationKey: 'initial:first' },
-      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondRight' },
-      { kind: 'rushHermesShrineOffer', generationKey: 'initial:secondRight' },
-      { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill' },
-      {
-        kind: 'interactAcquisitionEntry',
-        siteKey: 'hermesShrineDelivery',
-        entryKey: entryKey('initial:first'),
-      },
-      {
-        kind: 'interactAcquisitionEntry',
-        siteKey: 'hermesShrineDelivery',
-        entryKey: entryKey('initial:secondRight'),
-      },
-    ]);
+    expect(occurrence?.roomActions.order).toEqual(
+      withItemContents(
+        loaded.project,
+        createOccurrenceAddress(createBiomeAddress('Surface', 'N'), createOccurrenceId(shrine)),
+        [
+          { kind: 'useFountain' },
+          { kind: 'interactKeepsakeRack' },
+          { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first' },
+          { kind: 'rushHermesShrineOffer', generationKey: 'initial:first' },
+          { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondRight' },
+          { kind: 'rushHermesShrineOffer', generationKey: 'initial:secondRight' },
+          { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill' },
+          {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'hermesShrineDelivery',
+            entryKey: entryKey('initial:first'),
+          },
+          {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'hermesShrineDelivery',
+            entryKey: entryKey('initial:secondRight'),
+          },
+        ],
+      ),
+    );
 
     // The saved board repeats Ares on Combat05 before four distinct gods in the game's
     // assignment order; the unvisited Combat01/Combat10 swap restores it.
