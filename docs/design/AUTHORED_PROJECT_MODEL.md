@@ -981,9 +981,11 @@ kind:
 A reward is named by its type and the gods its payload names (a Devotion
 pair's chosen and spurned gods both). An item not observed yet (an unpinned
 Well or Pool slot, an unset reward, a payload not authored, Echo's replays)
-has no content. Every command stamps the rows of the biomes it changes that
-recorded none while their item is observed, both before it applies (so a row
-records the item it was placed for, not the one the edit swaps in) and after;
+has no content, and neither has the item of a stale row (one whose action the
+room no longer has, such as a pickup of a role its reward lacks). Every command
+stamps the rows of the biomes it changes that recorded none while their item
+is observed, both before it applies (so a row records the item it was placed
+for, not the one the edit swaps in) and after;
 stamping alone is not an edit of the room. Engine-built references (the
 roster's, the live product's) carry content; `InsertRoomAction` refuses a
 reference whose content its item does not hold, and placing the current item
