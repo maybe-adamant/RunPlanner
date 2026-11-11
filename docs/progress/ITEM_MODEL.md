@@ -177,7 +177,8 @@ Wave A review follow-ups:
 - An edit that changes an item's source discards its same-room derived items
   with their pickups in the same Undo step: a Sea Star duplicate when its
   source is no longer produced or its offer changes, an Artificer replacement
-  also when its source leaves the Artificer (no longer kept dormant), and a
+  also when the edit takes its source off the Artificer (no longer kept
+  dormant; the 102 → 103 upgrade drops dormant ones once), and a
   Nemesis result with its chain when the event's kind or contest result
   changes. Consumers that swap a source and re-proc must re-author the
   duplicate after the swap.
