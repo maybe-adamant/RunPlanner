@@ -1729,7 +1729,12 @@ describe('DecisionWorkbench', () => {
 
     // The ship decided the pool: a fixed value under the same label, never a picker.
     expect(screen.getByRole('group', { name: 'Reward Pool' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Reward Pool' })).toBeNull();
+    // Only the wheel the room's last phase opens picks a pool.
+    expect(
+      screen
+        .queryAllByRole('button', { name: 'Reward Pool' })
+        .filter((button) => button.closest('[aria-label="Combat 1 reward"]') === null),
+    ).toEqual([]);
     cleanup();
 
     const ordinaryOwner = createExitDecisionAddress(oBiome, {

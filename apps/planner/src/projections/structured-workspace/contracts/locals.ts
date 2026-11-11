@@ -511,11 +511,12 @@ export interface WorkspaceEncounterPhase {
   readonly identityLabel: string;
   readonly marker: WorkspaceMarker;
   /**
-   * The Timeline boundary whose banner names this phase's settled identity and
-   * whose row hosts its events; absent when it has neither a start nor an event.
-   * Identity and customization are always authored in the room Overview.
+   * The Timeline line that hosts this phase's events: room entry for a phase settled on
+   * entry, its encounter's markers for a fight, or a Nemesis random event's talk row;
+   * absent when it has none. Identity and customization are always authored in the
+   * room Overview.
    */
-  readonly timelineAnchor?: 'roomEntered' | 'encounterStart';
+  readonly timelineAnchor?: 'roomEntered' | 'encounter' | 'interaction';
   /** The engine settled this phase as skipped with Fig Leaf. */
   readonly skippedByFigLeaf?: true;
   readonly figLeaf?: {

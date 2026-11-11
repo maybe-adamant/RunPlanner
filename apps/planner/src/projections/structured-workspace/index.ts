@@ -248,7 +248,7 @@ export type {
 } from './presentation/hub-ranking';
 export { createStructuredWorkspaceProjection } from './projector';
 export type {
-  WorkspaceEncounterBannerSupplement,
+  WorkspaceEncounterEvents,
   WorkspaceNotReachedEntry,
   WorkspaceTimelineWait,
   WorkspaceJudgmentArcanaInteraction,

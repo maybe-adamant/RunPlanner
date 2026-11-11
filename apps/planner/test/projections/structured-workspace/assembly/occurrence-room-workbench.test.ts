@@ -118,9 +118,9 @@ describe('occurrence room workbench', () => {
       ['Combat2', 'Combat 2'],
     ]);
     expect(ship.workbench.phases.map((phase) => phase.wheel?.key)).toEqual([
+      undefined,
       'wheel1',
       'wheel2',
-      undefined,
     ]);
     expect(
       ship.workbench.phases

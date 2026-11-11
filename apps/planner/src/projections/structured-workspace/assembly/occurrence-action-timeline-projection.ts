@@ -15,6 +15,7 @@ import type {
   WorkspaceRoomLifecycleTimelineEntry,
   WorkspaceNotReachedEntry,
   WorkspaceRoomActionRow,
+  WorkspaceEncounterEvents,
   WorkspaceSteadyGrowthControl,
   WorkspaceTranscendentEmbryoControl,
 } from '../contracts/timeline';
@@ -23,14 +24,17 @@ import { nemesisFamilyLabel } from '../interactions/occurrence-interaction-bindi
 import type { WorkspaceOccurrenceActionsInput } from './occurrence-action-row-projection';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
-function lifecycleBoundaryLabel(boundary: WorkspaceRoomLifecycleBoundary): string {
+function lifecycleBoundaryLabel(
+  boundary: WorkspaceRoomLifecycleBoundary,
+  beginsEncounter: boolean,
+): string {
   switch (boundary.kind) {
     case 'roomEntered':
       return 'Room entered';
     case 'encounterBegun':
       return 'Encounter';
     case 'encounterStarted':
-      return 'Combat';
+      return beginsEncounter ? 'Encounter' : 'Combat';
     case 'encounterEnd':
       return 'Encounter ended';
     case 'bossDefeated':
@@ -62,11 +66,11 @@ function authoredBannerEvents(
   if (phase === undefined) return undefined;
   // An outcome's fixed choices (a bet, an event result, a capture point) always hold a value.
   const authored =
-    supplement.kind === 'encounterStart'
-      ? phase.figLeaf?.selected === true
-      : phase.aetos?.selectedWave !== undefined ||
+    (supplement.start === true && phase.figLeaf?.selected === true) ||
+    (supplement.choices.length > 0 &&
+      (phase.aetos?.selectedWave !== undefined ||
         phase.gorgonCondition?.selected === true ||
-        supplement.choices.some((choice) => choice !== 'aetos' && choice !== 'gorgonCondition');
+        supplement.choices.some((choice) => choice !== 'aetos' && choice !== 'gorgonCondition')));
   return authored
     ? Object.freeze({
         kind: 'events' as const,
@@ -263,14 +267,34 @@ function projectRoomLifecycleTimeline(
       offer: label.offer,
     });
   });
+  // The engine settles whether an encounter's begin shows as one marker with its Combat.
+  const mergedPhaseKeys = new Set(
+    timeline.entries.flatMap((entry) =>
+      entry.kind === 'boundary' &&
+      entry.boundary.kind === 'encounterBegun' &&
+      entry.markers === 'merged'
+        ? [entry.boundary.phaseKey]
+        : [],
+    ),
+  );
+  const shown = (boundary: WorkspaceRoomLifecycleBoundary) =>
+    boundary.kind !== 'encounterBegun' || !mergedPhaseKeys.has(boundary.phaseKey);
+  const beginsEncounter = (
+    boundary: WorkspaceRoomLifecycleBoundary,
+  ): boundary is Extract<
+    WorkspaceRoomLifecycleBoundary,
+    { readonly kind: 'encounterBegun' | 'encounterStarted' }
+  > =>
+    boundary.kind === 'encounterBegun' ||
+    (boundary.kind === 'encounterStarted' && mergedPhaseKeys.has(boundary.phaseKey));
   const cageLabelByBoundaryKey = new Map(
     timeline.entries
       .flatMap((entry) =>
-        entry.kind === 'boundary' && entry.boundary.kind === 'encounterStarted'
+        entry.kind === 'boundary' && shown(entry.boundary) && beginsEncounter(entry.boundary)
           ? [entry.boundary]
           : [],
       )
-      // Cages number among themselves; a Passive Nemesis event's start is not a cage.
+      // Cages number among themselves.
       .flatMap((boundary) => {
         const choice = cageChoices.find((candidate) => candidate.phaseKey === boundary.phaseKey);
         return choice === undefined ? [] : [{ boundary, choice }];
@@ -318,61 +342,67 @@ function projectRoomLifecycleTimeline(
   const encounterByPhase = new Map(
     encounterPhases.map((phase) => [phase.address.phaseKey, phase] as const),
   );
-  // A banner names its phase role only beside another start banner, and not when its
-  // Fields cage already does; phases settled on entry have no start banner of their own.
-  const startBannerCount = encounterPhases.filter(
-    (phase) => phase.timelineAnchor === 'encounterStart',
+  // A marker names its phase role only beside another encounter's, and not when its
+  // Fields cage already does; phases settled on entry have no marker of their own.
+  const encounterMarkerCount = encounterPhases.filter(
+    (phase) => phase.timelineAnchor === 'encounter',
   ).length;
-  const encounterStartSupplement = (phase: WorkspaceEncounterPhase, cageNamed: boolean) => {
+  const identityLabel = (phase: WorkspaceEncounterPhase, cageNamed: boolean) => {
     const family = phase.nemesisEvent?.value?.kind;
     const encounter =
       family === undefined
         ? phase.selectedEncounter.label
         : `${phase.selectedEncounter.label} · ${nemesisFamilyLabel(family)}`;
-    // Only a definitional encounter start names its identity; one settled on entry does not.
-    return Object.freeze({
-      kind: 'encounterStart' as const,
-      phase,
-      ...(phase.timelineAnchor === 'encounterStart'
-        ? {
-            identityLabel:
-              startBannerCount > 1 && !cageNamed ? `${phase.label} · ${encounter}` : encounter,
-          }
-        : {}),
-    });
+    return encounterMarkerCount > 1 && !cageNamed ? `${phase.label} · ${encounter}` : encounter;
   };
-  // How a fight ended sits on its outcome, shown only where the engine lists a choice for it.
-  const outcomeChoices = new Map(
-    (input.encounterOutcomes ?? []).map((outcome) => [outcome.phaseKey, outcome.choices] as const),
+  // How a fight ended sits where the engine observes it, only where it lists a choice.
+  const choicesAtCombat = new Map(
+    (input.encounterOutcomes ?? []).flatMap((outcome) =>
+      outcome.host.kind === 'combat' ? [[outcome.host.eventKey, outcome.choices] as const] : [],
+    ),
   );
-  const encounterOutcomeSupplement = (phaseKey: string) => {
-    const phase = encounterByPhase.get(phaseKey);
-    const choices = outcomeChoices.get(phaseKey);
-    return phase === undefined || choices === undefined || choices.length === 0
+  const choicesAtAction = new Map(
+    (input.encounterOutcomes ?? []).flatMap((outcome) =>
+      outcome.host.kind === 'interaction'
+        ? [[roomActionKey(outcome.host.action), outcome.choices] as const]
+        : [],
+    ),
+  );
+  const encounterEvents = (
+    phase: WorkspaceEncounterPhase,
+    events: Omit<WorkspaceEncounterEvents, 'phase'>,
+  ): WorkspaceEncounterEvents | undefined =>
+    events.identityLabel === undefined && events.start !== true && events.choices.length === 0
       ? undefined
-      : Object.freeze({
-          kind: 'encounterOutcome' as const,
-          phase,
-          choices: Object.freeze(choices),
-        });
-  };
-  const supplementForBoundary = (boundary: WorkspaceRoomLifecycleBoundary) => {
+      : Object.freeze({ phase, ...events, choices: Object.freeze(events.choices) });
+  const supplementForBoundary = (
+    boundary: WorkspaceRoomLifecycleBoundary,
+  ): WorkspaceEncounterEvents | undefined => {
     switch (boundary.kind) {
       case 'roomEntered': {
         const phase = encounterPhases.find(
           (candidate) => candidate.timelineAnchor === 'roomEntered',
         );
-        return phase === undefined ? undefined : encounterStartSupplement(phase, false);
+        return phase === undefined
+          ? undefined
+          : encounterEvents(phase, { start: true, choices: [] });
       }
+      // Its encounter is named where it begins; its Fig Leaf skip and outcome sit at its Combat.
+      case 'encounterBegun':
       case 'encounterStarted': {
         const phase = encounterByPhase.get(boundary.phaseKey);
-        return phase?.timelineAnchor === 'encounterStart'
-          ? encounterStartSupplement(phase, cageLabelByBoundaryKey.has(boundary.key))
-          : encounterOutcomeSupplement(boundary.phaseKey);
+        if (phase?.timelineAnchor !== 'encounter') return undefined;
+        const combat = boundary.kind === 'encounterStarted';
+        return encounterEvents(phase, {
+          ...(beginsEncounter(boundary)
+            ? { identityLabel: identityLabel(phase, cageLabelByBoundaryKey.has(boundary.key)) }
+            : {}),
+          ...(combat ? { start: true as const } : {}),
+          choices: combat ? (choicesAtCombat.get(boundary.key) ?? []) : [],
+        });
       }
       // A wheel opens and is taken on its phase's Timeline, beside these boundaries; an
       // encounter's end announces what it spawns; a Boss defeat hosts its own content.
-      case 'encounterBegun':
       case 'encounterEnd':
       case 'bossDefeated':
       case 'wheelsOpen':
@@ -384,12 +414,15 @@ function projectRoomLifecycleTimeline(
     if (action.kind !== 'action' || action.action.reference.kind !== 'interactEncounter')
       return undefined;
     const phase = encounterByPhase.get(action.action.reference.phaseKey);
-    return phase?.nemesisEvent === undefined
-      ? undefined
-      : Object.freeze({
-          kind: 'nemesisInteraction' as const,
-          owner: phase.nemesisEvent.owner,
-        });
+    if (phase?.nemesisEvent === undefined) return undefined;
+    const events = encounterEvents(phase, {
+      choices: choicesAtAction.get(action.action.key) ?? [],
+    });
+    return Object.freeze({
+      kind: 'nemesisInteraction' as const,
+      owner: phase.nemesisEvent.owner,
+      ...(events === undefined ? {} : { events }),
+    });
   };
   const entries: WorkspaceRoomLifecycleTimelineEntry[] = [];
   const activeWheelKeys = new Set(
@@ -397,13 +430,10 @@ function projectRoomLifecycleTimeline(
       ? roomLocal.wheels.filter((wheel) => wheel.active).map((wheel) => wheel.key)
       : [],
   );
-  // An outcome with no choice to host passes without an event of its own.
-  const hostsOutcome = (boundary: RoomLifecycleTimeline['boundaries'][number]) =>
-    boundary.kind !== 'encounterBegun' || boundary.merged !== true;
   for (const entry of timeline.entries) {
     if (entry.kind === 'boundary') {
       const boundary = entry.boundary;
-      if (!hostsOutcome(boundary)) continue;
+      if (!shown(boundary)) continue;
       const runState = launcherForBoundary(boundary);
       const startedCage = cageLabelByBoundaryKey.get(boundary.key);
       const endCage = endedCage(boundary);
@@ -412,7 +442,8 @@ function projectRoomLifecycleTimeline(
         Object.freeze({
           kind: 'boundary' as const,
           boundary: boundary,
-          label: lifecycleBoundaryLabel(boundary),
+          label: lifecycleBoundaryLabel(boundary, beginsEncounter(boundary)),
+          ...(beginsEncounter(boundary) ? { beginsEncounter: true as const } : {}),
           checkpointKey: lifecycleBoundaryCheckpointKey(boundary),
           dropIndex: Math.max(0, entry.rank - (entry.placement === 'before' ? 1 : 0)),
           placement: entry.placement,
@@ -524,7 +555,7 @@ function projectRoomLifecycleTimeline(
         }),
     boundaries: Object.freeze(
       timeline.boundaries.filter((boundary): boundary is WorkspaceRoomLifecycleBoundary =>
-        hostsOutcome(boundary),
+        shown(boundary),
       ),
     ),
     entries: Object.freeze(entries),

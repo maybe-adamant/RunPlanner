@@ -16,6 +16,7 @@ import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 /** Render-only boundary row; timeline placement remains the projection's authority. */
 export function LifecycleBoundaryRow({
   boundary,
+  beginsEncounter,
   label,
   controls,
   money,
@@ -27,6 +28,8 @@ export function LifecycleBoundaryRow({
   /** The encounter phase this banner belongs to, for the phase's light grouping. */
   readonly phase?: number;
   readonly boundary: WorkspaceRoomLifecycleBoundary;
+  /** Its phase's encounter begins here, which starts the phase's grouping. */
+  readonly beginsEncounter?: true;
   readonly label: string;
   /** The banner's own controls, flowing on its sentence after its identity. */
   readonly controls?: ReactNode;
@@ -67,8 +70,7 @@ export function LifecycleBoundaryRow({
       data-reorder-anchor={boundary.key}
       data-phase={phase}
       data-phase-start={
-        (boundary.kind === 'encounterBegun' || boundary.kind === 'roomEntered') &&
-        phase !== undefined
+        (beginsEncounter === true || boundary.kind === 'roomEntered') && phase !== undefined
           ? ''
           : undefined
       }

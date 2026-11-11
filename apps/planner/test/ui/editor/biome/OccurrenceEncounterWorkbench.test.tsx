@@ -2117,7 +2117,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.keyboard('{Escape}');
     openRoomTab('Combat 2 Timeline');
     // The room stops at its Overview, so the phase's banner waits until it is repaired there.
-    expect(screen.queryByLabelText('Encounter started')).toBeNull();
+    expect(screen.queryByLabelText('Encounter')).toBeNull();
     openRoomTab('Room Overview');
     const phase = screen.getByLabelText('Combat 2 encounter phase');
     const phaseAddress = createEncounterPhaseAddress(
@@ -2223,15 +2223,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(
       within(screen.getByLabelText('Intro ship phase')).getByText('Room entered'),
     ).toBeTruthy();
-    // The wheel chosen after the Intro opens on the Intro Timeline, then is taken.
+    // The Intro ends before the next wheels open.
     const intro = screen.getByLabelText('Intro ship phase');
-    const wheelOpen = within(intro).getByLabelText('Wheels open');
-    const selectWheel = within(intro).getByRole('listitem', { name: 'Select wheel' });
-    expect(within(intro).getByLabelText('Combat 1 reward')).toBeTruthy();
-    expect(within(intro).queryByLabelText('Next phase ready')).toBeNull();
-    expect(
-      wheelOpen.compareDocumentPosition(selectWheel) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).not.toBe(0);
+    expect(within(intro).queryByLabelText('Wheels open')).toBeNull();
+    expect(within(intro).queryByLabelText('Combat 1 reward')).toBeNull();
     expect(within(intro).queryByText('Doors open')).toBeNull();
     // Each phase is one Timeline tab, shown by its phase name.
     expect(
@@ -2243,8 +2238,16 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(combatOne).toBeTruthy();
     expect(within(combatOne).queryByRole('heading', { name: 'Combat 1' })).toBeNull();
     expect(within(combatOne).queryByRole('heading', { name: 'Timeline' })).toBeNull();
-    expect(within(combatOne).getByText('Encounter started')).toBeTruthy();
-    expect(within(combatOne).queryByLabelText('Combat 1 reward')).toBeNull();
+    // Its wheel opens as its encounter begins, and is taken to start its combat.
+    const wheelOpen = within(combatOne).getByLabelText('Wheels open');
+    const selectWheel = within(combatOne).getByRole('listitem', { name: 'Select wheel' });
+    expect(within(combatOne).getByLabelText('Combat 1 reward')).toBeTruthy();
+    expect(within(combatOne).queryByLabelText('Next phase ready')).toBeNull();
+    expect(
+      wheelOpen.compareDocumentPosition(selectWheel) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    expect(within(combatOne).getByLabelText('Encounter')).toBeTruthy();
+    expect(within(combatOne).getByLabelText('Combat')).toBeTruthy();
     expect(screen.queryByRole('tab', { name: 'Combat 2 Timeline' })).toBeNull();
     expect(within(combatOne).getByText('Doors open')).toBeTruthy();
     expect(within(combatOne).queryByText('Outgoing generation')).toBeNull();
@@ -2253,7 +2256,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         semanticOwnerNavigated(createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1')),
       ),
     );
-    openRoomTab('Intro Timeline');
+    openRoomTab('Combat 1 Timeline');
     expect(screen.getByLabelText('Combat 1 reward')).toBeTruthy();
   });
 
@@ -2266,12 +2269,12 @@ describe('OccurrenceEncounterWorkbench', () => {
       toIndex: 1,
     });
     renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(oOccurrenceIds.combat04));
-    openRoomTab('Intro Timeline');
-    const intro = screen.getByLabelText('Intro ship phase');
-    const selectWheel = within(intro).getAllByRole('listitem', { name: 'Select wheel' });
+    openRoomTab('Combat 1 Timeline');
+    const combatOne = screen.getByLabelText('Combat 1 ship phase');
+    const selectWheel = within(combatOne).getAllByRole('listitem', { name: 'Select wheel' });
     expect(selectWheel).toHaveLength(1);
     expect(
-      within(intro).getByLabelText('Wheels open').compareDocumentPosition(selectWheel[0]!) &
+      within(combatOne).getByLabelText('Wheels open').compareDocumentPosition(selectWheel[0]!) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
   });
@@ -2291,7 +2294,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     project = authorLegalTraitOffers(project);
     renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(oOccurrenceIds.combat04));
 
-    openRoomTab('Intro Timeline');
+    openRoomTab('Combat 1 Timeline');
     const ship = screen.getByLabelText('Combat 1 reward');
     const trigger = getByHint(ship, 'Converted by the Vow of Forfeit.');
     expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
@@ -2299,14 +2302,15 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(ship).queryByText(/^Forfeit →/)).toBeNull();
     expect(getAllByHint(ship, 'Converted by the Vow of Forfeit.')).toHaveLength(1);
 
-    openRoomTab('Combat 1 Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(queryByHint(actions, 'Converted by the Vow of Forfeit.')).toBeNull();
     expect(within(actions).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
     // The row names its converted reward by icon, with the reward as its accessible name.
-    expect(within(actions).getByRole('img', { name: 'Red Onion' })).toBeTruthy();
-    expect(actions.textContent).not.toContain('(Red Onion)');
-    expect(actions.textContent).not.toContain('Forfeit');
+    const row = within(actions)
+      .getByRole('img', { name: 'Red Onion' })
+      .closest<HTMLElement>('[data-room-action-key]')!;
+    expect(queryByHint(row, 'Converted by the Vow of Forfeit.')).toBeNull();
+    expect(row.textContent).not.toContain('(Red Onion)');
+    expect(row.textContent).not.toContain('Forfeit');
   });
 
   it('keeps Ship offer identity on the wheel and acquisition children on its Room Action row', () => {
@@ -2355,14 +2359,14 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     const focusByOwner = workspaceProjection(view.application).focusByOwner;
     const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    expect(focusByOwner.get(semanticAddressKey(wheel))?.roomTab).toBe('shipIntroActions');
-    expect(focusByOwner.get(semanticAddressKey(wheel2))?.roomTab).toBe('shipCombat1Actions');
+    expect(focusByOwner.get(semanticAddressKey(wheel))?.roomTab).toBe('shipCombat1Actions');
+    expect(focusByOwner.get(semanticAddressKey(wheel2))?.roomTab).toBe('shipCombat2Actions');
     const choiceAddress = createRoomActionAddress(
       oBiome,
       oOccurrenceIds.combat07,
       roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
     );
-    expect(focusByOwner.get(semanticAddressKey(choiceAddress))?.roomTab).toBe('shipIntroActions');
+    expect(focusByOwner.get(semanticAddressKey(choiceAddress))?.roomTab).toBe('shipCombat1Actions');
     expect(focusByOwner.get(semanticAddressKey(choiceAddress))?.focusAddress).toEqual(wheel);
     expect(
       focusByOwner.get(
@@ -2375,7 +2379,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         ),
       )?.roomTab,
     ).toBe('shipCombat1Actions');
-    openRoomTab('Intro Timeline');
+    openRoomTab('Combat 1 Timeline');
     const ship = screen.getByLabelText('Ship combat structure');
     expect(within(ship).queryByText('Choose Combat 1 wheel')).toBeNull();
     expect(
@@ -2387,7 +2391,6 @@ describe('OccurrenceEncounterWorkbench', () => {
       )?.some((action) => action.kind === 'chooseRewardWheel' && action.wheelKey === 'wheel1'),
     ).toBe(true);
 
-    openRoomTab('Intro Timeline');
     expect(
       within(screen.getByLabelText('Combat 1 reward')).getAllByRole('button', { name: 'Reward' })
         .length,
@@ -2397,7 +2400,6 @@ describe('OccurrenceEncounterWorkbench', () => {
         name: /Edit Trait/,
       }),
     ).toBeNull();
-    openRoomTab('Combat 1 Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const traitLauncher = within(actions).getByRole('button', { name: /Edit Trait/ });
     const actionRow = traitLauncher.closest<HTMLElement>('[data-room-action-key]');
@@ -2453,10 +2455,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat07),
     );
-    openRoomTab('Combat 1 Timeline');
-    const combatOne = screen.getByLabelText('Combat 1 ship phase');
-    // The Combat 2 wheel opens on the Combat 1 Timeline it follows.
-    expect(within(combatOne).queryByText('Choose Combat 2 wheel')).toBeNull();
+    openRoomTab('Combat 2 Timeline');
+    const combatTwo = screen.getByLabelText('Combat 2 ship phase');
+    // The Combat 2 wheel opens on its own phase's Timeline.
+    expect(within(combatTwo).queryByText('Choose Combat 2 wheel')).toBeNull();
     const restoredWheel = screen.getByLabelText('Combat 2 reward');
     expect(
       within(restoredWheel).getByRole('button', { name: /^Reward pool$/i }).textContent,
@@ -2464,11 +2466,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(restoredWheel).getByRole('button', { name: 'Offers' }).textContent).toContain(
       '2',
     );
-    openRoomTab('Combat 2 Timeline');
-    const combatTwo = screen.getByLabelText('Combat 2 ship phase');
     expect(within(combatTwo).queryByRole('heading', { name: 'Combat 2' })).toBeNull();
     expect(within(combatTwo).queryByRole('heading', { name: 'Timeline' })).toBeNull();
-    expect(within(combatTwo).getByText('Encounter started')).toBeTruthy();
+    expect(within(combatTwo).getByLabelText('Combat')).toBeTruthy();
     // The wheel reward row keeps its full name; its phase tab already names the phase.
     expect(
       within(combatTwo).getByRole('button', { name: /^Reorder Collect .+ · Combat 2 reward/ }),
@@ -2695,7 +2695,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat07),
     );
 
-    openRoomTab('Intro Timeline');
+    openRoomTab('Combat 1 Timeline');
     let rewardWheel = screen.getByLabelText('Combat 1 reward');
     const offerGrid = within(rewardWheel).getByRole('group', { name: 'Wheel offers' });
     const offerRows = () => within(offerGrid).getAllByRole('article');
@@ -2746,7 +2746,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         name: 'Edit Trait · Pick trait',
       }),
     ).toBeTruthy();
-    openRoomTab('Intro Timeline');
+    openRoomTab('Combat 1 Timeline');
     rewardWheel = screen.getByLabelText('Combat 1 reward');
 
     act(() =>
@@ -2800,7 +2800,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat07),
     );
 
-    openRoomTab('Intro Timeline');
+    openRoomTab('Combat 1 Timeline');
     const wheel = screen.getByLabelText('Combat 1 reward');
     const pool = within(wheel).getByRole('button', { name: /^Reward pool$/i });
     await view.user.click(pool);

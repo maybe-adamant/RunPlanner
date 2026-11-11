@@ -42,7 +42,6 @@ import {
   decisionContainingOccurrence,
   expectBefore,
   occurrenceById,
-  openNotReached,
   openRoomTab,
   reachedAnomalyProject,
 } from '@planner-test/support/occurrence-workbench';
@@ -174,7 +173,7 @@ describe('OccurrenceRoomFeatures', () => {
     ]);
   });
 
-  it('decides the Anomaly outcome at its Encounter outcome, before its end and reward pickup', async () => {
+  it('decides the Anomaly outcome at its Combat, before its end and reward pickup', async () => {
     const { occurrenceId, project } = reachedAnomalyProject();
     const application = createApplication();
     const dispatch = vi.spyOn(application.store, 'dispatch');
@@ -199,7 +198,7 @@ describe('OccurrenceRoomFeatures', () => {
     expectBefore(encounterEnd, pickup);
     // The capture point is how the fight ended: it sits among its outcome's controls.
     expect(cleared.closest('.timeline-banner-modifiers')).not.toBeNull();
-    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Encounter outcome'));
+    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Combat'));
 
     await view.user.click(cleared);
     await view.user.click(await screen.findByRole('option', { name: 'Not cleared' }));
@@ -331,8 +330,8 @@ describe('OccurrenceRoomFeatures', () => {
     expect(hintOf(within(actionRow).getByRole('button', { name: 'Reward' }))).toContain(
       'Max Health',
     );
-    // The answer ends her encounter, so it is chosen on a banner, not on the row.
-    expect(within(actionRow).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
+    // Her answer is observed on her row.
+    expect(within(actionRow).getByRole('button', { name: /^Nemesis outcome/ })).toBeTruthy();
     const outcome = () => screen.getByRole('button', { name: /^Nemesis outcome/ });
     expect(outcome().textContent).toBe('Declined');
     await view.user.click(outcome());
@@ -520,7 +519,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(
       trait.compareDocumentPosition(fixedReward) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(within(freeAction).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
+    expect(within(freeAction).getByRole('button', { name: /^Nemesis outcome/ })).toBeTruthy();
     await view.user.click(trait);
     const listbox = await screen.findByRole('listbox');
     const firstChoice = within(listbox).getAllByRole('option')[0];
@@ -543,9 +542,10 @@ describe('OccurrenceRoomFeatures', () => {
     freeAction = nemesisAction();
     expect(within(freeAction).getByText('hits you to get')).toBeTruthy();
     expect(within(freeAction).getByRole('button', { name: 'Reward' })).toBeTruthy();
-    // Her unchosen reward stops the walk at her row; the trade's outcome waits past it.
-    openNotReached();
-    expect(screen.getByRole('button', { name: /^Nemesis outcome/ }).textContent).toBe('Declined');
+    // Her unchosen reward stops the walk at her row, which keeps the trade's outcome.
+    expect(within(freeAction).getByRole('button', { name: /^Nemesis outcome/ }).textContent).toBe(
+      'Declined',
+    );
   });
 
   it('keeps the contest offer through its result; a failed contest spawns Consolation', async () => {
@@ -587,7 +587,7 @@ describe('OccurrenceRoomFeatures', () => {
 
     // A new contest has lost, with no success item planned; she still drops Consolation.
     expect(result().textContent).toBe('Failed');
-    expect(within(sentence()).queryByRole('button', { name: /^Nemesis outcome/ })).toBeNull();
+    expect(sentence().contains(result())).toBe(true);
     expect(reward() ?? null).toBeNull();
     await view.user.click(within(sentence()).getByRole('button', { name: 'Reward' }));
     await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
@@ -606,8 +606,8 @@ describe('OccurrenceRoomFeatures', () => {
     await waitFor(() => expect(result().textContent).toBe('Failed'));
     expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
     expect(within(sentence()).getByRole('button', { name: 'Reward' })).toBeTruthy();
-    // Her Consolation is collected, never the planned item.
-    const chip = document.querySelector<HTMLElement>('[data-spawned-loot="moment"] button')!;
+    // Her Consolation spawns under her row and is collected, never the planned item.
+    const chip = document.querySelector<HTMLElement>('[data-spawned-loot="action"] button')!;
     await view.user.click(chip);
     const collect = await waitFor(() => {
       const row = document.querySelector<HTMLElement>(

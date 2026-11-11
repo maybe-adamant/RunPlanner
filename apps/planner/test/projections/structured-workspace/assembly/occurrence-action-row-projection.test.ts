@@ -1120,9 +1120,9 @@ describe('structured workspace actions assembly', () => {
           : [],
       ),
     ).toEqual([
-      { kind: 'encounterStart', phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
+      { kind: 'encounterStarted', phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
       { kind: 'encounterEnd', phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
-      { kind: 'encounterStart', phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
+      { kind: 'encounterStarted', phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
       { kind: 'encounterEnd', phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
     ]);
     expect(roomActions.timeline.fieldsCageOrder).toEqual({
@@ -1190,17 +1190,17 @@ describe('structured workspace actions assembly', () => {
         expect.objectContaining({
           key: 'Intro',
           label: 'Intro',
-          wheel: ship.node.room.roomLocal.wheels[0],
         }),
         expect.objectContaining({
           key: 'Combat1',
           label: 'Combat 1',
+          wheel: ship.node.room.roomLocal.wheels[0],
         }),
       ],
       repairRows: [],
     });
     if (ship.node.room.workbench.kind !== 'ship') throw new Error('Ship workbench is missing');
-    expect(ship.node.room.workbench.phases[1]?.wheel).toBeUndefined();
+    expect(ship.node.room.workbench.phases[0]?.wheel).toBeUndefined();
     const shipActions = ship.node.room.roomActions;
     if (shipActions === undefined) throw new Error('Ship room actions are withheld');
     expect(

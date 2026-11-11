@@ -340,6 +340,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
   /** The loot the room spawns on its own; undefined while unentered. */
   readonly spawnedLoot?: import('../source-index').WorkspaceBiomeSource['spawnedLoot'];
   readonly encounterOutcomes?: import('../source-index').WorkspaceBiomeSource['encounterOutcomes'];
+  readonly roomLifecycleTimeline?: import('../source-index').WorkspaceBiomeSource['roomLifecycleTimeline'];
   /** Whether a new Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance?: import('../source-index').WorkspaceBiomeSource['rerollSpendAllowance'];
   /** A screen's next reroll and how far the pool at its point takes it. */
@@ -538,8 +539,12 @@ export function assembleWorkspaceOccurrence(
   const encounterOutcomes = input.encounterOutcomes?.(
     createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
   );
+  const roomLifecycleTimeline = input.roomLifecycleTimeline?.(
+    createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+  );
   const actionAssembly = assembleOccurrenceActions({
     roomActionPlacementRoster: input.roomActionPlacementRoster,
+    ...(roomLifecycleTimeline === undefined ? {} : { roomLifecycleTimeline }),
     ...(spawnedLoot === undefined ? {} : { spawnedLoot }),
     ...(encounterOutcomes === undefined ? {} : { encounterOutcomes }),
     biome: input.biome,

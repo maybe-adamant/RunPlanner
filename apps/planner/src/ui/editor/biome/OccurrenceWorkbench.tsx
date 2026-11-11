@@ -64,11 +64,20 @@ function timelineMapStage(row: Element): RoomMapStage | undefined {
   const index = rows.indexOf(row);
   const leave = rows.findIndex((item) => item.classList.contains('timeline-leave-row'));
   const open = rows.findIndex((item) =>
-    item.matches('[data-doors-open], [data-boundary-kind="cleanup"]'),
+    item.matches('[data-doors-open], [data-wheels-open], [data-boundary-kind="doorsOpened"]'),
   );
   if (leave >= 0 && index >= leave) return 'left';
   if (open >= 0 && index >= open) return 'open';
   return 'closed';
+}
+
+/** Whether the room's doors have opened by the row; a Ship phase's wheels open before them. */
+function timelinePastDoors(row: Element): boolean {
+  const rows = [...(row.parentElement?.children ?? [])];
+  const doors = rows.findIndex((item) =>
+    item.matches('[data-doors-open], [data-boundary-kind="doorsOpened"]'),
+  );
+  return doors >= 0 && rows.indexOf(row) >= doors;
 }
 
 /** The room's latest door press (an unlock or a reroll) at or before the row. */
@@ -291,6 +300,8 @@ export function OccurrenceWorkbench({
     readonly stage: RoomMapStage;
     /** The door press whose doors the map shows; none shows them as they open. */
     readonly step?: string;
+    /** The marked row is at or after the doors opening. */
+    readonly pastDoors?: true;
     /** The side door Melinoë stands at; none puts her at the entry. */
     readonly heroDoor?: string;
   }>();
@@ -298,22 +309,28 @@ export function OccurrenceWorkbench({
   const shipPhases = room.workbench.kind === 'ship' ? room.workbench.phases : [];
   const shipPhase = shipPhases.find((phase) => phase.tab === activeTab);
   const timelineTab = activeTab === 'actions' || shipPhase !== undefined;
-  // A Ship phase before the last shows the wheel the next phase is chosen at; the last its doors.
-  const wheelPhase = shipPhase === shipPhases.at(-1) ? undefined : shipPhase;
-  const leaveTab = timelineTab && wheelPhase === undefined;
+  // A Ship phase shows its wheel's offers until the doors open, which only its last phase has.
+  const lastShipPhase = shipPhase !== undefined && shipPhase === shipPhases.at(-1);
+  const wheelPhaseAt = (pastDoors: boolean) =>
+    shipPhase?.wheel === undefined || (lastShipPhase && pastDoors) ? undefined : shipPhase;
+  const stepsAt = (pastDoors: boolean) => {
+    const phase = wheelPhaseAt(pastDoors);
+    return phase === undefined ? (timelineDoors?.steps ?? []) : wheelOfferSteps(phase.wheelRerolls);
+  };
+  const leaveTab = timelineTab && (shipPhase === undefined || lastShipPhase);
   const pastEnd = planEndRelation === 'pastEnd';
   // Past the plan end every control is locked; only the last row's own picker stays live.
   const readOnlyPastEnd = (panel: ReactNode): ReactNode =>
     pastEnd ? <ReadOnlyFindingScope>{panel}</ReadOnlyFindingScope> : panel;
-  const stepsShown =
-    wheelPhase === undefined
-      ? (timelineDoors?.steps ?? [])
-      : wheelOfferSteps(wheelPhase.wheelRerolls);
   // Leaving the Timeline tab or the room returns the map to the plan.
   const mapStageShown =
     timelineTab && mapStage?.roomIdentity === roomIdentity && mapStage.tab === activeTab;
   if (mapStage !== undefined && !mapStageShown) setMapStage(undefined);
   const shownMapStage = mapStageShown ? mapStage.stage : 'summary';
+  // With no row marked, the Timeline shows the room as it is left.
+  const pastDoors = mapStageShown ? mapStage.pastDoors === true : true;
+  const wheelPhase = wheelPhaseAt(pastDoors);
+  const stepsShown = stepsAt(pastDoors);
   const markMapRow = (row: HTMLElement | undefined): void => {
     if (mapRow.current === row) return;
     if (mapRow.current !== undefined) delete mapRow.current.dataset.mapShown;
@@ -325,11 +342,16 @@ export function OccurrenceWorkbench({
     const stage = row === undefined ? undefined : timelineMapStage(row);
     if (row === undefined || stage === undefined) return;
     markMapRow(row);
-    const step = timelineDoorStep(row, new Set(stepsShown.map((candidate) => candidate.actionKey)));
+    const rowPastDoors = timelinePastDoors(row);
+    const step = timelineDoorStep(
+      row,
+      new Set(stepsAt(rowPastDoors).map((candidate) => candidate.actionKey)),
+    );
     const heroDoor = timelineHeroDoor(row);
     if (
       stage !== mapStage?.stage ||
       step !== mapStage.step ||
+      rowPastDoors !== (mapStage.pastDoors === true) ||
       heroDoor !== mapStage.heroDoor ||
       mapStage.tab !== activeTab ||
       mapStage.roomIdentity !== roomIdentity
@@ -338,6 +360,7 @@ export function OccurrenceWorkbench({
         roomIdentity,
         tab: activeTab,
         stage,
+        ...(rowPastDoors ? { pastDoors: true as const } : {}),
         ...(step === undefined ? {} : { step }),
         ...(heroDoor === undefined ? {} : { heroDoor }),
       });

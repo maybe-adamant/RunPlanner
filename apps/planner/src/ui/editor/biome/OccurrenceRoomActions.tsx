@@ -7,7 +7,7 @@ import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCo
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
-  type WorkspaceEncounterBannerSupplement,
+  type WorkspaceEncounterEvents,
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomActions,
@@ -397,7 +397,7 @@ export function RoomActionsWorkbench({
   readonly idPrefix?: string;
   readonly interactions: WorkspaceInteractionCatalog;
   /** Encounter/reward owner supplies a banner's encounter controls without a reverse import. */
-  readonly renderEncounterControls?: (controls: WorkspaceEncounterBannerSupplement) => ReactNode;
+  readonly renderEncounterControls?: (controls: WorkspaceEncounterEvents) => ReactNode;
   /** Consumer-owned leaf editor for one exact shared timeline row. */
   readonly renderRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderBoundaryContent?: (
@@ -493,10 +493,9 @@ export function RoomActionsWorkbench({
           .filter((phase) => phase.timelineAnchor !== undefined)
           .map((phase) => (
             <Fragment key={workspaceInteractionKey(phase.address)}>
-              {renderEncounterControls?.({ kind: 'encounterStart', phase })}
               {renderEncounterControls?.({
-                kind: 'encounterOutcome',
                 phase,
+                start: true,
                 choices: unenteredOutcomeChoices,
               })}
             </Fragment>
@@ -556,9 +555,9 @@ export function RoomActionsWorkbench({
     >['supplement'],
   ): ReactNode => {
     if (supplement === undefined) return null;
-    // A Nemesis interaction is its row's own sentence.
-    if (supplement.kind === 'nemesisInteraction') return null;
-    return renderEncounterControls?.(supplement) ?? null;
+    // A Nemesis interaction is its row's own sentence; her event's result follows it.
+    const events = 'kind' in supplement ? supplement.events : supplement;
+    return events === undefined ? null : (renderEncounterControls?.(events) ?? null);
   };
   const shipPhases = mode.kind === 'shipPhase' ? mode.phases : undefined;
   const phaseOf =
@@ -593,7 +592,7 @@ export function RoomActionsWorkbench({
     let count = 0;
     for (const entry of visibleTimeline) {
       if (entry.kind === 'boundary') {
-        if (entry.boundary.kind === 'encounterBegun' || entry.boundary.kind === 'roomEntered')
+        if (entry.beginsEncounter === true || entry.boundary.kind === 'roomEntered')
           phase = count++;
         else if (
           entry.boundary.kind !== 'encounterStarted' &&
@@ -658,8 +657,8 @@ export function RoomActionsWorkbench({
           label={entry.label}
           toggle={doorsOpen === undefined ? undefined : doorsOpenToggle(doorsOpen)}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
-          {...(entry.supplement?.kind === 'encounterStart' &&
-          entry.supplement.identityLabel !== undefined
+          {...(entry.beginsEncounter === true ? { beginsEncounter: true } : {})}
+          {...(entry.supplement?.identityLabel !== undefined
             ? {
                 identity: {
                   label: entry.supplement.identityLabel,
@@ -1017,11 +1016,8 @@ export function RoomActionsWorkbench({
                 interactions={interactions}
                 row={row}
               />
-              {nemesisInteraction === undefined ? (
-                renderSupplement(supplement)
-              ) : nemesisInteraction.value === null ? (
-                <NemesisEventPending />
-              ) : null}
+              {nemesisInteraction?.value === null ? <NemesisEventPending /> : null}
+              {renderSupplement(supplement)}
               {/* Sea Star's copy follows the pickup and its decisions. */}
               <SpawnCopyChips
                 copies={

@@ -344,26 +344,23 @@ export type WorkspaceRoomLifecycleBoundary =
   import('@run-planner/engine/authored-project').RoomEvent;
 
 /**
- * The encounter controls of one phase event. Its start hosts the identity and the Fig Leaf
- * skip; its outcome hosts how the fight ended (Aetos, the Gorgon condition, the Nemesis bet
- * or event result, an Anomaly cleared).
+ * The encounter controls one Timeline line hosts for a phase: its identity where the
+ * encounter begins, the Fig Leaf skip where its combat starts, and how the fight ended
+ * (Aetos, the Gorgon condition, the Nemesis bet or event result, an Anomaly cleared)
+ * where the engine observes it: its Combat, or a Nemesis random event's talk row.
  */
-export type WorkspaceEncounterBannerSupplement =
-  | {
-      readonly kind: 'encounterStart';
-      readonly phase: WorkspaceEncounterPhase;
-      /**
-       * Phase role (when the room has several and no cage names it) and encounter name
-       * of a definitional encounter start; absent for an encounter settled on entry.
-       */
-      readonly identityLabel?: string;
-    }
-  | {
-      readonly kind: 'encounterOutcome';
-      readonly phase: WorkspaceEncounterPhase;
-      /** The engine's choices this outcome hosts, in the room's choice order. */
-      readonly choices: readonly import('@run-planner/engine/simulation').EncounterOutcomeChoice[];
-    };
+export interface WorkspaceEncounterEvents {
+  readonly phase: WorkspaceEncounterPhase;
+  /**
+   * Phase role (when the room has several and no cage names it) and encounter name
+   * of a definitional encounter; absent for an encounter settled on entry.
+   */
+  readonly identityLabel?: string;
+  /** Hosts the phase's Fig Leaf skip. */
+  readonly start?: true;
+  /** The engine's choices observed here, in the room's choice order. */
+  readonly choices: readonly import('@run-planner/engine/simulation').EncounterOutcomeChoice[];
+}
 
 export type WorkspaceRoomLifecycleTimelineEntry =
   | {
@@ -379,7 +376,9 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly placement: 'before' | 'after';
       readonly runState?: WorkspaceRunStateLauncher;
       /** Exact projected encounter controls this banner hosts. */
-      readonly supplement?: WorkspaceEncounterBannerSupplement;
+      readonly supplement?: WorkspaceEncounterEvents;
+      /** The marker where its phase's encounter begins: its Encounter, or its Combat shown as one with it. */
+      readonly beginsEncounter?: true;
       /** Read-only identity of the cage assigned to this encounter cycle. */
       readonly fieldsCage?: WorkspaceFieldsCageLabel;
     }
@@ -395,6 +394,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly supplement?: {
         readonly kind: 'nemesisInteraction';
         readonly owner: NemesisRandomEventAddress;
+        /** Her event's result, observed as she is answered. */
+        readonly events?: WorkspaceEncounterEvents;
       };
     }
   | {
@@ -427,7 +428,7 @@ export type WorkspaceNotReachedEntry =
       readonly key: string;
       readonly label: string;
       readonly phaseKey: string;
-      readonly supplement: WorkspaceEncounterBannerSupplement;
+      readonly supplement: WorkspaceEncounterEvents;
     };
 
 /** The settled target's rarity before and after one timed growth; equal when nothing promoted. */

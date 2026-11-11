@@ -578,7 +578,7 @@ export interface WorkspaceShipPhasePresentation {
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
   /** The room objects' entries, on the last phase, where a new action is appended. */
   readonly objectEntries?: readonly import('./contracts/features').WorkspaceRoomObjectEntry[];
-  /** The active wheel chosen after this phase, opened and taken at this phase's end. */
+  /** The phase's active wheel, opened as its encounter begins and chosen to start its combat. */
   readonly wheel?: WorkspaceRewardWheelDescriptor;
   /** The wheel's offer rerolls, where it can or did reroll. */
   readonly wheelRerolls?: import('./contracts/structure').WorkspaceRoomRerolls;
