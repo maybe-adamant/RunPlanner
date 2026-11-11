@@ -376,6 +376,7 @@ describe('authored-project incoming reward commands', () => {
     );
     if (occurrence === undefined) throw new Error('Sea Star source occurrence is missing');
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
       catalog,
       biome: goldenFBiome,
@@ -659,6 +660,7 @@ describe('authored-project incoming reward commands', () => {
       'self',
     );
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
       catalog,
       biome: goldenFBiome,

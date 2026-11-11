@@ -213,6 +213,7 @@ describe('selected O validation', () => {
     expect(after.roomActions.order).toEqual(retainedOrder);
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, oBiome),
         catalog,
         biome: oBiome,
@@ -327,6 +328,7 @@ describe('selected O validation', () => {
       );
     if (authoredOccurrence === undefined) throw new Error('authored Ship occurrence is missing');
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, oBiome),
       catalog,
       biome: oBiome,

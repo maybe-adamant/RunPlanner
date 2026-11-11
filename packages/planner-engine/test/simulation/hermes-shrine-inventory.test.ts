@@ -1029,6 +1029,7 @@ describe('Hermes Shrine delayed deliveries', () => {
     ]);
     if (occurrence === undefined) throw new Error('delivery host occurrence is missing');
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, pBiome),
       catalog,
       biome: pBiome,

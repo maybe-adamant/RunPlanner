@@ -1,10 +1,5 @@
 import { sourceRerolledOwners, type OwnerRerolls } from '../../authored-project/rerolls';
-import type {
-  BiomeLayout,
-  Catalog,
-  GeneratedProgressionDescriptor,
-  RoomDeclaration,
-} from '../../catalog-schema';
+import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import {
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
@@ -27,11 +22,16 @@ import type {
 import {
   additionalExitsForDecision,
   declaredPhysicalExits,
+  orderedTargets,
   possibleGeneratedNormalExitKeys,
   selectedAdditionalExit,
   selectedExitKey,
 } from '../../authored-project/topology/query';
 import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/room-ownership';
+import type {
+  ClockworkBatchDoors,
+  ClockworkDoorReward,
+} from '../../authored-project/clockwork-doors';
 import { batchTakesOverNormalDoors, fieldsBatchFacts, targetContinuation } from './decision-facts';
 import { materializeAuthoredRoom } from './rooms/assemble';
 import type { AuthoredRoomRole } from './rooms/templates';
@@ -42,7 +42,6 @@ import type {
   CanonicalBatch,
   CanonicalBatchRewardStore,
   CanonicalBatchState,
-  CanonicalBiomeState,
   CanonicalDecisionParent,
   CanonicalPhysicalExit,
   CanonicalSelectedBatchContinuation,
@@ -58,11 +57,6 @@ export class BiomeMaterializationContractError extends Error {
 
 function fail(detail: string): never {
   throw new BiomeMaterializationContractError(detail);
-}
-
-function exitIndex(exitKey: string): number {
-  const match = /^exit(\d+)$/.exec(exitKey);
-  return match === null ? 1 : Number(match[1]);
 }
 
 function sourceAddress(source: ExitDecisionSource): ExitDecisionSourceAddress {
@@ -140,18 +134,6 @@ function retainedUnavailablePhysicalExit(
   return Object.freeze({ kind: 'unavailable', exitKey, index: Number(match[1]) });
 }
 
-export function orderedTargets(
-  targets: readonly ExitTargetReference[],
-): readonly ExitTargetReference[] {
-  return Object.freeze(
-    [...targets].sort(
-      (left, right) =>
-        exitIndex(left.exitKey) - exitIndex(right.exitKey) ||
-        left.exitKey.localeCompare(right.exitKey),
-    ),
-  );
-}
-
 function canonicalRewardStore(
   biome: BiomeAddress,
   source: ExitDecisionSourceAddress,
@@ -217,64 +199,13 @@ export function finalSharedBatchStoreKey(
   return lastForcedSharedRewardStore(catalog, rooms)?.storeKey ?? initialStoreKey;
 }
 
-export interface ClockworkState {
-  readonly goalsRemaining: number;
-  readonly nonGoalRewardsAcquired: number;
-  readonly maxNonGoalRewards: number;
-}
-
-export function initialClockworkState(
-  layout: GeneratedProgressionDescriptor,
-  biomeState: CanonicalBiomeState,
-): ClockworkState | undefined {
-  if (layout.batchPolicy.kind !== 'clockwork') return undefined;
-  const maxNonGoalRewards = biomeState.maxNonGoalRewards;
-  if (typeof maxNonGoalRewards !== 'number' || !Number.isInteger(maxNonGoalRewards)) {
-    fail('Clockwork progression has no maxNonGoalRewards');
-  }
-  return Object.freeze({
-    goalsRemaining: layout.batchPolicy.initialGoalCount,
-    nonGoalRewardsAcquired: 0,
-    maxNonGoalRewards,
-  });
-}
-
-/**
- * A Clockwork door's derived reward, in door order (`ForcedFirstReward`,
- * `ForcedRewards`): the Preboss and the first combat door the leaving room
- * offers get the Goal, as does every combat door once the non-goal rewards
- * reach their cap; any other reward but a Story counts toward that cap.
- */
-type ClockworkDoorReward = 'goal' | 'counted' | undefined;
-
-function clockworkDoorReward(
-  room: RoomDeclaration,
-  state: ClockworkState,
-  goalAlreadyOffered: boolean,
-): ClockworkDoorReward {
-  if (room.kind === 'Preboss') return 'goal';
-  if (room.kind === 'Story') return undefined;
-  if (room.kind !== 'Combat') return 'counted';
-  return (state.goalsRemaining > 0 && !goalAlreadyOffered) ||
-    state.nonGoalRewardsAcquired >= state.maxNonGoalRewards
-    ? 'goal'
-    : 'counted';
-}
-
-function advanceClockworkState(state: ClockworkState, reward: ClockworkDoorReward): ClockworkState {
-  if (reward === undefined) return state;
-  return reward === 'goal'
-    ? Object.freeze({ ...state, goalsRemaining: Math.max(0, state.goalsRemaining - 1) })
-    : Object.freeze({ ...state, nonGoalRewardsAcquired: state.nonGoalRewardsAcquired + 1 });
-}
-
 function materializeBatchState(
   catalog: Catalog,
   layout: BiomeLayout,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   decision: ExitDecision,
   takeover: boolean,
-  clockwork: ClockworkState | undefined,
+  clockwork: ClockworkBatchDoors | undefined,
 ): CanonicalBatchState {
   if (takeover || layout.progression.kind !== 'generated')
     return Object.freeze({ kind: 'standard' });
@@ -282,7 +213,7 @@ function materializeBatchState(
   if (policy.kind === 'standard') return Object.freeze({ kind: 'standard' });
   if (policy.kind === 'clockwork') {
     if (clockwork === undefined) fail(`${layout.biomeKey} Clockwork state is unavailable`);
-    return Object.freeze({ kind: 'clockwork', ...clockwork });
+    return Object.freeze({ kind: 'clockwork', ...clockwork.state });
   }
   if (decision.normal.batchState === null)
     fail(`${layout.biomeKey} Fields batch has no authored cage outcome`);
@@ -318,7 +249,7 @@ function materializeTarget(
   selectedExitKey: string | undefined,
   batchStore: string | undefined,
   batchState: CanonicalBatchState,
-  clockworkReward: ClockworkDoorReward,
+  clockworkReward: ClockworkDoorReward | undefined,
   physicalExit: CanonicalPhysicalExit,
   rerolledOwners: ReadonlyMap<string, OwnerRerolls> | undefined,
   loadout?: RouteWeaponAspectLoadout,
@@ -417,11 +348,6 @@ export interface BatchMaterializationOptions {
   readonly physicalExits: ReadonlyMap<string, CanonicalPhysicalExit>;
 }
 
-export interface MaterializedBatch {
-  readonly batch: CanonicalBatch;
-  readonly nextClockwork: ClockworkState | undefined;
-}
-
 export function materializeBatch(
   catalog: Catalog,
   biome: BiomeAddress,
@@ -432,10 +358,11 @@ export function materializeBatch(
   decision: ExitDecision,
   parent: CanonicalDecisionParent,
   sourceAuthoredRoom: CanonicalAuthoredRoom | undefined,
-  clockwork: ClockworkState | undefined,
+  /** The batch's Clockwork doors, derived on the biome's selected spine. */
+  clockwork: ClockworkBatchDoors | undefined,
   options: BatchMaterializationOptions,
   loadout?: RouteWeaponAspectLoadout,
-): MaterializedBatch {
+): CanonicalBatch {
   const normal = decision.normal;
   // Derived once per batch, and only when the source room presses a reroll.
   const rerollSource =
@@ -471,19 +398,7 @@ export function materializeBatch(
     ordered,
     batchStoreKey(sourceAuthoredRoom, normal.rewardStore),
   );
-  let goalAlreadyOffered = false;
-  const rewards = new Map<string, ClockworkDoorReward>();
-  if (batchState.kind === 'clockwork') {
-    for (const target of ordered) {
-      const reward = clockworkDoorReward(
-        requireRoom(catalog, layout, topology, requireOccurrence(occurrences, target.occurrenceId)),
-        batchState,
-        goalAlreadyOffered,
-      );
-      if (reward === 'goal') goalAlreadyOffered = true;
-      rewards.set(target.exitKey, reward);
-    }
-  }
+  const rewards = batchState.kind === 'clockwork' ? clockwork?.rewards : undefined;
   const targets = Object.freeze(
     ordered.map((target, index) => {
       const physicalExit =
@@ -504,7 +419,7 @@ export function materializeBatch(
         selected,
         sharedBatchStoreKey,
         batchState,
-        rewards.get(target.exitKey),
+        rewards?.get(target.exitKey),
         physicalExit,
         rerolledOwners,
         loadout,
@@ -530,33 +445,26 @@ export function materializeBatch(
   ) {
     fail(`complete ${layout.biomeKey} batch lost selected target`);
   }
-  const nextClockwork =
-    batchState.kind === 'clockwork' && selectedTarget !== undefined
-      ? advanceClockworkState(batchState, rewards.get(selectedTarget.exit.exitKey))
-      : clockwork;
   return Object.freeze({
-    batch: Object.freeze({
-      kind: 'batch',
-      origin: createExitDecisionAddress(biome, source),
+    kind: 'batch',
+    origin: createExitDecisionAddress(biome, source),
+    source,
+    parent,
+    rewardStore: canonicalRewardStore(
+      biome,
       source,
-      parent,
-      rewardStore: canonicalRewardStore(
-        biome,
-        source,
-        normal.rewardStore,
-        takeover,
-        selectedAdditional?.key === 'chaos',
-      ),
-      ...(sharedBatchStoreKey === undefined
-        ? {}
-        : { resolvedSharedRewardStoreKey: sharedBatchStoreKey }),
-      batchState,
-      targets,
-      additional,
-      selectedExitKey: selected ?? null,
-      selectedOrigin: createExitSelectionAddress(biome, source),
-    }),
-    nextClockwork,
+      normal.rewardStore,
+      takeover,
+      selectedAdditional?.key === 'chaos',
+    ),
+    ...(sharedBatchStoreKey === undefined
+      ? {}
+      : { resolvedSharedRewardStoreKey: sharedBatchStoreKey }),
+    batchState,
+    targets,
+    additional,
+    selectedExitKey: selected ?? null,
+    selectedOrigin: createExitSelectionAddress(biome, source),
   });
 }
 

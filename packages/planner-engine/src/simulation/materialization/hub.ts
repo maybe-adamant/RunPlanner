@@ -119,6 +119,7 @@ function materializeHubRoom(
       ? {}
       : { unmodeledEncounterKeys: room.unmodeledEncounterKeys }),
     lifecycleProfileKey,
+    runsProducer: false,
     counterEffects: room.counters,
     entered: true,
   });

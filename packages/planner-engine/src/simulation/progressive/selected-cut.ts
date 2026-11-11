@@ -103,14 +103,6 @@ function lifecycleEvent(event: HistoryEvent): event is LifecycleEvent {
   return 'operationIndex' in event;
 }
 
-/** Whether the room's reward runs a producer, resolved or not. */
-function runsProducer(room: object): boolean {
-  return (
-    ('incomingReward' in room && room.incomingReward !== undefined) ||
-    ('unresolvedIncomingReward' in room && room.unresolvedIncomingReward !== undefined)
-  );
-}
-
 function arrival(event: HistoryEvent): boolean {
   return event.kind === 'roomEntered' || event.kind === 'roomRestored';
 }
@@ -270,7 +262,7 @@ function positionRoom(
   if (declaration === undefined)
     throw new BiomeMaterializationContractError(`${owner.room.gameName} has no room declaration`);
   const overviewEnd = roomOverviewStepCount(
-    roomWalkSteps(catalog, profile, declaration, runsProducer(owner.room)),
+    roomWalkSteps(catalog, profile, declaration, owner.room.runsProducer),
   );
   const roomEvents = history.events.filter(
     (candidate): candidate is LifecycleEvent =>
@@ -895,7 +887,7 @@ function roomStop(
   const declaration = catalog.rooms.byKey[room.gameName];
   if (declaration === undefined)
     throw new BiomeMaterializationContractError(`${room.gameName} has no room declaration`);
-  const steps = roomWalkSteps(catalog, profile, declaration, runsProducer(room));
+  const steps = roomWalkSteps(catalog, profile, declaration, room.runsProducer);
   const generation = steps.findIndex(
     (step) => step.kind === 'operation' && step.operation.kind === 'generateOutgoingBatch',
   );

@@ -17,7 +17,8 @@ import {
   type RoomActionDomain,
 } from './domain';
 import { windowAnchor } from './event-graph';
-import { roomLifecycleProfileKey } from './lifecycle-profile';
+import { roomLifecycleProfileKey, roomRunsProducer } from './lifecycle-profile';
+import { clockworkDoors, forcedDoorReward } from '../clockwork-doors';
 import { fieldsDefaultActiveCageCount } from '../fields';
 import { roomActionKey } from './state';
 import { encounterEnvelopeSlots } from '../room-state/encounter-envelope';
@@ -184,6 +185,52 @@ export function scheduleRequiredRoomActions(options: {
   return frozen(result);
 }
 
+/**
+ * The lifecycle an authored occurrence runs where its plan places it, in its
+ * Hub role if it has one, and whether it runs its reward's producer: the same
+ * answers materialization publishes for the room.
+ */
+export function occurrenceLifecycle(
+  catalog: Catalog,
+  routePosition: import('../route-context').ResolvedRoutePosition,
+  plan: AuthoredBiomePlan,
+  topology: BiomeTopology,
+  occurrence: RoomOccurrence,
+): { readonly lifecycleProfileKey: string; readonly producer: boolean } {
+  const rawDeclaration = catalog.rooms.byKey[occurrence.gameName];
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  if (rawDeclaration === undefined || layout === undefined)
+    throw new Error(`missing Room Action declaration context for ${occurrence.gameName}`);
+  const entry = topology.startOccurrenceId === occurrence.occurrenceId;
+  const resolved = resolveEntryRoom(catalog, rawDeclaration, routePosition, entry);
+  const role = topology.decisions.some(
+    (decision) =>
+      decision.kind === 'localVisit' &&
+      Object.values(decision.targetsBySlot).some(
+        (target) => target.occurrenceId === occurrence.occurrenceId,
+      ),
+  )
+    ? 'localVisit'
+    : topology.decisions.some(
+          (decision) =>
+            decision.kind === 'hub' &&
+            decision.openTargets.some((target) => target.occurrenceId === occurrence.occurrenceId),
+        )
+      ? 'hubTarget'
+      : 'ordinary';
+  return Object.freeze({
+    lifecycleProfileKey: roomLifecycleProfileKey(resolved.declaration, role, occurrence),
+    producer: roomRunsProducer(
+      resolved,
+      entry,
+      forcedDoorReward(
+        clockworkDoors(catalog, layout, topology, plan.state),
+        occurrence.occurrenceId,
+      ),
+    ),
+  });
+}
+
 function roomActionDomainContext(
   catalog: Catalog,
   routePosition: import('../route-context').ResolvedRoutePosition,
@@ -209,25 +256,7 @@ function roomActionDomainContext(
   if (resolved === undefined || declaration === undefined || layout === undefined) {
     throw new Error(`missing Room Action declaration context for ${occurrence.gameName}`);
   }
-  const role = topology.decisions.some(
-    (decision) =>
-      decision.kind === 'localVisit' &&
-      Object.values(decision.targetsBySlot).some(
-        (target) => target.occurrenceId === occurrence.occurrenceId,
-      ),
-  )
-    ? 'localVisit'
-    : topology.decisions.some(
-          (decision) =>
-            decision.kind === 'hub' &&
-            decision.openTargets.some((target) => target.occurrenceId === occurrence.occurrenceId),
-        )
-      ? 'hubTarget'
-      : 'ordinary';
-  const lifecycle = Object.freeze({
-    lifecycleProfileKey: roomLifecycleProfileKey(declaration, role, occurrence),
-    producer: resolved.incomingRewardBinding.kind !== 'none',
-  });
+  const lifecycle = occurrenceLifecycle(catalog, routePosition, plan, topology, occurrence);
   const startingReward =
     entry && routePosition.isFirst
       ? composeStartingReward(loadout.startingReward, occurrence.startingRewardAcquisition)

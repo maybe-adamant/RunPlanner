@@ -303,7 +303,12 @@ export interface CanonicalAuthoredRoom {
    * The reward its door forces in place of a counted choice: a Clockwork Goal,
    * which spawns no pickup and draws from no store.
    */
-  readonly forcedRewardType?: string;
+  readonly forcedRewardType?: import('../../authored-project/clockwork-doors').ForcedRewardType;
+  /**
+   * Whether the room runs its reward's producer, its reward chosen or not
+   * (`roomRunsProducer`); the room's walk, event graph and cut read this.
+   */
+  readonly runsProducer: boolean;
   /** Its reward, spawned through a Clockwork batch's door, counts toward the next forced Goal. */
   readonly countsTowardClockworkGoal?: true;
   readonly incomingReward?: CanonicalResolvedIncomingReward;
@@ -368,6 +373,8 @@ export interface CanonicalHubRoom {
   /** Native Encounter carriers intentionally omitted from simulated phases. */
   readonly unmodeledEncounterKeys?: readonly string[];
   readonly lifecycleProfileKey: string;
+  /** The Hub board room spawns no reward. */
+  readonly runsProducer: false;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: true;
 }

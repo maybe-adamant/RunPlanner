@@ -3,9 +3,8 @@ import type { ProjectDocument } from '../model';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
 import type { JudgmentArcanaCommand } from './types';
-import { assembleRoomActionDomain } from '../room-actions/domain';
+import { roomActionDomainForOccurrence } from '../room-actions/defaults';
 import { createBiomeAddress } from '../addresses';
-import { resolveRoutePosition } from '../route-context';
 
 /** Stores only a declaration-canonical set; progressive state determines whether it is active. */
 export function applyJudgmentArcanaCommand(
@@ -27,13 +26,14 @@ export function applyJudgmentArcanaCommand(
   const room = catalog.rooms.byKey[boss.gameName];
   if (room?.mode.kind !== 'authored' || room.mode.templateKey !== 'Boss')
     failCommand(command, 'Judgment must be owned by this biome Boss occurrence');
-  const lifecycle = assembleRoomActionDomain({
+  requireTopology(located.plan, command);
+  const lifecycle = roomActionDomainForOccurrence(
+    document,
     catalog,
-    biome: createBiomeAddress(command.judgment.routeKey, command.judgment.biomeKey),
-    topology: requireTopology(located.plan, command),
-    occurrence: boss,
-    routePosition: resolveRoutePosition(catalog, document.route, command.judgment.biomeKey),
-  }).eventGraph;
+    createBiomeAddress(command.judgment.routeKey, command.judgment.biomeKey),
+    boss.occurrenceId,
+  )?.domain.eventGraph;
+  if (lifecycle === undefined) failCommand(command, 'Boss occurrence has no room action domain');
   if (
     !lifecycle.events.some(
       (event) => event.kind === 'bossDefeated' && event.phaseKey === command.judgment.phaseKey,

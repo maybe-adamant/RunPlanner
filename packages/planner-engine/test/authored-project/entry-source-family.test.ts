@@ -268,6 +268,7 @@ describe('stale room-action row source family', () => {
     ];
     const retained = { ...occurrence, roomActions: { ...occurrence.roomActions, order } };
     const domain = assembleRoomActionDomain({
+      producer: startingReward !== undefined,
       catalog,
       biome: nBiome,
       topology,

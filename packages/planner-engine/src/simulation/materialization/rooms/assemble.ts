@@ -14,6 +14,8 @@ import {
 import { routeHasKeepsakeRack } from '../../../authored-project/route-profile';
 import type { StygianWellGenerationKey } from '../../../authored-project/model';
 import type { Catalog, RoomDeclaration } from '../../../catalog-schema';
+import type { ForcedRewardType } from '../../../authored-project/clockwork-doors';
+import type { RewardProducerBinding } from '../../../reward-kernel/bindings';
 import {
   activeSelectedPickupProducers,
   echoLastRewardPickupEntryKeys,
@@ -55,18 +57,32 @@ import {
   type MaterializedRoomLeaf,
 } from './templates';
 import { resolveEntryRoom } from '../../../authored-project/room-state/entry-resolution';
-import { roomLifecycleProfileKey } from '../../../authored-project/room-actions/lifecycle-profile';
+import {
+  roomLifecycleProfileKey,
+  roomRunsProducer,
+} from '../../../authored-project/room-actions/lifecycle-profile';
 
 function fail(detail: string): never {
   throw new Error(detail);
 }
 
-/** The room's lifecycle, which admits its envelope and the producer its reward runs, if any. */
+/**
+ * The room's lifecycle, which admits its envelope and the producer its reward
+ * runs. The template materializes a reward exactly when the room runs a
+ * producer, and a room runs none only as a forced reward's counted room, a
+ * room whose binding is none, or a route start without the run-start reward.
+ */
 function requireLifecycleSelection(
   catalog: Catalog,
   room: RoomDeclaration,
   leaf: MaterializedRoomLeaf,
   lifecycleProfileKey: string,
+  producer: {
+    readonly runs: boolean;
+    readonly binding: RewardProducerBinding;
+    readonly forcedRewardType: ForcedRewardType | undefined;
+    readonly routeStartWithoutReward: boolean;
+  },
 ): void {
   const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
   if (profile === undefined) {
@@ -77,14 +93,23 @@ function requireLifecycleSelection(
       `${room.gameName} envelope ${room.encounterEnvelopeKey} is incompatible with ${profile.key}`,
     );
   }
-  const producer = leaf.incomingReward ?? leaf.unresolvedIncomingReward;
-  if (producer === undefined) return;
+  const reward = leaf.incomingReward ?? leaf.unresolvedIncomingReward;
+  if (
+    reward === undefined &&
+    !(producer.forcedRewardType !== undefined && producer.binding.kind === 'countedChoice') &&
+    producer.binding.kind !== 'none' &&
+    !producer.routeStartWithoutReward
+  )
+    fail(`${room.gameName} requires a producer`);
+  if ((reward !== undefined) !== producer.runs)
+    fail(`${room.gameName} materialized a reward that disagrees with its producer`);
+  if (reward === undefined) return;
   if (
     profile.producer.kind !== 'required' ||
-    !profile.producer.lifecycleProfileKeys.includes(producer.producerLifecycleKey)
+    !profile.producer.lifecycleProfileKeys.includes(reward.producerLifecycleKey)
   ) {
     fail(
-      `${room.gameName} producer ${producer.producerLifecycleKey} is incompatible with ${profile.key}`,
+      `${room.gameName} producer ${reward.producerLifecycleKey} is incompatible with ${profile.key}`,
     );
   }
 }
@@ -163,7 +188,17 @@ export function materializeAuthoredRoom(
           placeholderRoomGameName: authoredPhantomExit.placeholderRoomGameName,
           rewardType: authoredPhantomExit.rewardType,
         });
-  requireLifecycleSelection(context.catalog, context.room, leaf, lifecycleProfileKey);
+  const runsProducer = roomRunsProducer(
+    resolvedEntry,
+    context.entry === true,
+    context.forcedRewardType,
+  );
+  requireLifecycleSelection(context.catalog, context.room, leaf, lifecycleProfileKey, {
+    runs: runsProducer,
+    binding: resolvedEntry.incomingRewardBinding,
+    forcedRewardType: context.forcedRewardType,
+    routeStartWithoutReward: context.entry === true && !resolvedEntry.runStartReward,
+  });
   const pickupProducers = activeSelectedPickupProducers(
     context.catalog,
     context.biome,
@@ -279,6 +314,7 @@ export function materializeAuthoredRoom(
       ? {}
       : { unmodeledEncounterKeys: context.room.unmodeledEncounterKeys }),
     lifecycleProfileKey,
+    runsProducer,
     counterEffects: context.room.counters,
     entered: context.entered,
     entry: context.entry === true,
@@ -413,7 +449,7 @@ export function materializeAuthoredRoom(
     occurrence: context.occurrence,
     routePosition: context.routePosition,
     lifecycleProfileKey: base.lifecycleProfileKey,
-    producer: base.incomingReward !== undefined || base.unresolvedIncomingReward !== undefined,
+    producer: base.runsProducer,
     incomingRewardActive: base.incomingReward?.acquisitionEnabled !== false,
     // The producer acquires the materialized reward; a retained rerolled reward
     // that no current press draws stays authored for repair, its rows dormant.

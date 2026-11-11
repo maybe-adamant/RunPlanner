@@ -614,6 +614,24 @@ export function selectedExitTarget(decision: ExitDecision): ExitTargetReference 
   return decision.normal.targets.find((target) => target.exitKey === selected);
 }
 
+function exitIndex(exitKey: string): number {
+  const match = /^exit(\d+)$/.exec(exitKey);
+  return match === null ? 1 : Number(match[1]);
+}
+
+/** A batch's normal targets in door order. */
+export function orderedTargets(
+  targets: readonly ExitTargetReference[],
+): readonly ExitTargetReference[] {
+  return Object.freeze(
+    [...targets].sort(
+      (left, right) =>
+        exitIndex(left.exitKey) - exitIndex(right.exitKey) ||
+        left.exitKey.localeCompare(right.exitKey),
+    ),
+  );
+}
+
 /** Resolves an explicitly selected sibling continuation without normalizing it. */
 export function additionalExitsForDecision(
   topology: AdditionalExitTopology,

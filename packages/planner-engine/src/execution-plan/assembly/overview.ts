@@ -24,6 +24,7 @@ import {
   hermesShrinePurchaseAction,
   hermesShrineRushAction,
 } from '../../authored-project/hermes-shrine-delivery';
+import type { ForcedRewardType } from '../../authored-project/clockwork-doors';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import { chaosGateSpawnPoint } from '../../authored-project/chaos-gate-position';
@@ -75,11 +76,15 @@ export function executionKeepsakeEquipResults(
   });
 }
 
-/** The plan's producer label for a forced reward, which runs no producer. */
-function forcedRewardWireProducer(rewardType: string): string {
-  if (rewardType !== 'ClockworkGoal')
-    throw new Error(`forced reward ${rewardType} has no published producer label`);
-  return 'ClockworkGoalRoom';
+/**
+ * The plan's producer label for a forced reward, which runs no producer.
+ * `ClockworkGoalRoom` is a published protocol label, not a catalog profile.
+ */
+function forcedRewardWireProducer(rewardType: ForcedRewardType): string {
+  switch (rewardType) {
+    case 'ClockworkGoal':
+      return 'ClockworkGoalRoom';
+  }
 }
 
 /**

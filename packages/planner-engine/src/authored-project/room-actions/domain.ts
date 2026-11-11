@@ -964,8 +964,8 @@ export function assembleRoomActionDomain(options: {
   readonly occurrence: RoomOccurrence;
   readonly routePosition: ResolvedRoutePosition;
   readonly lifecycleProfileKey?: string;
-  /** Whether the room's reward runs a producer; by default its incoming binding's. */
-  readonly producer?: boolean;
+  /** Whether the room runs its reward's producer: its `roomRunsProducer` fact. */
+  readonly producer: boolean;
   readonly activeEncounterSlotKeys?: readonly string[];
   readonly activeRewardWheelKeys?: readonly string[];
   /** Evaluated producer disposition from canonical materialization. */
@@ -983,9 +983,7 @@ export function assembleRoomActionDomain(options: {
   const lifecycleProfileKey =
     options.lifecycleProfileKey ??
     roomLifecycleProfileKey(declaration, 'ordinary', options.occurrence);
-  const producer =
-    options.producer ??
-    (options.incomingRewardBinding ?? declaration.incomingReward).kind !== 'none';
+  const producer = options.producer;
   const structuralReferences = activeRoomActionReferences(
     options.catalog,
     options.biome,

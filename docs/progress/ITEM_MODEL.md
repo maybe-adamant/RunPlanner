@@ -325,6 +325,21 @@ C5d-1, the Shrine rush at any gap after its purchase (no schema change):
   directly after its purchase; `action-order.ts` may later order it from the
   record with `index`.
 
+Step 3a, one lifecycle per room (no schema change):
+
+- A room's producer presence is one engine fact: the canonical room's
+  `runsProducer`, from `roomRunsProducer`; command-time defaults derive it the
+  same way (`occurrenceLifecycle`). A reward not chosen yet runs its producer;
+  a Clockwork Goal is the door's forced reward (`forcedRewardType`), derived on
+  the selected spine by `clockworkDoors`, and suppresses only a counted choice.
+- `assembleRoomActionDomain` requires `producer`; structural commands build
+  through `roomActionDomainForOccurrence`. The normalized `RoomDeclaration` no
+  longer carries `lifecycleProfileKey`; read `lifecycleProfile`.
+- Draft: `packages/draft/src/walk.ts` (`clockworkGoal`, near line 100) still
+  derives "a Clockwork room without a reward is a Goal" from the occurrence
+  state. It compiles unchanged; the consumer pass reads the room's
+  `forcedRewardType` instead.
+
 ## Inventory (summary of existence-vs-interaction)
 
 Item identity today is (reward owner address, acquisition role); every

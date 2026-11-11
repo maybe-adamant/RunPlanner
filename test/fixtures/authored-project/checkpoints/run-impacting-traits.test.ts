@@ -97,6 +97,7 @@ describe('run-impacting trait checkpoint workflows', () => {
         topology: project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!,
         occurrence,
         routePosition,
+        producer: routeStartIncoming !== undefined && routeStartIncoming !== null,
         ...(routeStartIncoming === undefined || routeStartIncoming === null
           ? {}
           : {
@@ -203,6 +204,7 @@ describe('run-impacting trait checkpoint workflows', () => {
       topology: project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!,
       occurrence: occurrence(),
       routePosition: resolveRoutePosition(catalog, project.route, 'N'),
+      producer: true,
     });
     const sourceAction = domain.contributions.find(
       (entry) =>

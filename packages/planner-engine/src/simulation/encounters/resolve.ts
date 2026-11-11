@@ -9,6 +9,7 @@ import type {
   AuthoredEncounterCustomization,
   RoomEncounterState,
 } from '../../authored-project/model';
+import type { ForcedRewardType } from '../../authored-project/clockwork-doors';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
   encounterEnvelopeSlots,
@@ -155,7 +156,7 @@ export interface EncounterResolutionReachedFacts {
 
 /** Narrow retained facts needed to resolve contextual encounter identity. */
 export interface EncounterResolutionRoomFacts {
-  readonly forcedRewardType?: string;
+  readonly forcedRewardType?: ForcedRewardType;
   readonly incomingReward?: { readonly offer: { readonly rewardType: string } };
   readonly unresolvedIncomingReward?: unknown;
 }

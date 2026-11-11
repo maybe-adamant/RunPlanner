@@ -370,6 +370,7 @@ describe('Nemesis random events', () => {
     // The restored reward is live again for the owner to pick up.
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
@@ -405,6 +406,7 @@ describe('Nemesis random events', () => {
     );
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
@@ -562,6 +564,7 @@ describe('Nemesis random events', () => {
     if (occurrence === undefined) throw new Error('missing declined event occurrence');
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
@@ -847,6 +850,7 @@ describe('Nemesis random events', () => {
       );
       const selected = occurrence(project);
       const contribution = assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,
@@ -924,6 +928,7 @@ describe('Nemesis random events', () => {
     expect(selected.state.optionalRewards).toEqual(retainedOptionals);
     expect(selected.state.optionalRewardCount).toBe(4);
     const eventAction = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, goldenHBiome),
       catalog,
       biome: goldenHBiome,

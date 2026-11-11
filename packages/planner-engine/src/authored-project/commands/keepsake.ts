@@ -10,8 +10,7 @@ import {
   type EchoKeepsakeReplayAddress,
   type KeepsakeSelectionAddress,
 } from '../addresses';
-import { assembleRoomActionDomain } from '../room-actions/domain';
-import { resolveRoutePosition } from '../route-context';
+import { roomActionDomainForOccurrence } from '../room-actions/defaults';
 import {
   normalizeAuthoredTranscendentEmbryoOutcome,
   type AuthoredTranscendentEmbryoOutcome,
@@ -77,13 +76,14 @@ export function applyKeepsakeCommand(
     }
     const occurrence = requireOccurrence(located.plan, action.occurrenceId, command);
     const expectedActionKey = roomActionKey({ kind: 'useFountain' });
-    const declarationActions = assembleRoomActionDomain({
-      catalog,
-      biome: createBiomeAddress(command.outcome.routeKey, command.outcome.biomeKey),
-      topology: requireTopology(located.plan, command),
-      occurrence,
-      routePosition: resolveRoutePosition(catalog, document.route, command.outcome.biomeKey),
-    }).activeReferences;
+    requireTopology(located.plan, command);
+    const declarationActions =
+      roomActionDomainForOccurrence(
+        document,
+        catalog,
+        createBiomeAddress(command.outcome.routeKey, command.outcome.biomeKey),
+        occurrence.occurrenceId,
+      )?.domain.activeReferences ?? [];
     if (
       action.routeKey !== command.outcome.routeKey ||
       action.biomeKey !== command.outcome.biomeKey ||

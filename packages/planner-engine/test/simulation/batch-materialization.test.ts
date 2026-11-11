@@ -23,7 +23,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNProject, nOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
-import { orderedTargets } from '../../src/simulation/materialization/batch';
+import { orderedTargets } from '../../src/authored-project/topology/query';
 import {
   createCompleteFTakeoverProject,
   fBiome,

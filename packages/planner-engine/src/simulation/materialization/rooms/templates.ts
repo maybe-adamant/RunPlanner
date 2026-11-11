@@ -42,6 +42,7 @@ import { composeStartingReward } from '../../../authored-project/room-state/star
 import { INFERNAL_CONTRACT_ENTRY_KEY } from '../../../authored-project/infernal-contract-pedestal';
 import type { ResolvedEntryRoom } from '../../../authored-project/room-state/entry-resolution';
 import type { RoomLifecycleRole } from '../../../authored-project/room-actions/lifecycle-profile';
+import type { ForcedRewardType } from '../../../authored-project/clockwork-doors';
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -90,7 +91,7 @@ export interface AuthoredRoomMaterializationContext {
    * The reward its door forces (`ForcedFirstReward`, `ForcedRewards`): a
    * Clockwork Goal, which takes a counted choice's place and spawns no pickup.
    */
-  readonly forcedRewardType?: string;
+  readonly forcedRewardType?: ForcedRewardType;
   /** Its reward, spawned through a Clockwork batch's door, counts toward the next forced Goal. */
   readonly countsTowardClockworkGoal?: true;
   readonly loadout?: RouteWeaponAspectLoadout | BiomeMaterializationLoadout;

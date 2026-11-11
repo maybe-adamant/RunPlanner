@@ -429,6 +429,7 @@ describe('room-action commands', () => {
       site: { pointKey: 'nemesisGenerated:Encounter' },
     });
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
       catalog,
       biome: goldenFBiome,
@@ -543,6 +544,7 @@ describe('room-action commands', () => {
 
     for (const candidate of [reprieve, reversedReprieve]) {
       const domain = assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, biome),
         catalog,
         biome,
@@ -652,6 +654,7 @@ describe('room-action commands', () => {
     );
     if (hostOccurrence === undefined) throw new Error('missing Well host');
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
@@ -1107,6 +1110,7 @@ describe('room-action commands', () => {
       roomActionKey(replacement),
     );
     const domain = assembleRoomActionDomain({
+      producer: true,
       routePosition: ordinaryPositionFor(catalog, goldenHBiome),
       catalog,
       biome: goldenHBiome,
@@ -1145,6 +1149,7 @@ describe('room-action commands', () => {
     });
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenHBiome),
         catalog,
         biome: goldenHBiome,
@@ -1199,6 +1204,7 @@ describe('room-action commands', () => {
     expect(fields?.roomActions.order).not.toContainEqual(replacement);
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenHBiome),
         catalog,
         biome: goldenHBiome,
@@ -1702,6 +1708,7 @@ describe('room-action commands', () => {
     );
     expect(
       assembleRoomActionDomain({
+        producer: true,
         routePosition: ordinaryPositionFor(catalog, goldenFBiome),
         catalog,
         biome: goldenFBiome,

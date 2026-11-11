@@ -76,6 +76,16 @@ export function createRoomLifecycleInput(
 ): RoomLifecycleExecutionInput {
   const storeKey = enteredStoreKey(declaration.enteredRewardStoreHistory, room);
   const incomingReward = 'incomingReward' in room ? room.incomingReward : undefined;
+  // The walk runs the room's producer exactly when the room publishes one, and
+  // reaches it only once its reward is chosen.
+  if (room.runsProducer && incomingReward === undefined)
+    throw new HistoryLifecycleInputContractError(
+      `${room.gameName} walks its producer without a chosen reward`,
+    );
+  if (!room.runsProducer && incomingReward !== undefined)
+    throw new HistoryLifecycleInputContractError(
+      `${room.gameName} runs no producer but carries a reward`,
+    );
   const requiredObjects = 'requiredObjects' in room ? room.requiredObjects : undefined;
   const rewardWheels = 'rewardWheels' in room ? room.rewardWheels : undefined;
   const activePhaseKeys = new Set(encounterPhases.map((phase) => phase.slotKey));
