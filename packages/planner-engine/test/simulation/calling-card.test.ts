@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
   createTraitOfferAddress,
@@ -18,6 +19,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtures/underworld';
+import { replaceTestPlacedItem } from '@run-planner/test-fixtures/shared';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
@@ -158,11 +160,15 @@ describe('Calling Card offer settlement', () => {
 
   it('keeps an invalid composed offer unchanged and attributes its row action exactly', () => {
     let project = projectWithCallingCard(['option2']);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceStartingReward',
-      reward: createStartingRewardAddress('Underworld'),
-      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
-    });
+    project = replaceTestPlacedItem(
+      project,
+      {
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+      },
+      createOccurrenceAddress(biome, goldenFStartId),
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait,
