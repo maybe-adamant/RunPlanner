@@ -371,12 +371,8 @@ describe('authored-project incoming reward commands', () => {
       siteKey,
       entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
     };
-    expect(occurrence?.roomActions.order).not.toContainEqual(
-      withItemContent(
-        procced.present,
-        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
-        duplicateAction,
-      ),
+    expect((occurrence?.roomActions.order ?? []).map(roomActionKey)).not.toContain(
+      roomActionKey(duplicateAction),
     );
     if (occurrence === undefined) throw new Error('Sea Star source occurrence is missing');
     const domain = assembleRoomActionDomain({

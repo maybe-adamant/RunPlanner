@@ -791,8 +791,8 @@ describe('Nemesis random events', () => {
       { rewardType: 'MaxHealthDrop' },
     );
     expect(duplicateSites(contested)).toEqual([]);
-    expect(occurrence(contested).roomActions.order).not.toContainEqual(
-      withItemContent(contested, eventRoom, result),
+    expect(occurrence(contested).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(result),
     );
     roundTrips(contested);
     const free = duplicated({ kind: 'freeItem' }, 'ArmorBoost');
@@ -803,8 +803,8 @@ describe('Nemesis random events', () => {
       family: 'goldTrade',
     });
     expect(duplicateSites(family)).toEqual([]);
-    expect(occurrence(family).roomActions.order).not.toContainEqual(
-      withItemContent(family, eventRoom, result),
+    expect(occurrence(family).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(result),
     );
     roundTrips(family);
 
@@ -873,8 +873,8 @@ describe('Nemesis random events', () => {
     );
     // Removing the required pickup leaves the Pom live on the ground with its finding.
     const removed = applyProjectCommand(pom.project, catalog, { kind: 'RemoveRoomAction', action });
-    expect(occurrence(removed).roomActions.order).not.toContainEqual(
-      withItemContent(removed, eventRoom, result),
+    expect(occurrence(removed).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(result),
     );
     expect(simulateProjectAssembly(catalog, removed).evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'roomActionPlacementRequired', origin: action }),
@@ -882,8 +882,8 @@ describe('Nemesis random events', () => {
 
     const talent = contest('TalentDrop');
     expect(talent.contribution).toMatchObject({ participation: 'optional' });
-    expect(talent.selected.roomActions.order).not.toContainEqual(
-      withItemContent(talent.project, eventRoom, result),
+    expect(talent.selected.roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(result),
     );
   });
 

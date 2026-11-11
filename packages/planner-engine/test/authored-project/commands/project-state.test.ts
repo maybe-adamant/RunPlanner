@@ -286,8 +286,8 @@ describe('authored-project project-state commands', () => {
     expect(clearedPostboss?.roomActions.order).not.toContainEqual(
       expect.objectContaining({ generationKey: 'travelDealRefill' }),
     );
-    expect(clearedPostboss?.roomActions.order).not.toContainEqual(
-      withItemContent(refillCleared, occurrence, {
+    expect((clearedPostboss?.roomActions.order ?? []).map(roomActionKey)).not.toContain(
+      roomActionKey({
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey: hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),

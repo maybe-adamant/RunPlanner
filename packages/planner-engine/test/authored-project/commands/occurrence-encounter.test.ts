@@ -461,8 +461,8 @@ describe('authored encounter occurrence commands', () => {
     // Accepting activates the result without placing it; its owner picks it up.
     const eventRoom = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
     expect(
-      occurrence(accepted, 'F', goldenFOccurrenceId(5, 1)).roomActions.order,
-    ).not.toContainEqual(withItemContent(accepted, eventRoom, result));
+      occurrence(accepted, 'F', goldenFOccurrenceId(5, 1)).roomActions.order.map(roomActionKey),
+    ).not.toContain(roomActionKey(result));
     const collected = applyProjectCommand(accepted, catalog, {
       kind: 'InsertRoomAction',
       action: createRoomActionAddress(
@@ -482,8 +482,8 @@ describe('authored encounter occurrence commands', () => {
       value: { kind: 'goldTrade', response: 'decline', reward: { rewardType: 'MaxHealthDrop' } },
     });
     const declinedOccurrence = occurrence(declined, 'F', goldenFOccurrenceId(5, 1));
-    expect(declinedOccurrence.roomActions.order).not.toContainEqual(
-      withItemContent(declined, eventRoom, result),
+    expect(declinedOccurrence.roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(result),
     );
     expect(
       declinedOccurrence.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result

@@ -1082,11 +1082,11 @@ describe('room-action commands', () => {
       return occurrence;
     };
     const fieldsRoom = createOccurrenceAddress(goldenHBiome, fieldsOccurrenceId);
-    expect(fields(dormant).roomActions.order).not.toContainEqual(
-      withItemContent(dormant, fieldsRoom, sourceReference),
+    expect(fields(dormant).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(sourceReference),
     );
-    expect(fields(dormant).roomActions.order).not.toContainEqual(
-      withItemContent(dormant, fieldsRoom, replacement),
+    expect(fields(dormant).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(replacement),
     );
     expect(fields(dormant).acquisitionSites?.[replacement.siteKey]?.pickupEntries).toHaveProperty(
       replacement.entryKey,
@@ -1103,8 +1103,8 @@ describe('room-action commands', () => {
     expect(fields(dormant).roomActions.order).toContainEqual(
       withItemContent(dormant, fieldsRoom, sourceReference),
     );
-    expect(fields(dormant).roomActions.order).not.toContainEqual(
-      withItemContent(dormant, fieldsRoom, replacement),
+    expect(fields(dormant).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(replacement),
     );
     const domain = assembleRoomActionDomain({
       routePosition: ordinaryPositionFor(catalog, goldenHBiome),
@@ -1471,8 +1471,8 @@ describe('room-action commands', () => {
       acquisition,
       value: { kind: 'artificer' },
     });
-    expect(occurrence(restored).roomActions.order).not.toContainEqual(
-      withItemContent(restored, start, replacement),
+    expect(occurrence(restored).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(replacement),
     );
     expect(occurrence(restored).acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
       entryKey,

@@ -318,8 +318,8 @@ describe('trait-dropped pickups', () => {
       ),
       value: { rewardType: 'RoomMoneySmallDrop' },
     });
-    expect(occurrence(project, 'F', combatId).roomActions.order).not.toContainEqual(
-      dropRows(project, combat, siteKey, ['bones'])[0],
+    expect(occurrence(project, 'F', combatId).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(dropRows(project, combat, siteKey, ['bones'])[0]!),
     );
   });
 
@@ -341,8 +341,8 @@ describe('trait-dropped pickups', () => {
         action: createRoomActionAddress(goldenF, combatId, roomActionKey(drop)),
       });
     const authoredOrder = occurrence(authored, 'F', combatId).roomActions.order;
-    expect(authoredOrder).not.toEqual(
-      expect.arrayContaining([...dropRows(authored, combat, siteKey, ['smallGold'])]),
+    expect(authoredOrder.map(roomActionKey)).not.toContain(
+      roomActionKey(dropRows(authored, combat, siteKey, ['smallGold'])[0]!),
     );
 
     const { runModifiers: _runModifiers, ...loadout } = authored.route.loadout;
