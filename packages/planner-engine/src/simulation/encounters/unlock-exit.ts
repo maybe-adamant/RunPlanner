@@ -49,8 +49,8 @@ export interface UnlockExitCustomizationIssue {
 
 /**
  * A locked door's fight as `AttemptUseDoor` generates it at the press: the
- * host's lock encounter, its composition assessed against the state the
- * press reaches.
+ * host's lock encounter with the door's observed decisions, its composition
+ * assessed against the state the press reaches.
  */
 export interface PreparedUnlockExitEncounter {
   readonly origin: EncounterPhaseAddress;
@@ -79,15 +79,14 @@ export function prepareUnlockExitEncounter(
   if (encounterKey === undefined || rawDeclaration === undefined)
     throw new Error(`${room.gameName} lost its locked door's fight`);
   const origin = unlockExitPhaseAddress(room.origin, action.exitKey);
+  const customization = room.encounters.customizationByLockedExit?.[action.exitKey];
   const resolved = resolvedEncounterPhaseForDefinition(
     catalog,
     {
       slotKey: unlockExitPhaseKey(action.exitKey),
       envelopeKey: UNLOCK_EXIT_ENVELOPE_KEY,
       figLeafSkip: false,
-      ...(action.customization === undefined
-        ? {}
-        : { customizationByDecision: action.customization }),
+      ...(customization === undefined ? {} : { customizationByDecision: customization }),
     },
     encounterKey,
   );

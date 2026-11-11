@@ -1,5 +1,5 @@
 import { purgingPoolInteractions, stygianWellInteractions } from './feature-roll-seams';
-import { roomObjectInteractions } from './object-interaction-seams';
+import { lockedDoorFights, roomObjectInteractions } from './object-interaction-seams';
 import { createRoomObjectInteractionArtifacts } from '../../commerce/object-interactions';
 import {
   createBiomeAddress,
@@ -405,15 +405,19 @@ export function publishChronology(
       ),
       stygianWellInteractions(context, interactionWalk),
     ),
-    objectInteractionArtifacts: createRoomObjectInteractionArtifacts(
-      roomObjectInteractions(
-        context,
-        interactionWalk,
-        accumulation.derivedAcquisitionEntryContexts,
-      ),
-      interactionWalk.challengeSwitchEncounters,
-      interactionWalk.unlockExitEncounters,
-    ),
+    objectInteractionArtifacts: (() => {
+      const doorFights = lockedDoorFights(context, interactionWalk);
+      return createRoomObjectInteractionArtifacts(
+        roomObjectInteractions(
+          context,
+          interactionWalk,
+          accumulation.derivedAcquisitionEntryContexts,
+          doorFights,
+        ),
+        interactionWalk.challengeSwitchEncounters,
+        doorFights,
+      );
+    })(),
     findingRegions: Object.freeze(immutableFindingRegions),
     encounterEntryVowRanks: walk.encounterEntryVowRanks,
     through,

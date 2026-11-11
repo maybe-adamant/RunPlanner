@@ -1,5 +1,8 @@
 import { encodeProjectDocument, parseProjectDocument } from '@run-planner/engine/authored-project';
-import { settleProjectUpgrade } from '@run-planner/engine/project-migration';
+import {
+  moveLockedDoorFightOntoDoor,
+  settleProjectUpgrade,
+} from '@run-planner/engine/project-migration';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 
 export const SOURCE_SCHEMA_VERSION = 102;
@@ -14,7 +17,13 @@ function record(value, label) {
   return value;
 }
 
-/** Schema 103 keeps schema 102's shape, so the lift changes only the version. */
+/**
+ * Schema 103's item-model moves, in order: each a pure, lossless transform of
+ * the raw plan from row state onto its item, run before the strict parse.
+ */
+const ITEM_MODEL_TRANSFORMS = [moveLockedDoorFightOntoDoor];
+
+/** Lifts the version and moves each schema 102 row state onto its item. */
 export function liftProjectDocument(value) {
   const source = record(value, 'project document');
   if (source.schemaVersion !== SOURCE_SCHEMA_VERSION)
@@ -32,7 +41,10 @@ export function liftProjectDocument(value) {
     );
   const copy = JSON.parse(JSON.stringify(source));
   delete copy.schemaRevision;
-  return { ...copy, schemaVersion: OUTPUT_SCHEMA_VERSION };
+  return ITEM_MODEL_TRANSFORMS.reduce((document, transform) => transform(document), {
+    ...copy,
+    schemaVersion: OUTPUT_SCHEMA_VERSION,
+  });
 }
 
 /**

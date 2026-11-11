@@ -614,6 +614,8 @@ export interface WorkspaceLockedDoors {
     readonly locked: boolean;
     /** Why the door cannot be toggled. */
     readonly lock?: 'unreached' | 'challengeSwitch';
+    /** A locked door's fight before its press; a pressed door's sits on its press row. */
+    readonly fight?: WorkspaceUnlockExitEncounter;
   }[];
   /** The Doors object's presses: each locked door not yet pressed; absent while unreached. */
   readonly unlocks?: {
@@ -624,9 +626,14 @@ export interface WorkspaceLockedDoors {
   readonly lockedAtLeave: readonly string[];
 }
 
-/** A pressed locked door's fight, customized on its press row. */
+/**
+ * A locked door's fight, customized on its press row, or on the door before
+ * its press. The decisions belong to the door; findings go to its press.
+ */
 export interface WorkspaceUnlockExitEncounter {
   readonly address: import('@run-planner/engine/authored-project').RoomActionAddress;
+  readonly occurrence: import('@run-planner/engine/authored-project').OccurrenceAddress;
+  readonly exitKey: string;
   readonly interactionKey: string;
   readonly definitionKey: string;
   readonly label: string;

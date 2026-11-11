@@ -53,6 +53,7 @@ import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
 import { doorChipMapLink, type DoorChip } from './doorSummary';
 import { DoorRows } from './DoorRows';
+import { UnlockExitFightControl } from './UnlockExitFightControl';
 import type { DoorNoteFor } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
@@ -938,12 +939,17 @@ export function BatchDoorsDetail({
   const lockFor = (exitKey: string, index: number) => {
     const door = lockedDoors?.doors.find((candidate) => candidate.exitKey === exitKey);
     return lockedDoors === undefined || door === undefined ? undefined : (
-      <DoorLockToggle
-        door={door}
-        index={index}
-        interactions={interactions}
-        lockedDoors={lockedDoors}
-      />
+      <>
+        <DoorLockToggle
+          door={door}
+          index={index}
+          interactions={interactions}
+          lockedDoors={lockedDoors}
+        />
+        {door.fight === undefined ? null : (
+          <UnlockExitFightControl encounter={door.fight} interactions={interactions} />
+        )}
+      </>
     );
   };
   return (
@@ -1058,4 +1064,19 @@ export function AuthoringFrontier({
         'Hub structural frontiers must be rendered by HubDecisionWorkbench.',
       );
   }
+}
+
+/** The locked door a press opens: its door chip, or its name before the doors are known. */
+export function UnlockedDoor({
+  chip,
+  label,
+}: {
+  readonly chip?: DoorChip;
+  readonly label: string;
+}) {
+  return chip === undefined ? (
+    <span>{label}</span>
+  ) : (
+    <DoorChips chips={[{ ...chip, locked: false }]} label={label} />
+  );
 }

@@ -93,6 +93,24 @@ Gaps left for C5b (the engine cannot derive them today):
 - No new verb exports on `./simulation` yet; they land with the first
   consumer (the planner's live row in D).
 
+## C5b contract changes
+
+Consumer-facing changes per slice; Draft and the run import only had to
+compile.
+
+- **C5b-2, locked-door fight on the door.** `UnlockExitRoomAction` is thin
+  (`kind`, `exitKey`); the fight's decisions live in
+  `encounters.customizationByLockedExit[exitKey]`. `ReplaceUnlockExitCustomization
+{action}` is replaced by `ReplaceLockedExitCustomization {occurrence, exitKey,
+decisionKey, value}`, accepted for any locked door, pressed or not.
+  `ReplaceLockedExit locked:false` drops that door's fight; removing the press
+  keeps it. The live `lockedDoors.unlocks[].encounter` and
+  `unlockExitEncounterSupportForProjectEvaluationAssembly` now also answer for
+  an unpressed locked door, prepared where its press would append. Run import
+  (`locked-doors.ts`): no change; it locks and presses doors and never authors
+  the fight, so an imported fight stays native. A later fight import authors
+  it with `ReplaceLockedExitCustomization`, before or after the press.
+
 ## Inventory (summary of existence-vs-interaction)
 
 Item identity today is (reward owner address, acquisition role); every

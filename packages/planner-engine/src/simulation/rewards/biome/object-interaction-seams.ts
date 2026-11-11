@@ -11,7 +11,10 @@ import {
   unlockExitAction,
 } from '../../../authored-project/locked-exits';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
-import type { PreparedUnlockExitEncounter } from '../../encounters/unlock-exit';
+import {
+  prepareUnlockExitEncounter,
+  type PreparedUnlockExitEncounter,
+} from '../../encounters/unlock-exit';
 import { hermesShrinePurchaseAction } from '../../../authored-project/hermes-shrine-delivery';
 import {
   hermesShrineInitialGenerationKey,
@@ -51,6 +54,7 @@ import {
 import type { RewardBranchState } from '../branch-primitives';
 import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
 import type { DerivedAcquisitionEntryFrontier } from '../acquisition/contracts';
+import { BiomeRewardSimulationContractError } from './biome-contract';
 import type { ChronologyWalkContext, ChronologyWalkState } from './chronology-walk';
 
 const SHRINE_SLOT_KEYS: readonly HermesShrineSlotKey[] = ['first', 'secondLeft', 'secondRight'];
@@ -456,10 +460,59 @@ function challengeSwitchInteraction(
 }
 
 /**
+ * Each locked door's fight, by its press's address: a pressed door's as the
+ * walk prepared it at the press, and a door not yet pressed prepared where its
+ * press would append, at the room's last reached action, so its observed
+ * rolls can be authored before the press is placed.
+ */
+export function lockedDoorFights(
+  context: ChronologyWalkContext,
+  state: ChronologyWalkState,
+): ReadonlyMap<string, PreparedUnlockExitEncounter> {
+  const fights = new Map(state.unlockExitEncounters);
+  for (const roomKey of state.enteredLockHosts) {
+    const end = state.roomActionEnds.get(roomKey);
+    const room = authoredRoom(context, roomKey);
+    if (end === undefined || room === undefined || room.origin.kind !== 'occurrence') continue;
+    const origin = room.origin;
+    const pressed = new Set(
+      room.roomActionRoster.rows.flatMap((row) =>
+        row.rank !== null && row.reference.kind === 'unlockExit' ? [row.reference.exitKey] : [],
+      ),
+    );
+    const unpressed = (room.lockedExits ?? []).filter((exitKey) => !pressed.has(exitKey));
+    if (unpressed.length === 0) continue;
+    const view = context.history.viewsBySequence[end.historySequence];
+    if (view === undefined)
+      throw new BiomeRewardSimulationContractError(`${roomKey} has no view where its actions end`);
+    const biome = createBiomeAddress(origin.routeKey, origin.biomeKey);
+    for (const exitKey of unpressed) {
+      const reference = unlockExitAction(exitKey);
+      const prepared = prepareUnlockExitEncounter(
+        context.catalog,
+        room,
+        context.routePosition,
+        reference,
+        view,
+        state.encounterEntryVowRanks.get(roomKey),
+      );
+      if (prepared === undefined) continue;
+      fights.set(
+        semanticAddressKey(
+          createRoomActionAddress(biome, origin.occurrenceId, roomActionKey(reference)),
+        ),
+        prepared,
+      );
+    }
+  }
+  return fights;
+}
+
+/**
  * An entered lock host's doors: each door that can lock with the command
  * flipping it (refused beside a challenge switch), and once its Timeline is
- * reached, each locked door's press, appended where its actions end, or its
- * fight once pressed.
+ * reached, each locked door's press, appended where its actions end, and its
+ * fight, at the press or where the press would append.
  */
 function lockedDoorsInteraction(
   catalog: Catalog,
@@ -528,8 +581,9 @@ function lockedDoorsInteraction(
                       ? {}
                       : {
                           reset: Object.freeze({
-                            kind: 'ReplaceUnlockExitCustomization' as const,
-                            action,
+                            kind: 'ReplaceLockedExitCustomization' as const,
+                            occurrence: origin,
+                            exitKey,
                             decisionKey: decision.key,
                             value: null,
                           }),
@@ -558,6 +612,7 @@ export function roomObjectInteractions(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
   derivedEntries: DerivedEntryFrontiers,
+  doorFights: ReadonlyMap<string, PreparedUnlockExitEncounter>,
 ): ReadonlyMap<string, RoomObjectInteractions> {
   const interactions = new Map<string, RoomObjectInteractions>();
   for (const [roomKey, end] of state.roomActionEnds) {
@@ -606,7 +661,7 @@ export function roomObjectInteractions(
       context.catalog,
       room,
       state.roomActionEnds.has(roomKey),
-      state.unlockExitEncounters,
+      doorFights,
     );
     if (lockedDoors === undefined) continue;
     interactions.set(roomKey, Object.freeze({ ...interactions.get(roomKey), lockedDoors }));

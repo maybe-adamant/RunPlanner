@@ -59,6 +59,7 @@ export function decodeRoomEncounterState(
       ...(state.traitOffersByPhase === undefined ? [] : ['traitOffersByPhase']),
       ...(state.nemesisRandomEventByPhase === undefined ? [] : ['nemesisRandomEventByPhase']),
       ...(state.customizationByPhase === undefined ? [] : ['customizationByPhase']),
+      ...(state.customizationByLockedExit === undefined ? [] : ['customizationByLockedExit']),
       ...(state.judgmentArcanaKeysByPhase === undefined ? [] : ['judgmentArcanaKeysByPhase']),
       ...(state.figurineArcanaKeysByPhase === undefined ? [] : ['figurineArcanaKeysByPhase']),
     ],
@@ -483,5 +484,48 @@ export function decodeRoomEncounterState(
     ...(Object.keys(customizationByPhase).length === 0
       ? {}
       : { customizationByPhase: Object.freeze(customizationByPhase) }),
+    ...(state.customizationByLockedExit === undefined
+      ? {}
+      : {
+          customizationByLockedExit: decodeLockedExitCustomization(
+            state.customizationByLockedExit,
+            `${path}.customizationByLockedExit`,
+          ),
+        }),
   });
+}
+
+/**
+ * Each locked door's fight decisions, by exit key. The fight declares only a
+ * generated composition; the occurrence closes the keys over its locked doors.
+ */
+function decodeLockedExitCustomization(
+  value: unknown,
+  path: string,
+): NonNullable<RoomEncounterState['customizationByLockedExit']> {
+  const doors = expectRecord(value, path);
+  if (Object.keys(doors).length === 0) failProjectDocument(path, 'must not be empty');
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(doors).map(([exitKey, decisions]) => {
+        const doorPath = `${path}.${exitKey}`;
+        const record = expectRecord(decisions, doorPath);
+        if (Object.keys(record).length === 0) failProjectDocument(doorPath, 'must not be empty');
+        return [
+          exitKey,
+          Object.freeze(
+            Object.fromEntries(
+              Object.entries(record).map(([decisionKey, decision]) => [
+                decisionKey,
+                decodeGeneratedEncounterCustomization(
+                  expectRecord(decision, `${doorPath}.${decisionKey}`),
+                  `${doorPath}.${decisionKey}`,
+                ),
+              ]),
+            ),
+          ),
+        ];
+      }),
+    ),
+  );
 }

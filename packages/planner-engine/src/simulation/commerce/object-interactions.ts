@@ -184,12 +184,15 @@ export interface LockedDoorsInteraction {
     readonly action: import('../../authored-project/addresses').RoomActionSemanticAddress;
     /** Appends the press where the room's actions end; absent once it is pressed. */
     readonly append?: CommandOf<'InsertRoomAction'>;
-    /** The pressed door's fight, generated at its press; absent while unreached. */
+    /**
+     * The door's fight: generated at its press once pressed, or where its
+     * press would append before then; absent while that point is unreached.
+     */
     readonly encounter?: UnlockExitEncounterInteraction;
   }[];
 }
 
-/** A pressed locked door's fight and each declared decision with its authored value. */
+/** A locked door's fight and each declared decision with the door's authored value. */
 export interface UnlockExitEncounterInteraction {
   readonly selectedEncounterDefinitionKey: string;
   readonly label: string;
@@ -200,7 +203,7 @@ export interface UnlockExitEncounterInteraction {
     readonly value?: import('../../authored-project/model').AuthoredEncounterCustomization;
     readonly valueSupported: boolean;
     /** Restores the native roll; present while a value is authored. */
-    readonly reset?: CommandOf<'ReplaceUnlockExitCustomization'>;
+    readonly reset?: CommandOf<'ReplaceLockedExitCustomization'>;
   }[];
 }
 
@@ -221,7 +224,7 @@ export interface RoomObjectInteractionArtifacts {
   readonly challengeSwitchEncounterAt: (
     occurrence: OccurrenceAddress,
   ) => import('../encounters').GeneratedEncounterCandidateCapability | undefined;
-  /** A pressed locked door's fight generation capability at its press. */
+  /** A locked door's fight generation capability at its press, or where an unplaced press would append. */
   readonly unlockExitEncounterAt: (
     action: import('../../authored-project/addresses').RoomActionSemanticAddress,
   ) => import('../encounters').GeneratedEncounterCandidateCapability | undefined;

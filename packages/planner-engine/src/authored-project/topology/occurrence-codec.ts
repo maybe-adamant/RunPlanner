@@ -649,10 +649,14 @@ export function decodeRoomOccurrence(input: {
     const referencePath = `${rawOccurrence.path}.roomActions.order[${index}]`;
     if (!(lockedExits ?? []).includes(reference.exitKey))
       failProjectDocument(`${referencePath}.exitKey`, 'presses a door that is not locked');
-    for (const [decisionKey, value] of Object.entries(reference.customization ?? {})) {
+  }
+  for (const [exitKey, decisions] of Object.entries(encounters.customizationByLockedExit ?? {})) {
+    const doorPath = `${rawOccurrence.path}.encounters.customizationByLockedExit.${exitKey}`;
+    if (!(lockedExits ?? []).includes(exitKey))
+      failProjectDocument(doorPath, 'customizes the fight of a door that is not locked');
+    for (const [decisionKey, value] of Object.entries(decisions)) {
       const issue = unlockExitCustomizationIssue(catalog, room.gameName, decisionKey, value);
-      if (issue !== undefined)
-        failProjectDocument(`${referencePath}.customization.${decisionKey}`, issue);
+      if (issue !== undefined) failProjectDocument(`${doorPath}.${decisionKey}`, issue);
     }
   }
   if (

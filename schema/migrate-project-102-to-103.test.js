@@ -33,6 +33,11 @@ const stalePickup = JSON.stringify({
   acquisitionRole: 'source',
 });
 
+const gHost = (document) =>
+  document.route.biomes
+    .flatMap((biome) => biome.topology?.occurrences ?? [])
+    .find((occurrence) => occurrence.occurrenceId === 'golden-g-b1-e1');
+
 describe('schema 102 to 103 migration', () => {
   let step;
   let engine;
@@ -47,6 +52,44 @@ describe('schema 102 to 103 migration', () => {
     ));
   });
   const migrate = (document) => step.migrateProjectDocument(document, { catalog: engine.catalog });
+  /** The plan with the G opening's second door locked, pressed and its fight composed. */
+  const lockedDoorFight = (document) => {
+    const { catalog } = engine;
+    const project = engine.parseProjectDocument(JSON.stringify(document), catalog);
+    const biome = engine.createBiomeAddress(project.route.routeKey, 'G');
+    const occurrenceId = engine.createOccurrenceId('golden-g-b1-e1');
+    const occurrence = engine.createOccurrenceAddress(biome, occurrenceId);
+    const reference = { kind: 'unlockExit', exitKey: 'exit2' };
+    const action = engine.createRoomActionAddress(
+      biome,
+      occurrenceId,
+      engine.roomActionKey(reference),
+    );
+    const locked = engine.applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLockedExit',
+      occurrence,
+      exitKey: 'exit2',
+      locked: true,
+    });
+    const pressed = engine.applyProjectCommand(locked, catalog, {
+      kind: 'InsertRoomAction',
+      action,
+      reference,
+      index: gHost(locked).roomActions.order.length,
+    });
+    const capability = engine.unlockExitEncounterSupportForProjectEvaluationAssembly(
+      engine.simulateProjectAssembly(catalog, pressed),
+      action,
+    );
+    const customized = engine.applyProjectCommand(pressed, catalog, {
+      kind: 'ReplaceLockedExitCustomization',
+      occurrence,
+      exitKey: 'exit2',
+      decisionKey: capability.decisionKey,
+      value: capability.initialize(),
+    });
+    return JSON.parse(engine.encodeProjectDocument(customized));
+  };
 
   it('lifts by the version alone', () => {
     const current = checkpoint('underworld-fg');
@@ -84,6 +127,25 @@ describe('schema 102 to 103 migration', () => {
     }
     // The offline tool runs the same chain.
     assert.deepEqual(migrateProjectDocumentTo(at102(current)), migrate(at102(current)));
+  });
+
+  it('moves a press’s locked-door fight onto its door, losslessly', () => {
+    const current = lockedDoorFight(checkpoint('underworld-fg'));
+    const saved = at102(structuredClone(current));
+    const host = gHost(saved);
+    const fight = host.encounters.customizationByLockedExit.exit2;
+    delete host.encounters.customizationByLockedExit;
+    host.roomActions.order.find((row) => row.kind === 'unlockExit').customization = fight;
+    assert.deepEqual(step.liftProjectDocument(saved), current);
+    const migrated = migrate(saved);
+    assert.deepEqual(gHost(migrated).encounters.customizationByLockedExit, { exit2: fight });
+    assert.deepEqual(
+      gHost(migrated).roomActions.order.filter((row) => row.kind === 'unlockExit'),
+      [{ kind: 'unlockExit', exitKey: 'exit2' }],
+    );
+    assert.doesNotThrow(() =>
+      engine.parseProjectDocument(JSON.stringify(migrated), engine.catalog),
+    );
   });
 
   it('lifts by the version alone a plan its settlement leaves as it was', () => {

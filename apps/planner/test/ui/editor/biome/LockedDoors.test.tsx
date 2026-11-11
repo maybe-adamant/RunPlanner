@@ -60,6 +60,10 @@ describe('locked doors', () => {
     await user.click(lock());
     expect(hostRoom(application).lockedExits).toEqual(['exit2']);
     expect(lock().getAttribute('aria-pressed')).toBe('true');
+    // Its fight is customized on the door before the press, on the press row after it.
+    const customize = () =>
+      screen.queryAllByRole('button', { name: /Customize locked door fight/ });
+    expect(customize()).toHaveLength(1);
 
     const summary = () => screen.getByRole('list', { name: 'Door summary' });
     expect(within(summary()).getByRole('listitem', { name: /^Door 2 .* Locked$/ })).toBeTruthy();
@@ -77,7 +81,7 @@ describe('locked doors', () => {
       kind: 'unlockExit',
       exitKey: 'exit2',
     });
-    expect(screen.getByRole('button', { name: /Customize locked door fight/ })).toBeTruthy();
+    expect(customize()).toHaveLength(1);
 
     expect((await exitNames()).some((name) => name.startsWith('Door 2'))).toBe(true);
   });

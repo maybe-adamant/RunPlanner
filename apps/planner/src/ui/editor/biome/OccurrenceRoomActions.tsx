@@ -47,7 +47,8 @@ import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderH
 import { RoomAddArea, RoomAddEntry, type RoomAddAction, type RoomAddGroup } from './RoomAddMenu';
 import { useTimelineReorder } from './useTimelineReorder';
 import { DoorRerollRowReward, DoorsRerollEntry } from './RoomRerolls';
-import { UnlockedDoor, UnlockExitFightControl } from './UnlockExitFightControl';
+import { UnlockedDoor } from './DecisionWorkbench';
+import { UnlockExitFightControl } from './UnlockExitFightControl';
 import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
 import { doorsOpenToggle, wheelOfferChips } from './doorSummary';
 import { NemesisEventPending, NemesisInteractionSentence } from './NemesisEventEditor';

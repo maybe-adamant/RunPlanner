@@ -54,7 +54,7 @@ describe('locked doors in the structured workspace', () => {
     });
   });
 
-  it('presses a locked door from the Doors object and customizes its fight on the row', () => {
+  it('customizes a locked door’s fight on the door, then on its press row', () => {
     const project = createGoldenFGHIProject();
     const locked = apply(project, {
       kind: 'ReplaceLockedExit',
@@ -69,6 +69,19 @@ describe('locked doors in the structured workspace', () => {
     const lockedDoors = room(lockedWorkspace).lockedDoors!;
     expect(lockedDoors.doors[0]).toMatchObject({ locked: true });
     expect(lockedDoors.lockedAtLeave).toEqual(['exit2']);
+    // Before its press the door carries its fight, customized on the door.
+    const fight = lockedDoors.doors[0]!.fight;
+    expect(fight).toMatchObject({
+      definitionKey: 'GeneratedG_ExtraDoor',
+      exitKey: 'exit2',
+      customization: [{ key: 'generatedComposition' }],
+    });
+    const early = lockedWorkspace.interactions.unlockExitEncounters.get(fight!.interactionKey);
+    expect(early?.generatedAssessment).toBeDefined();
+    expect(early?.intentFor('generatedComposition', null).command).toMatchObject({
+      kind: 'ReplaceLockedExitCustomization',
+      exitKey: 'exit2',
+    });
     expect(lockedDoors.unlocks?.options).toEqual([{ exitKey: 'exit2', label: 'Unlock Door 2' }]);
     // The press is the Doors object's, never a generic Add action.
     const press = lockedWorkspace.interactions.roomObjectEntries
@@ -83,6 +96,7 @@ describe('locked doors in the structured workspace', () => {
     const summary = room(workspace);
     expect(summary.lockedDoors?.lockedAtLeave).toEqual([]);
     expect(summary.lockedDoors?.unlocks?.options).toEqual([]);
+    expect(summary.lockedDoors?.doors[0]?.fight).toBeUndefined();
     const row = summary.roomActions!.rows.find((candidate) => candidate.label === 'Unlock Door 2');
     expect(row?.unlockExitEncounter).toMatchObject({
       definitionKey: 'GeneratedG_ExtraDoor',
@@ -92,7 +106,9 @@ describe('locked doors in the structured workspace', () => {
       row!.unlockExitEncounter!.interactionKey,
     );
     expect(customization?.intentFor('generatedComposition', null).command).toMatchObject({
-      kind: 'ReplaceUnlockExitCustomization',
+      kind: 'ReplaceLockedExitCustomization',
+      occurrence: { occurrenceId: HOST },
+      exitKey: 'exit2',
       decisionKey: 'generatedComposition',
       value: null,
     });

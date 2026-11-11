@@ -765,15 +765,20 @@ doors observed locked when its doors opened. Only a door the host declares
 lockable may appear, never the first; absence means every door opened, and a
 leaf beside a `challengeSwitch` is rejected because the game never rolls both.
 Each locked door may be pressed once by an optional `unlockExit` room action
-keyed by its `exitKey`, in the doors-open window after every required action,
-which carries optional `customization` of its fight as a room phase's
-`customizationByPhase` entry; a press of a door that is not locked is
-rejected. A door or cage reroll of a locked door depends on that door's press.
+keyed by its `exitKey` and carrying nothing else, in the doors-open window
+after every required action; a press of a door that is not locked is
+rejected. The fight a press starts is an observation of the door, not of the
+press: `encounters.customizationByLockedExit` holds each locked door's optional
+fight decisions by exit key, as a room phase's `customizationByPhase` entry,
+whether or not the door is pressed, and only for a door in `lockedExits`. A
+door or cage reroll of a locked door depends on that door's press.
 `ReplaceLockedExit` locks or opens one door (refused on the first door, off a
-host and in a switch room; opening a door drops its press);
-`ReplaceChallengeSwitch` is refused while a door is locked;
-`ReplaceUnlockExitCustomization` edits the press's fight; the press itself is
-inserted, moved and removed as any optional room action. Each is one history
+host and in a switch room); opening a door ends it as an item, so its press and
+its fight go with it. `ReplaceChallengeSwitch` is refused while a door is
+locked. `ReplaceLockedExitCustomization` edits a locked door's fight, before
+or after its press; the press itself is inserted, moved and removed as any
+optional room action, and removing it keeps the door's fight. A room
+replaced by another loses its locks and their fights. Each is one history
 step. Leaving through a door still locked is a finding on the exit
 selection, never a refused selection. The game rules are owned by
 [G Game Rules](../biomes/G_GAME_RULES.md#locked-extra-exits).
