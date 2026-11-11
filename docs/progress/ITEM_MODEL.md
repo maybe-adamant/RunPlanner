@@ -162,7 +162,30 @@ C5b-4, Sea Star proc as an observation (no schema change):
   proc still removes a placed pickup. Import: `features.ts`
   `placeSeaStarDuplicate` must place the duplicate's pickup itself (an
   `InsertRoomAction` right after its source) instead of moving a row the
-  command no longer appends.
+  command no longer appends. Today (`features.ts`, the `duplicateIndex < 0`
+  branch) it returns true without placing anything, so an imported proc
+  leaves its duplicate live; fix it in the consumer pass.
+
+Wave A review follow-ups:
+
+- A Well or Pool reroll never takes an id the room's rows still name (a
+  removed reroll's purchase, sale, Twist result or pins), so a new reroll
+  cannot adopt an orphaned purchase; the live verb's `reference` and index
+  come from the authored order, as the command's do. Door, cage, wheel and
+  Hub reroll ids are named only by their own rows, so their allocation is
+  unchanged.
+- An edit that changes an item's source discards its same-room derived items
+  with their pickups in the same Undo step: a Sea Star duplicate when its
+  source is no longer produced or its offer changes, an Artificer replacement
+  also when its source leaves the Artificer (no longer kept dormant), and a
+  Nemesis result with its chain when the event's kind or contest result
+  changes. Consumers that swap a source and re-proc must re-author the
+  duplicate after the swap.
+- The plan's Shrine `rushed` and the Well's bought generations read the rows
+  the walk performs (ranked, non-stale), the walk's own input.
+- Run import test literal: `packages/run-import/test/import-surface-capture.test.ts`
+  still expects `{ kind: 'purchaseHermesShrineOffer', …, rushed: true }`; it
+  must expect the purchase followed by its `rushHermesShrineOffer` row.
 
 ## Inventory (summary of existence-vs-interaction)
 
