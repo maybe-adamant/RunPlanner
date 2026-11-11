@@ -155,19 +155,18 @@ describe('Hermes Shrine interaction', () => {
       document.route.biomes
         .flatMap((biome) => biome.topology?.occurrences ?? [])
         .find((occurrence) => occurrence.occurrenceId === shrine.occurrenceId)!.roomActions.order;
-    // The rush appends where the room's actions end.
+    // The rush enters directly after its purchase.
     expect(rush?.rush).toEqual({
       kind: 'SetHermesShrineRush',
       occurrence: shrine,
       generationKey: 'initial:secondLeft',
       rushed: true,
-      index: order(bought).length,
     });
     const rushed = apply(bought, rush!.rush);
-    expect(order(rushed).at(-1)).toEqual({
-      kind: 'rushHermesShrineOffer',
-      generationKey: 'initial:secondLeft',
-    });
+    expect(order(rushed).slice(-2)).toEqual([
+      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft' },
+      { kind: 'rushHermesShrineOffer', generationKey: 'initial:secondLeft' },
+    ]);
     expect(
       interactionsAt(rushed, shrine)?.hermesShrine?.rushes.map(
         (candidate) => candidate.generationKey,

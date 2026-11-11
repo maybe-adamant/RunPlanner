@@ -26,6 +26,8 @@ import { updateOccurrence } from './occurrence/mutation';
 import type { RoomActionCommand } from './types';
 import { reconcileRemovedOrMovedReroll } from './rerolls';
 import {
+  immediateFollowersInPlace,
+  movedRoomActionOrder,
   roomActionInsertionRefusal,
   roomActionOrderContextForOccurrence,
 } from '../room-actions/order-assessment';
@@ -208,6 +210,10 @@ export function applyRoomActionCommand(
   const existingIndex = order.findIndex(
     (reference) => roomActionKey(reference) === command.action.actionKey,
   );
+  const activeActions = () =>
+    domain === undefined
+      ? new Map()
+      : roomActionOrderContextForOccurrence(domain, occurrence).active;
 
   let nextOrder: RoomActionReference[];
   switch (command.kind) {
@@ -322,14 +328,19 @@ export function applyRoomActionCommand(
       if (existingIndex < 0) failCommand(command, 'room action is not ordered');
       requireIndex(command, command.toIndex, order.length - 1, 'toIndex');
       if (existingIndex === command.toIndex) return document;
-      nextOrder = [...order];
-      {
-        const [reference] = nextOrder.splice(existingIndex, 1);
-        if (reference === undefined) failCommand(command, 'room action disappeared while moving');
-        nextOrder.splice(command.toIndex, 0, reference);
-      }
+      nextOrder = [
+        ...movedRoomActionOrder(order, existingIndex, command.toIndex, activeActions()).order,
+      ];
+      if (nextOrder.every((reference, index) => reference === order[index])) return document;
       break;
   }
+  // A rush settles with its purchase, so nothing parts the pair.
+  if (
+    (command.kind === 'InsertRoomAction' || command.kind === 'MoveRoomAction') &&
+    immediateFollowersInPlace(nextOrder, activeActions()) <
+      immediateFollowersInPlace(order, activeActions())
+  )
+    failCommand(command, 'a Shrine rush stays directly after its purchase');
 
   let nextOccurrence = {
     ...occurrence,

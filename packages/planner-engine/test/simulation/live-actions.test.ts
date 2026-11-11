@@ -405,6 +405,42 @@ describe('live actions at a gap', () => {
     expect(beforeSpawn).toEqual([]);
   });
 
+  it('offers a bought Shrine item’s rush only directly after its purchase', () => {
+    // [wheel choice, wheel pickup, buy first, rush first, buy second left, first's pickup]
+    const loaded = loadSurfaceNOHermesShrineDeliveryCheckpoint();
+    const project = applyProjectCommand(loaded, catalog, {
+      kind: 'PurchaseHermesShrineOffer',
+      occurrence: oShrine,
+      generationKey: 'initial:secondRight',
+    });
+    const live = liveActionsForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+      oShrine,
+    )!;
+    const rushKey = roomActionKey({
+      kind: 'rushHermesShrineOffer',
+      generationKey: 'initial:secondLeft',
+    });
+    const purchaseIndex = roomOrder(project, oShrine).findIndex(
+      (reference) =>
+        reference.kind === 'purchaseHermesShrineOffer' &&
+        reference.generationKey === 'initial:secondLeft',
+    );
+    const gaps = live.gaps.flatMap((gap) =>
+      gap.items.some(
+        (item) =>
+          item.kind === 'object' &&
+          item.actions.some((action) => roomActionKey(action.reference) === rushKey),
+      )
+        ? [gap.index]
+        : [],
+    );
+    // Bought before the second right item, its rush stands right after its own purchase.
+    expect(purchaseIndex).toBeLessThan(roomOrder(project, oShrine).length - 1);
+    expect(gaps).toEqual([purchaseIndex + 1]);
+  });
+
   it('closes a required row’s window at its deadline, before the room’s last gap', () => {
     // Placed required rows whose window ends before the room's last gap: the walk takes the
     // row at its deadline and refuses it at the next distinct gap.

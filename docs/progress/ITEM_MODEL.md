@@ -141,12 +141,18 @@ C5b-3, Shrine rush as its own row (schema 103 shape):
   (authoring-only dependency, post-outgoing window), and a same-room pickup
   follows the rush. `SetHermesShrinePurchaseRush` is replaced by
   `SetHermesShrineRush { occurrence, generationKey, rushed, index? }`
-  (default: directly after the purchase); `PurchaseHermesShrineOffer` loses
+  (directly after the purchase); `PurchaseHermesShrineOffer` loses
   `rushed` and only buys. The Shrine object interaction lists `offers` (Buy)
-  and `rushes` (Rush, appended where the room's actions end); the live product
+  and `rushes` (Rush); the live product
   offers `rush` on a bought, unrushed item. Gold prices the order on the
   purchase row and the rush on the rush row. The rush settles with its
-  purchase, so the walk and the wire are unchanged. Import: `commerce.ts`
+  purchase, so the walk and the wire are unchanged.
+- Until C5d the rush row stays directly after its purchase (an immediate
+  `afterAction` dependency): `SetHermesShrineRush` accepts no other index,
+  the live verb and the Shrine interaction offer only that gap (its command
+  carries no index), a moved purchase carries its rush, and insertions or
+  moves that would part the pair are refused. C5d revisits this when the
+  rush becomes its own triggered consequence. Import: `commerce.ts`
   rushes with the new command; `action-order.ts` reads the rush row.
 
 C5b-4, Sea Star proc as an observation (no schema change):
