@@ -6,16 +6,21 @@ import { beginBiomeKeepsakeState, createKeepsakeState } from '../../src/simulati
 import { consumeFigLeafUse } from '../../src/simulation/keepsakes/encounter-effects';
 import {
   applyProjectCommand,
+  createAetosPhaseAddress,
   createEncounterPhaseAddress,
   createFigLeafPhaseAddress,
+  createGorgonPhaseAddress,
   createPostbossKeepsakeSelectionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
 } from '../../src/authored-project';
 import {
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
+  encounterPhaseGorgonSupportForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
 } from '../../src/simulation';
@@ -577,6 +582,111 @@ describe('Fig Leaf state contract', () => {
       true,
     );
     expect(p.history.events.some((event) => event.kind === 'roomCommitted')).toBe(true);
+  });
+
+  it('carries a P pre-combat skip through the later phase for Aetos, Gorgon and its own skip', () => {
+    const phaseOf = (gameName: string, batch: number, phaseKey: string) =>
+      createEncounterPhaseAddress(
+        pBiome,
+        { kind: 'occurrence', occurrenceId: pOccurrenceId(gameName, batch, 1) },
+        phaseKey,
+      );
+    const intro = phaseOf('P_Combat03', 1, 'Intro');
+    const combat = phaseOf('P_Combat03', 1, 'Combat');
+    const nextCombat = phaseOf('P_Combat02', 2, 'Combat');
+    // Fig Leaf's run trait outlives the swap, so Gorgon is pending beside it in P.
+    let skipped = applyProjectCommand(withFigLeaf(loadSurfaceNOPProject()), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(
+        createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-preboss:postboss')),
+      ),
+      keepsakeKey: 'AthenaEncounterKeepsake',
+    });
+    expect(
+      encounterPhaseGorgonSupportForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, skipped),
+        combat,
+      ),
+    ).toMatchObject({ supported: true });
+    skipped = applyProjectCommand(skipped, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: intro,
+      value: true,
+    });
+
+    // The later phase runs skipped, so the picker offers no Aetos wave and no Gorgon.
+    const skipOnly = simulateProjectAssembly(catalog, skipped);
+    expect(skipOnly.evaluation.status).toBe('valid');
+    expect(
+      encounterPhaseSequenceStatusForProjectEvaluationAssembly(skipOnly, combat),
+    ).toMatchObject({
+      execution: 'skippedByFigLeaf',
+      aetos: { waves: [], reason: 'skipped' },
+    });
+    expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(skipOnly, combat)).toMatchObject(
+      { supported: false },
+    );
+
+    const aetos = simulateProjectAssembly(
+      catalog,
+      applyProjectCommand(skipped, catalog, { kind: 'ReplaceAetosWave', phase: combat, value: 2 }),
+    );
+    expect(aetos.evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'aetosAppearanceUnavailable',
+        origin: createAetosPhaseAddress(combat),
+        evidence: expect.objectContaining({ reason: 'skipped', wave: 2 }),
+      }),
+    );
+
+    // Gorgon stays pending through the skipped room and activates at the next combat.
+    let gorgon = applyProjectCommand(skipped, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase: nextCombat,
+      value: true,
+    });
+    gorgon = applyProjectCommand(gorgon, catalog, {
+      kind: 'ReplaceGorgonAthenaOffer',
+      trait: createTraitOfferAddress(createGorgonPhaseAddress(nextCombat), 'gorgonAthena'),
+      value: {
+        traitKeys: [
+          'InvulnerabilityDashBoon',
+          'RetaliateInvulnerabilityBoon',
+          'FocusLastStandBoon',
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const carried = simulateProjectAssembly(catalog, gorgon);
+    expect(
+      encounterPhaseGorgonSupportForProjectEvaluationAssembly(carried, nextCombat),
+    ).toMatchObject({ supported: true });
+    // The activated Athena now waits only for its pickup to be placed in that room.
+    expect(carried.evaluation.findings).toEqual([
+      expect.objectContaining({
+        code: 'roomActionPlacementRequired',
+        origin: expect.objectContaining({
+          occurrenceId: pOccurrenceId('P_Combat02', 2, 1),
+          actionKey: JSON.stringify(['interactGorgon', 'Combat']),
+        }),
+      }),
+    ]);
+
+    // The later phase is not first, so a skip authored on it is unavailable.
+    const later = simulateProjectAssembly(
+      catalog,
+      applyProjectCommand(skipped, catalog, {
+        kind: 'ReplaceFigLeafSkip',
+        phase: combat,
+        value: true,
+      }),
+    );
+    expect(later.evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'figLeafSkipUnavailable',
+        origin: createFigLeafPhaseAddress(combat),
+      }),
+    );
   });
 
   it('retains an authored N side-room skip and reports the declaration blocker at its phase owner', () => {
