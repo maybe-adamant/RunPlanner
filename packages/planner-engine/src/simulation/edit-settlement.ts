@@ -1238,18 +1238,19 @@ function settleProject(options: {
     }
     // A row with no context or source has nothing to repair: the edit that orphans it removes it.
     const replaced = replacedItemRowsToRemove(catalog, edited, priorReplaced, assembly.project);
-    // The entry of a row on a replaced item holds the new item's observation: only the row goes.
-    const replacedRows = new Set(
-      replaced.map(
-        ({ owner, reference }) => `${semanticAddressKey(owner)}|${roomActionKey(reference)}`,
-      ),
-    );
+    const sourceGone = upgrade ? sourceGonePickups(catalog, assembly, evaluate) : [];
+    const rowKey = (row: { owner: OccurrenceAddress; reference: RoomActionReference }) =>
+      `${semanticAddressKey(row.owner)}|${roomActionKey(row.reference)}`;
+    // The entry of a row on a replaced item holds the new item's observation: only the row
+    // goes. A pickup whose source is gone takes its payload with it, whatever it recorded.
+    const sourceGoneRows = new Set(sourceGone.map(rowKey));
+    const replacedRows = new Set(replaced.map(rowKey).filter((key) => !sourceGoneRows.has(key)));
     const stale = [
       ...staleRowsToRemove(edited, beforeRosters, assembly, upgrade),
       ...replaced,
       ...sourceGoneShopRows(before, beforeArtifacts, artifacts, assembly, upgrade),
       ...cageGoneRerolls(before, assembly, upgrade),
-      ...(upgrade ? sourceGonePickups(catalog, assembly, evaluate) : []),
+      ...sourceGone,
     ];
     if (stale.length === 0) return settled(assembly);
     const pass: { owner: OccurrenceAddress; reference: RoomActionReference }[] = [];

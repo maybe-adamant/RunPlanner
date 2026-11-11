@@ -26,7 +26,11 @@ import {
   type ProjectDocument,
   type RerollTarget,
 } from '@run-planner/engine/authored-project';
-import { settleProjectUpgrade } from '@run-planner/engine/project-migration';
+import {
+  settleProjectUpgrade,
+  stampRoomActionItemContent,
+} from '@run-planner/engine/project-migration';
+import { roomActionsOnReplacedItems } from '../../src/authored-project/room-actions/replaced-items';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import {
   createCompleteFGProject,
@@ -74,6 +78,9 @@ const removedIn = (settled: ReturnType<typeof upgrade>, room: OccurrenceAddress)
     ?.actions.map(roomActionKey);
 type RawDocument = { route: { biomes: { topology: { occurrences: RawRoom[] } | null }[] } };
 type RawRoom = { occurrenceId: string; roomActions: { order: Record<string, unknown>[] } };
+type RawSites = {
+  acquisitionSites?: Record<string, { pickupEntries?: Record<string, unknown> }>;
+};
 const raw = (project: ProjectDocument) => JSON.parse(encodeProjectDocument(project)) as RawDocument;
 const rawRoom = (document: RawDocument, occurrenceId: string) =>
   document.route.biomes
@@ -240,6 +247,35 @@ describe('upgrade settlement of a plan saved under earlier rules', () => {
         expect(settled.fault).toBeUndefined();
         expect(drop(settled.assembly.project)).toEqual([]);
         expect(removedIn(settled, p3)).toEqual(drop(project));
+      });
+
+      it('goes with its payload: the lift records its row on the item it holds', () => {
+        // A 102 plan's rows record no content; the lift stamps each from the item it holds now,
+        // so a source-gone drop is never also a replaced row whose payload would be kept.
+        const stored = raw(lostDrop()) as unknown as {
+          route: { biomes: { topology: { occurrences: RawRoom[] } | null }[] };
+        };
+        const strip = (value: unknown): unknown =>
+          JSON.parse(JSON.stringify(value), (key, entry: unknown) =>
+            key === 'content' ? undefined : entry,
+          );
+        const lifted = decodeProjectDocument(
+          stampRoomActionItemContent(strip(stored), catalog) as never,
+          catalog,
+        );
+        const row = rawRoom(raw(lifted), p3.occurrenceId).roomActions.order.find((reference) =>
+          String(reference.entryKey).includes('clockedTraitGenerated:'),
+        )!;
+        const entry = (document: ProjectDocument) =>
+          (rawRoom(raw(document), p3.occurrenceId) as unknown as RawSites).acquisitionSites?.[
+            String(row.siteKey)
+          ]?.pickupEntries?.[String(row.entryKey)];
+        expect(entry(lifted)).toBeDefined();
+        expect(roomActionsOnReplacedItems(lifted, catalog)).toEqual([]);
+        const settled = upgrade(lifted);
+        expect(settled.fault).toBeUndefined();
+        expect(drop(settled.assembly.project)).toEqual([]);
+        expect(entry(settled.assembly.project)).toBeUndefined();
       });
 
       it('stays where its producer is held elsewhere in the walk without it', () => {
