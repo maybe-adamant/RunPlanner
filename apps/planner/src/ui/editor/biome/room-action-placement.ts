@@ -41,7 +41,7 @@ function bannerDestination(
   anchorIndex: number,
 ): { readonly label: string; readonly row: string; readonly edge: 'after' } | undefined {
   const matches = banners.filter(
-    (banner) => banner.kind !== 'encounterStart' && banner.dropIndex === anchorIndex,
+    (banner) => banner.kind !== 'encounterStarted' && banner.dropIndex === anchorIndex,
   );
   const banner = matches.find((candidate) => candidate.kind === 'doorsOpened') ?? matches[0];
   return banner === undefined

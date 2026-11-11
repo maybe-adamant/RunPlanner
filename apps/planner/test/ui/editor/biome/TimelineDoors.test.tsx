@@ -394,11 +394,12 @@ describe('a room’s last Timeline row', () => {
     const details = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(details).getByRole('tab', { name: 'Intro Timeline' }));
     expect(within(details).queryByRole('listitem', { name: 'Leave room' })).toBeNull();
-    expect(within(details).getByRole('listitem', { name: 'Select wheel' })).toBeTruthy();
+    expect(within(details).queryByLabelText('Doors open')).toBeNull();
+    // The last phase opens its own wheel, then its doors.
     await view.user.click(within(details).getByRole('tab', { name: 'Combat 1 Timeline' }));
+    expect(within(details).getByRole('listitem', { name: 'Select wheel' })).toBeTruthy();
     expect(within(details).getByLabelText('Doors open')).toBeTruthy();
     expect(within(details).getByRole('listitem', { name: 'Leave room' })).toBeTruthy();
-    expect(within(details).queryByRole('listitem', { name: 'Select wheel' })).toBeNull();
   });
 });
 

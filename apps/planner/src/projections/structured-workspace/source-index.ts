@@ -214,6 +214,10 @@ export interface WorkspaceBiomeSource {
   readonly encounterOutcomes: (
     occurrence: OccurrenceAddress,
   ) => readonly import('@run-planner/engine/simulation').EncounterOutcome[] | undefined;
+  /** The room's Timeline with each encounter's settled markers; undefined while unentered. */
+  readonly roomLifecycleTimeline: (
+    occurrence: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').RoomLifecycleTimeline | undefined;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
@@ -814,6 +818,7 @@ function createWorkspaceBiomeSource(
   roomLayout: WorkspaceBiomeSource['roomLayout'],
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'],
   encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'],
+  roomLifecycleTimeline: WorkspaceBiomeSource['roomLifecycleTimeline'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -1130,6 +1135,7 @@ function createWorkspaceBiomeSource(
     roomLayout,
     spawnedLoot,
     encounterOutcomes,
+    roomLifecycleTimeline,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -1229,6 +1235,7 @@ export function createWorkspaceProjectSourceIndex(
   roomLayout: WorkspaceBiomeSource['roomLayout'] = () => undefined,
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'] = () => undefined,
   encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'] = () => undefined,
+  roomLifecycleTimeline: WorkspaceBiomeSource['roomLifecycleTimeline'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1320,6 +1327,7 @@ export function createWorkspaceProjectSourceIndex(
             roomLayout,
             spawnedLoot,
             encounterOutcomes,
+            roomLifecycleTimeline,
           ),
         ),
       ),

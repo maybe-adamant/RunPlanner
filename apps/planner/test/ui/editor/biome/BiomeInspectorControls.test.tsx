@@ -584,7 +584,7 @@ describe('Biome inspector controls', () => {
       document.getElementById(semanticOwnerControlElementId(owner)),
     );
     expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
-    expect(within(inspector).getByText('Encounter started')).toBeTruthy();
+    expect(within(inspector).getByLabelText('Encounter')).toBeTruthy();
     // The boss defeat is the fight's outcome, which leads with the Judgment.
     expect(within(inspector).getAllByText('Boss defeated')).toHaveLength(1);
     const timeline = within(inspector).getByRole('region', { name: 'Room Timeline' });

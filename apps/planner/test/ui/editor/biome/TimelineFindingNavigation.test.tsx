@@ -118,7 +118,7 @@ it.each([
     await view.user.click(findings.container.querySelector('button')!);
     expect(
       screen
-        .getByRole('tab', { name: kind === 'ship' ? 'Intro Timeline' : 'Room Timeline' })
+        .getByRole('tab', { name: kind === 'ship' ? 'Combat 1 Timeline' : 'Room Timeline' })
         .getAttribute('aria-selected'),
     ).toBe('true');
     const destination = workspace.focusByOwner.get(semanticAddressKey(issue!.owner))!;
@@ -156,7 +156,7 @@ it.each([
       expect(
         screen
           .getByRole('tab', {
-            name: kind === 'ship' ? 'Intro Timeline' : 'Room Timeline',
+            name: kind === 'ship' ? 'Combat 1 Timeline' : 'Room Timeline',
           })
           .getAttribute('aria-selected'),
       ).toBe('true');

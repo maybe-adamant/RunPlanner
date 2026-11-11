@@ -123,7 +123,7 @@ export function DoorsOpenBanner({
     <>
       <TimelineRow
         aria-label={label}
-        data-doors-open
+        {...(doors.noun === 'offer' ? { 'data-wheels-open': '' } : { 'data-doors-open': '' })}
         kind="boundary"
         label={
           <>

@@ -43,28 +43,23 @@ function shipWorkbenchPresentation(
     }
     return index;
   };
-  const wheelForNextPhase = (phaseIndex: number): WorkspaceRewardWheelDescriptor | undefined => {
-    const nextPhase = roomLocal.phases[phaseIndex + 1];
-    return nextPhase?.rewardWheelKey === undefined
+  const wheelForPhase = (phaseIndex: number): WorkspaceRewardWheelDescriptor | undefined => {
+    const wheelKey = roomLocal.phases[phaseIndex]?.rewardWheelKey;
+    return wheelKey === undefined
       ? undefined
-      : activeWheels.find((wheel) => wheel.key === nextPhase.rewardWheelKey);
+      : activeWheels.find((wheel) => wheel.key === wheelKey);
   };
   const boundaryPhaseIndex = (boundary: WorkspaceRoomLifecycleBoundary): number => {
     switch (boundary.kind) {
       case 'roomEntered':
         return 0;
+      // A phase's wheels open as its encounter begins.
+      case 'wheelsOpen':
       case 'encounterBegun':
       case 'encounterStarted':
       case 'encounterEnd':
-        return phaseIndexForKey(boundary.phaseKey);
       case 'bossDefeated':
         return phaseIndexForKey(boundary.phaseKey);
-      case 'wheelsOpen': {
-        const targetIndex = roomLocal.phases.findIndex(
-          (phase) => phase.rewardWheelKey === boundary.wheelKey,
-        );
-        return targetIndex <= 0 ? 0 : targetIndex - 1;
-      }
       case 'doorsOpened':
         return roomLocal.phases.length - 1;
     }
@@ -83,16 +78,17 @@ function shipWorkbenchPresentation(
   const repairRows: WorkspaceRoomActionRow[] = [];
   const phaseIndexForWindow = (window: WorkspaceRoomActionRow['window']): number => {
     switch (window.kind) {
-      case 'encounterEnd':
-        return roomLocal.phases.findIndex((phase) => phase.key === window.phaseKey);
+      case 'encounterEnd': {
+        // A phase's end-effect pickups are due once the next phase's wheels open.
+        const index = roomLocal.phases.findIndex((phase) => phase.key === window.phaseKey);
+        return index >= 0 && roomLocal.phases[index + 1]?.rewardWheelKey !== undefined
+          ? index + 1
+          : index;
+      }
       case 'shipPostCombat':
       case 'shipWheelsOpen':
-      case 'shipPreCombat': {
-        const index = roomLocal.phases.findIndex(
-          (phase) => phase.rewardWheelKey === window.wheelKey,
-        );
-        return index < 0 ? -1 : window.kind === 'shipPostCombat' ? index : Math.max(0, index - 1);
-      }
+      case 'shipPreCombat':
+        return roomLocal.phases.findIndex((phase) => phase.rewardWheelKey === window.wheelKey);
       case 'standard':
         return window.phase === 'beforeCombat' ? 0 : roomLocal.phases.length - 1;
       case 'fields':
@@ -122,7 +118,8 @@ function shipWorkbenchPresentation(
         const phaseIndex = boundaryPhaseIndex(entry.boundary);
         phaseBoundaryEntries[phaseIndex]!.push(entry);
         phaseTimelineEntries[phaseIndex]!.push(entry);
-        if (entry.boundary.kind === 'encounterBegun') currentPhaseIndex = phaseIndex;
+        if (entry.boundary.kind !== 'roomEntered' && entry.boundary.kind !== 'doorsOpened')
+          currentPhaseIndex = phaseIndex;
         lastPhaseIndex = phaseIndex;
         continue;
       }
@@ -198,7 +195,7 @@ function shipWorkbenchPresentation(
   const phases: WorkspaceShipPhasePresentation[] = roomLocal.phases.map((phase, index) => {
     const phaseWaitsOn = waitsOn(index);
     const encounter = encounterPhases.find((candidate) => candidate.address.phaseKey === phase.key);
-    const wheel = wheelForNextPhase(index);
+    const wheel = wheelForPhase(index);
     return Object.freeze({
       tab: roomTabForPhase(roomLocal, phase.key),
       actionRows: Object.freeze(phaseRows[index]!),

@@ -40,7 +40,9 @@ function timelineRows(): HTMLElement[] {
 }
 
 const doorsOpenRow = () =>
-  timelineRows().find((row) => row.matches('[data-doors-open], [data-boundary-kind="cleanup"]'))!;
+  timelineRows().find((row) =>
+    row.matches('[data-doors-open], [data-boundary-kind="doorsOpened"]'),
+  )!;
 
 function mapDoor(doorIndex: number): HTMLElement {
   const map = screen

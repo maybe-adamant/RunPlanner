@@ -85,10 +85,10 @@ async function possibleRewards(resolver: WorkspaceRewardOfferResolver) {
 }
 
 describe('ship wheels on their phase Timeline', () => {
-  it('opens the wheel after the Intro on the Intro Timeline, with its pool and offer targets', () => {
+  it('opens the wheel on its own phase Timeline, with its pool and offer targets', () => {
     const projected = projectStructuredWorkspaceFixture(cardHolder());
     const phase = wheelPhase(projected);
-    expect(phase).toMatchObject({ tab: 'shipIntroActions', wheel: { key: 'wheel1' } });
+    expect(phase).toMatchObject({ tab: 'shipCombat1Actions', wheel: { key: 'wheel1' } });
     expect(phase.wheelRerolls).toMatchObject({ poolRemaining: 10, targetNoun: 'offer', rows: [] });
     // The Timeline keeps only its Wheels open marker.
     const wheelsOpen = phase.timeline.find(
@@ -98,7 +98,7 @@ describe('ship wheels on their phase Timeline', () => {
     expect(wheelsOpen?.kind === 'boundary' ? wheelsOpen.supplement : undefined).toBeUndefined();
     for (const owner of [wheel, createRewardWheelOfferAddress(o, ship, 'wheel1', 'offer1')])
       expect(projected.workspace.focusByOwner.get(semanticAddressKey(owner))).toMatchObject({
-        roomTab: 'shipIntroActions',
+        roomTab: 'shipCombat1Actions',
       });
     const interaction = projected.workspace.interactions.roomRerolls.get(
       phase.wheelRerolls!.interactionKey,
@@ -142,7 +142,7 @@ describe('ship wheels on their phase Timeline', () => {
     expect(phase.wheel?.offers[0]?.control.rerolledOffer).toEqual(reward);
     const press = phase.wheelRerolls!.rows[0]!;
     expect(projected.workspace.focusByOwner.get(semanticAddressKey(press.address))).toMatchObject({
-      roomTab: 'shipIntroActions',
+      roomTab: 'shipCombat1Actions',
     });
     // The press names its offer, the reward it replaces and the offers once it lands.
     expect(press.doors).toMatchObject({
@@ -196,7 +196,7 @@ describe('ship wheels on their phase Timeline', () => {
           : [],
       ),
     );
-    expect(wheelsOpen).toEqual([['wheel1'], ['wheel2'], []]);
+    expect(wheelsOpen).toEqual([[], ['wheel1'], ['wheel2']]);
     for (const phase of room.workbench.phases) {
       expect(phase.checkpoints.map((checkpoint) => checkpoint.key)).not.toContainEqual(
         expect.stringMatching(/^nextPhase/),
@@ -255,33 +255,40 @@ describe('ship wheels on their phase Timeline', () => {
     if (node?.kind !== 'occurrenceWorkbench' || node.room.workbench.kind !== 'ship')
       throw new Error('the ship room is not projected');
     const actions = node.room.roomActions!;
-    const combatOne = node.room.workbench.phases.find((phase) => phase.key === 'Combat1')!;
-    const sequence = combatOne.timeline.flatMap((entry) => {
-      if (entry.kind === 'boundary')
-        return entry.boundary.kind === 'encounterEnd' || entry.boundary.kind === 'wheelsOpen'
-          ? [entry.boundary.kind]
-          : [];
-      if (entry.kind === 'spawned') return [`spawned ${entry.moment}`];
-      if (entry.kind !== 'action') return [];
-      const reference = actions.rows.find((row) => row.key === entry.actionKey)?.reference;
-      switch (reference?.kind) {
-        case 'interactWheelReward':
-          return ['collect reward'];
-        case 'interactEncounter':
-          return ['talk'];
-        case 'interactAcquisitionEntry':
-          return reference.siteKey === 'hermesShrineDelivery' ? ['collect delivery'] : [];
-        case 'chooseRewardWheel':
-          return ['select wheel'];
-        default:
-          return [];
-      }
-    });
-    // Encounter ended spawns the wheel reward; the delivery arrives as the next wheel opens.
-    const tail = sequence.slice(sequence.indexOf('encounterEnd'));
+    const sequenceOf = (key: string) =>
+      node.room.workbench.kind !== 'ship'
+        ? []
+        : node.room.workbench.phases
+            .find((phase) => phase.key === key)!
+            .timeline.flatMap((entry) => {
+              if (entry.kind === 'boundary')
+                return entry.boundary.kind === 'encounterEnd' ||
+                  entry.boundary.kind === 'wheelsOpen'
+                  ? [entry.boundary.kind]
+                  : [];
+              if (entry.kind === 'spawned') return [`spawned ${entry.moment}`];
+              if (entry.kind !== 'action') return [];
+              const reference = actions.rows.find((row) => row.key === entry.actionKey)?.reference;
+              switch (reference?.kind) {
+                case 'interactWheelReward':
+                  return ['collect reward'];
+                case 'interactEncounter':
+                  return ['talk'];
+                case 'interactAcquisitionEntry':
+                  return reference.siteKey === 'hermesShrineDelivery' ? ['collect delivery'] : [];
+                case 'chooseRewardWheel':
+                  return ['select wheel'];
+                default:
+                  return [];
+              }
+            });
+    // Encounter ended spawns the wheel reward; the delivery arrives as the next wheel opens,
+    // in the next phase.
+    const combatOne = sequenceOf('Combat1');
+    const tail = combatOne.slice(combatOne.indexOf('encounterEnd'));
     expect(tail.slice(0, 2)).toEqual(['encounterEnd', 'spawned encounterEnd']);
-    expect([...tail.slice(2, 4)].sort()).toEqual(['collect reward', 'talk']);
-    expect(tail.slice(4)).toEqual([
+    expect([...tail.slice(2)].sort()).toEqual(['collect reward', 'talk']);
+    expect(sequenceOf('Combat2').slice(0, 4)).toEqual([
       'wheelsOpen',
       'spawned wheelsOpen',
       'collect delivery',

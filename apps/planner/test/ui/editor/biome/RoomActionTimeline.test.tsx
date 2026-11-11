@@ -617,7 +617,7 @@ describe('OccurrenceRoomActions', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
     const starts = [1, 2, 3].map((slot) =>
-      within(timeline).getByLabelText(`Encounter started, Cage ${slot}`),
+      within(timeline).getByLabelText(`Encounter, Cage ${slot}`),
     );
     const ends = Array.from(
       timeline.querySelectorAll<HTMLElement>('[data-lifecycle-boundary^="encounterEnd:"]'),
@@ -722,7 +722,7 @@ describe('OccurrenceRoomActions', () => {
     expect(screen.getByRole('group', { name: 'Combat order' })).toBeTruthy();
     // Each cage start banner names its encounter read-only; identity stays in Overview.
     for (const slot of [1, 2, 3]) {
-      const start = screen.getByLabelText(`Encounter started, Cage ${slot}`);
+      const start = screen.getByLabelText(`Encounter, Cage ${slot}`);
       expect(within(start).getByRole('img', { name: `Cage ${slot}` })).toBeTruthy();
     }
     for (const cage of ['Cage 1', 'Cage 2', 'Cage 3'])
@@ -763,7 +763,9 @@ describe('OccurrenceRoomActions', () => {
     // The start banners, in clear order, carry their cages' slots.
     const cageStartSlots = () =>
       Array.from(
-        document.querySelectorAll('[data-lifecycle-boundary^="encounterStart:"] [role="img"]'),
+        document.querySelectorAll(
+          '[data-lifecycle-boundary^="encounterStarted:"] [role="img"], [data-lifecycle-boundary^="encounterBegun:"] [role="img"]',
+        ),
         (slot) => slot.getAttribute('aria-label'),
       ).filter((name) => name?.startsWith('Cage '));
     expect(cageStartSlots()).toEqual(['Cage 3', 'Cage 2', 'Cage 1']);
@@ -1582,9 +1584,8 @@ describe('OccurrenceRoomActions', () => {
 
     const icarus = rowFor('Talk to Icarus');
     const moveIcarus = within(icarus).getByRole('button', { name: 'Reorder Talk to Icarus' });
-    // Combat 2's wheel offer is unset, so the walk stops at Combat 1's Wheels open and
-    // the Combat 2 wheel choice it blocks stands at that stop as its repair.
-    expect(within(combatOne).getByText('Choose Combat 2 wheel')).toBeTruthy();
+    // Combat 2's wheels open on its own phase, so its unset wheel stops the walk there.
+    expect(within(combatOne).queryByText('Choose Combat 2 wheel')).toBeNull();
     const icarusRow = projected.room.roomActions!.rows.find(
       (row) => row.key === icarus.dataset.roomActionKey,
     )!;

@@ -202,7 +202,8 @@ function momentLabel(moment: SpawnMoment): string {
 function entryIdentity(entry: TimelineEntry): string | undefined {
   switch (entry.kind) {
     case 'boundary':
-      return `boundary:${entry.boundary.kind}:${'phaseKey' in entry.boundary ? entry.boundary.phaseKey : 'wheelKey' in entry.boundary ? entry.boundary.wheelKey : ''}`;
+      // Wheels open is known by its wheel, every other encounter event by its phase.
+      return `boundary:${entry.boundary.kind}:${entry.boundary.kind === 'wheelsOpen' ? entry.boundary.wheelKey : 'phaseKey' in entry.boundary ? entry.boundary.phaseKey : ''}`;
     case 'action':
       return `action:${entry.actionKey}`;
     case 'automaticEffect':
@@ -232,8 +233,13 @@ function momentAnchor(
     case 'roomEntered':
     case 'deliveryFlush':
       return first(entered);
+    // Its Encounter, or its Combat where the two show as one marker.
     case 'encounterBegun':
-      return first(['after', boundaryAt('encounterBegun', phase)], entered);
+      return first(
+        ['after', boundaryAt('encounterBegun', phase)],
+        ['after', boundaryAt('encounterStarted', phase)],
+        entered,
+      );
     case 'encounterEnd':
       return first(
         ['after', boundaryAt('encounterEnd', phase)],

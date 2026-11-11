@@ -1084,15 +1084,16 @@ export function activeEncounterPhasesForOwner(
         ...(fieldsPassive && nemesisEvent === undefined
           ? {}
           : {
-              // Nemesis keeps the exits locked until answered, so her event has its own start.
+              // Nemesis keeps the exits locked until answered: her talk row hosts her event.
               timelineAnchor:
-                nemesisEvent === undefined &&
-                (fieldsPassive ||
-                  (customizable &&
-                    selectedDefinition !== undefined &&
-                    !isCombatBearingEncounterPhaseKind(selectedDefinition.kind)))
-                  ? ('roomEntered' as const)
-                  : ('encounterStart' as const),
+                nemesisEvent !== undefined
+                  ? ('interaction' as const)
+                  : fieldsPassive ||
+                      (customizable &&
+                        selectedDefinition !== undefined &&
+                        !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
+                    ? ('roomEntered' as const)
+                    : ('encounter' as const),
             }),
         ...(aetosWave !== undefined || (aetosSupport?.waves.length ?? 0) > 0
           ? {

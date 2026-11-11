@@ -308,7 +308,7 @@ export const galleryCases: readonly GalleryCase[] = [
     label: 'Incoming boon with its offer picked',
     shows: [
       'room entered',
-      'encounter start/end',
+      'Encounter, gate row, Combat, Encounter ended',
       'incoming reward',
       'trait offer picked + dimmed',
     ],
@@ -395,14 +395,14 @@ export const galleryCases: readonly GalleryCase[] = [
   {
     id: 'gorgon-athena',
     label: 'Gorgon Athena offer',
-    shows: ['Gorgon offer', 'encounter start with Gorgon'],
+    shows: ['Gorgon offer', 'Combat with Gorgon'],
     project: loadUnderworldGorgonAthenaCheckpoint,
     target: room('G', 'golden-g-b1-e1'),
   },
   {
     id: 'fig-leaf-skip',
-    label: 'Encounter start with a Fig Leaf skip',
-    shows: ['encounter start with Fig Leaf'],
+    label: 'Combat with a Fig Leaf skip',
+    shows: ['Combat with Fig Leaf'],
     project: loadUnderworldFigLeafCheckpoint,
     target: room('F', 'golden-f-b2-e1'),
   },
@@ -682,8 +682,8 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'wheel-next-phase',
-    label: 'Wheel room: select wheel, wheel reward and next phase',
-    shows: ['select wheel', 'wheel reward', 'next phase'],
+    label: 'Wheel room: Wheels open, select wheel and wheel reward',
+    shows: ['Wheels open', 'select wheel', 'wheel reward'],
     project: loadSurfaceEncounterShowcaseCheckpoint,
     target: room('O', 'surface-o-combat04'),
   },
@@ -719,7 +719,7 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'spawned-h-miniboss',
-    label: 'H miniboss: reward caged at the encounter start, unlocked at its end',
+    label: 'H miniboss: reward caged as its Encounter begins, unlocked at its end',
     shows: ['spawn notice', 'locked loot', 'unlocks row'],
     project: loadUnderworldFGHCheckpoint,
     target: room('H', 'golden-h-miniboss01'),
@@ -733,8 +733,8 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'ship-phase-wheel',
-    roomTab: 'shipIntroActions',
-    label: 'Ship room Intro phase: the wheel and its offers',
+    roomTab: 'shipCombat1Actions',
+    label: 'Ship room combat phase: its wheel and two offers',
     shows: ['ship phase', 'wheel offers table'],
     project: loadSurfaceEncounterShowcaseCheckpoint,
     commands: [
@@ -779,8 +779,8 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'outcome-aetos-gorgon',
-    label: 'P combat room: Aetos wave and Gorgon condition at the Encounter outcome',
-    shows: ['encounter outcome', 'Aetos wave', 'Gorgon condition'],
+    label: 'P combat room: Aetos wave and Gorgon condition at Combat',
+    shows: ['Combat outcome', 'Aetos wave', 'Gorgon condition'],
     project: loadSurfaceNOPProject,
     commands: [athenaAmulet],
     target: room('P', 'surface-p-1-1-p_combat03'),
@@ -788,7 +788,7 @@ export const galleryCases: readonly GalleryCase[] = [
   {
     id: 'outcome-aetos-gorgon-set',
     label: 'P combat room: Aetos wave and Gorgon condition set',
-    shows: ['encounter outcome', 'Aetos wave', 'Gorgon condition'],
+    shows: ['Combat outcome', 'Aetos wave', 'Gorgon condition'],
     project: loadSurfaceNOPProject,
     commands: [
       athenaAmulet,
@@ -807,8 +807,8 @@ export const galleryCases: readonly GalleryCase[] = [
   },
   {
     id: 'outcome-aetos-unavailable',
-    label: 'P combat room stopped at its Encounter outcome: an Aetos wave the fight cannot field',
-    shows: ['stop at the encounter outcome', 'Aetos wave', 'Not reached yet'],
+    label: 'P combat room stopped at its Combat: an Aetos wave the fight cannot field',
+    shows: ['stop at Combat', 'Aetos wave', 'Not reached yet'],
     project: loadSurfaceNOPProject,
     commands: [athenaAmulet, { kind: 'ReplaceAetosWave', phase: pCombat03Phase, value: 9 }],
     target: room('P', 'surface-p-1-1-p_combat03'),

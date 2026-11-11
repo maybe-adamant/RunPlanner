@@ -257,39 +257,30 @@ describe('outcome-dependent loot', () => {
     ).roomActions!;
   }
 
-  /** The event's stretch of the Timeline, from her encounter's start to its end. */
-  const eventSequence = (actions: ReturnType<typeof answered>) => {
-    const all = sequence(actions.timeline.entries);
-    return all.slice(
-      all.indexOf('encounterStart:Encounter'),
-      all.indexOf('encounterEnd:Encounter') + 1,
-    );
-  };
+  /** What her talk row spawned, by its source row's kind and its grouped items. */
+  const spawnedUnderRow = (actions: ReturnType<typeof answered>) =>
+    (actions.actionSpawns ?? []).map((spawn) => [
+      JSON.parse(spawn.sourceActionKey)[0],
+      grouped(spawn.groups),
+    ]);
 
-  it('announces a Nemesis contest’s result after her outcome', () => {
+  it('lists a Nemesis contest’s result under her talk row, with no marker for her', () => {
     const actions = answered(
       { kind: 'damageContest', result: 'failure' },
       'RoomRewardConsolationPrize',
     );
-    expect(eventSequence(actions)).toEqual([
-      'encounterStart:Encounter',
-      'action interactEncounter',
-      'encounterOutcome:Encounter',
-      'spawned encounterOutcome:Encounter',
-      'encounterEnd:Encounter',
+    const all = sequence(actions.timeline.entries);
+    expect(all).toContain('action interactEncounter');
+    expect(all.filter((entry) => entry.includes(':Encounter'))).toEqual([]);
+    expect(spawnedUnderRow(actions)).toEqual([
+      ['interactEncounter', [expect.stringMatching(/^\[Nemesis\]: /)]],
     ]);
-    expect(actions.actionSpawns ?? []).toEqual([]);
   });
 
-  it('keeps a Nemesis free item under her row, with no outcome to announce', () => {
+  it('keeps a Nemesis free item under her row', () => {
     const actions = answered({ kind: 'freeItem' }, 'HealDrop');
-    expect(eventSequence(actions)).toEqual([
-      'encounterStart:Encounter',
-      'action interactEncounter',
-      'encounterEnd:Encounter',
-    ]);
-    expect(actions.actionSpawns?.map((spawn) => JSON.parse(spawn.sourceActionKey)[0])).toEqual([
-      'interactEncounter',
+    expect(spawnedUnderRow(actions)).toEqual([
+      ['interactEncounter', [expect.stringMatching(/^\[Nemesis\]: /)]],
     ]);
   });
 });
@@ -328,10 +319,9 @@ describe('converted and copied loot', () => {
         }),
       }),
     ]);
-    // Her accepted trade's result spawns at her outcome, not under her row.
-    expect(actions.actionSpawns ?? []).toEqual([]);
-    expect(grouped(notice(actions.timeline.entries, 'encounterOutcome:Encounter').groups)).toEqual([
-      `[Nemesis]: ${original.labelParts?.name ?? original.label}`,
+    // Her accepted trade's result spawns under her talk row.
+    expect(actions.actionSpawns?.map((spawn) => grouped(spawn.groups))).toEqual([
+      [`[Nemesis]: ${original.labelParts?.name ?? original.label}`],
     ]);
   });
 

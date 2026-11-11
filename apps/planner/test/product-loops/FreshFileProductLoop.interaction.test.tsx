@@ -78,7 +78,7 @@ describe('Fresh File product loop', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     expect(
       within(screen.getByRole('region', { name: 'Room Timeline' })).getByRole('button', {
-        name: 'Encounter started: Intro combat',
+        name: 'Encounter: Intro combat',
       }),
     ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Edit Trait · Pick trait' }));

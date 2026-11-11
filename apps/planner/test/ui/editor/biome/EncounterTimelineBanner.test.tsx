@@ -38,10 +38,10 @@ describe('Encounter Timeline banner', () => {
       .getByRole('button', { name: 'Encounter' })
       .querySelector('span')!.textContent!;
     openRoomTab('Room Timeline');
-    const start = banner('Encounter started');
+    const start = banner('Encounter');
 
     // The banner navigates to the Overview owner; it is never a finding target itself.
-    const identity = within(start).getByRole('button', { name: `Encounter started: ${encounter}` });
+    const identity = within(start).getByRole('button', { name: `Encounter: ${encounter}` });
     expect(identity.hasAttribute('data-semantic-owner')).toBe(false);
     fireEvent.click(identity);
     const focused = view.application.store.getState().editorSession.focusedSemanticOwner;
@@ -56,7 +56,7 @@ describe('Encounter Timeline banner', () => {
     );
   });
 
-  it('hosts a phase event in its start banner row and routes its finding to that control', () => {
+  it('hosts the Fig Leaf skip where combat starts and routes its finding to that control', () => {
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
@@ -65,11 +65,11 @@ describe('Encounter Timeline banner', () => {
     renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
     openRoomTab('Room Timeline');
     const skip = screen.getByRole('button', { name: 'Fig Leaf skip' });
-    expect(skip.closest('li')).toBe(banner('Encounter started'));
+    expect(skip.closest('li')?.getAttribute('data-boundary-kind')).toBe('encounterStarted');
     expect(skip.hasAttribute('data-semantic-owner')).toBe(true);
   });
 
-  it('hosts how the fight ended on its Encounter outcome, not on its start or end', async () => {
+  it('hosts how the fight ended on its Combat, not where it begins or ends', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -93,12 +93,12 @@ describe('Encounter Timeline banner', () => {
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    // Only a Fig Leaf belongs to the start, so this start hosts no choice.
-    const start = banner('Encounter started');
+    // The encounter's begin names it and hosts no choice.
+    const start = banner('Encounter');
     expect(within(start).queryByRole('button', { name: 'No Death Defiance' })).toBeNull();
     expect(within(start).queryByRole('button', { name: /^Outcome/ })).toBeNull();
-    // The Gorgon condition and the kill race are read as the fight ends, on its outcome.
-    const outcome = within(banner('Encounter outcome')).getByRole('group', {
+    // The Gorgon condition and the kill race are observed at its Combat.
+    const outcome = within(banner('Combat')).getByRole('group', {
       name: / outcome choices$/,
     });
     expect(within(outcome).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
