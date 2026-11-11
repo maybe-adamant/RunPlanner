@@ -61,6 +61,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 
 import { createCompleteNProject } from '../support/complete-n-project';
+import { withItemContent } from '../../support/room-action-content';
 import { nBiome } from '../support/configured-projects';
 
 const nCombatId = createOccurrenceId('round-trip-n-combat02');
@@ -458,9 +459,10 @@ describe('authored encounter occurrence commands', () => {
       { rewardType: 'MaxHealthDrop' },
     );
     // Accepting activates the result without placing it; its owner picks it up.
+    const eventRoom = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1));
     expect(
       occurrence(accepted, 'F', goldenFOccurrenceId(5, 1)).roomActions.order,
-    ).not.toContainEqual(result);
+    ).not.toContainEqual(withItemContent(accepted, eventRoom, result));
     const collected = applyProjectCommand(accepted, catalog, {
       kind: 'InsertRoomAction',
       action: createRoomActionAddress(
@@ -472,7 +474,7 @@ describe('authored encounter occurrence commands', () => {
       index: occurrence(accepted, 'F', goldenFOccurrenceId(5, 1)).roomActions.order.length,
     });
     expect(occurrence(collected, 'F', goldenFOccurrenceId(5, 1)).roomActions.order).toContainEqual(
-      result,
+      withItemContent(collected, eventRoom, result),
     );
     const declined = applyProjectCommand(collected, catalog, {
       kind: 'ReplaceNemesisRandomEventInteraction',
@@ -480,11 +482,9 @@ describe('authored encounter occurrence commands', () => {
       value: { kind: 'goldTrade', response: 'decline', reward: { rewardType: 'MaxHealthDrop' } },
     });
     const declinedOccurrence = occurrence(declined, 'F', goldenFOccurrenceId(5, 1));
-    expect(declinedOccurrence.roomActions.order).not.toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'nemesisGenerated:Encounter',
-      entryKey: 'result',
-    });
+    expect(declinedOccurrence.roomActions.order).not.toContainEqual(
+      withItemContent(declined, eventRoom, result),
+    );
     expect(
       declinedOccurrence.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
         ?.offer,

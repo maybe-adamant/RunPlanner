@@ -30,11 +30,13 @@ import {
 } from '@run-planner/engine/authored-project';
 import { createGoldenFGHIProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import { withItemContents } from '../../support/room-action-content';
 
 const goldenF = createBiomeAddress('Underworld', 'F');
 const combatId = createOccurrenceId('golden-f-b2-e1');
 const incoming = createIncomingRewardAddress(goldenF, combatId);
 const boonTrait = createTraitOfferAddress(incoming, 'source');
+const combat = createOccurrenceAddress(goldenF, combatId);
 
 function occurrence(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
   const found = project.route.biomes
@@ -63,6 +65,16 @@ function siteOf(
 
 function drops(siteKey: string, entryKeys: readonly string[]): RoomActionReference[] {
   return entryKeys.map((entryKey) => ({ kind: 'interactAcquisitionEntry', siteKey, entryKey }));
+}
+
+/** The drops as the engine records them for the room's items now. */
+function dropRows(
+  project: ProjectDocument,
+  room: ReturnType<typeof createOccurrenceAddress>,
+  siteKey: string,
+  entryKeys: readonly string[],
+) {
+  return withItemContents(project, room, drops(siteKey, entryKeys));
 }
 
 /** The drops of one generated site the room offers as optional actions, placed or not. */
@@ -169,7 +181,7 @@ describe('trait-dropped pickups', () => {
     const siteKey = traitGeneratedPickupSiteKey(boonTrait, 'option1');
     expect(generatedRows(room.roomActions.order)).toEqual([]);
     expect(offeredDrops(history.present, goldenF, combatId, siteKey)).toEqual(
-      drops(siteKey, buriedTreasureDrops).map((reference) => ({
+      dropRows(history.present, combat, siteKey, buriedTreasureDrops).map((reference) => ({
         reference,
         participation: 'optional',
       })),
@@ -197,7 +209,7 @@ describe('trait-dropped pickups', () => {
     );
     const taken = (document: ProjectDocument) =>
       generatedRows(occurrence(document, 'F', combatId).roomActions.order);
-    expect(taken(project)).toEqual(drops(buried, buriedTreasureDrops));
+    expect(taken(project)).toEqual(dropRows(project, combat, buried, buriedTreasureDrops));
 
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitSelection',
@@ -224,7 +236,7 @@ describe('trait-dropped pickups', () => {
     expect(taken(project)).toEqual([]);
     expect(
       offeredDrops(project, goldenF, combatId, again).map(({ reference }) => reference),
-    ).toEqual(drops(again, buriedTreasureDrops));
+    ).toEqual(dropRows(project, combat, again, buriedTreasureDrops));
   });
 
   it('offers Quick Buck’s gold without placing it', () => {
@@ -264,7 +276,10 @@ describe('trait-dropped pickups', () => {
     const siteKey = traitGeneratedPickupSiteKey(trait, 'option2');
     expect(generatedRows(room.roomActions.order)).toEqual([]);
     expect(offeredDrops(project, goldenF, combatId, siteKey)).toEqual([
-      { reference: drops(siteKey, ['quickBuckGold'])[0], participation: 'optional' },
+      {
+        reference: dropRows(project, combat, siteKey, ['quickBuckGold'])[0],
+        participation: 'optional',
+      },
     ]);
     expect(room.acquisitionSites?.[siteKey]?.pickupEntries).toMatchObject({
       quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } },
@@ -303,7 +318,9 @@ describe('trait-dropped pickups', () => {
       ),
       value: { rewardType: 'RoomMoneySmallDrop' },
     });
-    expect(occurrence(project, 'F', combatId).roomActions.order).not.toContainEqual(bones);
+    expect(occurrence(project, 'F', combatId).roomActions.order).not.toContainEqual(
+      dropRows(project, combat, siteKey, ['bones'])[0],
+    );
   });
 
   it('installs a route whose Buried Treasure drops were removed without taking them again', () => {
@@ -324,7 +341,9 @@ describe('trait-dropped pickups', () => {
         action: createRoomActionAddress(goldenF, combatId, roomActionKey(drop)),
       });
     const authoredOrder = occurrence(authored, 'F', combatId).roomActions.order;
-    expect(authoredOrder).not.toEqual(expect.arrayContaining(drops(siteKey, ['smallGold'])));
+    expect(authoredOrder).not.toEqual(
+      expect.arrayContaining([...dropRows(authored, combat, siteKey, ['smallGold'])]),
+    );
 
     const { runModifiers: _runModifiers, ...loadout } = authored.route.loadout;
     void _runModifiers;
@@ -437,7 +456,14 @@ describe('Narcissus drops', () => {
         offeredDrops(taken, createBiomeAddress('Dream', 'G'), storyId, siteKey).map(
           ({ reference }) => reference,
         ),
-      ).toEqual(drops(siteKey, poms));
+      ).toEqual(
+        dropRows(
+          taken,
+          createOccurrenceAddress(createBiomeAddress('Dream', 'G'), storyId),
+          siteKey,
+          poms,
+        ),
+      );
     });
 
   it('drops the taken pickups with a reset offer', () => {
@@ -455,7 +481,14 @@ describe('Narcissus drops', () => {
       drops(siteKey, ['bones', 'maxHealth']),
     );
     expect(occurrence(picked, 'G', storyId).roomActions.order).toEqual(
-      expect.arrayContaining(drops(siteKey, ['bones', 'maxHealth'])),
+      expect.arrayContaining([
+        ...dropRows(
+          picked,
+          createOccurrenceAddress(createBiomeAddress('Dream', 'G'), storyId),
+          siteKey,
+          ['bones', 'maxHealth'],
+        ),
+      ]),
     );
     const reset = applyProjectCommand(picked, catalog, { kind: 'ResetEncounterTraitOffer', trait });
     expect(
@@ -507,6 +540,13 @@ describe('Narcissus drops', () => {
     const siteKey = traitGeneratedPickupSiteKey(hiddenSource, 'option1');
     expect(
       offeredDrops(taken, goldenGBiome, storyId, siteKey).map(({ reference }) => reference),
-    ).toEqual(drops(siteKey, buriedTreasureDrops.slice(0, 5)));
+    ).toEqual(
+      dropRows(
+        taken,
+        createOccurrenceAddress(goldenGBiome, storyId),
+        siteKey,
+        buriedTreasureDrops.slice(0, 5),
+      ),
+    );
   });
 });

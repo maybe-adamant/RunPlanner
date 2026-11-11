@@ -47,6 +47,7 @@ import {
   echoGoldIPrebossShopId,
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
+import { withItemContent, withItemContents } from '../support/room-action-content';
 
 describe('Gold Gold Gold Shop pickups', () => {
   it.each([
@@ -615,7 +616,9 @@ describe('Gold Gold Gold Shop pickups', () => {
         purchased: true,
         ...(index === undefined ? {} : { index }),
       });
-    const purchase = (offerKey: string) => ({ kind: 'interactShopOffer' as const, offerKey });
+    const shopRoom = createOccurrenceAddress(goldenFBiome, shopOccurrenceId);
+    const purchase = (offerKey: string) =>
+      withItemContent(project, shopRoom, { kind: 'interactShopOffer', offerKey });
     const bought = applyProjectCommand(
       applyProjectCommand(project, catalog, buy('Boon')),
       catalog,
@@ -669,8 +672,9 @@ describe('Gold Gold Gold Shop pickups', () => {
       siteKey: 'roomExit',
       entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
     };
-    expect(order(place())).toEqual([purchase, pickup]);
-    expect(order(place(1))).toEqual([purchase, pickup]);
+    const shopRoom = createOccurrenceAddress(goldenFBiome, shopOccurrenceId);
+    expect(order(place())).toEqual(withItemContents(place(), shopRoom, [purchase, pickup]));
+    expect(order(place(1))).toEqual(withItemContents(place(1), shopRoom, [purchase, pickup]));
     // The duplicate spawns with the purchase it duplicates, so it cannot precede it.
     expect(() => place(0)).toThrow('must follow ["interactShopOffer","Boon"]');
     expect(() => place(2)).toThrow('index must be an integer from 0 through 1');

@@ -66,6 +66,7 @@ import { settlePickupAcquisitionSite } from '../../src/simulation/rewards/acquis
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import type { SimulationState } from '../../src/simulation/state/model';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
+import { withItemContent, withItemContents } from '../support/room-action-content';
 import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { baseFacts } from './shop-trait-purchase-support';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
@@ -235,20 +236,22 @@ describe('Narcissus pickup producer', () => {
     const chosen = takeNarcissus(withCard, ['NarcissusF', 'NarcissusB', 'NarcissusC']);
     const entry = pickupEntry(chosen, 'reroll');
     // The owner picks up Fates' Trimmings' drop.
-    const taken = placeTestLivePickupsAtSite(
-      chosen,
-      createOccurrenceAddress(goldenGBiome, narcissusOccurrence(chosen).occurrenceId),
-      entry.site.pointKey,
+    const narcissus = createOccurrenceAddress(
+      goldenGBiome,
+      narcissusOccurrence(chosen).occurrenceId,
     );
+    const taken = placeTestLivePickupsAtSite(chosen, narcissus, entry.site.pointKey);
     expect(
       narcissusOccurrence(taken).roomActions.order.filter(
         (reference) =>
           reference.kind === 'interactAcquisitionEntry' &&
           reference.siteKey === entry.site.pointKey,
       ),
-    ).toEqual([
-      { kind: 'interactAcquisitionEntry', siteKey: entry.site.pointKey, entryKey: 'reroll' },
-    ]);
+    ).toEqual(
+      withItemContents(taken, narcissus, [
+        { kind: 'interactAcquisitionEntry', siteKey: entry.site.pointKey, entryKey: 'reroll' },
+      ]),
+    );
     const granted = (project: ProjectDocument) => {
       const g = evaluatedG(project);
       expect(g.findings).toEqual([]);
@@ -1021,7 +1024,15 @@ describe('Narcissus pickup producer', () => {
     expect(undoProjectHistory(ordered).present).toBe(history.present);
     const redone = redoProjectHistory(undoProjectHistory(ordered)).present;
     expect(narcissusOccurrence(redone)).toMatchObject({
-      roomActions: { order: expect.arrayContaining([reference]) },
+      roomActions: {
+        order: expect.arrayContaining([
+          withItemContent(
+            redone,
+            createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+            reference,
+          ),
+        ]),
+      },
       acquisitionSites: {
         [site.pointKey]: {
           pickupEntries: {

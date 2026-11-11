@@ -14,6 +14,7 @@ import {
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -27,6 +28,7 @@ import {
   selectedPickupProducers,
 } from '../../src/authored-project/acquisition/pickup-producers';
 import { composeStartingReward } from '../../src/authored-project/room-state/starting-reward';
+import { withItemContent } from '../support/room-action-content';
 
 const biome = createBiomeAddress('Surface', 'N');
 
@@ -205,6 +207,7 @@ describe('authored pickup producers', () => {
     ).find((candidate) => candidate.traitKey === 'MoneyMultiplierBoon');
     if (producer === undefined) throw new Error('Quick Buck producer is missing');
     expect(producer.sourceNormal).toBe(true);
+    if (producer.sourceAction === undefined) throw new Error('Quick Buck source action is missing');
     expect(producer.pickups).toEqual([
       { key: 'quickBuckGold', rewardType: 'RoomMoneyDrop', required: false },
     ]);
@@ -220,7 +223,13 @@ describe('authored pickup producers', () => {
     expect(reconciled.acquisitionSites?.[producer.siteKey]?.pickupEntries).toMatchObject({
       quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } },
     });
-    expect(reconciled.roomActions.order).toContainEqual(producer.sourceAction);
+    expect(reconciled.roomActions.order).toContainEqual(
+      withItemContent(
+        project,
+        createOccurrenceAddress(nBiome, nOccurrenceIds.opening),
+        producer.sourceAction,
+      ),
+    );
   });
 
   it('retracts only a removed Supply Chain source’s later clocked action and retains its payload', () => {

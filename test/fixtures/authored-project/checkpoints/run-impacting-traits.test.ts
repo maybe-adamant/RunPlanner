@@ -4,6 +4,7 @@ import {
   applyProjectHistoryCommand,
   resolveRoutePosition,
   assembleRoomActionDomain,
+  roomActionDomainForOccurrence,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
@@ -179,8 +180,17 @@ describe('run-impacting trait checkpoint workflows', () => {
       siteKey,
       entryKey: 'smallGold',
     });
-    // Taking Buried Treasure took its small Gold.
-    expect(occurrence().roomActions.order).toContainEqual(sourceReference);
+    // Taking Buried Treasure took its small Gold, as the engine's live reference to it.
+    const placedSource = roomActionDomainForOccurrence(
+      project,
+      catalog,
+      nBiome,
+      nOccurrenceIds.preHub,
+    )?.domain.activeReferences.find(
+      (reference) => roomActionKey(reference) === roomActionKey(sourceReference),
+    );
+    expect(placedSource).toMatchObject({ content: expect.any(Array) });
+    expect(occurrence().roomActions.order).toContainEqual(placedSource);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceSeaStarResult',
       acquisition: source,
@@ -214,12 +224,8 @@ describe('run-impacting trait checkpoint workflows', () => {
       kind: 'action',
       participation: sourceAction?.kind === 'action' ? sourceAction.participation : undefined,
       window: sourceAction?.kind === 'action' ? sourceAction.window : undefined,
-      dependencies: [
-        {
-          kind: 'afterAction',
-          action: sourceAction?.kind === 'action' ? sourceAction.reference : undefined,
-        },
-      ],
+      // A dependency names its row by key, without the item's content.
+      dependencies: [{ kind: 'afterAction', action: sourceReference }],
     });
   });
 

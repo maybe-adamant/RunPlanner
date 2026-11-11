@@ -371,7 +371,13 @@ describe('authored-project incoming reward commands', () => {
       siteKey,
       entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
     };
-    expect(occurrence?.roomActions.order).not.toContainEqual(duplicateAction);
+    expect(occurrence?.roomActions.order).not.toContainEqual(
+      withItemContent(
+        procced.present,
+        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+        duplicateAction,
+      ),
+    );
     if (occurrence === undefined) throw new Error('Sea Star source occurrence is missing');
     const domain = assembleRoomActionDomain({
       routePosition: ordinaryPositionFor(catalog, goldenFBiome),
@@ -396,10 +402,15 @@ describe('authored-project incoming reward commands', () => {
       kind: 'action',
       participation: source?.kind === 'action' ? source.participation : undefined,
       window: source?.kind === 'action' ? source.window : undefined,
+      // A dependency names its row by key, without the item's content.
       dependencies: [
         {
           kind: 'afterAction',
-          action: source?.kind === 'action' ? source.reference : undefined,
+          action: {
+            kind: 'interactIncomingReward',
+            producerPoint: 'roomRewardPickup',
+            acquisitionRole: 'self',
+          },
         },
       ],
     });
@@ -420,7 +431,13 @@ describe('authored-project incoming reward commands', () => {
       document.route!.biomes[0]!.topology!.occurrences.find(
         (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
       );
-    expect(roomOf(picked.present)?.roomActions.order.at(-1)).toEqual(duplicateAction);
+    expect(roomOf(picked.present)?.roomActions.order.at(-1)).toEqual(
+      withItemContent(
+        picked.present,
+        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+        duplicateAction,
+      ),
+    );
     // Proccing again keeps the owner's pickup where it stands.
     expect(
       applyProjectCommand(picked.present, catalog, {
@@ -438,7 +455,9 @@ describe('authored-project incoming reward commands', () => {
       procced: false,
     });
     expect(roomOf(cleared.present)?.acquisitionSites?.[siteKey]).toBeUndefined();
-    expect(roomOf(cleared.present)?.roomActions.order).not.toContainEqual(duplicateAction);
+    expect(roomOf(cleared.present)?.roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(duplicateAction),
+    );
     expect(undoProjectHistory(cleared).present).toBe(picked.present);
   });
 

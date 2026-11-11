@@ -18,6 +18,7 @@ import {
 import { materializeBiomePrefix, simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
+import { withItemContents } from '../../../support/room-action-content';
 
 import {
   loadSurfaceNEntryFrontierProject,
@@ -116,13 +117,15 @@ describe('canonical N Hub materialization', () => {
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === nOccurrenceIds.opening,
       );
-    expect(authoredOpening?.roomActions.order).toEqual([
-      {
-        kind: 'interactIncomingReward',
-        producerPoint: 'roomRewardPickup',
-        acquisitionRole: 'source',
-      },
-    ]);
+    expect(authoredOpening?.roomActions.order).toEqual(
+      withItemContents(project, createOccurrenceAddress(nBiome, nOccurrenceIds.opening), [
+        {
+          kind: 'interactIncomingReward',
+          producerPoint: 'roomRewardPickup',
+          acquisitionRole: 'source',
+        },
+      ]),
+    );
 
     const biome = simulateProject(catalog, project).route?.biomes.find(
       (candidate) => candidate.biomeKey === 'N',
