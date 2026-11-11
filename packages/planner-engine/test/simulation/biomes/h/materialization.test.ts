@@ -58,6 +58,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   authorTestArtificerReplacement,
   authorTestTraitsAndRequiredItems,
+  replaceTestPlacedItem,
   replaceTestRoomActionOrder,
   scheduleTestRequiredRoomActions,
 } from '@run-planner/test-fixtures/shared';
@@ -772,7 +773,7 @@ describe('H Fields materialization', () => {
   it('spends an Olympian provider only when an entered Fields cage creates its matching Boon', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const cage = createLocalRewardAddress(biome, occurrenceId, 'cages', 'cage1');
-    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    let project = replaceTestPlacedItem(createGoldenFGHProject(), {
       kind: 'ReplaceLocalReward',
       reward: cage,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
@@ -861,7 +862,7 @@ describe('H Fields materialization', () => {
     ) => {
       let project = createGoldenFGHProject();
       for (const [occurrenceId, slotKey, value] of rewards)
-        project = applyProjectCommand(project, catalog, {
+        project = replaceTestPlacedItem(project, {
           kind: 'ReplaceLocalReward',
           reward: cage(occurrenceId, slotKey),
           value,
