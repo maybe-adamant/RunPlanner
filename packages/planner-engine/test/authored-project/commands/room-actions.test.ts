@@ -48,6 +48,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { settleProjectUpgrade } from '@run-planner/engine/project-migration';
+import { withoutStaleDerivedItems } from '../../../src/authored-project/acquisition/derived-items';
 import {
   createCompleteFGProject,
   replaceNemesisRandomEventInteraction,
@@ -1342,6 +1343,25 @@ describe('room-action commands', () => {
     });
     expect(occurrence(left).acquisitionSites?.[siteKey]).toBeUndefined();
     expect(occurrence(left).roomActions.order).toEqual([reward]);
+
+    // An equal offer rebuilt with another key order is the same source and keeps its chain.
+    const room = occurrence(active);
+    const acquisitionState = room.startingRewardAcquisition!;
+    const judged = (offer: object) =>
+      withoutStaleDerivedItems(biome, room, room, {
+        previousStartIncoming: {
+          offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+          ...acquisitionState,
+        },
+        startIncoming: { offer, ...acquisitionState } as never,
+      });
+    expect(
+      judged({ payload: { source: 'ApolloUpgrade', kind: 'BoonSource' }, rewardType: 'Boon' }),
+    ).toBe(room);
+    expect(
+      judged({ rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } })
+        .acquisitionSites?.[siteKey],
+    ).toBeUndefined();
 
     // An earlier schema kept the replacement dormant once its source left the Artificer.
     const dormant = decodeProjectDocument(

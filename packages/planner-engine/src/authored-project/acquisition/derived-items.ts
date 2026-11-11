@@ -6,6 +6,7 @@ import type {
   ProjectDocument,
   RoomOccurrence,
 } from '../model';
+import { sameRewardOffer } from '../../reward-kernel';
 import { resolveRoutePosition } from '../route-context';
 import { routeStartIncomingReward } from '../room-state/starting-reward';
 import { authoredAcquisitionSources, type AuthoredAcquisitionSource } from './acquisition-sources';
@@ -136,7 +137,7 @@ export function withoutStaleDerivedItems(
       // A source this edit never saw is not this edit's to judge.
       if (was === undefined) return false;
       if (is === undefined) return true;
-      if (JSON.stringify(was.reward.offer) !== JSON.stringify(is.reward.offer)) return true;
+      if (!sameRewardOffer(was.reward.offer, is.reward.offer)) return true;
       // Only the edit that takes the source off the Artificer discards its replacement.
       return item.kind === 'artificer' && convertsWithArtificer(was) && !convertsWithArtificer(is);
     });
@@ -150,6 +151,15 @@ function convertsWithArtificer(source: AuthoredAcquisitionSource): boolean {
     source.reward.dispositionByAcquisitionRole[source.acquisition.acquisitionRole]?.kind ===
     'artificer'
   );
+}
+
+function sameOptionalOffer(
+  left: AuthoredRewardState | undefined,
+  right: AuthoredRewardState | undefined,
+): boolean {
+  return left === undefined || right === undefined
+    ? left === right
+    : sameRewardOffer(left.offer, right.offer);
 }
 
 /**
@@ -264,10 +274,7 @@ export function reconcileDerivedItems(
         before === undefined || beforePosition === undefined
           ? undefined
           : (routeStartIncomingReward(previous, beforePosition, before) ?? undefined);
-      if (
-        before === occurrence &&
-        JSON.stringify(startIncoming?.offer) === JSON.stringify(previousStartIncoming?.offer)
-      )
+      if (before === occurrence && sameOptionalOffer(startIncoming, previousStartIncoming))
         return occurrence;
       const reconciled = withoutStaleDerivedItems(biome, before, occurrence, {
         previousStartIncoming,
