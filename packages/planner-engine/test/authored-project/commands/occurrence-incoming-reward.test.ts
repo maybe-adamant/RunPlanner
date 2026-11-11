@@ -1,4 +1,5 @@
 import { ordinaryPositionFor } from '../../support/route-position';
+import { withItemContent } from '../../support/room-action-content';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -474,7 +475,10 @@ describe('authored-project incoming reward commands', () => {
       reference: duplicateAction,
       index: roomOf(project).roomActions.order.length,
     });
-    expect(roomOf(project).roomActions.order).toContainEqual(duplicateAction);
+    const room = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    expect(roomOf(project).roomActions.order).toContainEqual(
+      withItemContent(project, room, duplicateAction),
+    );
     const history = createProjectHistory(project);
     const swapped = applyProjectHistoryCommand(history, catalog, {
       kind: 'ReplaceIncomingReward',
@@ -482,7 +486,9 @@ describe('authored-project incoming reward commands', () => {
       value: { rewardType: 'MaxHealthDrop' },
     });
     expect(roomOf(swapped.present).acquisitionSites?.[siteKey]).toBeUndefined();
-    expect(roomOf(swapped.present).roomActions.order).not.toContainEqual(duplicateAction);
+    expect(roomOf(swapped.present).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(duplicateAction),
+    );
     expect(
       decodeProjectDocument(JSON.parse(encodeProjectDocument(swapped.present)), catalog),
     ).toEqual(swapped.present);
