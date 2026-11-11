@@ -1163,7 +1163,7 @@ function runEncounters(
 ): ExecutionState {
   let state = initial;
   const phases = schedule?.runPhases ?? context.encounterPhases;
-  for (const [index, phase] of phases.entries()) {
+  for (const phase of phases) {
     const skipped = figLeafSkipsPhase(context, phase.slotKey);
     const figLeaf = {
       ...(skipped ? { figLeafSkipped: true } : {}),
