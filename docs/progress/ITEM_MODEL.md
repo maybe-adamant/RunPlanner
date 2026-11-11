@@ -218,9 +218,12 @@ C5b wave C, walk-based settlement repairs:
   the payload is the new item's observation (a delivery or clocked drop
   payload change no longer loses the new payload). Consumers no longer
   re-apply a payload after settling its change.
-- A delivery whose Shrine slot stocks another reward, or whose payload lies
+- A delivery whose Shrine slot stocks another reward, whose source no longer
+  produces it (purchase gone, or for a pickup in the Shrine's room its rush
+  gone, or the Shrine with them; OD6, 2026-11-11), or whose payload lies
   unplaced at a host while the walk has it due elsewhere, is discarded with
-  its pickup (`strandedDeliveryPayloads` is folded into this repair).
+  its pickup (`strandedDeliveryPayloads` is folded into this repair). An
+  unbought or unrushed delivery's choices no longer come back on a rebuy.
 - A rerolled reward records `pressId` (the minimal structural part of
   C5b-4's move: optional on `rerolledIncomingReward`, `rerolledCages[slot]`
   and `rerolledOffers[offer]`; commands record it and stamp an unknown one
@@ -237,6 +240,19 @@ C5b wave C, walk-based settlement repairs:
   takes the new replay. A builder that authors a stale replay and settles
   loses it; author the replay after the last settled edit to keep a stale
   witness.
+
+Wave C review fixes (2026-11-11):
+
+- The removal notice counts reset items apart from removed actions and doors
+  ("1 action removed and 1 item reset at"): a delivery, rerolled reward or
+  Echo replay stays or returns; only its old rolls and choices go.
+- A stale row records no item content, by commands or by the 103 lift (the
+  lift reads the decoded plan's action domain, a role check when the plan does
+  not decode yet).
+- For Wave E: editing a press's result in place keeps its `pressId`, so the
+  effective item's outcomes survive a changed result today. The results
+  storage must reset the acquisition when the effective press's result
+  changes.
 
 Wave A review follow-ups:
 
