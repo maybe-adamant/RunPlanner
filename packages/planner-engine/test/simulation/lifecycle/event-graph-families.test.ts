@@ -300,8 +300,7 @@ describe('gated Opening and Devotion', () => {
     expect(room.loot).toEqual([`roomEntered: ${openingGate} ${gate}`]);
   });
 
-  it.fails('fires the Opening Combat from the gate row it follows', () => {
-    // Pending A: the graph names the F Opening gate role `self`; the room's pickup row is `source`.
+  it('fires the Opening Combat from the gate row it follows', () => {
     const room = observe(corpusRun('execution/f-opening'), fStart);
     expect(room.graph).toEqual([
       'roomEntered <- automatic',
@@ -357,13 +356,21 @@ describe('gated Opening and Devotion', () => {
     },
   );
 
-  it.fails('passes Encounter before an unplaced gate stops the walk', () => {
-    // Pending A: the walk does not emit `encounterBegun` yet.
+  it('passes Encounter before an unplaced gate stops the walk', () => {
+    // The walk has no begin event: Encounter stands at entry on the Timeline, and the
+    // walk stops right after entry, before Combat.
     const run = corpusRun('execution/f-opening');
     const reference = observe(run, fStart).reference(openingGate);
     const room = observe(simulate(removed(run.project, fStart, reference)), fStart);
-    expectInOrder(room.walk, ['roomEntered', /^encounterBegun\(Encounter/]);
+
+    expectInOrder(room.timeline, [
+      'roomEntered',
+      'encounterBegun(Encounter)',
+      'encounterStarted(Encounter)',
+    ]);
+    expect(room.fragment.blockedAt).toMatchObject({ actionKey: roomActionKey(reference) });
     expect(room.fragment.blockedDeadline).toEqual({ kind: 'encounter', phaseKey: 'Encounter' });
+    expect(room.walk.at(-1)).toBe('roomEntered');
   });
 });
 
@@ -499,13 +506,12 @@ describe('Ship phase', () => {
     expect(late.walk).not.toContain('encounterStarted(Combat1)');
   });
 
-  it.fails('opens the wheels in the walk before the reroll and the choice', () => {
-    // Pending A: the walk does not emit `wheelsOpen` or `encounterBegun` yet.
+  it('opens the wheels in the walk before the reroll and the choice', () => {
+    // The walk opens a wheel as its offer point; its Encounter begins there on the Timeline.
     const room = observe(corpusRun('execution/surface-no-rerolls'), oShipRerolls);
     expectInOrder(room.walk, [
       'encounterEndEffectsApplied(Intro)',
-      /^wheelsOpen\b.*wheel1/,
-      /^encounterBegun\(Combat1/,
+      'offerPointMaterialized(wheel1)',
       room.rank('reroll'),
       room.rank('chooseRewardWheel:wheel1'),
       'encounterStarted(Combat1)',
@@ -557,10 +563,6 @@ describe('Aetos and Gorgon', () => {
       'encounterInteractionReached(Encounter gorgon)',
     ]);
   });
-
-  it.todo(
-    'shows Encounter and Combat apart when its Combat hosts an observed outcome (pending A: evaluated Timeline markers)',
-  );
 });
 
 describe('Nemesis bet', () => {
@@ -625,12 +627,39 @@ describe('Nemesis random event', () => {
     expectInOrder(room.walk, [talk, 'encounterInteractionReached(Encounter encounter)', result]);
   });
 
-  it.fails('runs no encounter events for her in the walk', () => {
-    // Pending A (D3): the walk still starts and completes her phase.
-    const room = observe(corpusRun('checkpoint/nemesis-f-trait-trade'), fCombat06);
+  it('runs no encounter for her Fields phase in the walk, only her talk', () => {
+    // Fields: her phase shares the room with its cages.
+    const room = observe(corpusRun('checkpoint/nemesis-h-fields'), hFields);
+    const talk = room.rank('interactEncounter:Passive');
+
     expect(
-      room.walk.filter((token) => /^encounter(Begun|Started|Completed|End)/.test(token)),
+      room.walk.filter((token) =>
+        /^encounter(Started|DepthAdvanced|Completed|EndEffectsApplied)\(Passive/.test(token),
+      ),
     ).toEqual([]);
+    expect(room.walk[position(room.walk, talk) + 1]).toBe(
+      'encounterInteractionReached(Passive encounter)',
+    );
+  });
+
+  it('keeps a single-slot room’s non-combat start and completion before her talk', () => {
+    // A single-slot F room: her phase is the room's only encounter, started and
+    // completed with no depth or end effects, before her talk row.
+    const room = observe(corpusRun('checkpoint/nemesis-f-trait-trade'), fCombat06);
+    const talk = room.rank('interactEncounter:Encounter');
+
+    expect(room.walk.filter((token) => /^encounter[A-Z][A-Za-z]*\(Encounter/.test(token))).toEqual([
+      'encounterRecorded(Encounter)',
+      'encounterStarted(Encounter)',
+      'encounterCompleted(Encounter)',
+      'encounterInteractionReached(Encounter encounter)',
+    ]);
+    expectInOrder(room.walk, [
+      'encounterStarted(Encounter)',
+      'encounterCompleted(Encounter)',
+      talk,
+      'encounterInteractionReached(Encounter encounter)',
+    ]);
   });
 });
 
@@ -757,10 +786,18 @@ describe('Postboss', () => {
     ]);
   });
 
-  it.fails('opens the doors in the walk right after the fountain', () => {
-    // Pending A: the walk does not emit `doorsOpened` yet.
+  it('draws no doors in the walk and reaches the next row right after the fountain', () => {
+    // A Postboss room's way on is fixed: its Doors open draws nothing, so the walk
+    // has no door event; the Timeline places Doors open between these rows.
     const room = observe(corpusRun('execution/f-opening'), fPostboss);
-    expect(room.walk[position(room.walk, 'fountainUsed') + 1]).toBe('doorsOpened');
+    const rack = room.rank('interactKeepsakeRack');
+
+    expect(room.events.find((event) => event.kind === 'doorsOpened')).toMatchObject({
+      generatesOutgoing: false,
+    });
+    expect(room.walk).not.toContain('outgoingGenerationCheckpoint');
+    expect(room.walk[position(room.walk, 'fountainUsed') + 1]).toBe(rack);
+    expectInOrder(room.timeline, [room.rank('useFountain'), 'doorsOpened', rack]);
   });
 });
 
@@ -822,11 +859,13 @@ describe('Fields', () => {
     ).toEqual([]);
   });
 
-  it.fails('opens the doors in the walk once the last cage reward is taken', () => {
-    // Pending A: the walk does not emit `doorsOpened` yet.
+  it('draws the doors in the walk once the last cage reward is taken', () => {
     const room = observe(corpusRun('execution/underworld-fgh'), hFields);
     const last = position(room.walk, room.rank('interactLocalReward:cages:cage1'));
-    expect(room.walk.slice(last + 1, last + 3)).toEqual(['acquisitionPointReached', 'doorsOpened']);
+    expect(room.walk.slice(last + 1, last + 3)).toEqual([
+      'acquisitionPointReached',
+      'outgoingGenerationCheckpoint',
+    ]);
   });
 });
 
@@ -908,10 +947,20 @@ describe('the rest', () => {
     expectInOrder(room.walk, ['roomEntered', delivery, 'roomCommitted']);
   });
 
-  it.fails('opens a Preboss flush room’s doors in the walk after the delivery', () => {
-    // Pending A: the walk does not emit `doorsOpened` yet.
+  it('draws no doors in a Preboss flush room’s walk, committing after the delivery', () => {
+    // The Boss room follows a Preboss room, so its Doors open draws nothing.
     const room = observe(corpusRun('execution/surface-shrine-deliveries'), qPreboss);
-    expectInOrder(room.walk, ['roomEntered', room.rank(shrineDelivery), 'doorsOpened']);
+
+    expect(room.events.find((event) => event.kind === 'doorsOpened')).toMatchObject({
+      generatesOutgoing: false,
+    });
+    expect(room.walk).not.toContain('outgoingGenerationCheckpoint');
+    expectInOrder(room.walk, [
+      'roomEntered',
+      room.rank(shrineDelivery),
+      'acquisitionPointReached',
+      'roomCommitted',
+    ]);
   });
 
   it.each([
@@ -944,10 +993,9 @@ describe('the rest', () => {
     expectInOrder(room.walk, ['roomEntered', 'outgoingGenerationCheckpoint', purchase]);
   });
 
-  it.fails('opens a World Shop’s doors in the walk at entry', () => {
-    // Pending A: the walk does not emit `doorsOpened` yet.
+  it('draws a World Shop’s doors in the walk at entry', () => {
     const room = observe(corpusRun('checkpoint/underworld-f-midshop-pom-frontier'), fMidShop);
-    expect(room.walk[position(room.walk, 'roomEntered') + 1]).toBe('doorsOpened');
+    expect(room.walk[position(room.walk, 'roomEntered') + 1]).toBe('outgoingGenerationCheckpoint');
   });
 });
 
