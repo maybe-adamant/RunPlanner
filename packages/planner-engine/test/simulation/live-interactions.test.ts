@@ -435,6 +435,20 @@ describe('live interactions at a gap', () => {
     ]);
     for (const { gap, verb } of choices.filter(({ verb }) => verb.verb === 'reroll'))
       expect(verbAccepted(well, fWell, verb, gap), verb.choice?.picker).toBe(true);
+    // A Well or Pool reroll names the row its command creates.
+    for (const { gap, verb } of choices.filter(({ verb }) => verb.verb === 'reroll')) {
+      const rerolled = verb.commands!.reduce(
+        (document, command) => applyProjectCommand(document, catalog, command),
+        well,
+      );
+      expect(roomOrder(rerolled, fWell)[gap]).toEqual(verb.reference);
+    }
+    expect(
+      choices.filter(({ verb }) => verb.verb === 'reroll').map(({ verb }) => verb.reference),
+    ).toEqual([
+      { kind: 'rerollStygianWell', rerollId: 'r1' },
+      { kind: 'rerollPurgingPool', rerollId: 'r1' },
+    ]);
 
     // Each unpinned sale lists traits to pick, and the walk takes the sale the picker makes.
     const sales = choices.filter(({ verb }) => verb.verb === 'sell');

@@ -201,15 +201,15 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     // The opening stock stays the initial roll; the record keeps no later roll's content.
     expect(postboss.stygianWell?.offerKeyBySlot.secondRight).toBe('TemporaryForcedSecretDoorTrait');
     expect(postboss.roomActions.order.slice(2)).toEqual([
-      {
-        kind: 'rerollStygianWell',
-        rerollId: 'r1',
-        offerKeyBySlot: { secondRight: 'TemporaryForcedSecretDoorTrait' },
-      },
-      { kind: 'rerollPurgingPool', rerollId: 'r1', traitKeyBySlot: { left: 'BoonDecayBoon' } },
+      { kind: 'rerollStygianWell', rerollId: 'r1' },
+      { kind: 'rerollPurgingPool', rerollId: 'r1' },
       { kind: 'purchaseStygianWellOffer', generationKey: 'r1:secondRight' },
       { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' },
     ]);
+    expect(postboss.stygianWell?.rerollOfferKeyBySlot).toEqual({
+      r1: { secondRight: 'TemporaryForcedSecretDoorTrait' },
+    });
+    expect(postboss.purgingPool?.rerollTraitKeyBySlot).toEqual({ r1: { left: 'BoonDecayBoon' } });
     expect(
       imported.report.entries
         .filter((entry) => entry.reason === 'assumption' && entry.record?.roomIndex === 13)

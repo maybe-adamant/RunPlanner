@@ -385,7 +385,6 @@ describe('Well and Pool rerolls', () => {
     expect(occurrence(pool, room.occurrenceId).roomActions.order.at(-1)).toEqual({
       kind: 'rerollPurgingPool',
       rerollId: 'r1',
-      traitKeyBySlot: {},
     });
     expect(() =>
       applyProjectCommand(twice, catalog, {

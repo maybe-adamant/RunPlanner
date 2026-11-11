@@ -406,10 +406,7 @@
                   "secondLeft": "TemporaryBoonRarityTrait",
                   "secondRight": "TemporaryDiscountTrait"
                 },
-                "travelDealRefillKey": "TemporaryImprovedSecondaryTrait",
-                "purchasedGenerationKeys": [
-                  "initial:secondLeft"
-                ]
+                "travelDealRefillKey": "TemporaryImprovedSecondaryTrait"
               },
               "additionalExits": []
             },
@@ -1348,15 +1345,10 @@
                   "secondLeft": "TemporaryBoonRarityTrait",
                   "secondRight": "LimitedSwapTraitDrop"
                 },
-                "travelDealRefillKey": "RandomStoreItem",
-                "twistResultKeyBySlot": {
+                "twistResultKeyByGeneration": {
                   "travelDealRefill": "TemporaryBoonRarityTrait"
                 },
-                "purchasedGenerationKeys": [
-                  "initial:secondRight",
-                  "initial:secondLeft",
-                  "travelDealRefill"
-                ]
+                "travelDealRefillKey": "RandomStoreItem"
               },
               "additionalExits": []
             },

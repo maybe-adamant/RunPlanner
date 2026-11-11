@@ -1234,14 +1234,10 @@
                   "secondLeft": "TemporaryForcedSecretDoorTrait",
                   "secondRight": "RandomStoreItem"
                 },
-                "travelDealRefillKey": "ExtendedShopTrait",
-                "twistResultKeyBySlot": {
-                  "secondRight": "TemporaryBoonRarityTrait"
+                "twistResultKeyByGeneration": {
+                  "initial:secondRight": "TemporaryBoonRarityTrait"
                 },
-                "purchasedGenerationKeys": [
-                  "initial:secondLeft",
-                  "initial:secondRight"
-                ]
+                "travelDealRefillKey": "ExtendedShopTrait"
               },
               "purgingPool": {
                 "traitKeyBySlot": {

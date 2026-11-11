@@ -10,7 +10,7 @@ import {
   type Catalog,
 } from '@run-planner/engine/catalog-schema';
 import {
-  purgingPoolRerolls,
+  purgingPoolRerollPins,
   stygianWellGenerationItemKey,
   stygianWellGenerationSlot,
 } from '@run-planner/engine/authored-project';
@@ -221,7 +221,7 @@ export function occurrenceActionLabel(
     Partial<
       Pick<
         import('@run-planner/engine/authored-project').RoomOccurrence,
-        'roomActions' | 'challengeSwitch'
+        'roomActions' | 'challengeSwitch' | 'purgingPool'
       >
     >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
@@ -256,7 +256,7 @@ export function occurrenceActionLabelParts(
     Partial<
       Pick<
         import('@run-planner/engine/authored-project').RoomOccurrence,
-        'roomActions' | 'challengeSwitch'
+        'roomActions' | 'challengeSwitch' | 'purgingPool'
       >
     >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
@@ -461,9 +461,7 @@ export function occurrenceActionLabelParts(
       const traitKey =
         reference.rollKey === undefined
           ? purgingPoolTraitKeyBySlot?.[reference.slotKey]
-          : purgingPoolRerolls(occurrence.roomActions?.order ?? []).find(
-              (action) => action.rerollId === reference.rollKey,
-            )?.traitKeyBySlot[reference.slotKey];
+          : purgingPoolRerollPins(occurrence.purgingPool, reference.rollKey)[reference.slotKey];
       const traitLabel =
         traitKey === null || traitKey === undefined
           ? undefined

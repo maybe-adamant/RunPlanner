@@ -72,23 +72,17 @@ describe('topology leaf codecs', () => {
       detail: 'unknown RoomShop item UnknownWellItem',
     });
 
-    const unlistedPurchase = encodedProject(document);
-    const unlistedF = unlistedPurchase.route!.biomes[0]! as unknown as {
-      topology: EncodedTopology;
-    };
-    const unlistedHost = unlistedF.topology.occurrences.find(
-      (room) => room.occurrenceId === 'well-codec-host',
-    )!;
+    // A purchase row is the purchase; it needs a present Well.
+    const wellless = encodedProject(document);
+    const welllessF = wellless.route!.biomes[0]! as unknown as { topology: EncodedTopology };
     (
-      unlistedHost.stygianWell as { offerKeyBySlot: { healing: string | null } }
-    ).offerKeyBySlot.healing = 'ArmorBoostStore';
-    (unlistedHost.roomActions as { order: Array<Record<string, unknown>> }).order.push({
-      kind: 'purchaseStygianWellOffer',
-      generationKey: 'initial:healing',
-    });
-    expectDocumentError(unlistedPurchase, {
-      path: `$.route.biomes[0].topology.occurrences[${hostIndex}].roomActions.order`,
-      detail: 'Well purchase generations must exactly match purchaseStygianWellOffer actions',
+      welllessF.topology.occurrences[openingIndex]!.roomActions as {
+        order: Array<Record<string, unknown>>;
+      }
+    ).order.push({ kind: 'purchaseStygianWellOffer', generationKey: 'initial:healing' });
+    expectDocumentError(wellless, {
+      path: `$.route.biomes[0].topology.occurrences[${openingIndex}].roomActions.order`,
+      detail: 'Well purchases require a present Well',
     });
 
     const missingForced = encodedProject(createCompleteFGProject());
@@ -191,8 +185,8 @@ describe('topology leaf codecs', () => {
     expect(
       planFor(repaired, 'Underworld', 'F').topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-      )?.stygianWell?.twistResultKeyBySlot,
-    ).toEqual({});
+      )?.stygianWell?.twistResultKeyByGeneration,
+    ).toBeUndefined();
 
     for (const command of [
       {
@@ -214,8 +208,10 @@ describe('topology leaf codecs', () => {
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     )?.stygianWell;
     expect(well).toMatchObject({
-      purchasedGenerationKeys: ['travelDealRefill'],
-      twistResultKeyBySlot: { secondLeft: 'HealDropRange', travelDealRefill: 'HealDropRange' },
+      twistResultKeyByGeneration: {
+        'initial:secondLeft': 'HealDropRange',
+        travelDealRefill: 'HealDropRange',
+      },
     });
 
     for (const command of [
@@ -239,9 +235,8 @@ describe('topology leaf codecs', () => {
     expect(well).toMatchObject({
       offerKeyBySlot: { secondLeft: null },
       travelDealRefillKey: null,
-      purchasedGenerationKeys: ['travelDealRefill'],
-      twistResultKeyBySlot: {},
     });
+    expect(well?.twistResultKeyByGeneration).toBeUndefined();
     expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
   });
   it.each([

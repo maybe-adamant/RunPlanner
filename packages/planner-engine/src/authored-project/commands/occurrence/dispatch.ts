@@ -12,11 +12,18 @@ import { applyShopOccurrenceCommand } from './shop';
 import { applyInfernalContractPedestalCommand } from './infernal-contract-pedestal';
 import { applyPhantomExitCommand } from './phantom-exit';
 import { applyFieldsOccurrenceCommand } from './fields';
-import { applyFeatureRollCommand, pinRollSlot, roomShopItemKeys } from './feature-rolls';
+import {
+  applyFeatureRollCommand,
+  pinRollSlot,
+  roomShopItemKeys,
+  withoutStygianWellTwistResults,
+} from './feature-rolls';
 import {
   INITIAL_ROLL_KEY,
   parseStygianWellGenerationKey,
   stygianWellGenerationItemKey,
+  stygianWellGenerationKey,
+  stygianWellPurchasedGenerationKeys,
 } from '../../feature-rolls';
 import type { OccurrenceLeafCommand } from '../types';
 import { requireOccurrence, failCommand } from '../contract';
@@ -909,31 +916,23 @@ export function applyOccurrenceCommand(
       if (command.itemKey !== null && !known.has(command.itemKey))
         failCommand(command, 'unknown RoomShop item');
       const previousItemKey = well.offerKeyBySlot[command.slotKey];
+      const restocked = Object.freeze({
+        ...well,
+        offerKeyBySlot: Object.freeze({
+          ...well.offerKeyBySlot,
+          [command.slotKey]: command.itemKey,
+        }),
+      });
+      const generation = stygianWellGenerationKey(INITIAL_ROLL_KEY, command.slotKey);
       return updateOccurrence(
         document,
         located,
         Object.freeze({
           ...occurrence,
-          stygianWell: Object.freeze({
-            ...well,
-            offerKeyBySlot: Object.freeze({
-              ...well.offerKeyBySlot,
-              [command.slotKey]: command.itemKey,
-            }),
-            ...(previousItemKey === 'RandomStoreItem' && command.itemKey === 'RandomStoreItem'
-              ? {}
-              : well.twistResultKeyBySlot === undefined
-                ? {}
-                : {
-                    twistResultKeyBySlot: Object.freeze(
-                      Object.fromEntries(
-                        Object.entries(well.twistResultKeyBySlot ?? {}).filter(
-                          ([slotKey]) => slotKey !== command.slotKey,
-                        ),
-                      ),
-                    ),
-                  }),
-          }),
+          stygianWell:
+            previousItemKey === 'RandomStoreItem' && command.itemKey === 'RandomStoreItem'
+              ? restocked
+              : withoutStygianWellTwistResults(restocked, (key) => key === generation),
         }),
       );
     }
@@ -949,28 +948,16 @@ export function applyOccurrenceCommand(
       if (command.itemKey !== null && !known.has(command.itemKey))
         failCommand(command, 'unknown RoomShop item');
       const previousItemKey = well.travelDealRefillKey;
+      const restocked = Object.freeze({ ...well, travelDealRefillKey: command.itemKey });
       return updateOccurrence(
         document,
         located,
         Object.freeze({
           ...occurrence,
-          stygianWell: Object.freeze({
-            ...well,
-            travelDealRefillKey: command.itemKey,
-            ...(previousItemKey === 'RandomStoreItem' && command.itemKey === 'RandomStoreItem'
-              ? {}
-              : well.twistResultKeyBySlot === undefined
-                ? {}
-                : {
-                    twistResultKeyBySlot: Object.freeze(
-                      Object.fromEntries(
-                        Object.entries(well.twistResultKeyBySlot ?? {}).filter(
-                          ([slotKey]) => slotKey !== 'travelDealRefill',
-                        ),
-                      ),
-                    ),
-                  }),
-          }),
+          stygianWell:
+            previousItemKey === 'RandomStoreItem' && command.itemKey === 'RandomStoreItem'
+              ? restocked
+              : withoutStygianWellTwistResults(restocked, (key) => key === 'travelDealRefill'),
         }),
       );
     }
@@ -1013,9 +1000,6 @@ export function applyOccurrenceCommand(
       );
       if (command.index !== undefined && (!command.purchased || alreadyOrdered))
         failCommand(command, 'an index places only a new purchase');
-      const purchased = new Set(well.purchasedGenerationKeys ?? []);
-      if (command.purchased) purchased.add(generation);
-      else purchased.delete(generation);
       const order = command.purchased
         ? occurrence.roomActions.order.some(
             (r) => r.kind === 'purchaseStygianWellOffer' && r.generationKey === generation,
@@ -1050,10 +1034,6 @@ export function applyOccurrenceCommand(
           Object.freeze({
             ...occurrence,
             roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
-            stygianWell: Object.freeze({
-              ...well,
-              purchasedGenerationKeys: Object.freeze([...purchased]),
-            }),
           }),
         ),
         catalog,
@@ -1071,7 +1051,9 @@ export function applyOccurrenceCommand(
       if (
         command.itemKey !== null &&
         (parentItemKey !== 'RandomStoreItem' ||
-          !(well.purchasedGenerationKeys ?? []).includes(command.generationKey))
+          !stygianWellPurchasedGenerationKeys(occurrence.roomActions.order).includes(
+            command.generationKey,
+          ))
       )
         failCommand(command, 'Twist result requires a purchased RandomStoreItem generation');
       const twistGrant = catalog.rewards.shops.byKey.RoomShop?.groups.values
@@ -1080,36 +1062,12 @@ export function applyOccurrenceCommand(
       const twistResultItemKeys = new Set(twistGrant?.kind === 'twist' ? twistGrant.pool : []);
       if (command.itemKey !== null && !twistResultItemKeys.has(command.itemKey))
         failCommand(command, 'item is not in the closed Twist result pool');
-      if (parsed !== undefined && parsed.rollKey !== INITIAL_ROLL_KEY) {
-        const order = occurrence.roomActions.order;
-        const index = order.findIndex(
-          (reference) =>
-            reference.kind === 'rerollStygianWell' && reference.rerollId === parsed.rollKey,
-        );
-        const reroll = order[index];
-        if (reroll?.kind !== 'rerollStygianWell')
-          failCommand(command, 'unknown Stygian Well generation');
-        const nextOrder = [...order];
-        nextOrder[index] = Object.freeze({
-          ...reroll,
-          twistResultKeyBySlot: Object.freeze({
-            ...reroll.twistResultKeyBySlot,
-            [parsed.slotKey]: command.itemKey,
-          }),
-        });
-        return updateOccurrence(
-          document,
-          located,
-          Object.freeze({
-            ...occurrence,
-            roomActions: Object.freeze({
-              ...occurrence.roomActions,
-              order: Object.freeze(nextOrder),
-            }),
-          }),
-        );
-      }
-      const childKey = parsed === undefined ? 'travelDealRefill' : parsed.slotKey;
+      if (
+        parsed !== undefined &&
+        parsed.rollKey !== INITIAL_ROLL_KEY &&
+        parentItemKey === undefined
+      )
+        failCommand(command, 'unknown Stygian Well generation');
       return updateOccurrence(
         document,
         located,
@@ -1117,9 +1075,9 @@ export function applyOccurrenceCommand(
           ...occurrence,
           stygianWell: Object.freeze({
             ...well,
-            twistResultKeyBySlot: Object.freeze({
-              ...well.twistResultKeyBySlot,
-              [childKey]: command.itemKey,
+            twistResultKeyByGeneration: Object.freeze({
+              ...well.twistResultKeyByGeneration,
+              [command.generationKey]: command.itemKey,
             }),
           }),
         }),
@@ -1175,19 +1133,18 @@ function withStygianWellInitialItem(
   const previous =
     slotKey === 'travelDealRefill' ? well.travelDealRefillKey : well.offerKeyBySlot[slotKey];
   if (previous === itemKey) return occurrence;
-  const twists = Object.fromEntries(
-    Object.entries(well.twistResultKeyBySlot ?? {}).filter(([key]) => key !== slotKey),
-  );
-  const { twistResultKeyBySlot: _previousTwists, ...rest } = well;
-  void _previousTwists;
+  const generation =
+    slotKey === 'travelDealRefill' ? slotKey : stygianWellGenerationKey(INITIAL_ROLL_KEY, slotKey);
   return Object.freeze({
     ...occurrence,
-    stygianWell: Object.freeze({
-      ...rest,
-      ...(slotKey === 'travelDealRefill'
-        ? { travelDealRefillKey: itemKey }
-        : { offerKeyBySlot: Object.freeze({ ...well.offerKeyBySlot, [slotKey]: itemKey }) }),
-      ...(Object.keys(twists).length === 0 ? {} : { twistResultKeyBySlot: Object.freeze(twists) }),
-    }),
+    stygianWell: withoutStygianWellTwistResults(
+      Object.freeze({
+        ...well,
+        ...(slotKey === 'travelDealRefill'
+          ? { travelDealRefillKey: itemKey }
+          : { offerKeyBySlot: Object.freeze({ ...well.offerKeyBySlot, [slotKey]: itemKey }) }),
+      }),
+      (key) => key === generation,
+    ),
   });
 }

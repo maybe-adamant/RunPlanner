@@ -4,10 +4,24 @@ import {
   PURGING_POOL_SLOT_KEYS,
   STYGIAN_WELL_SLOT_KEYS,
   featureRerolls,
+  parseStygianWellGenerationKey,
+  purgingPoolRerollPins,
   rerollActionKind,
+  stygianWellGenerationKey,
+  stygianWellRerollPins,
+  type FeatureRerollAction,
   type RollFeature,
 } from '../../feature-rolls';
-import type { ProjectDocument, RoomActionReference, RoomOccurrence } from '../../model';
+import type {
+  ProjectDocument,
+  PurgingPoolSlotKey,
+  PurgingPoolState,
+  RoomActionReference,
+  RoomOccurrence,
+  StygianWellGenerationKey,
+  StygianWellSlotKey,
+  StygianWellState,
+} from '../../model';
 import { nextRerollId } from '../../rerolls';
 import { roomActionKey } from '../../room-actions/key';
 import { screenRerollSupported } from '../../screen-rerolls';
@@ -81,18 +95,10 @@ export function applyFeatureRollCommand(
       if (!Number.isInteger(command.index) || command.index < 0 || command.index > order.length)
         failCommand(command, `index must be an integer from 0 through ${order.length}`);
       const rerollId = nextRerollId(featureRerolls(order, feature));
-      const reroll: RoomActionReference =
-        feature === 'stygianWell'
-          ? Object.freeze({
-              kind: rerollActionKind(feature) as 'rerollStygianWell',
-              rerollId,
-              offerKeyBySlot: Object.freeze({}),
-            })
-          : Object.freeze({
-              kind: rerollActionKind(feature) as 'rerollPurgingPool',
-              rerollId,
-              traitKeyBySlot: Object.freeze({}),
-            });
+      const reroll: RoomActionReference = Object.freeze({
+        kind: rerollActionKind(feature),
+        rerollId,
+      });
       const nextOrder = [...order];
       nextOrder.splice(command.index, 0, reroll);
       return updateOccurrence(document, located, withOrder(occurrence, nextOrder));
@@ -198,6 +204,89 @@ function pinInitialPoolSlot(
   });
 }
 
+/** One reroll's pins in a by-reroll record; absent when none is left. */
+function withRerollPins<Slot extends string>(
+  byReroll: Readonly<Record<string, Readonly<Partial<Record<Slot, string>>>>> | undefined,
+  rerollId: string,
+  pins: Readonly<Partial<Record<Slot, string>>>,
+): Readonly<Record<string, Readonly<Partial<Record<Slot, string>>>>> | undefined {
+  const next = { ...byReroll };
+  if (Object.keys(pins).length === 0) delete next[rerollId];
+  else next[rerollId] = Object.freeze({ ...pins });
+  return Object.keys(next).length === 0 ? undefined : Object.freeze(next);
+}
+
+/**
+ * The Well without the Twist results of the given generations; a result
+ * belongs to the Fateful Twist it resolved.
+ */
+export function withoutStygianWellTwistResults(
+  well: StygianWellState,
+  dropped: (generationKey: StygianWellGenerationKey) => boolean,
+): StygianWellState {
+  const results = well.twistResultKeyByGeneration;
+  if (results === undefined) return well;
+  const kept = Object.entries(results).filter(
+    ([generationKey]) => !dropped(generationKey as StygianWellGenerationKey),
+  );
+  if (kept.length === Object.keys(results).length) return well;
+  const { twistResultKeyByGeneration: _previous, ...rest } = well;
+  void _previous;
+  return Object.freeze({
+    ...rest,
+    ...(kept.length === 0
+      ? {}
+      : { twistResultKeyByGeneration: Object.freeze(Object.fromEntries(kept)) }),
+  });
+}
+
+function withStygianWellRerollPins(
+  well: StygianWellState,
+  rerollId: string,
+  pins: Readonly<Partial<Record<StygianWellSlotKey, string>>>,
+): StygianWellState {
+  const { rerollOfferKeyBySlot: _previous, ...rest } = well;
+  void _previous;
+  const next = withRerollPins(well.rerollOfferKeyBySlot, rerollId, pins);
+  return Object.freeze({ ...rest, ...(next === undefined ? {} : { rerollOfferKeyBySlot: next }) });
+}
+
+function withPurgingPoolRerollPins(
+  pool: PurgingPoolState,
+  rerollId: string,
+  pins: Readonly<Partial<Record<PurgingPoolSlotKey, string>>>,
+): PurgingPoolState {
+  const { rerollTraitKeyBySlot: _previous, ...rest } = pool;
+  void _previous;
+  const next = withRerollPins(pool.rerollTraitKeyBySlot, rerollId, pins);
+  return Object.freeze({ ...rest, ...(next === undefined ? {} : { rerollTraitKeyBySlot: next }) });
+}
+
+/**
+ * The occurrence without what a removed Well or Pool reroll drew: its pins
+ * and the Twist results of its generations.
+ */
+export function withoutFeatureRerollObservations(
+  occurrence: RoomOccurrence,
+  reroll: FeatureRerollAction,
+): RoomOccurrence {
+  if (reroll.kind === 'rerollStygianWell') {
+    const well = occurrence.stygianWell;
+    if (well === undefined) return occurrence;
+    const next = withoutStygianWellTwistResults(
+      withStygianWellRerollPins(well, reroll.rerollId, {}),
+      (generationKey) => parseStygianWellGenerationKey(generationKey)?.rollKey === reroll.rerollId,
+    );
+    return next === well ? occurrence : Object.freeze({ ...occurrence, stygianWell: next });
+  }
+  const pool = occurrence.purgingPool;
+  if (pool?.rerollTraitKeyBySlot?.[reroll.rerollId] === undefined) return occurrence;
+  return Object.freeze({
+    ...occurrence,
+    purgingPool: withPurgingPoolRerollPins(pool, reroll.rerollId, {}),
+  });
+}
+
 /**
  * Pins or, with null, unpins one slot of a Well or Pool reroll; returns the
  * occurrence itself when nothing changes.
@@ -211,47 +300,47 @@ export function pinRollSlot(
   slotKey: string,
   value: string | null,
 ): RoomOccurrence {
-  const order = occurrence.roomActions.order;
-  const index = order.findIndex(
-    (reference) => reference.kind === rerollActionKind(feature) && reference.rerollId === rerollId,
+  const present = featureRerolls(occurrence.roomActions.order, feature).some(
+    (reference) => reference.rerollId === rerollId,
   );
-  const existing = order[index];
-  const nextOrder = [...order];
   if (feature === 'stygianWell') {
-    if (existing?.kind !== 'rerollStygianWell')
+    const well = occurrence.stygianWell;
+    if (!present || well === undefined)
       failCommand(command, 'room action is not an ordered Well reroll');
     if (!(STYGIAN_WELL_SLOT_KEYS as readonly string[]).includes(slotKey))
       failCommand(command, 'unknown Stygian Well slot');
     if (value !== null && !roomShopItemKeys(catalog).has(value))
       failCommand(command, 'unknown RoomShop item');
-    const key = slotKey as keyof typeof existing.offerKeyBySlot;
-    if ((existing.offerKeyBySlot[key] ?? null) === value) return occurrence;
-    const offers: Record<string, string> = { ...existing.offerKeyBySlot };
-    if (value === null) delete offers[key];
-    else offers[key] = value;
-    // A Twist result belongs to the Fateful Twist it resolved.
-    const twists: Record<string, string | null> = { ...existing.twistResultKeyBySlot };
-    delete twists[key];
-    const { twistResultKeyBySlot: _previousTwists, ...rest } = existing;
-    void _previousTwists;
-    nextOrder[index] = Object.freeze({
-      ...rest,
-      offerKeyBySlot: Object.freeze(offers),
-      ...(Object.keys(twists).length === 0 ? {} : { twistResultKeyBySlot: Object.freeze(twists) }),
+    const key = slotKey as StygianWellSlotKey;
+    const existing = stygianWellRerollPins(well, rerollId);
+    if ((existing[key] ?? null) === value) return occurrence;
+    const pins: Partial<Record<StygianWellSlotKey, string>> = { ...existing };
+    if (value === null) delete pins[key];
+    else pins[key] = value;
+    const generation = stygianWellGenerationKey(rerollId, key);
+    return Object.freeze({
+      ...occurrence,
+      stygianWell: withoutStygianWellTwistResults(
+        withStygianWellRerollPins(well, rerollId, pins),
+        (generationKey) => generationKey === generation,
+      ),
     });
-  } else {
-    if (existing?.kind !== 'rerollPurgingPool')
-      failCommand(command, 'room action is not an ordered Pool reroll');
-    if (!(PURGING_POOL_SLOT_KEYS as readonly string[]).includes(slotKey))
-      failCommand(command, `unknown Purging Pool slot ${slotKey}`);
-    if (value !== null && catalog.traits.byKey[value] === undefined)
-      failCommand(command, 'unknown trait');
-    const key = slotKey as keyof typeof existing.traitKeyBySlot;
-    if ((existing.traitKeyBySlot[key] ?? null) === value) return occurrence;
-    const traits: Record<string, string> = { ...existing.traitKeyBySlot };
-    if (value === null) delete traits[key];
-    else traits[key] = value;
-    nextOrder[index] = Object.freeze({ ...existing, traitKeyBySlot: Object.freeze(traits) });
   }
-  return withOrder(occurrence, nextOrder);
+  const pool = occurrence.purgingPool;
+  if (!present || pool === undefined)
+    failCommand(command, 'room action is not an ordered Pool reroll');
+  if (!(PURGING_POOL_SLOT_KEYS as readonly string[]).includes(slotKey))
+    failCommand(command, `unknown Purging Pool slot ${slotKey}`);
+  if (value !== null && catalog.traits.byKey[value] === undefined)
+    failCommand(command, 'unknown trait');
+  const key = slotKey as PurgingPoolSlotKey;
+  const existing = purgingPoolRerollPins(pool, rerollId);
+  if ((existing[key] ?? null) === value) return occurrence;
+  const pins: Partial<Record<PurgingPoolSlotKey, string>> = { ...existing };
+  if (value === null) delete pins[key];
+  else pins[key] = value;
+  return Object.freeze({
+    ...occurrence,
+    purgingPool: withPurgingPoolRerollPins(pool, rerollId, pins),
+  });
 }

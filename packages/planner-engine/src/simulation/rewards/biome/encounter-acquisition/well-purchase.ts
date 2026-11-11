@@ -165,7 +165,7 @@ export function applyWellPurchaseTransition(inputs: {
     );
     const refillTwistResultKey =
       refillItemKey === 'RandomStoreItem'
-        ? authoredRoom.stygianWell?.twistResultKeyBySlot?.travelDealRefill
+        ? authoredRoom.stygianWell?.twistResultKeyByGeneration?.travelDealRefill
         : undefined;
     return Object.freeze({
       owner: createTravelDealRefillRealizationAddress(

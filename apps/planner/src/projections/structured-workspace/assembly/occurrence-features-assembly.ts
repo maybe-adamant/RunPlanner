@@ -10,6 +10,7 @@ import {
   hermesShrineInitialSlotKey,
   routeRoomShop,
   semanticAddressKey,
+  stygianWellPurchasedGenerationKeys,
   type BiomeAddress,
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
@@ -236,7 +237,9 @@ function roomFeatures(
               input.catalog.rewards.shops.byKey.RoomShop?.groups.values
                 .flatMap((group) => group.options.values)
                 .find((option) => option.key === itemKey)?.label ?? itemKey;
-            const purchased = new Set(well?.purchasedGenerationKeys ?? []);
+            const purchased = new Set(
+              stygianWellPurchasedGenerationKeys(input.occurrence.roomActions.order),
+            );
             const initialSlots =
               well === undefined
                 ? []
@@ -273,7 +276,7 @@ function roomFeatures(
                 !purchased.has('travelDealRefill') &&
                 (wellAssessment !== undefined ||
                   (well.travelDealRefillKey === undefined &&
-                    well.twistResultKeyBySlot?.travelDealRefill == null)))
+                    well.twistResultKeyByGeneration?.travelDealRefill == null)))
                 ? undefined
                 : (() => {
                     const generationKey = 'travelDealRefill' as const;

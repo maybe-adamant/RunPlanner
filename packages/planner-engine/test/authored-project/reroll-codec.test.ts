@@ -134,26 +134,72 @@ describe('reroll codec', () => {
       (room: Record<string, unknown>) => {
         (room.roomActions as { order: unknown[] }).order.push(...actions);
       };
-    const wellRoll = {
-      kind: 'rerollStygianWell',
-      rerollId: 'r1',
-      offerKeyBySlot: { healing: 'ArmorBoostStore' },
+    const wellRoll = { kind: 'rerollStygianWell', rerollId: 'r1' };
+    const wellPins = (pins: unknown) => (room: Record<string, unknown>) => {
+      (room.stygianWell as Record<string, unknown>).rerollOfferKeyBySlot = pins;
     };
-    const decoded = decodeWith(withOrder(wellRoll))();
-    expect(
-      decoded.route.biomes[0]!.topology!.occurrences.find(
-        (room) => room.occurrenceId === 'golden-f-preboss-shop:postboss',
-      )!.roomActions.order.at(-1),
-    ).toEqual(wellRoll);
-    expect(JSON.parse(encodeProjectDocument(decoded))).toEqual(
-      JSON.parse(encodeProjectDocument(decodeWith(withOrder(wellRoll))())),
+    const both =
+      (...edits: ((room: Record<string, unknown>) => void)[]) =>
+      (room: Record<string, unknown>) => {
+        for (const edit of edits) edit(room);
+      };
+    const pinned = both(withOrder(wellRoll), wellPins({ r1: { healing: 'ArmorBoostStore' } }));
+    const decodedRoom = decodeWith(pinned)().route.biomes[0]!.topology!.occurrences.find(
+      (room) => room.occurrenceId === 'golden-f-preboss-shop:postboss',
+    )!;
+    expect(decodedRoom.roomActions.order.at(-1)).toEqual(wellRoll);
+    expect(decodedRoom.stygianWell?.rerollOfferKeyBySlot).toEqual({
+      r1: { healing: 'ArmorBoostStore' },
+    });
+    expect(JSON.parse(encodeProjectDocument(decodeWith(pinned)()))).toEqual(
+      JSON.parse(encodeProjectDocument(decodeWith(pinned)())),
     );
+    // The row is the reroll alone: what it drew lives on the Well.
     expect(
-      decodeWith(withOrder({ ...wellRoll, offerKeyBySlot: { first: 'ArmorBoostStore' } })),
-    ).toThrow('contains unknown Well slot first');
-    expect(decodeWith(withOrder({ ...wellRoll, offerKeyBySlot: { healing: 'Nope' } }))).toThrow(
+      decodeWith(withOrder({ ...wellRoll, offerKeyBySlot: { healing: 'ArmorBoostStore' } })),
+    ).toThrow('is not a project document field');
+    expect(
+      decodeWith(both(withOrder(wellRoll), wellPins({ r1: { first: 'ArmorBoostStore' } }))),
+    ).toThrow('contains unknown slot first');
+    expect(decodeWith(both(withOrder(wellRoll), wellPins({ r1: { healing: 'Nope' } })))).toThrow(
       'unknown RoomShop item Nope',
     );
+    expect(decodeWith(both(withOrder(wellRoll), wellPins({ r1: {} })))).toThrow(
+      'must pin at least one slot',
+    );
+    expect(decodeWith(both(withOrder(wellRoll), wellPins({})))).toThrow('must not be empty');
+    // Pins and Twist results name only a reroll the room holds.
+    expect(decodeWith(wellPins({ r1: { healing: 'ArmorBoostStore' } }))).toThrow(
+      'pins a Well reroll the room does not hold',
+    );
+    expect(
+      decodeWith((room) => {
+        (room.stygianWell as Record<string, unknown>).twistResultKeyByGeneration = {
+          'r1:healing': null,
+        };
+      }),
+    ).toThrow('names a Well reroll the room does not hold');
+    expect(
+      decodeWith(
+        both(withOrder(wellRoll), (room) => {
+          (room.stygianWell as Record<string, unknown>).twistResultKeyByGeneration = {
+            'r1:healing': null,
+          };
+        }),
+      ),
+    ).not.toThrow();
+    expect(
+      decodeWith((room) => {
+        (room.stygianWell as Record<string, unknown>).twistResultKeyByGeneration = {
+          'later:healing': null,
+        };
+      }),
+    ).toThrow('must be a Well generation key');
+    expect(
+      decodeWith((room) => {
+        (room.stygianWell as Record<string, unknown>).purchasedGenerationKeys = [];
+      }),
+    ).toThrow('is not a project document field');
     expect(
       decodeWith((room) => {
         (room.stygianWell as Record<string, unknown>).rerollCount = 1;
@@ -175,15 +221,24 @@ describe('reroll codec', () => {
       decodeWith((room) => {
         interactedPool(room);
         withOrder(
-          {
-            kind: 'rerollPurgingPool',
-            rerollId: 'r1',
-            traitKeyBySlot: { left: 'ApolloWeaponBoon' },
-          },
+          { kind: 'rerollPurgingPool', rerollId: 'r1' },
           { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' },
         )(room);
+        (room.purgingPool as Record<string, unknown>).rerollTraitKeyBySlot = {
+          r1: { left: 'ApolloWeaponBoon' },
+        };
       }),
     ).not.toThrow();
+    expect(
+      decodeWith((room) => {
+        (room.purgingPool as Record<string, unknown>).rerollTraitKeyBySlot = {
+          r1: { left: 'ApolloWeaponBoon' },
+        };
+      }),
+    ).toThrow('pins a Pool reroll the room does not hold');
+    expect(
+      decodeWith(withOrder({ kind: 'rerollPurgingPool', rerollId: 'r1', traitKeyBySlot: {} })),
+    ).toThrow('is not a project document field');
     expect(
       decodeWith((room) => {
         interactedPool(room);

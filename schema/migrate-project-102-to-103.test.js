@@ -48,12 +48,63 @@ describe('schema 102 to 103 migration', () => {
   });
   const migrate = (document) => step.migrateProjectDocument(document, { catalog: engine.catalog });
 
-  it('lifts by the version alone', () => {
+  it('lifts a plan with nothing to reshape by the version alone', () => {
     const current = checkpoint('underworld-fg');
     const lifted = step.liftProjectDocument(at102(current));
     assert.equal(lifted.schemaVersion, 103);
     assert.equal('schemaRevision' in lifted, false);
     assert.deepEqual(lifted, current);
+  });
+
+  it('moves Well and Pool rolls from their reroll actions onto the Well and Pool', () => {
+    const current = checkpoint('underworld-f-stygian-well');
+    const legacy = at102(structuredClone(current));
+    const room = (document) =>
+      document.route.biomes[0].topology.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === 'golden-f-preboss-shop:postboss',
+      );
+    const purchases = room(current)
+      .roomActions.order.filter((action) => action.kind === 'purchaseStygianWellOffer')
+      .map((action) => action.generationKey);
+    const { travelDealRefillKey, ...well } = room(legacy).stygianWell;
+    room(legacy).stygianWell = {
+      ...well,
+      travelDealRefillKey,
+      twistResultKeyBySlot: { travelDealRefill: null },
+      purchasedGenerationKeys: purchases,
+    };
+    room(legacy).roomActions.order.push(
+      {
+        kind: 'rerollStygianWell',
+        rerollId: 'r1',
+        offerKeyBySlot: { healing: 'HealDropRange' },
+        twistResultKeyBySlot: {},
+      },
+      { kind: 'rerollPurgingPool', rerollId: 'r1', traitKeyBySlot: { left: 'ApolloWeaponBoon' } },
+    );
+    for (const migrated of [step.liftProjectDocument(legacy), migrate(legacy)]) {
+      assert.deepEqual(room(migrated).stygianWell, {
+        ...room(current).stygianWell,
+        rerollOfferKeyBySlot: { r1: { healing: 'HealDropRange' } },
+        twistResultKeyByGeneration: { travelDealRefill: null },
+      });
+      assert.deepEqual(room(migrated).purgingPool.rerollTraitKeyBySlot, {
+        r1: { left: 'ApolloWeaponBoon' },
+      });
+      assert.deepEqual(room(migrated).roomActions.order.slice(-2), [
+        { kind: 'rerollStygianWell', rerollId: 'r1' },
+        { kind: 'rerollPurgingPool', rerollId: 'r1' },
+      ]);
+      assert.deepEqual(
+        room(migrated)
+          .roomActions.order.filter((action) => action.kind === 'purchaseStygianWellOffer')
+          .map((action) => action.generationKey),
+        purchases,
+      );
+      assert.doesNotThrow(() =>
+        engine.parseProjectDocument(JSON.stringify(migrated), engine.catalog),
+      );
+    }
   });
 
   it('rejects another schema, a later revision or another catalog', () => {

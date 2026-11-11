@@ -9,10 +9,12 @@ import {
   INITIAL_ROLL_KEY,
   STYGIAN_WELL_SLOT_KEYS,
   parseStygianWellGenerationKey,
+  purgingPoolRerollPins,
   purgingPoolRollTraitKey,
   purgingPoolSaleRollKey,
   stygianWellGenerationItemKey,
   stygianWellGenerationKey,
+  stygianWellRerollPins,
   type RollFeature,
 } from '../../../authored-project/feature-rolls';
 import type {
@@ -176,7 +178,10 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
         emissions: [settledFindings(settled.findings), timeline],
       };
     const offered = stygianWellRestockedSlots(walk);
-    const pins = reference?.kind === 'rerollStygianWell' ? reference.offerKeyBySlot : {};
+    const pins =
+      reference?.kind === 'rerollStygianWell'
+        ? stygianWellRerollPins(room.stygianWell, reference.rerollId)
+        : {};
     const view = wellOccurrenceView(room);
     const refillSlot = stygianWellLiveRefillSlot(walk);
     const onShow = [
@@ -256,7 +261,10 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
       state: withBranch(state, undefined),
       emissions: [settledFindings(settled.findings), timeline],
     };
-  const pins = reference?.kind === 'rerollPurgingPool' ? reference.traitKeyBySlot : {};
+  const pins =
+    reference?.kind === 'rerollPurgingPool'
+      ? purgingPoolRerollPins(room.purgingPool, reference.rerollId)
+      : {};
   // The ban applies only when the previous draw left eligible traits unshown.
   if (walk.eligibleCount > walk.offeredSlotKeys.length) {
     const view = { purgingPool: room.purgingPool, roomActions: { order: rankedReferences(room) } };
@@ -343,8 +351,8 @@ function reportRepeatsAllOffers(
 
 function rerollReference(feature: RollFeature, rerollId: string): RoomActionReference {
   return feature === 'stygianWell'
-    ? { kind: 'rerollStygianWell', rerollId, offerKeyBySlot: {} }
-    : { kind: 'rerollPurgingPool', rerollId, traitKeyBySlot: {} };
+    ? { kind: 'rerollStygianWell', rerollId }
+    : { kind: 'rerollPurgingPool', rerollId };
 }
 
 /**

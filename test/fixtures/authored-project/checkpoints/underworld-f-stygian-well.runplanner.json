@@ -1238,12 +1238,7 @@
                   "secondLeft": "TemporaryBoonRarityTrait",
                   "secondRight": "LimitedSwapTraitDrop"
                 },
-                "travelDealRefillKey": "ExtendedShopTrait",
-                "purchasedGenerationKeys": [
-                  "initial:secondLeft",
-                  "initial:secondRight",
-                  "travelDealRefill"
-                ]
+                "travelDealRefillKey": "ExtendedShopTrait"
               },
               "purgingPool": {
                 "traitKeyBySlot": {

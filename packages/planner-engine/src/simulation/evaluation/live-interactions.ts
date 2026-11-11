@@ -17,8 +17,16 @@ import type {
   RoomActionReference,
   RoomOccurrence,
 } from '../../authored-project/model';
-import { INITIAL_ROLL_KEY } from '../../authored-project/feature-rolls';
-import { rerollAppendIndex, type RerollSurface } from '../../authored-project/rerolls';
+import {
+  INITIAL_ROLL_KEY,
+  featureRerolls,
+  rerollActionKind,
+} from '../../authored-project/feature-rolls';
+import {
+  nextRerollId,
+  rerollAppendIndex,
+  type RerollSurface,
+} from '../../authored-project/rerolls';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import { composeStartingReward } from '../../authored-project/room-state/starting-reward';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../authored-project/shop';
@@ -112,8 +120,8 @@ export interface LiveVerb {
   /** For a required verb: the last gap at which it may stand. */
   readonly deadline?: number;
   /**
-   * The row it stands as or places; absent for a new reroll press, Well
-   * reroll or Pool reroll, whose row id the picker or the engine allocates.
+   * The row it stands as or places; absent for a new door, cage or wheel
+   * reroll press, whose row id the picker allocates.
    */
   readonly reference?: RoomActionReference;
   /** The conversion's acquisition role, for a verb that sets one. */
@@ -401,6 +409,9 @@ function objectChoiceVerbs(
   }
   // A Well's or Pool's interaction stands where the room's reached actions end.
   if (frontier !== orderLength) return frozen(verbs);
+  const order = room.roomActionRoster.rows.flatMap((row) =>
+    row.rank === null ? [] : [row.reference],
+  );
   const featureReroll = (
     object: 'stygianWell' | 'purgingPool',
     option: { readonly enabled: boolean; readonly available: boolean } | undefined,
@@ -416,6 +427,11 @@ function objectChoiceVerbs(
       object === 'stygianWell'
         ? frozen({ kind: 'InsertStygianWellReroll' as const, occurrence, index: orderLength })
         : frozen({ kind: 'InsertPurgingPoolReroll' as const, occurrence, index: orderLength });
+    // The command allocates the smallest id the room's rerolls of this object leave free.
+    const reference: RoomActionReference = frozen({
+      kind: rerollActionKind(object),
+      rerollId: nextRerollId(featureRerolls(order, object)),
+    });
     verbs.push(
       frozen({
         object,
@@ -424,6 +440,7 @@ function objectChoiceVerbs(
         verb: frozen({
           verb: 'reroll' as const,
           participation: 'optional' as const,
+          reference,
           commands: frozen([command]),
           choice: frozen({
             picker:

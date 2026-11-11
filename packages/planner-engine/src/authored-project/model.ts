@@ -158,12 +158,19 @@ export interface ShopState {
 export type PurgingPoolSlotKey = 'left' | 'middle' | 'right';
 
 /**
- * The Pool's initial sell list; a null slot stays native until a sale needs
- * it. Use follows from the room's actions; each later list is a
- * `rerollPurgingPool` room action.
+ * The Pool's observed sell lists: the initial one, where a null slot stays
+ * native until a sale needs it, and each later list a `rerollPurgingPool`
+ * room action draws. Use follows from the room's actions.
  */
 export interface PurgingPoolState {
   readonly traitKeyBySlot: Readonly<Record<PurgingPoolSlotKey, string | null>>;
+  /**
+   * The pinned slots of each present Pool reroll's list, by its `rerollId`;
+   * an unpinned slot stays native. Absent when nothing is pinned.
+   */
+  readonly rerollTraitKeyBySlot?: Readonly<
+    Record<string, Readonly<Partial<Record<PurgingPoolSlotKey, string>>>>
+  >;
   /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
   readonly anchorId?: number;
 }
@@ -241,16 +248,26 @@ export type StygianWellSlotKey = 'healing' | 'secondLeft' | 'secondRight';
  */
 export type StygianWellGenerationKey = `${string}:${StygianWellSlotKey}` | 'travelDealRefill';
 /**
- * The Well's initial stock; a null slot stays native until a purchase needs
- * it. Use follows from the room's actions; each later roll is a
- * `rerollStygianWell` room action.
+ * The Well's observed stock: the initial roll, where a null slot stays native
+ * until a purchase needs it, and each later roll a `rerollStygianWell` room
+ * action draws. Use and purchases follow from the room's actions.
  */
 export interface StygianWellState {
   readonly offerKeyBySlot: Readonly<Record<StygianWellSlotKey, string | null>>;
-  readonly twistResultKeyBySlot?: Readonly<
-    Partial<Record<StygianWellSlotKey | 'travelDealRefill', string | null>>
+  /**
+   * The pinned slots of each present Well reroll, by its `rerollId`; an
+   * unpinned slot stays native. Absent when nothing is pinned.
+   */
+  readonly rerollOfferKeyBySlot?: Readonly<
+    Record<string, Readonly<Partial<Record<StygianWellSlotKey, string>>>>
   >;
-  readonly purchasedGenerationKeys?: readonly StygianWellGenerationKey[];
+  /**
+   * A bought Fateful Twist's result, by the generation it was bought from; the
+   * game rolls it per bought generation. Absent when none is recorded.
+   */
+  readonly twistResultKeyByGeneration?: Readonly<
+    Partial<Record<StygianWellGenerationKey, string | null>>
+  >;
   readonly travelDealRefillKey?: string | null;
   /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
   readonly anchorId?: number;
@@ -347,26 +364,20 @@ export interface UnlockExitRoomAction {
 
 /**
  * One Well reroll, identified by its persisted `rerollId`. It restocks every
- * slot not bought earlier in the room; a pinned slot names the restocked
- * item, and an unpinned one stays native.
+ * slot not bought earlier in the room; the Well holds what it restocked.
  */
 export interface StygianWellRerollAction {
   readonly kind: 'rerollStygianWell';
   readonly rerollId: string;
-  readonly offerKeyBySlot: Readonly<Partial<Record<StygianWellSlotKey, string>>>;
-  /** A bought Fateful Twist's result, by its slot. */
-  readonly twistResultKeyBySlot?: Readonly<Partial<Record<StygianWellSlotKey, string | null>>>;
 }
 
 /**
  * One Pool reroll, identified by its persisted `rerollId`. It redraws the
- * whole list from the current traits; a pinned slot names its trait, and an
- * unpinned one stays native.
+ * whole list from the current traits; the Pool holds the list it drew.
  */
 export interface PurgingPoolRerollAction {
   readonly kind: 'rerollPurgingPool';
   readonly rerollId: string;
-  readonly traitKeyBySlot: Readonly<Partial<Record<PurgingPoolSlotKey, string>>>;
 }
 
 /**

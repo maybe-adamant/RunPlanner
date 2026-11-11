@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { stygianWellPurchasedGenerationKeys } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { RunRecord } from '../src/run-record';
 import { projectFromRunRecord } from '../src/import';
@@ -153,7 +154,9 @@ describe('run import of synthetic Erebus variants', () => {
     const imported = projectFromRunRecord(catalog, withoutTravelDeal());
     expect(imported.kind).toBe('complete');
     expect(
-      occurrence(imported.project, 'H-r30:postboss').stygianWell?.purchasedGenerationKeys,
+      stygianWellPurchasedGenerationKeys(
+        occurrence(imported.project, 'H-r30:postboss').roomActions.order,
+      ),
     ).toEqual(['initial:secondRight']);
     expect(entryLines(imported.report)).toContain('refused well r32 roomFeature@H-r30:postboss');
   });

@@ -1230,10 +1230,7 @@
                   "secondLeft": "TemporaryForcedSecretDoorTrait",
                   "secondRight": "LimitedSwapTraitDrop"
                 },
-                "travelDealRefillKey": "ExtendedShopTrait",
-                "purchasedGenerationKeys": [
-                  "initial:secondLeft"
-                ]
+                "travelDealRefillKey": "ExtendedShopTrait"
               },
               "purgingPool": {
                 "traitKeyBySlot": {

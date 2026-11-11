@@ -50,12 +50,16 @@ function withScreenRerolls(
   });
 }
 
-function roomOrder(application: PlannerApplication) {
+function postbossRoom(application: PlannerApplication) {
   return application.store
     .getState()
     .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
       (room) => room.occurrenceId === postbossId,
-    )!.roomActions.order;
+    )!;
+}
+
+function roomOrder(application: PlannerApplication) {
+  return postbossRoom(application).roomActions.order;
 }
 
 it('rerolls the Well from its Timeline entry and buys a restocked slot with its item', async () => {
@@ -98,10 +102,10 @@ it('rerolls the Well from its Timeline entry and buys a restocked slot with its 
     }),
   );
 
-  // The item is pinned on its reroll in the same edit.
-  expect(
-    roomOrder(view.application).find((reference) => reference.kind === 'rerollStygianWell'),
-  ).toMatchObject({ offerKeyBySlot: { healing: expect.any(String) } });
+  // The item is pinned on the Well's roll in the same edit.
+  expect(postbossRoom(view.application).stygianWell?.rerollOfferKeyBySlot).toMatchObject({
+    r1: { healing: expect.any(String) },
+  });
   openNotReached();
   expect(screen.getAllByRole('img', { name: 'Roll 2' })).toHaveLength(2);
   expect(

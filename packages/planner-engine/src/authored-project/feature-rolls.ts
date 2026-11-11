@@ -1,11 +1,13 @@
 import type {
   PurgingPoolRerollAction,
   PurgingPoolSlotKey,
+  PurgingPoolState,
   RoomActionReference,
   RoomOccurrence,
   StygianWellGenerationKey,
   StygianWellRerollAction,
   StygianWellSlotKey,
+  StygianWellState,
 } from './model';
 
 /**
@@ -78,6 +80,33 @@ export function featureRerolls(
   return feature === 'stygianWell' ? stygianWellRerolls(order) : purgingPoolRerolls(order);
 }
 
+const NO_PINS = Object.freeze({});
+
+/** The pinned slots of one Well reroll; empty when none is pinned. */
+export function stygianWellRerollPins(
+  well: StygianWellState | undefined,
+  rerollId: string,
+): Readonly<Partial<Record<StygianWellSlotKey, string>>> {
+  return well?.rerollOfferKeyBySlot?.[rerollId] ?? NO_PINS;
+}
+
+/** The pinned slots of one Pool reroll's list; empty when none is pinned. */
+export function purgingPoolRerollPins(
+  pool: PurgingPoolState | undefined,
+  rerollId: string,
+): Readonly<Partial<Record<PurgingPoolSlotKey, string>>> {
+  return pool?.rerollTraitKeyBySlot?.[rerollId] ?? NO_PINS;
+}
+
+/** The Well generations bought in a room, in action order: each purchase row is one. */
+export function stygianWellPurchasedGenerationKeys(
+  order: readonly RoomActionReference[],
+): readonly StygianWellGenerationKey[] {
+  return order.flatMap((reference) =>
+    reference.kind === 'purchaseStygianWellOffer' ? [reference.generationKey] : [],
+  );
+}
+
 /** The Pool sale's roll: its reroll id, or the initial list. */
 export function purgingPoolSaleRollKey(
   reference: Extract<RoomActionReference, { readonly kind: 'sellPurgingPoolTrait' }>,
@@ -102,10 +131,12 @@ export function stygianWellGenerationItemKey(
   const parsed = parseStygianWellGenerationKey(generationKey);
   if (parsed === undefined) return undefined;
   if (parsed.rollKey === INITIAL_ROLL_KEY) return well.offerKeyBySlot[parsed.slotKey];
-  const reroll = stygianWellRerolls(occurrence.roomActions.order).find(
+  const present = stygianWellRerolls(occurrence.roomActions.order).some(
     (candidate) => candidate.rerollId === parsed.rollKey,
   );
-  return reroll === undefined ? undefined : (reroll.offerKeyBySlot[parsed.slotKey] ?? null);
+  return present
+    ? (stygianWellRerollPins(well, parsed.rollKey)[parsed.slotKey] ?? null)
+    : undefined;
 }
 
 /**
@@ -131,21 +162,10 @@ export function stygianWellGenerationSlot(
 
 /** The authored Fateful Twist result of one Well generation. */
 export function stygianWellGenerationTwistResultKey(
-  occurrence: {
-    readonly stygianWell?: RoomOccurrence['stygianWell'] | undefined;
-    readonly roomActions: RoomOccurrence['roomActions'];
-  },
+  occurrence: { readonly stygianWell?: RoomOccurrence['stygianWell'] | undefined },
   generationKey: StygianWellGenerationKey,
 ): string | null | undefined {
-  const well = occurrence.stygianWell;
-  if (well === undefined) return undefined;
-  if (generationKey === 'travelDealRefill') return well.twistResultKeyBySlot?.travelDealRefill;
-  const parsed = parseStygianWellGenerationKey(generationKey);
-  if (parsed === undefined) return undefined;
-  if (parsed.rollKey === INITIAL_ROLL_KEY) return well.twistResultKeyBySlot?.[parsed.slotKey];
-  return stygianWellRerolls(occurrence.roomActions.order).find(
-    (candidate) => candidate.rerollId === parsed.rollKey,
-  )?.twistResultKeyBySlot?.[parsed.slotKey];
+  return occurrence.stygianWell?.twistResultKeyByGeneration?.[generationKey];
 }
 
 /**
@@ -163,8 +183,8 @@ export function purgingPoolRollTraitKey(
   const pool = occurrence.purgingPool;
   if (pool === undefined) return undefined;
   if (rollKey === INITIAL_ROLL_KEY) return pool.traitKeyBySlot[slotKey];
-  const reroll = purgingPoolRerolls(occurrence.roomActions.order).find(
+  const present = purgingPoolRerolls(occurrence.roomActions.order).some(
     (candidate) => candidate.rerollId === rollKey,
   );
-  return reroll === undefined ? undefined : (reroll.traitKeyBySlot[slotKey] ?? null);
+  return present ? (purgingPoolRerollPins(pool, rollKey)[slotKey] ?? null) : undefined;
 }
