@@ -271,6 +271,8 @@ describe('upgrade settlement of a plan saved under earlier rules', () => {
             String(row.siteKey)
           ]?.pickupEntries?.[String(row.entryKey)];
         expect(entry(lifted)).toBeDefined();
+        // The lift stamped the drop row, and with the item it holds now: no replaced row.
+        expect(row.content).toEqual(expect.arrayContaining([expect.any(String)]));
         expect(roomActionsOnReplacedItems(lifted, catalog)).toEqual([]);
         const settled = upgrade(lifted);
         expect(settled.fault).toBeUndefined();
