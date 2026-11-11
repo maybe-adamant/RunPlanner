@@ -40,6 +40,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
+import { withItemContent } from '../../support/room-action-content';
 
 function biomeTopology(
   project: ReturnType<typeof fProject>,
@@ -328,11 +329,13 @@ describe('authored-project route detour commands', () => {
     expect(before.map((reference) => reference.kind)).toEqual(
       expect.arrayContaining(['interactChallengeSwitch', 'rerollStygianWell']),
     );
-    expect(before).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'challengeSwitch',
-      entryKey: 'reward',
-    });
+    expect(before).toContainEqual(
+      withItemContent(project, host, {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'challengeSwitch',
+        entryKey: 'reward',
+      }),
+    );
     const rewardActions = before.filter((reference) => reference.kind === 'interactIncomingReward');
     expect(rewardActions).not.toHaveLength(0);
 

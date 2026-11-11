@@ -22,6 +22,7 @@ import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { withItemContent } from '../../support/room-action-content';
 
 describe('starting reward ownership', () => {
   it('evaluates the route-owned reward before entry identity and reports its absence on the route', () => {
@@ -122,11 +123,11 @@ describe('starting reward ownership', () => {
       expect.objectContaining({
         kind: 'action',
         participation: 'required',
-        reference: {
+        reference: withItemContent(project, createOccurrenceAddress(biome, occurrenceId), {
           kind: 'interactIncomingReward',
           producerPoint: 'roomRewardPickup',
           acquisitionRole: 'source',
-        },
+        }),
       }),
     );
   });
@@ -165,11 +166,11 @@ describe('starting reward ownership', () => {
       expect.objectContaining({
         kind: 'action',
         participation: 'required',
-        reference: {
+        reference: withItemContent(project, createOccurrenceAddress(biome, occurrenceId), {
           kind: 'interactIncomingReward',
           producerPoint: 'roomRewardPickup',
           acquisitionRole: 'source',
-        },
+        }),
       }),
     );
     project = applyProjectCommand(project, catalog, {

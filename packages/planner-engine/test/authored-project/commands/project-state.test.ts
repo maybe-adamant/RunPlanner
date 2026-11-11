@@ -35,6 +35,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import { fBiome, fProject, iBiome, iProject } from '../support/configured-projects';
+import { withItemContent } from '../../support/room-action-content';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 /** Buys a Shrine item rushed and picks up its same-room pickup at the end of the room. */
@@ -220,10 +221,12 @@ describe('authored-project project-state commands', () => {
       rewardType: 'HealBigDrop',
       delay: 2,
     });
-    expect(postboss?.roomActions.order).toContainEqual({
-      kind: 'purchaseHermesShrineOffer',
-      generationKey: 'initial:first',
-    });
+    expect(postboss?.roomActions.order).toContainEqual(
+      withItemContent(purchased, occurrence, {
+        kind: 'purchaseHermesShrineOffer',
+        generationKey: 'initial:first',
+      }),
+    );
     expect(postboss?.roomActions.order).not.toContainEqual(
       expect.objectContaining({ kind: 'rushHermesShrineOffer' }),
     );
@@ -284,11 +287,13 @@ describe('authored-project project-state commands', () => {
     expect(clearedPostboss?.roomActions.order).not.toContainEqual(
       expect.objectContaining({ generationKey: 'travelDealRefill' }),
     );
-    expect(clearedPostboss?.roomActions.order).not.toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
-      entryKey: hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
-    });
+    expect(clearedPostboss?.roomActions.order).not.toContainEqual(
+      withItemContent(refillCleared, occurrence, {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey: hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
+      }),
+    );
     const refillRushed = purchaseTestHermesShrineOffer(
       refilled,
       catalog,
@@ -299,10 +304,12 @@ describe('authored-project project-state commands', () => {
     const rushedPostboss = refillRushed.route.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     );
-    expect(rushedPostboss?.roomActions.order).toContainEqual({
-      kind: 'rushHermesShrineOffer',
-      generationKey: 'travelDealRefill',
-    });
+    expect(rushedPostboss?.roomActions.order).toContainEqual(
+      withItemContent(refillRushed, occurrence, {
+        kind: 'rushHermesShrineOffer',
+        generationKey: 'travelDealRefill',
+      }),
+    );
     expect(rushedPostboss?.acquisitionSites?.hermesShrineDelivery?.pickupEntries).toHaveProperty(
       hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
     );
@@ -513,11 +520,13 @@ describe('authored-project project-state commands', () => {
       delay: 2,
     });
     const entryKey = hermesShrineDeliveryEntryKey(occurrence, 'initial:first');
-    expect(occurrenceState?.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
-      entryKey,
-    });
+    expect(occurrenceState?.roomActions.order).toContainEqual(
+      withItemContent(authored, occurrence, {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey,
+      }),
+    );
     expect(
       occurrenceState?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
         ?.levelResolutionsByAcquisitionRole?.self,

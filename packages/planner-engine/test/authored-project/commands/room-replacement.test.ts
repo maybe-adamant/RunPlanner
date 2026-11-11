@@ -34,6 +34,7 @@ import {
   surfaceProject,
 } from '../support/configured-projects';
 import { nLocalOccurrenceIds } from '../support/n-local-occurrences';
+import { withItemContents } from '../../support/room-action-content';
 import { scheduleTestRequiredRoomActions } from '@run-planner/test-fixtures/shared';
 
 function sourceDecision(project: ReturnType<typeof surfaceProject>, biome = oBiome) {
@@ -204,13 +205,15 @@ describe('authored-project room replacement commands', () => {
       gameName: 'F_Reprieve01',
     });
 
-    expect(fOccurrence(replaced, target.occurrenceId).roomActions.order).toEqual([
-      {
-        kind: 'interactIncomingReward',
-        producerPoint: 'roomRewardPickup',
-        acquisitionRole: 'source',
-      },
-    ]);
+    expect(fOccurrence(replaced, target.occurrenceId).roomActions.order).toEqual(
+      withItemContents(replaced, createOccurrenceAddress(fBiome, target.occurrenceId), [
+        {
+          kind: 'interactIncomingReward',
+          producerPoint: 'roomRewardPickup',
+          acquisitionRole: 'source',
+        },
+      ]),
+    );
   });
 
   it('cannot replace an ordinary door target with a fixed completion room', () => {
