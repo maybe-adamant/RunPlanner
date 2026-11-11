@@ -25,6 +25,8 @@ import {
   authorLegalTraitOffers,
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
+  replaceTestPlacedItem,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 import { oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
@@ -721,8 +723,9 @@ describe('execution-plan compiler and codec', () => {
       createOccurrenceAddress(oBiome, oOccurrenceIds.combat01),
       'Combat1',
     );
-    project = authorLegalTraitOffers(
-      applyProjectCommand(project, catalog, {
+    // The Boon is a new wheel item: its pickup is placed again with its screen.
+    project = authorTestTraitsAndRequiredItems(
+      settleTestEdit(project, {
         kind: 'ReplaceRewardWheelOffer',
         offer,
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
@@ -762,7 +765,7 @@ describe('execution-plan compiler and codec', () => {
       }),
     );
 
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer,
       value: { rewardType: 'RoomMoneyDrop' },

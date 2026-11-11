@@ -10,7 +10,6 @@ import {
   createTraitOfferAddress,
   forcedChaosOccurrenceKeys,
   semanticAddressKey,
-  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { locateBiome } from '../../src/authored-project/commands/contract';
 import {
@@ -55,41 +54,7 @@ import {
 } from '../../src/simulation/commerce/stygian-well';
 import { reachedFrontier } from '../support/reward-frontier';
 import { settleTestEdit } from '@run-planner/test-fixtures/shared';
-
-type WellAddress = ReturnType<typeof createOccurrenceAddress>;
-
-/**
- * Pins another item in a bought slot: the swap removes its purchase, and the
- * owner buys it again where it stood.
- */
-function repinBoughtWellSlot(
-  project: ProjectDocument,
-  occurrence: WellAddress,
-  slotKey: StygianWellSlotKey,
-  itemKey: string,
-): ProjectDocument {
-  const generationKey = `initial:${slotKey}` as const;
-  const index = project.route.biomes
-    .find((biome) => biome.biomeKey === occurrence.biomeKey)
-    ?.topology?.occurrences.find((room) => room.occurrenceId === occurrence.occurrenceId)
-    ?.roomActions.order.findIndex(
-      (row) => row.kind === 'purchaseStygianWellOffer' && row.generationKey === generationKey,
-    );
-  if (index === undefined || index < 0) throw new Error(`${slotKey} is not bought`);
-  const swapped = settleTestEdit(project, {
-    kind: 'ReplaceStygianWellOffer',
-    occurrence,
-    slotKey,
-    itemKey,
-  });
-  return settleTestEdit(swapped, {
-    kind: 'SetStygianWellPurchase',
-    occurrence,
-    generationKey,
-    purchased: true,
-    index,
-  });
-}
+import { repinBoughtStygianWellSlot } from '../support/stygian-well';
 
 /** Assesses one purchase of the authored Well; the first purchase restocks under Travel Deal. */
 function assessPurchase(
@@ -927,7 +892,7 @@ describe('Stygian Well consequential purchase state', () => {
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
     let project = loadUnderworldFStygianWellCheckpoint();
-    project = repinBoughtWellSlot(project, well, 'secondLeft', 'RandomStoreItem');
+    project = repinBoughtStygianWellSlot(project, well, 'secondLeft', 'RandomStoreItem');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellTwistResult',
       occurrence: well,
@@ -962,8 +927,8 @@ describe('Stygian Well consequential purchase state', () => {
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
     let project = createUnderworldFWellCheckpoint(false);
-    project = repinBoughtWellSlot(project, well, 'secondLeft', 'TemporaryImprovedCastTrait');
-    project = repinBoughtWellSlot(project, well, 'secondRight', 'TemporaryDiscountTrait');
+    project = repinBoughtStygianWellSlot(project, well, 'secondLeft', 'TemporaryImprovedCastTrait');
+    project = repinBoughtStygianWellSlot(project, well, 'secondRight', 'TemporaryDiscountTrait');
     project = settleTestEdit(project, {
       kind: 'SetStygianWellPurchase',
       occurrence: well,
@@ -1118,7 +1083,7 @@ describe('Stygian Well consequential purchase state', () => {
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
     let project = createUnderworldFWellCheckpoint(false);
-    project = repinBoughtWellSlot(project, well, 'secondLeft', 'RandomStoreItem');
+    project = repinBoughtStygianWellSlot(project, well, 'secondLeft', 'RandomStoreItem');
     project = settleTestEdit(project, {
       kind: 'ReplaceStygianWellTwistResult',
       occurrence: well,

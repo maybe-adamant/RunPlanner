@@ -21,8 +21,10 @@ import {
   replaceTestShopOfferActions,
   hubVisitActions,
   purchaseTestHermesShrineOffer,
+  replaceTestPlacedItem,
   settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
+import { repinBoughtStygianWellSlot } from '../support/stygian-well';
 import {
   loadUnderworldFGHICheckpoint,
   loadUnderworldFPoolCheckpoint,
@@ -316,7 +318,7 @@ function automaticOutcomeProject() {
     value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
   });
   const growthReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1));
-  project = applyProjectCommand(project, catalog, {
+  project = replaceTestPlacedItem(project, {
     kind: 'ReplaceIncomingReward',
     reward: growthReward,
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
@@ -2463,18 +2465,18 @@ describe('engine-owned F/G execution semantic product', () => {
     const well = createOccurrenceAddress(goldenFBiome, wellId);
     // Make the first accepted purchase neutral. Travel Deal still retains it
     // as the opaque source of the later refill and qualifying purchases.
-    wellProject = applyProjectCommand(wellProject, catalog, {
-      kind: 'ReplaceStygianWellOffer',
-      occurrence: well,
-      slotKey: 'secondLeft',
-      itemKey: 'TemporaryImprovedSecondaryTrait',
-    });
-    wellProject = applyProjectCommand(wellProject, catalog, {
-      kind: 'ReplaceStygianWellOffer',
-      occurrence: well,
-      slotKey: 'secondRight',
-      itemKey: 'TemporaryImprovedDefenseTrait',
-    });
+    wellProject = repinBoughtStygianWellSlot(
+      wellProject,
+      well,
+      'secondLeft',
+      'TemporaryImprovedSecondaryTrait',
+    );
+    wellProject = repinBoughtStygianWellSlot(
+      wellProject,
+      well,
+      'secondRight',
+      'TemporaryImprovedDefenseTrait',
+    );
     const refillAction = {
       kind: 'purchaseStygianWellOffer' as const,
       generationKey: 'travelDealRefill' as const,
@@ -2556,12 +2558,12 @@ describe('engine-owned F/G execution semantic product', () => {
   it('realizes a Travel Deal Well refill and protects its source when the refill is not purchased', () => {
     const wellId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const well = createOccurrenceAddress(goldenFBiome, wellId);
-    let project = applyProjectCommand(loadUnderworldFStygianWellCheckpoint(), catalog, {
-      kind: 'ReplaceStygianWellOffer',
-      occurrence: well,
-      slotKey: 'secondLeft',
-      itemKey: 'TemporaryImprovedSecondaryTrait',
-    });
+    let project = repinBoughtStygianWellSlot(
+      loadUnderworldFStygianWellCheckpoint(),
+      well,
+      'secondLeft',
+      'TemporaryImprovedSecondaryTrait',
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'SetStygianWellPurchase',
       occurrence: well,
