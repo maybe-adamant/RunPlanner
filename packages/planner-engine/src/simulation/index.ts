@@ -349,7 +349,6 @@ export {
 export { roomActionResetsForProjectEvaluationAssembly } from './evaluation/room-action-reset';
 export {
   encounterOutcomesForProjectEvaluationAssembly,
-  roomLifecycleTimelineForProjectEvaluationAssembly,
   type EncounterOutcome,
   type EncounterOutcomeChoice,
   type EncounterOutcomeHost,
@@ -421,7 +420,10 @@ export type {
   ProjectEvaluation,
   ProjectEvaluationAssembly,
   ProjectRouteEvaluation,
+  RoomStopAnchor,
+  RoomStopCoverage,
 } from './evaluation/evaluation-products';
+export { roomStopEntryIndex } from './evaluation/evaluation-products';
 export { transcendentEmbryoBlessingValues } from './keepsakes/trait-effects';
 export {
   assessTraitOffer,

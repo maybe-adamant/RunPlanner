@@ -471,7 +471,7 @@ export function liveActionsForProjectEvaluationAssembly(
   const stop = walk.stop;
   // The walk passed every entry before its stop, as the spawned loot reads it.
   const frontier =
-    stop === undefined || stop.kind === 'exit' ? orderLength : lastGapOfEntry(stop.entryIndex);
+    stop === undefined || stop.kind === 'exit' ? orderLength : lastGapOfEntry(walk.stopIndex!);
 
   /**
    * Every gap of the whole order at which a row may stand, with the action
@@ -717,7 +717,7 @@ export function liveActionsForProjectEvaluationAssembly(
           to: Math.min(
             actionEntries.find((entry) => entry.rank > gap)?.index ?? entries.length,
             gap === frontier && stop !== undefined && stop.kind !== 'exit'
-              ? stop.entryIndex + (stop.at === 'entry' ? 1 : 0)
+              ? walk.stopIndex! + (stop.at === 'entry' ? 1 : 0)
               : entries.length,
           ),
         }),

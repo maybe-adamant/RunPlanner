@@ -31,7 +31,7 @@ import type {
   RoomActionRow,
 } from './model';
 import type { PlannerTimelineDependency, PlannerTimelineNode } from '../timeline-facts';
-import { withRequiredScopes } from './required-scope';
+import { withRequiredScopes, type RoomActionRowFacts } from './required-scope';
 
 function frozen<T>(value: T): T {
   return Object.freeze(value);
@@ -68,7 +68,7 @@ export function assembleRoomActionRoster(options: {
       .filter((issue) => issue.kind !== 'unrankedRequired')
       .map((issue) => roomActionKey(issue.reference)),
   );
-  const rows: RoomActionRow[] = options.order.map((reference, index) => {
+  const rows: RoomActionRowFacts[] = options.order.map((reference, index) => {
     const entry = active.get(roomActionKey(reference));
     // The row was placed for content its item no longer holds: a replaced item.
     const itemReplaced =

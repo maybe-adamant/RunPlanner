@@ -13,7 +13,7 @@ import {
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { roomStopEntryIndex, simulateProject } from '@run-planner/engine/simulation';
 import {
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNShrineSideRoomDeliveryCheckpoint,
@@ -332,9 +332,10 @@ describe('Shrine purchases after the doors open', () => {
       at: 'entry',
     });
     if (!('materializedPrefix' in o)) throw new Error('O lost its materialized prefix');
-    const stopped = rooms(o.materializedPrefix).find(
+    const entries = rooms(o.materializedPrefix).find(
       (room) => room.occurrenceId === host.occurrenceId,
-    )?.roomLifecycleTimeline.entries[o.coverage.roomStop!.entryIndex];
+    )?.roomLifecycleTimeline.entries;
+    const stopped = entries?.[roomStopEntryIndex(entries, o.coverage.roomStop!)];
     expect(stopped?.kind === 'action' ? stopped.action.key : undefined).toBe(
       roomActionKey(purchase),
     );

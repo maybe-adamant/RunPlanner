@@ -28,9 +28,8 @@ export type RoomLifecycleTimelineEntry =
       readonly placement: 'before' | 'after';
       /**
        * An encounter's begin only: whether it shows as one marker with its Combat
-       * (no gate between them and no outcome choice hosted there) or as its own. The
-       * evaluated Timeline (`roomLifecycleTimelineForProjectEvaluationAssembly`)
-       * settles it against the outcomes the walk reached.
+       * (no gate between them and no Nemesis bet or Anomaly capture hosted there)
+       * or as its own.
        */
       readonly markers?: 'merged' | 'split';
     }
@@ -60,6 +59,8 @@ export interface RoomLifecycleTimeline {
   readonly graph: RoomEventGraph;
   readonly entries: readonly RoomLifecycleTimelineEntry[];
   readonly boundaries: readonly RoomLifecycleBoundary[];
+  /** The doors open after this many ranked rows: the slot of Doors open. */
+  readonly doorsAfterRank: number;
   /** Retained unranked/stale action rows remain available to a repair surface. */
   readonly repairRows: readonly RoomActionRow[];
 }
@@ -241,10 +242,15 @@ function boundaryEntry(
     boundary: point,
     rank,
     placement,
-    ...(point.kind === 'encounterBegun'
-      ? { markers: point.merged === true ? ('merged' as const) : ('split' as const) }
+    ...(point.kind === 'encounterBegun' && point.markers !== 'none'
+      ? { markers: point.markers }
       : {}),
   });
+}
+
+/** The graph's events that stand on the Timeline: every event with a marker. */
+function timelineEvents(graph: RoomEventGraph): readonly RoomEvent[] {
+  return graph.events.filter((event) => !('markers' in event) || event.markers !== 'none');
 }
 
 function boundarySlot(entry: RoomLifecycleBoundaryEntry): number {
@@ -387,18 +393,14 @@ export function assembleRoomLifecycleTimeline(
       case 'roomEntered':
         return boundaryEntry(point, 0, 'before');
       case 'encounterBegun': {
-        // An encounter merged with its Combat stands where its Combat does.
-        if (point.merged === true) {
-          const combat = structure.events.find(
-            (
-              event,
-            ): event is Extract<RoomLifecycleBoundary, { readonly kind: 'encounterStarted' }> =>
-              event.kind === 'encounterStarted' && event.phaseKey === point.phaseKey,
-          );
-          if (combat !== undefined) {
-            const at = desiredCombat(combat, point);
-            return boundaryEntry(point, at.rank, at.placement);
-          }
+        // An encounter no gate separates from its Combat stands where its Combat does.
+        const combat = structure.events.find(
+          (event): event is Extract<RoomLifecycleBoundary, { readonly kind: 'encounterStarted' }> =>
+            event.kind === 'encounterStarted' && event.phaseKey === point.phaseKey,
+        );
+        if (combat?.trigger.kind === 'automatic') {
+          const at = desiredCombat(combat, point);
+          return boundaryEntry(point, at.rank, at.placement);
         }
         // A cage's row begins it; otherwise it begins with what came before (room
         // entry, Wheels open, the previous phase's end).
@@ -495,7 +497,8 @@ export function assembleRoomLifecycleTimeline(
     }
   };
 
-  const boundaryEntries = structure.events.map((point) => {
+  // A Nemesis random event's events carry no marker, so they hold no Timeline position.
+  const boundaryEntries = timelineEvents(structure).map((point) => {
     const desired = desiredBoundary(point);
     const desiredSlot = boundarySlot(desired);
     const slot = Math.max(precedingSlot, desiredSlot);
@@ -539,6 +542,8 @@ export function assembleRoomLifecycleTimeline(
     graph: structure,
     entries: Object.freeze(entries),
     boundaries: Object.freeze(boundaryEntries.map(({ entry }) => entry.boundary)),
+    doorsAfterRank:
+      boundaryEntries.find(({ entry }) => entry.boundary.kind === 'doorsOpened')?.slot ?? 0,
     repairRows: Object.freeze(roster.rows.filter((row) => row.rank === null || row.stale)),
   });
 }
@@ -564,6 +569,7 @@ export function scopeRoomLifecycleTimeline(
     graph,
     entries: Object.freeze(entries),
     boundaries: Object.freeze(timeline.boundaries.filter(boundaryActive)),
+    doorsAfterRank: timeline.doorsAfterRank,
     repairRows: timeline.repairRows,
   });
 }

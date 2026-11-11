@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   encounterOutcomesForProjectEvaluationAssembly,
-  roomLifecycleTimelineForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { equivalenceCorpus } from '../../equivalence/corpus';
@@ -20,13 +19,13 @@ function room(entryName: string, gameName: string) {
   return {
     room: found,
     outcomes: encounterOutcomesForProjectEvaluationAssembly(entry.catalog, assembly, origin) ?? [],
-    timeline: roomLifecycleTimelineForProjectEvaluationAssembly(entry.catalog, assembly, origin),
+    timeline: found.roomLifecycleTimeline,
   };
 }
 
 function markers(timeline: ReturnType<typeof room>['timeline'], phaseKey: string) {
-  const entry = timeline?.entries.find(
-    (candidate) =>
+  const entry = timeline.entries.find(
+    (candidate: (typeof timeline.entries)[number]) =>
       candidate.kind === 'boundary' &&
       candidate.boundary.kind === 'encounterBegun' &&
       candidate.boundary.phaseKey === phaseKey,
@@ -35,11 +34,14 @@ function markers(timeline: ReturnType<typeof room>['timeline'], phaseKey: string
 }
 
 describe('encounter markers', () => {
-  it('splits a gate-free fight whose Combat can record an outcome not yet recorded', () => {
+  it('merges a gate-free fight whose outcome its encounter hosts', () => {
     const { room: p, outcomes, timeline } = room('execution/surface-nopq', 'P_Combat03');
     expect(p.encounters.aetosWaveByPhase?.Combat).toBeUndefined();
-    expect(outcomes.find((outcome) => outcome.phaseKey === 'Combat')?.choices).toContain('aetos');
-    expect(markers(timeline, 'Combat')).toBe('split');
+    expect(outcomes.find((outcome) => outcome.phaseKey === 'Combat')).toMatchObject({
+      host: { kind: 'encounter' },
+      choices: expect.arrayContaining(['aetos']),
+    });
+    expect(markers(timeline, 'Combat')).toBe('merged');
   });
 
   it('splits an Anomaly, whose Combat observes its capture', () => {

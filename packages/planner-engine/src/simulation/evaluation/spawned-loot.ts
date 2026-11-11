@@ -39,7 +39,11 @@ import {
   type RoomActionRow,
   type RoomLifecycleTimelineEntry,
 } from '../room-actions';
-import type { ProjectEvaluationAssembly, RoomStopCoverage } from './evaluation-products';
+import {
+  roomStopEntryIndex,
+  type ProjectEvaluationAssembly,
+  type RoomStopCoverage,
+} from './evaluation-products';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
@@ -393,6 +397,8 @@ export interface RoomWalk {
   readonly unreached?: true;
   /** Where the walk stopped, in the room it stopped in. */
   readonly stop?: RoomStopCoverage;
+  /** The index of the stop's entry in the room's Timeline entries. */
+  readonly stopIndex?: number;
 }
 
 export function roomWalk(
@@ -412,12 +418,16 @@ export function roomWalk(
     return { entry: () => 'unreached', unreached: true };
   const stop = biome.coverage.roomStop;
   if (stop === undefined || semanticAddressKey(stop.room) !== key) return all;
+  const room = authoredRoom(assembly, occurrence);
+  if (room === undefined) throw new Error(`${key} stopped outside its evaluated biome`);
+  const stopIndex = roomStopEntryIndex(room.roomLifecycleTimeline.entries, stop);
   return {
     stop,
+    stopIndex,
     entry: (entryIndex) =>
-      entryIndex < stop.entryIndex
+      entryIndex < stopIndex
         ? 'settled'
-        : entryIndex === stop.entryIndex && stop.at === 'entry'
+        : entryIndex === stopIndex && stop.at === 'entry'
           ? 'blocking'
           : 'unreached',
   };

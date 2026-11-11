@@ -520,37 +520,25 @@ describe('Ship phase', () => {
 });
 
 describe('Aetos and Gorgon', () => {
-  it('hosts the Aetos wave at Combat', () => {
+  it('hosts the Aetos wave at its encounter, merging a gate-free fight', () => {
     const room = observe(corpusRun('execution/surface-nopq'), pAetos);
 
     expect(outcomes(room, pAetos)).toEqual([
-      {
-        phaseKey: 'Combat',
-        host: { kind: 'combat', eventKey: 'encounterStarted:Combat' },
-        choices: ['aetos'],
-      },
+      { phaseKey: 'Combat', host: { kind: 'encounter' }, choices: ['aetos'] },
     ]);
-    expect(room.events.find((event) => event.key === 'encounterStarted:Combat')).toMatchObject({
-      kind: 'encounterStarted',
-      hostsOutcome: true,
+    expect(room.events.find((event) => event.key === 'encounterBegun:Combat')).toMatchObject({
+      markers: 'merged',
     });
     expect(room.timeline).toContain('encounterStarted(Combat)');
   });
 
-  it('hosts the Gorgon condition at Combat and keeps the Athena row after combat', () => {
+  it('hosts the Gorgon condition at its encounter and keeps the Athena row after combat', () => {
     const room = observe(corpusRun('checkpoint/underworld-gorgon-athena'), gCombat01);
     const athena = room.rank('interactGorgon:Encounter');
 
     expect(outcomes(room, gCombat01)).toEqual([
-      {
-        phaseKey: 'Encounter',
-        host: { kind: 'combat', eventKey: 'encounterStarted:Encounter' },
-        choices: ['gorgonCondition'],
-      },
+      { phaseKey: 'Encounter', host: { kind: 'encounter' }, choices: ['gorgonCondition'] },
     ]);
-    expect(room.events.find((event) => event.key === 'encounterStarted:Encounter')).toMatchObject({
-      hostsOutcome: true,
-    });
     expectInOrder(room.timeline, [
       'encounterStarted(Encounter)',
       'encounterEnd(Encounter)',
@@ -609,7 +597,19 @@ describe('Nemesis random event', () => {
     const talk = room.rank('interactEncounter:Encounter');
     const result = room.rank('interactAcquisitionEntry:nemesisGenerated');
 
-    expect(room.graph).toEqual(['roomEntered <- automatic', 'doorsOpened <- doorsPredicate']);
+    // Her encounter's events carry no marker, so the Timeline shows none of them.
+    expect(room.graph).toEqual([
+      'roomEntered <- automatic',
+      'encounterBegun(Encounter) <- automatic',
+      'encounterStarted(Encounter) <- automatic',
+      'encounterEnd(Encounter) <- automatic',
+      'doorsOpened <- doorsPredicate',
+    ]);
+    expect(room.events.flatMap((event) => ('markers' in event ? [event.markers] : []))).toEqual([
+      'none',
+      'none',
+      'none',
+    ]);
     expect(room.timeline).toEqual(['roomEntered', talk, result, 'doorsOpened']);
     expect(outcomes(room, fCombat06)).toEqual([
       {
@@ -754,7 +754,7 @@ describe('ordinary combat', () => {
       'doorsOpened <- doorsPredicate',
     ]);
     expect(room.events.find((event) => event.kind === 'encounterBegun')).toMatchObject({
-      merged: true,
+      markers: 'merged',
     });
     // No outcome is observed at its Combat to show the two apart.
     expect(outcomes(room, fOrdinary)).toEqual([]);
@@ -841,12 +841,16 @@ describe('Fields', () => {
     expect(unplaced.walk).toContain('encounterEndEffectsApplied(Cage01)');
   });
 
-  it('emits no events for the Passive encounter', () => {
+  it('shows no events for the Passive encounter', () => {
     const room = observe(corpusRun('checkpoint/nemesis-h-fields'), hFields);
 
     expect(
-      room.events.filter((event) => 'phaseKey' in event && event.phaseKey === 'Passive'),
-    ).toEqual([]);
+      room.events.flatMap((event) =>
+        'phaseKey' in event && event.phaseKey === 'Passive'
+          ? [`${event.kind}:${'markers' in event ? event.markers : ''}`]
+          : [],
+      ),
+    ).toEqual(['encounterBegun:none', 'encounterStarted:none', 'encounterEnd:none']);
     expect(room.timeline.filter((text) => text.includes('(Passive)'))).toEqual([]);
     expect(room.timeline.slice(0, 2)).toEqual([
       'roomEntered',

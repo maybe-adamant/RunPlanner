@@ -55,11 +55,8 @@ function withKeepsake(keepsakeKey: string): ProjectDocument {
   });
 }
 
-/** An outcome observed at its phase's Combat. */
-const atCombat = (phaseKey: string) => ({
-  kind: 'combat' as const,
-  eventKey: `encounterStarted:${phaseKey}`,
-});
+/** Aetos and the Gorgon condition are observed by the encounter itself. */
+const atEncounter = { kind: 'encounter' as const };
 
 /** A Nemesis random event's outcome, observed at her talk row. */
 const herTalk = (phaseKey: string) => ({
@@ -70,7 +67,7 @@ const herTalk = (phaseKey: string) => ({
 describe('Encounter outcome', () => {
   it('hosts the Aetos wave only while the fight can field it', () => {
     expect(outcomes(loadSurfaceNOPProject(), 'P', pCombat03)).toEqual([
-      { phaseKey: 'Combat', host: atCombat('Combat'), choices: ['aetos'] },
+      { phaseKey: 'Combat', host: atEncounter, choices: ['aetos'] },
     ]);
     // An Aetos already placed this biome leaves a later fight's outcome with nothing to host.
     const fixture = reachedPOutdoorIcarusFixture();
@@ -84,7 +81,7 @@ describe('Encounter outcome', () => {
 
   it('pairs the Gorgon condition with Aetos when the Amulet is pending', () => {
     expect(outcomes(withKeepsake('AthenaEncounterKeepsake'), 'P', pCombat03)).toEqual([
-      { phaseKey: 'Combat', host: atCombat('Combat'), choices: ['aetos', 'gorgonCondition'] },
+      { phaseKey: 'Combat', host: atEncounter, choices: ['aetos', 'gorgonCondition'] },
     ]);
   });
 
@@ -105,7 +102,7 @@ describe('Encounter outcome', () => {
       value: 2,
     });
     expect(outcomes(authored, 'P', pCombat03)).toEqual([
-      { phaseKey: 'Combat', host: atCombat('Combat'), choices: ['aetos'] },
+      { phaseKey: 'Combat', host: atEncounter, choices: ['aetos'] },
     ]);
   });
 

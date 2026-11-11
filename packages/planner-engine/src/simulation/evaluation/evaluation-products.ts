@@ -132,23 +132,48 @@ export interface RoomTimelineCoverage {
   readonly blockingRowKeys: readonly string[];
 }
 
+/** A Timeline entry by its stable identity: a row by its action key, a boundary by its event key. */
+export type RoomStopAnchor =
+  | { readonly kind: 'row'; readonly actionKey: string }
+  | { readonly kind: 'event'; readonly eventKey: string };
+
 /**
  * Where the walk stopped inside the room it blocks in. Entries of the room's
- * lifecycle Timeline before `entryIndex` are reached and every entry after it
- * is not; `at` says whether the entry at `entryIndex` was reached. An Overview
- * stop is past entry only, and an exit stop is past every entry.
+ * lifecycle Timeline before the `anchor` entry are reached and every entry
+ * after it is not; `at` says whether the anchor entry was reached. No anchor
+ * stands past every entry. An Overview stop is past entry only, and an exit
+ * stop is past every entry.
  */
 export interface RoomStopCoverage {
   readonly room: OccurrenceAddress;
   readonly kind: 'overview' | 'timeline' | 'exit';
-  /** Index in the room's `roomLifecycleTimeline.entries`, at most its length. */
-  readonly entryIndex: number;
+  readonly anchor?: RoomStopAnchor;
   /**
    * `entry`: the walk reached that entry and blocks on its own contact (a blocking
    * row, the doors opening, a phase start, Boss defeated, an encounter end's due
    * outcome or delivery, a wheel's offers). `before`: it stopped before reaching it.
    */
   readonly at: 'entry' | 'before';
+}
+
+/** The index of the stop's entry among Timeline entries; their length when it stands past every one. */
+export function roomStopEntryIndex(
+  entries: readonly (
+    | { readonly kind: 'action'; readonly action: { readonly key: string } }
+    | { readonly kind: 'boundary'; readonly boundary: { readonly key: string } }
+    | { readonly kind: 'automaticEffect' }
+  )[],
+  stop: Pick<RoomStopCoverage, 'anchor'>,
+): number {
+  const anchor = stop.anchor;
+  if (anchor === undefined) return entries.length;
+  const index = entries.findIndex((entry) =>
+    anchor.kind === 'row'
+      ? entry.kind === 'action' && entry.action.key === anchor.actionKey
+      : entry.kind === 'boundary' && entry.boundary.key === anchor.eventKey,
+  );
+  if (index < 0) throw new Error(`room stop names no Timeline entry: ${JSON.stringify(anchor)}`);
+  return index;
 }
 
 export interface PrefixBiomeEvaluationCoverage {

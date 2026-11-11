@@ -163,6 +163,9 @@ function assembleRoomLifecycleTimeline(input: {
   });
 }
 
+/** The Timeline places rows by window and rank; it reads no label. */
+const TIMELINE_UNREAD_LABEL = Object.freeze({ kind: 'afterCombat' as const });
+
 function rankedRow(
   reference: RoomActionReference,
   window: RoomActionWindow,
@@ -179,6 +182,7 @@ function rankedRow(
     rank,
     stale: false,
     executable: true,
+    label: TIMELINE_UNREAD_LABEL,
   });
 }
 
@@ -263,6 +267,7 @@ describe('room lifecycle timeline', () => {
       rank: 1,
       stale: false,
       executable: true,
+      label: TIMELINE_UNREAD_LABEL,
     });
     const timeline = assembleRoomLifecycleTimeline({
       owner,
@@ -444,6 +449,7 @@ describe('room lifecycle timeline', () => {
       rank: null,
       stale: false,
       executable: false,
+      label: TIMELINE_UNREAD_LABEL,
     });
     const timeline = assembleRoomLifecycleTimeline({
       owner,
@@ -491,6 +497,7 @@ describe('room lifecycle timeline', () => {
             ...rankedRow(cage, { kind: 'fields', phaseKey: 'Cage01' }, 1),
             rank: null,
             executable: false,
+            label: TIMELINE_UNREAD_LABEL,
           }),
         ]),
         checkpoints: Object.freeze([]),

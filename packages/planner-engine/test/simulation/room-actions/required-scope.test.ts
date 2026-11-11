@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { createOccurrenceId } from '../../../src/authored-project/addresses';
 import { roomActionKey } from '../../../src/authored-project/room-actions/state';
 import type { RoomEventGraph } from '../../../src/authored-project/room-actions/event-graph';
-import type { RoomActionRow } from '../../../src/simulation/room-actions/model';
-import { withRequiredScopes } from '../../../src/simulation/room-actions/required-scope';
+
+import {
+  withRequiredScopes,
+  type RoomActionRowFacts,
+} from '../../../src/simulation/room-actions/required-scope';
 import {
   assembleRoomActionRoster,
   scopeRoomActionRoster,
@@ -17,9 +20,9 @@ const structure: RoomEventGraph = {
   events: gateFreeGraphEvents(['Cage01', 'Cage02'], false),
 };
 function row(
-  reference: RoomActionRow['reference'],
-  overrides: Partial<RoomActionRow> = {},
-): RoomActionRow {
+  reference: RoomActionRowFacts['reference'],
+  overrides: Partial<RoomActionRowFacts> = {},
+): RoomActionRowFacts {
   return {
     reference,
     key: roomActionKey(reference),

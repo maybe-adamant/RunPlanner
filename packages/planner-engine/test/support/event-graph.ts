@@ -15,7 +15,7 @@ export function gateFreeGraphEvents(
         key: `encounterBegun:${phaseKey}`,
         phaseKey,
         trigger: automatic,
-        merged: true,
+        markers: 'merged',
       },
       {
         kind: 'encounterStarted',
@@ -68,7 +68,7 @@ export function testGraphEvents(
           options.cages === true
             ? { kind: 'action', action: { kind: 'completeFieldsCage', phaseKey: phase.phaseKey } }
             : automatic,
-        ...(wheelKey === undefined ? { merged: true as const } : {}),
+        markers: wheelKey === undefined ? 'merged' : 'split',
       },
       {
         kind: 'encounterStarted',

@@ -29,6 +29,27 @@ export type RoomActionRosterContribution =
 
 export type RoomActionRosterIssue = RoomActionOrderIssue;
 
+/**
+ * When a row's item may be used, named by the room's phases: before or after
+ * the room's combat, after an encounter's end (and, when the next phase's wheel
+ * waits on what it spawns, before that wheel's choice), during a Fields room,
+ * after the doors open, or before, at the choice of, or after a wheel phase.
+ */
+export type RoomActionRowLabel =
+  | { readonly kind: 'beforeCombat' | 'afterCombat' | 'fields' | 'afterDoorsOpen' }
+  | {
+      readonly kind: 'afterEncounterEnd';
+      readonly phaseKey: string;
+      /** The phase whose wheel's choice waits on this row. */
+      readonly beforeWheelChoicePhaseKey?: string;
+    }
+  | {
+      readonly kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase';
+      readonly wheelKey: string;
+      /** The phase the wheel belongs to; absent when the room no longer plays it. */
+      readonly phaseKey?: string;
+    };
+
 export interface RoomActionRow {
   readonly reference: RoomActionReference;
   readonly key: string;
@@ -37,6 +58,14 @@ export interface RoomActionRow {
   /** Active mandatory work constrained to encounter progression or only room completion. */
   readonly requiredScope?: 'phase' | 'room';
   readonly window: RoomActionWindow;
+  /**
+   * The event-graph phase the row belongs to: a wheel phase's rows to it, an
+   * encounter end's to that phase, or to the next one when its wheel waits on
+   * them, rows before combat to the first phase and every other to the last.
+   * Absent when the room plays no phase or no longer plays the one it names.
+   */
+  readonly phaseKey?: string;
+  readonly label: RoomActionRowLabel;
   readonly dependencies: readonly RoomActionDependency[];
   readonly rank: number | null;
   readonly placementAssessment?: import('../../authored-project/generated-pickup-placement').GeneratedPickupPlacementAssessment;

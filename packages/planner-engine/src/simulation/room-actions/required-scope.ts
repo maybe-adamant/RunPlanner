@@ -1,10 +1,89 @@
 import { roomActionKey } from '../../authored-project/room-actions/state';
-import { windowAnchor, type RoomEventGraph } from '../../authored-project/room-actions/event-graph';
-import type { RoomActionRow } from './model';
+import {
+  windowAnchor,
+  type RoomActionWindow,
+  type RoomEventGraph,
+} from '../../authored-project/room-actions/event-graph';
+import type { RoomActionRow, RoomActionRowLabel } from './model';
 
-/** Classifies existing obligations; it does not add ordering or participation constraints. */
+/** A row before its phase, label and required scope are named. */
+export type RoomActionRowFacts = Omit<RoomActionRow, 'label'> & {
+  readonly label?: RoomActionRowLabel;
+};
+
+/** The phase whose wheel opens after this phase ends, when one does. */
+function nextWheelPhaseKey(phaseKey: string, structure: RoomEventGraph): string | undefined {
+  const index = structure.phases.findIndex((phase) => phase.phaseKey === phaseKey);
+  const next = index < 0 ? undefined : structure.phases[index + 1];
+  return next?.rewardWheelKey === undefined ? undefined : next.phaseKey;
+}
+
+function wheelPhaseKey(wheelKey: string, structure: RoomEventGraph): string | undefined {
+  return structure.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey;
+}
+
+/** A Ship phase's end-effect pickups wait for the next wheel, so they belong to its phase. */
+function rowPhaseKey(window: RoomActionWindow, structure: RoomEventGraph): string | undefined {
+  const phases = structure.phases;
+  switch (window.kind) {
+    case 'encounterEnd':
+      return phases.some((phase) => phase.phaseKey === window.phaseKey)
+        ? (nextWheelPhaseKey(window.phaseKey, structure) ?? window.phaseKey)
+        : undefined;
+    case 'shipPreCombat':
+    case 'shipWheelsOpen':
+    case 'shipPostCombat':
+      return wheelPhaseKey(window.wheelKey, structure);
+    case 'standard':
+      return (window.phase === 'beforeCombat' ? phases[0] : phases.at(-1))?.phaseKey;
+    case 'fields':
+      return window.phaseKey !== undefined &&
+        phases.some((phase) => phase.phaseKey === window.phaseKey)
+        ? window.phaseKey
+        : phases.at(-1)?.phaseKey;
+    case 'postOutgoing':
+      return phases.at(-1)?.phaseKey;
+  }
+}
+
+function rowLabel(window: RoomActionWindow, structure: RoomEventGraph): RoomActionRowLabel {
+  const wheel = (
+    kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase',
+    wheelKey: string,
+  ): RoomActionRowLabel => {
+    const phaseKey = wheelPhaseKey(wheelKey, structure);
+    return Object.freeze({ kind, wheelKey, ...(phaseKey === undefined ? {} : { phaseKey }) });
+  };
+  switch (window.kind) {
+    case 'standard':
+      return Object.freeze({ kind: window.phase });
+    case 'encounterEnd': {
+      const next = nextWheelPhaseKey(window.phaseKey, structure);
+      return Object.freeze({
+        kind: 'afterEncounterEnd',
+        phaseKey: window.phaseKey,
+        ...(next === undefined ? {} : { beforeWheelChoicePhaseKey: next }),
+      });
+    }
+    case 'fields':
+      return Object.freeze({ kind: 'fields' });
+    case 'postOutgoing':
+      return Object.freeze({ kind: 'afterDoorsOpen' });
+    case 'shipPreCombat':
+      return wheel('beforeWheelPhase', window.wheelKey);
+    case 'shipWheelsOpen':
+      return wheel('beforeWheelChoice', window.wheelKey);
+    case 'shipPostCombat':
+      return wheel('afterWheelPhase', window.wheelKey);
+  }
+}
+
+/**
+ * Classifies existing obligations and names each row's phase and label; it
+ * does not add ordering or participation constraints.
+ */
 export function withRequiredScopes(
-  rows: readonly RoomActionRow[],
+  rows: readonly RoomActionRowFacts[],
   structure: RoomEventGraph,
 ): readonly RoomActionRow[] {
   const phaseBound = new Set<string>();
@@ -51,8 +130,12 @@ export function withRequiredScopes(
     rows.map((previous) => {
       const row = { ...previous };
       delete row.requiredScope;
+      delete row.phaseKey;
+      const phaseKey = rowPhaseKey(row.window, structure);
       return Object.freeze({
         ...row,
+        ...(phaseKey === undefined ? {} : { phaseKey }),
+        label: rowLabel(row.window, structure),
         ...(row.stale || row.participation !== 'required'
           ? {}
           : {

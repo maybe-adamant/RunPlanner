@@ -30,6 +30,12 @@ export type RoomActionWindow =
   | { readonly kind: 'shipWheelsOpen'; readonly wheelKey: string }
   | { readonly kind: 'shipPostCombat'; readonly wheelKey: string };
 
+/**
+ * How an encounter's begin shows on the Timeline: with its Combat, apart from
+ * it, or not at all (a Nemesis random event, whose events carry no marker).
+ */
+export type RoomEventMarkers = 'merged' | 'split' | 'none';
+
 /** What makes a room event happen. */
 export type RoomEventTrigger =
   /** It follows the event before it (room entry, a previous phase's end, an intro). */
@@ -46,9 +52,9 @@ export type RoomEventTrigger =
  * One event of a room, in its graph order. Keys are stable within the room.
  * An encounter begins (`encounterBegun`, no effect), its gate rows stand
  * between, and its combat starts (`encounterStarted`, Combat: depth advances
- * and its outcome observations are hosted there); Boss defeated and the
- * encounter's end follow. A Nemesis random event, which no encounter runs
- * for, has no events: her talk row hosts her event.
+ * and the Nemesis bet or an Anomaly capture is observed there); Boss defeated
+ * and the encounter's end follow. A Nemesis random event's encounter has no
+ * fight: its events carry no marker, and her talk row hosts her event.
  */
 export type RoomEvent =
   | {
@@ -77,10 +83,11 @@ export type RoomEvent =
       /** Automatic, or the cage row that begins it. */
       readonly trigger: RoomEventTrigger;
       /**
-       * No gate stands between it and its Combat, which follows at once: the
-       * two show as one marker unless that Combat hosts an outcome.
+       * How it shows beside its Combat: as one marker when no gate stands
+       * between them and that Combat hosts no Nemesis bet or Anomaly capture,
+       * as its own otherwise, and not at all for a Nemesis random event.
        */
-      readonly merged?: true;
+      readonly markers: RoomEventMarkers;
     }
   | {
       /** Combat: combat starts, depth advances, and the phase's outcome is observed. */
@@ -89,8 +96,8 @@ export type RoomEvent =
       readonly phaseKey: string;
       /** Automatic, or the gate row whose use starts combat (Opening or Devotion pickup, wheel). */
       readonly trigger: RoomEventTrigger;
-      /** The phase can host an outcome observation (Aetos, Gorgon, Nemesis bet, Anomaly). */
-      readonly hostsOutcome?: true;
+      /** A Nemesis random event's: no Combat shows. */
+      readonly markers?: 'none';
     }
   | {
       readonly kind: 'bossDefeated';
@@ -103,6 +110,8 @@ export type RoomEvent =
       readonly key: string;
       readonly phaseKey: string;
       readonly trigger: Extract<RoomEventTrigger, { readonly kind: 'automatic' }>;
+      /** A Nemesis random event's: her talk row shows where it ends. */
+      readonly markers?: 'none';
     }
   | {
       readonly kind: 'doorsOpened';
@@ -192,6 +201,8 @@ export function producerPointsBeforeCombat(
 interface GraphSlot {
   readonly phase: RoomEventGraphPhase;
   readonly definition?: EncounterDefinition;
+  /** Its Combat hosts a choice: a Nemesis bet or an Anomaly capture. */
+  readonly combatHostsOutcome?: true;
 }
 
 /** The room's events from its profile, its active encounter slots and their scripts. */
@@ -275,6 +286,11 @@ export function assembleRoomEventGraph(options: {
       (authoring?.resolution.kind === 'direct'
         ? options.catalog.encounterDefinitions.byKey[authoring.resolution.encounterDefinitionKey]
         : undefined);
+    // A Boss room's outcome is its Boss defeated.
+    const combatHostsOutcome =
+      options.lifecycleProfileKey !== 'BossRoom' &&
+      (options.occurrence.anomalyReplacement !== undefined ||
+        candidates.some((candidate) => candidate.goldBet !== undefined));
     const wheel =
       slot.rewardAttachment?.kind === 'rewardWheel'
         ? { rewardWheelKey: slot.rewardAttachment.key }
@@ -310,6 +326,7 @@ export function assembleRoomEventGraph(options: {
         ...((directDefinition ?? candidates[0]) === undefined
           ? {}
           : { definition: directDefinition ?? candidates[0]! }),
+        ...(combatHostsOutcome ? { combatHostsOutcome: true as const } : {}),
       },
     ];
   });
@@ -334,9 +351,34 @@ export function assembleRoomEventGraph(options: {
     frozen({ kind: 'roomEntered', key: 'roomEntered', trigger: AUTOMATIC }),
   ];
   let previousPhaseKey: string | undefined;
-  for (const { phase, definition } of ordered) {
-    // No encounter runs for a Nemesis random event; her talk row hosts it.
-    if (phase.endsOnInteraction === true) continue;
+  for (const { phase, definition, combatHostsOutcome } of ordered) {
+    // A Nemesis random event's encounter starts on entry and ends as she is answered.
+    if (phase.endsOnInteraction === true) {
+      events.push(
+        frozen({
+          kind: 'encounterBegun',
+          key: `encounterBegun:${phase.phaseKey}`,
+          phaseKey: phase.phaseKey,
+          trigger: AUTOMATIC,
+          markers: 'none',
+        }),
+        frozen({
+          kind: 'encounterStarted',
+          key: `encounterStarted:${phase.phaseKey}`,
+          phaseKey: phase.phaseKey,
+          trigger: AUTOMATIC,
+          markers: 'none',
+        }),
+        frozen({
+          kind: 'encounterEnd',
+          key: `encounterEnd:${phase.phaseKey}`,
+          phaseKey: phase.phaseKey,
+          trigger: AUTOMATIC,
+          markers: 'none',
+        }),
+      );
+      continue;
+    }
     const gate = definition?.script.gate ?? frozen({ kind: 'none' as const });
     if (phase.rewardWheelKey !== undefined)
       events.push(
@@ -389,14 +431,14 @@ export function assembleRoomEventGraph(options: {
         key: `encounterBegun:${phase.phaseKey}`,
         phaseKey: phase.phaseKey,
         trigger: begunTrigger,
-        ...(startedTrigger.kind === 'automatic' ? { merged: true as const } : {}),
+        markers:
+          startedTrigger.kind === 'automatic' && combatHostsOutcome !== true ? 'merged' : 'split',
       }),
       frozen({
         kind: 'encounterStarted',
         key: `encounterStarted:${phase.phaseKey}`,
         phaseKey: phase.phaseKey,
         trigger: startedTrigger,
-        ...(phase.hostsOutcome === true ? { hostsOutcome: true as const } : {}),
       }),
     );
     if (options.lifecycleProfileKey === 'BossRoom')
@@ -496,7 +538,6 @@ type AnchorPoint =
   | { readonly kind: 'wheelsOpen'; readonly wheelKey: string }
   | { readonly kind: 'wheelChoice'; readonly wheelKey: string }
   | { readonly kind: 'combat'; readonly phaseKey: string }
-  | { readonly kind: 'outcome'; readonly phaseKey: string }
   | { readonly kind: 'bossDefeated'; readonly phaseKey: string }
   | { readonly kind: 'encounterEnd'; readonly phaseKey: string }
   | { readonly kind: 'outgoing' }
@@ -516,7 +557,6 @@ function anchorPoints(graph: RoomEventGraph): readonly AnchorPoint[] {
         { kind: 'wheelChoice', wheelKey: phase.rewardWheelKey },
       );
     points.push({ kind: 'combat', phaseKey: phase.phaseKey });
-    if (phase.hostsOutcome === true) points.push({ kind: 'outcome', phaseKey: phase.phaseKey });
     if (graph.profileKey === 'BossRoom')
       points.push({ kind: 'bossDefeated', phaseKey: phase.phaseKey });
     points.push({ kind: 'encounterEnd', phaseKey: phase.phaseKey });
