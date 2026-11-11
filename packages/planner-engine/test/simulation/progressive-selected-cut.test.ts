@@ -66,6 +66,7 @@ import {
 import {
   collectTestRequiredItems,
   replaceTestShopOfferActions,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 import {
@@ -889,18 +890,30 @@ describe('room Timeline block', () => {
       action: createRoomActionAddress(goldenFBiome, shopId, rowKey(refillRow)),
       toIndex: 1,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: refill,
-      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
-    });
+    // Another refill is a new item: its pickup goes, and the owner picks it up again before the Boon.
+    const pickUpRefill = (current: ProjectDocument) =>
+      applyProjectCommand(current, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(goldenFBiome, shopId, rowKey(refillRow)),
+        reference: refillRow,
+        index: 1,
+      });
+    project = pickUpRefill(
+      settleTestEdit(project, {
+        kind: 'ReplaceShopOffer',
+        offer: refill,
+        value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+      }),
+    );
     project = authorLegalTraitOffers(project);
     // A new refill source resets its offer: the purchased Boon's offer stays authored.
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: refill,
-      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
-    });
+    project = pickUpRefill(
+      settleTestEdit(project, {
+        kind: 'ReplaceShopOffer',
+        offer: refill,
+        value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      }),
+    );
     const assembly = simulateProjectAssembly(catalog, project);
     const f = biomeEvaluation(project, 'F');
     const refillTrait = createTraitOfferAddress(refill, 'source');

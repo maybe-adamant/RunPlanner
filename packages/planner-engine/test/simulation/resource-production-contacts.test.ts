@@ -12,7 +12,7 @@ import {
   traitGeneratedPickupSiteKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { replaceTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import { replaceTestRoomActionOrder, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 import { simulateProject } from '../../src/simulation';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
@@ -182,7 +182,8 @@ describe('screen-produced pickup production', () => {
   }
 
   function buriedTreasureCageProject(): ProjectDocument {
-    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    // The swap removes the old cage reward's pickup; the order below picks the Boon up.
+    let project = settleTestEdit(createGoldenFGHProject(), {
       kind: 'ReplaceLocalReward',
       reward: cage2,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },

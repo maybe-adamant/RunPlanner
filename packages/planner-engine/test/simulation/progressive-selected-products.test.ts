@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ordinaryRoutePosition } from '../support/route-position';
 
 import * as fixture from './support/progressive-biome-fixtures';
-import { requireTraits } from '@run-planner/test-fixtures/shared';
+import { replaceTestPlacedItem, requireTraits } from '@run-planner/test-fixtures/shared';
 import {
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
@@ -502,15 +502,11 @@ describe('progressive selected and blocked products', () => {
       ] as const,
       selectedOptionKey: 'option1' as const,
     };
-    let completeProject = applyProjectCommand(
-      authorLegalTraitOffers(createGoldenFGHIProject()),
-      catalog,
-      {
-        kind: 'ReplaceIncomingReward',
-        reward,
-        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
-      },
-    );
+    let completeProject = replaceTestPlacedItem(authorLegalTraitOffers(createGoldenFGHIProject()), {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
     completeProject = applyProjectCommand(completeProject, catalog, {
       kind: 'ReplaceTraitOffer',
       trait,
@@ -1300,12 +1296,12 @@ describe('progressive selected and blocked products', () => {
     project = authorLegalTraitOffers(project);
     // Cage2 becomes the first qualifying cage and is picked first; cage1's
     // Hammer resets to an unauthored offer, so the later cage1 pickup blocks.
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceLocalReward',
       reward: cage2,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceLocalReward',
       reward: cage1,
       value: { rewardType: 'WeaponUpgrade' },

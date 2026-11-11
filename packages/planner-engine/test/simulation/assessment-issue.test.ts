@@ -22,6 +22,7 @@ import {
   fDecision,
 } from './support/f-takeover-project';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
+import { collectTestRequiredItems, settleTestEdit } from '@run-planner/test-fixtures/shared';
 
 const evaluate = (project: ReturnType<typeof createFProject>) =>
   simulateProjectAssembly(catalog, project);
@@ -34,11 +35,14 @@ const openingTrait = createTraitOfferAddress(
 describe('first assessment issue', () => {
   it('advances from the opening offer to its outgoing decision and then the batch pool', () => {
     const repaired = createFStart();
-    const missing = applyProjectCommand(repaired, catalog, {
-      kind: 'ReplaceStartingReward',
-      reward: openingReward,
-      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
-    });
+    // The owner picks up the new opening Boon; its trait screen is still to be authored.
+    const missing = collectTestRequiredItems(
+      settleTestEdit(repaired, {
+        kind: 'ReplaceStartingReward',
+        reward: openingReward,
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      }),
+    );
     const first = evaluate(missing);
     expect(first.evaluation.issue).toMatchObject({
       kind: 'incomplete',

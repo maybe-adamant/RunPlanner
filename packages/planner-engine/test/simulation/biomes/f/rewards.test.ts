@@ -46,7 +46,9 @@ import {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   replaceTestShopOfferActions,
+  replaceTestPlacedItem,
   scheduleTestRequiredRoomActions,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
 
 import {
@@ -1009,7 +1011,7 @@ describe('F reward-history simulation', () => {
 
   it('replays a later forced target store across earlier ordinary peers', () => {
     let project = authorTestTraitsAndRequiredItems(ratioBoundaryProject());
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(biome, createOccurrenceId('ratio-mixed-peer')),
       gameName: 'F_Combat01',
@@ -1018,12 +1020,16 @@ describe('F reward-history simulation', () => {
     if (forcedBinding?.kind !== 'countedChoice') {
       throw new Error('F_Combat01 must retain its counted reward binding');
     }
-    project = replaceIncoming(project, createOccurrenceId('ratio-mixed-peer'), {
-      rewardType: 'MaxHealthDrop',
-    });
-    project = replaceIncoming(project, createOccurrenceId('ratio-mixed'), {
-      rewardType: 'MaxManaDrop',
-    });
+    // Each new reward is a new item, which the owner picks up again.
+    for (const [occurrenceId, rewardType] of [
+      ['ratio-mixed-peer', 'MaxHealthDrop'],
+      ['ratio-mixed', 'MaxManaDrop'],
+    ] as const)
+      project = replaceTestPlacedItem(project, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(biome, createOccurrenceId(occurrenceId)),
+        value: { rewardType },
+      });
 
     const result = evaluate(project, false);
     const batch = result.snapshot.decisions[2];

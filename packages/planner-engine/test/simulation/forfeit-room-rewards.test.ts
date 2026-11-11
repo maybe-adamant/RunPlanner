@@ -33,6 +33,7 @@ import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-
 import {
   authorLegalTraitOffers,
   collectTestRequiredItems,
+  replaceTestPlacedItem,
 } from '@run-planner/test-fixtures/shared';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
@@ -283,7 +284,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     project = authorLegalTraitOffers(project);
     // A new cage2 Boon resets its trait offer, so evaluation blocks at cage2's
     // pickup, which precedes cage1's pickup in this room.
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceLocalReward',
       reward: fieldsCage2,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
@@ -339,7 +340,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       result: { supported: true, findings: [] },
     });
 
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceRewardWheelOffer',
       offer: owner,
       value,
@@ -434,7 +435,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
 
     it('publishes the picked Boon realization before its combat and settles the same outcome after it', () => {
       const project = authorLegalTraitOffers(
-        applyProjectCommand(withForfeit(), catalog, {
+        replaceTestPlacedItem(withForfeit(), {
           kind: 'ReplaceRewardWheelOffer',
           offer: offer1,
           value: boon,

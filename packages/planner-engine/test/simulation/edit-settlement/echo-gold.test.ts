@@ -134,11 +134,16 @@ describe('required Echo Gold activation', () => {
       value: { rewardType: 'BlindBoxLoot' },
     });
     optional = applyProjectCommand(optional, catalog, purchase);
-    const settled = settle(optional, {
+    const swapped = settle(optional, {
       kind: 'ReplaceShopOffer',
       offer,
       value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
+    // The loot is a new item: its purchase goes, and the owner buys it again.
+    expect(shop(swapped.project).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey({ kind: 'interactShopOffer', offerKey: 'Boon' }),
+    );
+    const settled = settle(swapped.project, purchase);
     expect(gold(settled.project)).toBeUndefined();
     // Once the Boon's offer is authored, the unplaced duplicate stands with its finding.
     expect(evaluate(authorLegalTraitOffers(settled.project)).evaluation.findings).toContainEqual(

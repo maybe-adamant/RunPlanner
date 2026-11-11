@@ -30,7 +30,10 @@ import {
   goldenGOccurrenceId,
   goldenGStartId,
 } from '@run-planner/test-fixtures/underworld';
-import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  settleTestEdit,
+} from '@run-planner/test-fixtures/shared';
 
 function completeG(project = createCompleteFGProject()) {
   const result = simulateProject(catalog, project);
@@ -76,12 +79,12 @@ describe('G generation and takeover', () => {
   it('carries F Postboss through G Intro and a selected G Preboss free reward', () => {
     let project = createCompleteFGProject({ prebossSource: 'G_Combat14' });
     const source = { kind: 'occurrence' as const, occurrenceId: goldenGOccurrenceId(7, 1) };
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenGBiome, source),
       value: { kind: 'normal', exitKey: 'exit2' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(
         goldenGBiome,
@@ -89,14 +92,14 @@ describe('G generation and takeover', () => {
       ),
       value: { rewardType: 'HermesUpgrade' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(goldenGBiome, createOccurrenceId('golden-g-b7-e1:exit3')),
       value: { rewardType: 'StackUpgrade' },
     });
     // Selecting exit2 moves the Preboss, so its boss door is a new authored
     // decision the route owns — the run-wide ledger supports RunProgress there.
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceBossDoorRewardStore',
       rewardStore: createBatchRewardStoreAddress(goldenGBiome, {
         kind: 'occurrence',

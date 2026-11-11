@@ -64,10 +64,13 @@ import {
   authorLegalTraitOffers,
   authorTestTraitsAndRequiredItems,
   purchaseTestHermesShrineOffer,
+  replaceTestPlacedItem,
+  settleTestEdit,
   supportedTraitOffer,
   testHermesShrinePurchaseAction,
   testHermesShrineRushAction,
 } from '@run-planner/test-fixtures/shared';
+import { withItemContent, withItemContents } from '../support/room-action-content';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   assessHermesShrineInventory,
@@ -1052,18 +1055,18 @@ describe('Hermes Shrine delayed deliveries', () => {
 
 describe('Hermes Shrine Travel Deal generation', () => {
   it('carries an unpurchased N offer into the later O Shrine candidate inventory', () => {
-    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+    let project = replaceTestPlacedItem(loadSurfaceNOProject(), {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
       value: { rewardType: 'MaxHealthDropBig' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = replaceTestPlacedItem(project, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat01')),
       value: { rewardType: 'SpellDrop' },
     });
     const host = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-preboss:postboss'));
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceHermesShrineOffer',
       occurrence: host,
       slotKey: 'secondLeft',
@@ -1279,11 +1282,13 @@ describe('Hermes Shrine Travel Deal generation', () => {
     );
     expect(
       materializedRefillHost?.roomActionRoster.rows.map((row) => row.reference),
-    ).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'hermesShrineDelivery',
-      entryKey: refillEntry.entryKey,
-    });
+    ).toContainEqual(
+      withItemContent(project, host, {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey: refillEntry.entryKey,
+      }),
+    );
     expect(
       materializedRefillHost?.roomActionRoster.rows.find(
         (row) =>
@@ -1420,16 +1425,18 @@ describe('Hermes Shrine Travel Deal generation', () => {
     );
     expect(bothRushedHost?.roomActionRoster.rows.map((row) => row.reference)).toEqual(
       expect.arrayContaining([
-        {
-          kind: 'interactAcquisitionEntry',
-          siteKey: 'hermesShrineDelivery',
-          entryKey: hermesShrineDeliveryEntryKey(host, 'initial:first'),
-        },
-        {
-          kind: 'interactAcquisitionEntry',
-          siteKey: 'hermesShrineDelivery',
-          entryKey: hermesShrineDeliveryEntryKey(host, 'initial:secondLeft'),
-        },
+        ...withItemContents(bothRushed, host, [
+          {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'hermesShrineDelivery',
+            entryKey: hermesShrineDeliveryEntryKey(host, 'initial:first'),
+          },
+          {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'hermesShrineDelivery',
+            entryKey: hermesShrineDeliveryEntryKey(host, 'initial:secondLeft'),
+          },
+        ]),
       ]),
     );
     expect(
@@ -2559,14 +2566,23 @@ it('keeps an earlier proven same-room placement when a later sibling blocks', ()
     introEntry,
     combatEntry,
   } = createSurfaceOSameRoomHermesDeliveriesCheckpoint();
-  const project = applyProjectCommand(complete, catalog, {
+  const aphrodite = {
     kind: 'ReplaceAcquisitionEntryOffer',
     entry: combatEntry,
     value: {
       rewardType: 'BlindBoxLoot',
       payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
     },
+  } as const;
+  // Another payload is a new item: its pickup goes, and the owner places the delivery again
+  // at its Combat1 end with the Aphrodite payload, whose screen is still to be authored.
+  let project = settleTestEdit(complete, aphrodite);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'PlaceHermesShrineDelivery',
+    entry: combatEntry,
+    encounterPhaseKey: 'Combat1',
   });
+  project = applyProjectCommand(project, catalog, aphrodite);
   const assembly = simulateProjectAssembly(catalog, project);
   const evaluation = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
   if (evaluation === undefined || !('rewards' in evaluation))

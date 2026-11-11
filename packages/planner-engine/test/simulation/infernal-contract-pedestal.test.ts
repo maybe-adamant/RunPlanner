@@ -34,7 +34,11 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
+import {
+  authorTestTraitsAndRequiredItems,
+  settleTestEdit,
+} from '@run-planner/test-fixtures/shared';
+import { withItemContent } from '../support/room-action-content';
 
 const shopId = createOccurrenceId('zagreus-contract-preboss-shop');
 const peerId = createOccurrenceId('zagreus-contract-preboss-peer');
@@ -74,7 +78,9 @@ describe('Infernal Contract pedestal', () => {
       'MajorNonBoon',
       'Minor',
     ]);
-    expect(shop.roomActions.order).toContainEqual(collect);
+    expect(shop.roomActions.order).toContainEqual(
+      withItemContent(project, createOccurrenceAddress(goldenGBiome, shopId), collect),
+    );
     expect(peer.state.kind).toBe('freeReward');
     expect(peer.infernalContractPedestal).toEqual({ optionKey: null, reward: null });
   });
@@ -118,7 +124,9 @@ describe('Infernal Contract pedestal', () => {
       pedestal: peerPedestal,
       collected: true,
     });
-    expect(occurrence(project, peerId).roomActions.order).toContainEqual(collect);
+    expect(occurrence(project, peerId).roomActions.order).toContainEqual(
+      withItemContent(project, createOccurrenceAddress(goldenGBiome, peerId), collect),
+    );
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     expect(
       evaluation.findings.filter(
@@ -190,7 +198,9 @@ describe('Infernal Contract pedestal', () => {
       collected: false,
     });
     expect(occurrence(project, shopId).acquisitionSites?.infernalContractPedestal).toBeUndefined();
-    expect(occurrence(project, shopId).roomActions.order).not.toContainEqual(collect);
+    expect(occurrence(project, shopId).roomActions.order.map(roomActionKey)).not.toContain(
+      roomActionKey(collect),
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ClearInfernalContractPedestal',
       pedestal: shopPedestal,
@@ -262,12 +272,12 @@ const gEntry = createAcquisitionEntryAddress(
 function contractShopProject(withHex = false): ProjectDocument {
   const midshop = goldenGOccurrenceId(5, 1);
   const returned = goldenGOccurrenceId(7, 1);
-  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+  let project = settleTestEdit(createCompleteFGProject(), {
     kind: 'AddZagreusContract',
     additional: createAdditionalExitAddress(goldenGBiome, midshop, 'zagreusContract'),
     occurrenceId: createOccurrenceId('contract-pedestal-witness'),
   });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(goldenGBiome, {
       kind: 'occurrence',
@@ -275,24 +285,24 @@ function contractShopProject(withHex = false): ProjectDocument {
     }),
     value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
   });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(goldenGBiome, returned),
     gameName: 'G_MiniBoss03',
   });
-  project = applyProjectCommand(project, catalog, {
+  project = settleTestEdit(project, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenGBiome, returned),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   if (withHex) {
     const spell = createShopOfferAddress(goldenGBiome, midshop, 'Minor');
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceShopOffer',
       offer: spell,
       value: { rewardType: 'SpellDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceShopPurchaseParticipation',
       offer: spell,
       purchased: true,

@@ -35,7 +35,10 @@ import { initializeTestRewardBranch } from '../support/arcana-fear';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
-import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import {
+  replaceTestPlacedItem,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures/shared';
 import {
   loadUnderworldFMidshopPomFrontierProject,
   fMidshopPomShopId,
@@ -718,14 +721,19 @@ describe('Pom level resolutions', () => {
       goldenFBiome,
       createOccurrenceId('midshop-pom-start'),
     );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceStartingReward',
-      reward: createStartingRewardAddress('Underworld'),
-      value: {
-        rewardType: 'Boon',
-        payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+    // The new opening Boon is a new item, which the owner picks up again.
+    project = replaceTestPlacedItem(
+      project,
+      {
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+        },
       },
-    });
+      createOccurrenceAddress(goldenFBiome, createOccurrenceId('midshop-pom-start')),
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(openingReward, 'source'),

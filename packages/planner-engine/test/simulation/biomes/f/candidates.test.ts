@@ -40,7 +40,10 @@ import {
 import {
   authorLegalTraitOffers,
   authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
+  settleTestEdit,
 } from '@run-planner/test-fixtures/shared';
+import { withItemContents } from '../../../support/room-action-content';
 import {
   createCompleteFGProject,
   createFMidshopUnresolvedBlindBoxBeforePomProject,
@@ -317,11 +320,14 @@ describe('F candidate support', () => {
         },
       });
 
-      const replaced = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceStartingReward',
-        reward,
-        value: boon,
-      });
+      // The owner picks up the new opening Boon; its trait screen is still to be authored.
+      const replaced = collectTestRequiredItems(
+        settleTestEdit(project, {
+          kind: 'ReplaceStartingReward',
+          reward,
+          value: boon,
+        }),
+      );
       const trait = createTraitOfferAddress(incoming, 'source');
       expect(simulateProject(catalog, replaced).findings).toContainEqual(
         expect.objectContaining({ code: 'traitOfferMissing', origin: trait }),
@@ -557,8 +563,10 @@ describe('F candidate support', () => {
         ?.roomActions.order,
     ).toEqual(
       expect.arrayContaining([
-        { kind: 'interactShopOffer', offerKey: 'Boon' },
-        { kind: 'interactShopOffer', offerKey: 'Minor' },
+        ...withItemContents(ordered, site.owner, [
+          { kind: 'interactShopOffer', offerKey: 'Boon' },
+          { kind: 'interactShopOffer', offerKey: 'Minor' },
+        ]),
       ]),
     );
     const evaluation = simulateProject(catalog, ordered);
