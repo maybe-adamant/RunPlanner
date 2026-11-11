@@ -25,6 +25,7 @@ import {
   encodeProjectDocument,
   undoProjectHistory,
   type AuthoredTraitOfferTraits,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   createGoldenFGHProject,
@@ -438,6 +439,61 @@ describe('authored-project incoming reward commands', () => {
     expect(roomOf(cleared.present)?.acquisitionSites?.[siteKey]).toBeUndefined();
     expect(roomOf(cleared.present)?.roomActions.order).not.toContainEqual(duplicateAction);
     expect(undoProjectHistory(cleared).present).toBe(picked.present);
+  });
+
+  it('discards a Sea Star duplicate and its pickup when its source is swapped, in one Undo step', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const acquisition = createAcquisitionRoleAddress(reward, 'self');
+    const siteKey = seaStarDuplicateSiteKey(acquisition);
+    const duplicateAction = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey,
+      entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+    };
+    const roomOf = (document: ProjectDocument) =>
+      document.route.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+      )!;
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition,
+      procced: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        goldenFOccurrenceId(1, 1),
+        roomActionKey(duplicateAction),
+      ),
+      reference: duplicateAction,
+      index: roomOf(project).roomActions.order.length,
+    });
+    expect(roomOf(project).roomActions.order).toContainEqual(duplicateAction);
+    const history = createProjectHistory(project);
+    const swapped = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    expect(roomOf(swapped.present).acquisitionSites?.[siteKey]).toBeUndefined();
+    expect(roomOf(swapped.present).roomActions.order).not.toContainEqual(duplicateAction);
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(swapped.present)), catalog),
+    ).toEqual(swapped.present);
+    expect(undoProjectHistory(swapped).present).toBe(project);
+    // An edit that leaves the source's offer alone keeps its duplicate.
+    const goldified = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'timePiece' },
+    });
+    expect(roomOf(goldified).acquisitionSites?.[siteKey]).toBeDefined();
   });
 
   it('keeps a retained Sea Star child dormant while its parent uses Time Piece', () => {

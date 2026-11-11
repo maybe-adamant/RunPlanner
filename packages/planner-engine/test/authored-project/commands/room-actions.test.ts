@@ -1306,7 +1306,7 @@ describe('room-action commands', () => {
     expect(fieldsOccurrence(withoutStale).roomActions.order).not.toContainEqual(invented);
   });
 
-  it('keeps an Artificer replacement payload dormant while rejecting raw insertion until its source role reactivates', () => {
+  it('discards an Artificer replacement and its pickup when its source leaves the Artificer', () => {
     const source = createIncomingRewardAddress(biome, occurrenceId);
     const acquisition = createAcquisitionRoleAddress(source, 'source');
     const site = artificerAcquisitionSite(createOccurrenceAddress(biome, occurrenceId), source);
@@ -1332,21 +1332,16 @@ describe('room-action commands', () => {
         index,
       });
     expect(occurrence(active).roomActions.order).toEqual([reward, replacement]);
-    let dormant = applyProjectCommand(active, catalog, {
+    // Leaving the Artificer discards the replacement and its pickup in the same edit.
+    const left = applyProjectCommand(active, catalog, {
       kind: 'ReplaceAcquisitionDisposition',
       acquisition,
       value: { kind: 'normal' },
     });
-    expect(occurrence(dormant).acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
-      entryKey,
-      null,
-    );
-    dormant = applyProjectCommand(dormant, catalog, {
-      kind: 'RemoveRoomAction',
-      action: action(replacement),
-    });
+    expect(occurrence(left).acquisitionSites?.[siteKey]).toBeUndefined();
+    expect(occurrence(left).roomActions.order).toEqual([reward]);
     expect(() =>
-      applyProjectCommand(dormant, catalog, {
+      applyProjectCommand(left, catalog, {
         kind: 'InsertRoomAction',
         action: action(replacement),
         reference: replacement,
@@ -1354,12 +1349,17 @@ describe('room-action commands', () => {
       }),
     ).toThrow('room action is not active for this occurrence');
 
-    const restored = applyProjectCommand(dormant, catalog, {
+    // Returning to the Artificer produces a new replacement, live until placed.
+    const restored = applyProjectCommand(left, catalog, {
       kind: 'ReplaceAcquisitionDisposition',
       acquisition,
       value: { kind: 'artificer' },
     });
     expect(occurrence(restored).roomActions.order).not.toContainEqual(replacement);
+    expect(occurrence(restored).acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
+      entryKey,
+      null,
+    );
     expect(
       occurrence(
         applyProjectCommand(restored, catalog, {
@@ -1370,10 +1370,6 @@ describe('room-action commands', () => {
         }),
       ).roomActions.order,
     ).toEqual([reward, replacement]);
-    expect(occurrence(restored).acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
-      entryKey,
-      null,
-    );
   });
 
   it('preserves authored chronology when room identity is replaced', () => {

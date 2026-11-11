@@ -1,3 +1,4 @@
+import { reconcileDerivedItems } from '../acquisition/derived-items';
 import type { Catalog } from '../../catalog-schema';
 import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
@@ -440,8 +441,10 @@ export function applyProjectCommand(
       withRetractedClockedPickups,
       catalog,
     );
+    // An item derived from a source the edit changed goes with its source's old content.
+    const withDerivedItems = reconcileDerivedItems(document, withGeneratedPickupState, catalog);
     const reconciled = reconcileChaosTopology(
-      reconcileLeftChallengeSwitchPresses(document, withGeneratedPickupState, command),
+      reconcileLeftChallengeSwitchPresses(document, withDerivedItems, command),
       catalog,
     );
     // Generated detours can delete occurrences after the direct command.

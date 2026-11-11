@@ -18,6 +18,8 @@ import {
   createRoomActionAddress,
   roomActionKey,
   createTraitOfferAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   semanticAddressKey,
   type AuthoredNemesisRandomEventOutcome,
   type ProjectDocument,
@@ -729,6 +731,96 @@ describe('Nemesis random events', () => {
     ]);
     // Sold, the cleared options regenerate at the open with the Cast slot empty.
     expect(withTrade('accept')).toEqual([undefined]);
+  });
+
+  it('discards the result and its Sea Star duplicate when the event or contest result changes', () => {
+    const address = createNemesisRandomEventAddress(phase);
+    const source = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
+          'nemesisGenerated:Encounter',
+        ),
+        'result',
+      ),
+      'self',
+    );
+    const result = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    };
+    const duplicated = (outcome: AuthoredNemesisRandomEventOutcome, rewardType: string) => {
+      let project = collectTestRequiredItems(
+        replaceNemesisRandomEventInteraction(selectEvent(), address, outcome, { rewardType }),
+      );
+      if (
+        !occurrence(project).roomActions.order.some(
+          (reference) => roomActionKey(reference) === roomActionKey(result),
+        )
+      )
+        project = insertOptionalResult(project);
+      return applyProjectCommand(project, catalog, {
+        kind: 'ReplaceSeaStarResult',
+        acquisition: source,
+        procced: true,
+      });
+    };
+    const duplicateSites = (project: ProjectDocument) =>
+      Object.keys(occurrence(project).acquisitionSites ?? {}).filter((siteKey) =>
+        siteKey.startsWith('seaStarDuplicate:'),
+      );
+    const roundTrips = (project: ProjectDocument) =>
+      expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+        project,
+      );
+
+    // Another event with the same reward is another source.
+    const traded = duplicated({ kind: 'damageTrade', response: 'accept' }, 'MaxHealthDrop');
+    expect(duplicateSites(traded)).toHaveLength(1);
+    expect(occurrence(traded).roomActions.order).toContainEqual(result);
+    const contested = replaceNemesisRandomEventInteraction(
+      traded,
+      address,
+      { kind: 'damageContest', result: 'success' },
+      { rewardType: 'MaxHealthDrop' },
+    );
+    expect(duplicateSites(contested)).toEqual([]);
+    expect(occurrence(contested).roomActions.order).not.toContainEqual(result);
+    roundTrips(contested);
+    const free = duplicated({ kind: 'freeItem' }, 'ArmorBoost');
+    expect(duplicateSites(free)).toHaveLength(1);
+    const family = applyProjectCommand(free, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event: address,
+      family: 'goldTrade',
+    });
+    expect(duplicateSites(family)).toEqual([]);
+    expect(occurrence(family).roomActions.order).not.toContainEqual(result);
+    roundTrips(family);
+
+    // A contest won and then lost spawns another item.
+    const won = duplicated({ kind: 'damageContest', result: 'success' }, 'MaxHealthDrop');
+    expect(duplicateSites(won)).toHaveLength(1);
+    const lost = replaceNemesisRandomEventInteraction(
+      won,
+      address,
+      { kind: 'damageContest', result: 'failure' },
+      { rewardType: 'RoomRewardConsolationPrize' },
+    );
+    expect(duplicateSites(lost)).toEqual([]);
+    roundTrips(lost);
+    // The same contest result keeps its item and duplicate.
+    expect(
+      duplicateSites(
+        replaceNemesisRandomEventInteraction(
+          won,
+          address,
+          { kind: 'damageContest', result: 'success' },
+          { rewardType: 'MaxHealthDrop' },
+        ),
+      ),
+    ).toHaveLength(1);
   });
 
   it('requires a contest Pom pickup while consumable contest results stay optional', () => {

@@ -837,9 +837,20 @@ result that becomes inactive remains authored for repair but has no active
 child action. The persisted entry is ordinary
 `AuthoredRewardState`, so no reward-copy tree or second timeline is needed.
 
+A Sea Star duplicate and an Artificer replacement are items derived from a
+source in the same room. When an edit changes that source, the derived item
+and its own derived items go with their pickups in the same undo step: when
+the source is no longer produced, when its offer changes (a swapped reward),
+when a replacement's source no longer converts with the Artificer, and when a
+Nemesis event's kind or contest result changes, since another event or
+result is another source even with the same reward. An edit that keeps the
+source, such as its Time Piece disposition, keeps them.
+
 A Nemesis random event's site holds her offer as its one `result` entry: the
 item she gives or trades, the trait trade's fixed Triple Gold, and for a
-damage contest the planned success item, kept whatever the contest's result.
+damage contest the planned success item, whatever the contest's result.
+Changing the event's kind or the contest's result renews the entry without
+its authored choices and unplaces its pickup.
 What spawns derives from the outcome: the offer for her free item, an
 accepted trade or a won contest, nothing for a declined trade, and the fixed
 Consolation prize for a lost contest, which therefore needs no offer.
@@ -1162,8 +1173,9 @@ explicit semantic command changes or removes it.
 
 Before decoding a successful proposal, the command boundary closes it in one
 explicit command-local order: resource topology cleanup, Shrine-source and
-inactive clocked-pickup retraction, generated pickup sites, a left challenge
-switch's press and Chaos topology reconciliation. No closure places a row: a
+inactive clocked-pickup retraction, generated pickup sites, items derived
+from a changed source, a left challenge switch's press and Chaos topology
+reconciliation. No closure places a row: a
 newly required action, a newly taken trait's dropped pickup and a rushed
 Shrine item stay unplaced until the owner places them. The closure does not
 invoke simulation or materialization, repair pre-existing omissions, or remove
