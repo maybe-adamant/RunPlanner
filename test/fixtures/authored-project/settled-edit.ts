@@ -276,7 +276,7 @@ export function replaceTestPlacedItem(
       // (an inactive room or another role holds none).
       if (
         !(error instanceof ProjectCommandContractError) ||
-        !error.message.includes('room action is not active')
+        error.detail !== 'room action is not active for this occurrence'
       )
         throw error;
     }

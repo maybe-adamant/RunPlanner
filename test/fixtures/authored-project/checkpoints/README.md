@@ -19,6 +19,12 @@ regeneration when the schema changes. Imported user-authored checkpoints keep
 canonical loader and integrity coverage and are not reconstructed by the
 command.
 
+A saved checkpoint with no recipe changes only through the engine's own
+transforms, never by hand: when a rule a transform owns changes (such as the
+item content `stampRoomActionItemContent` records on rows), rerun that
+transform over the saved document and keep its output, so the checkpoint holds
+what a migrated user plan would.
+
 A fixture migration preserves each scenario's intent, passes current strict
 decoding and regenerates canonical bytes and hashes. A one-to-many migration
 emits every document rather than silently selecting a sibling. Temporary
