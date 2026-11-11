@@ -37,6 +37,9 @@ Investigations (read-only, 2026-11-10):
 
 ## C5a: what the live product publishes
 
+- A separate query, `liveInteractionsForProjectEvaluationAssembly`, wraps the
+  live actions product; Draft and Collect all required keep the cheap
+  `liveActions…` and never pay for verbs.
 - Every live item (pickup or object) carries `verbs`: kind, participation,
   deadline, the row it stands as or places, and either the ordered commands
   performing it at that gap (empty while standing) or a picker. A picker is
@@ -51,8 +54,11 @@ Investigations (read-only, 2026-11-10):
 - Choice verbs the live product lacked: door, cage and wheel reroll presses
   at the surface's append point; Well and Pool rerolls and unpinned Pool
   sales where the room's reached actions end; each only while a held card
-  enables it and the pool pays. A pinned Pool sale and the rack are roster
-  rows already.
+  enables it and the pool pays, and a sale only while its list can show a
+  held trait (the picker's `traitKeys`, never empty). A pinned Pool sale and
+  the rack are roster rows already. Verbs at one gap are alternatives: each
+  is one edit, and the product is read again after it, so a sale and a
+  reroll at the same gap never compose.
 - `progression` at the frontier: `leaveRoom` once the walk passes the room
   with nothing required live; `chooseWheel` when the next wheel's choice is
   the only required thing live. Leaving is the exit decision, not a row, so
@@ -65,6 +71,18 @@ Gaps left for C5b (the engine cannot derive them today):
 - Goldify and transform for an unplaced item, or for a placed one at any
   gap but its own: the conversion capability exists only at a reached
   contact, so the state at another gap is unknown.
+- Shared conversion capacity: a row's offer reads its own contact, which
+  counts only earlier conversions, so goldifying or transforming an earlier
+  row can starve a later standing conversion (its finding then shows). The
+  witness pins it; the item model fixes it by judging an item's conversion
+  against the whole room's.
+- An Artificer offer withheld at zero uses is not witnessed: no fixture
+  reaches a fourth eligible pickup without the replacement choices
+  rippling. The offer reads the same `supported` assessment as Time Piece,
+  whose zero-charge and Unfated cases are witnessed.
+- A new reroll press, Well reroll and Pool reroll carry no `reference`: the
+  row id is allocated when the row is created (by the picker for a press,
+  by the engine for a Well or Pool reroll). C5b's item keys give them one.
 - A row covering several roles (a caged Blind Box) gets no conversion verbs.
 - Well and Pool rerolls, Pool sales and door rerolls only at their append
   point: no engine query answers their other legal indices. A wheel
