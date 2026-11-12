@@ -545,6 +545,8 @@ describe('structured workspace actions assembly', () => {
           siteKey: 'roomExit',
           entryKey: address.entryKey,
         },
+        // The engine names the drop's phase and contact as a placed row's.
+        phaseKey: 'Encounter',
         label: { kind: 'afterEncounterEnd' as const, phaseKey: 'Encounter' },
         placement: {
           kind: 'PlaceClockedTraitPickup' as const,
@@ -575,6 +577,7 @@ describe('structured workspace actions assembly', () => {
         expect.objectContaining({
           participation: 'optional',
           rank: null,
+          phaseKey: 'Encounter',
           timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
           placement: {
             command: expect.objectContaining({
@@ -1006,6 +1009,9 @@ describe('structured workspace actions assembly', () => {
       timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
     });
     expect(placedRow?.rank).not.toBeNull();
+    // Due and placed, the delivery keeps the engine's one phase.
+    expect(placedRow?.phaseKey).toBeDefined();
+    expect(dueRow?.phaseKey).toBe(placedRow?.phaseKey);
     expect(placedRow?.placement).toBeUndefined();
     expect(placedRow?.rewardPayload).toBeDefined();
   });

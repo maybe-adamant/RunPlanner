@@ -294,6 +294,8 @@ export interface WorkspaceBiomeSource {
     /** The row that places a due delivery or clocked drop, and how the editor names its timing. */
     readonly reference?: import('@run-planner/engine/authored-project').RoomActionReference;
     readonly label?: import('@run-planner/engine/simulation').RoomActionRowLabel;
+    /** A due delivery's or clocked drop's phase on the Timeline, as its placed row's. */
+    readonly phaseKey?: string;
     /** The command placing a due delivery or clocked drop where it is live. */
     readonly placement?: import('@run-planner/engine/simulation').TimedPickupPlacementCommand;
     readonly participation?: 'required' | 'optional';
