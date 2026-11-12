@@ -53,7 +53,13 @@ import { importRoomActionOrders } from './action-order';
 import { answerRequiredPlacement } from './actions';
 import { importEncounters } from './encounters';
 import { answerCommerce, importCommerce } from './commerce';
-import { answerFeatures, importFeatures, recordedHexTree, reportDenialBans } from './features';
+import {
+  answerFeatures,
+  importFeatures,
+  importKeepsakeRacks,
+  recordedHexTree,
+  reportDenialBans,
+} from './features';
 import {
   answerFields,
   importFieldsConversions,
@@ -568,6 +574,7 @@ export class RunImportWalk {
       importDispositions(this.context);
       importSideRoomVisits(this.context);
       importPhantomExits(this.context);
+      importKeepsakeRacks(this.context);
       importCommerce(this.context);
       // A switch's claim pickups are authored before the room's Sea Star duplicates are placed.
       importChallengeSwitches(this.context);

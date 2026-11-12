@@ -259,8 +259,13 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     expect(postboss.roomActions.order.slice(2)).toEqual([
       { kind: 'rerollStygianWell', rerollId: 'r1' },
       { kind: 'rerollPurgingPool', rerollId: 'r1' },
-      { kind: 'purchaseStygianWellOffer', generationKey: 'r1:secondRight' },
-      { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' },
+      // Placed rows record the item content they act on.
+      {
+        kind: 'purchaseStygianWellOffer',
+        generationKey: 'r1:secondRight',
+        content: ['TemporaryForcedSecretDoorTrait'],
+      },
+      { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1', content: ['BoonDecayBoon'] },
     ]);
     expect(postboss.stygianWell?.rerollOfferKeyBySlot).toEqual({
       r1: { secondRight: 'TemporaryForcedSecretDoorTrait' },

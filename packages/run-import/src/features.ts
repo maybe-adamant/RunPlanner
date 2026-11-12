@@ -721,7 +721,21 @@ export function chaosUnpickedCurses(
   };
 }
 
-/** Keepsake racks and fountains: optional room actions authored once their room is entered. */
+/**
+ * Keepsake racks, authored once their room is entered and before its stores:
+ * the keepsake taken there can pay a Well or Pool reroll after it.
+ */
+export function importKeepsakeRacks(context: RunImportContext): void {
+  const project = context.assembly().project;
+  for (const biome of project.route.biomes)
+    for (const occurrence of biome.topology?.occurrences ?? []) {
+      const roomIndex = context.occurrences.visitsOf(occurrence.occurrenceId)[0];
+      if (roomIndex !== undefined && context.pending(occurrence.occurrenceId))
+        importRack(context, biome.biomeKey, occurrence, roomIndex);
+    }
+}
+
+/** Fountains, trait pickups and Sea Star duplicates, authored once their room is entered. */
 export function importFeatures(context: RunImportContext): void {
   const project = context.assembly().project;
   for (const biome of project.route.biomes)
@@ -734,7 +748,6 @@ export function importFeatures(context: RunImportContext): void {
       const solved = !waits && wheelsSolved(context, roomIndex) && !context.used.has(released);
       if (!context.pending(occurrence.occurrenceId) && !solved) continue;
       if (solved) context.used.add(released);
-      importRack(context, biome.biomeKey, occurrence, roomIndex);
       importFountain(context, biome.biomeKey, occurrence, roomIndex);
       if (!waits) importTraitPickups(context, biome.biomeKey, occurrence, roomIndex);
       importSeaStar(context, biome.biomeKey, occurrence, roomIndex);
