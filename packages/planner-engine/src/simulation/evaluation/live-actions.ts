@@ -29,7 +29,6 @@ import {
   asUnplacedWhenReplaced,
   type RoomActionParticipation,
   type RoomActionRow,
-  type RoomActionWindow,
 } from '../room-actions';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import { roomObjectInteractionsForProjectEvaluationAssembly } from './project-evaluation-assembly';
@@ -122,8 +121,6 @@ export interface LivePickup extends LiveObligation {
   readonly reference: RoomActionReference;
   readonly source: SpawnedLootSource;
   readonly reward?: SpawnedLootReward;
-  /** The collect row's lifecycle window, once it is a roster row. */
-  readonly window?: RoomActionWindow;
   /** Where it spawned: the gap, and its spawn moment's key or the action whose settlement spawned it. */
   readonly spawn: {
     readonly gap: number;
@@ -624,7 +621,6 @@ export function liveActionsForProjectEvaluationAssembly(
       ...(item.reward === undefined ? {} : { reward: item.reward }),
       participation: item.participation,
       ...(deadline === undefined ? {} : { deadline }),
-      ...(row === undefined ? {} : { window: row.window }),
       spawn: frozen({
         gap: spawn.gap,
         ...(spawn.moment === undefined ? {} : { moment: spawn.moment }),

@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { BiomeAddress } from '../addresses';
-import { resolveRoutePosition } from '../route-context';
+import { resolveRoutePosition, type ResolvedRoutePosition } from '../route-context';
 import { resolveEntryRoom } from '../room-state/entry-resolution';
 import { composeStartingReward } from '../room-state/starting-reward';
 import type {
@@ -16,7 +16,7 @@ import {
   type RoomActionContribution,
   type RoomActionDomain,
 } from './domain';
-import { windowAnchor } from './event-graph';
+import { roomActionOpeningPoint, roomEventPlaces } from './event-graph';
 import { roomLifecycleProfileKey, roomRunsProducer } from './lifecycle-profile';
 import { clockworkDoors, forcedDoorReward } from '../clockwork-doors';
 import { fieldsDefaultActiveCageCount } from '../fields';
@@ -52,14 +52,16 @@ function score(
   action: RoomActionContribution,
 ): number {
   const reference = action.reference;
-  if (action.window.kind !== 'fields') {
-    const ordinal = windowAnchor(action.window, domain.eventGraph);
-    // Fields rows score from their cage order below; a later window follows all of them.
-    return domain.eventGraph.profileKey === 'FieldsCombatRoom' &&
-      ordinal > windowAnchor({ kind: 'fields' }, domain.eventGraph)
-      ? 10000 + ordinal * 100
-      : ordinal * 100;
-  }
+  // A Fields room's rows score from their cage order below.
+  const cagePhaseKey =
+    action.bounds.spawn.kind === 'encounterEnd' || action.bounds.spawn.kind === 'endEffects'
+      ? action.bounds.spawn.phaseKey
+      : undefined;
+  const fields = domain.eventGraph.events.some(
+    (event) => event.kind === 'encounterBegun' && event.trigger.kind === 'action',
+  );
+  if (!fields)
+    return roomEventPlaces(domain.eventGraph)(roomActionOpeningPoint(action.bounds)) * 100;
   const phaseOrder = fieldsPhaseOrder(catalog, domain, order);
   if (reference.kind === 'interactEncounter' || reference.kind === 'interactGorgon') {
     const ordinal = phaseOrder.indexOf(reference.phaseKey);
@@ -70,13 +72,13 @@ function score(
     return 2000 + Math.max(0, ordinal) * 200;
   }
   if (reference.kind === 'interactLocalReward' && reference.groupKey === 'cages') {
-    const ordinal = phaseOrder.indexOf(action.window.phaseKey ?? '');
+    const ordinal = phaseOrder.indexOf(cagePhaseKey ?? '');
     if (ordinal < 0) throw new Error(`${domain.declaration.gameName} cage reward has no phase`);
     return 2150 + ordinal * 200;
   }
   // A cage end's delivery or clocked drop is collected with its cage, after the reward.
-  if (reference.kind === 'interactAcquisitionEntry' && action.window.phaseKey !== undefined) {
-    const ordinal = phaseOrder.indexOf(action.window.phaseKey);
+  if (reference.kind === 'interactAcquisitionEntry' && cagePhaseKey !== undefined) {
+    const ordinal = phaseOrder.indexOf(cagePhaseKey);
     if (ordinal >= 0) return 2175 + ordinal * 200;
   }
   return 8000;
@@ -192,7 +194,7 @@ export function scheduleRequiredRoomActions(options: {
  */
 export function occurrenceLifecycle(
   catalog: Catalog,
-  routePosition: import('../route-context').ResolvedRoutePosition,
+  routePosition: ResolvedRoutePosition,
   plan: AuthoredBiomePlan,
   topology: BiomeTopology,
   occurrence: RoomOccurrence,
@@ -233,7 +235,7 @@ export function occurrenceLifecycle(
 
 function roomActionDomainContext(
   catalog: Catalog,
-  routePosition: import('../route-context').ResolvedRoutePosition,
+  routePosition: ResolvedRoutePosition,
   plan: AuthoredBiomePlan,
   topology: BiomeTopology,
   occurrence: RoomOccurrence,

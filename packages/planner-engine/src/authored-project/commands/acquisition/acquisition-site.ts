@@ -44,7 +44,7 @@ import {
 } from '../../room-actions/defaults';
 import { roomActionKey } from '../../room-actions/state';
 import { withChosenIndex } from '../chosen-index';
-import { windowAnchor } from '../../room-actions/event-graph';
+import { roomActionOpeningPoint, roomEventPlaces } from '../../room-actions/event-graph';
 import { resolveRoutePosition } from '../../route-context';
 
 function refuseIndexWhenPlaced(command: AcquisitionSiteCommand & { readonly index?: number }) {
@@ -193,7 +193,8 @@ export function applyAcquisitionSiteCommand(
     );
     if (domain === undefined || target?.kind !== 'action')
       failCommand(command, 'has no active room-action placement');
-    const targetOrdinal = windowAnchor(target.window, domain.eventGraph);
+    const place = roomEventPlaces(domain.eventGraph);
+    const targetOpening = place(roomActionOpeningPoint(target.bounds));
     const actionsByKey = new Map(
       domain.contributions.flatMap((entry) =>
         entry.kind === 'action' ? [[roomActionKey(entry.reference), entry] as const] : [],
@@ -203,7 +204,7 @@ export function applyAcquisitionSiteCommand(
       const contribution = actionsByKey.get(roomActionKey(candidate));
       return (
         contribution !== undefined &&
-        windowAnchor(contribution.window, domain.eventGraph) > targetOrdinal
+        place(roomActionOpeningPoint(contribution.bounds)) > targetOpening
       );
     });
     const nextOrder = [...host.roomActions.order];

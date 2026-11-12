@@ -64,7 +64,7 @@ export function encounterOutcomesForProjectEvaluationAssembly(
       // A boss fight hosts none: its outcome is its Boss defeated.
       if (point.hostsOutcome !== true) return [];
       const fightHost: EncounterOutcomeHost =
-        point.endsOnInteraction === true
+        point.script?.endsByInteraction === true
           ? Object.freeze({
               kind: 'interaction' as const,
               action: Object.freeze({
@@ -111,7 +111,7 @@ export function encounterOutcomesForProjectEvaluationAssembly(
         if (
           nemesisEvent != null &&
           nemesisEvent.kind !== 'freeItem' &&
-          point.endsOnInteraction === true
+          point.script?.endsByInteraction === true
         )
           fightChoices.push('nemesisEvent');
         if (room.anomalyReplacement !== undefined) fightChoices.push('anomalyCleared');

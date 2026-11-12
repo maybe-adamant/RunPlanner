@@ -25,18 +25,17 @@ function blockerText(row: RoomActionRow, blocker: RoomActionPlacementBlocker): s
   const subject = roomActionKey(blocker.reference);
   const prefix = subject === row.key ? '' : `${compactActionKey(subject)} `;
   switch (blocker.kind) {
-    case 'dependency': {
-      const dependency = blocker.dependency;
-      const target =
-        dependency.kind === 'afterAction'
-          ? compactActionKey(roomActionKey(dependency.action))
-          : dependency.checkpointKey;
-      return `${prefix}${dependency.kind} ${target}${blocker.checkpointUnavailable === true ? ' unavailable' : ''}`;
-    }
-    case 'window':
+    case 'dependency':
+      return `${prefix}afterAction ${compactActionKey(roomActionKey(blocker.dependency.action))}`;
+    case 'pastDeadline':
       return `${prefix}window after ${compactActionKey(roomActionKey(blocker.precedingAction))}`;
-    case 'requiredFirst':
-      return `${prefix}requiredFirst ${compactActionKey(roomActionKey(blocker.requiredAction))}`;
+    case 'beforeSpawn':
+    case 'beforeEnabler':
+      return blocker.requiredAction !== undefined
+        ? `${prefix}requiredFirst ${compactActionKey(roomActionKey(blocker.requiredAction))}`
+        : blocker.unavailable === true && blocker.point.kind === 'encounterEnd'
+          ? `${prefix}afterCheckpoint combat:${blocker.point.phaseKey} unavailable`
+          : `${prefix}afterCheckpoint exitUsable`;
   }
 }
 

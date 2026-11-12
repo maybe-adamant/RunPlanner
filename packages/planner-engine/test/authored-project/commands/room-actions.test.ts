@@ -1,3 +1,4 @@
+import { doorsReadyAfterRank } from '../../../src/simulation/room-actions';
 import { ordinaryPositionFor } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
@@ -582,8 +583,8 @@ describe('room-action commands', () => {
     };
     expect(roster.valid).toBe(true);
     expect(
-      roster.rows.find((row) => roomActionKey(row.reference) === roomActionKey(purchase))?.window,
-    ).toEqual({ kind: 'postOutgoing' });
+      roster.rows.find((row) => roomActionKey(row.reference) === roomActionKey(purchase))?.label,
+    ).toEqual({ kind: 'afterDoorsOpen' });
     expect(
       roster.proposals.find(
         (proposal) =>
@@ -1853,19 +1854,14 @@ describe('room-action commands', () => {
         'optional',
       );
       // Doors open once the fountain resolves, whatever the rack's position.
-      expect(
-        assessed.checkpoints.find((checkpoint) => checkpoint.checkpointKey === 'exitUsable')
-          ?.afterRank,
-      ).toBe(order.indexOf(fountain) + 1);
+      expect(doorsReadyAfterRank(assessed.rows).afterRank).toBe(order.indexOf(fountain) + 1);
     }
     expect(
-      roster([rack, fountain, purchase]).rows.find((row) => row.key === roomActionKey(rack))
-        ?.window,
-    ).toEqual({ kind: 'standard', phase: 'afterCombat' });
+      roster([rack, fountain, purchase]).rows.find((row) => row.key === roomActionKey(rack))?.label,
+    ).toEqual({ kind: 'afterCombat' });
     expect(
-      roster([fountain, purchase, rack]).rows.find((row) => row.key === roomActionKey(rack))
-        ?.window,
-    ).toEqual({ kind: 'postOutgoing' });
+      roster([fountain, purchase, rack]).rows.find((row) => row.key === roomActionKey(rack))?.label,
+    ).toEqual({ kind: 'afterDoorsOpen' });
     // The Well still unlocks only with the doors.
     expect(roster([purchase, fountain, rack]).valid).toBe(false);
     expect(

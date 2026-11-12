@@ -1879,7 +1879,7 @@ describe('Hermes Shrine purchase actions', () => {
       ),
     ).toMatchObject({
       participation: 'optional',
-      window: { kind: 'postOutgoing' },
+      bounds: expect.objectContaining({ enabler: { kind: 'doorsOpened' } }),
       dependencies: [
         { kind: 'afterAction', action: purchase('initial:secondLeft'), authoringOnly: true },
       ],
@@ -2211,7 +2211,7 @@ describe('Hermes Shrine purchase actions', () => {
       ),
     ).toMatchObject({
       participation: 'optional',
-      window: { kind: 'postOutgoing' },
+      bounds: expect.objectContaining({ enabler: { kind: 'doorsOpened' } }),
       dependencies: [
         { kind: 'afterAction', action: rushOf('initial:secondLeft'), authoringOnly: true },
       ],

@@ -943,7 +943,7 @@ describe('Nemesis random events', () => {
     expect(eventAction).toMatchObject({
       kind: 'action',
       participation: 'required',
-      window: { kind: 'fields', phaseKey: 'Passive' },
+      bounds: expect.objectContaining({ spawn: { kind: 'encounterEnd', phaseKey: 'Passive' } }),
       dependencies: [],
     });
     expect(selected.roomActions.order).toContainEqual({

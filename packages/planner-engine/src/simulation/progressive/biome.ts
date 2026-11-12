@@ -1,3 +1,4 @@
+import type { RoomActionPlacementBlocker } from '../../authored-project/room-actions/order-assessment';
 import type { Catalog } from '../../catalog-schema';
 import { isRequiredMissingInputFinding, type SemanticFinding } from '../model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
@@ -128,6 +129,35 @@ export function talentDropClosureLifecycleState(context: ProgressiveBiomeContext
 
 type RequiredActionDeadline = import('../lifecycle/model').RequiredActionDeadline;
 
+/** A placement blocker as finding evidence, in the order vocabulary findings publish. */
+function orderIssueEvidence(issue: RoomActionPlacementBlocker): SemanticFinding['evidence'] {
+  switch (issue.kind) {
+    case 'dependency':
+      return {
+        reason: 'dependency',
+        detail: issue.detail,
+        dependencyKind: 'afterAction',
+        checkpointUnavailable: false,
+      };
+    case 'pastDeadline':
+      return { reason: 'window', detail: issue.detail };
+    case 'beforeSpawn':
+    case 'beforeEnabler':
+      return issue.requiredAction !== undefined
+        ? {
+            reason: 'requiredFirst',
+            detail: issue.detail,
+            requiredAction: roomActionKey(issue.requiredAction),
+          }
+        : {
+            reason: 'dependency',
+            detail: issue.detail,
+            dependencyKind: 'afterCheckpoint',
+            checkpointUnavailable: issue.unavailable === true,
+          };
+  }
+}
+
 /** Classify only the exact active action that stopped lifecycle execution. */
 function lifecycleBlockFindings(
   blockedAt: SemanticAddress,
@@ -154,35 +184,28 @@ function lifecycleBlockFindings(
         }),
       ]);
     const issues = room.roomActionRoster.issues;
-    // A required action of an earlier window ordered after the row stops the walk at the
-    // row; that crossing is the row's one reason, not also a window issue of the later action.
+    // A required action opening earlier but ordered after the row stops the walk at the
+    // row; that is the row's one reason, not also a crossing of the later action.
     const requiredFirst = issues.some(
-      (issue) => issue.kind === 'requiredFirst' && roomActionKey(issue.reference) === row.key,
+      (issue) =>
+        (issue.kind === 'beforeSpawn' || issue.kind === 'beforeEnabler') &&
+        issue.requiredAction !== undefined &&
+        roomActionKey(issue.reference) === row.key,
     );
-    // Otherwise a window crossing blocks at whichever of its two actions execution reaches first.
+    // Otherwise a crossing blocks at whichever of its two actions execution reaches first.
     const reasons = issues.flatMap((issue): SemanticFinding[] =>
+      issue.kind !== 'stale' &&
+      issue.kind !== 'unrankedRequired' &&
       (roomActionKey(issue.reference) === row.key ||
-        (issue.kind === 'window' &&
+        (issue.kind === 'pastDeadline' &&
           !requiredFirst &&
-          roomActionKey(issue.precedingAction) === row.key)) &&
-      (issue.kind === 'dependency' || issue.kind === 'window' || issue.kind === 'requiredFirst')
+          roomActionKey(issue.precedingAction) === row.key))
         ? [
             Object.freeze({
               code: 'roomActionOrderUnavailable',
               phase: 'encounterResolution',
               origin: blockedAt,
-              evidence: Object.freeze({
-                reason: issue.kind,
-                detail: issue.detail,
-                ...(issue.kind === 'dependency'
-                  ? {
-                      dependencyKind: issue.dependency.kind,
-                      checkpointUnavailable: issue.checkpointUnavailable === true,
-                    }
-                  : issue.kind === 'requiredFirst'
-                    ? { requiredAction: roomActionKey(issue.requiredAction) }
-                    : {}),
-              }),
+              evidence: Object.freeze(orderIssueEvidence(issue)),
             }),
           ]
         : [],

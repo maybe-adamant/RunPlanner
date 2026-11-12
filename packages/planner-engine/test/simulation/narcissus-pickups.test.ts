@@ -683,7 +683,7 @@ describe('Narcissus pickup producer', () => {
     );
     expect(maxMana).toMatchObject({
       participation: 'optional',
-      window: { kind: 'postOutgoing' },
+      label: expect.objectContaining({ kind: 'afterDoorsOpen' }),
       rank: null,
       stale: false,
       sourceFamily: { kind: 'trait', traitKey: 'NarcissusD' },

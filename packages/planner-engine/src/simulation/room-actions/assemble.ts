@@ -12,7 +12,6 @@ import {
 import type { RoomActionReference } from '../../authored-project/model';
 import type { AcquisitionEntrySourceFamily } from '../../authored-project/acquisition/entry-source-family';
 import {
-  windowAnchor,
   scopeRoomEventGraph,
   type RoomEventGraph,
 } from '../../authored-project/room-actions/event-graph';
@@ -23,11 +22,9 @@ import {
   roomActionOrderContext,
 } from '../../authored-project/room-actions/order-assessment';
 import type {
-  RoomActionCheckpoint,
   RoomActionContribution,
   RoomActionProposal,
   RoomActionRoster,
-  RoomActionRosterContribution,
   RoomActionRow,
 } from './model';
 import type { PlannerTimelineDependency, PlannerTimelineNode } from '../timeline-facts';
@@ -37,10 +34,16 @@ function frozen<T>(value: T): T {
   return Object.freeze(value);
 }
 
+/** A stale row has no item: it names no bound the room plays. */
+const STALE_BOUNDS = frozen({
+  spawn: frozen({ kind: 'roomEntered' as const }),
+  deadline: frozen({ kind: 'doorsOpened' as const }),
+});
+
 export function assembleRoomActionRoster(options: {
   readonly owner: OccurrenceAddress;
   readonly order: readonly RoomActionReference[];
-  readonly contributions: readonly RoomActionRosterContribution[];
+  readonly contributions: readonly RoomActionContribution[];
   /** What created each authored pickup without an active contribution, by action key. */
   readonly retainedSourceFamilies?: ReadonlyMap<string, AcquisitionEntrySourceFamily>;
   readonly eventGraph: RoomEventGraph;
@@ -51,9 +54,7 @@ export function assembleRoomActionRoster(options: {
   /** An action nothing may follow (a left switch press: leaving ends the room). */
   readonly terminalActionKey?: string;
 }): RoomActionRoster {
-  const actions = options.contributions.filter(
-    (entry): entry is RoomActionContribution => entry.kind === 'action',
-  );
+  const actions = options.contributions;
   const context = roomActionOrderContext({
     contributions: options.contributions,
     eventGraph: options.eventGraph,
@@ -89,7 +90,7 @@ export function assembleRoomActionRoster(options: {
           roomActionKey(reference),
         ),
       participation: entry?.participation ?? 'optional',
-      window: entry?.window ?? frozen({ kind: 'standard', phase: 'afterCombat' }),
+      bounds: entry?.bounds ?? STALE_BOUNDS,
       dependencies: entry?.dependencies ?? frozen([]),
       ...(sourceFamily === undefined ? {} : { sourceFamily }),
       rank: index + 1,
@@ -111,7 +112,7 @@ export function assembleRoomActionRoster(options: {
         key: roomActionKey(action.reference),
         owner: action.owner,
         participation: action.participation,
-        window: action.window,
+        bounds: action.bounds,
         dependencies: action.dependencies,
         ...(action.sourceFamily === undefined ? {} : { sourceFamily: action.sourceFamily }),
         rank: null,
@@ -266,35 +267,6 @@ export function assembleRoomActionRoster(options: {
       );
     }
   }
-  const checkpoints: RoomActionCheckpoint[] = options.contributions
-    .filter((entry) => entry.kind === 'checkpoint')
-    .map((entry) =>
-      frozen({
-        checkpointKey: entry.checkpointKey,
-        label: entry.label,
-        window: entry.window,
-        afterRank:
-          entry.checkpointKey === 'outgoingGeneration'
-            ? doorsReadyAfterRank(rows).afterRank
-            : entry.checkpointKey === 'exitUsable'
-              ? rows.reduce(
-                  (rank, row) =>
-                    row.rank !== null && row.participation === 'required'
-                      ? Math.max(rank, row.rank)
-                      : rank,
-                  0,
-                )
-              : rows.reduce(
-                  (rank, row) =>
-                    row.rank !== null &&
-                    windowAnchor(row.window, options.eventGraph) <=
-                      windowAnchor(entry.window, options.eventGraph)
-                      ? Math.max(rank, row.rank)
-                      : rank,
-                  0,
-                ),
-      }),
-    );
   const activeByKey = new Map(
     rows.flatMap((row) => (row.stale || row.rank === null ? [] : [[row.key, row] as const])),
   );
@@ -312,7 +284,7 @@ export function assembleRoomActionRoster(options: {
       }),
     );
     for (const dependency of row.dependencies) {
-      if (dependency.kind !== 'afterAction' || dependency.authoringOnly === true) continue;
+      if (dependency.authoringOnly === true) continue;
       const after = activeByKey.get(roomActionKey(dependency.action));
       if (after === undefined) continue;
       timelineDependencies.push(frozen({ owner: row.owner, afterOwner: after.owner }));
@@ -321,7 +293,6 @@ export function assembleRoomActionRoster(options: {
   return frozen({
     eventGraph: options.eventGraph,
     rows: withRequiredScopes(rows, options.eventGraph),
-    checkpoints: frozen(checkpoints),
     issues,
     proposals: frozen(proposals),
     timelineFacts: frozen({
@@ -332,7 +303,7 @@ export function assembleRoomActionRoster(options: {
   });
 }
 
-type DoorsRow = Pick<RoomActionRow, 'participation' | 'rank' | 'stale' | 'window'>;
+type DoorsRow = Pick<RoomActionRow, 'participation' | 'rank' | 'stale' | 'bounds'>;
 
 /**
  * When the doors can open: after the last placed required row they wait on,
@@ -343,7 +314,11 @@ export function doorsReadyAfterRank<Row extends DoorsRow>(
   rows: readonly Row[],
 ): { readonly afterRank: number; readonly unplaced: readonly Row[] } {
   const waitedOn = rows.filter(
-    (row) => !row.stale && row.participation === 'required' && row.window.kind !== 'postOutgoing',
+    (row) =>
+      !row.stale &&
+      row.participation === 'required' &&
+      row.bounds.enabler?.kind !== 'doorsOpened' &&
+      row.bounds.enabler?.kind !== 'exitsReady',
   );
   return {
     afterRank: waitedOn.reduce((rank, row) => Math.max(rank, row.rank ?? 0), 0),

@@ -11,19 +11,37 @@ import {
   assembleRoomActionRoster,
   scopeRoomActionRoster,
 } from '../../../src/simulation/room-actions/assemble';
-import { gateFreeGraphEvents } from '../../support/event-graph';
+import { gateFreeGraphEvents, testGraphEvents } from '../../support/event-graph';
+import { boundsForPlacement, type TestRowPlacement } from '../../support/room-action-bounds';
 
 const structure: RoomEventGraph = {
   profileKey: 'FieldsCombatRoom',
+  activeEncounterSlotKeys: ['Cage01', 'Cage02'],
+  phases: [{ phaseKey: 'Cage01' }, { phaseKey: 'Cage02' }],
+  events: testGraphEvents([{ phaseKey: 'Cage01' }, { phaseKey: 'Cage02' }], {
+    cages: true,
+    generatesOutgoing: false,
+  }),
+};
+/** Two fights in sequence, the first's end effects before the second. */
+const sequence: RoomEventGraph = {
+  profileKey: 'PCombatRoom',
   activeEncounterSlotKeys: ['Cage01', 'Cage02'],
   phases: [{ phaseKey: 'Cage01' }, { phaseKey: 'Cage02' }],
   events: gateFreeGraphEvents(['Cage01', 'Cage02'], false),
 };
 function row(
   reference: RoomActionRowFacts['reference'],
-  overrides: Partial<RoomActionRowFacts> = {},
+  {
+    placement = { kind: 'fields' },
+    ...overrides
+  }: Partial<RoomActionRowFacts> & {
+    readonly placement?: TestRowPlacement;
+  } = {},
+  graph: RoomEventGraph = structure,
 ): RoomActionRowFacts {
   return {
+    bounds: boundsForPlacement(placement, graph),
     reference,
     key: roomActionKey(reference),
     owner: {
@@ -33,7 +51,6 @@ function row(
       occurrenceId: createOccurrenceId('scope'),
     },
     participation: 'required',
-    window: { kind: 'fields' },
     dependencies: [],
     rank: 1,
     stale: false,
@@ -59,7 +76,7 @@ describe('required action scope', () => {
           reference: cage.reference,
           owner: cage.owner,
           participation: cage.participation,
-          window: cage.window,
+          bounds: cage.bounds,
           dependencies: cage.dependencies,
         },
       ],
@@ -78,7 +95,7 @@ describe('required action scope', () => {
               producerPoint: 'roomReward',
               acquisitionRole: 'primary',
             },
-            { window: { kind: 'standard', phase: 'beforeCombat' } },
+            { placement: { kind: 'beforeCombat' as const } },
           ),
         ],
         {
@@ -125,16 +142,17 @@ describe('required action scope', () => {
     ).toEqual(['phase', 'phase', 'phase']);
   });
   it.each([
-    [{ kind: 'standard', phase: 'beforeCombat' }, 'phase'],
-    [{ kind: 'standard', phase: 'afterCombat' }, 'room'],
-    [{ kind: 'shipPreCombat', wheelKey: 'wheel1' }, 'phase'],
-    [{ kind: 'shipPostCombat', wheelKey: 'wheel1' }, 'phase'],
-    [{ kind: 'encounterEnd', phaseKey: 'Cage01' }, 'phase'],
-    [{ kind: 'encounterEnd', phaseKey: 'Cage02' }, 'room'],
-    [{ kind: 'postOutgoing' }, 'room'],
-  ] as const)('uses the fixed window %j', (window, expected) => {
+    [{ kind: 'beforeCombat' as const }, 'phase'],
+    [{ kind: 'afterCombat' as const }, 'room'],
+    [{ kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' }, 'phase'],
+    [{ kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' }, 'phase'],
+    [{ kind: 'afterEncounterEnd' as const, phaseKey: 'Cage01' }, 'phase'],
+    [{ kind: 'afterEncounterEnd' as const, phaseKey: 'Cage02' }, 'room'],
+    [{ kind: 'afterDoorsOpen' as const }, 'room'],
+  ] as const)('uses the fixed placement %j', (placement, expected) => {
     expect(
-      withRequiredScopes([row({ kind: 'useFountain' }, { window })], structure)[0]?.requiredScope,
+      withRequiredScopes([row({ kind: 'useFountain' }, { placement }, sequence)], sequence)[0]
+        ?.requiredScope,
     ).toBe(expected);
   });
   it('does not classify optional or stale actions and drops obsolete scoped deadlines', () => {

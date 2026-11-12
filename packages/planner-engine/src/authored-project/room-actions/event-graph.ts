@@ -3,10 +3,9 @@ import {
   type Catalog,
   type EncounterDefinition,
   type EncounterEnvelope,
+  type EncounterScript,
   type RoomDeclaration,
-  type RoomLifecycleProfile,
 } from '../../catalog-schema';
-import type { ProducerLifecyclePointKey } from '../../reward-kernel/model';
 import type { RoomActionReference, RoomOccurrence } from '../model';
 import {
   encounterEnvelopeSlots,
@@ -45,16 +44,6 @@ export interface RoomActionBounds {
   readonly enabler?: RoomEventPoint;
   readonly deadline: RoomEventPoint;
 }
-
-/** Where a row may stand, until its bounds replace it. */
-export type RoomActionWindow =
-  | { readonly kind: 'standard'; readonly phase: 'beforeCombat' | 'afterCombat' }
-  | { readonly kind: 'encounterEnd'; readonly phaseKey: string }
-  | { readonly kind: 'postOutgoing' }
-  | { readonly kind: 'fields'; readonly phaseKey?: string }
-  | { readonly kind: 'shipPreCombat'; readonly wheelKey: string }
-  | { readonly kind: 'shipWheelsOpen'; readonly wheelKey: string }
-  | { readonly kind: 'shipPostCombat'; readonly wheelKey: string };
 
 /**
  * How an encounter's begin shows on the Timeline: with its Combat, apart from
@@ -150,8 +139,8 @@ export type RoomEvent =
 export interface RoomEventGraphPhase {
   readonly phaseKey: string;
   readonly rewardWheelKey?: string;
-  /** A noncombat event its required encounter interaction ends, not a fight. */
-  readonly endsOnInteraction?: true;
+  /** The phase's encounter script, when its encounter is known. */
+  readonly script?: EncounterScript;
   /** The phase can host an outcome choice, or the room authors one for it. */
   readonly hostsOutcome?: true;
 }
@@ -170,61 +159,6 @@ function frozen<T>(value: T): T {
 
 const AUTOMATIC = frozen({ kind: 'automatic' as const });
 const DOORS_PREDICATE = frozen({ kind: 'doorsPredicate' as const });
-
-/** The producer point a gate role's pickup is taken at, in the room's reward lifecycles. */
-function gateRolePoint(
-  catalog: Catalog,
-  profile: RoomLifecycleProfile,
-  producer: boolean,
-  role: string,
-  gameName: string,
-): ProducerLifecyclePointKey | undefined {
-  if (!producer || profile.producer.kind === 'none') return undefined;
-  const points = new Set<ProducerLifecyclePointKey>();
-  for (const key of profile.producer.lifecycleProfileKeys)
-    for (const reward of catalog.rewards.producerLifecycles.byKey[key]?.rewardTypes.values ?? [])
-      for (const binding of reward.acquisitionLifecycle)
-        if (binding.role === role) points.add(binding.lifecyclePoint);
-  if (points.size !== 1)
-    throw new Error(`${gameName} gate role ${role} has no single ${profile.key} producer point`);
-  return [...points][0]!;
-}
-
-/**
- * The producer points a room takes before its encounters run: the reward
- * before combat and the points a bound encounter's gate pickup is taken at,
- * by script.
- */
-export function producerPointsBeforeCombat(
-  catalog: Catalog,
-  profile: RoomLifecycleProfile,
-  declaration: RoomDeclaration,
-  producer: boolean,
-): ReadonlySet<ProducerLifecyclePointKey> {
-  const points = new Set<ProducerLifecyclePointKey>();
-  if (!producer || profile.producer.kind === 'none') return points;
-  const keys = declaration.encounterSlotBindings.flatMap((binding) =>
-    binding.kind === 'set'
-      ? (catalog.encounterSets.byKey[binding.encounterSetKey]?.encounterDefinitionKeys ?? [])
-      : [
-          binding.encounterDefinitionKey,
-          ...(binding.rivalsEncounterDefinitionKey === undefined
-            ? []
-            : [binding.rivalsEncounterDefinitionKey]),
-          ...(binding.shadowEncounterDefinitionKey === undefined
-            ? []
-            : [binding.shadowEncounterDefinitionKey]),
-        ],
-  );
-  for (const key of keys) {
-    const gate = catalog.encounterDefinitions.byKey[key]?.script.gate;
-    if (gate?.kind !== 'useItemRole') continue;
-    const point = gateRolePoint(catalog, profile, producer, gate.role, declaration.gameName);
-    if (point !== undefined) points.add(point);
-  }
-  for (const point of profile.producer.points) if (point === 'beforeCombat') points.add(point);
-  return points;
-}
 
 /**
  * Whether the room runs one encounter on its own: not native
@@ -346,7 +280,7 @@ export function assembleRoomEventGraph(options: {
           phase: frozen({
             phaseKey: slot.key,
             ...wheel,
-            endsOnInteraction: true as const,
+            script: directDefinition.script,
             hostsOutcome: true as const,
           }),
           definition: directDefinition,
@@ -363,6 +297,9 @@ export function assembleRoomEventGraph(options: {
         phase: frozen({
           phaseKey: slot.key,
           ...wheel,
+          ...((directDefinition ?? candidates[0]) === undefined
+            ? {}
+            : { script: (directDefinition ?? candidates[0])!.script }),
           ...(hostsOutcome && !bossEnding ? { hostsOutcome: true as const } : {}),
         }),
         ...((directDefinition ?? candidates[0]) === undefined
@@ -379,7 +316,7 @@ export function assembleRoomEventGraph(options: {
         const ranked = options.occurrence.roomActions.order.flatMap((reference) =>
           (reference.kind === 'completeFieldsCage' ||
             (reference.kind === 'interactEncounter' &&
-              byKey.get(reference.phaseKey)?.phase.endsOnInteraction === true)) &&
+              byKey.get(reference.phaseKey)?.phase.script?.endsByInteraction === true)) &&
           byKey.has(reference.phaseKey)
             ? [byKey.get(reference.phaseKey)!]
             : [],
@@ -395,7 +332,7 @@ export function assembleRoomEventGraph(options: {
   let previousPhaseKey: string | undefined;
   for (const { phase, definition, combatHostsOutcome } of ordered) {
     // A Nemesis random event's encounter starts on entry and ends as she is answered.
-    if (phase.endsOnInteraction === true) {
+    if (phase.script?.endsByInteraction === true) {
       events.push(
         frozen({
           kind: 'encounterBegun',
@@ -440,16 +377,28 @@ export function assembleRoomEventGraph(options: {
             action: frozen({ kind: 'completeFieldsCage', phaseKey: phase.phaseKey }),
           })
         : AUTOMATIC;
-    const gatePoint =
-      gate.kind === 'useItemRole'
-        ? gateRolePoint(
-            options.catalog,
-            profile,
-            options.producer,
-            gate.role,
-            options.occurrence.gameName,
-          )
-        : undefined;
+    // The gate uses the room reward's pickup at the producer point its role is taken at.
+    const gatePoints =
+      gate.kind !== 'useItemRole' || !options.producer || profile.producer.kind === 'none'
+        ? []
+        : [
+            ...new Set(
+              profile.producer.lifecycleProfileKeys.flatMap((key) =>
+                (
+                  options.catalog.rewards.producerLifecycles.byKey[key]?.rewardTypes.values ?? []
+                ).flatMap((reward) =>
+                  reward.acquisitionLifecycle.flatMap((binding) =>
+                    binding.role === gate.role ? [binding.lifecyclePoint] : [],
+                  ),
+                ),
+              ),
+            ),
+          ];
+    if (gatePoints.length > 1)
+      throw new Error(
+        `${options.occurrence.gameName} gate role ${gate.kind === 'useItemRole' ? gate.role : ''} has no single ${profile.key} producer point`,
+      );
+    const gatePoint = gatePoints[0];
     const startedTrigger: RoomEventTrigger =
       gate.kind === 'useItemRole' && gatePoint !== undefined
         ? frozen({
@@ -581,136 +530,139 @@ export function roomEventActive(graph: RoomEventGraph, event: RoomEvent): boolea
   return eventActive(event, active, activeWheelKeys);
 }
 
-type AnchorPoint =
-  | { readonly kind: 'roomEntered' }
-  | { readonly kind: 'wheelsOpen'; readonly wheelKey: string }
-  | { readonly kind: 'wheelChoice'; readonly wheelKey: string }
-  | { readonly kind: 'combat'; readonly phaseKey: string }
-  | { readonly kind: 'bossDefeated'; readonly phaseKey: string }
-  | { readonly kind: 'encounterEnd'; readonly phaseKey: string }
-  | { readonly kind: 'outgoing' }
-  | { readonly kind: 'exit' };
+/** Whether the player's verb starts the phase's encounter wherever its row stands (a Fields cage). */
+function verbActivated(graph: RoomEventGraph, phaseKey: string): boolean {
+  return graph.events.some(
+    (event) =>
+      event.kind === 'encounterBegun' &&
+      event.phaseKey === phaseKey &&
+      event.trigger.kind === 'action',
+  );
+}
 
 /**
- * The points a window is anchored to. A phase's wheels opened by an earlier
- * phase rank before the wheel's choice, which waits on the pickups that phase
- * spawned; a first phase's wheels open with its combat's anchor.
+ * Where each bound point stands in the room's graph, as a comparable place;
+ * only the order of places within one graph is meaningful. Points that
+ * happen together share a place: a phase's end effects apply at its end
+ * unless its script waits for the room to be ready, and the next phase's
+ * wheels open with them. A room whose encounters the player starts (Fields
+ * cages) gives its phases no fixed place: they happen where their rows stand,
+ * so every phase point stands with room entry. A point the room does not
+ * play stands at room entry, a gate or wheel at the very start.
  */
-function anchorPoints(graph: RoomEventGraph): readonly AnchorPoint[] {
-  const points: AnchorPoint[] = [{ kind: 'roomEntered' }];
+export function roomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) => number {
+  // Each graph point takes a before and an after place, in graph order.
+  const order: string[] = ['roomEntered'];
   graph.phases.forEach((phase, index) => {
     if (phase.rewardWheelKey !== undefined && index > 0)
-      points.push(
-        { kind: 'wheelsOpen', wheelKey: phase.rewardWheelKey },
-        { kind: 'wheelChoice', wheelKey: phase.rewardWheelKey },
-      );
-    points.push({ kind: 'combat', phaseKey: phase.phaseKey });
+      order.push(`wheelsOpen:${phase.rewardWheelKey}`, `gate:${phase.phaseKey}`);
+    order.push(`encounterStarted:${phase.phaseKey}`);
     if (graph.events.some((event) => event.key === `bossDefeated:${phase.phaseKey}`))
-      points.push({ kind: 'bossDefeated', phaseKey: phase.phaseKey });
-    points.push({ kind: 'encounterEnd', phaseKey: phase.phaseKey });
+      order.push(`bossDefeated:${phase.phaseKey}`);
+    order.push(`encounterEnd:${phase.phaseKey}`);
   });
   if (graph.events.some((event) => event.kind === 'doorsOpened' && event.generatesOutgoing))
-    points.push({ kind: 'outgoing' });
-  points.push({ kind: 'exit' });
-  return points;
-}
-
-const anchorCache = new WeakMap<RoomEventGraph, readonly AnchorPoint[]>();
-
-/**
- * A comparable position for a window's lower bound in the room's graph. Only
- * the order of anchors within one graph is meaningful.
- */
-export function windowAnchor(window: RoomActionWindow, graph: RoomEventGraph): number {
-  let points = anchorCache.get(graph);
-  if (points === undefined) {
-    points = anchorPoints(graph);
-    anchorCache.set(graph, points);
-  }
-  const all = points;
-  const pointIndex = (predicate: (point: AnchorPoint) => boolean): number => {
-    const index = all.findIndex(predicate);
-    return index < 0 ? 0 : index;
-  };
-  const beforePoint = (predicate: (point: AnchorPoint) => boolean): number =>
-    pointIndex(predicate) * 2;
-  const afterPoint = (predicate: (point: AnchorPoint) => boolean): number =>
-    pointIndex(predicate) * 2 + 1;
-  const lastAfterPoint = (predicate: (point: AnchorPoint) => boolean): number => {
-    const index = all.reduce(
-      (last, point, candidateIndex) => (predicate(point) ? candidateIndex : last),
-      -1,
-    );
-    return (index < 0 ? 0 : index) * 2 + 1;
-  };
-  const phaseWithWheel = (phaseKey: string, wheelKey: string) =>
-    graph.phases.some((phase) => phase.phaseKey === phaseKey && phase.rewardWheelKey === wheelKey);
-  switch (window.kind) {
-    case 'standard':
-      return window.phase === 'beforeCombat'
-        ? beforePoint((point) => point.kind === 'combat')
-        : lastAfterPoint((point) => point.kind === 'encounterEnd');
-    case 'encounterEnd': {
-      // A wheel phase's end-effect pickups follow the next wheels opening, or, after
-      // the final phase, its wheel reward.
-      const phaseIndex = graph.phases.findIndex((phase) => phase.phaseKey === window.phaseKey);
-      const nextWheelKey = graph.phases[phaseIndex + 1]?.rewardWheelKey;
-      if (
-        phaseIndex >= 0 &&
-        nextWheelKey !== undefined &&
-        all.some((point) => point.kind === 'wheelsOpen' && point.wheelKey === nextWheelKey)
-      )
-        return afterPoint(
-          (point) => point.kind === 'wheelsOpen' && point.wheelKey === nextWheelKey,
-        );
-      return (
-        afterPoint((point) => point.kind === 'encounterEnd' && point.phaseKey === window.phaseKey) +
-        (graph.phases.some(
-          (phase) => phase.phaseKey === window.phaseKey && phase.rewardWheelKey !== undefined,
-        )
+    order.push('doorsOpened');
+  order.push('leave');
+  const index = new Map(order.map((key, position) => [key, position]));
+  const before = (key: string) => (index.get(key) ?? 0) * 2;
+  const after = (key: string) => (index.get(key) ?? 0) * 2 + 1;
+  const free = graph.phases.some((phase) => verbActivated(graph, phase.phaseKey));
+  const phaseIndex = (phaseKey: string) =>
+    graph.phases.findIndex((phase) => phase.phaseKey === phaseKey);
+  const wheelPhase = (wheelKey: string) =>
+    graph.phases.findIndex((phase) => phase.rewardWheelKey === wheelKey);
+  const place = (point: RoomEventPoint): number => {
+    switch (point.kind) {
+      case 'roomEntered':
+        return 1;
+      case 'wheelsOpen': {
+        const at = wheelPhase(point.wheelKey);
+        if (at < 0) return 0;
+        return at > 0
+          ? after(`wheelsOpen:${point.wheelKey}`)
+          : before(`encounterStarted:${graph.phases[at]!.phaseKey}`);
+      }
+      case 'gate': {
+        if (free) return 1;
+        const at = phaseIndex(point.phaseKey);
+        if (at < 0) return 0;
+        return index.has(`gate:${point.phaseKey}`)
+          ? after(`gate:${point.phaseKey}`)
+          : before(`encounterStarted:${point.phaseKey}`);
+      }
+      case 'encounterStarted':
+        return free || phaseIndex(point.phaseKey) < 0
           ? 1
-          : 0)
-      );
+          : after(`encounterStarted:${point.phaseKey}`);
+      case 'encounterEnd':
+        return free || phaseIndex(point.phaseKey) < 0 ? 1 : after(`encounterEnd:${point.phaseKey}`);
+      case 'endEffects': {
+        const at = phaseIndex(point.phaseKey);
+        if (free || at < 0) return 1;
+        const next = nextWheelsOpen(graph, point.phaseKey);
+        if (next !== undefined) return after(`wheelsOpen:${next.wheelKey}`);
+        return (
+          after(`encounterEnd:${point.phaseKey}`) +
+          (graph.phases[at]!.script?.waitReadyBeforeEnd === true ? 1 : 0)
+        );
+      }
+      case 'doorsOpened':
+      case 'exitsReady':
+        return index.has('doorsOpened') ? after('doorsOpened') : before('leave');
+      case 'leave':
+        return after('leave');
     }
-    case 'fields':
-      return 1;
-    case 'shipPreCombat':
-      return all.some((point) => point.kind === 'wheelChoice' && point.wheelKey === window.wheelKey)
-        ? afterPoint((point) => point.kind === 'wheelChoice' && point.wheelKey === window.wheelKey)
-        : beforePoint(
-            (point) => point.kind === 'combat' && phaseWithWheel(point.phaseKey, window.wheelKey),
-          );
-    case 'shipWheelsOpen':
-      return all.some((point) => point.kind === 'wheelsOpen' && point.wheelKey === window.wheelKey)
-        ? afterPoint((point) => point.kind === 'wheelsOpen' && point.wheelKey === window.wheelKey)
-        : windowAnchor({ kind: 'shipPreCombat', wheelKey: window.wheelKey }, graph);
-    case 'shipPostCombat':
-      return afterPoint(
-        (point) => point.kind === 'encounterEnd' && phaseWithWheel(point.phaseKey, window.wheelKey),
-      );
-    case 'postOutgoing':
-      // Without outgoing generation, exits unlock after the room's required work.
-      return all.some((point) => point.kind === 'outgoing')
-        ? afterPoint((point) => point.kind === 'outgoing')
-        : beforePoint((point) => point.kind === 'exit');
-  }
+  };
+  return place;
 }
 
-/**
- * Whether the window names a phase or wheel this room's graph has; a
- * retained placement at a phase the room no longer plays names none.
- */
-export function roomActionWindowResolves(graph: RoomEventGraph, window: RoomActionWindow): boolean {
-  switch (window.kind) {
+/** Whether the room plays the phase or wheel a point names. */
+export function roomEventPointResolves(graph: RoomEventGraph, point: RoomEventPoint): boolean {
+  switch (point.kind) {
+    case 'wheelsOpen':
+      return graph.phases.some((phase) => phase.rewardWheelKey === point.wheelKey);
+    case 'gate':
+    case 'encounterStarted':
     case 'encounterEnd':
-      return graph.phases.some((phase) => phase.phaseKey === window.phaseKey);
-    case 'shipPreCombat':
-    case 'shipWheelsOpen':
-    case 'shipPostCombat':
-      return graph.phases.some((phase) => phase.rewardWheelKey === window.wheelKey);
-    case 'standard':
-    case 'fields':
-    case 'postOutgoing':
+    case 'endEffects':
+      return graph.phases.some((phase) => phase.phaseKey === point.phaseKey);
+    case 'roomEntered':
+    case 'doorsOpened':
+    case 'exitsReady':
+    case 'leave':
       return true;
   }
+}
+
+/** The end of the room's last fight, or its entry when it has none. */
+export function roomFightsEnd(graph: RoomEventGraph): RoomEventPoint {
+  const last = graph.phases.at(-1)?.phaseKey;
+  return last === undefined
+    ? frozen({ kind: 'roomEntered' as const })
+    : frozen({ kind: 'encounterEnd' as const, phaseKey: last });
+}
+
+/** The bound a row opens at: its enabler when it has one, otherwise its spawn. */
+export function roomActionOpeningPoint(bounds: RoomActionBounds): RoomEventPoint {
+  return bounds.enabler ?? bounds.spawn;
+}
+
+/**
+ * The wheels that open with this phase's end effects, when a next Ship phase
+ * opens any: what those effects spawn waits for that wheel's choice.
+ */
+export function nextWheelsOpen(
+  graph: RoomEventGraph,
+  phaseKey: string,
+): Extract<RoomEvent, { readonly kind: 'wheelsOpen' }> | undefined {
+  return graph.events.find(
+    (event): event is Extract<RoomEvent, { readonly kind: 'wheelsOpen' }> =>
+      event.kind === 'wheelsOpen' && event.afterPhaseKey === phaseKey,
+  );
+}
+
+/** The phase whose wheels open with this phase's end effects, when one does. */
+export function nextWheelPhaseKey(graph: RoomEventGraph, phaseKey: string): string | undefined {
+  return nextWheelsOpen(graph, phaseKey)?.phaseKey;
 }

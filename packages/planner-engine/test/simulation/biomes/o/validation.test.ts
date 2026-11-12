@@ -1,3 +1,4 @@
+import { doorsReadyAfterRank } from '../../../../src/simulation/room-actions';
 import { ordinaryPositionFor } from '../../../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -198,7 +199,7 @@ describe('selected O validation', () => {
     });
     const invalidBefore = materializedORoom(project, oOccurrenceIds.combat07);
     expect(invalidBefore.roomActionRoster.issues).toContainEqual(
-      expect.objectContaining({ kind: 'window' }),
+      expect.objectContaining({ kind: 'pastDeadline' }),
     );
     const retainedOrder = invalidBefore.roomActions.order;
 
@@ -228,7 +229,7 @@ describe('selected O validation', () => {
       expect.objectContaining({ kind: 'action', participation: 'required', reference: contact }),
     );
     expect(after.roomActionRoster.issues).toContainEqual(
-      expect.objectContaining({ kind: 'window' }),
+      expect.objectContaining({ kind: 'pastDeadline' }),
     );
   });
 
@@ -340,18 +341,17 @@ describe('selected O validation', () => {
         .filter((entry) => entry.kind === 'action')
         .map((entry) => roomActionKey(entry.reference)),
     ).toEqual(room.roomActionRoster.rows.filter((row) => !row.stale).map((row) => row.key));
-    expect(room.roomActionRoster.checkpoints).toEqual(
+    expect(
+      room.roomActionRoster.rows
+        .filter((row) => row.reference.kind === 'interactWheelReward')
+        .map((row) => [row.label, row.rank]),
+    ).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ checkpointKey: 'combat:Combat1', afterRank: 2 }),
-        expect.objectContaining({ checkpointKey: 'combat:Combat2', afterRank: 4 }),
-        expect.objectContaining({
-          checkpointKey: 'outgoingGeneration',
-          afterRank: 4,
-          window: { kind: 'shipPostCombat', wheelKey: 'wheel2' },
-        }),
-        expect.objectContaining({ checkpointKey: 'exitUsable', afterRank: 4 }),
+        [expect.objectContaining({ phaseKey: 'Combat1' }), 2],
+        [expect.objectContaining({ phaseKey: 'Combat2' }), 4],
       ]),
     );
+    expect(doorsReadyAfterRank(room.roomActionRoster.rows).afterRank).toBe(4);
     expect(
       room.roomActionRoster.proposals.find(
         (proposal) =>
@@ -373,14 +373,16 @@ describe('selected O validation', () => {
     const invalidRoom = materializedORoom(invalidOrder, oOccurrenceIds.combat07);
     expect(invalidRoom.roomActionRoster.issues).toContainEqual(
       expect.objectContaining({
-        kind: 'requiredFirst',
+        kind: 'beforeEnabler',
         reference: wheel2Choice,
         requiredAction: { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
       }),
     );
-    expect(room.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey)).toEqual(
-      ['combat:Intro', 'combat:Combat1', 'combat:Combat2', 'outgoingGeneration', 'exitUsable'],
-    );
+    expect(room.roomActionRoster.eventGraph.phases.map((phase) => phase.phaseKey)).toEqual([
+      'Intro',
+      'Combat1',
+      'Combat2',
+    ]);
     const invalid = simulateProject(catalog, invalidOrder);
     const owner = createRoomActionAddress(
       oBiome,
@@ -449,20 +451,11 @@ describe('selected O validation', () => {
       ]),
     );
     expect(
-      room.roomActionRoster.checkpoints.some(
-        (checkpoint) =>
-          checkpoint.checkpointKey.includes('wheel2') ||
-          checkpoint.checkpointKey === 'combat:Combat2',
+      room.roomActionRoster.eventGraph.phases.some(
+        (phase) => phase.rewardWheelKey === 'wheel2' || phase.phaseKey === 'Combat2',
       ),
     ).toBe(false);
-    expect(
-      room.roomActionRoster.checkpoints.find(
-        (checkpoint) => checkpoint.checkpointKey === 'outgoingGeneration',
-      ),
-    ).toMatchObject({
-      afterRank: 2,
-      window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
-    });
+    expect(doorsReadyAfterRank(room.roomActionRoster.rows).afterRank).toBe(2);
     expect(predecessorDecision.resolvedSharedRewardStoreKey).toBe('RunProgress');
     expect(sourceDecision.rewardStore).toMatchObject({ kind: 'sourceOfferPoint' });
     expect(sourceDecision.resolvedSharedRewardStoreKey).toBe('MetaProgress');
@@ -504,8 +497,8 @@ describe('selected O validation', () => {
       ),
     ).toBe(false);
     expect(
-      dormantRoom.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
-    ).not.toContain('combat:Combat2');
+      dormantRoom.roomActionRoster.eventGraph.phases.map((phase) => phase.phaseKey),
+    ).not.toContain('Combat2');
 
     const restored = applyProjectCommand(withTwo, catalog, {
       kind: 'ReplaceShipEncounterCount',

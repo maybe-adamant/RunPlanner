@@ -227,7 +227,7 @@ describe('run-impacting trait checkpoint workflows', () => {
     expect(childAction).toMatchObject({
       kind: 'action',
       participation: sourceAction?.kind === 'action' ? sourceAction.participation : undefined,
-      window: sourceAction?.kind === 'action' ? sourceAction.window : undefined,
+      bounds: sourceAction?.kind === 'action' ? sourceAction.bounds : undefined,
       // A dependency names its row by key, without the item's content.
       dependencies: [{ kind: 'afterAction', action: sourceReference }],
     });

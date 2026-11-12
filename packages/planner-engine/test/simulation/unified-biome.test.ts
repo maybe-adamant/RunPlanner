@@ -488,11 +488,10 @@ describe('unified biome simulation', () => {
     ]);
     for (const target of takeover.targets) {
       expect(
-        target.room.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
-      ).not.toContain('outgoingGeneration');
-      expect(
-        target.room.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
-      ).toContain('exitUsable');
+        target.room.roomActionRoster.eventGraph.events.some(
+          (event) => event.kind === 'doorsOpened' && event.generatesOutgoing,
+        ),
+      ).toBe(false);
     }
     const selectedPreboss = takeover.targets.find((target) => target.room.entered)?.room;
     expect(
@@ -790,11 +789,10 @@ describe('unified biome simulation', () => {
     expect(enteredSideRooms.length).toBeGreaterThan(0);
     for (const sideRoom of enteredSideRooms) {
       expect(
-        sideRoom.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
-      ).not.toContain('outgoingGeneration');
-      expect(
-        sideRoom.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
-      ).toContain('exitUsable');
+        sideRoom.roomActionRoster.eventGraph.events.some(
+          (event) => event.kind === 'doorsOpened' && event.generatesOutgoing,
+        ),
+      ).toBe(false);
       expect(
         biome.history.events.some(
           (event) =>

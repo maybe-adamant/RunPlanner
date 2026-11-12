@@ -1,3 +1,4 @@
+import { doorsReadyAfterRank } from '../../../src/simulation/room-actions';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -30,7 +31,8 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
-  windowAnchor,
+  roomEventPlaces,
+  roomFightsEnd,
   type RoomEventGraph,
 } from '../../../src/authored-project/room-actions/event-graph';
 import type {
@@ -119,7 +121,7 @@ function reorder(
   return decodeProjectDocument(encoded, catalog);
 }
 
-describe('post-outgoing window without outgoing generation', () => {
+describe('doors opening without outgoing generation', () => {
   const sideRoom: RoomEventGraph = {
     profileKey: 'EphyraSideRoom',
     activeEncounterSlotKeys: ['Encounter'],
@@ -137,9 +139,8 @@ describe('post-outgoing window without outgoing generation', () => {
     ['side room', sideRoom],
     ['Postboss', postboss],
   ])('follows the %s afterCombat work', (_, structure) => {
-    expect(windowAnchor({ kind: 'postOutgoing' }, structure)).toBeGreaterThan(
-      windowAnchor({ kind: 'standard', phase: 'afterCombat' }, structure),
-    );
+    const place = roomEventPlaces(structure);
+    expect(place({ kind: 'doorsOpened' })).toBeGreaterThan(place(roomFightsEnd(structure)));
   });
 });
 
@@ -214,12 +215,12 @@ describe('Shrine purchases after the doors open', () => {
     expect(evaluatedRoom(beforeFountain, 'N', nPostbossId).roomActionRoster.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: 'requiredFirst',
+          kind: 'beforeEnabler',
           reference: purchase,
           requiredAction: { kind: 'useFountain' },
         }),
         expect.objectContaining({
-          kind: 'window',
+          kind: 'pastDeadline',
           reference: { kind: 'useFountain' },
           precedingAction: purchase,
         }),
@@ -354,10 +355,7 @@ describe('Shrine purchases after the doors open', () => {
     const wheelRewardRank = room.roomActionRoster.rows.find(
       (row) => row.reference.kind === 'interactWheelReward',
     )?.rank;
-    expect(
-      room.roomActionRoster.checkpoints.find((entry) => entry.checkpointKey === 'exitUsable')
-        ?.afterRank,
-    ).toBe(wheelRewardRank);
+    expect(doorsReadyAfterRank(room.roomActionRoster.rows).afterRank).toBe(wheelRewardRank);
     expect(
       room.roomActionRoster.rows
         .filter(

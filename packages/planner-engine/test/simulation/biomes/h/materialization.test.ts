@@ -1379,7 +1379,9 @@ describe('H Fields materialization', () => {
     );
     expect(contribution).toMatchObject({
       participation: 'required',
-      window: { kind: 'fields', phaseKey: first.phaseKey },
+      bounds: expect.objectContaining({
+        spawn: { kind: 'endEffects', phaseKey: first.phaseKey },
+      }),
       dependencies: [{ kind: 'afterAction', action: first }],
     });
     const order = base.filter(
@@ -1458,8 +1460,12 @@ describe('H Fields materialization', () => {
           reference: unlock,
           owner: createOccurrenceAddress(biome, occurrenceId),
           participation: 'optional',
-          window: { kind: 'postOutgoing' },
-          dependencies: [{ kind: 'afterCheckpoint', checkpointKey: 'exitUsable' }],
+          bounds: {
+            spawn: { kind: 'roomEntered' },
+            enabler: { kind: 'exitsReady' },
+            deadline: { kind: 'leave' },
+          },
+          dependencies: [],
         },
       ],
     });
@@ -1499,7 +1505,11 @@ describe('H Fields materialization', () => {
       const placed = delivery(cage.phaseKey);
       const domain = withPress(fieldsDomainWithPlacedEntries(occurrenceId, [placed]).domain);
       expect(issuesOf(domain, [...base, unlock, placed])).toContainEqual(
-        expect.objectContaining({ kind: 'window', reference: placed, precedingAction: unlock }),
+        expect.objectContaining({
+          kind: 'pastDeadline',
+          reference: placed,
+          precedingAction: unlock,
+        }),
       );
     });
 
@@ -1512,7 +1522,7 @@ describe('H Fields materialization', () => {
           entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(placed),
       );
       expect(contribution).toMatchObject({
-        window: { kind: 'encounterEnd', phaseKey: 'Passive' },
+        bounds: expect.objectContaining({ spawn: { kind: 'endEffects', phaseKey: 'Passive' } }),
         dependencies: [],
       });
     });
@@ -1532,7 +1542,9 @@ describe('H Fields materialization', () => {
           entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(drop),
       );
       expect(contribution).toMatchObject({
-        window: { kind: 'fields', phaseKey: cage.phaseKey },
+        bounds: expect.objectContaining({
+          spawn: { kind: 'endEffects', phaseKey: cage.phaseKey },
+        }),
         dependencies: [{ kind: 'afterAction', action: cage }],
       });
     });

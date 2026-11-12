@@ -241,7 +241,7 @@ function roomActionsForOccurrence(
     if (key.startsWith('combat:')) return `${phaseLabel(key.slice('combat:'.length))} complete`;
     if (key === 'outgoingGeneration') return 'the next rooms are generated';
     if (key === 'exitUsable') return 'the doors can be used';
-    return roster.checkpoints.find((entry) => entry.checkpointKey === key)?.label ?? key;
+    return key;
   };
   const timingLabel = (timing: RoomActionRowLabel): string => {
     switch (timing.kind) {
@@ -300,45 +300,32 @@ function roomActionsForOccurrence(
     proposalKeysByAction.set(key, [...(proposalKeysByAction.get(key) ?? []), entry.key]);
   }
   type Blocker = import('@run-planner/engine/simulation').RoomActionProposal['blockers'][number];
-  const windowIdentity = (window: import('@run-planner/engine/simulation').RoomActionWindow) => [
-    window.kind,
-    'phase' in window ? window.phase : null,
-    'phaseKey' in window ? window.phaseKey : null,
-    'wheelKey' in window ? window.wheelKey : null,
-  ];
   const blockerIdentity = (blocker: Blocker): string =>
     JSON.stringify(
-      blocker.kind === 'window'
+      blocker.kind === 'pastDeadline'
         ? [
             blocker.kind,
             roomActionKey(blocker.reference),
             roomActionKey(blocker.precedingAction),
-            windowIdentity(blocker.window),
-            windowIdentity(blocker.precedingWindow),
+            blocker.deadline,
           ]
-        : blocker.kind === 'requiredFirst'
+        : blocker.kind === 'dependency'
           ? [
               blocker.kind,
               roomActionKey(blocker.reference),
-              roomActionKey(blocker.requiredAction),
-              windowIdentity(blocker.window),
-              windowIdentity(blocker.requiredWindow),
+              roomActionKey(blocker.dependency.action),
             ]
           : [
               blocker.kind,
               roomActionKey(blocker.reference),
-              blocker.dependency.kind,
-              blocker.dependency.kind === 'afterAction'
-                ? roomActionKey(blocker.dependency.action)
-                : blocker.dependency.checkpointKey,
-              blocker.checkpointUnavailable === true,
+              blocker.requiredAction === undefined ? null : roomActionKey(blocker.requiredAction),
+              blocker.point,
+              blocker.unavailable === true,
             ],
     );
   const existingBlockers = new Set(
     roster.issues.flatMap((issue) =>
-      issue.kind === 'dependency' || issue.kind === 'window' || issue.kind === 'requiredFirst'
-        ? [blockerIdentity(issue)]
-        : [],
+      issue.kind === 'stale' || issue.kind === 'unrankedRequired' ? [] : [blockerIdentity(issue)],
     ),
   );
   const explanationFor = (
@@ -352,15 +339,15 @@ function roomActionsForOccurrence(
     const candidates = introduced.length > 0 ? introduced : proposal.blockers;
     const concernsProposal = (blocker: Blocker) =>
       roomActionKey(blocker.reference) === proposedKey ||
-      (blocker.kind === 'window'
+      (blocker.kind === 'pastDeadline'
         ? roomActionKey(blocker.precedingAction) === proposedKey
-        : blocker.kind === 'requiredFirst'
-          ? roomActionKey(blocker.requiredAction) === proposedKey
-          : blocker.dependency.kind === 'afterAction' &&
-            roomActionKey(blocker.dependency.action) === proposedKey);
+        : blocker.kind === 'dependency'
+          ? roomActionKey(blocker.dependency.action) === proposedKey
+          : blocker.requiredAction !== undefined &&
+            roomActionKey(blocker.requiredAction) === proposedKey);
     // The most direct blockers first: what must precede the moved action, then its window.
     const rank = (entry: Blocker) =>
-      (concernsProposal(entry) ? 0 : 2) + (entry.kind === 'window' ? 1 : 0);
+      (concernsProposal(entry) ? 0 : 2) + (entry.kind === 'pastDeadline' ? 1 : 0);
     const ranked = [...candidates].sort((left, right) => rank(left) - rank(right));
     const prefix = introduced.length === 0 ? 'Existing timeline issue: ' : '';
     return Object.freeze(
@@ -372,13 +359,13 @@ function roomActionsForOccurrence(
   const blockerSentence = (blocker: Blocker, proposedKey: string): string => {
     const label = actionLabel(blocker.reference);
     let explanation: string;
-    if (blocker.kind === 'window') {
+    if (blocker.kind === 'pastDeadline') {
       const movedPreceding = roomActionKey(blocker.precedingAction) === proposedKey;
       const subject = movedPreceding ? blocker.precedingAction : blocker.reference;
       explanation = `${movedPreceding ? actionLabel(subject) : label} belongs ${timingLabel(timingOf(subject))}.`;
-    } else if (blocker.kind === 'requiredFirst') {
+    } else if (blocker.kind !== 'dependency' && blocker.requiredAction !== undefined) {
       explanation = `${requiredFirstTitle(actionLabel(blocker.requiredAction))}.`;
-    } else if (blocker.dependency.kind === 'afterAction') {
+    } else if (blocker.kind === 'dependency') {
       const prerequisite = blocker.dependency.action;
       const movingDependent = roomActionKey(blocker.reference) === proposedKey;
       const movingPrerequisite = roomActionKey(prerequisite) === proposedKey;
@@ -422,10 +409,10 @@ function roomActionsForOccurrence(
       else if (movingDependent) explanation = `Requires: ${actionLabel(prerequisite)}.`;
       else if (movingPrerequisite) explanation = `${label} requires this action first.`;
       else explanation = `${label} requires ${actionLabel(prerequisite)} first.`;
-    } else if (blocker.checkpointUnavailable === true) {
-      explanation = `${label} requires a checkpoint this room cannot reach: ${checkpointLabel(blocker.dependency.checkpointKey)}.`;
+    } else if (blocker.unavailable === true && blocker.point.kind === 'encounterEnd') {
+      explanation = `${label} requires a checkpoint this room cannot reach: ${checkpointLabel(`combat:${blocker.point.phaseKey}`)}.`;
     } else {
-      explanation = `${label} must come ${blocker.dependency.kind === 'afterCheckpoint' ? 'after' : 'before'} ${checkpointLabel(blocker.dependency.checkpointKey)}.`;
+      explanation = `${label} must come after ${checkpointLabel('exitUsable')}.`;
     }
     return explanation;
   };
@@ -1158,17 +1145,26 @@ function roomActionsForOccurrence(
     }),
     ...(spawned.actionSpawns.length === 0 ? {} : { actionSpawns: spawned.actionSpawns }),
     ...(spawned.copies.length === 0 ? {} : { spawnCopies: spawned.copies }),
-    checkpoints: Object.freeze(
-      roster.checkpoints
-        .filter((checkpoint) => checkpoint.checkpointKey !== 'outgoingGeneration')
-        .map((checkpoint) =>
-          Object.freeze({
-            key: checkpoint.checkpointKey,
-            label: checkpoint.label,
-            afterRank: checkpoint.afterRank,
-          }),
-        ),
-    ),
+    checkpoints: Object.freeze([
+      ...roster.eventGraph.phases.map((phase) =>
+        Object.freeze({
+          key: `combat:${phase.phaseKey}`,
+          label: `${phase.phaseKey} complete`,
+          afterRank:
+            lifecycleTimeline.entries.find(
+              (entry) =>
+                entry.kind === 'boundary' &&
+                entry.boundary.kind === 'encounterEnd' &&
+                entry.boundary.phaseKey === phase.phaseKey,
+            )?.rank ?? 0,
+        }),
+      ),
+      Object.freeze({
+        key: 'exitUsable',
+        label: 'Exit usable',
+        afterRank: lifecycleTimeline.doorsAfterRank,
+      }),
+    ]),
     interactionKey: semanticAddressKey(owner),
     owner,
     optionalRows,

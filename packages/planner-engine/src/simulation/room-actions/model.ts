@@ -2,12 +2,9 @@ import type { SemanticAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import type {
   RoomActionBounds,
-  RoomActionWindow,
   RoomEventGraph,
 } from '../../authored-project/room-actions/event-graph';
 import type {
-  RoomActionCheckpointContribution,
-  RoomActionContribution,
   RoomActionDependency,
   RoomActionParticipation,
 } from '../../authored-project/room-actions/domain';
@@ -18,24 +15,19 @@ import type {
 import type { PlannerTimelineFacts } from '../timeline-facts';
 
 export type {
-  RoomActionCheckpointContribution,
   RoomActionContribution,
   RoomActionDependency,
   RoomActionParticipation,
 } from '../../authored-project/room-actions/domain';
 export type {
   RoomActionBounds,
-  RoomActionWindow,
   RoomEventPoint,
 } from '../../authored-project/room-actions/event-graph';
-
-export type RoomActionRosterContribution =
-  RoomActionContribution | RoomActionCheckpointContribution;
 
 export type RoomActionRosterIssue = RoomActionOrderIssue;
 
 /**
- * When a row's item may be used, named by the room's phases: before or after
+ * When a row's item may be used, named from its bounds by the room's phases: before or after
  * the room's combat, after an encounter's end (and, when the next phase's wheel
  * waits on what it spawns, before that wheel's choice), during a Fields room,
  * after the doors open, or before, at the choice of, or after a wheel phase.
@@ -62,7 +54,6 @@ export interface RoomActionRow {
   readonly participation: RoomActionParticipation;
   /** Active mandatory work constrained to encounter progression or only room completion. */
   readonly requiredScope?: 'phase' | 'room';
-  readonly window: RoomActionWindow;
   /** Where the row may stand, in the room's graph events. */
   readonly bounds: RoomActionBounds;
   /**
@@ -106,24 +97,15 @@ export interface RoomActionProposal {
   readonly structurallyAuthorable: boolean;
   /**
    * The insertion a required action takes when no position is chosen: before the
-   * first retained action with a later window, after its dependencies.
+   * first retained action that opens later, after its dependencies.
    */
   readonly canonical?: true;
   readonly blockers: readonly RoomActionPlacementBlocker[];
 }
 
-export interface RoomActionCheckpoint {
-  readonly checkpointKey: string;
-  readonly label: string;
-  readonly window: RoomActionWindow;
-  /** Number of authored rows that precede this derived checkpoint. */
-  readonly afterRank: number;
-}
-
 export interface RoomActionRoster {
   readonly eventGraph: RoomEventGraph;
   readonly rows: readonly RoomActionRow[];
-  readonly checkpoints: readonly RoomActionCheckpoint[];
   readonly issues: readonly RoomActionRosterIssue[];
   readonly proposals: readonly RoomActionProposal[];
   /** Structural planner facts; reward transitions add their exact relations. */

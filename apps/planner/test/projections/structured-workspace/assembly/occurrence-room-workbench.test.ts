@@ -134,38 +134,4 @@ describe('occurrence room workbench', () => {
       ),
     ).not.toContain('outgoingGeneration');
   });
-
-  it.each([
-    {
-      name: 'before-combat standard',
-      window: { kind: 'standard' as const, phase: 'beforeCombat' as const },
-    },
-    {
-      name: 'Fields',
-      window: { kind: 'fields' as const, phaseKey: 'Combat1' },
-    },
-  ])('keeps the engine timeline authoritative for a $name checkpoint window', ({ window }) => {
-    const assembled = assemble(
-      loadSurfaceNOPQProject(),
-      'Surface',
-      'O',
-      oOccurrenceIds.combat04,
-      undefined,
-      undefined,
-      (evaluatedRoom) => {
-        const roster = evaluatedRoom.roomActionRoster;
-        if (roster === undefined || roster.checkpoints[0] === undefined) {
-          throw new Error('Ship Room Action checkpoint is missing');
-        }
-        return {
-          ...evaluatedRoom,
-          roomActionRoster: {
-            ...roster,
-            checkpoints: [{ ...roster.checkpoints[0], window }, ...roster.checkpoints.slice(1)],
-          },
-        };
-      },
-    ).assembly.node.room;
-    expect(assembled.workbench.kind).toBe('ship');
-  });
 });

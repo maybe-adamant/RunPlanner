@@ -2,8 +2,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'vitest';
 
-import { ExecutionCompilerError } from '@run-planner/engine/execution-plan';
-import { assembleLifecycleWindow } from '../../src/execution-plan/assembly/lifecycle';
+import type { RoomEventGraph } from '../../src/authored-project/room-actions/event-graph';
+import { wireWindow } from '../../src/execution-plan/assembly/lifecycle';
 import type { ExecutionLifecycleWindow } from '../../src/execution-plan/model';
 import type { RoomActionRow } from '../../src/simulation/room-actions/model';
 import {
@@ -39,13 +39,8 @@ function contactText(window: ExecutionLifecycleWindow): string {
 }
 
 /** The execution contact a row publishes, or the refusal it raises. */
-function rowContact(row: RoomActionRow): string {
-  try {
-    return contactText(assembleLifecycleWindow(row.window));
-  } catch (error) {
-    if (error instanceof ExecutionCompilerError) return `refused ${error.code}`;
-    throw error;
-  }
+function rowContact(row: RoomActionRow, graph: RoomEventGraph): string {
+  return contactText(wireWindow(row.bounds, graph));
 }
 
 describe('published lifecycle contacts', () => {
@@ -57,7 +52,11 @@ describe('published lifecycle contacts', () => {
         const rows: Record<string, string> = {};
         for (const row of room.roomActionRoster.rows)
           if (!row.stale && row.rank !== null)
-            setUnique(rows, `#${row.rank} ${compactActionKey(row.key)}`, rowContact(row));
+            setUnique(
+              rows,
+              `#${row.rank} ${compactActionKey(row.key)}`,
+              rowContact(row, room.roomActionRoster.eventGraph),
+            );
         if (Object.keys(rows).length > 0)
           witnesses.push({
             entry: entry.name,

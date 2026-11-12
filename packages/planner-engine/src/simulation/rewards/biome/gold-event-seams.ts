@@ -69,15 +69,15 @@ function authoredRoom(
 
 /** The required action whose settlement makes the room's exit usable, when one is ranked. */
 function exitUsableRow(room: CanonicalAuthoredRoom): RoomActionRow | undefined {
-  const afterRank = room.roomActionRoster.checkpoints.find(
-    (checkpoint) => checkpoint.checkpointKey === 'exitUsable',
-  )?.afterRank;
-  return room.roomActionRoster.rows.find(
-    (candidate) =>
+  return room.roomActionRoster.rows.reduce<RoomActionRow | undefined>(
+    (last, candidate) =>
       !candidate.stale &&
       candidate.rank !== null &&
-      candidate.rank === afterRank &&
-      candidate.participation === 'required',
+      candidate.participation === 'required' &&
+      (last === undefined || candidate.rank > last.rank!)
+        ? candidate
+        : last,
+    undefined,
   );
 }
 
@@ -197,11 +197,12 @@ const DOOR_EXIT_ACTIONS: ReadonlySet<RoomActionRow['reference']['kind']> = new S
  * no outgoing generation makes the exit usable at that action instead.
  */
 function doorsOpenAt(room: CanonicalAuthoredRoom, event: HistoryEvent): boolean {
-  const generates = room.roomActionRoster.checkpoints.some(
-    (checkpoint) => checkpoint.checkpointKey === 'outgoingGeneration',
+  const generates = room.roomActionRoster.eventGraph.events.some(
+    (event) => event.kind === 'doorsOpened' && event.generatesOutgoing,
   );
   const exit = exitUsableRow(room);
-  const atExitRow = exit !== undefined && (!generates || exit.window.kind === 'postOutgoing');
+  const atExitRow =
+    exit !== undefined && (!generates || exit.bounds.enabler?.kind === 'doorsOpened');
   return atExitRow
     ? DOOR_EXIT_ACTIONS.has(exit.reference.kind) && rowSettledBy(event, exit)
     : event.kind === 'outgoingGenerationCheckpoint';

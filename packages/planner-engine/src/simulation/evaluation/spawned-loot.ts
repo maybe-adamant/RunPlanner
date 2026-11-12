@@ -1,3 +1,4 @@
+import { nextWheelsOpen } from '../../authored-project/room-actions/event-graph';
 import {
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
@@ -656,19 +657,8 @@ export function spawnedLootForProjectEvaluationAssembly(
   const encounterEndState = (phaseKey: string): EntryState =>
     walk.entry(spawnMomentEntryIndex(entries, 'encounterEnd', phaseKey));
   /** The wheel that opens right after this phase's end, when one does. */
-  const nextWheelKey = (phaseKey: string): string | undefined => {
-    const index = structure.phases.findIndex((phase) => phase.phaseKey === phaseKey);
-    const wheelKey = index < 0 ? undefined : structure.phases[index + 1]?.rewardWheelKey;
-    return wheelKey !== undefined &&
-      structure.events.some(
-        (event) =>
-          event.kind === 'wheelsOpen' &&
-          event.wheelKey === wheelKey &&
-          event.afterPhaseKey === phaseKey,
-      )
-      ? wheelKey
-      : undefined;
-  };
+  const nextWheelKey = (phaseKey: string): string | undefined =>
+    nextWheelsOpen(structure, phaseKey)?.wheelKey;
   const momentState = (kind: SpawnMomentKind, phaseKey: string | undefined): EntryState => {
     switch (kind) {
       case 'roomEntered':
@@ -736,8 +726,7 @@ export function spawnedLootForProjectEvaluationAssembly(
         : 'encounterEnd';
 
   const unlockKey = (phaseKey: string) => momentKey('encounterEnd', phaseKey);
-  const beforeCombat = (row: RoomActionRow) =>
-    row.window.kind === 'standard' && row.window.phase === 'beforeCombat';
+  const beforeCombat = (row: RoomActionRow) => row.label.kind === 'beforeCombat';
 
   // Rewards, which each moment spawns before its other loot.
   for (const row of liveRows) {
@@ -779,7 +768,10 @@ export function spawnedLootForProjectEvaluationAssembly(
         break;
       }
       case 'interactLocalReward': {
-        const cagePhaseKey = row.window.kind === 'fields' ? row.window.phaseKey : undefined;
+        const cagePhaseKey =
+          row.label.kind === 'fields' && row.bounds.spawn.kind === 'encounterEnd'
+            ? row.bounds.spawn.phaseKey
+            : undefined;
         add(
           'roomEntered',
           undefined,

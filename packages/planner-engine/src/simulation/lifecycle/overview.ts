@@ -5,10 +5,7 @@ import type {
   RoomLifecycleProfile,
 } from '../../catalog-schema';
 import type { ProducerLifecyclePointKey } from '../../reward-kernel/model';
-import {
-  producerPointsBeforeCombat,
-  runsOneEncounter,
-} from '../../authored-project/room-actions/event-graph';
+import { runsOneEncounter } from '../../authored-project/room-actions/event-graph';
 
 /**
  * One step of a room's walk; every history event records the step it was
@@ -33,6 +30,46 @@ function advance(point: ProducerLifecyclePointKey): RoomLifecycleOperation {
     point,
     effects: Object.freeze(['recordProducerPoint' as const]),
   });
+}
+
+/**
+ * The producer points a room takes before its encounters run: the reward
+ * before combat and the point any bound encounter's gate pickup is taken at.
+ */
+function pointsBeforeEncounters(
+  catalog: Catalog,
+  profile: RoomLifecycleProfile,
+  declaration: RoomDeclaration,
+): ReadonlySet<ProducerLifecyclePointKey> {
+  if (profile.producer.kind === 'none') return new Set();
+  const gateRoles = new Set(
+    declaration.encounterSlotBindings
+      .flatMap((binding) =>
+        binding.kind === 'set'
+          ? (catalog.encounterSets.byKey[binding.encounterSetKey]?.encounterDefinitionKeys ?? [])
+          : [
+              binding.encounterDefinitionKey,
+              ...(binding.rivalsEncounterDefinitionKey === undefined
+                ? []
+                : [binding.rivalsEncounterDefinitionKey]),
+              ...(binding.shadowEncounterDefinitionKey === undefined
+                ? []
+                : [binding.shadowEncounterDefinitionKey]),
+            ],
+      )
+      .flatMap((key) => {
+        const gate = catalog.encounterDefinitions.byKey[key]?.script.gate;
+        return gate?.kind === 'useItemRole' ? [gate.role] : [];
+      }),
+  );
+  const points = new Set<ProducerLifecyclePointKey>(
+    profile.producer.points.filter((point) => point === 'beforeCombat'),
+  );
+  for (const key of profile.producer.lifecycleProfileKeys)
+    for (const reward of catalog.rewards.producerLifecycles.byKey[key]?.rewardTypes.values ?? [])
+      for (const binding of reward.acquisitionLifecycle)
+        if (gateRoles.has(binding.role)) points.add(binding.lifecyclePoint);
+  return points;
 }
 
 const caches = {
@@ -62,7 +99,9 @@ export function roomWalkSteps(
   if (cached !== undefined) return cached;
   const envelope = catalog.encounterEnvelopes.byKey[declaration.encounterEnvelopeKey];
   const points = !producer || profile.producer.kind === 'none' ? [] : profile.producer.points;
-  const beforeCombat = producerPointsBeforeCombat(catalog, profile, declaration, producer);
+  const beforeCombat = producer
+    ? pointsBeforeEncounters(catalog, profile, declaration)
+    : new Set<ProducerLifecyclePointKey>();
   const before = points.filter((point) => beforeCombat.has(point));
   const after = points.filter((point) => !before.includes(point));
   const operation = (value: RoomLifecycleOperation): RoomWalkStep =>

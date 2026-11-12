@@ -102,11 +102,11 @@ export {
   assembleRoomActionRoster,
   type RoomActionProposal,
   type RoomActionRoster,
-  type RoomActionRosterContribution,
   type RoomActionRosterIssue,
   type RoomActionRow,
   type RoomActionRowLabel,
-  type RoomActionWindow,
+  type RoomActionBounds,
+  type RoomEventPoint,
 } from './room-actions';
 export {
   appendSteadyGrowthTimelineEffects,

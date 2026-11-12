@@ -1,159 +1,119 @@
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import {
-  windowAnchor,
+  nextWheelPhaseKey,
+  roomActionOpeningPoint,
+  roomEventPlaces,
   type RoomActionBounds,
-  type RoomActionWindow,
   type RoomEventGraph,
-  type RoomEventPoint,
 } from '../../authored-project/room-actions/event-graph';
 import type { RoomActionRow, RoomActionRowLabel } from './model';
 
 /** A row before its phase, label and required scope are named. */
-export type RoomActionRowFacts = Omit<RoomActionRow, 'label' | 'bounds'> & {
+export type RoomActionRowFacts = Omit<RoomActionRow, 'label'> & {
   readonly label?: RoomActionRowLabel;
-  readonly bounds?: RoomActionBounds;
 };
 
-const point = <Point extends RoomEventPoint>(value: Point): Point => Object.freeze(value);
-
-function windowBounds(row: RoomActionRowFacts, structure: RoomEventGraph): RoomActionBounds {
-  const phases = structure.phases;
-  const first = phases[0]?.phaseKey;
-  const last = phases.at(-1)?.phaseKey;
-  const doors = point({ kind: 'doorsOpened' });
-  const entered = point({ kind: 'roomEntered' });
-  const wheelPhase = (wheelKey: string) =>
-    phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey ?? wheelKey;
-  const window = row.window;
-  let bounds: RoomActionBounds = { spawn: entered, deadline: doors };
-  switch (window.kind) {
-    case 'standard':
-      bounds =
-        window.phase === 'beforeCombat' && first !== undefined
-          ? {
-              spawn: entered,
-              enabler: point({ kind: 'gate', phaseKey: first }),
-              deadline: point({ kind: 'encounterStarted', phaseKey: first }),
-            }
-          : {
-              spawn: last === undefined ? entered : point({ kind: 'encounterEnd', phaseKey: last }),
-              deadline: doors,
-            };
-      break;
-    case 'encounterEnd': {
-      const next = nextWheelPhaseKey(window.phaseKey, structure);
-      bounds = {
-        spawn: point({ kind: 'endEffects', phaseKey: window.phaseKey }),
-        deadline: next === undefined ? doors : point({ kind: 'gate', phaseKey: next }),
-      };
-      break;
-    }
-    case 'fields':
-      bounds = {
-        spawn:
-          window.phaseKey === undefined
-            ? entered
-            : point({ kind: 'encounterEnd', phaseKey: window.phaseKey }),
-        deadline: doors,
-      };
-      break;
-    case 'postOutgoing':
-      bounds = { spawn: entered, enabler: doors, deadline: point({ kind: 'leave' }) };
-      break;
-    case 'shipPreCombat':
-      bounds = {
-        spawn: point({ kind: 'wheelsOpen', wheelKey: window.wheelKey }),
-        enabler: point({ kind: 'gate', phaseKey: wheelPhase(window.wheelKey) }),
-        deadline: point({ kind: 'encounterStarted', phaseKey: wheelPhase(window.wheelKey) }),
-      };
-      break;
-    case 'shipWheelsOpen':
-      bounds = {
-        spawn: point({ kind: 'wheelsOpen', wheelKey: window.wheelKey }),
-        deadline: point({ kind: 'gate', phaseKey: wheelPhase(window.wheelKey) }),
-      };
-      break;
-    case 'shipPostCombat':
-      bounds = {
-        spawn: point({ kind: 'encounterEnd', phaseKey: wheelPhase(window.wheelKey) }),
-        deadline: point({ kind: 'endEffects', phaseKey: wheelPhase(window.wheelKey) }),
-      };
-      break;
-  }
-  if (
-    row.dependencies.some(
-      (dependency) =>
-        dependency.kind === 'afterCheckpoint' && dependency.checkpointKey === 'exitUsable',
-    )
-  )
-    bounds = { ...bounds, enabler: point({ kind: 'exitsReady' }) };
-  return Object.freeze(bounds);
+function playedPhase(structure: RoomEventGraph, phaseKey: string): boolean {
+  return structure.phases.some((phase) => phase.phaseKey === phaseKey);
 }
 
-/** The phase whose wheel opens after this phase ends, when one does. */
-function nextWheelPhaseKey(phaseKey: string, structure: RoomEventGraph): string | undefined {
-  const index = structure.phases.findIndex((phase) => phase.phaseKey === phaseKey);
-  const next = index < 0 ? undefined : structure.phases[index + 1];
-  return next?.rewardWheelKey === undefined ? undefined : next.phaseKey;
+function phaseWheelKey(structure: RoomEventGraph, phaseKey: string): string | undefined {
+  return structure.phases.find((phase) => phase.phaseKey === phaseKey)?.rewardWheelKey;
 }
 
-function wheelPhaseKey(wheelKey: string, structure: RoomEventGraph): string | undefined {
+function wheelPhaseKey(structure: RoomEventGraph, wheelKey: string): string | undefined {
   return structure.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey;
 }
 
-/** A Ship phase's end-effect pickups wait for the next wheel, so they belong to its phase. */
-function rowPhaseKey(window: RoomActionWindow, structure: RoomEventGraph): string | undefined {
-  const phases = structure.phases;
-  switch (window.kind) {
-    case 'encounterEnd':
-      return phases.some((phase) => phase.phaseKey === window.phaseKey)
-        ? (nextWheelPhaseKey(window.phaseKey, structure) ?? window.phaseKey)
-        : undefined;
-    case 'shipPreCombat':
-    case 'shipWheelsOpen':
-    case 'shipPostCombat':
-      return wheelPhaseKey(window.wheelKey, structure);
-    case 'standard':
-      return (window.phase === 'beforeCombat' ? phases[0] : phases.at(-1))?.phaseKey;
-    case 'fields':
-      return window.phaseKey !== undefined &&
-        phases.some((phase) => phase.phaseKey === window.phaseKey)
-        ? window.phaseKey
-        : phases.at(-1)?.phaseKey;
-    case 'postOutgoing':
-      return phases.at(-1)?.phaseKey;
-  }
+/** Whether the player's verb starts this phase's encounter (a Fields cage). */
+function verbPhase(structure: RoomEventGraph, phaseKey: string): boolean {
+  return structure.events.some(
+    (event) =>
+      event.kind === 'encounterBegun' &&
+      event.phaseKey === phaseKey &&
+      event.trigger.kind === 'action',
+  );
 }
 
-function rowLabel(window: RoomActionWindow, structure: RoomEventGraph): RoomActionRowLabel {
+/** Whether the player's verb starts the room's encounters (Fields cages). */
+function fieldsRoom(structure: RoomEventGraph): boolean {
+  return structure.events.some(
+    (event) => event.kind === 'encounterBegun' && event.trigger.kind === 'action',
+  );
+}
+
+/**
+ * The label a row's bounds name: after the doors open, before a phase's
+ * Combat (a wheel phase's choice), at a wheel's roll, after an encounter's
+ * end effects (before the next wheel's choice when its wheels open then),
+ * after a wheel phase's fight, during a Fields room, or after the room's fights.
+ */
+function boundsLabel(bounds: RoomActionBounds, structure: RoomEventGraph): RoomActionRowLabel {
+  const { spawn, enabler } = bounds;
   const wheel = (
     kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase',
     wheelKey: string,
   ): RoomActionRowLabel => {
-    const phaseKey = wheelPhaseKey(wheelKey, structure);
+    const phaseKey = wheelPhaseKey(structure, wheelKey);
     return Object.freeze({ kind, wheelKey, ...(phaseKey === undefined ? {} : { phaseKey }) });
   };
-  switch (window.kind) {
-    case 'standard':
-      return Object.freeze({ kind: window.phase });
-    case 'encounterEnd': {
-      const next = nextWheelPhaseKey(window.phaseKey, structure);
+  if (enabler?.kind === 'doorsOpened' || enabler?.kind === 'exitsReady')
+    return Object.freeze({ kind: 'afterDoorsOpen' });
+  if (enabler?.kind === 'gate') {
+    const wheelKey = phaseWheelKey(structure, enabler.phaseKey);
+    return wheelKey === undefined
+      ? Object.freeze({ kind: 'beforeCombat' })
+      : wheel('beforeWheelPhase', wheelKey);
+  }
+  switch (spawn.kind) {
+    case 'wheelsOpen':
+      return wheel('beforeWheelChoice', spawn.wheelKey);
+    case 'endEffects': {
+      // A Fields cage's due pickups stand with the room's free cage rows.
+      if (verbPhase(structure, spawn.phaseKey)) return Object.freeze({ kind: 'fields' });
+      const next = nextWheelPhaseKey(structure, spawn.phaseKey);
       return Object.freeze({
         kind: 'afterEncounterEnd',
-        phaseKey: window.phaseKey,
+        phaseKey: spawn.phaseKey,
         ...(next === undefined ? {} : { beforeWheelChoicePhaseKey: next }),
       });
     }
-    case 'fields':
-      return Object.freeze({ kind: 'fields' });
-    case 'postOutgoing':
-      return Object.freeze({ kind: 'afterDoorsOpen' });
-    case 'shipPreCombat':
-      return wheel('beforeWheelPhase', window.wheelKey);
-    case 'shipWheelsOpen':
-      return wheel('beforeWheelChoice', window.wheelKey);
-    case 'shipPostCombat':
-      return wheel('afterWheelPhase', window.wheelKey);
+    case 'encounterEnd': {
+      const wheelKey = phaseWheelKey(structure, spawn.phaseKey);
+      if (wheelKey !== undefined) return wheel('afterWheelPhase', wheelKey);
+      return Object.freeze({ kind: fieldsRoom(structure) ? 'fields' : 'afterCombat' });
+    }
+    default:
+      return Object.freeze({ kind: fieldsRoom(structure) ? 'fields' : 'afterCombat' });
+  }
+}
+
+/**
+ * The phase a row belongs to: a wheel phase's rows to it, an encounter's end
+ * effects to that phase, or to the next one when its wheels open with them,
+ * a Fields cage's rows to its cage, rows before Combat to that phase and
+ * every other to the last.
+ */
+function boundsPhaseKey(bounds: RoomActionBounds, structure: RoomEventGraph): string | undefined {
+  const last = structure.phases.at(-1)?.phaseKey;
+  const { spawn, enabler } = bounds;
+  if (enabler?.kind === 'gate')
+    return playedPhase(structure, enabler.phaseKey) ? enabler.phaseKey : undefined;
+  if (enabler !== undefined) return last;
+  switch (spawn.kind) {
+    case 'wheelsOpen':
+      return wheelPhaseKey(structure, spawn.wheelKey);
+    case 'endEffects':
+      return playedPhase(structure, spawn.phaseKey)
+        ? (nextWheelPhaseKey(structure, spawn.phaseKey) ?? spawn.phaseKey)
+        : undefined;
+    case 'encounterEnd':
+      return playedPhase(structure, spawn.phaseKey) &&
+        (fieldsRoom(structure) || phaseWheelKey(structure, spawn.phaseKey) !== undefined)
+        ? spawn.phaseKey
+        : last;
+    default:
+      return last;
   }
 }
 
@@ -169,23 +129,22 @@ export function withRequiredScopes(
   const active = rows.filter(
     (row) => !row.stale && (row.participation === 'required' || row.rank !== null),
   );
-  const roomEnd = windowAnchor({ kind: 'standard', phase: 'afterCombat' }, structure);
+  const place = roomEventPlaces(structure);
+  const last = structure.phases.at(-1)?.phaseKey;
+  const roomEnd =
+    last === undefined ? 1 : place(Object.freeze({ kind: 'encounterEnd', phaseKey: last }));
+  const fields = fieldsRoom(structure);
   for (const row of active) {
-    const window = row.window;
+    const label = boundsLabel(row.bounds, structure);
     if (
       row.reference.kind === 'completeFieldsCage' ||
-      window.kind === 'shipPreCombat' ||
-      window.kind === 'shipWheelsOpen' ||
-      window.kind === 'shipPostCombat' ||
-      (window.kind !== 'fields' &&
-        window.kind !== 'postOutgoing' &&
+      label.kind === 'beforeWheelPhase' ||
+      label.kind === 'beforeWheelChoice' ||
+      label.kind === 'afterWheelPhase' ||
+      (!fields &&
+        label.kind !== 'afterDoorsOpen' &&
         structure.phases.length > 0 &&
-        windowAnchor(window, structure) < roomEnd) ||
-      row.dependencies.some(
-        (dependency) =>
-          dependency.kind === 'beforeCheckpoint' &&
-          structure.phases.some((phase) => dependency.checkpointKey === `combat:${phase.phaseKey}`),
-      )
+        place(roomActionOpeningPoint(row.bounds)) < roomEnd)
     )
       phaseBound.add(row.key);
   }
@@ -197,7 +156,6 @@ export function withRequiredScopes(
     for (const row of active) {
       if (!phaseBound.has(row.key)) continue;
       for (const dependency of row.dependencies) {
-        if (dependency.kind !== 'afterAction') continue;
         const key = roomActionKey(dependency.action);
         if (phaseBound.has(key)) continue;
         phaseBound.add(key);
@@ -210,13 +168,11 @@ export function withRequiredScopes(
       const row = { ...previous };
       delete row.requiredScope;
       delete row.phaseKey;
-      delete row.bounds;
-      const phaseKey = rowPhaseKey(row.window, structure);
+      const phaseKey = boundsPhaseKey(row.bounds, structure);
       return Object.freeze({
         ...row,
         ...(phaseKey === undefined ? {} : { phaseKey }),
-        label: rowLabel(row.window, structure),
-        bounds: windowBounds(row, structure),
+        label: boundsLabel(row.bounds, structure),
         ...(row.stale || row.participation !== 'required'
           ? {}
           : {

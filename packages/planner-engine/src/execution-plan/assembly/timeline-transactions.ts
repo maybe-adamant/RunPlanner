@@ -29,7 +29,7 @@ import {
 } from '../../simulation/room-actions';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, completeFrontier, executionRoomOwnerKey } from './support';
-import { assembleLifecycleWindow } from './lifecycle';
+import { wireWindow } from './lifecycle';
 import {
   executionKeepsakeEquipResults,
   executionRewardFromOffer,
@@ -462,7 +462,7 @@ export function executionTimelineTransactions(
         'executionCoverageMissing',
         `${room.gameName} has a transaction without an active roster owner ${transactionOwner}`,
       );
-    return assembleLifecycleWindow(row.window);
+    return wireWindow(row.bounds, room.roomActionRoster.eventGraph);
   };
   const add = (transaction: ExecutionTimelineTransaction): void => {
     if (transactions.some((candidate) => candidate.owner === transaction.owner))

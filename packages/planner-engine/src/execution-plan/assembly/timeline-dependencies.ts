@@ -175,8 +175,7 @@ function nativelyOrdered(
     afterOwner.kind === 'steadyGrowthOutcome' ||
     afterOwner.kind === 'transcendentEmbryoOutcome'
   ) {
-    const window = rows.get(semanticAddressKey(owner))?.window;
-    return window?.kind === 'standard' && window.phase === 'afterCombat';
+    return rows.get(semanticAddressKey(owner))?.label.kind === 'afterCombat';
   }
   // Devotion's spurned boon resolves after the trial that the chosen pick starts.
   return (

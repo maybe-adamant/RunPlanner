@@ -1,3 +1,5 @@
+import type { RoomActionContribution } from '../../src/authored-project/room-actions/domain';
+import { boundsForPlacement, type TestRowPlacement } from '../support/room-action-bounds';
 import {
   createBiomeAddress,
   createOccurrenceAddress,
@@ -14,7 +16,6 @@ import {
   executeRoomLifecycle,
   LifecycleExecutionContractError,
   type ResolvedEncounterPhase,
-  type RoomActionRosterContribution,
   type RoomLifecycleExecutionInput,
 } from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
@@ -174,20 +175,20 @@ const firstShrineRush: RoomActionReference = Object.freeze({
 function actionRoster(
   actionOrigin: typeof origin,
   order: readonly RoomActionReference[],
-  contributions: readonly Omit<
-    Extract<RoomActionRosterContribution, { readonly kind: 'action' }>,
-    'kind' | 'owner'
-  >[],
+  contributions: readonly (Omit<RoomActionContribution, 'kind' | 'owner' | 'bounds'> & {
+    readonly placement: TestRowPlacement;
+  })[],
   lifecycleProfileKey?: string,
   phaseKeysOverride?: readonly string[],
 ) {
   const profileKey =
     lifecycleProfileKey ??
-    (contributions.some((entry) => entry.window.kind === 'fields')
+    (contributions.some((entry) => entry.placement.kind === 'fields')
       ? 'FieldsCombatRoom'
       : contributions.some(
             (entry) =>
-              entry.window.kind === 'shipPreCombat' || entry.window.kind === 'shipPostCombat',
+              entry.placement.kind === 'beforeWheelPhase' ||
+              entry.placement.kind === 'afterWheelPhase',
           )
         ? 'ShipCombatRoom'
         : 'StandardRewardRoom');
@@ -214,8 +215,8 @@ function actionRoster(
   const shipWheelKeys = Array.from(
     new Set(
       contributions.flatMap((entry) =>
-        entry.window.kind === 'shipPreCombat' || entry.window.kind === 'shipPostCombat'
-          ? [entry.window.wheelKey]
+        entry.placement.kind === 'beforeWheelPhase' || entry.placement.kind === 'afterWheelPhase'
+          ? [entry.placement.wheelKey]
           : [],
       ),
     ),
@@ -247,13 +248,14 @@ function actionRoster(
     owner: actionOrigin,
     order,
     eventGraph,
-    contributions: contributions.map((entry) => ({
+    contributions: contributions.map(({ placement, ...entry }) => ({
       kind: 'action' as const,
       owner: createRoomActionAddress(
         createBiomeAddress(actionOrigin.routeKey, actionOrigin.biomeKey),
         actionOrigin.occurrenceId,
         roomActionKey(entry.reference),
       ),
+      bounds: boundsForPlacement(placement, eventGraph),
       ...entry,
     })),
   });
@@ -286,7 +288,7 @@ describe('single-room lifecycle execution', () => {
             {
               reference: firstShrinePurchase,
               participation: 'required',
-              window: { kind: 'postOutgoing' },
+              placement: { kind: 'afterDoorsOpen' as const },
               dependencies: [],
             },
           ],
@@ -345,19 +347,19 @@ describe('single-room lifecycle execution', () => {
             {
               reference: firstShrinePurchase,
               participation: 'required',
-              window: { kind: 'postOutgoing' },
+              placement: { kind: 'afterDoorsOpen' as const },
               dependencies: [],
             },
             {
               reference: firstShrineRush,
               participation: 'optional',
-              window: { kind: 'postOutgoing' },
+              placement: { kind: 'afterDoorsOpen' as const },
               dependencies: [],
             },
             {
               reference: delivery,
               participation: 'required',
-              window: { kind: 'postOutgoing' },
+              placement: { kind: 'afterDoorsOpen' as const },
               dependencies: [],
             },
           ],
@@ -425,31 +427,34 @@ describe('single-room lifecycle execution', () => {
           ...[delivery0, delivery1, delivery2].map((reference) => ({
             reference,
             participation: 'required' as const,
-            window: { kind: 'encounterEnd' as const, phaseKey: reference.encounterPhaseKey },
+            placement: {
+              kind: 'afterEncounterEnd' as const,
+              phaseKey: reference.encounterPhaseKey,
+            },
             dependencies: [],
           })),
           {
             reference: choose1,
             participation: 'required',
-            window: { kind: 'shipPreCombat', wheelKey: 'wheel1' },
+            placement: { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' },
             dependencies: [],
           },
           {
             reference: interact1,
             participation: 'required',
-            window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
+            placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
             dependencies: [{ kind: 'afterAction', action: choose1 }],
           },
           {
             reference: choose2,
             participation: 'required',
-            window: { kind: 'shipPreCombat', wheelKey: 'wheel2' },
+            placement: { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel2' },
             dependencies: [],
           },
           {
             reference: interact2,
             participation: 'required',
-            window: { kind: 'shipPostCombat', wheelKey: 'wheel2' },
+            placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel2' },
             dependencies: [{ kind: 'afterAction', action: choose2 }],
           },
         ],
@@ -540,25 +545,25 @@ describe('single-room lifecycle execution', () => {
               {
                 reference: choose,
                 participation: 'required',
-                window: { kind: 'shipPreCombat', wheelKey: 'wheel1' },
+                placement: { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' },
                 dependencies: [],
               },
               {
                 reference: icarus,
                 participation: 'required',
-                window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
+                placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
                 dependencies: [],
               },
               {
                 reference: wheel,
                 participation: 'required',
-                window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
+                placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
                 dependencies: [{ kind: 'afterAction', action: choose }],
               },
               {
                 reference: delivery,
                 participation: 'required',
-                window: { kind: 'encounterEnd', phaseKey: 'Combat1' },
+                placement: { kind: 'afterEncounterEnd' as const, phaseKey: 'Combat1' },
                 dependencies: [],
               },
             ],
@@ -628,31 +633,31 @@ describe('single-room lifecycle execution', () => {
         {
           reference: cage('Cage01'),
           participation: 'required',
-          window: { kind: 'fields' },
+          placement: { kind: 'fields' as const },
           dependencies: [],
         },
         {
           reference: cage('Cage02'),
           participation: 'required',
-          window: { kind: 'fields' },
+          placement: { kind: 'fields' as const },
           dependencies: [],
         },
         {
           reference: reward('cage1'),
           participation: 'required',
-          window: { kind: 'fields', phaseKey: 'Cage01' },
+          placement: { kind: 'fields' as const, phaseKey: 'Cage01' },
           dependencies: after('Cage01'),
         },
         {
           reference: reward('cage2'),
           participation: 'required',
-          window: { kind: 'fields', phaseKey: 'Cage02' },
+          placement: { kind: 'fields' as const, phaseKey: 'Cage02' },
           dependencies: after('Cage02'),
         },
         {
           reference: delivery,
           participation: 'required',
-          window: { kind: 'fields', phaseKey: 'Cage01' },
+          placement: { kind: 'fields' as const, phaseKey: 'Cage01' },
           dependencies: after('Cage01'),
         },
       ],
@@ -821,7 +826,7 @@ describe('single-room lifecycle execution', () => {
             {
               reference: active,
               participation: 'required',
-              window: { kind: 'standard', phase: 'afterCombat' },
+              placement: { kind: 'afterCombat' as const },
               dependencies: [],
             },
           ],
@@ -860,19 +865,19 @@ describe('single-room lifecycle execution', () => {
             {
               reference: reward,
               participation: 'required',
-              window: { kind: 'standard', phase: 'afterCombat' },
+              placement: { kind: 'afterCombat' as const },
               dependencies: [],
             },
             {
               reference: purchase,
               participation: 'optional',
-              window: { kind: 'postOutgoing' },
+              placement: { kind: 'afterDoorsOpen' as const },
               dependencies: [],
             },
             {
               reference: collect,
               participation: 'required',
-              window: { kind: 'standard', phase: 'afterCombat' },
+              placement: { kind: 'afterCombat' as const },
               dependencies: [],
             },
           ],
@@ -920,13 +925,13 @@ describe('single-room lifecycle execution', () => {
             {
               reference: fountain,
               participation: 'optional',
-              window: { kind: 'standard', phase: 'afterCombat' },
+              placement: { kind: 'afterCombat' as const },
               dependencies: [],
             },
             {
               reference: reward,
               participation: 'required',
-              window: { kind: 'standard', phase: 'afterCombat' },
+              placement: { kind: 'afterCombat' as const },
               dependencies: [],
             },
           ],
@@ -1159,25 +1164,25 @@ describe('single-room lifecycle execution', () => {
         {
           reference: choose1,
           participation: 'required',
-          window: { kind: 'shipPreCombat', wheelKey: 'wheel1' },
+          placement: { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' },
           dependencies: [],
         },
         {
           reference: pickup1,
           participation: 'required',
-          window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
+          placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
           dependencies: [{ kind: 'afterAction', action: choose1 }],
         },
         {
           reference: choose2,
           participation: 'required',
-          window: { kind: 'shipPreCombat', wheelKey: 'wheel2' },
+          placement: { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel2' },
           dependencies: [],
         },
         {
           reference: pickup2,
           participation: 'required',
-          window: { kind: 'shipPostCombat', wheelKey: 'wheel2' },
+          placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel2' },
           dependencies: [{ kind: 'afterAction', action: choose2 }],
         },
       ],
@@ -1205,7 +1210,7 @@ describe('single-room lifecycle execution', () => {
         event.kind === 'encounterCompleted' ? [[event.phaseKey, event.endEffects]] : [],
       ),
     ).toEqual([
-      ['Intro', 'applied'],
+      ['Intro', 'deferred'],
       ['Combat1', 'deferred'],
     ]);
     expect(
@@ -1231,13 +1236,13 @@ describe('single-room lifecycle execution', () => {
       {
         reference: complete,
         participation: 'required' as const,
-        window: { kind: 'fields' as const },
+        placement: { kind: 'fields' as const },
         dependencies: [],
       },
       {
         reference: contact,
         participation: 'required' as const,
-        window: { kind: 'fields' as const, phaseKey: 'Cage01' },
+        placement: { kind: 'fields' as const, phaseKey: 'Cage01' },
         dependencies: [{ kind: 'afterAction' as const, action: complete }],
       },
     ];
@@ -1407,7 +1412,7 @@ describe('single-room lifecycle execution', () => {
               {
                 reference: pickup,
                 participation: 'required',
-                window: { kind: 'standard', phase: 'afterCombat' },
+                placement: { kind: 'afterCombat' as const },
                 dependencies: [],
               },
             ],

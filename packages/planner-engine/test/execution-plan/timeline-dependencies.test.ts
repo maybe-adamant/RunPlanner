@@ -63,7 +63,7 @@ type Kind = 'screen' | 'pickup' | 'native' | 'phialFountain' | RoomActionReferen
 interface Action {
   readonly key: string;
   readonly kind: Kind;
-  readonly window?: RoomActionRow['window'];
+  readonly label?: RoomActionRow['label'];
   readonly owner?: SemanticAddress;
 }
 
@@ -89,7 +89,7 @@ function room(actions: readonly Action[], automatic: readonly SemanticAddress[] 
         key: action.key,
         owner: ownerOf(action),
         participation: 'required',
-        window: action.window ?? afterCombat,
+        label: action.label ?? { kind: 'afterCombat' },
         dependencies: [],
         rank: index + 1,
         stale: false,
@@ -177,9 +177,9 @@ describe('trait fence dependencies', () => {
 
   it('orders a fence against its neighbours by rank across lifecycle windows', () => {
     const { room: fenceRoom, transactions } = room([
-      { key: 'before', kind: 'screen', window: { kind: 'standard', phase: 'beforeCombat' } },
+      { key: 'before', kind: 'screen', label: { kind: 'beforeCombat' } },
       { key: 'fence', kind: 'interactKeepsakeRack' },
-      { key: 'after', kind: 'screen', window: { kind: 'postOutgoing' } },
+      { key: 'after', kind: 'screen', label: { kind: 'afterDoorsOpen' } },
     ]);
     expect(traitFenceDependencies(fenceRoom, transactions)).toEqual([
       edge('fence', 'before'),
@@ -298,7 +298,11 @@ describe('natively ordered trait mutations', () => {
   it('publishes an automatic outcome edge only where the screen can open before it', () => {
     const { room: automaticRoom, transactions } = room(
       [
-        { key: 'cage', kind: 'screen', window: { kind: 'encounterEnd', phaseKey: 'Encounter' } },
+        {
+          key: 'cage',
+          kind: 'screen',
+          label: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
+        },
         { key: 'reward', kind: 'screen' },
       ],
       [steadyGrowth, embryo],
@@ -319,7 +323,7 @@ describe('natively ordered trait mutations', () => {
         key: 'chosen',
         kind: 'screen',
         owner: chosen,
-        window: { kind: 'standard', phase: 'beforeCombat' },
+        label: { kind: 'beforeCombat' },
       },
       { key: 'spurned', kind: 'screen', owner: spurned },
     ]);

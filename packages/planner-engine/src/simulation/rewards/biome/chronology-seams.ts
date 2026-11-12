@@ -14,8 +14,11 @@ import { encounterEntryVowRanks } from '../../arcana-fear';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../../authored-project/shop';
 import {
-  windowAnchor,
-  type RoomActionWindow,
+  roomActionOpeningPoint,
+  roomEventPlaces,
+  roomFightsEnd,
+  type RoomEventGraph,
+  type RoomEventPoint,
 } from '../../../authored-project/room-actions/event-graph';
 import type { HistoryEvent } from '../../history';
 import { projectRoomEncounterRecords } from '../../history/facts';
@@ -155,7 +158,8 @@ function placementDeadline(
   context: ChronologyWalkContext,
   origin: SemanticAddress,
   sequence: number,
-  window: RoomActionWindow,
+  /** Where the item opens: rows that open later close it. */
+  opening: (graph: RoomEventGraph) => RoomEventPoint,
 ): { readonly sequence: number; readonly deadline: Readonly<Record<string, string>> } | undefined {
   const roomKey = semanticAddressKey(origin);
   const room = authoredRoom(context, origin);
@@ -176,7 +180,8 @@ function placementDeadline(
         };
   if (room === undefined) return closing;
   const structure = room.roomActionRoster.eventGraph;
-  const ordinal = windowAnchor(window, structure);
+  const place = roomEventPlaces(structure);
+  const ordinal = place(opening(structure));
   const rows = new Map(room.roomActionRoster.rows.map((row) => [row.key, row]));
   const last = context.history.events.at(-1)?.sequence ?? 0;
   const later = context.reachedActions.find((action) => {
@@ -187,7 +192,7 @@ function placementDeadline(
       action.sequence <= last &&
       row !== undefined &&
       !row.stale &&
-      windowAnchor(row.window, structure) > ordinal &&
+      place(roomActionOpeningPoint(row.bounds)) > ordinal &&
       (closing === undefined || action.sequence < closing.sequence)
     );
   });
@@ -219,13 +224,13 @@ function deliveryPlacementAtDeadline(
   context: ChronologyWalkContext,
   origin: SemanticAddress,
   sequence: number,
-  window: RoomActionWindow,
+  opening: (graph: RoomEventGraph) => RoomEventPoint,
   findings: readonly LifecycleFinding[],
 ): { readonly findings: readonly LifecycleFinding[]; readonly haltBefore?: number } {
   const placement = (entry: LifecycleFinding) =>
     entry.finding.code === 'hermesShrineDeliveryPlacementRequired';
   if (!findings.some(placement)) return { findings };
-  const due = placementDeadline(context, origin, sequence, window);
+  const due = placementDeadline(context, origin, sequence, opening);
   return {
     findings: findings.flatMap((entry) =>
       !placement(entry)
@@ -694,7 +699,7 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
     context,
     event.origin,
     event.sequence,
-    Object.freeze({ kind: 'encounterEnd', phaseKey: event.phaseKey }),
+    () => Object.freeze({ kind: 'endEffects' as const, phaseKey: event.phaseKey }),
     transition.findings,
   );
   return {
@@ -1016,7 +1021,9 @@ function echoDuplicateAtDeadline(
     )
   )
     return { emissions };
-  const due = placementDeadline(context, room.origin, sequence, purchase.window);
+  const due = placementDeadline(context, room.origin, sequence, () =>
+    roomActionOpeningPoint(purchase.bounds),
+  );
   return {
     emissions: emissions.map((emission) =>
       emission.kind !== 'findings' || emission.rule !== 'add'
@@ -1608,7 +1615,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     context,
     event.origin,
     event.sequence,
-    Object.freeze({ kind: 'standard', phase: 'afterCombat' }),
+    roomFightsEnd,
     entered.findings,
   );
   const shrine = entered.hermesShrineAssessment;

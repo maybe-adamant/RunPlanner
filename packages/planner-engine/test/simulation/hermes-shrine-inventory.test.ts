@@ -1295,8 +1295,8 @@ describe('Hermes Shrine Travel Deal generation', () => {
         (row) =>
           row.reference.kind === 'interactAcquisitionEntry' &&
           row.reference.entryKey === refillEntry.entryKey,
-      )?.window,
-    ).toEqual({ kind: 'postOutgoing' });
+      )?.label,
+    ).toEqual({ kind: 'afterDoorsOpen' });
     const completeSnapshot = snapshot as typeof snapshot & {
       readonly entryRoom: NonNullable<typeof snapshot.entryRoom>;
     };
@@ -1447,8 +1447,8 @@ describe('Hermes Shrine Travel Deal generation', () => {
             row.reference.kind === 'interactAcquisitionEntry' &&
             row.reference.siteKey === 'hermesShrineDelivery',
         )
-        .map((row) => row.window),
-    ).toEqual([{ kind: 'postOutgoing' }, { kind: 'postOutgoing' }]);
+        .map((row) => row.label),
+    ).toEqual([{ kind: 'afterDoorsOpen' }, { kind: 'afterDoorsOpen' }]);
     expect(
       bothRushedResult.hermesShrineDeliveries.map((delivery) => delivery.entryKey),
     ).not.toContain(hermesShrineDeliveryEntryKey(host, 'initial:first'));

@@ -3364,7 +3364,7 @@
     {
       "entries": ["checkpoint/surface-n-quick-buck"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > outgoingGenerationCheckpoint > #2 > acquisitionPointReached(acquisitionEntry:traitGenerated:[traitOffer,Surface,N,[incomingReward,Surface,N,surface-n-opening],self]:option1:quickBuckGold) > roomCommitted > roomCountersAdvanced > roomExited",
-      "timeline": "roomEntered | encounterBegun Encounter | #1 | #2 | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
+      "timeline": "roomEntered | encounterBegun Encounter | #1 | encounterStarted Encounter | #2 | encounterEnd Encounter | doorsOpened",
       "loot": [
         "roomEntered: interactIncomingReward:roomRewardPickup:self required #1",
         "after interactIncomingReward:roomRewardPickup:self: interactAcquisitionEntry:traitGenerated:[traitOffer,Surface,N,[incomingReward,Surface,N,surface-n-opening],self]:option1:quickBuckGold optional #2"
@@ -4501,7 +4501,7 @@
         "surface/surfaceSeleneHexPathProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
       "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #2"]
     },
@@ -4510,7 +4510,7 @@
         "execution/surface-scheduled-lifecycle",
         "checkpoint/surface-scheduled-lifecycle"
       ],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > #3 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft]) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > #3 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft]) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | #3 | doorsOpened",
       "loot": [
         "encounterEnd:Combat1: interactWheelReward:wheel1 required #2",
@@ -4523,7 +4523,7 @@
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-start-q-opening"
       ],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > #3 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondLeft]) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > #3 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondLeft]) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | #3 | doorsOpened",
       "loot": [
         "encounterEnd:Combat1: interactWheelReward:wheel1 required #2",
@@ -4532,7 +4532,7 @@
     },
     {
       "entries": ["execution/surface-no-rerolls"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > rewardRerolled({kind:wheelOffer,wheelKey:wheel1,offerKey:offer1}) > #2 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #3 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > rewardRerolled({kind:wheelOffer,wheelKey:wheel1,offerKey:offer1}) > #2 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #3 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | #2 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #3 Combat1 | doorsOpened",
       "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #3"]
     },
@@ -4541,7 +4541,7 @@
         "checkpoint/surface-shrine-travel-deal",
         "surface/surfaceShrineTravelDealProject"
       ],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > #3 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill]) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > #3 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill]) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | #3 | doorsOpened",
       "loot": [
         "encounterEnd:Combat1: interactWheelReward:wheel1 required #2",
@@ -4578,13 +4578,13 @@
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject"
       ],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
       "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #2"]
     },
     {
       "entries": ["execution/surface-shrine-deliveries", "execution/surface-start-q-opening"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > hermesShrineDeliveriesScheduled > #3 > hermesShrinePurchaseReached(initial:first) > #4 > hermesShrineRushReached(initial:first) > #5 > hermesShrinePurchaseReached(travelDealRefill) > #6 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,initial:first]) > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > hermesShrineDeliveriesScheduled > #3 > hermesShrinePurchaseReached(initial:first) > #4 > hermesShrineRushReached(initial:first) > #5 > hermesShrinePurchaseReached(travelDealRefill) > #6 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,initial:first]) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened | #3 | #4 | #5 | #6",
       "loot": [
         "encounterEnd:Combat1: interactWheelReward:wheel1 required #2",
@@ -4593,7 +4593,7 @@
     },
     {
       "entries": ["execution/surface-shrine-rushed-unranked"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > hermesShrineDeliveriesScheduled > #3 > hermesShrinePurchaseReached(initial:first) > #4 > hermesShrineRushReached(initial:first) > #5 > hermesShrinePurchaseReached(travelDealRefill) > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > hermesShrineDeliveriesScheduled > #3 > hermesShrinePurchaseReached(initial:first) > #4 > hermesShrineRushReached(initial:first) > #5 > hermesShrinePurchaseReached(travelDealRefill) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened | #3 | #4 | #5",
       "loot": [
         "encounterEnd:Combat1: interactWheelReward:wheel1 required #2",
@@ -4605,7 +4605,7 @@
         "checkpoint/surface-no-hermes-shrine-delivery",
         "surface/createSurfaceNOHermesShrineDeliveryCheckpoint"
       ],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > hermesShrineDeliveriesScheduled > #3 > hermesShrinePurchaseReached(initial:first) > #4 > hermesShrineRushReached(initial:first) > #5 > hermesShrinePurchaseReached(initial:secondLeft) > #6 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,initial:first]) > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > hermesShrineDeliveriesScheduled > #3 > hermesShrinePurchaseReached(initial:first) > #4 > hermesShrineRushReached(initial:first) > #5 > hermesShrinePurchaseReached(initial:secondLeft) > #6 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,initial:first]) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened | #3 | #4 | #5 | #6",
       "loot": [
         "encounterEnd:Combat1: interactWheelReward:wheel1 required #2",
@@ -4614,7 +4614,7 @@
     },
     {
       "entries": ["surface/oShipWheelPickupBeforeDeferredEndEffects"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > encounterRecorded(Combat2) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > offerPointMaterialized(wheel2) > #3 > encounterStarted(Combat2) > encounterDepthAdvanced(Combat2) > encounterCompleted(Combat2 deferred) > #4 > offerPointAcquired(wheel2) > encounterEndEffectsApplied(Combat2) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > encounterRecorded(Combat2) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > offerPointMaterialized(wheel2) > #3 > encounterStarted(Combat2) > encounterDepthAdvanced(Combat2) > encounterCompleted(Combat2 deferred) > #4 > offerPointAcquired(wheel2) > encounterEndEffectsApplied(Combat2) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | wheelsOpen wheel2 | encounterBegun Combat2 | #3 Combat2 | encounterStarted Combat2 | encounterEnd Combat2 | #4 Combat2 | doorsOpened",
       "loot": [
         "encounterEnd:Combat1: interactWheelReward:wheel1 required #2",
@@ -4651,7 +4651,7 @@
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject"
       ],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
       "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #2"]
     },
@@ -4660,7 +4660,7 @@
         "execution/surface-scheduled-lifecycle",
         "checkpoint/surface-scheduled-lifecycle"
       ],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > #3 > encounterInteractionReached(Combat1 encounter) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > #3 > encounterInteractionReached(Combat1 encounter) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | #3 Combat1 | doorsOpened",
       "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #2"]
     },
@@ -4670,7 +4670,7 @@
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-start-q-opening"
       ],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondRight]) > #2 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #3 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > #4 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,travelDealRefill]) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondRight]) > #2 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #3 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > #4 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,travelDealRefill]) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 | #2 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #3 Combat1 | #4 | doorsOpened",
       "loot": [
         "wheelsOpen:Intro: interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondRight] required #1",
@@ -4680,7 +4680,7 @@
     },
     {
       "entries": ["surface/oShipWheelPickupBeforeDeferredEndEffects"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
       "loot": []
     }
@@ -4816,13 +4816,13 @@
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject"
       ],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
       "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #2"]
     },
     {
       "entries": ["surface/oShipWheelPickupBeforeDeferredEndEffects"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
       "loot": []
     }
@@ -6083,7 +6083,7 @@
   "O/dream-o-first-ship O_Combat04": [
     {
       "entries": ["execution/dream-o-skipped-ship"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
       "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #2"]
     }
@@ -6091,7 +6091,7 @@
   "O/dream-o-second-ship O_Combat07": [
     {
       "entries": ["execution/dream-o-skipped-ship"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
       "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #2"]
     }
@@ -6125,7 +6125,7 @@
   "O/dream-o-return-ship O_Combat01": [
     {
       "entries": ["execution/dream-o-skipped-ship"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
       "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #2"]
     }
@@ -7006,7 +7006,7 @@
   "O/e2f90be5-7502-486c-9070-33274cc472d7 O_Combat04": [
     {
       "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
       "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #2"]
     }
@@ -7052,7 +7052,7 @@
   "O/f5cd94da-1e74-40a0-8161-fc0c58c3f384 O_Combat10": [
     {
       "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > encounterRecorded(Combat2) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro applied) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > offerPointMaterialized(wheel2) > #3 > encounterStarted(Combat2) > encounterDepthAdvanced(Combat2) > encounterCompleted(Combat2 deferred) > #4 > offerPointAcquired(wheel2) > encounterEndEffectsApplied(Combat2) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > encounterRecorded(Combat2) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > offerPointMaterialized(wheel2) > #3 > encounterStarted(Combat2) > encounterDepthAdvanced(Combat2) > encounterCompleted(Combat2 deferred) > #4 > offerPointAcquired(wheel2) > encounterEndEffectsApplied(Combat2) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | wheelsOpen wheel2 | encounterBegun Combat2 | #3 Combat2 | encounterStarted Combat2 | encounterEnd Combat2 | #4 Combat2 | doorsOpened",
       "loot": [
         "encounterEnd:Combat1: interactWheelReward:wheel1 required #2",

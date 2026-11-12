@@ -2283,7 +2283,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     );
     expect(row).toMatchObject({
       participation: 'required',
-      window: { kind: 'standard', phase: 'afterCombat' },
+      label: expect.objectContaining({ kind: 'afterCombat' }),
       rank: expect.any(Number),
       dependencies: [
         {
@@ -2656,7 +2656,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     );
     expect(generatedRow).toMatchObject({
       participation: 'optional',
-      window: { kind: 'standard', phase: 'afterCombat' },
+      label: expect.objectContaining({ kind: 'afterCombat' }),
       dependencies: [
         {
           kind: 'afterAction',

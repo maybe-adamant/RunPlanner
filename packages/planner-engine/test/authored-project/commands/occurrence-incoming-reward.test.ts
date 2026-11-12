@@ -398,7 +398,7 @@ describe('authored-project incoming reward commands', () => {
     expect(child).toMatchObject({
       kind: 'action',
       participation: source?.kind === 'action' ? source.participation : undefined,
-      window: source?.kind === 'action' ? source.window : undefined,
+      bounds: source?.kind === 'action' ? source.bounds : undefined,
       // A dependency names its row by key, without the item's content.
       dependencies: [
         {

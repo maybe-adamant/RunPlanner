@@ -13,18 +13,16 @@ export {
   scopeRoomLifecycleTimeline,
 } from './timeline';
 export type {
-  RoomActionCheckpoint,
-  RoomActionCheckpointContribution,
   RoomActionContribution,
   RoomActionDependency,
   RoomActionParticipation,
   RoomActionProposal,
   RoomActionRoster,
-  RoomActionRosterContribution,
   RoomActionRosterIssue,
   RoomActionRow,
   RoomActionRowLabel,
-  RoomActionWindow,
+  RoomActionBounds,
+  RoomEventPoint,
 } from './model';
 export type {
   RoomLifecycleBoundary,

@@ -12,7 +12,7 @@ import {
   type RoomEventGraph,
 } from '@run-planner/engine/authored-project';
 import type { RoomActionDependency } from '../../../src/authored-project/room-actions/domain';
-import type { RoomActionWindow } from '../../../src/authored-project/room-actions/event-graph';
+import { boundsForPlacement, type TestRowPlacement } from '../../support/room-action-bounds';
 import {
   assessRoomActionMove,
   assessRoomActionOrder,
@@ -56,31 +56,37 @@ const press: RoomActionReference = { kind: 'unlockExit', exitKey: 'exit2' };
 function action(
   reference: RoomActionReference,
   participation: 'required' | 'optional',
-  window: RoomActionWindow,
+  placement: TestRowPlacement,
   dependencies: RoomActionDependency[] = [],
 ) {
-  return { kind: 'action' as const, reference, owner, participation, window, dependencies };
+  return {
+    kind: 'action' as const,
+    reference,
+    owner,
+    participation,
+    bounds: boundsForPlacement(placement, structure),
+    dependencies,
+  };
 }
 
 function context(terminalActionKey?: string) {
   return roomActionOrderContext({
     eventGraph: structure,
     contributions: [
-      action(before, 'required', { kind: 'standard', phase: 'beforeCombat' }),
-      action(prep, 'optional', { kind: 'standard', phase: 'beforeCombat' }),
-      action(reward, 'required', { kind: 'standard', phase: 'afterCombat' }),
-      action(dependent, 'required', { kind: 'standard', phase: 'afterCombat' }, [
+      action(before, 'required', { kind: 'beforeCombat' }),
+      action(prep, 'optional', { kind: 'beforeCombat' }),
+      action(reward, 'required', { kind: 'afterCombat' }),
+      action(dependent, 'required', { kind: 'afterCombat' }, [
         { kind: 'afterAction', action: reward },
       ]),
-      action(optional, 'optional', { kind: 'standard', phase: 'afterCombat' }),
-      action(press, 'optional', { kind: 'postOutgoing' }, [
-        { kind: 'afterCheckpoint', checkpointKey: 'exitUsable' },
-      ]),
+      action(optional, 'optional', { kind: 'afterCombat' }),
       {
-        kind: 'checkpoint' as const,
-        checkpointKey: 'exitUsable',
-        label: 'Exit usable',
-        window: { kind: 'postOutgoing' as const },
+        ...action(press, 'optional', { kind: 'afterDoorsOpen' }),
+        bounds: {
+          spawn: { kind: 'roomEntered' as const },
+          enabler: { kind: 'exitsReady' as const },
+          deadline: { kind: 'leave' as const },
+        },
       },
     ],
     ...(terminalActionKey === undefined ? {} : { terminalActionKey }),
@@ -117,12 +123,11 @@ describe('room action insertion legality', () => {
     // The required before-combat action's deadline passes before the reward's window opens.
     expect(assessRoomActionInsertion([before, optional], reward, 0, context()).blockers).toEqual([
       {
-        kind: 'requiredFirst',
+        kind: 'beforeSpawn',
         reference: reward,
         detail: `must follow ${roomActionKey(before)}, a required action of an earlier window`,
-        window: { kind: 'standard', phase: 'afterCombat' },
+        point: { kind: 'encounterEnd', phaseKey: 'Encounter' },
         requiredAction: before,
-        requiredWindow: { kind: 'standard', phase: 'beforeCombat' },
       },
     ]);
     // An optional action of an earlier window takes no part.
@@ -139,7 +144,7 @@ describe('room action insertion legality', () => {
         detail: expect.stringMatching(/^must follow/),
       }),
       expect.objectContaining({
-        kind: 'requiredFirst',
+        kind: 'beforeSpawn',
         reference: dependent,
         requiredAction: before,
       }),
@@ -153,15 +158,15 @@ describe('room action insertion legality', () => {
     // dependent follows a later window.
     expect(at(4).blockers).toEqual([
       expect.objectContaining({
-        kind: 'dependency',
+        kind: 'beforeEnabler',
         reference: press,
-        dependency: { kind: 'afterCheckpoint', checkpointKey: 'exitUsable' },
+        point: { kind: 'exitsReady' },
       }),
       expect.objectContaining({
-        kind: 'window',
+        kind: 'pastDeadline',
         reference: dependent,
         precedingAction: press,
-        precedingWindow: { kind: 'postOutgoing' },
+        deadline: { kind: 'exitsReady' },
       }),
     ]);
     expect(legalIndexes(order, dependent)).toEqual([2, 3]);
@@ -173,20 +178,24 @@ describe('room action insertion legality', () => {
     // The press precedes the required dependent: an issue of the press.
     const order = [before, reward, press, dependent];
     expect(issueKinds(order)).toEqual([
-      ['dependency', roomActionKey(press)],
-      ['window', roomActionKey(dependent)],
-      ['requiredFirst', roomActionKey(press)],
+      ['beforeEnabler', roomActionKey(press)],
+      ['pastDeadline', roomActionKey(dependent)],
+      ['beforeEnabler', roomActionKey(press)],
     ]);
     expect(legalIndexes(order, optional)).toEqual([1, 2]);
     expect(assessRoomActionInsertion(order, optional, 3, context()).blockers).toEqual([
       expect.objectContaining({
-        kind: 'dependency',
+        kind: 'beforeEnabler',
         reference: press,
-        dependency: expect.objectContaining({ kind: 'afterCheckpoint' }),
+        point: { kind: 'exitsReady' },
       }),
-      expect.objectContaining({ kind: 'window', reference: optional, precedingAction: press }),
       expect.objectContaining({
-        kind: 'requiredFirst',
+        kind: 'pastDeadline',
+        reference: optional,
+        precedingAction: press,
+      }),
+      expect.objectContaining({
+        kind: 'beforeEnabler',
         reference: press,
         requiredAction: dependent,
       }),
@@ -196,7 +205,7 @@ describe('room action insertion legality', () => {
   it('accepts an index that invalidates a later row, which then carries its issue', () => {
     const inserted = assessRoomActionInsertion([prep, optional], reward, 0, context());
     expect(inserted).toMatchObject({ structurallyAuthorable: true, blockers: [] });
-    expect(issueKinds(inserted.order)).toEqual([['window', roomActionKey(prep)]]);
+    expect(issueKinds(inserted.order)).toEqual([['pastDeadline', roomActionKey(prep)]]);
   });
 
   it('judges a move like an insertion at its target', () => {
@@ -204,28 +213,28 @@ describe('room action insertion legality', () => {
     // After the required action, the optional row passes the walk; prep then finds its window closed.
     const early = assessRoomActionMove(order, 3, 1, context());
     expect(early).toMatchObject({ structurallyAuthorable: true, blockers: [] });
-    expect(issueKinds(early.order)).toEqual([['window', roomActionKey(prep)]]);
+    expect(issueKinds(early.order)).toEqual([['pastDeadline', roomActionKey(prep)]]);
     // Ahead of the required before-combat action it is not reached.
     expect(assessRoomActionMove(order, 3, 0, context()).blockers).toEqual([
       expect.objectContaining({
-        kind: 'requiredFirst',
+        kind: 'beforeSpawn',
         reference: optional,
         requiredAction: before,
       }),
     ]);
     // Past the press, the press in its prefix precedes the required reward.
     expect(assessRoomActionMove(order, 2, 4, context()).blockers).toEqual([
-      expect.objectContaining({ kind: 'dependency', reference: press }),
-      expect.objectContaining({ kind: 'window', reference: reward }),
+      expect.objectContaining({ kind: 'beforeEnabler', reference: press }),
+      expect.objectContaining({ kind: 'pastDeadline', reference: reward }),
     ]);
     // The press moved before a required action waits on it itself.
     expect(assessRoomActionMove(order, 4, 2, context()).blockers).toEqual([
       expect.objectContaining({
-        kind: 'dependency',
+        kind: 'beforeEnabler',
         reference: press,
-        dependency: expect.objectContaining({ kind: 'afterCheckpoint' }),
+        point: { kind: 'exitsReady' },
       }),
-      expect.objectContaining({ kind: 'requiredFirst', reference: press, requiredAction: reward }),
+      expect.objectContaining({ kind: 'beforeEnabler', reference: press, requiredAction: reward }),
     ]);
   });
 
@@ -252,8 +261,8 @@ describe('room action insertion legality', () => {
     expect(assessRoomActionPlacement(group, 3, context()).structurallyAuthorable).toBe(true);
     const reversed = [before, optional, press, reward];
     expect(assessRoomActionPlacement(reversed, 3, context()).blockers).toEqual([
-      expect.objectContaining({ kind: 'dependency', reference: press }),
-      expect.objectContaining({ kind: 'window', reference: reward }),
+      expect.objectContaining({ kind: 'beforeEnabler', reference: press }),
+      expect.objectContaining({ kind: 'pastDeadline', reference: reward }),
     ]);
     // A placed row's prefix ends at that row: the reward at 2 is judged before the press.
     expect(assessRoomActionPlacement(reversed, 1, context()).structurallyAuthorable).toBe(true);
@@ -265,22 +274,21 @@ describe('room action insertion legality', () => {
     // earliest-window required action after each row.
     expect(
       assessRoomActionOrder([optional, reward, before], context()).filter(
-        (issue) => issue.kind === 'requiredFirst',
+        (issue) => 'requiredAction' in issue,
       ),
     ).toEqual([
       expect.objectContaining({ reference: optional, requiredAction: before }),
       {
-        kind: 'requiredFirst',
+        kind: 'beforeSpawn',
         reference: reward,
         detail: `must follow ${roomActionKey(before)}, a required action of an earlier window`,
-        window: { kind: 'standard', phase: 'afterCombat' },
+        point: { kind: 'encounterEnd', phaseKey: 'Encounter' },
         requiredAction: before,
-        requiredWindow: { kind: 'standard', phase: 'beforeCombat' },
       },
     ]);
     // Only a required action sets a deadline: an optional earlier-window row
     // after a later one is that row's own window issue.
-    expect(issueKinds([before, optional, prep])).toEqual([['window', roomActionKey(prep)]]);
+    expect(issueKinds([before, optional, prep])).toEqual([['pastDeadline', roomActionKey(prep)]]);
   });
 
   it('sets no deadline for a required action placed at a phase the room does not play', () => {
@@ -293,13 +301,13 @@ describe('room action insertion legality', () => {
     const retained = roomActionOrderContext({
       eventGraph: structure,
       contributions: [
-        action(reward, 'required', { kind: 'standard', phase: 'afterCombat' }),
-        action(delivery, 'required', { kind: 'encounterEnd', phaseKey: 'Gone' }),
+        action(reward, 'required', { kind: 'afterCombat' }),
+        action(delivery, 'required', { kind: 'afterEncounterEnd', phaseKey: 'Gone' }),
       ],
     });
     expect(
       assessRoomActionOrder([reward, delivery], retained).some(
-        (issue) => issue.kind === 'requiredFirst',
+        (issue) => 'requiredAction' in issue,
       ),
     ).toBe(false);
   });
