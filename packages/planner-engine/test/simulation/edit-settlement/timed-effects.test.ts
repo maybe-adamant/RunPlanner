@@ -467,7 +467,7 @@ describe('timed-effect edit settlement', () => {
     ).toBe(false);
   });
   it.each(['reschedule', 'restore'] as const)(
-    'keeps nested Hermes choices on %s only with its item',
+    'drops inherited nested Hermes choices on %s without correspondence',
     (operation) => {
       const o = createBiomeAddress('Surface', 'O');
       const source = createOccurrenceAddress(o, createOccurrenceId('surface-o-combat07'));
@@ -539,13 +539,17 @@ describe('timed-effect edit settlement', () => {
             }
           : { kind: 'PlaceHermesShrineDelivery', entry },
       );
-      // Rescheduled, it is the same item: it stays with its old host, choices kept, until it
-      // is placed where it is due.
+      // Rescheduled, the old delivery item goes with its host's entry: nothing is left behind.
       if (operation === 'reschedule')
         expect(
-          occurrence(settled.project, 'surface-o-devotion').acquisitionSites?.hermesShrineDelivery
-            ?.pickupEntries?.[entryKey]?.offer,
-        ).toEqual(apollo);
+          settled.project.route.biomes
+            .flatMap((biome) => biome.topology?.occurrences ?? [])
+            .filter(
+              (room) =>
+                room.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey] !==
+                undefined,
+            ),
+        ).toEqual([]);
       // A rescheduled delivery lies live at its new host until it is picked up there.
       const placed =
         operation === 'reschedule' ? collectTestRequiredItems(settled.project) : settled.project;
@@ -564,10 +568,8 @@ describe('timed-effect edit settlement', () => {
       expect(retained).toHaveLength(1);
       if (operation === 'reschedule')
         expect(retained[0]!.room.occurrenceId).not.toBe('surface-o-devotion');
-      if (operation === 'reschedule') {
-        expect(retained[0]!.reward?.offer).toEqual(apollo);
-        expect(retained[0]!.reward?.traitOffersByAcquisitionRole.hiddenSource).toMatchObject(value);
-      } else expect(retained[0]!.reward).toBeNull();
+      expect(retained[0]!.reward).toBeNull();
+      expect(retained[0]!.reward?.traitOffersByAcquisitionRole.hiddenSource).not.toEqual(value);
       const history = publishProjectHistoryEdit(createProjectHistory(project), settled.project);
       expect(undoProjectHistory(history).present).toBe(project);
     },

@@ -32,7 +32,6 @@ import {
   parseHermesShrineDeliveryEntryKey,
   purchasedOfferFor,
   removeHermesShrineDeliveryFromOtherHosts,
-  retainedHermesShrineDeliveryPayload,
 } from '../../hermes-shrine-delivery';
 import { createBiomeAddress } from '../../addresses';
 import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
@@ -257,10 +256,9 @@ export function applyAcquisitionSiteCommand(
     if (actionAlreadyOrdered) refuseIndexWhenPlaced(command);
     if (actionAlreadyOrdered && existingEntries[command.entry.entryKey] !== undefined)
       return removeHermesShrineDeliveryFromOtherHosts(document, command.entry.entryKey, site.owner);
-    // A payload kept at any host is the same delivery, wherever it arrives.
-    const retainedReward =
-      existingEntries[command.entry.entryKey] ??
-      retainedHermesShrineDeliveryPayload(document, command.entry.entryKey);
+    // A payload kept at this host is the same delivery; one kept at another host belonged to a
+    // delivery due elsewhere, so this one arrives new, with none of its choices.
+    const retainedReward = existingEntries[command.entry.entryKey];
     const relocatedReward =
       retainedReward !== undefined &&
       (retainedReward === null || retainedReward.offer.rewardType === sourceOffer.rewardType)

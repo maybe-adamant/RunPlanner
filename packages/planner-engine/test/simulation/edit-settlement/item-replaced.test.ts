@@ -39,10 +39,7 @@ import {
 } from '../../../src/simulation/candidates/evaluated-biome';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { createSurfaceOSameRoomHermesDeliveriesCheckpoint } from '@run-planner/test-fixtures/surface';
-import {
-  collectTestRequiredItems,
-  placeTestLivePickupsAtSite,
-} from '@run-planner/test-fixtures/shared';
+import { placeTestLivePickupsAtSite } from '@run-planner/test-fixtures/shared';
 import { roomActionsOnReplacedItems } from '../../../src/authored-project/room-actions/replaced-items';
 import { withArcana, withGoldenUnderworldJudgments, withJudgment } from '../../support/rerolls';
 import { liveInteractionsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/live-interactions';
@@ -811,10 +808,9 @@ describe('rows on a replaced item in edit settlement', () => {
       expect(settled.removedStaleActions).toBeUndefined();
     });
 
-    it('keeps it as the same item when it comes due at another host', () => {
+    it('discards it at its old host, announced, when it comes due at another', () => {
       const project = loadCheckpoint('surface-no-hermes-shrine-delivery');
       const delivery = placedDelivery(project);
-      const before = deliveryAt(project, entryOf(delivery));
       const settled = settle(project, {
         kind: 'SetHermesShrineOfferDelay',
         occurrence: shrine,
@@ -822,31 +818,19 @@ describe('rows on a replaced item in edit settlement', () => {
         delay: 4,
       });
       expect(settled.fault).toBeUndefined();
-      // Its row leaves the old host, which keeps the item until it is placed where it is due.
       expect(deliveryAt(settled.assembly.project, entryOf(delivery))).toEqual({
-        offer: before.offer,
+        offer: undefined,
         placed: false,
       });
-      expect(settled.removedStaleActions).toEqual([{ occurrence: host, actions: [delivery] }]);
+      expect(settled.removedStaleActions).toEqual([
+        { occurrence: host, actions: [delivery], discarded: [{ item: entryOf(delivery) }] },
+      ]);
+      // It arrives at its new host as a new item, live to be placed there.
       expect(
         settled.assembly.evaluation.findings.some(
           (finding) => finding.code === 'hermesShrineDeliveryPlacementRequired',
         ),
       ).toBe(true);
-      const collected = collectTestRequiredItems(settled.assembly.project);
-      expect(deliveryAt(collected, entryOf(delivery))).toEqual({ offer: undefined, placed: false });
-      const hosts = collected.route.biomes.flatMap((plan) =>
-        (plan.topology?.occurrences ?? []).flatMap((room) => {
-          const payload =
-            room.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[
-              entryOf(delivery).entryKey
-            ];
-          return payload === undefined ? [] : [{ room: room.occurrenceId, offer: payload?.offer }];
-        }),
-      );
-      expect(hosts).toEqual([
-        { room: expect.not.stringMatching(host.occurrenceId), offer: before.offer },
-      ]);
     });
   });
 

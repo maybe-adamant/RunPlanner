@@ -118,7 +118,7 @@ export interface RemovedRoomDoor {
 
 /**
  * An item whose observations an edit discarded because the item was replaced:
- * a Hermes delivery whose Shrine stock changed or source is gone, a rerolled reward whose
+ * a Hermes delivery whose host or Shrine stock changed, a rerolled reward whose
  * press is no longer its effective one, or an Echo replay of another reward.
  */
 export interface DiscardedRoomObservation {
@@ -708,21 +708,46 @@ function deliveryPayloadsOffTheirSource(project: ProjectDocument): ReadonlySet<s
  * Delivery items an edit replaced: a payload whose source no longer produces
  * it or whose Shrine slot stocks another reward, judged in every room as a
  * row on a replaced item is (one the plan held so before the edit, `prior`,
- * goes only with an edit of its host, and an upgrade takes every one).
+ * goes only with an edit of its host, and an upgrade takes every one), and a
+ * payload retained unplaced at a host while the walk has its delivery due at
+ * another, judged only where the walk reaches (a placed one is the displaced
+ * pass's).
  */
 function replacedDeliveryPayloads(
   prior: ReadonlySet<string>,
   edited: RoomEdited,
-  project: ProjectDocument,
+  assembly: ProjectEvaluationAssembly,
+  artifacts: CandidateArtifacts,
 ): { owner: OccurrenceAddress; entryKey: string }[] {
-  const offSource = deliveryPayloadsOffTheirSource(project);
+  const rooms = occurrences(assembly.project);
+  const dueHosts = new Map<string, string>();
+  for (const { owner } of rooms) {
+    const site = createAcquisitionSiteAddress(owner, HERMES_SHRINE_DELIVERY_SITE_KEY);
+    for (const { address, capability } of artifacts
+      .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
+      ?.derivedAcquisitionEntries.entriesAt(site) ?? [])
+      if (capability.kind === 'hermesShrineDelivery')
+        dueHosts.set(address.entryKey, semanticAddressKey(owner));
+  }
+  const offSource = deliveryPayloadsOffTheirSource(assembly.project);
   const replaced: { owner: OccurrenceAddress; entryKey: string }[] = [];
-  for (const { owner, occurrence } of occurrences(project)) {
+  for (const { owner, occurrence } of rooms) {
     const entries = occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY]?.pickupEntries;
     for (const entryKey of Object.keys(entries ?? {})) {
       const key = `${semanticAddressKey(owner)}|${entryKey}`;
-      if (offSource.has(key) && (!prior.has(key) || edited(project, owner)))
+      if (offSource.has(key) && (!prior.has(key) || edited(assembly.project, owner))) {
         replaced.push({ owner, entryKey });
+        continue;
+      }
+      const dueHost = dueHosts.get(entryKey);
+      if (dueHost === undefined || dueHost === semanticAddressKey(owner)) continue;
+      const placed = occurrence.roomActions.order.some(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.siteKey === HERMES_SHRINE_DELIVERY_SITE_KEY &&
+          reference.entryKey === entryKey,
+      );
+      if (!placed) replaced.push({ owner, entryKey });
     }
   }
   return replaced;
@@ -1264,7 +1289,12 @@ function settleProject(options: {
     const artifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
     // An installed route keeps exactly the rows it was authored with.
     if (command?.kind === 'ReplaceRoute') return settled(assembly);
-    const deliveries = replacedDeliveryPayloads(priorDeliveriesOffSource, edited, assembly.project);
+    const deliveries = replacedDeliveryPayloads(
+      priorDeliveriesOffSource,
+      edited,
+      assembly,
+      artifacts,
+    );
     if (deliveries.length > 0) {
       for (const { owner, entryKey } of deliveries) {
         const address = createAcquisitionEntryAddress(
