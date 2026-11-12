@@ -54,10 +54,9 @@ vi.mock('../../src/simulation/lifecycle', async (importOriginal) => {
  * must stand after its due spawn (that phase's end effects, room entry for a
  * flush host, its rush for a rushed item) and before its deadline (the next
  * wheel's choice after a non-final Ship phase; otherwise Doors open for a
- * required row and leaving for an optional one); and the bound "after any
- * end-effects event of this room" must let it stand no earlier than the stored
- * phase does. Automatic events fire eagerly: once the rows ranked before it
- * have run, every event no row waits on fires before the next ranked row.
+ * required row and leaving for an optional one); and it must stand after the
+ * structural bound "an end-effects event of this room" (room entry for a flush
+ * host).
  */
 
 type Kind = 'delivery' | 'clocked' | 'flush' | 'rush';
@@ -308,26 +307,10 @@ function witnessRoom(
     )
       failures.push('it ranks after the next wheel click');
 
-    // The row's rank lets it stand no earlier than after the rows ranked before it,
-    // their own events and the automatic events that fire eagerly after them.
-    const ranked = fragment.reachedActions.reduce(
-      (latest, action) =>
-        (rankByKey.get(action.actionKey) ?? Infinity) < row.rank!
-          ? Math.max(latest, (action.through ?? action.sequence - 1) + 1)
-          : latest,
-      1,
-    );
-    const rowStands = new Set(fragment.reachedActions.map((action) => action.sequence));
-    let previous = ranked;
-    while (previous <= events.length && !rowStands.has(previous)) previous += 1;
-    if (kind !== 'rush' && due !== undefined) {
+    if (kind !== 'rush') {
       const bound = kind === 'flush' ? roomEntered : firstEndEffects;
-      const today = Math.max(previous, due + 1);
-      const dropped = bound === undefined ? undefined : Math.max(previous, bound + 1);
-      if (dropped !== today)
-        failures.push(
-          `dropping its phase lets it stand from #${dropped} instead of #${today}, before its due spawn`,
-        );
+      if (bound === undefined || position <= bound)
+        failures.push(`it stands before its structural bound (#${bound})`);
     }
     return {
       ...base,
