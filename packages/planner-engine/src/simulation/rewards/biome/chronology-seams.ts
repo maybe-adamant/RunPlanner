@@ -177,7 +177,7 @@ function placementDeadline(
       : {
           sequence: closingEvent.sequence,
           deadline: Object.freeze({
-            deadline: closingEvent.kind === 'roomCommitted' ? 'leave' : 'doorsOpen',
+            deadline: closingEvent.kind === 'roomCommitted' ? 'leave' : 'doorsOpened',
           }),
         };
   if (room === undefined) return closing;

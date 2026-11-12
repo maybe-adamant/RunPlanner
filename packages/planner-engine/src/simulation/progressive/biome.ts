@@ -225,9 +225,7 @@ function lifecycleBlockFindings(
           : {
               deadline: deadline.kind,
               ...(deadline.kind === 'action' ? { deadlineAction: deadline.actionKey } : {}),
-              ...(deadline.kind === 'encounter' || deadline.kind === 'phaseEnd'
-                ? { deadlinePhase: deadline.phaseKey }
-                : {}),
+              ...('phaseKey' in deadline ? { deadlinePhase: deadline.phaseKey } : {}),
             },
       ),
     }),

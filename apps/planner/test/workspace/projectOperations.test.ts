@@ -621,7 +621,7 @@ describe('project operations', () => {
         candidate.origin.site.owner.occurrenceId === 'c34604d0-c4e3-4c26-8539-54a82158716f',
     );
     // Reached past the outcome, the delivery waits on the ground until the owner picks it up.
-    expect(deliveryFinding).toMatchObject({ evidence: { deadline: 'doorsOpen' } });
+    expect(deliveryFinding).toMatchObject({ evidence: { deadline: 'doorsOpened' } });
     const host = application.store
       .getState()
       .projectWorkspace.history!.present.route.biomes.flatMap(

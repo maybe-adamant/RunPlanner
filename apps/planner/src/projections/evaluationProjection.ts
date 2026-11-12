@@ -977,13 +977,14 @@ function requiredDeadlineCopy(
   labels: FindingLabels | undefined,
 ): string | undefined {
   switch (evidenceString(finding.evidence.deadline)) {
-    case 'doorsOpen':
+    case 'doorsOpened':
+    case 'exitsReady':
       return 'before the doors open';
     case 'leave':
       return 'before leaving';
-    case 'encounter':
+    case 'encounterStarted':
       return 'before the fight';
-    case 'phaseEnd':
+    case 'endEffects':
       return 'before this phase ends';
     case 'action': {
       const actionKey = evidenceString(finding.evidence.deadlineAction);

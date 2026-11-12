@@ -261,7 +261,7 @@ describe('Heracles’s bounty', () => {
         finding.code,
         finding.evidence,
       ]),
-    ).toEqual([['roomActionPlacementRequired', { deadline: 'doorsOpen' }]]);
+    ).toEqual([['roomActionPlacementRequired', { deadline: 'doorsOpened' }]]);
     const duplicated = procTestSeaStar(project, catalog, room, bountySource);
     const gold = spending(duplicated);
     const paid = bountyGains(gold);

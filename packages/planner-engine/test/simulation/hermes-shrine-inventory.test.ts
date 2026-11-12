@@ -2545,7 +2545,7 @@ it('retains placement rejection for a row placed at a phase the room does not pl
     'hermesShrineDeliveryPlacementRequired',
     'rewardSourceUnavailable',
   ]);
-  expect(evaluation.findings[0]).toMatchObject({ evidence: { deadline: 'doorsOpen' } });
+  expect(evaluation.findings[0]).toMatchObject({ evidence: { deadline: 'doorsOpened' } });
   const placement = evaluation.rewards.generatedPickupPlacements?.find(
     (candidate) => candidate.address.entryKey === entry.entryKey,
   );

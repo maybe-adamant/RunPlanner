@@ -1011,7 +1011,7 @@ describe('single-room lifecycle execution', () => {
       );
       if (placed.length === 0) {
         expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(reward));
-        expect(fragment.blockedDeadline).toEqual({ kind: 'phaseEnd', phaseKey: 'Encounter' });
+        expect(fragment.blockedDeadline).toEqual({ kind: 'endEffects', phaseKey: 'Encounter' });
       } else {
         // The delivery spawns at the end effects, which pass the reward's deadline.
         expect(roster.issues).toContainEqual(
@@ -1070,7 +1070,7 @@ describe('single-room lifecycle execution', () => {
       roomActionKey(reward),
     );
     expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(delivery));
-    expect(fragment.blockedDeadline).toEqual({ kind: 'doorsOpen' });
+    expect(fragment.blockedDeadline).toEqual({ kind: 'doorsOpened' });
   });
 
   it("keeps an earlier same-window row's own events apart from the pickup it precedes", () => {

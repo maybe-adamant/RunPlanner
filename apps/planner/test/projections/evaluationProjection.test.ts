@@ -758,10 +758,10 @@ describe('a required item left unplaced', () => {
   });
 
   it.each([
-    [{ deadline: 'doorsOpen' }, 'Use Fountain before the doors open'],
+    [{ deadline: 'doorsOpened' }, 'Use Fountain before the doors open'],
     [{ deadline: 'leave' }, 'Use Fountain before leaving'],
-    [{ deadline: 'encounter', deadlinePhase: 'Combat1' }, 'Use Fountain before the fight'],
-    [{ deadline: 'phaseEnd', deadlinePhase: 'Combat1' }, 'Use Fountain before this phase ends'],
+    [{ deadline: 'encounterStarted', deadlinePhase: 'Combat1' }, 'Use Fountain before the fight'],
+    [{ deadline: 'endEffects', deadlinePhase: 'Combat1' }, 'Use Fountain before this phase ends'],
     [
       { deadline: 'action', deadlineAction: roomActionKey({ kind: 'interactEris' }) },
       'Use Fountain before meeting Eris',

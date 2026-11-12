@@ -251,19 +251,12 @@ export interface ReachedRoomAction {
 }
 
 /**
- * Where a required action left unplaced fell due: the point the walk could not
- * pass without it.
+ * Where a required action left unplaced fell due: the graph point the walk
+ * could not pass without it, or a placed row of a later window.
  */
 export type RequiredActionDeadline =
-  /** A placed row of a later window. */
-  | { readonly kind: 'action'; readonly actionKey: string }
-  /** The fight it leads to. */
-  | { readonly kind: 'encounter'; readonly phaseKey: string }
-  /** A Ship phase's end effects. */
-  | { readonly kind: 'phaseEnd'; readonly phaseKey: string }
-  | { readonly kind: 'doorsOpen' }
-  /** The room's commit, in a room whose doors do not open. */
-  | { readonly kind: 'leave' };
+  | import('../../authored-project/room-actions/event-graph').RoomEventPoint
+  | { readonly kind: 'action'; readonly actionKey: string };
 
 export interface RoomHistoryFragment {
   readonly origin: RoomHistoryOrigin;

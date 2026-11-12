@@ -91,7 +91,7 @@ describe('a required row left unplaced', () => {
 
     expect(finding).toMatchObject({
       code: 'roomActionPlacementRequired',
-      evidence: { deadline: 'encounter', deadlinePhase: 'Encounter' },
+      evidence: { deadline: 'encounterStarted', deadlinePhase: 'Encounter' },
     });
     expect(finding?.evidence).not.toHaveProperty('deadlineAction');
   });
@@ -105,7 +105,7 @@ describe('a required row left unplaced', () => {
 
     expect(finding).toMatchObject({
       code: 'roomActionPlacementRequired',
-      evidence: { deadline: 'phaseEnd', deadlinePhase: 'Combat1' },
+      evidence: { deadline: 'endEffects', deadlinePhase: 'Combat1' },
     });
   });
 });

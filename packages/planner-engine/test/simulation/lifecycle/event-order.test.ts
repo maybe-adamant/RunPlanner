@@ -87,7 +87,7 @@ function walkText(fragment: RoomHistoryFragment, rankByKey: ReadonlyMap<string, 
         : ` due ${deadline.kind}${
             deadline.kind === 'action'
               ? ` #${rankByKey.get(deadline.actionKey) ?? compactActionKey(deadline.actionKey)}`
-              : deadline.kind === 'encounter' || deadline.kind === 'phaseEnd'
+              : 'phaseKey' in deadline
                 ? ` ${deadline.phaseKey}`
                 : ''
           }`;

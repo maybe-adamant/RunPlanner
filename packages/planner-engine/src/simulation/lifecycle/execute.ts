@@ -123,26 +123,6 @@ function appendEncounterEndEffects(
   });
 }
 
-/** The walk point a required row's deadline names, where an unplaced one falls due. */
-function requiredDeadline(point: RoomEventPoint): RequiredActionDeadline | undefined {
-  switch (point.kind) {
-    case 'encounterStarted':
-      return { kind: 'encounter', phaseKey: point.phaseKey };
-    case 'endEffects':
-      return { kind: 'phaseEnd', phaseKey: point.phaseKey };
-    case 'doorsOpened':
-    case 'exitsReady':
-      return { kind: 'doorsOpen' };
-    case 'leave':
-      return { kind: 'leave' };
-    case 'roomEntered':
-    case 'wheelsOpen':
-    case 'gate':
-    case 'encounterEnd':
-      return undefined;
-  }
-}
-
 /** What the room itself does as the walk passes its stages. */
 const roomEffects = {
   prepare: (context: OperationContext, state: ExecutionState): ExecutionState => {
@@ -554,6 +534,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
 
   const place = roomEventPlaces(eventGraph);
   const leavePoint: RoomEventPoint = Object.freeze({ kind: 'leave' });
+  const doorsOpenedPoint: RoomEventPoint = Object.freeze({ kind: 'doorsOpened' });
   /** Where a row opens: the place its enabler, or else its spawn, holds from. */
   const opening = (row: RoomActionRow) => place(roomActionOpeningPoint(row.bounds));
 
@@ -796,8 +777,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
       cursor += 1;
     }
     if (target === undefined) return state;
-    if (target.rank === null)
-      return blockAt(state, target, requiredDeadline(target.bounds.deadline));
+    if (target.rank === null) return blockAt(state, target, target.bounds.deadline);
     const row = rankedRows[cursor];
     if (row?.key !== target.key || !row.executable) return blockAt(state, row ?? target);
     state = reach(
@@ -819,7 +799,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
     const state = advance({ kind: 'rank', rank: ready.afterRank }, operationIndex, initial);
     if (state.blockedAt !== undefined) return state;
     const missing = ready.unplaced.find((row) => !skippedInteraction(row));
-    return missing === undefined ? state : blockAt(state, missing, { kind: 'doorsOpen' });
+    return missing === undefined ? state : blockAt(state, missing, doorsOpenedPoint);
   };
 
   /** The room is left: every ranked row is taken and no required row is left unplaced. */
@@ -834,7 +814,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
     );
     if (state.blockedAt !== undefined) return state;
     const missing = unplacedBefore(leavePoint);
-    return missing === undefined ? state : blockAt(state, missing, { kind: 'leave' });
+    return missing === undefined ? state : blockAt(state, missing, leavePoint);
   };
 
   /**
@@ -938,9 +918,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
     const missing = unplacedBefore(
       Object.freeze({ kind: 'encounterStarted' as const, phaseKey: phase.slotKey }),
     );
-    return missing === undefined
-      ? state
-      : blockAt(state, missing, requiredDeadline(missing.bounds.deadline));
+    return missing === undefined ? state : blockAt(state, missing, missing.bounds.deadline);
   };
 
   /**
@@ -969,7 +947,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
     if (next.blockedAt !== undefined) return next;
     return unranked === undefined
       ? next
-      : blockAt(next, unranked, { kind: 'phaseEnd', phaseKey: phase.slotKey });
+      : blockAt(next, unranked, { kind: 'endEffects', phaseKey: phase.slotKey });
   };
 
   const afterEndEffects = (

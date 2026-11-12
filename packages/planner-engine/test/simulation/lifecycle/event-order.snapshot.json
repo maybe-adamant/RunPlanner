@@ -220,7 +220,7 @@
     },
     {
       "entries": ["underworld/createFInvalidLaterConversionProject"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpen",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": []
     }
@@ -2570,7 +2570,7 @@
     },
     {
       "entries": ["fresh-file/frontier/00"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:source due doorsOpen",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:source due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": [
         "encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:source required unplaced placeable"
@@ -2622,13 +2622,13 @@
     },
     {
       "entries": ["fresh-file/frontier/01"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpen",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": []
     },
     {
       "entries": ["fresh-file/frontier/02", "fresh-file/frontier/03"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpen",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": [
         "encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required unplaced placeable"
@@ -2763,13 +2763,13 @@
     },
     {
       "entries": ["fresh-file/frontier/04", "fresh-file/frontier/05", "fresh-file/frontier/06"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpen",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": []
     },
     {
       "entries": ["fresh-file/frontier/07", "fresh-file/frontier/08"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpen",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": [
         "encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required unplaced placeable"
@@ -2971,13 +2971,13 @@
         "fresh-file/frontier/11",
         "fresh-file/frontier/12"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpen",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": []
     },
     {
       "entries": ["fresh-file/frontier/13", "fresh-file/frontier/14"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpen",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:self due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": [
         "encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required unplaced placeable"
@@ -3191,7 +3191,7 @@
     },
     {
       "entries": ["underworld/echoReplayUnresolvedHammer"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:source due doorsOpen",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop interactIncomingReward:roomRewardPickup:source due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": []
     }
@@ -3372,7 +3372,7 @@
     },
     {
       "entries": ["checkpoint/surface-n-entry-frontier"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > stop interactIncomingReward:roomRewardPickup:source due encounter Encounter",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > stop interactIncomingReward:roomRewardPickup:source due encounterStarted Encounter",
       "timeline": "roomEntered | encounterBegun Encounter | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": [
         "roomEntered: interactIncomingReward:roomRewardPickup:source required unplaced placeable"
@@ -6266,7 +6266,7 @@
         "fresh-file/frontier/13",
         "fresh-file/frontier/14"
       ],
-      "walk": "roomPrepared > roomEntered > stop interactEris due doorsOpen"
+      "walk": "roomPrepared > roomEntered > stop interactEris due doorsOpened"
     }
   ],
   "G/golden-g-b1-e1": [
@@ -7576,7 +7576,7 @@
   "G/contract-availability-first-entered C_Boss01": [
     {
       "entries": ["underworld/createGContractAvailabilityProject(true)"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop collectRequiredReward due doorsOpen",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > stop collectRequiredReward due doorsOpened",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": []
     }

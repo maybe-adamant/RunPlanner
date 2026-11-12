@@ -335,7 +335,10 @@ describe('gated Opening and Devotion', () => {
       const room = observe(simulate(removed(run.project, origin, reference)), origin);
 
       expect(room.fragment.blockedAt).toMatchObject({ actionKey: roomActionKey(reference) });
-      expect(room.fragment.blockedDeadline).toEqual({ kind: 'encounter', phaseKey: 'Encounter' });
+      expect(room.fragment.blockedDeadline).toEqual({
+        kind: 'encounterStarted',
+        phaseKey: 'Encounter',
+      });
       expect(room.walk).not.toContain('encounterStarted(Encounter)');
       expect(room.walk).not.toContain('encounterDepthAdvanced(Encounter)');
     },
@@ -447,7 +450,7 @@ describe('Ship phase', () => {
     const reference = observe(run, oShip).reference('interactWheelReward:wheel1');
     const room = observe(simulate(removed(run.project, oShip, reference)), oShip);
 
-    expect(room.fragment.blockedDeadline).toEqual({ kind: 'phaseEnd', phaseKey: 'Combat1' });
+    expect(room.fragment.blockedDeadline).toEqual({ kind: 'endEffects', phaseKey: 'Combat1' });
     expect(room.walk).not.toContain('encounterEndEffectsApplied(Combat1)');
     expect(room.walk).not.toContain('encounterStarted(Combat2)');
   });
@@ -798,7 +801,7 @@ describe('Fields', () => {
 
     const reference = room.reference('interactLocalReward:cages:cage1');
     const unplaced = observe(simulate(removed(run.project, hFields, reference)), hFields);
-    expect(unplaced.fragment.blockedDeadline).toEqual({ kind: 'doorsOpen' });
+    expect(unplaced.fragment.blockedDeadline).toEqual({ kind: 'doorsOpened' });
     expect(unplaced.walk).toContain('encounterEndEffectsApplied(Cage01)');
   });
 
