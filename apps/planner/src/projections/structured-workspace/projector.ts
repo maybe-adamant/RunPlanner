@@ -49,6 +49,8 @@ import {
   hubStaysForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
   encounterOutcomesForProjectEvaluationAssembly,
+  fieldsSpatialPositionsForProjectEvaluationAssembly,
+  chaosGatePositionForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -416,6 +418,9 @@ export function createStructuredWorkspaceProjection(
             throw error;
           }
         },
+        (occurrence) =>
+          fieldsSpatialPositionsForProjectEvaluationAssembly(catalog, assembly, occurrence),
+        (gate) => chaosGatePositionForProjectEvaluationAssembly(catalog, assembly, gate),
       );
       const routeSource = sources.route;
       const authoredRoute =

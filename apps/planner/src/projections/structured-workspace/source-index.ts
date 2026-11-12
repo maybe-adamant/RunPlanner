@@ -228,6 +228,14 @@ export interface WorkspaceBiomeSource {
   readonly roomLayout: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomLayoutAuthoring | undefined;
+  /** Where each active Fields slot of a room stands, chosen or default; undefined while unevaluated. */
+  readonly fieldsSpatialPositions: (
+    occurrence: OccurrenceAddress,
+  ) => readonly import('@run-planner/engine/simulation').FieldsSpatialPosition[] | undefined;
+  /** Where an authored Chaos gate spawns, chosen or default, with the points it can take. */
+  readonly chaosGatePosition: (
+    gate: import('@run-planner/engine/authored-project').AdditionalExitAddress,
+  ) => import('@run-planner/engine/simulation').ChaosGatePositionAuthoring | undefined;
   /** The loot a room spawns on its own, by moment and source action; undefined while unentered. */
   readonly spawnedLoot: (
     occurrence: OccurrenceAddress,
@@ -842,6 +850,8 @@ function createWorkspaceBiomeSource(
   roomLayout: WorkspaceBiomeSource['roomLayout'],
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'],
   encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'],
+  fieldsSpatialPositions: WorkspaceBiomeSource['fieldsSpatialPositions'],
+  chaosGatePosition: WorkspaceBiomeSource['chaosGatePosition'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -1167,6 +1177,8 @@ function createWorkspaceBiomeSource(
     roomLayout,
     spawnedLoot,
     encounterOutcomes,
+    fieldsSpatialPositions,
+    chaosGatePosition,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -1266,6 +1278,8 @@ export function createWorkspaceProjectSourceIndex(
   roomLayout: WorkspaceBiomeSource['roomLayout'] = () => undefined,
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'] = () => undefined,
   encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'] = () => undefined,
+  fieldsSpatialPositions: WorkspaceBiomeSource['fieldsSpatialPositions'] = () => undefined,
+  chaosGatePosition: WorkspaceBiomeSource['chaosGatePosition'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1357,6 +1371,8 @@ export function createWorkspaceProjectSourceIndex(
             roomLayout,
             spawnedLoot,
             encounterOutcomes,
+            fieldsSpatialPositions,
+            chaosGatePosition,
           ),
         ),
       ),

@@ -106,7 +106,7 @@ export function ChaosSpawnWorkbench({
   );
 }
 
-/** The Chaos gate's point among the room's SecretPoints, `?` leaving it to the game. */
+/** The Chaos gate's chosen or default point among the room's SecretPoints. */
 export function ChaosGatePosition({
   feature,
   interactions,
@@ -134,8 +134,11 @@ export function ChaosGatePosition({
         layout="inline"
         model={declaredChoicesPicker(
           [
-            { key: 'any', value: null, label: '?' },
-            ...(position.invalid && position.value !== null
+            // A chosen point can return to the gate's default.
+            ...(position.default === true
+              ? []
+              : [{ key: 'default', value: null, label: 'Default' }]),
+            ...(position.invalid
               ? [
                   {
                     key: String(position.value),
@@ -148,7 +151,10 @@ export function ChaosGatePosition({
             ...position.choices.map((value) => ({
               key: String(value),
               value,
-              label: `P${value}`,
+              label:
+                position.default === true && value === position.value
+                  ? `P${value} · Default`
+                  : `P${value}`,
             })),
           ],
           position.value,
@@ -171,12 +177,12 @@ export function ChaosGatePosition({
             ).positionIntent(value),
           );
         }}
-        placeholder="?"
+        placeholder={`P${position.value}`}
         searchable={false}
         {...(position.invalid
           ? { triggerHint: `P${position.value} isn’t available in this room` }
           : {})}
-        triggerLabel={position.value === null ? '?' : `P${position.value}`}
+        triggerLabel={`P${position.value}`}
         triggerSize="content"
       />
     </div>

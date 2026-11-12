@@ -134,15 +134,21 @@ export function assembleRoomLayout(input: {
         : (authored ?? {});
       return roll ? layoutWithFlip(settlement, withEntry, pair.flipped) : withEntry;
     };
+    // The engine marks each open part it fills by default.
+    const byDefault =
+      value !== undefined &&
+      (!roll || flip.default === true) &&
+      (entry.kind !== 'choice' || entry.default === true);
     return {
       state: {
         kind: 'choice',
         ...(value === undefined ? {} : { value }),
+        ...(byDefault ? { default: true as const } : {}),
         ...(stale ? { stale: held } : {}),
         choices: Object.freeze([
           ...(authoring.clear === undefined
             ? []
-            : [{ key: bind('entry:game', clear()), pair: null }]),
+            : [{ key: bind('entry:default', clear()), pair: null }]),
           ...pairs
             .filter((pair) => stale || pair !== value)
             .map((pair) => ({ key: bind(pairKey(pair), layoutFor(pair)), pair })),

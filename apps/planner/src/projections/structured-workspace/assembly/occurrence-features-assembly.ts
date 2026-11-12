@@ -1,5 +1,4 @@
 import {
-  chaosGateSpawnPointIndices,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -16,6 +15,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type {
+  ChaosGatePositionAuthoring,
   HermesShrineCandidateCapability,
   ChaosCandidateCapability,
   PurgingPoolCandidateCapability,
@@ -31,6 +31,8 @@ import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-bui
 export interface WorkspaceOccurrenceFeaturesInput {
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
+  /** Where the authored Chaos gate spawns, chosen or default. */
+  readonly chaosGatePosition?: ChaosGatePositionAuthoring;
   readonly facts: {
     readonly authoredAdditionalExitKeys: readonly string[];
     readonly detailsActive: boolean;
@@ -175,12 +177,18 @@ function roomFeatures(
   const zagreus = room.additionalExits.find((candidate) => candidate.kind === 'zagreusContract');
   const chaos = room.additionalExits.find((candidate) => candidate.kind === 'chaos');
   const authoredChaos = input.occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
-  const positionChoices = chaosGateSpawnPointIndices(room);
-  const positionValue = authoredChaos?.spawnPointIndex ?? null;
-  const invalidPosition = positionValue !== null && !positionChoices.includes(positionValue);
+  const gatePosition = authoredChaos === undefined ? undefined : input.chaosGatePosition;
+  const invalidPosition =
+    gatePosition !== undefined &&
+    !gatePosition.spawnPointIndices.includes(gatePosition.spawnPointIndex);
   const position =
-    authoredChaos !== undefined && (positionChoices.length > 1 || invalidPosition)
-      ? Object.freeze({ value: positionValue, choices: positionChoices, invalid: invalidPosition })
+    gatePosition !== undefined && (gatePosition.spawnPointIndices.length > 1 || invalidPosition)
+      ? Object.freeze({
+          value: gatePosition.spawnPointIndex,
+          ...(gatePosition.source === 'default' ? { default: true as const } : {}),
+          choices: gatePosition.spawnPointIndices,
+          invalid: invalidPosition,
+        })
       : undefined;
   const poolOwner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const featureAddress = (

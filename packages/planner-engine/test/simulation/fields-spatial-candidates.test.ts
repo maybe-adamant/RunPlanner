@@ -14,6 +14,7 @@ import {
 import {
   authoringReadinessAt,
   createPreparedProjectCandidateSession,
+  fieldsSpatialPositionsForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { assembleExecutionProduct, compileExecutionPlan } from '@run-planner/engine/execution-plan';
@@ -372,6 +373,12 @@ describe('Fields spatial candidates', () => {
       assembly.evaluation.findings.filter((finding) => finding.origin.kind === 'fieldsSpatial'),
     ).toEqual([]);
     expect(defaults(project)).toEqual(before);
+    // The room's authoring product shows the same points, each marked default.
+    expect(
+      fieldsSpatialPositionsForProjectEvaluationAssembly(catalog, assembly, occurrence)?.map(
+        (position) => [position.pointId, position.source],
+      ),
+    ).toEqual(before.map((pointId) => [pointId, 'default']));
 
     // Choosing cage2 on cage1's default moves only cage1's default.
     const chosen = applyProjectCommand(project, catalog, {
@@ -380,6 +387,13 @@ describe('Fields spatial candidates', () => {
       pointId: before[0]!,
     });
     const after = defaults(chosen);
+    expect(
+      fieldsSpatialPositionsForProjectEvaluationAssembly(
+        catalog,
+        simulateProjectAssembly(catalog, chosen),
+        occurrence,
+      )?.find((position) => position.target.kind === 'cage' && position.target.slotKey === 'cage2'),
+    ).toMatchObject({ pointId: before[0], source: 'chosen' });
     expect(after[1]).toBeUndefined();
     expect(after[0]).not.toBe(before[0]);
     expect(after.slice(3)).toEqual(before.slice(3));
