@@ -119,6 +119,13 @@ export interface SimulationState {
   readonly pendingResourcePickups: Readonly<
     Record<string, Readonly<Record<string, ResourceAmounts>>>
   >;
+  /**
+   * Spawned objects Forfeit replaced as they spawned, by room, then by object
+   * role: what each role is realized as. Absent while none is uncollected.
+   */
+  readonly forfeitedPickups?: Readonly<
+    Record<string, Readonly<Record<string, import('../../reward-kernel').ConcreteAcquisitionEvent>>>
+  >;
   /** The room last left, whose exit the next room's flip and entry read; absent at run start. */
   readonly lastDeparture?: RoomDeparture;
 }

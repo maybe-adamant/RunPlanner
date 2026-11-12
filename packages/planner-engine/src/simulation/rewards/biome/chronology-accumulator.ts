@@ -63,7 +63,7 @@ export interface FountainRaritySettlement {
 }
 import type {
   AcquisitionRoleFrontier,
-  FixedAcquisitionRealization,
+  ForfeitPeek,
   GeneratedPickupPlacement,
   DerivedAcquisitionEntryFrontier,
 } from '../acquisition/contracts';
@@ -131,10 +131,7 @@ export type ChronologyEmission =
       readonly kind: 'acquisitionRoleFrontiers';
       readonly frontiers: readonly AcquisitionRoleFrontier[] | undefined;
     }
-  | {
-      readonly kind: 'fixedAcquisitionRealizations';
-      readonly realizations: readonly FixedAcquisitionRealization[];
-    }
+  | { readonly kind: 'forfeitPeeks'; readonly peeks: readonly ForfeitPeek[] }
   | {
       readonly kind: 'traitOfferCandidateContacts';
       readonly contacts: readonly ReachedTraitOfferCandidateContact[] | undefined;
@@ -267,7 +264,8 @@ export interface ChronologyAccumulation {
     readonly TraitOfferCandidateContext[]
   >;
   readonly acquisitionConversionContexts: ReadonlyMap<string, AcquisitionRoleFrontier>;
-  readonly fixedAcquisitionRealizations: ReadonlyMap<string, FixedAcquisitionRealization>;
+  /** Each reward's latest Onion preview, by owner. */
+  readonly forfeitPeeks: ReadonlyMap<string, ForfeitPeek>;
   readonly derivedAcquisitionEntryContexts: ReadonlyMap<string, DerivedAcquisitionEntryFrontier>;
   readonly timelineFacts: PlannerTimelineFacts;
   readonly runStateSnapshots: readonly RunStateSnapshot[];
@@ -405,7 +403,7 @@ export function createChronologyAccumulator(
   const reachedTraitOfferCandidateContexts = new Map<string, TraitOfferCandidateContext[]>();
   const reachedTraitOfferCandidateFingerprints = new Map<string, Set<string>>();
   const acquisitionConversionContexts = new Map<string, AcquisitionRoleFrontier>();
-  const fixedAcquisitionRealizations = new Map<string, FixedAcquisitionRealization>();
+  const forfeitPeeks = new Map<string, ForfeitPeek>();
   const generatedPickupPlacements = new Map<string, GeneratedPickupPlacement>();
   const derivedAcquisitionEntryContexts = new Map<string, DerivedAcquisitionEntryFrontier>();
   const timelineFactNodes = new Map<string, PlannerTimelineNode>();
@@ -735,12 +733,8 @@ export function createChronologyAccumulator(
       case 'acquisitionRoleFrontiers':
         recordAcquisitionRoleFrontiers(emission.frontiers);
         return;
-      case 'fixedAcquisitionRealizations':
-        for (const realization of emission.realizations) {
-          const key = semanticAddressKey(realization.address);
-          if (!fixedAcquisitionRealizations.has(key))
-            fixedAcquisitionRealizations.set(key, realization);
-        }
+      case 'forfeitPeeks':
+        for (const peek of emission.peeks) forfeitPeeks.set(semanticAddressKey(peek.owner), peek);
         return;
       case 'traitOfferCandidateContacts':
         recordTraitOfferCandidateContacts(emission.contacts);
@@ -909,7 +903,7 @@ export function createChronologyAccumulator(
         producerFrontiers,
         reachedTraitOfferCandidateContexts,
         acquisitionConversionContexts,
-        fixedAcquisitionRealizations,
+        forfeitPeeks,
         derivedAcquisitionEntryContexts,
         timelineFacts:
           timelineFactNodes.size === 0 && timelineFactDependencies.size === 0

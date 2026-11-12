@@ -16,6 +16,7 @@ import {
   routeLoadoutEditDomain,
   semanticAddressKey,
   type AuthoredHexTreeConfiguration,
+  type RoomEventPoint,
   type SemanticAddress,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
@@ -861,10 +862,13 @@ export function createStructuredWorkspaceProjection(
       registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, route);
       const projectAddress = { kind: 'project' as const };
       const walkStop = walkStopOf(catalog, evaluation.route.issue, focusByOwner, route);
+      const roomActionsOf = roomActionsByOwner(route);
       const result = Object.freeze({
         ...(walkStop === undefined ? {} : { walkStop }),
-        roomActionLabel: roomActionLabels(route),
-        roomEventPointName: roomEventPointNames(route),
+        roomActionLabel: (owner: SemanticAddress, actionKey: string) =>
+          roomActionsOf(owner)?.rows.find((row) => row.key === actionKey)?.label,
+        roomEventPointName: (owner: SemanticAddress, point: RoomEventPoint) =>
+          roomActionsOf(owner)?.pointName(point),
         authoringReadiness: (owner: SemanticAddress) => authoringReadinessAt(assembly, owner),
         focusByOwner,
         findingsByRepairTarget: indexFindingsByRepairTarget(
@@ -890,38 +894,17 @@ export function createStructuredWorkspaceProjection(
   });
 }
 
-/** Each projected room's event point names, read by the room holding an owner. */
-function roomEventPointNames(
+/** Each projected room's Timeline, read by the room holding an owner. */
+function roomActionsByOwner(
   route: import('./contracts/structure').WorkspaceRoute,
-): import('./contracts/structure').StructuredWorkspaceProjection['roomEventPointName'] {
-  const rooms = new Map<string, import('./contracts/timeline').WorkspaceRoomActions['pointName']>();
+): (owner: SemanticAddress) => import('./contracts/timeline').WorkspaceRoomActions | undefined {
+  const rooms = new Map<string, import('./contracts/timeline').WorkspaceRoomActions>();
   for (const biome of route.biomes)
     for (const node of [...biome.nodes, ...biome.completionOutline])
       if (node.kind === 'occurrenceWorkbench' && node.room.roomActions !== undefined)
-        rooms.set(
-          `${biome.biomeKey}\u0000${node.room.occurrenceId}`,
-          node.room.roomActions.pointName,
-        );
-  return (owner, point) =>
+        rooms.set(`${biome.biomeKey}\u0000${node.room.occurrenceId}`, node.room.roomActions);
+  return (owner) =>
     'biomeKey' in owner && 'occurrenceId' in owner
-      ? rooms.get(`${owner.biomeKey}\u0000${owner.occurrenceId}`)?.(point)
-      : undefined;
-}
-
-/** Each projected room's Timeline row labels, read by the room holding an owner. */
-function roomActionLabels(
-  route: import('./contracts/structure').WorkspaceRoute,
-): import('./contracts/structure').StructuredWorkspaceProjection['roomActionLabel'] {
-  const rows = new Map<string, ReadonlyMap<string, string>>();
-  for (const biome of route.biomes)
-    for (const node of [...biome.nodes, ...biome.completionOutline])
-      if (node.kind === 'occurrenceWorkbench' && node.room.roomActions !== undefined)
-        rows.set(
-          `${biome.biomeKey}\u0000${node.room.occurrenceId}`,
-          new Map(node.room.roomActions.rows.map((row) => [row.key, row.label] as const)),
-        );
-  return (owner, actionKey) =>
-    'biomeKey' in owner && 'occurrenceId' in owner
-      ? rows.get(`${owner.biomeKey}\u0000${owner.occurrenceId}`)?.get(actionKey)
+      ? rooms.get(`${owner.biomeKey}\u0000${owner.occurrenceId}`)
       : undefined;
 }

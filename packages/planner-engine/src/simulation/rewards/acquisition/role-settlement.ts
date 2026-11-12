@@ -5,7 +5,6 @@ import {
   semanticAddressKey,
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
-  type TraitOfferOwnerAddress,
 } from '../../../authored-project/addresses';
 import { artificerReplacementEntryKey } from '../../../authored-project/acquisition/artificer';
 import {
@@ -29,7 +28,7 @@ import {
   creditMaxStatGain,
   recordGodLootPickup,
 } from '../../../reward-kernel/history';
-import { consumeRoomRewardForfeit, grantPickupRerolls } from '../../arcana-fear';
+import { grantPickupRerolls } from '../../arcana-fear';
 import type { FindingChronology, FindingRegionEntry } from '../../finding-regions';
 import { bankPathPoints } from '../../hex-progress';
 import type { HexActivationContext } from '../../hex-activation';
@@ -70,7 +69,6 @@ import {
 import type {
   AcquisitionRoleFrontier,
   AcquisitionRoleResolution,
-  FixedAcquisitionRealization,
   ProducerRoleSettlementProduct,
   RewardFactsFactory,
 } from './contracts';
@@ -85,8 +83,10 @@ import {
   spawnPendingTraitOffers,
   traitOfferRoomOccurrence,
 } from '../../state/pending-trait-offers';
+import { settleRewardSpawn } from '../biome/offer-lifecycle/spawned-trait-offers';
 import {
   collectPendingResourcePickup,
+  forfeitedPickupOf,
   resolveProducedMaxStatGrant,
   resolveProducedRerollGrant,
   spawnPickups,
@@ -98,37 +98,6 @@ import {
 } from '../../../authored-project/acquisition/sea-star';
 
 /** A Sea Star duplicate loot is created after its source screen closes. */
-/**
- * Realizations of an offer's acquisition roles once a Forfeit replacement is
- * known ahead of the pickup contact, such as a Fields cage at room entry or a
- * picked Ship wheel offer at its pick.
- */
-export function forfeitFixedAcquisitionRealizations(
-  catalog: Catalog,
-  origin: TraitOfferOwnerAddress,
-  producerLifecycleKey: string,
-  offer: ResolvedRewardOffer,
-  replacement: 'RoomRewardConsolationPrize',
-  historySequence: number,
-): readonly FixedAcquisitionRealization[] {
-  const bindings =
-    catalog.rewards.producerLifecycles.byKey[producerLifecycleKey]?.rewardTypes.byKey[
-      offer.rewardType
-    ]?.acquisitionLifecycle ?? [];
-  return Object.freeze(
-    bindings.map((binding) =>
-      Object.freeze({
-        address: createAcquisitionRoleAddress(origin, binding.role),
-        realizedAcquisition: Object.freeze({
-          ...resolveAcquisitionRole(catalog.rewards, offer, binding.role, binding.lifecyclePoint),
-          acquisition: Object.freeze({ kind: 'consumable' as const, gameName: replacement }),
-        }),
-        historySequence,
-      }),
-    ),
-  );
-}
-
 function spawnSeaStarDuplicate(
   catalog: Catalog,
   branch: RewardBranchState,
@@ -154,7 +123,6 @@ function spawnSeaStarDuplicate(
   ]);
   return state === branch.state ? branch : Object.freeze({ ...branch, state });
 }
-import type { RewardEvent } from '../model';
 import type { CountedRewardBinding } from '../../../reward-kernel/bindings';
 import { staticallyExcludedCandidateResult } from '../producer-frontiers';
 import {
@@ -257,56 +225,25 @@ export function applyProducerRoleHistory(
       resolution.role,
       resolution.lifecyclePoint,
     );
-    const qualifyingRewardType =
-      incoming.offer.rewardType === 'Boon' || incoming.offer.rewardType === 'HermesUpgrade'
-        ? incoming.offer.rewardType
-        : undefined;
-    const fixedForfeit = branch.events.find(
-      (event): event is Extract<RewardEvent, { readonly kind: 'rewardForfeited' }> =>
-        event.kind === 'rewardForfeited' &&
-        qualifyingRewardType !== undefined &&
-        semanticAddressKey(event.origin) === semanticAddressKey(incoming.origin) &&
-        event.rewardType === qualifyingRewardType,
-    );
-    const forfeit =
-      fixedForfeit !== undefined
-        ? Object.freeze({
-            consumed: true as const,
-            state: branch.state.arcanaFear,
-            replacementRewardType: fixedForfeit.replacementRewardType,
-          })
-        : incoming.roomRewardForfeitEligible === true && qualifyingRewardType !== undefined
-          ? consumeRoomRewardForfeit(catalog, branch.state.arcanaFear, qualifyingRewardType, {
-              owner: incoming.origin,
-              sequence: resolution.historySequence,
-            })
-          : Object.freeze({ consumed: false as const, state: branch.state.arcanaFear });
-    const realizedAcquisition = forfeit.consumed
-      ? Object.freeze({
-          ...acquisition,
-          acquisition: Object.freeze({
-            kind: 'consumable' as const,
-            gameName: forfeit.replacementRewardType,
-          }),
-        })
-      : acquisition;
-    if (forfeit.consumed) realizedAcquisitionAtRole = realizedAcquisition;
-    const forfeitBranch =
-      forfeit.consumed && fixedForfeit === undefined && qualifyingRewardType !== undefined
-        ? appendRewardEvent(
-            Object.freeze({
-              ...branch,
-              state: Object.freeze({ ...branch.state, arcanaFear: forfeit.state }),
-            }),
-            resolution.historySequence,
-            Object.freeze({
-              kind: 'rewardForfeited' as const,
+    // An object the walk did not spawn earlier (an Opening or Devotion gate
+    // reward) spawns at this contact; one already spawned keeps its decision.
+    const spawnedBranch =
+      incoming.roomRewardForfeitEligible === true
+        ? settleRewardSpawn(
+            catalog,
+            branch,
+            {
               origin: incoming.origin,
-              rewardType: qualifyingRewardType,
-              replacementRewardType: forfeit.replacementRewardType,
-            }),
+              offer: incoming.offer,
+              producerLifecycleKey: incoming.producerLifecycleKey,
+              forfeitEligible: true,
+            },
+            resolution.historySequence,
           )
         : branch;
+    const forfeited = forfeitedPickupOf(spawnedBranch.state, incoming.origin, resolution.role);
+    const realizedAcquisition = forfeited ?? acquisition;
+    if (forfeited !== undefined) realizedAcquisitionAtRole = forfeited;
     const seaStarAssessment = assessSeaStarDuplication(
       catalog,
       branch,
@@ -319,18 +256,21 @@ export function applyProducerRoleHistory(
       : undefined;
     const attestedBranch = retainSeaStarEligibility
       ? Object.freeze({
-          ...forfeitBranch,
+          ...spawnedBranch,
           seaStarDuplicateEligibilityBySource: freezeRecord({
-            ...(forfeitBranch.seaStarDuplicateEligibilityBySource ?? {}),
+            ...(spawnedBranch.seaStarDuplicateEligibilityBySource ?? {}),
             [seaStarSourceKey]: seaStarAssessment,
           }),
         })
-      : forfeitBranch;
+      : spawnedBranch;
     // A concrete god-loot acquisition is a materialization contact when the
     // producer gives it free; directly created loot is not given. Blind Box
-    // hidden loot is always given, even from a paid or created box.
+    // hidden loot is always given, even from a paid or created box. A
+    // room-reward object spent its keepsake as it spawned.
     const materializedProvider =
-      (incoming.instanceProvenance === 'free' && incoming.createdNotGiven !== true) ||
+      (incoming.instanceProvenance === 'free' &&
+        incoming.createdNotGiven !== true &&
+        incoming.roomRewardForfeitEligible !== true) ||
       resolution.lifecyclePoint === 'afterUnwrap'
         ? catalog.traitGiverByAcquisitionGameName[realizedAcquisition.acquisition.gameName]
         : undefined;
@@ -396,7 +336,7 @@ export function applyProducerRoleHistory(
         findingChronology ?? historyChronology(resolution.historySequence),
       );
     }
-    if (forfeit.consumed) {
+    if (forfeited !== undefined) {
       const history = applyConcreteAcquisition(
         catalog.rewards,
         materializedBranch.state.rewardHistory,
@@ -435,10 +375,17 @@ export function applyProducerRoleHistory(
       unresolvedArtificerReplacement ||= conversion.status !== 'converted';
       const generated = conversion.generatedReplacement;
       if (generated === undefined) return undefined;
-      // The conversion spawns the replacement loot, whose options are built now.
+      // The conversion spawns the replacement loot (GiftLogic.lua:29), whose
+      // options are built now.
+      const decided = settleRewardSpawn(
+        catalog,
+        generated.branch,
+        { ...generated.source, forfeitEligible: true },
+        resolution.historySequence,
+      );
       const spawned = Object.freeze({
-        ...generated.branch,
-        state: spawnPendingTraitOffers(catalog, generated.branch.state, [generated.source]),
+        ...decided,
+        state: spawnPendingTraitOffers(catalog, decided.state, [generated.source]),
       });
       if (deferArtificerReplacement) return spawned;
       let replacement: RewardBranchState | undefined = spawned;

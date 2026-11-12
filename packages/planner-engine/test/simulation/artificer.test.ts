@@ -59,6 +59,10 @@ import {
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { createAcquisitionConversionCandidateArtifacts } from '../../src/simulation/rewards/acquisition/artifacts';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
+import {
+  forfeitPeeks,
+  settleRewardSpawn,
+} from '../../src/simulation/rewards/biome/offer-lifecycle/spawned-trait-offers';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { installHexTree } from '../../src/simulation/hex-progress';
 
@@ -916,6 +920,8 @@ describe('The Artificer', () => {
   });
 
   it('does not substitute either Devotion acquisition role when the RoomReward lane is marked', () => {
+    // Devotion spawns through StartDevotionTest's GiveLoot (EncounterLogic.lua:1686,1692),
+    // never SpawnRoomReward: both loots are created, spending each god's keepsake.
     const occurrenceId = createOccurrenceId('devotion-forfeit');
     const siteOwner = createOccurrenceAddress(biome, occurrenceId);
     const site = createAcquisitionSiteAddress(siteOwner, 'roomRewardPickup');
@@ -943,6 +949,12 @@ describe('The Artificer', () => {
         ...branch,
         state: Object.freeze({
           ...branch.state,
+          keepsakes: initializeTestRewardBranchForRoute(
+            undefined,
+            branch.state.arcanaFear,
+            catalog,
+            'ForceZeusBoonKeepsake',
+          ).state.keepsakes,
           rewardHistory: Object.freeze({
             ...branch.state.rewardHistory,
             lootTypeHistory: Object.freeze({ ApolloUpgrade: 1, ZeusUpgrade: 1 }),
@@ -1019,6 +1031,45 @@ describe('The Artificer', () => {
           ['ApolloUpgrade', 'ZeusUpgrade'].includes(event.acquisition.acquisition.gameName),
       ),
     ).toHaveLength(2);
+    // The spurned Zeus loot spawned too, so its keepsake is spent.
+    expect(seeded.state.keepsakes.olympianSources[0]?.remainingForceUses).toBe(1);
+    expect(branch.state.keepsakes.olympianSources[0]?.remainingForceUses).toBe(0);
+
+    // A door into the Devotion room shows no Onion.
+    const devotionDoor = createIncomingRewardAddress(biome, occurrenceId);
+    expect(
+      forfeitPeeks(
+        catalog,
+        seeded.state,
+        [
+          {
+            origin: devotionDoor,
+            offer,
+            producerLifecycleKey: 'RoomReward',
+            forfeitEligible: true,
+          },
+        ],
+        1,
+      ),
+    ).toMatchObject([{ owner: devotionDoor, takes: false }]);
+
+    // Forfeit stays for the biome's next eligible Boon spawn.
+    const nextBoon = createIncomingRewardAddress(biome, createOccurrenceId('after-devotion'));
+    const next = settleRewardSpawn(
+      catalog,
+      branch,
+      {
+        origin: nextBoon,
+        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+        producerLifecycleKey: 'RoomReward',
+        forfeitEligible: true,
+      },
+      2,
+    );
+    expect(next.state.arcanaFear.fear.forfeitConsumed).toBe(true);
+    expect(next.events.filter((event) => event.kind === 'rewardForfeited')).toMatchObject([
+      { origin: nextBoon, rewardType: 'Boon', historySequence: 2 },
+    ]);
   });
 
   it('consumes one Forfeit use across either chronological order of ordinary and Artificer rewards', () => {
@@ -1034,6 +1085,11 @@ describe('The Artificer', () => {
 
     const artificerFirst = convert(initialBranch(true), 0, 'Boon');
     expect(artificerFirst.findings.size).toBe(0);
+    // The replacement Boon is forfeited as the conversion spawns it (GiftLogic.lua:29).
+    expect(
+      artificerFirst.product.branch!.events.find((event) => event.kind === 'rewardForfeited')
+        ?.origin.kind,
+    ).toBe('acquisitionEntry');
     const ordinaryAfter = settleOrdinaryBoon(artificerFirst.product.branch, 1, 'ApolloSpecialBoon');
     expect(ordinaryAfter.findings.size).toBe(0);
     const artificerFirstBranch = ordinaryAfter.settled.branch!;

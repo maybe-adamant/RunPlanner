@@ -10,7 +10,6 @@ import type { AcquisitionEntrySourceFamily } from '../../../authored-project/acq
 import type { Catalog } from '../../../catalog-schema';
 import type { ConcreteAcquisitionEvent } from '../../../reward-kernel';
 import type { FindingEvidence } from '../../model';
-import type { HistoryFindingChronology } from '../../finding-regions';
 import type { RewardBranchState } from '../branch-primitives';
 import {
   assessArtificerConversion,
@@ -18,7 +17,13 @@ import {
   assessTimePieceConversion,
 } from './conversions';
 import type { AcquisitionSource } from './source';
-import type { DerivedAcquisitionEntryFrontier, FixedAcquisitionRealization } from './contracts';
+import type { DerivedAcquisitionEntryFrontier, ForfeitPeek } from './contracts';
+import type { SimulationState } from '../../state/model';
+import { forfeitedPickupOf } from '../../state/pending-resource-pickups';
+import {
+  forfeitRealization,
+  forfeitWouldTake,
+} from '../biome/offer-lifecycle/spawned-trait-offers';
 import { createAnvilCandidateCapability, type AnvilCandidateCapability } from '../anvil-settlement';
 import {
   createHexActivationCandidateCapability,
@@ -189,15 +194,6 @@ export interface AcquisitionConversionCandidateArtifacts {
         readonly capability: AcquisitionConversionCandidateCapability;
       }
     | undefined;
-  /** History position of the contact that produced this role's capability. */
-  readonly positionAt: (address: AcquisitionRoleAddress) => HistoryFindingChronology | undefined;
-  /** A Forfeit realization fixed ahead of this role's pickup contact, with its position. */
-  readonly fixedAt: (address: AcquisitionRoleAddress) =>
-    | {
-        readonly capability: AcquisitionConversionCandidateCapability;
-        readonly position: HistoryFindingChronology;
-      }
-    | undefined;
 }
 export function createAcquisitionConversionCandidateArtifacts(
   catalog: Catalog,
@@ -219,22 +215,49 @@ export function createAcquisitionConversionCandidateArtifacts(
       readonly hexActivationContext?: HexActivationContext;
     }
   >,
-  fixedRealizations: ReadonlyMap<string, FixedAcquisitionRealization> = new Map(),
+  spawned: {
+    /** The reached state the walk published, holding each uncollected spawned object. */
+    readonly frontier: SimulationState | undefined;
+    readonly peeks: ReadonlyMap<string, ForfeitPeek>;
+  } = { frontier: undefined, peeks: new Map() },
 ): AcquisitionConversionCandidateArtifacts {
   const privateContexts = new Map(contexts);
-  const privateFixedRealizations = new Map(fixedRealizations);
-  // A forfeit fixed before the pickup contact realizes the role without any
-  // settlement-time conversion assessment.
-  const fixedCapability = (
-    fixed: FixedAcquisitionRealization,
-  ): AcquisitionConversionCandidateCapability =>
-    Object.freeze({ realizedAcquisition: fixed.realizedAcquisition });
+  const privatePeeks = new Map(spawned.peeks);
+  // Before its pickup, a role reads what Forfeit made of its spawned object
+  // or, while it has not spawned, the game's Onion preview of it.
+  const forfeited = (address: AcquisitionRoleAddress): ConcreteAcquisitionEvent | undefined => {
+    const frontier = spawned.frontier;
+    if (frontier === undefined) return undefined;
+    const recorded = forfeitedPickupOf(frontier, address.owner, address.acquisitionRole);
+    if (recorded !== undefined) return recorded;
+    const peek = privatePeeks.get(semanticAddressKey(address.owner));
+    const spawn =
+      peek?.takes === true
+        ? {
+            origin: peek.owner,
+            offer: peek.offer,
+            producerLifecycleKey: peek.producerLifecycleKey,
+            forfeitEligible: true,
+          }
+        : undefined;
+    const binding =
+      spawn === undefined
+        ? undefined
+        : catalog.rewards.producerLifecycles.byKey[spawn.producerLifecycleKey]?.rewardTypes.byKey[
+            spawn.offer.rewardType
+          ]?.acquisitionLifecycle.find((candidate) => candidate.role === address.acquisitionRole);
+    return spawn === undefined ||
+      binding === undefined ||
+      !forfeitWouldTake(catalog, frontier, spawn, Number.MAX_SAFE_INTEGER)
+      ? undefined
+      : forfeitRealization(catalog, spawn.offer, binding, 'RoomRewardConsolationPrize');
+  };
   const at = (address: AcquisitionRoleAddress) => {
     const key = semanticAddressKey(address);
     const entry = privateContexts.get(key);
     if (entry === undefined) {
-      const fixed = privateFixedRealizations.get(key);
-      return fixed === undefined ? undefined : fixedCapability(fixed);
+      const realizedAcquisition = forfeited(address);
+      return realizedAcquisition === undefined ? undefined : Object.freeze({ realizedAcquisition });
     }
     const anvil = createAnvilCandidateCapability(catalog, entry);
     const hexActivation =
@@ -297,35 +320,11 @@ export function createAcquisitionConversionCandidateArtifacts(
       }
       return undefined;
     },
-    positionAt: (address: AcquisitionRoleAddress) => {
-      const key = semanticAddressKey(address);
-      const sequence =
-        privateContexts.get(key)?.historySequence ??
-        privateFixedRealizations.get(key)?.historySequence;
-      return sequence === undefined
-        ? undefined
-        : Object.freeze({ kind: 'history' as const, sequence, boundary: 'at' as const });
-    },
-    fixedAt: (address: AcquisitionRoleAddress) => {
-      const fixed = privateFixedRealizations.get(semanticAddressKey(address));
-      return fixed === undefined
-        ? undefined
-        : Object.freeze({
-            capability: fixedCapability(fixed),
-            position: Object.freeze({
-              kind: 'history' as const,
-              sequence: fixed.historySequence,
-              boundary: 'at' as const,
-            }),
-          });
-    },
   });
 }
 export function createEmptyAcquisitionConversionCandidateArtifacts(): AcquisitionConversionCandidateArtifacts {
   return Object.freeze({
     at: () => undefined,
     atReplacement: () => undefined,
-    positionAt: () => undefined,
-    fixedAt: () => undefined,
   });
 }

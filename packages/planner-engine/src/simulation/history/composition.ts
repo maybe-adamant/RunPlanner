@@ -1,11 +1,13 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
+import { pressFightOf } from '../../authored-project/room-actions/event-graph';
 import type { BiomeTransitionCounterReset, Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   semanticAddressKey,
   type BiomeAddress,
 } from '../../authored-project/addresses';
-import { preparePressFight } from '../encounters/press-fight';
+import { prepareChallengeSwitchEncounter } from '../encounters/challenge-switch';
+import { prepareUnlockExitEncounter } from '../encounters/unlock-exit';
 import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
 import { prepareRoomEncounterPhases, type EncounterAuthoringRoom } from '../encounters/preparation';
 import {
@@ -545,18 +547,21 @@ function withPressFightComposition(
   event: Extract<RoomLifecycleEvent, { readonly kind: 'encounterRecorded' | 'encounterStarted' }>,
   fail: (detail: string) => never,
 ): RoomLifecycleEvent {
-  const fight = room.roomActionRoster.eventGraph.pressFights.find(
-    (candidate) => candidate.phaseKey === event.phaseKey,
-  );
+  const fight = pressFightOf(room.roomActionRoster.eventGraph, event.phaseKey);
   if (fight === undefined) return event;
   const view =
     fight.script.generatedAt === 'entry' ? writer.roomEntry(room.origin) : writer.current();
   if (view === undefined) fail(`${room.gameName} pressed ${event.phaseKey} before entry`);
-  const prepared = preparePressFight(catalog, room, writer.routePosition, fight, view);
+  const prepared =
+    fight.press.kind === 'unlockExit'
+      ? prepareUnlockExitEncounter(catalog, room, writer.routePosition, fight.press, view)
+      : prepareChallengeSwitchEncounter(catalog, room, writer.routePosition, view);
   const customization = prepared?.phase.generatedCustomization;
-  return customization === undefined
-    ? event
-    : Object.freeze({ ...event, generatedCustomization: customization });
+  return Object.freeze({
+    ...event,
+    pressFight: true as const,
+    ...(customization === undefined ? {} : { generatedCustomization: customization }),
+  });
 }
 
 interface BiomeHistoryPrefixOptions {

@@ -6,6 +6,7 @@ import {
   type RoomDeclaration,
 } from '../../catalog-schema';
 import type { RoomActionReference, RoomOccurrence } from '../model';
+import { roomActionKey } from './key';
 import {
   encounterEnvelopeSlots,
   encounterAuthoringProfileForKey,
@@ -162,6 +163,11 @@ export interface RoomEventGraphPhase {
   readonly standsAt?: RoomEventPoint;
 }
 
+export type PressFightAction = Extract<
+  RoomActionReference,
+  { readonly kind: 'interactChallengeSwitch' | 'unlockExit' }
+>;
+
 /**
  * A fight a placed row's press begins and starts outside the room's envelope:
  * a challenge switch's (`StartChallengeEncounter`) or a locked door's
@@ -171,7 +177,8 @@ export interface RoomPressFight extends RoomEventGraphPhase {
   readonly script: EncounterScript;
   readonly envelopeKey: string;
   readonly encounterKey: string;
-  readonly press: RoomActionReference;
+  /** The press that begins it, which also names how its encounter is prepared. */
+  readonly press: PressFightAction;
   readonly standsAt: RoomEventPoint;
   /** False for a switch left mid-fight (`EndedEarly`, RoomLogic.lua:4213-4216): it never ends. */
   readonly completes: boolean;
@@ -204,13 +211,14 @@ function pressFight(
   press: RoomActionReference,
 ): RoomPressFight | undefined {
   const observed = occurrence.challengeSwitch;
-  const [phaseKey, envelopeKey, encounterKey, completes] =
+  const [phaseKey, envelopeKey, encounterKey, completes, fightPress] =
     press.kind === 'interactChallengeSwitch' && observed !== undefined
       ? [
           CHALLENGE_SWITCH_PHASE_KEY,
           CHALLENGE_SWITCH_ENVELOPE_KEY,
           challengeSwitchEncounterKey(catalog, occurrence.gameName, observed.variantKey),
           observed.outcome !== 'left',
+          press,
         ]
       : press.kind === 'unlockExit' && (occurrence.lockedExits ?? []).includes(press.exitKey)
         ? [
@@ -218,6 +226,7 @@ function pressFight(
             UNLOCK_EXIT_ENVELOPE_KEY,
             unlockExitEncounterKey(catalog, occurrence.gameName),
             true,
+            press,
           ]
         : [];
   const definition =
@@ -229,7 +238,7 @@ function pressFight(
         script: definition.script,
         envelopeKey: envelopeKey!,
         encounterKey: definition.key,
-        press,
+        press: fightPress!,
         standsAt: DOORS_OPENED_POINT,
         completes: completes!,
       });
@@ -693,6 +702,11 @@ export function pressFightOf(graph: RoomEventGraph, phaseKey: string): RoomPress
   return graph.pressFights.find((fight) => fight.phaseKey === phaseKey);
 }
 
+/** The fight the row with this action key presses, when it presses one. */
+export function fightOfPress(graph: RoomEventGraph, pressKey: string): RoomPressFight | undefined {
+  return graph.pressFights.find((fight) => roomActionKey(fight.press) === pressKey);
+}
+
 /** Whether the room plays this envelope phase. */
 export function playsPhase(graph: RoomEventGraph, phaseKey: string): boolean {
   return graph.phases.some((phase) => phase.phaseKey === phaseKey);
@@ -715,6 +729,9 @@ function graphPhase(graph: RoomEventGraph, phaseKey: string): RoomEventGraphPhas
   );
 }
 
+// Graphs are frozen, so their places are computed once per graph.
+const placesByGraph = new WeakMap<RoomEventGraph, (point: RoomEventPoint) => number>();
+
 /**
  * Where each bound point stands in the room's graph, as a comparable place;
  * only the order of places within one graph is meaningful. Distinct points
@@ -726,6 +743,15 @@ function graphPhase(graph: RoomEventGraph, phaseKey: string): RoomEventGraphPhas
  * wheel at the very start.
  */
 export function roomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) => number {
+  let places = placesByGraph.get(graph);
+  if (places === undefined) {
+    places = buildRoomEventPlaces(graph);
+    placesByGraph.set(graph, places);
+  }
+  return places;
+}
+
+function buildRoomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) => number {
   // Each graph point takes a before and an after place, in graph order.
   const order: string[] = ['roomEntered'];
   graph.phases.forEach((phase, index) => {
@@ -791,6 +817,15 @@ export function roomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) 
   return place;
 }
 
+/** A point's identity within its room: its kind and the phase or wheel it belongs to. */
+export function roomEventPointKey(point: RoomEventPoint): string {
+  return 'phaseKey' in point
+    ? `${point.kind}:${point.phaseKey}`
+    : 'wheelKey' in point
+      ? `${point.kind}:${point.wheelKey}`
+      : point.kind;
+}
+
 /**
  * Whether reaching a point passes a deadline: it stands later, or it is that
  * deadline; another point sharing the deadline's place does not pass it. The
@@ -802,13 +837,7 @@ export function roomEventPointPasses(
   deadline: RoomEventPoint,
 ): boolean {
   const name = (point: RoomEventPoint) =>
-    point.kind === 'exitsReady'
-      ? 'doorsOpened'
-      : 'phaseKey' in point
-        ? `${point.kind}:${point.phaseKey}`
-        : 'wheelKey' in point
-          ? `${point.kind}:${point.wheelKey}`
-          : point.kind;
+    point.kind === 'exitsReady' ? 'doorsOpened' : roomEventPointKey(point);
   const at = place(reached);
   const due = place(deadline);
   return at > due || (at === due && name(reached) === name(deadline));

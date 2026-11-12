@@ -19,6 +19,7 @@ import {
   roomEventPlaces,
   roomEventPointPasses,
   type RoomEventPoint,
+  fightOfPress,
   pressFightOf,
 } from '../../authored-project/room-actions/event-graph';
 import { ROOM_WALK_STAGES } from './overview';
@@ -572,9 +573,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
     operationContext: OperationContext,
     state: ExecutionState,
   ): ExecutionState => {
-    const fight = eventGraph.pressFights.find(
-      (candidate) => roomActionKey(candidate.press) === row.key,
-    );
+    const fight = fightOfPress(eventGraph, row.key);
     if (fight === undefined) return state;
     const phase = resolvedEncounterPhaseForDefinition(
       context.catalog,

@@ -138,6 +138,9 @@ export function publishChronology(
         });
   const immutableFindingRegions = accumulation.findingRegions;
   const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
+  const takenPeeks = Object.freeze(
+    [...accumulation.forfeitPeeks.values()].filter((peek) => peek.takes),
+  );
   const traitProducts = selectedTraitOfferProducts(
     walk.branch,
     immutableFindingRegions.flatMap((entry) =>
@@ -198,6 +201,7 @@ export function publishChronology(
     targetHistory: accumulation.targetHistory,
     frontier: walk.branch === undefined ? undefined : publicRewardBranch(walk.branch),
     findings: immutableFindings,
+    ...(takenPeeks.length === 0 ? {} : { forfeitPeeks: takenPeeks }),
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
     hubDepartures: accumulation.hubDepartures,
@@ -350,7 +354,7 @@ export function publishChronology(
     acquisitionConversionArtifacts: createAcquisitionConversionCandidateArtifacts(
       catalog,
       accumulation.acquisitionConversionContexts,
-      accumulation.fixedAcquisitionRealizations,
+      { frontier: walk.branch?.state, peeks: accumulation.forfeitPeeks },
     ),
     derivedAcquisitionEntryArtifacts: createDerivedAcquisitionEntryCandidateArtifacts(
       accumulation.derivedAcquisitionEntryContexts,

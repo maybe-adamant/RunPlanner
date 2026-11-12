@@ -90,6 +90,8 @@ export type RoomLifecycleEvent =
       readonly encounterKey: string;
       readonly phaseKind: EncounterPhaseKind;
       readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
+      /** A press fight, run outside the room's envelope; history composition marks it. */
+      readonly pressFight?: true;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterStarted';
@@ -101,6 +103,7 @@ export type RoomLifecycleEvent =
       readonly figLeafSkipOwner: boolean;
       /** A press fight's composition; history composition attaches it as the fight is prepared. */
       readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
+      readonly pressFight?: true;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterDepthAdvanced';

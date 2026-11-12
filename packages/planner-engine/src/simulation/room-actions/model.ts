@@ -35,10 +35,25 @@ export type RoomActionRowLabel =
       /** The phase whose wheel's choice waits on this row. */
       readonly beforeWheelChoicePhaseKey?: string;
     }
-  | Extract<
-      RoomActionContact,
-      { readonly kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase' }
-    >;
+  | WheelContact;
+
+/**
+ * At a Ship wheel phase's gate, from its wheel's roll (also a gate row whose
+ * phase the room no longer plays), or after its fight.
+ */
+export interface WheelContact {
+  readonly kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase';
+  readonly wheelKey: string;
+  readonly phaseKey?: string;
+}
+
+export function isWheelContact(contact: RoomActionContact): contact is WheelContact {
+  return (
+    contact.kind === 'beforeWheelPhase' ||
+    contact.kind === 'beforeWheelChoice' ||
+    contact.kind === 'afterWheelPhase'
+  );
+}
 
 /**
  * Where a row's item meets the room's events, classified once from its bounds.
@@ -52,15 +67,7 @@ export type RoomActionContact =
   | { readonly kind: 'afterDoorsOpen' | 'afterCombat'; readonly phaseKey?: string }
   /** Before a phase's Combat, which its use starts. */
   | { readonly kind: 'beforeCombat'; readonly phaseKey?: string }
-  /**
-   * At a Ship wheel phase's gate, from its wheel's roll (also a gate row whose
-   * phase the room no longer plays), or after its fight.
-   */
-  | {
-      readonly kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase';
-      readonly wheelKey: string;
-      readonly phaseKey?: string;
-    }
+  | WheelContact
   /** Spawned by an encounter's end effects. */
   | {
       readonly kind: 'afterEncounterEnd';
