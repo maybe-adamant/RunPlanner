@@ -168,7 +168,7 @@ describe('timed-effect edit settlement', () => {
   it('keeps an invalid inherited clocked pickup reached again, with its finding', () => {
     const id = 'surface-p-1-1-p_combat03';
     const checkpoint = loadSurfaceScheduledLifecycleCheckpoint();
-    // The Supply Chain pickup matures at Combat; ranking it at Intro makes it invalid.
+    // The Supply Chain pickup matures at Combat; placing it at Intro's end makes it stale.
     const project: ProjectDocument = {
       ...checkpoint,
       route: {
@@ -204,9 +204,9 @@ describe('timed-effect edit settlement', () => {
     const stale = (assembly: ReturnType<typeof evaluate>) =>
       assembly.evaluation.findings.filter(
         (finding) =>
-          finding.code === 'roomActionOrderUnavailable' &&
-          finding.origin.kind === 'roomAction' &&
-          finding.origin.actionKey.includes('clockedTraitGenerated:'),
+          finding.code === 'rewardSourceUnavailable' &&
+          finding.origin.kind === 'acquisitionEntry' &&
+          finding.origin.entryKey.startsWith('clockedTraitGenerated:'),
       );
     expect(stale(evaluate(project))).toHaveLength(1);
     const trait = createTraitOfferAddress(

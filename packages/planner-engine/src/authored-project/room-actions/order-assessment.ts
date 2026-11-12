@@ -4,6 +4,7 @@ import type { RoomActionContribution, RoomActionDependency, RoomActionDomain } f
 import {
   roomActionOpeningPoint,
   roomEventPlaces,
+  roomEventPointPasses,
   roomEventPointResolves,
   type RoomEventGraph,
   type RoomEventPoint,
@@ -18,7 +19,7 @@ function frozen<T>(value: T): T {
  * Why a row cannot stand where it is placed, in its bounds: it stands before
  * its spawn or enabler can happen (a required action ordered after it must
  * come first, or the point never happens in this room), or past its deadline
- * (an action ordered before it stands only after that point).
+ * (an action ordered before it opens at or after that point).
  */
 export type RoomActionBoundBlocker =
   | {
@@ -36,9 +37,9 @@ export type RoomActionBoundBlocker =
       readonly kind: 'pastDeadline';
       readonly reference: RoomActionReference;
       readonly detail: string;
-      /** The point the walk passes before it reaches the row. */
+      /** The row's deadline, which the walk passes before it reaches the row. */
       readonly deadline: RoomEventPoint;
-      /** The action ordered before the row that stands only after that point. */
+      /** The nearest action ordered before the row whose opening passes it. */
       readonly precedingAction: RoomActionReference;
     };
 
@@ -79,8 +80,8 @@ export interface RoomActionOrderContext {
   readonly eventGraph: RoomEventGraph;
   /** An action nothing may follow (a left switch press: leaving ends the room). */
   readonly terminalActionKey?: string;
-  /** The place each active action opens at, its enabler's or its spawn's, which no order changes. */
-  readonly openings: ReadonlyMap<string, number>;
+  /** Where a point stands in the room's graph. */
+  readonly place: (point: RoomEventPoint) => number;
   /** Active required action keys. */
   readonly requiredKeys: readonly string[];
 }
@@ -101,9 +102,7 @@ export function roomActionOrderContext(options: {
     ...(options.terminalActionKey === undefined
       ? {}
       : { terminalActionKey: options.terminalActionKey }),
-    openings: new Map(
-      [...active].map(([key, entry]) => [key, place(roomActionOpeningPoint(entry.bounds))]),
-    ),
+    place,
     requiredKeys: frozen(required.map(([key]) => key)),
   });
 }
@@ -155,14 +154,13 @@ function rowAndBoundIssues(
   context: RoomActionOrderContext,
   through: number,
 ): { readonly rows: RoomActionOrderIssue[]; readonly crossings: RoomActionOrderIssue[] } {
-  const { active, eventGraph, openings } = context;
+  const { active, eventGraph } = context;
   const rows: RoomActionOrderIssue[] = [];
   const crossings: RoomActionOrderIssue[] = [];
   const keys = order.map(keyOf);
   const indexes = new Map(keys.map((key, index) => [key, index]));
   let exitsReadyIndex: number | undefined;
-  let left: RoomActionContribution | undefined;
-  let leftOpening = 0;
+  const reached: RoomActionContribution[] = [];
   for (let ownIndex = 0; ownIndex <= through && ownIndex < order.length; ownIndex += 1) {
     const reference = order[ownIndex]!;
     const entry = active.get(keys[ownIndex]!);
@@ -211,20 +209,20 @@ function rowAndBoundIssues(
         );
     }
     if (standsAnywhere(entry)) continue;
-    const opening = openings.get(keys[ownIndex]!)!;
-    if (left !== undefined && leftOpening > opening) {
+    const passedAt = judgedDeadline(entry, context)
+      ? reached.findLast((before) => passes(before, entry, context))
+      : undefined;
+    if (passedAt !== undefined)
       crossings.push(
         frozen({
           kind: 'pastDeadline',
           reference: entry.reference,
-          detail: `must stand before ${pointText(roomActionOpeningPoint(left.bounds))}, after which ${keyOf(left.reference)} stands`,
-          deadline: roomActionOpeningPoint(left.bounds),
-          precedingAction: left.reference,
+          detail: `must stand before ${pointText(entry.bounds.deadline)}, which ${keyOf(passedAt.reference)} passes`,
+          deadline: entry.bounds.deadline,
+          precedingAction: passedAt.reference,
         }),
       );
-    }
-    left = entry;
-    leftOpening = opening;
+    reached.push(entry);
   }
   return { rows, crossings };
 }
@@ -244,70 +242,85 @@ export function assessRoomActionOrder(
     .map((key) =>
       frozen({ kind: 'unrankedRequired' as const, reference: context.active.get(key)!.reference }),
     );
-  const deadlines = requiredDeadlinesAfter(order, context);
   const requiredFirst = order.flatMap((reference, index) => {
-    const issue = requiredFirstIssue(reference, deadlines[index], context);
+    const issue = requiredFirstIssue(reference, requiredAfter(order, index, context), context);
     return issue === undefined ? [] : [issue];
   });
   return frozen([...rows, ...unranked, ...crossings, ...requiredFirst]);
 }
 
-interface RequiredDeadline {
-  readonly entry: RoomActionContribution;
-  readonly opening: number;
-}
-
-/**
- * For each row, the ranked required action ordered after it that opens first
- * (the earliest such row on a tie). An action whose bounds name a phase or
- * wheel the room does not play has no deadline here; its placement is its
- * own finding.
- */
-function requiredDeadlinesAfter(
-  order: readonly RoomActionReference[],
+/** Whether the walk, reaching `before` where it opens, has passed `entry`'s deadline. */
+function passes(
+  before: RoomActionContribution,
+  entry: RoomActionContribution,
   context: RoomActionOrderContext,
-): readonly (RequiredDeadline | undefined)[] {
-  const deadlines: (RequiredDeadline | undefined)[] = new Array(order.length);
-  let earliest: RequiredDeadline | undefined;
-  for (let index = order.length - 1; index >= 0; index -= 1) {
-    deadlines[index] = earliest;
-    const key = keyOf(order[index]!);
-    const entry = context.active.get(key);
-    if (
-      entry?.participation !== 'required' ||
-      standsAnywhere(entry) ||
-      !roomEventPointResolves(context.eventGraph, roomActionOpeningPoint(entry.bounds)) ||
-      !roomEventPointResolves(context.eventGraph, entry.bounds.spawn)
-    )
-      continue;
-    const opening = context.openings.get(key)!;
-    if (earliest === undefined || opening <= earliest.opening) earliest = { entry, opening };
-  }
-  return deadlines;
+): boolean {
+  return roomEventPointPasses(
+    context.place,
+    roomActionOpeningPoint(before.bounds),
+    entry.bounds.deadline,
+  );
 }
 
 /**
- * A ranked required action is taken by its deadline, which passes before a
- * row that opens later than it can be reached: a row ordered before such a
- * required action stands before its own opening, and the required action
- * must come first.
+ * Whether a row's deadline is judged here: an action whose bounds name a
+ * phase or wheel the room does not play has none; its placement is its own
+ * finding.
+ */
+function judgedDeadline(entry: RoomActionContribution, context: RoomActionOrderContext): boolean {
+  const { eventGraph } = context;
+  return (
+    roomEventPointResolves(eventGraph, entry.bounds.deadline) &&
+    roomEventPointResolves(eventGraph, roomActionOpeningPoint(entry.bounds)) &&
+    roomEventPointResolves(eventGraph, entry.bounds.spawn)
+  );
+}
+
+/** The ranked required actions ordered after `index` whose deadlines are judged. */
+function requiredAfter(
+  order: readonly RoomActionReference[],
+  index: number,
+  context: RoomActionOrderContext,
+): readonly RoomActionContribution[] {
+  return order.slice(index + 1).flatMap((reference) => {
+    const entry = context.active.get(keyOf(reference));
+    return entry?.participation === 'required' &&
+      !standsAnywhere(entry) &&
+      judgedDeadline(entry, context)
+      ? [entry]
+      : [];
+  });
+}
+
+/**
+ * A ranked required action is taken by its deadline: a row ordered before it
+ * whose opening passes that deadline would pass it first, so the required
+ * action must come first. The one named is the earliest deadline it passes.
  */
 function requiredFirstIssue(
   reference: RoomActionReference,
-  deadline: RequiredDeadline | undefined,
+  required: readonly RoomActionContribution[],
   context: RoomActionOrderContext,
 ): RoomActionBoundBlocker | undefined {
-  const key = keyOf(reference);
-  const entry = context.active.get(key);
-  if (entry === undefined || deadline === undefined || standsAnywhere(entry)) return undefined;
-  if (context.openings.get(key)! <= deadline.opening) return undefined;
-  const required = deadline.entry;
+  const entry = context.active.get(keyOf(reference));
+  if (entry === undefined || standsAnywhere(entry)) return undefined;
+  const first = required
+    .filter((candidate) => passes(entry, candidate, context))
+    .reduce<RoomActionContribution | undefined>(
+      (earliest, candidate) =>
+        earliest === undefined ||
+        context.place(candidate.bounds.deadline) < context.place(earliest.bounds.deadline)
+          ? candidate
+          : earliest,
+      undefined,
+    );
+  if (first === undefined) return undefined;
   return frozen({
     kind: openingKind(entry),
     reference: entry.reference,
-    detail: `must follow ${keyOf(required.reference)}, a required action whose deadline passes first`,
+    detail: `must follow ${keyOf(first.reference)}, a required action whose deadline passes first`,
     point: roomActionOpeningPoint(entry.bounds),
-    requiredAction: required.reference,
+    requiredAction: first.reference,
   });
 }
 
@@ -317,10 +330,10 @@ function requiredFirstBlockers(
   lastIndex: number,
   context: RoomActionOrderContext,
 ): RoomActionPlacementBlocker[] {
-  const deadline = requiredDeadlinesAfter(order, context)[lastIndex];
-  if (deadline === undefined) return [];
+  const required = requiredAfter(order, lastIndex, context);
+  if (required.length === 0) return [];
   return order.slice(0, lastIndex + 1).flatMap((reference) => {
-    const issue = requiredFirstIssue(reference, deadline, context);
+    const issue = requiredFirstIssue(reference, required, context);
     return issue === undefined ? [] : [issue];
   });
 }

@@ -135,7 +135,7 @@ describe('room action proposal blockers', () => {
         kind: 'pastDeadline',
         reference: first,
         precedingAction: second,
-        deadline: { kind: 'encounterEnd', phaseKey: 'first' },
+        deadline: { kind: 'encounterStarted', phaseKey: 'first' },
       }),
     ]);
     const legal = assembleRoomActionRoster({

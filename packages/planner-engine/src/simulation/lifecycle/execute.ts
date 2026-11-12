@@ -12,6 +12,8 @@ import { roomActionKey } from '../../authored-project/room-actions/state';
 import {
   roomActionOpeningPoint,
   roomEventPlaces,
+  roomEventPointPasses,
+  type RoomEventPoint,
   runsOneEncounter,
 } from '../../authored-project/room-actions/event-graph';
 import { ROOM_WALK_STAGES } from './overview';
@@ -545,18 +547,19 @@ function createRoomActionSchedule(context: ExecutionContext) {
   };
 
   const place = roomEventPlaces(eventGraph);
+  const leavePoint: RoomEventPoint = Object.freeze({ kind: 'leave' });
   /** Where a row opens: the place its enabler, or else its spawn, holds from. */
   const opening = (row: RoomActionRow) => place(roomActionOpeningPoint(row.bounds));
 
-  /** The unplaced required rows opening before a place: the earliest is due first. */
-  const unplacedBefore = (at: number) =>
+  /** An unplaced required row whose deadline the walk passes by reaching a point. */
+  const unplacedBefore = (at: RoomEventPoint) =>
     roster.rows.find(
       (row) =>
         row.rank === null &&
         row.participation === 'required' &&
         !row.stale &&
         !skippedInteraction(row) &&
-        opening(row) < at,
+        roomEventPointPasses(place, at, row.bounds.deadline),
     );
 
   const liveRow = (reference: RoomActionReference) => {
@@ -750,7 +753,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
     let state = initial;
     const target = goal.kind === 'trigger' ? goal.row : undefined;
     if (target !== undefined) {
-      const missing = unplacedBefore(opening(target));
+      const missing = unplacedBefore(roomActionOpeningPoint(target.bounds));
       if (missing !== undefined)
         return blockAt(state, missing, { kind: 'action', actionKey: target.key });
     }
@@ -758,7 +761,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
       const row = rankedRows[cursor]!;
       if (target === undefined) {
         if (row.rank! > (goal as { readonly rank: number }).rank) break;
-        const missing = unplacedBefore(opening(row));
+        const missing = unplacedBefore(roomActionOpeningPoint(row.bounds));
         if (missing !== undefined)
           return blockAt(state, missing, { kind: 'action', actionKey: row.key });
       } else if (row.key === target.key) break;
@@ -808,7 +811,7 @@ function createRoomActionSchedule(context: ExecutionContext) {
       doorless ? scheduleShrineDeliveries(operationIndex, initial) : initial,
     );
     if (state.blockedAt !== undefined) return state;
-    const missing = unplacedBefore(Number.POSITIVE_INFINITY);
+    const missing = unplacedBefore(leavePoint);
     return missing === undefined ? state : blockAt(state, missing, { kind: 'leave' });
   };
 

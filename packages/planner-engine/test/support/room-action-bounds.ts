@@ -23,6 +23,14 @@ export function boundsForPlacement(
   const wheelPhase = (wheelKey: string) =>
     graph.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey ?? wheelKey;
   const doors = point({ kind: 'doorsOpened' });
+  // A fight's spoils are due before its end effects when its script waits for them.
+  const spawnedDeadline = (spawn: RoomEventPoint): RoomEventPoint =>
+    spawn.kind === 'encounterEnd' &&
+    graph.phases.some(
+      (phase) => phase.phaseKey === spawn.phaseKey && phase.script?.waitReadyBeforeEnd === true,
+    )
+      ? point({ kind: 'endEffects', phaseKey: spawn.phaseKey })
+      : doors;
   switch (placement.kind) {
     case 'afterDoorsOpen':
       return {
@@ -31,7 +39,7 @@ export function boundsForPlacement(
         deadline: point({ kind: 'leave' }),
       };
     case 'afterCombat':
-      return { spawn: roomFightsEnd(graph), deadline: doors };
+      return { spawn: roomFightsEnd(graph), deadline: spawnedDeadline(roomFightsEnd(graph)) };
     case 'beforeCombat':
       return {
         spawn: point({ kind: 'roomEntered' }),

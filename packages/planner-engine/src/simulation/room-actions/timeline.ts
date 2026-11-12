@@ -9,6 +9,7 @@ import {
   roomActionOpeningPoint,
   roomEventActive,
   roomEventPlaces,
+  roomEventPointPasses,
   scopeRoomEventGraph,
   type RoomEvent,
   type RoomEventGraph,
@@ -308,8 +309,8 @@ export function assembleRoomLifecycleTimeline(
    * Where the fight an unplaced cage or wheel choice starts would start: after
    * the executable rows of its window the walk reaches before it, from the
    * last boundary placed, up to the first row of a later window or one it
-   * cannot take. Undefined while a required action of an earlier window is
-   * missing, since the walk stops there first.
+   * cannot take. Undefined while a required action due by then is missing,
+   * since the walk stops there first.
    */
   const unplacedStartRank = (start: RoomActionReference, fromSlot: number): number | undefined => {
     const startRow = roster.rows.find((row) => row.key === roomActionKey(start));
@@ -321,7 +322,7 @@ export function assembleRoomLifecycleTimeline(
           row.rank === null &&
           row.participation === 'required' &&
           !row.stale &&
-          opening(row) < ordinal,
+          roomEventPointPasses(place, roomActionOpeningPoint(startRow.bounds), row.bounds.deadline),
       )
     )
       return undefined;

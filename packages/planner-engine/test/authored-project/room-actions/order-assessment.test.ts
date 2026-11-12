@@ -165,7 +165,7 @@ describe('room action insertion legality', () => {
         kind: 'pastDeadline',
         reference: dependent,
         precedingAction: press,
-        deadline: { kind: 'exitsReady' },
+        deadline: { kind: 'doorsOpened' },
       }),
     ]);
     expect(legalIndexes(order, dependent)).toEqual([2, 3]);
@@ -323,5 +323,58 @@ describe('room action insertion legality', () => {
     expect(
       roomActionInsertionRefusal([before, reward], optional, 2, context(roomActionKey(reward))),
     ).toBe('index 2 follows leaving the switch fight, which ends the room');
+  });
+});
+
+describe('deadlines', () => {
+  /** Two fights in sequence: a delivery due at the first's end effects, the reward after both. */
+  const twoFights: RoomEventGraph = {
+    profileKey: 'PCombatRoom',
+    activeEncounterSlotKeys: ['First', 'Second'],
+    phases: [{ phaseKey: 'First' }, { phaseKey: 'Second' }],
+    pressFights: [],
+    events: gateFreeGraphEvents(['First', 'Second'], true),
+  };
+  const delivery: RoomActionReference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey: 'hermesShrineDelivery',
+    entryKey: 'delivery',
+    encounterPhaseKey: 'First',
+  };
+  const twoFightContext = roomActionOrderContext({
+    eventGraph: twoFights,
+    contributions: [
+      {
+        reference: delivery,
+        owner,
+        participation: 'required' as const,
+        bounds: boundsForPlacement({ kind: 'afterEncounterEnd', phaseKey: 'First' }, twoFights),
+        dependencies: [],
+      },
+      {
+        reference: reward,
+        owner,
+        participation: 'required' as const,
+        bounds: boundsForPlacement({ kind: 'afterCombat' }, twoFights),
+        dependencies: [],
+      },
+    ],
+  });
+
+  it.each([
+    ['delivery first', [delivery, reward]],
+    ['reward first', [reward, delivery]],
+  ])(
+    'lets an earlier fight’s delivery and the reward, both due as the doors open, go in either order (%s)',
+    (_, order) => {
+      expect(assessRoomActionOrder(order, twoFightContext)).toEqual([]);
+    },
+  );
+
+  it('judges a row by its own deadline, not by a later row’s opening', () => {
+    // The before-combat action is due at Combat, which the reward's opening passes.
+    expect(issueKinds([reward, before])).toContainEqual(['pastDeadline', roomActionKey(before)]);
+    // The reward is due as the doors open, which the optional row's opening does not pass.
+    expect(issueKinds([before, optional, reward])).toEqual([]);
   });
 });

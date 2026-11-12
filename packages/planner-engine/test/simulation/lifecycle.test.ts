@@ -21,6 +21,7 @@ import {
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 import { testGraphEvents } from '../support/event-graph';
+import type { EncounterScript } from '../../src/catalog-schema';
 
 const origin = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
@@ -180,6 +181,7 @@ function actionRoster(
   })[],
   lifecycleProfileKey?: string,
   phaseKeysOverride?: readonly string[],
+  phaseScripts: Readonly<Record<string, EncounterScript>> = {},
 ) {
   const profileKey =
     lifecycleProfileKey ??
@@ -232,6 +234,7 @@ function actionRoster(
         ]
       : phaseKeys.map((phaseKey) => ({
           phaseKey,
+          ...(phaseScripts[phaseKey] === undefined ? {} : { script: phaseScripts[phaseKey] }),
           ...(profileKey === 'FieldsCombatRoom'
             ? { standsAt: Object.freeze({ kind: 'roomEntered' as const }) }
             : {}),
@@ -909,6 +912,131 @@ describe('single-room lifecycle execution', () => {
     expect(fragment.events.find((event) => event.kind === 'encounterCompleted')).toMatchObject({
       endEffects: 'applied',
     });
+  });
+
+  it.each([
+    ['unplaced', [] as const],
+    ['placed after the delivery', ['delivery', 'reward'] as const],
+  ])(
+    'holds a waiting encounter’s end effects for its reward, before the delivery they spawn (%s)',
+    (_, placed) => {
+      const reward = {
+        kind: 'interactIncomingReward' as const,
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source' as const,
+      };
+      const delivery = Object.freeze({
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'hermesShrineDelivery',
+        entryKey: hermesShrineDeliveryEntryKey(origin, 'initial:first'),
+        encounterPhaseKey: 'Encounter',
+      });
+      const roster = actionRoster(
+        origin,
+        placed.length === 0
+          ? [delivery]
+          : placed.map((key) => (key === 'reward' ? reward : delivery)),
+        [
+          {
+            reference: reward,
+            participation: 'required',
+            placement: { kind: 'afterCombat' as const },
+            dependencies: [],
+          },
+          {
+            reference: delivery,
+            participation: 'required',
+            placement: { kind: 'afterEncounterEnd' as const, phaseKey: 'Encounter' },
+            dependencies: [],
+          },
+        ],
+        'StandardRewardRoom',
+        ['Encounter'],
+        { Encounter: catalog.encounterDefinitions.byKey.HeraclesCombatO!.script },
+      );
+      // Heracles' script waits for the room to be ready before its end effects
+      // (`WaitForNextEncounterReady`): the reward is due there, before the delivery spawns.
+      const rewardRow = roster.rows.find((row) => row.key === roomActionKey(reward));
+      expect(rewardRow?.bounds.deadline).toEqual({ kind: 'endEffects', phaseKey: 'Encounter' });
+      const fragment = executeRoomLifecycle(
+        catalog,
+        input({
+          encounterPhases: phases('SingleEncounter', ['HeraclesCombatO']),
+          roomActionRoster: roster,
+        }),
+      );
+
+      expect(
+        fragment.events.some(
+          (event) =>
+            event.kind === 'acquisitionPointReached' && event.entryKey === delivery.entryKey,
+        ),
+      ).toBe(false);
+      expect(fragment.events.some((event) => event.kind === 'encounterEndEffectsApplied')).toBe(
+        false,
+      );
+      if (placed.length === 0) {
+        expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(reward));
+        expect(fragment.blockedDeadline).toEqual({ kind: 'phaseEnd', phaseKey: 'Encounter' });
+      } else {
+        // The delivery spawns at the end effects, which pass the reward's deadline.
+        expect(roster.issues).toContainEqual(
+          expect.objectContaining({
+            kind: 'pastDeadline',
+            reference: reward,
+            precedingAction: delivery,
+          }),
+        );
+      }
+    },
+  );
+
+  it('takes the reward before an earlier fight’s unplaced delivery, which is due only as the doors open', () => {
+    const reward = {
+      kind: 'interactIncomingReward' as const,
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source' as const,
+    };
+    const delivery = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(origin, 'initial:first'),
+      encounterPhaseKey: 'Intro',
+    });
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        lifecycleProfileKey: 'PCombatRoom',
+        encounterEnvelopeKey: 'PEncounter',
+        encounterPhases: phases('PEncounter', ['GeneratedP_PreCombat', 'GeneratedP']),
+        roomActionRoster: actionRoster(
+          origin,
+          [reward],
+          [
+            {
+              reference: delivery,
+              participation: 'required',
+              placement: { kind: 'afterEncounterEnd' as const, phaseKey: 'Intro' },
+              dependencies: [],
+            },
+            {
+              reference: reward,
+              participation: 'required',
+              placement: { kind: 'afterCombat' as const },
+              dependencies: [],
+            },
+          ],
+          'PCombatRoom',
+          ['Intro', 'Combat'],
+        ),
+      }),
+    );
+
+    expect(fragment.reachedActions.map((action) => action.actionKey)).toContain(
+      roomActionKey(reward),
+    );
+    expect(fragment.blockedAt?.actionKey).toBe(roomActionKey(delivery));
+    expect(fragment.blockedDeadline).toEqual({ kind: 'doorsOpen' });
   });
 
   it("keeps an earlier same-window row's own events apart from the pickup it precedes", () => {

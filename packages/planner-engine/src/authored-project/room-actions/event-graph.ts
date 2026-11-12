@@ -759,6 +759,29 @@ export function roomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) 
   return place;
 }
 
+/**
+ * Whether reaching a point passes a deadline: it stands later, or it is that
+ * deadline; another point sharing the deadline's place does not pass it. The
+ * exits being ready is the doors' own moment.
+ */
+export function roomEventPointPasses(
+  place: (point: RoomEventPoint) => number,
+  reached: RoomEventPoint,
+  deadline: RoomEventPoint,
+): boolean {
+  const name = (point: RoomEventPoint) =>
+    point.kind === 'exitsReady'
+      ? 'doorsOpened'
+      : 'phaseKey' in point
+        ? `${point.kind}:${point.phaseKey}`
+        : 'wheelKey' in point
+          ? `${point.kind}:${point.wheelKey}`
+          : point.kind;
+  const at = place(reached);
+  const due = place(deadline);
+  return at > due || (at === due && name(reached) === name(deadline));
+}
+
 /** Whether the room plays the phase or wheel a point names. */
 export function roomEventPointResolves(graph: RoomEventGraph, point: RoomEventPoint): boolean {
   switch (point.kind) {

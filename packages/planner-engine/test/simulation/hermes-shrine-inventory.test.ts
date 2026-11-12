@@ -2515,7 +2515,7 @@ describe('Hermes Shrine entry inventory requirements', () => {
   });
 });
 
-it('retains reached placement rejection where the walk reaches a row of the wrong phase', () => {
+it('retains placement rejection for a row placed at a phase the room does not play', () => {
   const original = loadSurfaceNOHermesShrineDeliveryCheckpoint();
   const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
   const occurrence = original.route.biomes
@@ -2539,18 +2539,13 @@ it('retains reached placement rejection where the walk reaches a row of the wron
   const evaluation = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
   if (evaluation === undefined || !('rewards' in evaluation))
     throw new Error('delivery evaluation missing');
-  // The walk passes the end the item is due at and reaches the row placed at a phase the room
-  // does not play: that row's own order finding comes before the item's deadline.
-  expect(evaluation.findings).toEqual([
-    expect.objectContaining({
-      code: 'roomActionOrderUnavailable',
-      origin: expect.objectContaining({
-        kind: 'roomAction',
-        occurrenceId: host.occurrenceId,
-        actionKey: roomActionKey(reference),
-      }),
-    }),
+  // The row placed at a phase the room does not play stands until the doors open; the
+  // item still due there is unplaced at that deadline, and the row's own source is stale.
+  expect(evaluation.findings.map((finding) => finding.code)).toEqual([
+    'hermesShrineDeliveryPlacementRequired',
+    'rewardSourceUnavailable',
   ]);
+  expect(evaluation.findings[0]).toMatchObject({ evidence: { deadline: 'doorsOpen' } });
   const placement = evaluation.rewards.generatedPickupPlacements?.find(
     (candidate) => candidate.address.entryKey === entry.entryKey,
   );

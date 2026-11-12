@@ -455,22 +455,21 @@ no second order authority.
 
 An insertion or a move is judged by its prefix, the way the walk reaches it.
 An action placed at position k is legal when the rows before it, with it at k,
-are valid as the walk reaches k: no row up to k follows a row of a later
-window, every explicit dependency of those rows is among the rows before them,
+are valid as the walk reaches k: no row up to k stands past its own deadline,
+which a row before it passes by opening at or after it, every explicit dependency of those rows is among the rows before them,
 and every checkpoint they wait on is met there. The doors-open checkpoint
 counts every placed required action, those after k included, as the walk
 does, so a doors-open action needs each of them before it. A left switch
 press ends the room, so it is valid only as the room's last row: nothing may
 follow it, and the press itself is refused at k while any row follows it,
 which is the press's own validity rather than a veto from a later row. A
-required action's window closes at its deadline, so a ranked required action
-of an earlier window placed after k also refuses k: the walk cannot progress
-past it. The walk applies the same rule to the authored order, stopping at the
+ranked required action placed after k whose deadline a row up to k passes also
+refuses k: the walk cannot take it in time. The walk applies the same rule to the authored order, stopping at the
 first row such an action follows, before that row settles: a Postboss Well,
 Pool, Shrine or switch row before the fountain use that unlocks the exits is
 never reached. A required action placed at a phase the room does not play
 sets no deadline; its placement is its own finding. An unplaced required
-action of an earlier window does not refuse k; the walk's own deadline stop
+action does not refuse k; the walk's own deadline stop
 leaves k unreached. Every other row after k takes no part: a later row the
 edit invalidates carries its own issue when the walk reaches it. A prefix that
 is already invalid stops the walk before k, so k is refused unless the edit repairs that prefix. A
@@ -853,8 +852,14 @@ the same product at that gap.
 A required item left unplaced never holds the walk where it spawns: the walk
 passes the event or action that spawns it, the item lies live on the ground,
 and the walk stops at its deadline with its placement finding, never at its
-spawn. The deadline is the first point the item must precede: a reached row
-of a later window, Doors open, or the room's commit. A Ship phase's end
+spawn. The deadline is the point its bounds name, which the walk passes by
+reaching a later point or that point itself: Doors open, a fight's start, the
+next wheel's choice, a phase's end effects, or the room's commit. Items due at
+the same deadline are independent and may be taken in either order. What a
+fight's end spawns is due before its end effects when the encounter's script
+waits for the room to be ready (`WaitForNextEncounterReady`), otherwise as the
+doors open. An optional item is due when the room is left, except a wheel's
+reroll, which its wheel's choice ends. A Ship phase's end
 effects wait until its wheel reward and required contacts are taken, so an
 unplaced one is due there, after the phase's other post-combat rows. The
 pickups those end effects spawn are due at the next wheel's choice, after its
@@ -865,7 +870,7 @@ that fight, so the fight waits on them; whether a fight follows is the room
 profile's fact, an encounter later among its operations. An unplaced cage or wheel choice is
 due after the executable rows of its window the walk reaches before it, such
 as the earlier cage's reward or a delivery its wheels opening spawned, unless
-a required action of an earlier window is missing; playing forward therefore
+a required action due by then is missing; playing forward therefore
 clears and collects a Fields room cage by cage.
 
 A countdown Hermes delivery and the fourth-biome Preboss flush are required

@@ -178,16 +178,33 @@ function bounds(
 /** Usable once the doors open, until the room is left. */
 const AFTER_DOORS = bounds(ROOM_ENTERED, LEAVE, DOORS_OPENED);
 
-/** From the room's last encounter end (room entry without one) until the doors open. */
+/**
+ * What a fight's end spawns is due as the doors open, or before the fight's
+ * end effects when its script waits for the room to be ready
+ * (`WaitForNextEncounterReady`).
+ */
+function spawnedAtEnd(graph: RoomEventGraph, spawn: RoomEventPoint): RoomActionBounds {
+  const waits =
+    spawn.kind === 'encounterEnd' &&
+    graph.phases.some(
+      (phase) => phase.phaseKey === spawn.phaseKey && phase.script?.waitReadyBeforeEnd === true,
+    );
+  return bounds(
+    spawn,
+    waits ? frozen({ kind: 'endEffects' as const, phaseKey: spawn.phaseKey }) : DOORS_OPENED,
+  );
+}
+
+/** From the room's last encounter end (room entry without one). */
 function afterCombat(graph: RoomEventGraph): RoomActionBounds {
-  return bounds(roomFightsEnd(graph), DOORS_OPENED);
+  return spawnedAtEnd(graph, roomFightsEnd(graph));
 }
 
 /** Taken in a Fields room, where the player starts each cage's encounter. */
-function fieldsBounds(phaseKey: string | undefined): RoomActionBounds {
-  return bounds(
+function fieldsBounds(graph: RoomEventGraph, phaseKey: string | undefined): RoomActionBounds {
+  return spawnedAtEnd(
+    graph,
     phaseKey === undefined ? ROOM_ENTERED : frozen({ kind: 'encounterEnd' as const, phaseKey }),
-    DOORS_OPENED,
   );
 }
 
@@ -454,7 +471,7 @@ function baseContribution(
         hermesShrinePurchaseDependencies(occurrence, reference, undefined),
       );
     case 'completeFieldsCage':
-      return contribution(biome, occurrence, reference, 'required', fieldsBounds(undefined));
+      return contribution(biome, occurrence, reference, 'required', fieldsBounds(graph, undefined));
     case 'interactIncomingReward':
       return contribution(
         biome,
@@ -481,7 +498,7 @@ function baseContribution(
         occurrence,
         reference,
         required ? 'required' : 'optional',
-        fieldsBounds(attachment?.key),
+        fieldsBounds(graph, attachment?.key),
         attachment === undefined
           ? []
           : [
@@ -697,7 +714,7 @@ function baseContribution(
         : attachment?.kind === 'rewardWheel'
           ? afterWheelPhase(graph, attachment.key)
           : fields
-            ? fieldsBounds(reference.phaseKey)
+            ? fieldsBounds(graph, reference.phaseKey)
             : afterCombat(graph);
       const dependencies: RoomActionDependency[] =
         cage === undefined ? [] : [frozen({ action: cage })];
@@ -1111,9 +1128,12 @@ export function assembleRoomActionDomain(options: {
       });
     });
   }
-  // Nothing holds an optional row: it may be taken until the room is left.
+  // Nothing holds an optional row, so it may be taken until the room is left, except a
+  // wheel's reroll: using the wheel ends its rerolls.
   actions = actions.map((action) =>
-    action.participation === 'required' || action.bounds.deadline.kind === 'leave'
+    action.participation === 'required' ||
+    action.bounds.deadline.kind === 'leave' ||
+    (action.reference.kind === 'reroll' && action.reference.target.kind === 'wheelOffer')
       ? action
       : frozen({ ...action, bounds: frozen({ ...action.bounds, deadline: LEAVE }) }),
   );
