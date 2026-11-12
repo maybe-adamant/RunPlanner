@@ -581,6 +581,28 @@ export function assembleRoomEventGraph(options: {
   });
 }
 
+/** The graph of a room without encounters or rows (the Hub board room): entered, then its doors. */
+export function encounterFreeRoomEventGraph(
+  profileKey: string,
+  generatesOutgoing: boolean,
+): RoomEventGraph {
+  return frozen({
+    profileKey,
+    activeEncounterSlotKeys: frozen([]),
+    phases: frozen([]),
+    pressFights: frozen([]),
+    events: frozen([
+      frozen({ kind: 'roomEntered' as const, key: 'roomEntered' as const, trigger: AUTOMATIC }),
+      frozen({
+        kind: 'doorsOpened' as const,
+        key: 'doorsOpened' as const,
+        generatesOutgoing,
+        trigger: DOORS_PREDICATE,
+      }),
+    ]),
+  });
+}
+
 /** Whether an event belongs to the phases and wheels kept; press fights are always kept. */
 function eventActive(
   event: RoomEvent,

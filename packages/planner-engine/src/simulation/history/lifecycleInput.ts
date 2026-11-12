@@ -1,8 +1,9 @@
-import type { RoomDeclaration } from '../../catalog-schema';
+import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { EnteredRewardStoreHistoryPolicy } from '../../reward-kernel/bindings';
 import type { RoomLifecycleExecutionInput } from '../lifecycle';
 import type { ResolvedEncounterPhase } from '../encounters/model';
 import { scopeRoomActionRoster } from '../room-actions';
+import { encounterFreeRoomEventGraph } from '../../authored-project/room-actions/event-graph';
 import { declaredEnteredStoreKey } from '../rewards/biome/reward-store-support';
 import type {
   CanonicalAuthoredRoom,
@@ -70,6 +71,7 @@ export function lacksEnteredStoreProvenance(
 }
 
 export function createRoomLifecycleInput(
+  catalog: Catalog,
   room: CanonicalLifecycleRoom,
   encounterPhases: readonly ResolvedEncounterPhase[],
   declaration: RoomDeclaration,
@@ -101,7 +103,17 @@ export function createRoomLifecycleInput(
         );
   const roomActionRoster =
     room.kind !== 'authored'
-      ? undefined
+      ? Object.freeze({
+          eventGraph: encounterFreeRoomEventGraph(
+            room.lifecycleProfileKey,
+            catalog.roomLifecycleProfiles.byKey[room.lifecycleProfileKey]?.generatesOutgoing ===
+              true,
+          ),
+          rows: Object.freeze([]),
+          issues: Object.freeze([]),
+          proposals: Object.freeze([]),
+          valid: true,
+        })
       : scopeRoomActionRoster(
           room.roomActionRoster,
           encounterPhases.map((phase) => phase.slotKey),
@@ -124,7 +136,7 @@ export function createRoomLifecycleInput(
       : {}),
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
     ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),
-    ...(roomActionRoster === undefined ? {} : { roomActionRoster }),
+    roomActionRoster,
     ...(room.kind === 'authored' && room.hermesShrine !== undefined
       ? { hermesShrine: room.hermesShrine }
       : {}),

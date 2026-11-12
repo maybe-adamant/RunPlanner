@@ -229,8 +229,8 @@ export interface RoomLifecycleExecutionInput {
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;
-  /** Present for occurrence rooms, including fixed Boss and Postboss rooms. */
-  readonly roomActionRoster?: RoomActionRoster;
+  /** The room's rows and event graph; the Hub board room's has neither rows nor encounters. */
+  readonly roomActionRoster: RoomActionRoster;
   /** Feature-local Shrine purchases, consumed only by the Shrine scheduling checkpoint. */
   readonly hermesShrine?: import('../../authored-project/model').HermesShrineState;
   /** The rack swaps the keepsake; an unchanged rack's action is a no-op. */

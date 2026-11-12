@@ -113,8 +113,41 @@ function roomDeclaration(lifecycleProfileKey: string, encounterEnvelopeKey: stri
   return room;
 }
 
+/** A room with no rows: its graph runs the input's phases in order. */
+function rowlessRoster(
+  lifecycleProfileKey: string,
+  encounterPhases: readonly ResolvedEncounterPhase[] = [],
+) {
+  const fields = lifecycleProfileKey === 'FieldsCombatRoom';
+  const graphPhases: readonly RoomEventGraphPhase[] = encounterPhases.map((phase) => ({
+    phaseKey: phase.slotKey,
+    ...(phase.rewardAttachment?.kind === 'rewardWheel'
+      ? { rewardWheelKey: phase.rewardAttachment.key }
+      : {}),
+    ...(catalog.encounterDefinitions.byKey[phase.encounterKey] === undefined
+      ? {}
+      : { script: catalog.encounterDefinitions.byKey[phase.encounterKey]!.script }),
+    ...(fields ? { standsAt: Object.freeze({ kind: 'roomEntered' as const }) } : {}),
+  }));
+  const eventGraph: RoomEventGraph = Object.freeze({
+    profileKey: lifecycleProfileKey,
+    activeEncounterSlotKeys: Object.freeze(graphPhases.map((phase) => phase.phaseKey)),
+    phases: Object.freeze(graphPhases),
+    pressFights: [],
+    events: Object.freeze(
+      testGraphEvents(graphPhases, {
+        cages: fields,
+        generatesOutgoing:
+          catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey]?.generatesOutgoing === true,
+      }),
+    ),
+  });
+  return assembleRoomActionRoster({ owner: origin, order: [], eventGraph, contributions: [] });
+}
+
 function input(overrides: Partial<RoomLifecycleExecutionInput> = {}): RoomLifecycleExecutionInput {
-  const executionInput: Omit<RoomLifecycleExecutionInput, 'roomDeclaration'> = {
+  const executionInput: Omit<RoomLifecycleExecutionInput, 'roomDeclaration' | 'roomActionRoster'> &
+    Partial<Pick<RoomLifecycleExecutionInput, 'roomActionRoster'>> = {
     origin,
     lifecycleProfileKey: 'StandardRewardRoom',
     encounterEnvelopeKey: 'SingleEncounter',
@@ -131,6 +164,9 @@ function input(overrides: Partial<RoomLifecycleExecutionInput> = {}): RoomLifecy
   };
   return {
     ...executionInput,
+    roomActionRoster:
+      executionInput.roomActionRoster ??
+      rowlessRoster(executionInput.lifecycleProfileKey, executionInput.encounterPhases),
     roomDeclaration:
       overrides.roomDeclaration ??
       roomDeclaration(executionInput.lifecycleProfileKey, executionInput.encounterEnvelopeKey),
@@ -152,9 +188,7 @@ function inputWithoutProducer(
     ...(executionInput.requiredObjects === undefined
       ? {}
       : { requiredObjects: executionInput.requiredObjects }),
-    ...(executionInput.roomActionRoster === undefined
-      ? {}
-      : { roomActionRoster: executionInput.roomActionRoster }),
+    roomActionRoster: executionInput.roomActionRoster,
     counterEffects: executionInput.counterEffects,
   };
 }
@@ -1164,16 +1198,45 @@ describe('single-room lifecycle execution', () => {
   ] as const)(
     'acquires the %s %s opening reward before its delayed counting encounter',
     (routeKey, biomeKey, encounterKey) => {
+      const openingOrigin = createOccurrenceAddress(
+        createBiomeAddress(routeKey, biomeKey),
+        createOccurrenceId(`${biomeKey.toLowerCase()}-opening-lifecycle-fixture`),
+      );
+      const pickup = {
+        kind: 'interactIncomingReward' as const,
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      };
+      const roster = actionRoster(
+        openingOrigin,
+        [pickup],
+        [
+          {
+            reference: pickup,
+            participation: 'required',
+            placement: { kind: 'beforeCombat' as const },
+            dependencies: [],
+          },
+        ],
+        'OpeningRewardRoom',
+      );
+      // Using the pickup starts the fight.
+      const eventGraph = Object.freeze({
+        ...roster.eventGraph,
+        events: roster.eventGraph.events.map((event) =>
+          event.kind === 'encounterStarted'
+            ? Object.freeze({ ...event, trigger: { kind: 'action' as const, action: pickup } })
+            : event,
+        ),
+      });
       const fragment = executeRoomLifecycle(
         catalog,
         input({
-          origin: createOccurrenceAddress(
-            createBiomeAddress(routeKey, biomeKey),
-            createOccurrenceId(`${biomeKey.toLowerCase()}-opening-lifecycle-fixture`),
-          ),
+          origin: openingOrigin,
           lifecycleProfileKey: 'OpeningRewardRoom',
           encounterEnvelopeKey: 'SingleEncounter',
           encounterPhases: phases('SingleEncounter', [encounterKey]),
+          roomActionRoster: Object.freeze({ ...roster, eventGraph }),
         }),
       );
 
@@ -1267,16 +1330,11 @@ describe('single-room lifecycle execution', () => {
       'offerPointMaterialized',
       'roomEntered',
       'outgoingGenerationCheckpoint',
-      'acquisitionPointReached',
       'roomCommitted',
       'roomCountersAdvanced',
       'roomExited',
     ]);
     expect(fragment.events[2]).toMatchObject({ offerPoint: 'shopInventory' });
-    expect(fragment.events[5]).toMatchObject({
-      kind: 'acquisitionPointReached',
-      point: 'roomExit',
-    });
   });
 
   it('blocks before Wheel 2 when the required Wheel 1 pickup is unranked', () => {

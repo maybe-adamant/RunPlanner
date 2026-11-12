@@ -359,7 +359,7 @@ export function appendRoomLifecycle(
   const effectiveEncounterPhases = writer.resolveFigLeafEncounterPhases(room, encounterPhases);
   const fragment = executeRoomLifecycle(
     catalog,
-    createRoomLifecycleInput(room, effectiveEncounterPhases, declaration),
+    createRoomLifecycleInput(catalog, room, effectiveEncounterPhases, declaration),
   );
   options.prepare?.(fragment.events);
   let projectedOutgoing = false;
