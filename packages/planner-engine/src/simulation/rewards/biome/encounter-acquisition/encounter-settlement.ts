@@ -637,7 +637,14 @@ export function applyEncounterSettlementTransition(inputs: {
         catalog,
         room,
         event.phaseKey,
-        spawnIncomingRewardAtEncounterCompletion(catalog, room, roomEncounterKeys, branch),
+        spawnIncomingRewardAtEncounterCompletion(
+          catalog,
+          room,
+          roomEncounterKeys,
+          branch,
+          event.sequence,
+        ),
+        event.sequence,
       ),
     );
     const rewards =

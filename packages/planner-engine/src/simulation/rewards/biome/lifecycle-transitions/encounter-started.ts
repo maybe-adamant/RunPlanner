@@ -39,7 +39,13 @@ export function applyEncounterStartedTransition(
   let next =
     room === undefined || branch === undefined
       ? branch
-      : spawnIncomingRewardAtEncounterStart(catalog, room, event.encounterKey, branch);
+      : spawnIncomingRewardAtEncounterStart(
+          catalog,
+          room,
+          event.encounterKey,
+          branch,
+          event.sequence,
+        );
   const findings: LifecycleFinding[] = [];
   const figLeafCandidates: {
     key: string;

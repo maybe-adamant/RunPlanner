@@ -119,13 +119,16 @@ export interface DerivedAcquisitionEntryFrontier {
 }
 
 /**
- * A role's realized acquisition fixed by a `rewardForfeited` event before its
- * pickup contact, such as a Fields cage forfeited on room entry.
+ * The game's Onion preview of one reward before it spawns: whether Forfeit
+ * would take it (RewardPresentation.lua:279-286), read without consuming it.
+ * A later preview of the same owner replaces it.
  */
-export interface FixedAcquisitionRealization {
-  readonly address: import('../../../authored-project/addresses').AcquisitionRoleAddress;
-  readonly realizedAcquisition: ConcreteAcquisitionEvent;
+export interface ForfeitPeek {
+  readonly owner: import('../../../authored-project/addresses').TraitOfferOwnerAddress;
+  readonly offer: ResolvedRewardOffer;
+  readonly producerLifecycleKey: string;
   readonly historySequence: number;
+  readonly takes: boolean;
 }
 
 export interface AcquisitionRoleFrontier {

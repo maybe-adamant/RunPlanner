@@ -109,6 +109,11 @@ import {
 import { captureRerollSurfaces } from './reroll-surfaces';
 import { captureRoomActionEnd } from './object-interaction-seams';
 import { featureRerolled, purgingPoolSale, wellPurchaseRoll } from './feature-roll-seams';
+import {
+  doorRewardSpawns,
+  forfeitPeeks,
+  type RewardSpawn,
+} from './offer-lifecycle/spawned-trait-offers';
 import { parsePurgingPoolSalePoint } from '../../commerce/feature-rolls';
 import { historyFindingChronology } from './finding-chronology';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
@@ -554,9 +559,55 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
       ...(transition.settlement === undefined
         ? []
         : [{ kind: 'rerollSettlement' as const, settlement: transition.settlement }]),
+      {
+        kind: 'forfeitPeeks',
+        peeks:
+          press === undefined || transition.branch === undefined
+            ? []
+            : forfeitPeeks(
+                context.catalog,
+                transition.branch.state,
+                rerolledRewardSpawns(context, source, press),
+                event.sequence,
+              ),
+      },
     ],
   };
 };
+
+/** The reward a reroll press put in its target's place, as its preview shows it. */
+function rerolledRewardSpawns(
+  context: ChronologyWalkContext,
+  source: CanonicalAuthoredRoom,
+  press: import('../../../authored-project/rerolls').ResolvedRerollPress,
+): readonly RewardSpawn[] {
+  const { target, result } = press;
+  if (target.kind === 'wheelOffer') {
+    const wheel = source.rewardWheels?.find((candidate) => candidate.wheelKey === target.wheelKey);
+    const offer = wheel?.offers.find((candidate) => candidate.offerKey === target.offerKey);
+    return wheel === undefined || offer === undefined
+      ? []
+      : [
+          {
+            origin: offer.origin,
+            offer: result,
+            producerLifecycleKey: wheel.producerLifecycleKey,
+            forfeitEligible: true,
+          },
+        ];
+  }
+  const rewards = context.prepared.batchesByParent
+    .get(semanticAddressKey(source.origin))
+    ?.targets.find((candidate) => candidate.room.occurrenceId === target.occurrenceId)?.room;
+  const spawns = rewards === undefined ? [] : doorRewardSpawns(rewards);
+  const owner =
+    target.kind === 'door'
+      ? spawns.find((spawn) => spawn.origin.kind === 'incomingReward')
+      : spawns.find(
+          (spawn) => spawn.origin.kind === 'localReward' && spawn.origin.slotKey === target.slotKey,
+        );
+  return owner === undefined ? [] : [{ ...owner, offer: result }];
+}
 
 /**
  * One Hub board reroll in the stay it is authored in. Its slot must still be
@@ -1594,6 +1645,20 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
     emissions: [
       { kind: 'storeSupport', entries: transition.storeSupportEntries },
       generationFindings(transition.findings),
+      {
+        kind: 'forfeitPeeks',
+        peeks:
+          transition.branch === undefined
+            ? []
+            : forfeitPeeks(
+                context.catalog,
+                transition.branch.state,
+                (prepared.batchesByParent.get(ownerKey)?.targets ?? []).flatMap((target) =>
+                  doorRewardSpawns(target.room),
+                ),
+                event.sequence,
+              ),
+      },
     ],
   };
 };
@@ -1714,7 +1779,6 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
         kind: 'derivedAcquisitionEntryFrontiers',
         frontiers: entered.derivedAcquisitionEntryFrontiers,
       },
-      { kind: 'fixedAcquisitionRealizations', realizations: entered.fixedAcquisitionRealizations },
     ],
     state: Object.freeze({
       ...state,
@@ -1910,10 +1974,7 @@ const offerPointMaterialized: ChronologySeamHandler<'offerPointMaterialized'> = 
     emissions: [
       generationFindings(transition.findings),
       { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
-      {
-        kind: 'fixedAcquisitionRealizations',
-        realizations: transition.fixedAcquisitionRealizations,
-      },
+      { kind: 'forfeitPeeks', peeks: transition.forfeitPeeks },
     ],
   };
 };

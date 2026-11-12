@@ -152,7 +152,7 @@ export type RewardEvent =
       };
     })
   | (RewardEventBase & {
-      /** Automatic RoomReward substitution evidence; the fixed Onion settles at its pickup. */
+      /** Forfeit replaced this reward as it spawned; its Onion settles at the pickup. */
       readonly kind: 'rewardForfeited';
       readonly rewardType: 'Boon' | 'HermesUpgrade';
       readonly replacementRewardType: 'RoomRewardConsolationPrize';
@@ -202,6 +202,11 @@ interface RewardSimulationBase {
   /** The one reached state the walk ended on; none when a block stopped it. */
   readonly frontier: RewardBranch | undefined;
   readonly findings: readonly SemanticFinding[];
+  /**
+   * Rewards whose latest preview, before they spawned, showed Forfeit would
+   * take them (the door's or wheel's Onion); absent when none did.
+   */
+  readonly forfeitPeeks?: readonly import('./acquisition/contracts').ForfeitPeek[];
 }
 
 /** A start inside its biome, at its Preboss or completion Boss. */
