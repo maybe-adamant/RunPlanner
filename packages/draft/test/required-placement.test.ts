@@ -32,7 +32,7 @@ const PINNED_COUNTS = {
   restored: 95,
   stoppedInRoom: 1,
   encounterChosen: 11,
-  livePlacements: 131,
+  livePlacements: 134,
 };
 
 const PLACEMENT_FINDINGS: ReadonlySet<string> = new Set([
