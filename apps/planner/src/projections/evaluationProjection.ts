@@ -19,6 +19,7 @@ import {
   type ProjectRouteEvaluation,
   type ResolvedEncounterPhase,
   type SemanticFinding,
+  roomActionOrderEvidence,
 } from '@run-planner/engine/simulation';
 
 import {
@@ -701,6 +702,8 @@ export interface FindingLabels extends EncounterIssueNames {
   readonly room?: (biomeKey: string, occurrenceId: string) => string | undefined;
   /** A Timeline row's label, in the room holding the owner. */
   readonly roomAction?: (owner: SemanticAddress, actionKey: string) => string | undefined;
+  /** An event point named with its phase, in the room holding the owner. */
+  readonly roomEventPoint?: (owner: SemanticAddress, point: RoomEventPoint) => string | undefined;
 }
 
 const labelsByCatalog = new WeakMap<Catalog, FindingLabels>();
@@ -897,35 +900,31 @@ function orderUnavailableCopy(
   finding: SemanticFinding,
   labels: FindingLabels | undefined,
 ): FindingPresentation {
-  const evidence = finding.evidence;
-  const point = roomEventPointEvidence(
-    evidence.reason === 'pastDeadline' ? evidence.deadline : evidence.point,
-  );
-  switch (evidence.reason) {
+  const evidence = roomActionOrderEvidence(finding);
+  // A point named with its room's phase; end effects resolve after their encounter ends.
+  const moment = (point: RoomEventPoint) => {
+    const name = labels?.roomEventPoint?.(finding.origin, point) ?? roomEventPointName(point);
+    return point.kind === 'endEffects' ? `${name} resolve` : name;
+  };
+  switch (evidence?.reason) {
     case 'beforeSpawn':
     case 'beforeEnabler':
       if (evidence.requiredAction !== undefined)
         return Object.freeze({ title: requiredFirstTitle(requiredFirstLabel(finding, labels)) });
       if (evidence.unavailable === true)
-        return Object.freeze({ title: 'Room phase for this action is gone' });
+        return Object.freeze({ title: "This action's encounter isn't in the room anymore" });
       return Object.freeze({
         title: 'Action out of order',
-        ...(point === undefined
-          ? {}
-          : { description: `Move it after ${roomEventPointName(point)}.` }),
+        description: `Move it after ${moment(evidence.point)}.`,
       });
     case 'pastDeadline': {
       // The row ordered first stands only after the deadline the other must precede.
       const preceding =
         finding.origin.kind === 'roomAction' &&
-        finding.origin.actionKey === evidenceString(evidence.precedingAction);
+        finding.origin.actionKey === evidence.precedingAction;
       return Object.freeze({
         title: 'Action out of order',
-        ...(point === undefined
-          ? {}
-          : {
-              description: `Move it ${preceding ? 'after' : 'before'} ${roomEventPointName(point)}.`,
-            }),
+        description: `Move it ${preceding ? 'after' : 'before'} ${moment(evidence.deadline)}.`,
       });
     }
     default:
@@ -934,15 +933,6 @@ function orderUnavailableCopy(
         description: 'Move it after its prerequisite.',
       });
   }
-}
-
-/** A point the engine carries in finding evidence. */
-function roomEventPointEvidence(value: unknown): RoomEventPoint | undefined {
-  return value !== null &&
-    typeof value === 'object' &&
-    typeof (value as { kind?: unknown }).kind === 'string'
-    ? (value as RoomEventPoint)
-    : undefined;
 }
 
 /** The required action a row must follow, by its own row in the finding's room. */

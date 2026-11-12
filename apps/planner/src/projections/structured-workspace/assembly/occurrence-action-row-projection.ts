@@ -1103,6 +1103,7 @@ function roomActionsForOccurrence(
   // The Timeline ends where the room's walk stops; what spawns past it is not yet shown.
   const stop = splitAtRoomStop(spawned.entries, lifecycleTimeline.entries, input);
   return Object.freeze({
+    pointName,
     timeline: Object.freeze({
       ...projectedTimeline,
       entries: stop?.reached ?? spawned.entries,

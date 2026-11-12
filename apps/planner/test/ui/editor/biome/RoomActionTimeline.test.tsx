@@ -1495,7 +1495,7 @@ describe('OccurrenceRoomActions', () => {
       expect(new Set(proposal.explanations).size).toBe(proposal.explanations.length);
       expect(proposal.explanations[0]).toMatch(
         new RegExp(
-          `^${row.label} must come (before|after) (Combat [123]|Encounter ended · Combat [123]|choosing the Combat [123] wheel)\\.$`,
+          `^${row.label} must come (before|after) (Combat [123]|Encounter ended · Combat [123]|Combat [123]'s end effects|choosing the Combat [123] wheel)\\.$`,
         ),
       );
     }

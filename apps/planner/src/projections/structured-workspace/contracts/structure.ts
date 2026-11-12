@@ -1026,6 +1026,11 @@ export interface StructuredWorkspaceProjection {
   readonly runStateLaunchers: ReadonlyMap<string, WorkspaceRunStateLauncher>;
   /** A Timeline row's label, in the projected room holding the owner. */
   readonly roomActionLabel: (owner: SemanticAddress, actionKey: string) => string | undefined;
+  /** An event point named with its phase, in the projected room holding the owner. */
+  readonly roomEventPointName: (
+    owner: SemanticAddress,
+    point: import('@run-planner/engine/authored-project').RoomEventPoint,
+  ) => string | undefined;
   readonly route: WorkspaceRoute;
   readonly status: WorkspaceStatus;
   /** Where the walk stops, with the way there; absent when nothing stops it. */

@@ -62,8 +62,11 @@ export function roomEventPointName(point: RoomEventPoint, phases?: RoomEventPhas
           : `${label}'s ${roomEventMarker.encounterStarted}`;
     }
     case 'encounterEnd':
-    case 'endEffects':
       return phaseMarker(roomEventMarker.encounterEnd, phase(point.phaseKey));
+    case 'endEffects': {
+      const label = phase(point.phaseKey);
+      return label === undefined ? 'the end effects' : `${label}'s end effects`;
+    }
     case 'doorsOpened':
       return roomEventMarker.doorsOpened;
     case 'exitsReady':

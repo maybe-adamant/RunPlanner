@@ -244,6 +244,10 @@ export type WorkspaceTravelDealLine =
 
 export interface WorkspaceRoomActions {
   readonly timeline: WorkspaceRoomLifecycleTimeline;
+  /** An event point of this room, named with its phase as the room's blockers name it. */
+  readonly pointName: (
+    point: import('@run-planner/engine/authored-project').RoomEventPoint,
+  ) => string;
   readonly interactionKey: string;
   readonly owner: OccurrenceAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];

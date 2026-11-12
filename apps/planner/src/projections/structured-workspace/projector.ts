@@ -861,6 +861,7 @@ export function createStructuredWorkspaceProjection(
       const result = Object.freeze({
         ...(walkStop === undefined ? {} : { walkStop }),
         roomActionLabel: roomActionLabels(route),
+        roomEventPointName: roomEventPointNames(route),
         authoringReadiness: (owner: SemanticAddress) => authoringReadinessAt(assembly, owner),
         focusByOwner,
         findingsByRepairTarget: indexFindingsByRepairTarget(
@@ -884,6 +885,24 @@ export function createStructuredWorkspaceProjection(
       return result;
     },
   });
+}
+
+/** Each projected room's event point names, read by the room holding an owner. */
+function roomEventPointNames(
+  route: import('./contracts/structure').WorkspaceRoute,
+): import('./contracts/structure').StructuredWorkspaceProjection['roomEventPointName'] {
+  const rooms = new Map<string, import('./contracts/timeline').WorkspaceRoomActions['pointName']>();
+  for (const biome of route.biomes)
+    for (const node of [...biome.nodes, ...biome.completionOutline])
+      if (node.kind === 'occurrenceWorkbench' && node.room.roomActions !== undefined)
+        rooms.set(
+          `${biome.biomeKey}\u0000${node.room.occurrenceId}`,
+          node.room.roomActions.pointName,
+        );
+  return (owner, point) =>
+    'biomeKey' in owner && 'occurrenceId' in owner
+      ? rooms.get(`${owner.biomeKey}\u0000${owner.occurrenceId}`)?.(point)
+      : undefined;
 }
 
 /** Each projected room's Timeline row labels, read by the room holding an owner. */

@@ -1,4 +1,5 @@
 import type { SemanticAddress } from '../authored-project/addresses';
+import type { RoomEventPoint } from '../authored-project/room-actions/event-graph';
 
 export type SimulationPhase =
   'completeness' | 'encounterResolution' | 'rewardGeneration' | 'roomGeneration';
@@ -183,6 +184,35 @@ export type FindingEvidenceValue =
   | { readonly [key: string]: FindingEvidenceValue };
 
 export type FindingEvidence = Readonly<Record<string, FindingEvidenceValue>>;
+
+/**
+ * A `roomActionOrderUnavailable` finding's evidence, in its bound's vocabulary:
+ * the point the row stands before, or the deadline it stands past, and the
+ * action that must come first or that stands only after that deadline.
+ */
+export type RoomActionOrderEvidence =
+  | { readonly reason: 'dependency'; readonly prerequisite: string }
+  | {
+      readonly reason: 'pastDeadline';
+      readonly deadline: RoomEventPoint;
+      readonly precedingAction: string;
+    }
+  | {
+      readonly reason: 'beforeSpawn' | 'beforeEnabler';
+      readonly point: RoomEventPoint;
+      readonly requiredAction?: string;
+      /** The point names a phase the room no longer plays. */
+      readonly unavailable?: true;
+    };
+
+/** The order evidence of a `roomActionOrderUnavailable` finding. */
+export function roomActionOrderEvidence(
+  finding: SemanticFinding,
+): RoomActionOrderEvidence | undefined {
+  return finding.code === 'roomActionOrderUnavailable'
+    ? (finding.evidence as RoomActionOrderEvidence)
+    : undefined;
+}
 
 export interface SemanticFinding {
   readonly code: FindingCode;

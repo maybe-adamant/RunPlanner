@@ -5,7 +5,7 @@ import {
 import type { Catalog } from '../../catalog-schema';
 import {
   isRequiredMissingInputFinding,
-  type FindingEvidence,
+  type RoomActionOrderEvidence,
   type SemanticFinding,
 } from '../model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
@@ -136,12 +136,8 @@ export function talentDropClosureLifecycleState(context: ProgressiveBiomeContext
 
 type RequiredActionDeadline = import('../lifecycle/model').RequiredActionDeadline;
 
-/**
- * A placement blocker as finding evidence, in its bound's vocabulary: the
- * point the row stands before, or the deadline it stands past, and the action
- * that must come first or that stands only after that deadline.
- */
-function orderIssueEvidence(issue: RoomActionPlacementBlocker): FindingEvidence {
+/** A placement blocker as finding evidence, in its bound's vocabulary. */
+function orderIssueEvidence(issue: RoomActionPlacementBlocker): RoomActionOrderEvidence {
   switch (issue.kind) {
     case 'dependency':
       return { reason: 'dependency', prerequisite: roomActionKey(issue.dependency.action) };

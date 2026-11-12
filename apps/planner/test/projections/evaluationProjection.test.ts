@@ -662,7 +662,26 @@ describe('timeline finding guidance', () => {
           unavailable: true,
         }),
       ),
-    ).toEqual({ title: 'Room phase for this action is gone' });
+    ).toEqual({ title: "This action's encounter isn't in the room anymore" });
+  });
+
+  it("names a deadline by its room's phase, end effects apart from the encounter end", () => {
+    const spoils = finding({
+      reason: 'pastDeadline',
+      deadline: { kind: 'endEffects', phaseKey: 'Combat1' },
+      precedingAction: 'useFountain',
+    });
+    expect(presentFinding(spoils).description).toBe('Move it before the end effects resolve.');
+    expect(
+      presentFinding(spoils, {
+        ...catalogFindingLabels(catalog),
+        roomEventPoint: (owner, point) =>
+          semanticAddressKey(owner) === semanticAddressKey(spoils.origin) &&
+          point.kind === 'endEffects'
+            ? "Combat 1's end effects"
+            : undefined,
+      }).description,
+    ).toBe("Move it before Combat 1's end effects resolve.");
   });
 
   it('moves the row ordered first past the deadline it stands after', () => {

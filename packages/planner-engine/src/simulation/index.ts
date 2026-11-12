@@ -225,8 +225,10 @@ export {
 export {
   type FindingCode,
   type FindingEvidenceValue,
+  type RoomActionOrderEvidence,
   type SemanticFinding,
   isRequiredMissingInputFinding,
+  roomActionOrderEvidence,
 } from './model';
 export { type AcquisitionConversionCandidateCapability } from './rewards/acquisition/artifacts';
 export { type HexActivationCandidateCapability } from './hex-activation';
