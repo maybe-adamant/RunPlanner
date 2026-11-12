@@ -24,7 +24,9 @@ import { withRequiredScopes } from '../../src/simulation/room-actions/required-s
 import { boundsForPlacement, type TestRowPlacement } from '../support/room-action-bounds';
 
 /** A test row names where it stands; the room's graph gives it bounds, label and phase. */
-type TestRow = Omit<RoomActionRow, 'label' | 'bounds'> & { readonly placement: TestRowPlacement };
+type TestRow = Omit<RoomActionRow, 'contact' | 'label' | 'bounds'> & {
+  readonly placement: TestRowPlacement;
+};
 type TestRoster = Omit<RoomActionRoster, 'rows'> & { readonly rows: readonly TestRow[] };
 import { testGraphEvents } from '../support/event-graph';
 

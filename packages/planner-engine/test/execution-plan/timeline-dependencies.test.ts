@@ -64,7 +64,7 @@ type Kind = 'screen' | 'pickup' | 'native' | 'phialFountain' | RoomActionReferen
 interface Action {
   readonly key: string;
   readonly kind: Kind;
-  readonly label?: RoomActionRow['label'];
+  readonly contact?: RoomActionRow['contact'];
   readonly owner?: SemanticAddress;
 }
 
@@ -90,7 +90,7 @@ function room(actions: readonly Action[], automatic: readonly SemanticAddress[] 
         key: action.key,
         owner: ownerOf(action),
         participation: 'required',
-        label: action.label ?? { kind: 'afterCombat' },
+        contact: action.contact ?? { kind: 'afterCombat' },
         dependencies: [],
         rank: index + 1,
         stale: false,
@@ -178,9 +178,9 @@ describe('trait fence dependencies', () => {
 
   it('orders a fence against its neighbours by rank across lifecycle windows', () => {
     const { room: fenceRoom, transactions } = room([
-      { key: 'before', kind: 'screen', label: { kind: 'beforeCombat' } },
+      { key: 'before', kind: 'screen', contact: { kind: 'beforeCombat' } },
       { key: 'fence', kind: 'interactKeepsakeRack' },
-      { key: 'after', kind: 'screen', label: { kind: 'afterDoorsOpen' } },
+      { key: 'after', kind: 'screen', contact: { kind: 'afterDoorsOpen' } },
     ]);
     expect(traitFenceDependencies(fenceRoom, transactions)).toEqual([
       edge('fence', 'before'),
@@ -302,7 +302,7 @@ describe('natively ordered trait mutations', () => {
         {
           key: 'cage',
           kind: 'screen',
-          label: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
+          contact: { kind: 'afterEncounterEnd', endedPhaseKey: 'Encounter' },
         },
         { key: 'reward', kind: 'screen' },
       ],
@@ -324,7 +324,7 @@ describe('natively ordered trait mutations', () => {
         key: 'chosen',
         kind: 'screen',
         owner: chosen,
-        label: { kind: 'beforeCombat' },
+        contact: { kind: 'beforeCombat' },
       },
       { key: 'spurned', kind: 'screen', owner: spurned },
     ]);

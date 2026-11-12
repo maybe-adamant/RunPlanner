@@ -462,7 +462,7 @@ export function executionTimelineTransactions(
         'executionCoverageMissing',
         `${room.gameName} has a transaction without an active roster owner ${transactionOwner}`,
       );
-    return wireWindow(row.bounds, room.roomActionRoster.eventGraph);
+    return wireWindow(row.contact);
   };
   const add = (transaction: ExecutionTimelineTransaction): void => {
     if (transactions.some((candidate) => candidate.owner === transaction.owner))

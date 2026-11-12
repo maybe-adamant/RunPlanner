@@ -11,91 +11,100 @@ import {
   type RoomActionBounds,
   type RoomEventGraph,
 } from '../../authored-project/room-actions/event-graph';
-import type { RoomActionRow, RoomActionRowLabel } from './model';
+import type { RoomActionContact, RoomActionRow, RoomActionRowLabel } from './model';
 
-/** A row before its phase, label and required scope are named. */
-export type RoomActionRowFacts = Omit<RoomActionRow, 'label'> & {
+/** A row before its contact, phase, label and required scope are named. */
+export type RoomActionRowFacts = Omit<RoomActionRow, 'contact' | 'label'> & {
+  readonly contact?: RoomActionContact;
   readonly label?: RoomActionRowLabel;
 };
 
 /**
- * The label a row's bounds name: after the doors open, before a phase's
- * Combat (a wheel phase's choice), at a wheel's roll, after an encounter's
- * end effects (before the next wheel's choice when its wheels open then),
- * after a wheel phase's fight, during a Fields room, or after the room's fights.
+ * The one classification of a row's bounds: after the doors open, before a
+ * phase's Combat (a wheel phase's choice), at a wheel's roll, after an
+ * encounter's end effects, after a wheel phase's fight, during a Fields room,
+ * or after the room's fights.
  */
-function boundsLabel(bounds: RoomActionBounds, structure: RoomEventGraph): RoomActionRowLabel {
+function roomActionContact(bounds: RoomActionBounds, graph: RoomEventGraph): RoomActionContact {
+  const last = graph.phases.at(-1)?.phaseKey;
+  const phase = (phaseKey: string | undefined) => (phaseKey === undefined ? {} : { phaseKey });
+  const played = (phaseKey: string) => phase(playsPhase(graph, phaseKey) ? phaseKey : undefined);
   const { spawn, enabler } = bounds;
-  const wheel = (
-    kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase',
-    wheelKey: string,
-  ): RoomActionRowLabel => {
-    const phaseKey = phaseOfWheel(structure, wheelKey);
-    return Object.freeze({ kind, wheelKey, ...(phaseKey === undefined ? {} : { phaseKey }) });
-  };
   if (enabler?.kind === 'doorsOpened' || enabler?.kind === 'exitsReady')
-    return Object.freeze({ kind: 'afterDoorsOpen' });
+    return Object.freeze({ kind: 'afterDoorsOpen', ...phase(last) });
   if (enabler?.kind === 'gate') {
-    const wheelKey = wheelOfPhase(structure, enabler.phaseKey);
-    return wheelKey === undefined
-      ? Object.freeze({ kind: 'beforeCombat' })
-      : wheel('beforeWheelPhase', wheelKey);
+    const wheelKey = wheelOfPhase(graph, enabler.phaseKey);
+    return Object.freeze(
+      wheelKey !== undefined
+        ? { kind: 'beforeWheelPhase', wheelKey, ...played(enabler.phaseKey) }
+        : {
+            kind: 'beforeCombat',
+            ...played(enabler.phaseKey),
+            ...(spawn.kind === 'wheelsOpen' ? { wheelKey: spawn.wheelKey } : {}),
+          },
+    );
   }
   switch (spawn.kind) {
     case 'wheelsOpen':
-      return wheel('beforeWheelChoice', spawn.wheelKey);
-    case 'endEffects': {
-      // A Fields cage's due pickups stand with the room's free cage rows.
-      if (cagePhase(structure, spawn.phaseKey)) return Object.freeze({ kind: 'fields' });
-      const next = nextWheelsOpen(structure, spawn.phaseKey)?.phaseKey;
       return Object.freeze({
-        kind: 'afterEncounterEnd',
-        phaseKey: spawn.phaseKey,
-        ...(next === undefined ? {} : { beforeWheelChoicePhaseKey: next }),
+        kind: 'beforeWheelChoice',
+        wheelKey: spawn.wheelKey,
+        ...phase(phaseOfWheel(graph, spawn.wheelKey)),
+      });
+    case 'endEffects': {
+      const endedPhaseKey = spawn.phaseKey;
+      const phaseKey = playsPhase(graph, endedPhaseKey)
+        ? (nextWheelsOpen(graph, endedPhaseKey)?.phaseKey ?? endedPhaseKey)
+        : undefined;
+      // A Fields cage's due pickups stand with the room's free cage rows.
+      return Object.freeze({
+        kind: cagePhase(graph, endedPhaseKey)
+          ? ('fields' as const)
+          : ('afterEncounterEnd' as const),
+        endedPhaseKey,
+        ...phase(phaseKey),
       });
     }
     case 'encounterEnd': {
-      const wheelKey = wheelOfPhase(structure, spawn.phaseKey);
-      if (wheelKey !== undefined) return wheel('afterWheelPhase', wheelKey);
-      return Object.freeze({ kind: fieldsRoom(structure) ? 'fields' : 'afterCombat' });
+      const wheelKey = wheelOfPhase(graph, spawn.phaseKey);
+      const phaseKey = playsPhase(graph, spawn.phaseKey) ? spawn.phaseKey : last;
+      if (wheelKey !== undefined)
+        return Object.freeze({ kind: 'afterWheelPhase', wheelKey, ...phase(phaseKey) });
+      return Object.freeze(
+        fieldsRoom(graph)
+          ? { kind: 'fields', endedPhaseKey: spawn.phaseKey, ...phase(phaseKey) }
+          : { kind: 'afterCombat', ...phase(last) },
+      );
     }
     default:
-      return Object.freeze({ kind: fieldsRoom(structure) ? 'fields' : 'afterCombat' });
+      return Object.freeze({ kind: fieldsRoom(graph) ? 'fields' : 'afterCombat', ...phase(last) });
   }
 }
 
-/**
- * The phase a row belongs to: a wheel phase's rows to it, an encounter's end
- * effects to that phase, or to the next one when its wheels open with them,
- * a Fields cage's rows to its cage, rows before Combat to that phase and
- * every other to the last.
- */
-function boundsPhaseKey(bounds: RoomActionBounds, structure: RoomEventGraph): string | undefined {
-  const last = structure.phases.at(-1)?.phaseKey;
-  const { spawn, enabler } = bounds;
-  if (enabler?.kind === 'gate')
-    return playsPhase(structure, enabler.phaseKey) ? enabler.phaseKey : undefined;
-  if (enabler !== undefined) return last;
-  switch (spawn.kind) {
-    case 'wheelsOpen':
-      return phaseOfWheel(structure, spawn.wheelKey);
-    case 'endEffects':
-      return playsPhase(structure, spawn.phaseKey)
-        ? (nextWheelsOpen(structure, spawn.phaseKey)?.phaseKey ?? spawn.phaseKey)
-        : undefined;
-    case 'encounterEnd':
-      return playsPhase(structure, spawn.phaseKey) &&
-        (fieldsRoom(structure) || wheelOfPhase(structure, spawn.phaseKey) !== undefined)
-        ? spawn.phaseKey
-        : last;
+/** The contact as the editor names it. */
+function contactLabel(contact: RoomActionContact): RoomActionRowLabel {
+  switch (contact.kind) {
+    case 'beforeWheelPhase':
+    case 'beforeWheelChoice':
+    case 'afterWheelPhase':
+      return contact;
+    case 'afterEncounterEnd':
+      // Its phase is the next one when that phase's wheel waits on it.
+      return Object.freeze({
+        kind: contact.kind,
+        phaseKey: contact.endedPhaseKey,
+        ...(contact.phaseKey === undefined || contact.phaseKey === contact.endedPhaseKey
+          ? {}
+          : { beforeWheelChoicePhaseKey: contact.phaseKey }),
+      });
     default:
-      return last;
+      return Object.freeze({ kind: contact.kind });
   }
 }
 
 /**
- * Classifies existing obligations and names each row's phase and label; it
- * does not add ordering or participation constraints.
+ * Classifies existing obligations and names each row's contact, with its phase
+ * and label; it does not add ordering or participation constraints.
  */
 export function withRequiredScopes(
   rows: readonly RoomActionRowFacts[],
@@ -110,15 +119,16 @@ export function withRequiredScopes(
   const roomEnd =
     last === undefined ? 1 : place(Object.freeze({ kind: 'encounterEnd', phaseKey: last }));
   const fields = fieldsRoom(structure);
+  const contacts = new Map(rows.map((row) => [row, roomActionContact(row.bounds, structure)]));
   for (const row of active) {
-    const label = boundsLabel(row.bounds, structure);
+    const contact = contacts.get(row)!;
     if (
       row.reference.kind === 'completeFieldsCage' ||
-      label.kind === 'beforeWheelPhase' ||
-      label.kind === 'beforeWheelChoice' ||
-      label.kind === 'afterWheelPhase' ||
+      contact.kind === 'beforeWheelPhase' ||
+      contact.kind === 'beforeWheelChoice' ||
+      contact.kind === 'afterWheelPhase' ||
       (!fields &&
-        label.kind !== 'afterDoorsOpen' &&
+        contact.kind !== 'afterDoorsOpen' &&
         structure.phases.length > 0 &&
         place(roomActionOpeningPoint(row.bounds)) < roomEnd)
     )
@@ -144,11 +154,12 @@ export function withRequiredScopes(
       const row = { ...previous };
       delete row.requiredScope;
       delete row.phaseKey;
-      const phaseKey = boundsPhaseKey(row.bounds, structure);
+      const contact = contacts.get(previous)!;
       return Object.freeze({
         ...row,
-        ...(phaseKey === undefined ? {} : { phaseKey }),
-        label: boundsLabel(row.bounds, structure),
+        contact,
+        ...(contact.phaseKey === undefined ? {} : { phaseKey: contact.phaseKey }),
+        label: contactLabel(contact),
         ...(row.stale || row.participation !== 'required'
           ? {}
           : {

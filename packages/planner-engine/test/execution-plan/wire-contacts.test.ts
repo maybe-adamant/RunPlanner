@@ -2,7 +2,6 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'vitest';
 
-import type { RoomEventGraph } from '../../src/authored-project/room-actions/event-graph';
 import { wireWindow } from '../../src/execution-plan/assembly/lifecycle';
 import type { ExecutionLifecycleWindow } from '../../src/execution-plan/model';
 import type { RoomActionRow } from '../../src/simulation/room-actions/model';
@@ -39,8 +38,8 @@ function contactText(window: ExecutionLifecycleWindow): string {
 }
 
 /** The execution contact a row publishes, or the refusal it raises. */
-function rowContact(row: RoomActionRow, graph: RoomEventGraph): string {
-  return contactText(wireWindow(row.bounds, graph));
+function rowContact(row: RoomActionRow): string {
+  return contactText(wireWindow(row.contact));
 }
 
 describe('published lifecycle contacts', () => {
@@ -52,11 +51,7 @@ describe('published lifecycle contacts', () => {
         const rows: Record<string, string> = {};
         for (const row of room.roomActionRoster.rows)
           if (!row.stale && row.rank !== null)
-            setUnique(
-              rows,
-              `#${row.rank} ${compactActionKey(row.key)}`,
-              rowContact(row, room.roomActionRoster.eventGraph),
-            );
+            setUnique(rows, `#${row.rank} ${compactActionKey(row.key)}`, rowContact(row));
         if (Object.keys(rows).length > 0)
           witnesses.push({
             entry: entry.name,

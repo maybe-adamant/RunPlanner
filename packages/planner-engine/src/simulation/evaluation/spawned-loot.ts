@@ -721,7 +721,7 @@ export function spawnedLootForProjectEvaluationAssembly(
         : 'encounterEnd';
 
   const unlockKey = (phaseKey: string) => momentKey('encounterEnd', phaseKey);
-  const beforeCombat = (row: RoomActionRow) => row.label.kind === 'beforeCombat';
+  const beforeCombat = (row: RoomActionRow) => row.contact.kind === 'beforeCombat';
 
   // Rewards, which each moment spawns before its other loot.
   for (const row of liveRows) {
@@ -764,7 +764,7 @@ export function spawnedLootForProjectEvaluationAssembly(
       }
       case 'interactLocalReward': {
         const cagePhaseKey =
-          row.label.kind === 'fields' && row.bounds.spawn.kind === 'encounterEnd'
+          row.contact.kind === 'fields' && row.bounds.spawn.kind === 'encounterEnd'
             ? row.bounds.spawn.phaseKey
             : undefined;
         add(

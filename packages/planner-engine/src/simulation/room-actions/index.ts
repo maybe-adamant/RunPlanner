@@ -22,6 +22,7 @@ export type {
   RoomActionRow,
   RoomActionRowLabel,
   RoomActionBounds,
+  RoomActionContact,
   RoomEventPoint,
 } from './model';
 export type {

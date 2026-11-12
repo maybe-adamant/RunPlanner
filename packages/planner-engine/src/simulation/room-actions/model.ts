@@ -26,12 +26,7 @@ export type {
 
 export type RoomActionRosterIssue = RoomActionOrderIssue;
 
-/**
- * When a row's item may be used, named from its bounds by the room's phases: before or after
- * the room's combat, after an encounter's end (and, when the next phase's wheel
- * waits on what it spawns, before that wheel's choice), during a Fields room,
- * after the doors open, or before, at the choice of, or after a wheel phase.
- */
+/** A row's contact as the editor names it. */
 export type RoomActionRowLabel =
   | { readonly kind: 'beforeCombat' | 'afterCombat' | 'fields' | 'afterDoorsOpen' }
   | {
@@ -47,6 +42,43 @@ export type RoomActionRowLabel =
       readonly phaseKey?: string;
     };
 
+/**
+ * Where a row's item meets the room's events, classified once from its bounds.
+ * `phaseKey` is the phase the row belongs to: a wheel phase's rows to it, an
+ * encounter end's to that phase or to the next one when its wheel waits on
+ * them, rows before combat to their phase and every other to the last; absent
+ * when the room plays no phase or no longer plays the one it names.
+ */
+export type RoomActionContact =
+  /** Usable once the doors open or the exits are ready. */
+  | { readonly kind: 'afterDoorsOpen'; readonly phaseKey?: string }
+  /** Before a phase's Combat, which its use starts. */
+  | {
+      readonly kind: 'beforeCombat';
+      readonly phaseKey?: string;
+      /** The wheel whose roll spawns it when the room no longer plays that wheel's phase. */
+      readonly wheelKey?: string;
+    }
+  /** At a Ship wheel phase's gate, from its wheel's roll, or after its fight. */
+  | {
+      readonly kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase';
+      readonly wheelKey: string;
+      readonly phaseKey?: string;
+    }
+  /** Spawned by an encounter's end effects. */
+  | {
+      readonly kind: 'afterEncounterEnd';
+      readonly endedPhaseKey: string;
+      readonly phaseKey?: string;
+    }
+  /**
+   * In a Fields room: spawned by a cage's end effects or a fight's end
+   * (`endedPhaseKey`), or standing from the room's entry.
+   */
+  | { readonly kind: 'fields'; readonly endedPhaseKey?: string; readonly phaseKey?: string }
+  /** After the room's combat. */
+  | { readonly kind: 'afterCombat'; readonly phaseKey?: string };
+
 export interface RoomActionRow {
   readonly reference: RoomActionReference;
   readonly key: string;
@@ -56,13 +88,10 @@ export interface RoomActionRow {
   readonly requiredScope?: 'phase' | 'room';
   /** Where the row may stand, in the room's graph events. */
   readonly bounds: RoomActionBounds;
-  /**
-   * The event-graph phase the row belongs to: a wheel phase's rows to it, an
-   * encounter end's to that phase, or to the next one when its wheel waits on
-   * them, rows before combat to the first phase and every other to the last.
-   * Absent when the room plays no phase or no longer plays the one it names.
-   */
+  readonly contact: RoomActionContact;
+  /** The contact's phase. */
   readonly phaseKey?: string;
+  /** The contact as the editor names it; presentation only. */
   readonly label: RoomActionRowLabel;
   readonly dependencies: readonly RoomActionDependency[];
   readonly rank: number | null;

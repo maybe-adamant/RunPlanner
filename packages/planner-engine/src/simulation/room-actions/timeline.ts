@@ -97,7 +97,7 @@ function appendAutomaticTimelineEffects(
     if (
       entry.kind === 'action' &&
       entry.action.participation === 'required' &&
-      entry.action.label.kind === 'afterWheelPhase'
+      entry.action.contact.kind === 'afterWheelPhase'
     ) {
       if (latestEncounterEndPhaseKey !== undefined)
         shipPostCombatActionIndexByPhase.set(latestEncounterEndPhaseKey, index);
@@ -274,11 +274,11 @@ export function assembleRoomLifecycleTimeline(
       : undefined;
   };
 
-  const wheelRow = (row: RoomActionRow): string | undefined =>
-    row.label.kind === 'beforeWheelPhase' ||
-    row.label.kind === 'beforeWheelChoice' ||
-    row.label.kind === 'afterWheelPhase'
-      ? row.label.wheelKey
+  const wheelRow = ({ contact }: RoomActionRow): string | undefined =>
+    contact.kind === 'beforeWheelPhase' ||
+    contact.kind === 'beforeWheelChoice' ||
+    contact.kind === 'afterWheelPhase'
+      ? contact.wheelKey
       : undefined;
   const endEffectsRow = (row: RoomActionRow, phaseKey: string): boolean =>
     row.bounds.spawn.kind === 'endEffects' && row.bounds.spawn.phaseKey === phaseKey;
@@ -293,8 +293,8 @@ export function assembleRoomLifecycleTimeline(
           endEffectsRow(row, phase.phaseKey)
         );
       return (
-        row.label.kind === 'beforeCombat' ||
-        (row.label.kind === 'afterCombat' && phase.phaseKey === finalPhaseKey) ||
+        row.contact.kind === 'beforeCombat' ||
+        (row.contact.kind === 'afterCombat' && phase.phaseKey === finalPhaseKey) ||
         endEffectsRow(row, phase.phaseKey)
       );
     });
@@ -304,14 +304,14 @@ export function assembleRoomLifecycleTimeline(
     return phase.rewardWheelKey === undefined
       ? firstRank(
           phaseRows,
-          (row) => row.label.kind === 'afterCombat' || endEffectsRow(row, phase.phaseKey),
+          (row) => row.contact.kind === 'afterCombat' || endEffectsRow(row, phase.phaseKey),
         )
-      : firstRank(phaseRows, (row) => row.label.kind === 'afterWheelPhase');
+      : firstRank(phaseRows, (row) => row.contact.kind === 'afterWheelPhase');
   };
 
   // A wheel's rerolls, choice and spoils stand in its phase's encounter, begun as its wheels open.
   const shipPhaseKeyForAction = (row: RoomActionRow): string | undefined =>
-    wheelRow(row) === undefined || !('phaseKey' in row.label) ? undefined : row.label.phaseKey;
+    wheelRow(row) === undefined ? undefined : row.contact.phaseKey;
 
   const place = roomEventPlaces(structure);
   const opening = (row: RoomActionRow) => place(roomActionOpeningPoint(row.bounds));
@@ -366,7 +366,7 @@ export function assembleRoomLifecycleTimeline(
         ? boundaryEntry(point, 0, 'before')
         : boundaryEntry(point, unplaced, 'after');
     }
-    const lastPreCombatRank = lastRank(rankedRows, (row) => row.label.kind === 'beforeCombat');
+    const lastPreCombatRank = lastRank(rankedRows, (row) => row.contact.kind === 'beforeCombat');
     return lastPreCombatRank === undefined
       ? boundaryEntry(point, 0, 'before')
       : boundaryEntry(point, lastPreCombatRank, 'after');
