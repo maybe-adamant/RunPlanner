@@ -1,12 +1,15 @@
 import {
   createBiomeAddress,
+  createOccurrenceAddress,
   createRoomActionAddress,
   roomActionKey,
   type OccurrenceId,
   type RoomActionReference,
+  type SemanticAddress,
   roomActionDomainForOccurrence,
   scheduleRequiredRoomActions,
 } from '@run-planner/engine/authored-project';
+import type { SemanticFinding } from '@run-planner/engine/simulation';
 import type { RunImportContext } from './import';
 
 /** The address of one room action of an occurrence. */
@@ -89,4 +92,34 @@ export function removeRoomAction(
     kind: 'RemoveRoomAction',
     action: roomActionAddress(context, biomeKey, occurrenceId, reference),
   });
+}
+
+const PLACEMENT_REQUIRED = new Set([
+  'roomActionPlacementRequired',
+  'hermesShrineDeliveryPlacementRequired',
+  'echoGoldPickupPlacementRequired',
+]);
+
+/** The room an owner lies in; an acquisition entry's is its site owner's. */
+function ownerRoom(origin: SemanticAddress) {
+  if (origin.kind === 'acquisitionEntry') return ownerRoom(origin.site.owner);
+  if (!('occurrenceId' in origin)) return undefined;
+  return createOccurrenceAddress(
+    createBiomeAddress(origin.routeKey, origin.biomeKey),
+    origin.occurrenceId,
+  );
+}
+
+/**
+ * A required item nobody placed is collected where the player would take it:
+ * the engine collects every required item live in its room. The record's own
+ * order is applied once the plan is complete.
+ */
+export function answerRequiredPlacement(
+  context: RunImportContext,
+  reason: SemanticFinding,
+): boolean {
+  if (!PLACEMENT_REQUIRED.has(reason.code)) return false;
+  const room = ownerRoom(reason.origin);
+  return room !== undefined && context.collectRequired(room);
 }

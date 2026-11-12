@@ -7,6 +7,7 @@ import {
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
+  type OccurrenceAddress,
   type ProjectCommand,
   type ProjectDocument,
   type SemanticAddress,
@@ -14,6 +15,7 @@ import {
 import { createAuthoringSession, type AuthoringSession } from '@run-planner/engine/authoring';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
+  collectRequiredItems,
   type ProjectCandidateSession,
   findingsAddedSince,
   planEndAvailability,
@@ -48,6 +50,7 @@ import {
 } from './carrier-children';
 import { importDispositions, reportUnplacedDispositions } from './dispositions';
 import { importRoomActionOrders } from './action-order';
+import { answerRequiredPlacement } from './actions';
 import { importEncounters } from './encounters';
 import { answerCommerce, importCommerce } from './commerce';
 import { answerFeatures, importFeatures, recordedHexTree, reportDenialBans } from './features';
@@ -116,6 +119,11 @@ export interface RunImportContext {
   readonly candidates: () => ProjectCandidateSession;
   /** Applies one command through edit settlement; false when it is refused or changes nothing. */
   readonly apply: (command: ProjectCommand) => boolean;
+  /**
+   * Collects every required item live in an entered room through the engine's
+   * collection, as playing forward would; false when it placed nothing.
+   */
+  readonly collectRequired: (occurrence: OccurrenceAddress) => boolean;
   /** Applies one command unless it is refused or adds a finding other than missing input. */
   readonly applyValid: (command: ProjectCommand) => boolean;
   /** Runs several applications as one, kept only when they succeed and stay valid as `applyValid`. */
@@ -347,6 +355,7 @@ export class RunImportWalk {
       assembly: () => this.assembly,
       candidates: () => this.authoring.candidates(),
       apply: (command) => this.apply(command),
+      collectRequired: (occurrence) => this.collectRequired(occurrence),
       applyValid: (command) => this.transaction(() => this.apply(command)),
       transaction: (run) => this.transaction(run),
       probe: (run) => this.probe(run),
@@ -672,6 +681,19 @@ export class RunImportWalk {
     return true;
   }
 
+  private collectRequired(occurrence: OccurrenceAddress): boolean {
+    const collected = collectRequiredItems({
+      catalog: this.catalog,
+      before: this.assembly,
+      occurrence,
+      evaluate: (project) => simulateProjectAssembly(this.catalog, project),
+    });
+    if (collected.commands.length === 0) return false;
+    this.authoring.restore(collected.assembly);
+    if (collected.fault !== undefined) this.reportFault(collected.fault);
+    return true;
+  }
+
   private reportFault(fault: SettlementFault): void {
     this.report(areaOfOwner(fault.owner), 'engineFault', fault.owner);
   }
@@ -873,6 +895,7 @@ export class RunImportWalk {
       answerArcanaGrant(this.context, reason) ||
       answerTopology(this.context, reason) ||
       answerReward(this.context, reason) ||
+      answerRequiredPlacement(this.context, reason) ||
       answerTraitOffer(this.context, reason) ||
       answerCarrierChild(this.context, reason) ||
       answerLevelResolution(this.context, reason) ||
