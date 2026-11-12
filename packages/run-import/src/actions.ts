@@ -128,6 +128,41 @@ export function placeLiveRoomAction(
   return chosen !== undefined && context.applyValid(chosen.verb.commands![0]!);
 }
 
+/**
+ * Whether the room's walk has passed a standing row and collected the
+ * required items live after it: the record's later actions follow them.
+ */
+export function collectedPast(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrenceId: string,
+  reference: RoomActionReference,
+): boolean {
+  const room = createOccurrenceAddress(
+    createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+    occurrenceId as OccurrenceId,
+  );
+  context.collectRequired(room);
+  const live = liveRoomForProjectEvaluationAssembly(
+    context.catalog,
+    context.assembly(),
+    room,
+    'placements',
+  );
+  const key = roomActionKey(reference);
+  const gap = live?.gaps.find((candidate) =>
+    candidate.items.some((item) =>
+      item.verbs.some(
+        (verb) =>
+          verb.standing === true &&
+          verb.reference !== undefined &&
+          roomActionKey(verb.reference) === key,
+      ),
+    ),
+  );
+  return live !== undefined && gap !== undefined && live.frontier > gap.index;
+}
+
 /** Removes a room action, unless that adds a finding. */
 export function removeRoomAction(
   context: RunImportContext,

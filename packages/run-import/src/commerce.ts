@@ -46,7 +46,7 @@ import type {
   RunRecordStore,
   RunRecordStoreKind,
 } from './run-record/model';
-import { insertRoomAction, placeLiveRoomAction, roomActionAddress } from './actions';
+import { collectedPast, insertRoomAction, placeLiveRoomAction, roomActionAddress } from './actions';
 import type { RunImportContext } from './import';
 import type { RunImportArea } from './report';
 import { isQuestionFinding } from './areas';
@@ -864,9 +864,9 @@ function importShopPurchases(
   const slots = context.catalog.rewards.shops.byKey[shop.profileKey]?.slots.values ?? [];
   // Purchases wait for the profile's whole inventory.
   if (slots.some((slot) => (shop.offers[slot.key]?.reward ?? null) === null)) return;
-  context.used.add(used);
   const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
   if (visit.store.purchases === undefined) {
+    context.used.add(used);
     context.note({
       area: 'shop',
       reason: 'notInRecord',
@@ -875,7 +875,31 @@ function importShopPurchases(
     });
     return;
   }
-  for (const purchase of purchaseOrder(context, shop, visit.room, visit.store.purchases)) {
+  const purchases = purchaseOrder(context, shop, visit.room, visit.store.purchases);
+  const placed = (offerKey: string) =>
+    authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrence.occurrenceId,
+    )?.roomActions.order.some(
+      (action) => action.kind === 'interactShopOffer' && action.offerKey === offerKey,
+    ) === true;
+  for (const [index, purchase] of purchases.entries()) {
+    const bought = `${used}:${index}`;
+    if (context.used.has(bought)) continue;
+    // The record's next purchase follows what the one before it spawned, so it waits until
+    // the walk passes that purchase and its required items are collected.
+    const previous = index === 0 ? undefined : slots[purchases[index - 1]!.slot - 1]?.key;
+    if (
+      previous !== undefined &&
+      placed(previous) &&
+      !collectedPast(context, biomeKey, occurrence.occurrenceId, {
+        kind: 'interactShopOffer',
+        offerKey: previous,
+      })
+    )
+      return;
+    context.used.add(bought);
     const offerKey = slots[purchase.slot - 1]?.key;
     const offer =
       offerKey === undefined
@@ -909,6 +933,7 @@ function importShopPurchases(
       record: record(visit.roomIndex),
     });
   }
+  context.used.add(used);
 }
 
 /** Each giver's stamped screen picks in a room, earliest first: an acquired trait, or the one a level-up raised. */
