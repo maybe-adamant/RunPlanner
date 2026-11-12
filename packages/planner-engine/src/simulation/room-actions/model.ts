@@ -35,12 +35,10 @@ export type RoomActionRowLabel =
       /** The phase whose wheel's choice waits on this row. */
       readonly beforeWheelChoicePhaseKey?: string;
     }
-  | {
-      readonly kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase';
-      readonly wheelKey: string;
-      /** The phase the wheel belongs to; absent when the room no longer plays it. */
-      readonly phaseKey?: string;
-    };
+  | Extract<
+      RoomActionContact,
+      { readonly kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase' }
+    >;
 
 /**
  * Where a row's item meets the room's events, classified once from its bounds.
@@ -50,8 +48,8 @@ export type RoomActionRowLabel =
  * when the room plays no phase or no longer plays the one it names.
  */
 export type RoomActionContact =
-  /** Usable once the doors open or the exits are ready. */
-  | { readonly kind: 'afterDoorsOpen'; readonly phaseKey?: string }
+  /** Usable once the doors open or the exits are ready, or after the room's combat. */
+  | { readonly kind: 'afterDoorsOpen' | 'afterCombat'; readonly phaseKey?: string }
   /** Before a phase's Combat, which its use starts. */
   | {
       readonly kind: 'beforeCombat';
@@ -75,9 +73,7 @@ export type RoomActionContact =
    * In a Fields room: spawned by a cage's end effects or a fight's end
    * (`endedPhaseKey`), or standing from the room's entry.
    */
-  | { readonly kind: 'fields'; readonly endedPhaseKey?: string; readonly phaseKey?: string }
-  /** After the room's combat. */
-  | { readonly kind: 'afterCombat'; readonly phaseKey?: string };
+  | { readonly kind: 'fields'; readonly endedPhaseKey?: string; readonly phaseKey?: string };
 
 export interface RoomActionRow {
   readonly reference: RoomActionReference;
@@ -89,8 +85,6 @@ export interface RoomActionRow {
   /** Where the row may stand, in the room's graph events. */
   readonly bounds: RoomActionBounds;
   readonly contact: RoomActionContact;
-  /** The contact's phase. */
-  readonly phaseKey?: string;
   /** The contact as the editor names it; presentation only. */
   readonly label: RoomActionRowLabel;
   readonly dependencies: readonly RoomActionDependency[];

@@ -13,11 +13,8 @@ import {
 } from '../../authored-project/room-actions/event-graph';
 import type { RoomActionContact, RoomActionRow, RoomActionRowLabel } from './model';
 
-/** A row before its contact, phase, label and required scope are named. */
-export type RoomActionRowFacts = Omit<RoomActionRow, 'contact' | 'label'> & {
-  readonly contact?: RoomActionContact;
-  readonly label?: RoomActionRowLabel;
-};
+/** A row before its contact, label and required scope are named. */
+export type RoomActionRowFacts = Omit<RoomActionRow, 'contact' | 'label'>;
 
 /**
  * The one classification of a row's bounds: after the doors open, before a
@@ -153,12 +150,10 @@ export function withRequiredScopes(
     rows.map((previous) => {
       const row = { ...previous };
       delete row.requiredScope;
-      delete row.phaseKey;
       const contact = contacts.get(previous)!;
       return Object.freeze({
         ...row,
         contact,
-        ...(contact.phaseKey === undefined ? {} : { phaseKey: contact.phaseKey }),
         label: contactLabel(contact),
         ...(row.stale || row.participation !== 'required'
           ? {}

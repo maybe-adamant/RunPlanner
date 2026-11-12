@@ -658,7 +658,7 @@ function roomActionsForOccurrence(
           ? {}
           : { placementAssessment: row.placementAssessment }),
         stale: row.stale,
-        ...(row.phaseKey === undefined ? {} : { phaseKey: row.phaseKey }),
+        ...(row.contact.phaseKey === undefined ? {} : { phaseKey: row.contact.phaseKey }),
         timing: row.label,
         ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
         ...(fountainRarity === undefined ? {} : { fountainRarity }),
