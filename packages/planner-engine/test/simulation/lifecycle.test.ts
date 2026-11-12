@@ -1313,7 +1313,7 @@ describe('single-room lifecycle execution', () => {
     });
   });
 
-  it('keeps WorldShop outgoing generation before purchases', () => {
+  it('starts and completes the Shop encounter, then keeps outgoing generation before purchases', () => {
     const fragment = executeRoomLifecycle(
       catalog,
       input({
@@ -1329,12 +1329,16 @@ describe('single-room lifecycle execution', () => {
       'encounterRecorded',
       'offerPointMaterialized',
       'roomEntered',
+      'encounterStarted',
+      'encounterCompleted',
       'outgoingGenerationCheckpoint',
       'roomCommitted',
       'roomCountersAdvanced',
       'roomExited',
     ]);
     expect(fragment.events[2]).toMatchObject({ offerPoint: 'shopInventory' });
+    // A Shop counts no depth and has no end effects (`StartEncounter`, RoomLogic.lua).
+    expect(fragment.events[5]).toMatchObject({ kind: 'encounterCompleted', endEffects: 'none' });
   });
 
   it('blocks before Wheel 2 when the required Wheel 1 pickup is unranked', () => {

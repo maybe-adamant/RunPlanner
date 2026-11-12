@@ -6,7 +6,6 @@ export const shopsRoomLifecycleProfiles = [
     encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'], points: [] },
     offerPoint: { key: 'shopInventory', at: 'beforeEntry' },
-    runsEncounters: false,
     requiredObjects: false,
     generatesOutgoing: true,
     exitAcquisitionPoint: 'roomExit',

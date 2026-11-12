@@ -879,8 +879,6 @@ export interface RoomLifecycleProfile {
     readonly key: string;
     readonly at: 'beforeEntry' | 'afterEntry';
   };
-  /** Whether its encounters run; a Shop's is prepared and recorded but never started. */
-  readonly runsEncounters: boolean;
   /** The Ephyra pylon: required objects spawned right after entry and completed after the fights. */
   readonly requiredObjects: boolean;
   /** Doors open generates the room's outgoing doors; otherwise it only unlocks the exit. */

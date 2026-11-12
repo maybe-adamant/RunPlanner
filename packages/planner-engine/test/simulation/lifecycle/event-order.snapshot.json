@@ -919,13 +919,13 @@
         "underworld/fWellDuplicateRefill",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     },
     {
       "entries": ["checkpoint/underworld-world-shop-travel-deal"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(shopOffer:MajorNonBoon) > #2 > acquisitionPointReached(acquisitionEntry:roomExit:travelDealRefill) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(shopOffer:MajorNonBoon) > #2 > acquisitionPointReached(acquisitionEntry:roomExit:travelDealRefill) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1 | #2",
       "loot": []
     }
@@ -1531,13 +1531,13 @@
         "fresh-file/frontier/25",
         "fresh-file/frontier/26"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     },
     {
       "entries": ["execution/underworld-g-locked-doors"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened"
     }
   ],
@@ -1755,7 +1755,7 @@
         "fresh-file/frontier/25",
         "fresh-file/frontier/26"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -2140,7 +2140,7 @@
         "fresh-file/frontier/25",
         "fresh-file/frontier/26"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -2418,19 +2418,19 @@
         "underworld/createGoldenFGHIProject",
         "underworld/echoHammerReplayMissing"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     },
     {
       "entries": ["execution/underworld-fghi-empty-shop-group"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(shopOffer:PremiumProgress) > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(shopOffer:PremiumProgress) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | doorsOpened | #1",
       "loot": []
     },
     {
       "entries": ["execution/underworld-echo-gold-anvil-duplicate"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(shopOffer:PremiumProgress) > #2 > acquisitionPointReached(acquisitionEntry:roomExit:echoDoubleShopReward) > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(shopOffer:PremiumProgress) > #2 > acquisitionPointReached(acquisitionEntry:roomExit:echoDoubleShopReward) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | doorsOpened | #1 | #2",
       "loot": [
         "after interactShopOffer:PremiumProgress: interactAcquisitionEntry:roomExit:echoDoubleShopReward optional #2"
@@ -2810,7 +2810,7 @@
         "fresh-file/frontier/25",
         "fresh-file/frontier/26"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -3012,7 +3012,7 @@
         "fresh-file/frontier/25",
         "fresh-file/frontier/26"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -3143,7 +3143,7 @@
         "fresh-file/frontier/25",
         "fresh-file/frontier/26"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     },
@@ -3210,7 +3210,7 @@
         "fresh-file/frontier/25",
         "fresh-file/frontier/26"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -3252,7 +3252,7 @@
         "checkpoint/underworld-twist-scylla",
         "underworld/createCompleteFGIxionChaosProject"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -4283,7 +4283,7 @@
         "surface/surfaceSeleneHexPathProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -4862,7 +4862,7 @@
         "surface/surfaceSeleneHexPathProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -5297,13 +5297,13 @@
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     },
     {
       "entries": ["surface/createRepresentativeNOPQShopTraitProject"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(shopOffer:MajorNonBoon) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(shopOffer:MajorNonBoon) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1",
       "loot": []
     }
@@ -5606,13 +5606,13 @@
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     },
     {
       "entries": ["execution/surface-q-shop-correlation"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(shopOffer:MixedProgress1) > #2 > acquisitionPointReached(shopOffer:MixedProgress2) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(shopOffer:MixedProgress1) > #2 > acquisitionPointReached(shopOffer:MixedProgress2) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1 | #2",
       "loot": []
     },
@@ -5622,7 +5622,7 @@
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-start-q-opening"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,P,surface-p-preboss-shop:postboss,initial:secondRight]) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(acquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,P,surface-p-preboss-shop:postboss,initial:secondRight]) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | #1 | doorsOpened",
       "loot": [
         "deliveryFlush: interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,P,surface-p-preboss-shop:postboss,initial:secondRight] required #1"
@@ -5630,13 +5630,13 @@
     },
     {
       "entries": ["execution/surface-travel-deal-refill-anvil"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(shopOffer:PremiumProgress) > #2 > acquisitionPointReached(acquisitionEntry:roomExit:travelDealRefill) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(shopOffer:PremiumProgress) > #2 > acquisitionPointReached(acquisitionEntry:roomExit:travelDealRefill) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1 | #2",
       "loot": []
     },
     {
       "entries": ["checkpoint/surface-anvil", "surface/surfaceAnvilProject"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(shopOffer:PremiumProgress) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(shopOffer:PremiumProgress) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1",
       "loot": []
     }
@@ -5783,7 +5783,7 @@
         "execution/dream-start-n-opening",
         "checkpoint/dream-mixed-handoff"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -6024,7 +6024,7 @@
         "execution/dream-start-n-opening",
         "checkpoint/dream-mixed-handoff"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -6107,7 +6107,7 @@
   "O/dream-o-shop O_Shop01": [
     {
       "entries": ["execution/dream-o-skipped-ship"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -6133,7 +6133,7 @@
   "O/dream-o-preboss O_PreBoss01": [
     {
       "entries": ["execution/dream-o-skipped-ship"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -6208,7 +6208,7 @@
         "execution/underworld-f-switches",
         "execution/underworld-f-switches-failed-left"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
     }
   ],
   "F/golden-f-preboss-shop:boss": [
@@ -6331,7 +6331,7 @@
         "underworld/createFInvalidLaterConversionProject",
         "underworld/fPoolSaleCleared"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
     }
   ],
   "G/golden-g-b6-e1": [
@@ -6373,7 +6373,7 @@
         "underworld/createFInvalidLaterConversionProject",
         "underworld/fPoolSaleCleared"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
     }
   ],
   "G/golden-g-preboss-shop:boss": [
@@ -6437,7 +6437,7 @@
   "N/surface-n-preboss": [
     {
       "entries": ["execution/surface-n-partial-hub"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > roomExited"
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > roomExited"
     }
   ],
   "N/surface-n-preboss:boss": [
@@ -6455,7 +6455,7 @@
   "P/surface-p-preboss-shop": [
     {
       "entries": ["execution/surface-p-elite-switch"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
     }
   ],
   "P/surface-p-preboss-shop:boss": [
@@ -6515,7 +6515,7 @@
   "Q/surface-q-preboss": [
     {
       "entries": ["execution/surface-p-elite-switch"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
     }
   ],
   "Q/surface-q-preboss:boss": [
@@ -6585,7 +6585,7 @@
   "H/dream-user-h-preboss H_PreBoss01": [
     {
       "entries": ["checkpoint/dream-h-artificer-echo"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -6627,7 +6627,7 @@
   "G/zagreus-contract-preboss-shop G_PreBoss01": [
     {
       "entries": ["checkpoint/underworld-zagreus-contract"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(infernalContractPedestal) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(infernalContractPedestal) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1",
       "loot": []
     }
@@ -6714,13 +6714,13 @@
         "checkpoint/underworld-f-midshop-pom-frontier",
         "underworld/loadUnderworldFMidshopPomFrontierProject"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > #1 > acquisitionPointReached(shopOffer:Minor) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > #1 > acquisitionPointReached(shopOffer:Minor) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1",
       "loot": []
     },
     {
       "entries": ["underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > #1 > acquisitionPointReached(shopOffer:Boon) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > #1 > acquisitionPointReached(shopOffer:Boon) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1",
       "loot": []
     }
@@ -6817,7 +6817,7 @@
         "checkpoint/underworld-f-trait-order-checks",
         "checkpoint/underworld-f-duo-exchange-order"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > #1 > acquisitionPointReached(shopOffer:Boon) > #2 > acquisitionPointReached(acquisitionEntry:roomExit:travelDealRefill) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > #1 > acquisitionPointReached(shopOffer:Boon) > #2 > acquisitionPointReached(acquisitionEntry:roomExit:travelDealRefill) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1 | #2",
       "loot": []
     }
@@ -6872,7 +6872,7 @@
         "checkpoint/underworld-f-trait-order-checks",
         "checkpoint/underworld-f-duo-exchange-order"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(infernalContractPedestal) > #2 > acquisitionPointReached(shopOffer:Boon) > #3 > acquisitionPointReached(acquisitionEntry:roomExit:travelDealRefill) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(infernalContractPedestal) > #2 > acquisitionPointReached(shopOffer:Boon) > #3 > acquisitionPointReached(acquisitionEntry:roomExit:travelDealRefill) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1 | #2 | #3",
       "loot": []
     }
@@ -6974,7 +6974,7 @@
   "N/4799357e-0c49-4f63-8027-4aa8c20b3329 N_PreBoss01": [
     {
       "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(shopOffer:MajorNonBoon) > #2 > acquisitionPointReached(shopOffer:Boon) > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(shopOffer:MajorNonBoon) > #2 > acquisitionPointReached(shopOffer:Boon) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | doorsOpened | #1 | #2",
       "loot": []
     }
@@ -7063,7 +7063,7 @@
   "O/85c1be67-d8b3-45d9-9ba1-679718f781c3 O_PreBoss01": [
     {
       "entries": ["checkpoint/surface-p-steady-growth-shrine-frontier"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > #1 > acquisitionPointReached(shopOffer:Boon) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(shopOffer:Boon) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1",
       "loot": []
     }
@@ -7119,7 +7119,7 @@
   "N/N:preboss N_PreBoss01": [
     {
       "entries": ["checkpoint/surface-n-complete-hub-frontier"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -7289,7 +7289,7 @@
         "fresh-file/frontier/17",
         "fresh-file/frontier/18"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
     }
   ],
   "H/golden-h-preboss-shop:boss": [
@@ -7542,7 +7542,7 @@
         "fresh-file/frontier/17",
         "fresh-file/frontier/18"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > roomCommitted > roomCountersAdvanced > roomExited"
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > roomExited"
     }
   ],
   "I/golden-i-preboss:boss": [
@@ -7584,7 +7584,7 @@
   "G/contract-availability-later-skipped G_Shop01": [
     {
       "entries": ["underworld/createGContractAvailabilityProject(false)"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened",
       "loot": []
     }
@@ -7688,7 +7688,7 @@
         "fresh-file/frontier/17",
         "fresh-file/frontier/18"
       ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
+      "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited"
     }
   ]
 }

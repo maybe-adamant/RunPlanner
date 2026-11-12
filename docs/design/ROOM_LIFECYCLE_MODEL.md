@@ -969,11 +969,10 @@ producer only once its reward is chosen.
 
 The walk's order is fixed: prepare, enter, the encounters as the room's event
 graph runs them, the points after combat, Doors open, leave. The reward point
-before combat is reached as the encounters begin. A profile declares only what it adds to that order: its
-producer points, whether its encounters run (a Shop's is recorded but never
-started), an offer point before or after entry, the Ephyra pylon's required
-objects, whether Doors open generates doors, and an acquisition point settled
-as the room is left. A gate's point is not a stop of its own: the gate pickup
+before combat is reached as the encounters begin. A profile declares only what
+it adds to that order: its producer points, an offer point before or after
+entry, the Ephyra pylon's required objects, whether Doors open generates doors,
+and an acquisition point settled as the room is left. A gate's point is not a stop of its own: the gate pickup
 is taken as it starts its fight. The listings below name the operations in
 that order.
 
@@ -1116,12 +1115,17 @@ restoration and departures are topology between fragments
 prepareRoom
 materializeOfferPoint(shopInventory)
 enterRoom
+startEncounter(main)
+completeEncounter(main)
 generateOutgoingBatch
 settleAcquisitionPoint(roomExit)
 commitRoom
 exitRoom
 ```
 
+`StartRoom` starts the Shop's non-combat encounter (`Shop`, `TyphonShop` or
+`Empty`) as it does every room's: it counts no encounter depth and applies no
+end effects, and its markers stay hidden.
 Shop inventory is prepared from the committed predecessor's history and
 materializes before the shop's outgoing doors are generated; the outgoing batch
 is then generated from the same pre-purchase history, with the full generated

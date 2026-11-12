@@ -194,7 +194,6 @@ function profileFacts(profile: RoomLifecycleProfile, all: readonly Selection[]) 
     )
       throw new Error(`${selection.label} selects ${profile.key} for its envelope`);
   return [
-    profile.runsEncounters ? 'runsEncounters' : 'recordsEncounters',
     ...(profile.offerPoint === undefined
       ? []
       : [`offerPoint ${profile.offerPoint.key} ${profile.offerPoint.at}`]),

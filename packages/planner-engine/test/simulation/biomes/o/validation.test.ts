@@ -1939,6 +1939,54 @@ describe('selected O validation', () => {
     ).toMatchObject({ kind: 'takeoverPrebossBatch', result: { requiredExitKeys: ['exit1'] } });
   });
 
+  it('counts a Shop as a room of the Ship intro window, so a combat may follow three', () => {
+    // Intro, C04, C07, C01, Shop, C03, C02: native `SumPrevRooms = 3` reads the room the doors
+    // open in and the two before it, and the Shop's started encounter holds no Ship intro.
+    let project = loadSurfaceNOProject();
+    for (const [occurrenceId, gameName] of [
+      [oOccurrenceIds.devotion, 'O_Shop01'],
+      [oOccurrenceIds.story, 'O_Combat03'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(oBiome, occurrenceId),
+        gameName,
+      });
+    project = authorSurfaceWorldShop(project, oBiome, oOccurrenceIds.devotion);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.story, 'wheel1', 'offer1'),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat02, 'wheel1'),
+      storeKey: 'MetaProgress',
+    });
+    project = settleTestEdit(project, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel1', 'offer1'),
+      value: { rewardType: 'GiftDrop' },
+    });
+    const { biome } = evaluateValidO(authorTestTraitsAndRequiredItems(project));
+    const pressureFrom = (sourceGameName: string) =>
+      biome.roomGeneration.ordinary.ordinaryBatches
+        .flatMap((batch) => batch.targets.map((target) => target.pressure))
+        .find((entry) => entry.sourceGameName === sourceGameName);
+    const combats = (names: readonly string[] | undefined) =>
+      (names ?? []).filter((name) => name.startsWith('O_Combat'));
+
+    // C01's own intro fills its window (C01, C07, C04): no combat may follow it.
+    expect(pressureFrom('O_Combat01')).toMatchObject({ selectedGameName: 'O_Shop01' });
+    expect(combats(pressureFrom('O_Combat01')?.eligibleRoomGameNames)).toEqual([]);
+    // The Shop's window (Shop, C01, C07) holds two intros.
+    expect(pressureFrom('O_Shop01')).toMatchObject({
+      selectedGameName: 'O_Combat03',
+      selectedPossible: true,
+    });
+    expect(combats(pressureFrom('O_Shop01')?.eligibleRoomGameNames)).toContain('O_Combat03');
+  });
+
   it('keeps the declaration-driven terminal takeover assessable from its empty envelope', () => {
     const decision = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',

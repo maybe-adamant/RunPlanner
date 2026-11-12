@@ -367,25 +367,6 @@ describe('room lifecycle catalog', () => {
           'unknown producer lifecycle MissingProducer',
         ),
       },
-      {
-        profile: { ...base, runsEncounters: false },
-        error: new CatalogContractError(
-          'roomLifecycleProfiles[0].producer.points',
-          'producer points require the room to run its encounters',
-        ),
-      },
-      {
-        profile: {
-          ...base,
-          producer: { kind: 'none' },
-          runsEncounters: false,
-          requiredObjects: true,
-        },
-        error: new CatalogContractError(
-          'roomLifecycleProfiles[0].requiredObjects',
-          'required objects complete after the encounters',
-        ),
-      },
     ] as const;
 
     for (const fixture of cases) {

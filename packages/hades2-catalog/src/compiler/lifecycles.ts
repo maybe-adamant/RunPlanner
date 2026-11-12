@@ -94,10 +94,6 @@ export function normalizeRoomLifecycleProfiles(
         producerLifecycles,
         `${path}.producer`,
       );
-      if (producer.kind === 'required' && producer.points.length > 0 && !raw.runsEncounters)
-        fail(`${path}.producer.points`, 'producer points require the room to run its encounters');
-      if (raw.requiredObjects && !raw.runsEncounters)
-        fail(`${path}.requiredObjects`, 'required objects complete after the encounters');
       return Object.freeze({
         key,
         encounterEnvelopeKeys,
@@ -110,7 +106,6 @@ export function normalizeRoomLifecycleProfiles(
                 at: raw.offerPoint.at,
               }),
             }),
-        runsEncounters: raw.runsEncounters,
         requiredObjects: raw.requiredObjects,
         generatesOutgoing: raw.generatesOutgoing,
         ...(raw.exitAcquisitionPoint === undefined

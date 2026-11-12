@@ -5,7 +5,6 @@ export const shipRoomLifecycleProfiles = [
     key: 'ShipCombatRoom',
     encounterEnvelopeKeys: ['ShipEncounter'],
     producer: { kind: 'none' },
-    runsEncounters: true,
     requiredObjects: false,
     generatesOutgoing: true,
   },

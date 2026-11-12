@@ -1081,11 +1081,7 @@ export function executeRoomLifecycle(
       roomEffects.requiredObjects(at('requiredObjectsSpawn'), state, 'requiredObjectSpawned'),
     ),
     ...points.filter((point) => point === 'beforeCombat').map(rewardPoint('encounters')),
-    ...when(
-      profile.runsEncounters &&
-        (catalog.encounterEnvelopes.byKey[input.encounterEnvelopeKey]?.slots.length ?? 0) > 0,
-      (state) => runEncounters(context, state, schedule),
-    ),
+    (state) => runEncounters(context, state, schedule),
     ...when(profile.requiredObjects, (state) =>
       roomEffects.requiredObjects(at('afterCombat'), state, 'requiredObjectCompleted'),
     ),

@@ -3,68 +3,67 @@
     "StandardRewardRoom": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
-      "walk": ["runsEncounters", "generatesOutgoing"]
+      "walk": ["generatesOutgoing"]
     },
     "OpeningRewardRoom": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward: roomRewardPickup",
-      "walk": ["runsEncounters", "generatesOutgoing"]
+      "walk": ["generatesOutgoing"]
     },
     "OpeningRewardNoEncounterRoom": {
       "envelopes": "EmptyEncounter",
       "producer": "required RoomReward: roomRewardPickup",
-      "walk": ["runsEncounters", "generatesOutgoing"]
+      "walk": ["generatesOutgoing"]
     },
     "RewardlessCombatRoom": {
       "envelopes": "SingleEncounter",
       "producer": "none",
-      "walk": ["runsEncounters", "generatesOutgoing"]
+      "walk": ["generatesOutgoing"]
     },
     "PCombatRoom": {
       "envelopes": "PEncounter",
       "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
-      "walk": ["runsEncounters", "generatesOutgoing"]
+      "walk": ["generatesOutgoing"]
     },
     "EphyraMainRoom": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
-      "walk": ["runsEncounters", "requiredObjects", "generatesOutgoing"]
+      "walk": ["requiredObjects", "generatesOutgoing"]
     },
     "EphyraSideRoom": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
-      "walk": ["runsEncounters"]
+      "walk": []
     },
     "EphyraHubRoom": {
       "envelopes": "EmptyEncounter",
       "producer": "none",
-      "walk": ["recordsEncounters", "generatesOutgoing"]
+      "walk": ["generatesOutgoing"]
     },
     "StoryPickupRoom": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
-      "walk": ["runsEncounters", "generatesOutgoing", "exitAcquisitionPoint roomExit"]
+      "walk": ["generatesOutgoing", "exitAcquisitionPoint roomExit"]
     },
     "DevotionRoom": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward: beforeCombat, afterCombat",
-      "walk": ["runsEncounters", "generatesOutgoing"]
+      "walk": ["generatesOutgoing"]
     },
     "FieldsCombatRoom": {
       "envelopes": "FieldsEncounter",
       "producer": "none",
-      "walk": ["runsEncounters", "offerPoint fieldsOptionalRewards afterEntry", "generatesOutgoing"]
+      "walk": ["offerPoint fieldsOptionalRewards afterEntry", "generatesOutgoing"]
     },
     "ShipCombatRoom": {
       "envelopes": "ShipEncounter",
       "producer": "none",
-      "walk": ["runsEncounters", "generatesOutgoing"]
+      "walk": ["generatesOutgoing"]
     },
     "WorldShopRoom": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward: ",
       "walk": [
-        "recordsEncounters",
         "offerPoint shopInventory beforeEntry",
         "generatesOutgoing",
         "exitAcquisitionPoint roomExit"
@@ -73,23 +72,15 @@
     "PrebossFreeRewardRoom": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
-      "walk": ["runsEncounters"]
+      "walk": []
     },
     "PrebossShopRoom": {
       "envelopes": "SingleEncounter",
       "producer": "required RoomReward: ",
-      "walk": [
-        "recordsEncounters",
-        "offerPoint shopInventory beforeEntry",
-        "exitAcquisitionPoint roomExit"
-      ]
+      "walk": ["offerPoint shopInventory beforeEntry", "exitAcquisitionPoint roomExit"]
     },
-    "BossRoom": { "envelopes": "SingleEncounter", "producer": "none", "walk": ["runsEncounters"] },
-    "PostBossRoom": {
-      "envelopes": "SingleEncounter",
-      "producer": "none",
-      "walk": ["runsEncounters"]
-    }
+    "BossRoom": { "envelopes": "SingleEncounter", "producer": "none", "walk": [] },
+    "PostBossRoom": { "envelopes": "SingleEncounter", "producer": "none", "walk": [] }
   },
   "rooms": {
     "B_Combat01": "template Anomaly | profile - | envelope SingleEncounter | slots Encounter=fixed GeneratedAnomalyB",

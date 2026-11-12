@@ -6,7 +6,6 @@ export const fieldsRoomLifecycleProfiles = [
     encounterEnvelopeKeys: ['FieldsEncounter'],
     producer: { kind: 'none' },
     offerPoint: { key: 'fieldsOptionalRewards', at: 'afterEntry' },
-    runsEncounters: true,
     requiredObjects: false,
     generatesOutgoing: true,
   },

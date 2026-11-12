@@ -1002,8 +1002,23 @@ describe('the rest', () => {
     expectInOrder(room.walk, ['roomEntered', 'outgoingGenerationCheckpoint', purchase]);
   });
 
-  it('draws a World Shop’s doors in the walk at entry', () => {
+  it('starts and completes a World Shop’s encounter at entry, then draws its doors', () => {
     const room = observe(corpusRun('checkpoint/underworld-f-midshop-pom-frontier'), fMidShop);
-    expect(room.walk[position(room.walk, 'roomEntered') + 1]).toBe('outgoingGenerationCheckpoint');
+    const entered = position(room.walk, 'roomEntered');
+    expect(room.walk.slice(entered, entered + 4)).toEqual([
+      'roomEntered',
+      'encounterStarted(Encounter)',
+      'encounterCompleted(Encounter)',
+      'outgoingGenerationCheckpoint',
+    ]);
+    expect(room.walk).not.toContain('encounterDepthAdvanced(Encounter)');
+    expect(room.walk).not.toContain('encounterEndEffectsApplied(Encounter)');
+    // Its markers stay hidden and it spawns nothing: the Timeline above is unchanged.
+    expect(
+      room.events.flatMap((event) =>
+        'phaseKey' in event && 'markers' in event ? [event.markers] : [],
+      ),
+    ).toEqual(['none', 'none', 'none']);
+    expect(room.loot).toEqual([]);
   });
 });
