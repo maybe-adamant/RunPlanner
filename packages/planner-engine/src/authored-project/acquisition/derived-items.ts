@@ -2,6 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import { createBiomeAddress, semanticAddressKey, type BiomeAddress } from '../addresses';
 import type {
   AuthoredAcquisitionSiteState,
+  AuthoredBiomePlan,
   AuthoredRewardState,
   ProjectDocument,
   RoomOccurrence,
@@ -184,28 +185,18 @@ export function withoutDormantArtificerReplacements(
   return dormant.length === 0 ? occurrence : withoutItems(occurrence, dormant);
 }
 
-/** {@link withoutDormantArtificerReplacements} in every occurrence of the plan. */
-export function withoutDormantArtificerReplacementsInProject(
+/** The plan with each occurrence of each biome mapped; the same plan when none changes. */
+function mapOccurrences(
   document: ProjectDocument,
-  catalog: Catalog,
+  map: (plan: AuthoredBiomePlan, occurrence: RoomOccurrence) => RoomOccurrence,
 ): ProjectDocument {
   const route = document.route;
   let changed = false;
   const biomes = route.biomes.map((plan) => {
     if (plan.topology === null) return plan;
-    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
-    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
-    let occurrencesChanged = false;
-    const occurrences = plan.topology.occurrences.map((occurrence) => {
-      const cleaned = withoutDormantArtificerReplacements(
-        biome,
-        occurrence,
-        routeStartIncomingReward(document, routePosition, occurrence) ?? undefined,
-      );
-      if (cleaned !== occurrence) occurrencesChanged = true;
-      return cleaned;
-    });
-    if (!occurrencesChanged) return plan;
+    const occurrences = plan.topology.occurrences.map((occurrence) => map(plan, occurrence));
+    if (occurrences.every((occurrence, index) => occurrence === plan.topology!.occurrences[index]))
+      return plan;
     changed = true;
     return Object.freeze({
       ...plan,
@@ -218,6 +209,24 @@ export function withoutDormantArtificerReplacementsInProject(
         route: Object.freeze({ ...route, biomes: Object.freeze(biomes) }),
       })
     : document;
+}
+
+/** {@link withoutDormantArtificerReplacements} in every occurrence of the plan. */
+export function withoutDormantArtificerReplacementsInProject(
+  document: ProjectDocument,
+  catalog: Catalog,
+): ProjectDocument {
+  return mapOccurrences(document, (plan, occurrence) =>
+    withoutDormantArtificerReplacements(
+      createBiomeAddress(document.route.routeKey, plan.biomeKey),
+      occurrence,
+      routeStartIncomingReward(
+        document,
+        resolveRoutePosition(catalog, document.route, plan.biomeKey),
+        occurrence,
+      ) ?? undefined,
+    ),
+  );
 }
 
 /** Discards the items derived from one acquisition entry, whose source the edit replaced. */
@@ -280,50 +289,35 @@ export function reconcileDerivedItems(
 ): ProjectDocument {
   const route = document.route;
   const previousRoute = previous.route.routeKey === route.routeKey ? previous.route : undefined;
-  let changed = false;
-  const biomes = route.biomes.map((plan) => {
-    if (plan.topology === null) return plan;
+  return mapOccurrences(document, (plan, occurrence) => {
+    if (derivedItems(occurrence).length === 0) return occurrence;
     const previousPlan = previousRoute?.biomes.find(
       (candidate) => candidate.biomeKey === plan.biomeKey,
     );
-    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
-    const routePosition = () => resolveRoutePosition(catalog, route, plan.biomeKey);
-    const previousPosition = () =>
-      previousRoute === undefined || previousPlan === undefined
+    const before = previousPlan?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+    );
+    const startIncoming =
+      routeStartIncomingReward(
+        document,
+        resolveRoutePosition(catalog, route, plan.biomeKey),
+        occurrence,
+      ) ?? undefined;
+    const previousStartIncoming =
+      before === undefined || previousRoute === undefined
         ? undefined
-        : resolveRoutePosition(catalog, previousRoute, plan.biomeKey);
-    let occurrencesChanged = false;
-    const occurrences = plan.topology.occurrences.map((occurrence) => {
-      const before = previousPlan?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-      );
-      if (derivedItems(occurrence).length === 0) return occurrence;
-      const startIncoming =
-        routeStartIncomingReward(document, routePosition(), occurrence) ?? undefined;
-      const beforePosition = before === undefined ? undefined : previousPosition();
-      const previousStartIncoming =
-        before === undefined || beforePosition === undefined
-          ? undefined
-          : (routeStartIncomingReward(previous, beforePosition, before) ?? undefined);
-      if (before === occurrence && sameOptionalOffer(startIncoming, previousStartIncoming))
-        return occurrence;
-      const reconciled = withoutStaleDerivedItems(biome, before, occurrence, {
-        previousStartIncoming,
-        startIncoming,
-      });
-      if (reconciled !== occurrence) occurrencesChanged = true;
-      return reconciled;
-    });
-    if (!occurrencesChanged) return plan;
-    changed = true;
-    return Object.freeze({
-      ...plan,
-      topology: Object.freeze({ ...plan.topology, occurrences: Object.freeze(occurrences) }),
-    });
-  });
-  if (!changed) return document;
-  return Object.freeze({
-    ...document,
-    route: Object.freeze({ ...route, biomes: Object.freeze(biomes) }),
+        : (routeStartIncomingReward(
+            previous,
+            resolveRoutePosition(catalog, previousRoute, plan.biomeKey),
+            before,
+          ) ?? undefined);
+    if (before === occurrence && sameOptionalOffer(startIncoming, previousStartIncoming))
+      return occurrence;
+    return withoutStaleDerivedItems(
+      createBiomeAddress(route.routeKey, plan.biomeKey),
+      before,
+      occurrence,
+      { previousStartIncoming, startIncoming },
+    );
   });
 }

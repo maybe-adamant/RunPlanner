@@ -238,6 +238,27 @@ export function resolveRerollTarget(
   return slotKey === undefined ? undefined : Object.freeze({ ...target, slotKey });
 }
 
+/** Whether the source room's exit holds this door into its room. */
+export function sourceHasDoor(
+  topology: Pick<BiomeTopology, 'decisions'>,
+  sourceOccurrenceId: OccurrenceId,
+  door: { readonly exitKey: string; readonly occurrenceId: OccurrenceId },
+): boolean {
+  const exit = topology.decisions.find(
+    (decision) =>
+      decision.kind === 'exit' &&
+      decision.source.kind === 'occurrence' &&
+      decision.source.occurrenceId === sourceOccurrenceId,
+  );
+  return (
+    exit?.kind === 'exit' &&
+    exit.normal.targets.some(
+      (candidate) =>
+        candidate.exitKey === door.exitKey && candidate.occurrenceId === door.occurrenceId,
+    )
+  );
+}
+
 /**
  * What a door or cage reroll's target lacks in the authored topology: the
  * source's door into that room, or that room's cage slot holding the press's
@@ -250,20 +271,7 @@ export function missingRerollTarget(
 ): 'door' | 'cage' | undefined {
   const target = press.target;
   if (target.kind === 'wheelOffer') return undefined;
-  const exit = topology.decisions.find(
-    (decision) =>
-      decision.kind === 'exit' &&
-      decision.source.kind === 'occurrence' &&
-      decision.source.occurrenceId === sourceOccurrenceId,
-  );
-  if (
-    exit?.kind !== 'exit' ||
-    !exit.normal.targets.some(
-      (candidate) =>
-        candidate.exitKey === target.exitKey && candidate.occurrenceId === target.occurrenceId,
-    )
-  )
-    return 'door';
+  if (!sourceHasDoor(topology, sourceOccurrenceId, target)) return 'door';
   if (target.kind === 'door') return undefined;
   const destination = occurrenceIn(topology, target.occurrenceId);
   const slotKey = rerolledCageSlotOf(destination, press.rerollId);

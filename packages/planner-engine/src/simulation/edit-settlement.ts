@@ -481,22 +481,16 @@ function cageGoneRerolls(
   before: ProjectEvaluationAssembly,
   assembly: ProjectEvaluationAssembly,
   upgrade: boolean,
-) {
-  const findingsAt = (evaluated: ProjectEvaluationAssembly, key: string) =>
-    evaluated.evaluation.findings.filter(
-      (finding) =>
-        finding.origin.kind === 'roomAction' && semanticAddressKey(finding.origin) === key,
-    );
+): TakenRow[] {
+  // The saved plan cannot show that a press once found its cage: an upgrade keeps it.
+  if (upgrade) return [];
   const reason = (finding: { readonly code: string; readonly evidence: unknown }) =>
     finding.code === 'rerollTargetUnavailable'
       ? (finding.evidence as { readonly reason?: unknown }).reason
       : undefined;
-  const gone = (finding: { readonly code: string; readonly evidence: unknown }) =>
-    reason(finding) === 'cageNotPlayed';
-  const removals: TakenRow[] = [];
-  for (const finding of assembly.evaluation.findings) {
-    if (!gone(finding) || finding.origin.kind !== 'roomAction') continue;
+  return assembly.evaluation.findings.flatMap((finding) => {
     const action = finding.origin;
+    if (reason(finding) !== 'cageNotPlayed' || action.kind !== 'roomAction') return [];
     const owner = createOccurrenceAddress(
       createBiomeAddress(action.routeKey, action.biomeKey),
       action.occurrenceId,
@@ -504,21 +498,18 @@ function cageGoneRerolls(
     const reference = occurrenceAt(assembly.project, owner)?.roomActions.order.find(
       (candidate) => roomActionKey(candidate) === action.actionKey,
     );
-    if (reference?.kind !== 'reroll' || reference.target.kind !== 'cage') continue;
-    // The saved plan cannot show that a press once found its cage: an upgrade keeps it.
-    if (upgrade) continue;
+    if (reference?.kind !== 'reroll' || reference.target.kind !== 'cage') return [];
     const key = semanticAddressKey(action);
-    const prior = findingsAt(before, key);
     const foundCage =
       rerollSettlementForProjectEvaluationAssembly(before, action) !== undefined ||
-      prior.some(
+      before.evaluation.findings.some(
         (candidate) =>
-          reason(candidate) === 'notRerollable' || candidate.code === 'rerollPoolExceeded',
+          candidate.origin.kind === 'roomAction' &&
+          semanticAddressKey(candidate.origin) === key &&
+          (reason(candidate) === 'notRerollable' || candidate.code === 'rerollPoolExceeded'),
       );
-    if (!foundCage) continue;
-    removals.push({ owner, reference });
-  }
-  return removals;
+    return foundCage ? [{ owner, reference }] : [];
+  });
 }
 
 /** The acquisitions whose trait produces timed drops at some checkpoint the walk reached. */
@@ -1381,32 +1372,30 @@ function addedRerollSpendOwners(
       );
     }
     case 'InsertHubReroll': {
-      const hubActions = (project: ProjectDocument) =>
+      const pressIds = (project: ProjectDocument) =>
         project.route.biomes
           .find((biome) => biome.biomeKey === command.hub.biomeKey)
-          ?.topology?.decisions.find(
-            (decision) => decision.kind === 'hub' && decision.hubKey === command.hub.hubKey,
-          );
-      const actionsOf = (project: ProjectDocument) => {
-        const hub = hubActions(project);
-        return hub?.kind === 'hub' ? hub.actions : [];
-      };
-      const known = new Set(
-        actionsOf(before).flatMap((action) => (action.kind === 'reroll' ? [action.rerollId] : [])),
-      );
+          ?.topology?.decisions.flatMap((decision) =>
+            decision.kind === 'hub' && decision.hubKey === command.hub.hubKey
+              ? decision.actions.flatMap((action) =>
+                  action.kind === 'reroll' ? [action.rerollId] : [],
+                )
+              : [],
+          ) ?? [];
+      const known = new Set(pressIds(before));
       return new Set(
-        actionsOf(after).flatMap((action) =>
-          action.kind === 'reroll' && !known.has(action.rerollId)
-            ? [
+        pressIds(after).flatMap((rerollId) =>
+          known.has(rerollId)
+            ? []
+            : [
                 semanticAddressKey(
                   createHubRerollAddress(
                     createBiomeAddress(command.hub.routeKey, command.hub.biomeKey),
                     command.hub.hubKey,
-                    action.rerollId,
+                    rerollId,
                   ),
                 ),
-              ]
-            : [],
+              ],
         ),
       );
     }

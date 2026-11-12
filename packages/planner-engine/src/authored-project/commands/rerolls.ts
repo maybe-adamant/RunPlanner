@@ -25,6 +25,7 @@ import {
   rerollResult,
   rerollTargetOwner,
   roomRerollOwner,
+  sourceHasDoor,
   withRerolledAcquisition,
   withRerolledRecord,
   type RerolledRewardOwner,
@@ -114,19 +115,7 @@ function requireRerollTarget(
       failCommand(command, 'names no wheel offer of this room');
     return;
   }
-  const exit = topology.decisions.find(
-    (decision) =>
-      decision.kind === 'exit' &&
-      decision.source.kind === 'occurrence' &&
-      decision.source.occurrenceId === source.occurrenceId,
-  );
-  if (
-    exit?.kind !== 'exit' ||
-    !exit.normal.targets.some(
-      (candidate) =>
-        candidate.exitKey === target.exitKey && candidate.occurrenceId === target.occurrenceId,
-    )
-  )
+  if (!sourceHasDoor(topology, source.occurrenceId, target))
     failCommand(command, 'names no door of this room');
   if (target.kind === 'door') return;
   const destination = topology.occurrences.find(
