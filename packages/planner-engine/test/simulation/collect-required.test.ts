@@ -28,6 +28,7 @@ import {
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   liveRoomForProjectEvaluationAssembly,
+  nextRequiredPlacement,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
   type LiveRoom,
@@ -51,7 +52,7 @@ import {
   surfaceShrineDeliveriesProject,
   surfaceShrineDeliverySources,
 } from '@run-planner/test-fixtures/surface';
-import { collectRequiredItems, nextRequiredPlacement } from '../../src/simulation/collect-required';
+import { collectRequiredItems, requiredPlacementAt } from '../../src/simulation/collect-required';
 import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 
 /**
@@ -360,6 +361,35 @@ describe('Collect all required', () => {
     expect(issueKey(collected.assembly)).toBe(issueKey(evaluate(project)));
   });
 
+  it('answers the next required placement collection takes, and nothing behind a collected row', () => {
+    const hBiome = createBiomeAddress('Underworld', 'H');
+    const shop = createOccurrenceAddress(hBiome, createOccurrenceId('golden-h-preboss-shop'));
+    const bought = evaluate(
+      authorLegalTraitOffers(
+        applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
+          kind: 'ReplaceShopPurchaseParticipation',
+          offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
+          purchased: true,
+        }),
+      ),
+    );
+    const next = nextRequiredPlacement(catalog, bought, shop, new Set());
+    const collected = collectRequiredItems({ catalog, before: bought, occurrence: shop, evaluate });
+    expect(next.reached && next.placement?.command).toEqual(collected.commands[0]);
+
+    // Once placed, the duplicate stands with its unauthored offer: nothing is collected behind it.
+    const placedKey = next.reached ? roomActionKey(next.placement!.reference) : '';
+    expect(nextRequiredPlacement(catalog, collected.assembly, shop, new Set([placedKey]))).toEqual({
+      reached: true,
+      placement: undefined,
+    });
+
+    const unreached = createOccurrenceAddress(hBiome, createOccurrenceId('no-such-room'));
+    expect(nextRequiredPlacement(catalog, bought, unreached, new Set())).toEqual({
+      reached: false,
+    });
+  });
+
   it("collects a fresh purchase's Gold Gold Gold duplicate after the purchase", () => {
     const hBiome = createBiomeAddress('Underworld', 'H');
     const shop = createOccurrenceAddress(hBiome, createOccurrenceId('golden-h-preboss-shop'));
@@ -565,7 +595,7 @@ describe('Collect all required', () => {
         },
       ],
     } as unknown as LiveRoom;
-    expect(nextRequiredPlacement(live, new Set())?.reference).toEqual(delivery);
+    expect(requiredPlacementAt(live, new Set())?.reference).toEqual(delivery);
   });
 
   it('stops cleanly at a missing choice and returns what it placed', () => {

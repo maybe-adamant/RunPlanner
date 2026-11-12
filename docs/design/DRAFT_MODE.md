@@ -193,6 +193,9 @@ room as the route declares it, route overlays included.
   doors and make a wanted god's reward likelier. Resource points roll at the
   spec's resource room chance, preferring an element a waiting trait needs;
   Dream buys elemental boosts instead.
+- **Trait drops.** Quick Buck's gold and Buried Treasure's pickups are
+  optional, but players take them, so the draft picks each up at the first
+  point the room allows after the boon that grants it.
 - **Exclusions.** An offer exclusion stops the walk
   chasing that god or source for the biome rather than retrying it.
 - **Encounters.** Each reached encounter phase where the engine offers the Fig

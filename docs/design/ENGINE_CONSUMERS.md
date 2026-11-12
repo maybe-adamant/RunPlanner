@@ -101,9 +101,12 @@ A consumer asks the engine what is possible; it never decides it.
   [live room](ROOM_LIFECYCLE_MODEL.md#live-at-a-point): the pickups and
   objects live at each gap through the walk's frontier, each with its verbs
   and the commands that perform them there. Draft places a room's required
-  rows from its placements alone, taking a required action's canonical
-  restore where one is offered. The run import collects a room's required
-  rows through the engine's collection, which places them the same way.
+  rows one at a time by the engine's next required placement, the same
+  query collecting a room's required items plays forward with. The run import
+  collects a room's required rows through that collection.
+- Which reward each door of a Clockwork exit decision derives, the forced Goal
+  or a reward counted toward it, is a query over authored structure; Draft's
+  Goal steering reads it.
 - Hypothetical questions are engine-owned queries; the consumer supplies only
   its choice policy or its observation:
   - **Carrier-child completion** authors every selected-outcome child an offer

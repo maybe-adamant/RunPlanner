@@ -29,7 +29,6 @@ import {
   type OccurrenceId,
   type ProjectCommand,
   type ProjectDocument,
-  type RoomActionReference,
   type RoomOccurrence,
   type SemanticAddress,
   type TargetAddress,
@@ -39,6 +38,7 @@ import {
   resolveBiomeStart,
   routeRoomDeclaration,
   DRAFT_OPTIONS,
+  clockworkExitRewards,
 } from '@run-planner/engine/authored-project';
 import {
   locallyValidRewardOffers,
@@ -59,9 +59,9 @@ import {
   type RewardOfferExclusionReason,
   prepareRouteStartTraitRequirements,
   routeResourceAuthoring,
+  nextRequiredPlacement,
   liveRoomForProjectEvaluationAssembly,
   type LiveRoom,
-  type LiveVerb,
 } from '@run-planner/engine/simulation';
 import { latestRunState } from './report';
 import {
@@ -97,17 +97,6 @@ import type { DraftWorldProduct } from './world';
 /** A pursued Clockwork Goal door: above any boon door (at most 90), below a story room (200). */
 const TARTARUS_GOAL_WEIGHT = 150;
 
-/** A Clockwork combat room left without an authored reward resolves to a Goal. */
-function clockworkGoal(catalog: Catalog, routeKey: string, occurrence: RoomOccurrence): boolean {
-  const mode = routeRoomDeclaration(catalog.rooms.byKey[occurrence.gameName], routeKey)?.mode;
-  return (
-    mode?.kind === 'authored' &&
-    mode.templateKey === 'ClockworkCombat' &&
-    occurrence.state.kind === 'counted' &&
-    occurrence.state.reward === null
-  );
-}
-
 /** An offered reward's exact result; absent when its candidate context is unavailable. */
 function rewardOfferResult(evaluation: ProjectCandidateEvaluation) {
   switch (evaluation.kind) {
@@ -132,55 +121,6 @@ function originRoom(origin: SemanticAddress): OccurrenceAddress | undefined {
   );
 }
 
-/** A verb placing a row not yet placed: the row and the one command placing it. */
-interface LivePlacement {
-  readonly reference: RoomActionReference;
-  readonly command: ProjectCommand;
-}
-
-/**
- * The placement a verb performs; none while its row stands, for a move, or while a picker
- * supplies its command (a Travel Deal item's value). A choice the placed row still needs
- * (a Pom's level) is its own finding once placed.
- */
-function placementOf(verb: LiveVerb): LivePlacement | undefined {
-  const command = verb.standing === true ? undefined : verb.commands?.[0];
-  return command === undefined || command.kind === 'MoveRoomAction' || verb.reference === undefined
-    ? undefined
-    : { reference: verb.reference, command };
-}
-
-/**
- * The first required item live at the walk's frontier, in the engine's item order, that the
- * product offers a placement for, never one already placed by this repair: its canonical
- * restore wherever the product offers it, otherwise its placement at the frontier.
- */
-function requiredPlacement(live: LiveRoom, placed: ReadonlySet<string>): LivePlacement | undefined {
-  const offered = live.gaps.flatMap((gap) => gap.items.flatMap((item) => item.verbs));
-  for (const item of live.gaps[live.frontier]?.items ?? []) {
-    const verbs: readonly LiveVerb[] =
-      item.kind === 'pickup'
-        ? item.participation === 'required'
-          ? item.verbs
-          : []
-        : item.verbs.filter((verb) => verb.participation === 'required');
-    for (const verb of verbs) {
-      const placement = placementOf(verb);
-      if (placement === undefined) continue;
-      const key = roomActionKey(placement.reference);
-      if (placed.has(key)) continue;
-      const canonical = offered.find(
-        (candidate) =>
-          candidate.canonical === true &&
-          candidate.reference !== undefined &&
-          roomActionKey(candidate.reference) === key,
-      );
-      return (canonical === undefined ? undefined : placementOf(canonical)) ?? placement;
-    }
-  }
-  return undefined;
-}
-
 /** A Shop door beside a door to a new god with queued traits. */
 const SHOP_OUTRANKED_FACTOR = 0.001;
 
@@ -188,6 +128,43 @@ const SHOP_OUTRANKED_FACTOR = 0.001;
 const WANTED_GOD_WEIGHT = 30;
 
 const RESOURCE_FAMILIES = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
+
+/** Quick Buck and Buried Treasure: their drops are optional, but a player takes them. */
+const PICKED_UP_DROP_TRAITS = ['MoneyMultiplierBoon', 'RoomRewardBonusBoon'] as const;
+
+/**
+ * The earliest pickup of a Quick Buck or Buried Treasure drop not yet placed, by the
+ * commands the live room offers at the first gap from `floor` it is live; `placed`
+ * holds the row keys already tried.
+ */
+function firstTraitDropPlacement(
+  live: LiveRoom,
+  placed: ReadonlySet<string>,
+  floor: number,
+):
+  | { readonly key: string; readonly gap: number; readonly commands: readonly ProjectCommand[] }
+  | undefined {
+  for (const gap of live.gaps.filter((candidate) => candidate.index >= floor))
+    for (const item of gap.items) {
+      if (
+        item.kind !== 'pickup' ||
+        item.lockedUntil !== undefined ||
+        item.source.kind !== 'generated' ||
+        item.source.family.kind !== 'trait' ||
+        !(PICKED_UP_DROP_TRAITS as readonly string[]).includes(item.source.family.traitKey)
+      )
+        continue;
+      const key = roomActionKey(item.reference);
+      if (placed.has(key)) continue;
+      const verb = item.verbs.find((candidate) => candidate.verb === 'pickUp');
+      if (verb === undefined || verb.standing === true) continue;
+      // A move means the pickup already stands later in the order.
+      const first = verb.commands?.[0];
+      if (first === undefined || first.kind === 'MoveRoomAction') continue;
+      return { key, gap: gap.index, commands: verb.commands! };
+    }
+  return undefined;
+}
 
 /**
  * One finding-driven draft walk over a working project. Every value comes from
@@ -202,6 +179,8 @@ export class DraftWalk {
   private nextOccurrence = 0;
   /** Rooms entered per biome that have had their essence roll. */
   private readonly essenceRooms = new Map<number, number>();
+  /** Rooms the walk passed after their Quick Buck and Buried Treasure drops were picked up. */
+  private readonly dropRoomsDone = new Set<string>();
   /** Reward commands this walk applied. */
   private readonly authoredRewards = new Set<string>();
   private stepCount = 0;
@@ -320,6 +299,9 @@ export class DraftWalk {
     this.biomeIndex = biomeIndex;
     this.steering.paceBiome(() => this.rng());
     while (this.stepCount < maxSteps) {
+      // Before the biome closes, so the rooms its last step entered roll too.
+      this.maybePlaceEssence(biomeIndex);
+      this.pickUpTraitDrops(biomeIndex);
       if (this.issueBiomeIndex() > biomeIndex) {
         const rack = this.equipRack(biomeIndex);
         if (rack === 'equipped') {
@@ -332,7 +314,6 @@ export class DraftWalk {
         }
         return true;
       }
-      this.maybePlaceEssence(biomeIndex);
       const issue = this.assembly.evaluation.issue!;
       const reason = issue.reasons[0]!;
       if (!draftEncounterChoice(this.encounterChoices, reason) && !this.repair(reason)) {
@@ -346,25 +327,44 @@ export class DraftWalk {
   }
 
   /**
-   * Each newly entered room places an unplaced resource point at the spec's resource room
-   * chance, preferring an element a waiting basket trait needs.
+   * Each room entered since the previous step, in entry order, places an unplaced resource
+   * point at the spec's resource room chance, preferring an element a waiting basket trait
+   * needs. Rooms this walk enters in an earlier biome roll too; those it starts with were
+   * rolled by the walk that entered them.
    */
   private maybePlaceEssence(biomeIndex: number): void {
-    const biomeKey = this.project.route.itineraryBiomeKeys[biomeIndex];
+    const biomeKeys = this.project.route.itineraryBiomeKeys;
+    for (const [index, biomeKey] of biomeKeys.slice(0, biomeIndex + 1).entries()) {
+      const entered = this.enteredRooms(biomeKey);
+      const rolled = this.essenceRooms.get(index);
+      if (rolled === undefined && index < biomeIndex) {
+        this.essenceRooms.set(index, entered.length);
+        continue;
+      }
+      if (entered.length <= (rolled ?? 0)) continue;
+      this.essenceRooms.set(index, entered.length);
+      for (const room of entered.slice(rolled ?? 0))
+        this.rollEssence(biomeKey, room.occurrenceId, room.gameName);
+    }
+  }
+
+  /** The biome's entered rooms, in entry order. */
+  private enteredRooms(
+    biomeKey: string,
+  ): readonly { readonly occurrenceId: OccurrenceId; readonly gameName: string }[] {
     const biome = this.assembly.evaluation.route.biomes.find((b) => b.biomeKey === biomeKey);
-    if (biome === undefined || !('history' in biome)) return;
-    const entered = biome.history.ledgers.roomAppearances.filter(
-      (appearance) =>
-        appearance.origin.kind === 'occurrence' && appearance.origin.biomeKey === biomeKey,
+    if (biome === undefined || !('history' in biome)) return [];
+    return biome.history.ledgers.roomAppearances.flatMap((appearance) =>
+      appearance.origin.kind === 'occurrence' && appearance.origin.biomeKey === biomeKey
+        ? [{ occurrenceId: appearance.origin.occurrenceId, gameName: appearance.gameName }]
+        : [],
     );
-    if (entered.length <= (this.essenceRooms.get(biomeIndex) ?? 0)) return;
-    this.essenceRooms.set(biomeIndex, entered.length);
-    const latest = entered.at(-1)!;
-    if (latest.origin.kind !== 'occurrence') return;
-    const occurrenceId = latest.origin.occurrenceId;
+  }
+
+  private rollEssence(biomeKey: string, occurrenceId: OccurrenceId, gameName: string): void {
     const route = this.project.route;
     // Only a room that can host an unplaced point rolls.
-    const support = this.roomOf(latest.gameName)?.resourcePointSupport;
+    const support = this.roomOf(gameName)?.resourcePointSupport;
     if (
       support === undefined ||
       support.excludedRouteKeys?.includes(route.routeKey) === true ||
@@ -394,7 +394,7 @@ export class DraftWalk {
           kind: 'ReplaceResourcePlacement',
           route: createRouteAddress(route.routeKey),
           family,
-          value: { biomeKey: biomeKey!, occurrenceId },
+          value: { biomeKey, occurrenceId },
         },
         'noNewFinding',
       );
@@ -402,6 +402,55 @@ export class DraftWalk {
       if (outcome.fault !== undefined) this.faults.push(outcome.fault);
       return;
     }
+  }
+
+  /**
+   * While Quick Buck or Buried Treasure is held, picks up their optional drops in each of
+   * the biome's entered rooms not yet read since the walk passed it, in spawn order, each
+   * at the first gap the engine's live room offers it.
+   */
+  private pickUpTraitDrops(biomeIndex: number): void {
+    const biomeKey = this.project.route.itineraryBiomeKeys[biomeIndex];
+    if (biomeKey === undefined) return;
+    const equipped = latestRunState(this.assembly)?.traits.equippedTraits ?? {};
+    if (!PICKED_UP_DROP_TRAITS.some((key) => key in equipped)) return;
+    const biome = createBiomeAddress(this.project.route.routeKey, biomeKey);
+    for (const room of this.enteredRooms(biomeKey)) {
+      const key = `${biomeKey}/${room.occurrenceId}`;
+      if (this.dropRoomsDone.has(key)) continue;
+      const occurrence = createOccurrenceAddress(biome, room.occurrenceId);
+      const placed = new Set<string>();
+      // Each drop after the one placed before it, in spawn order.
+      let floor = 0;
+      for (;;) {
+        const live = liveRoomForProjectEvaluationAssembly(
+          this.catalog,
+          this.assembly,
+          occurrence,
+          'placements',
+        );
+        if (live === undefined) break;
+        const placement = firstTraitDropPlacement(live, placed, floor);
+        if (placement === undefined) {
+          // A room the walk has passed spawns nothing more.
+          if (live.leftBehind !== undefined) this.dropRoomsDone.add(key);
+          break;
+        }
+        placed.add(placement.key);
+        if (this.applyAll(placement.commands)) floor = placement.gap + 1;
+      }
+    }
+  }
+
+  /** Applies one verb's commands in order, never adding a finding; false at a refusal. */
+  private applyAll(commands: readonly ProjectCommand[]): boolean {
+    for (const command of commands) {
+      const outcome = this.authoring.apply(command, 'noNewFinding');
+      if (outcome.kind !== 'applied') return false;
+      this.appliedCommands.push(command);
+      if (outcome.fault !== undefined) this.faults.push(outcome.fault);
+    }
+    return true;
   }
 
   private candidates(): ProjectCandidateSession {
@@ -1120,6 +1169,7 @@ export class DraftWalk {
       const reward = rewardOf(this.occurrence(selection.biomeKey, target.occurrenceId));
       return reward !== undefined && reward !== null && this.steering.queuedNewGod(reward.offer);
     });
+    const clockwork = clockworkExitRewards(this.catalog, this.project, selection);
     const ordered = this.weighted(targets, (target) => {
       const occurrence = this.occurrence(selection.biomeKey, target.occurrenceId);
       if (occurrence === undefined) return 1;
@@ -1136,10 +1186,7 @@ export class DraftWalk {
         reward !== undefined && reward !== null
           ? Math.max(this.steering.offerWeight(reward.offer), 0.01)
           : 1;
-      if (
-        this.spec.pursueTartarusGoal === true &&
-        clockworkGoal(this.catalog, this.project.route.routeKey, occurrence)
-      )
+      if (this.spec.pursueTartarusGoal === true && clockwork.get(target.exitKey) === 'goal')
         return TARTARUS_GOAL_WEIGHT;
       const outranked =
         newGodDoor && this.roomOf(occurrence.gameName)?.kind === 'Shop' ? SHOP_OUTRANKED_FACTOR : 1;
@@ -1590,10 +1637,9 @@ export class DraftWalk {
   // --- Other owners --------------------------------------------------------
 
   /**
-   * Places what the origin's room still requires where the walk stands, each by the command the
-   * engine's live product offers for it: its canonical restore when offered, otherwise at the
-   * frontier. Places one at a time until nothing required is placeable there or an edit is
-   * refused; optional pickups and purchases stay the walk's own choices.
+   * Places what the origin's room still requires where the walk stands, one at a time by the
+   * engine's next required placement, until nothing required is placeable there, an edit is
+   * refused or a placement comes back; optional pickups and purchases stay the walk's choices.
    */
   private placeRequiredActions(origin: SemanticAddress): boolean {
     if (origin.kind === 'incomingReward') {
@@ -1607,17 +1653,13 @@ export class DraftWalk {
     const placed = new Set<string>();
     let changed = false;
     for (;;) {
-      const live = liveRoomForProjectEvaluationAssembly(
-        this.catalog,
-        this.assembly,
-        room,
-        'placements',
-      );
-      if (live === undefined) return changed;
-      const placement = requiredPlacement(live, placed);
+      const next = nextRequiredPlacement(this.catalog, this.assembly, room, placed);
+      const placement = next.reached ? next.placement : undefined;
       if (placement === undefined) return changed;
-      placed.add(roomActionKey(placement.reference));
-      // A refused placement is the walk's dead end here, never a reason to place it elsewhere.
+      const key = roomActionKey(placement.reference);
+      // A placement offered again did not hold; a refused one is the walk's dead end here.
+      if (placed.has(key)) return changed;
+      placed.add(key);
       if (!this.apply(placement.command)) return changed;
       changed = true;
     }

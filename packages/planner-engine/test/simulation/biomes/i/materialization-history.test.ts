@@ -1,6 +1,7 @@
 import { ordinaryPositionFor } from '../../../support/route-position';
 import {
   applyProjectCommand,
+  clockworkExitRewards,
   createBiomeAddress,
   createBiomeFieldAddress,
   createExitDecisionAddress,
@@ -446,6 +447,46 @@ describe('canonical I Clockwork materialization and history', () => {
       ['I_Combat08', undefined],
       ['I_PreBoss02', 0],
     ]);
+  });
+
+  it("answers each exit decision's Clockwork door rewards as its batch materializes them", () => {
+    const project = completeProject();
+    const snapshot = materializeBiome(
+      catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      complete(project),
+      traitContext(project),
+    );
+    const seen = new Set<string | undefined>();
+    for (const batch of batches(snapshot)) {
+      const rewards = clockworkExitRewards(catalog, project, batch.origin);
+      for (const reward of rewards.values()) seen.add(reward);
+      expect(
+        batch.targets.map((target) => rewards.get(target.origin.exitKey)),
+        batch.source.kind === 'occurrence' ? batch.source.occurrenceId : batch.source.decisionKey,
+      ).toEqual(
+        batch.targets.map((target) =>
+          target.room.forcedRewardType === 'ClockworkGoal'
+            ? 'goal'
+            : target.room.countsTowardClockworkGoal === true
+              ? 'counted'
+              : undefined,
+        ),
+      );
+    }
+    expect(seen).toEqual(new Set(['goal', 'counted']));
+    // No Clockwork rewards while the non-goal cap is unauthored.
+    expect(
+      clockworkExitRewards(
+        catalog,
+        createIProject('i-uncapped'),
+        createExitDecisionAddress(biome, {
+          kind: 'occurrence',
+          occurrenceId: occurrence('combat07'),
+        }),
+      ).size,
+    ).toBe(0);
   });
 
   it('carries H route state and advances Clockwork counters only at picked producer points', () => {
