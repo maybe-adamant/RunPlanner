@@ -470,6 +470,20 @@ export function discardRetainedHermesShrineDelivery(
   return reconcileGeneratedPickupProducerState(document, discarded, catalog);
 }
 
+/** The payload some host keeps for a delivery: the same item wherever it arrives. */
+export function retainedHermesShrineDeliveryPayload(
+  document: ProjectDocument,
+  entryKey: string,
+): AuthoredRewardState | null | undefined {
+  for (const biome of document.route.biomes)
+    for (const occurrence of biome.topology?.occurrences ?? []) {
+      const payload =
+        occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY]?.pickupEntries?.[entryKey];
+      if (payload !== undefined) return payload;
+    }
+  return undefined;
+}
+
 /**
  * Once the simulator identifies the new due host, the concrete delivery has
  * exactly one payload owner and one timeline reference again.
