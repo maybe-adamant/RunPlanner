@@ -197,6 +197,9 @@ describe('F takeover materialization', () => {
     ]);
     expect(opening.roomLifecycleTimeline.graph.events.map((event) => event.kind)).toEqual([
       'roomEntered',
+      'encounterBegun',
+      'encounterStarted',
+      'encounterEnd',
       'doorsOpened',
     ]);
   });

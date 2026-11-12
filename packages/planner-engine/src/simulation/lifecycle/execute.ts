@@ -19,7 +19,8 @@ import {
   roomEventPlaces,
   roomEventPointPasses,
   type RoomEventPoint,
-  runsOneEncounter,
+  nextWheelsOpen,
+  pressFightOf,
 } from '../../authored-project/room-actions/event-graph';
 import { ROOM_WALK_STAGES } from './overview';
 import { resolvedEncounterPhaseForDefinition } from '../encounters/resolve';
@@ -893,26 +894,20 @@ function createRoomActionSchedule(context: ExecutionContext) {
     });
   };
 
-  // A multi-encounter or cage room runs the fights its graph orders (Fields cages by
-  // activation); no fight runs for a Nemesis random event, which her talk row settles.
-  const envelope = context.catalog.encounterEnvelopes.byKey[context.input.encounterEnvelopeKey];
-  const oneEncounter = envelope !== undefined && runsOneEncounter(envelope);
-  const runPhases = oneEncounter
-    ? context.encounterPhases
-    : (() => {
-        const byKey = new Map(context.encounterPhases.map((phase) => [phase.slotKey, phase]));
-        return Object.freeze(
-          eventGraph.phases.flatMap((phase) => {
-            if (phase.script?.endsByInteraction === true) return [];
-            const resolved = byKey.get(phase.phaseKey);
-            if (resolved === undefined)
-              throw new LifecycleExecutionContractError(
-                `${eventGraph.profileKey} graph selected missing phase ${phase.phaseKey}`,
-              );
-            return [resolved];
-          }),
+  // The room runs the encounters its graph starts, in graph order (Fields cages by
+  // activation); a press fight runs at its press.
+  const byKey = new Map(context.encounterPhases.map((phase) => [phase.slotKey, phase]));
+  const runPhases = Object.freeze(
+    eventGraph.events.flatMap((event) => {
+      if (event.kind !== 'encounterStarted' || pressFightOf(eventGraph, event.phaseKey)) return [];
+      const resolved = byKey.get(event.phaseKey);
+      if (resolved === undefined)
+        throw new LifecycleExecutionContractError(
+          `${eventGraph.profileKey} graph started missing phase ${event.phaseKey}`,
         );
-      })();
+      return [resolved];
+    }),
+  );
 
   const graphEvent = (kind: 'encounterBegun' | 'encounterStarted', phaseKey: string) =>
     eventGraph.events.find((event) => event.kind === kind && event.phaseKey === phaseKey);
@@ -983,11 +978,12 @@ function createRoomActionSchedule(context: ExecutionContext) {
     state: ExecutionState,
   ): ExecutionState => {
     let next = state;
-    // What a phase's end effects spawn waits for the next wheels to open.
+    // Only end effects spawn deliveries; what they spawn waits for the next wheels to open.
     if (
-      eventGraph.events.some(
-        (event) => event.kind === 'wheelsOpen' && event.afterPhaseKey === phase.slotKey,
-      )
+      !state.events.some(
+        (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === phase.slotKey,
+      ) ||
+      nextWheelsOpen(eventGraph, phase.slotKey) !== undefined
     )
       return next;
     const deliveries = roster.rows
@@ -1017,7 +1013,6 @@ function createRoomActionSchedule(context: ExecutionContext) {
 
   return Object.freeze({
     runPhases,
-    oneEncounter,
     gatePoints: new Set(gatePickups.map((pickup) => pickup.producerPoint)),
     rewardPoint,
     doorsOpen,
@@ -1059,10 +1054,8 @@ function runEncounters(
     state = schedule.readyWait(phase, operationIndex, state);
     if (state.blockedAt !== undefined) return state;
     if (waitsForReady(context, phase)) state = appendEncounterEndEffects(fight, state);
-    if (!schedule.oneEncounter) {
-      state = schedule.afterEndEffects(phase, operationIndex, state);
-      if (state.blockedAt !== undefined) return state;
-    }
+    state = schedule.afterEndEffects(phase, operationIndex, state);
+    if (state.blockedAt !== undefined) return state;
   }
   return state;
 }

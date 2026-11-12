@@ -728,7 +728,7 @@ describe('Postboss', () => {
   it('opens the doors right after the fountain row', () => {
     const room = observe(corpusRun('execution/f-opening'), fPostboss);
 
-    expect(room.graph).toEqual(expectedRoomEventGraph());
+    expect(room.graph).toEqual(expectedRoomEventGraph([{ phaseKey: 'Encounter' }]));
     expect(room.timeline.slice(0, 3)).toEqual([
       'roomEntered',
       room.rank('useFountain'),
@@ -800,7 +800,7 @@ describe('Fields', () => {
           ? [`${event.kind}:${'markers' in event ? event.markers : ''}`]
           : [],
       ),
-    ).toEqual(['encounterBegun:none', 'encounterStarted:none', 'encounterEnd:none']);
+    ).toEqual([]);
     expect(room.timeline.filter((text) => text.includes('(Passive)'))).toEqual([]);
     expect(room.timeline.slice(0, 2)).toEqual([
       'roomEntered',
@@ -884,7 +884,7 @@ describe('the rest', () => {
     const room = observe(corpusRun('checkpoint/underworld-world-shop-travel-deal'), fPreboss);
     const purchase = room.rank('interactShopOffer');
 
-    expect(room.graph).toEqual(expectedRoomEventGraph());
+    expect(room.graph).toEqual(expectedRoomEventGraph([{ phaseKey: 'Encounter' }]));
     expectInOrder(room.timeline, ['roomEntered', 'doorsOpened', purchase]);
     expectInOrder(room.walk, ['roomEntered', purchase]);
   });
@@ -980,7 +980,7 @@ describe('the rest', () => {
     const room = observe(corpusRun('checkpoint/underworld-f-midshop-pom-frontier'), fMidShop);
     const purchase = room.rank('interactShopOffer');
 
-    expect(room.graph).toEqual(expectedRoomEventGraph());
+    expect(room.graph).toEqual(expectedRoomEventGraph([{ phaseKey: 'Encounter' }]));
     expect(room.events.find((event) => event.kind === 'doorsOpened')).toMatchObject({
       generatesOutgoing: true,
     });

@@ -79,7 +79,8 @@ export type RoomEventTrigger =
  * between, and its combat starts (`encounterStarted`, Combat: depth advances
  * and the Nemesis bet or an Anomaly capture is observed there); Boss defeated
  * and the encounter's end follow. A Nemesis random event's encounter has no
- * fight: its events carry no marker, and her talk row hosts her event.
+ * fight: its events carry no marker, and her talk row hosts her event. A
+ * room's one encounter without a fight shows no marker either.
  */
 export type RoomEvent =
   | {
@@ -121,7 +122,7 @@ export type RoomEvent =
       readonly phaseKey: string;
       /** Automatic, or the gate row whose use starts combat (Opening or Devotion pickup, wheel). */
       readonly trigger: RoomEventTrigger;
-      /** A Nemesis random event's: no Combat shows. */
+      /** A Nemesis random event's or a fightless encounter's: no Combat shows. */
       readonly markers?: 'none';
     }
   | {
@@ -135,7 +136,7 @@ export type RoomEvent =
       readonly key: string;
       readonly phaseKey: string;
       readonly trigger: Extract<RoomEventTrigger, { readonly kind: 'automatic' }>;
-      /** A Nemesis random event's: her talk row shows where it ends. */
+      /** A Nemesis random event's (her talk row shows where it ends) or a fightless encounter's. */
       readonly markers?: 'none';
     }
   | {
@@ -248,6 +249,11 @@ export function runsOneEncounter(envelope: EncounterEnvelope): boolean {
 
 interface GraphSlot {
   readonly phase: RoomEventGraphPhase;
+  /**
+   * A room's one encounter that is no fight (Postboss, Shop, a story room):
+   * `StartRoom` still starts it, so it has events, with no marker, and no phase.
+   */
+  readonly markerless?: true;
   readonly definition?: EncounterDefinition;
   /** Its Combat hosts a choice: a Nemesis bet or an Anomaly capture. */
   readonly combatHostsOutcome?: true;
@@ -278,6 +284,9 @@ export function assembleRoomEventGraph(options: {
   );
   // Fields: the player starts each cage's encounter, in the order the cages are used.
   const fields = envelopeSlots.some((slot) => slot.activatedByVerb !== undefined);
+  const single =
+    options.catalog.encounterEnvelopes.byKey[options.declaration.encounterEnvelopeKey]?.kind ===
+    'single';
   const activeSlotKeys =
     options.activeEncounterSlotKeys === undefined
       ? undefined
@@ -366,7 +375,7 @@ export function assembleRoomEventGraph(options: {
       options.occurrence.state.kind !== 'shipCombat' &&
       (encounter === undefined || !isCombatBearingEncounterPhaseKind(encounter.kind))
     )
-      return [];
+      return single ? [{ phase: frozen({ phaseKey: slot.key }), markerless: true as const }] : [];
     return [
       {
         phase: frozen({
@@ -406,9 +415,11 @@ export function assembleRoomEventGraph(options: {
     frozen({ kind: 'roomEntered', key: 'roomEntered', trigger: AUTOMATIC }),
   ];
   let previousPhaseKey: string | undefined;
-  for (const { phase, definition, combatHostsOutcome } of ordered) {
-    // A Nemesis random event's encounter starts on entry and ends as she is answered.
-    if (phase.script?.endsByInteraction === true) {
+  for (const { phase, definition, combatHostsOutcome, markerless } of ordered) {
+    // A Nemesis random event's encounter starts on entry and ends as she is answered;
+    // in a Fields room her row places her event, and the room starts no encounter for her.
+    if (phase.script?.endsByInteraction === true || markerless === true) {
+      if (phase.standsAt !== undefined) continue;
       events.push(
         frozen({
           kind: 'encounterBegun',
@@ -575,7 +586,7 @@ export function assembleRoomEventGraph(options: {
   return frozen({
     profileKey: options.lifecycleProfileKey,
     activeEncounterSlotKeys: frozen(activeSlots.map((slot) => slot.key)),
-    phases: frozen(ordered.map((slot) => slot.phase)),
+    phases: frozen(ordered.flatMap((slot) => (slot.markerless === true ? [] : [slot.phase]))),
     pressFights: frozen(pressFights),
     events: frozen(events),
   });
