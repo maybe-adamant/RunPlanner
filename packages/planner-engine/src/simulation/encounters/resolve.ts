@@ -17,6 +17,7 @@ import {
   encounterBindingsBySlot,
   selectedEncounterAuthoringProfileKey,
   fixedEncounterDefinitionKey,
+  rewardEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounter-envelope';
 import {
   withUnsupportedCustomization,
@@ -209,10 +210,10 @@ export function resolveEncounterAuthoringProfile(
       return firstBiomeKey;
   }
   if (context.kind === 'unavailable') return undefined;
-  return context.kind === 'knownReward'
-    ? (profile.resolution.encounterDefinitionKeyByRewardType[context.rewardType] ??
-        profile.resolution.defaultEncounterDefinitionKey)
-    : profile.resolution.defaultEncounterDefinitionKey;
+  return rewardEncounterDefinitionKey(
+    profile.resolution,
+    context.kind === 'knownReward' ? context.rewardType : undefined,
+  );
 }
 
 /**

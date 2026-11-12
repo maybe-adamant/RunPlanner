@@ -6850,7 +6850,7 @@
     {
       "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > #1 > producerPointReached(beforeCombat) > producerRoleAdvanced(beforeCombat chosenSource) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > #2 > producerPointReached(afterCombat) > producerRoleAdvanced(afterCombat spurnedSource) > producerPointReached(roomRewardPickup) > outgoingGenerationCheckpoint > #3 > wellPurchase(initial:secondRight) > #4 > wellPurchase(travelDealRefill) > #5 > wellPurchase(initial:secondLeft) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | #1 | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #2 | doorsOpened | #3 | #4 | #5",
+      "timeline": "roomEntered | encounterBegun Encounter | #1 | encounterStarted Encounter | encounterEnd Encounter | #2 | doorsOpened | #3 | #4 | #5",
       "loot": [
         "roomEntered: interactIncomingReward:beforeCombat:chosenSource required #1",
         "encounterEnd:Encounter: interactIncomingReward:afterCombat:spurnedSource required #2"
@@ -6859,7 +6859,7 @@
     {
       "entries": ["checkpoint/underworld-f-duo-exchange-order"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > #1 > producerPointReached(beforeCombat) > producerRoleAdvanced(beforeCombat chosenSource) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > #2 > producerPointReached(afterCombat) > producerRoleAdvanced(afterCombat spurnedSource) > producerPointReached(roomRewardPickup) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | #1 | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #2 | doorsOpened",
+      "timeline": "roomEntered | encounterBegun Encounter | #1 | encounterStarted Encounter | encounterEnd Encounter | #2 | doorsOpened",
       "loot": [
         "roomEntered: interactIncomingReward:beforeCombat:chosenSource required #1",
         "encounterEnd:Encounter: interactIncomingReward:afterCombat:spurnedSource required #2"

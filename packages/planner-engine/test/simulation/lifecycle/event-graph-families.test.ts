@@ -253,6 +253,7 @@ const hDreamFields = at('Dream', 'H', 'a6b19a5f-d499-48d1-ae59-30aed524f968');
 const nMain = at('Surface', 'N', 'surface-n-combat05');
 const nSide = at('Surface', 'N', 'surface-n-combat05-sideDoor2');
 const oDevotion = at('Surface', 'O', 'surface-o-devotion');
+const fDevotion = at('Underworld', 'F', 'd476f7b4-5302-4e1a-9876-7f0dcbd17654');
 const oShip = at('Surface', 'O', 'surface-o-combat07');
 const oShipRerolls = at('Surface', 'O', 'surface-o-combat04');
 const oShipDelivery = at('Surface', 'O', 'surface-o-combat01');
@@ -289,29 +290,39 @@ describe('gated Opening and Devotion', () => {
     expect(room.loot).toEqual([`roomEntered: ${openingGate} ${gate}`]);
   });
 
-  it('begins the Devotion encounter at entry, takes the chosen boon, then starts Combat', () => {
-    const room = observe(corpusRun('execution/surface-nopq'), oDevotion);
-    const chosen = room.rank(devotionGate);
-    const spurned = room.rank('interactIncomingReward:afterCombat:spurnedSource');
+  // O_Devotion01 binds its Devotion fight; a standard F room resolves it by its Devotion reward.
+  it.each([
+    ['O_Devotion01', 'execution/surface-nopq', oDevotion],
+    ['a standard F room', 'checkpoint/underworld-f-duo-exchange-order', fDevotion],
+  ] as const)(
+    'begins the Devotion encounter in %s at entry, takes the chosen boon, then starts Combat',
+    (_, entry, origin) => {
+      const room = observe(corpusRun(entry), origin);
+      const chosen = room.rank(devotionGate);
+      const spurned = room.rank('interactIncomingReward:afterCombat:spurnedSource');
 
-    expect(room.graph).toEqual(
-      expectedRoomEventGraph([{ phaseKey: 'Encounter', startedBy: devotionGate }]),
-    );
-    expect(room.timeline).toEqual([
-      'roomEntered',
-      'encounterBegun(Encounter)',
-      chosen,
-      'encounterStarted(Encounter)',
-      'encounterEnd(Encounter)',
-      spurned,
-      'doorsOpened',
-    ]);
-    expectInOrder(room.walk, ['roomEntered', chosen, 'encounterStarted(Encounter)', spurned]);
-    expect(room.loot).toEqual([
-      `roomEntered: ${devotionGate} ${chosen}`,
-      `encounterEnd:Encounter: interactIncomingReward:afterCombat:spurnedSource ${spurned}`,
-    ]);
-  });
+      expect(room.graph).toEqual(
+        expectedRoomEventGraph([{ phaseKey: 'Encounter', startedBy: devotionGate }]),
+      );
+      expect(room.events.find((event) => event.kind === 'encounterBegun')).toMatchObject({
+        markers: 'split',
+      });
+      expect(room.timeline).toEqual([
+        'roomEntered',
+        'encounterBegun(Encounter)',
+        chosen,
+        'encounterStarted(Encounter)',
+        'encounterEnd(Encounter)',
+        spurned,
+        'doorsOpened',
+      ]);
+      expectInOrder(room.walk, ['roomEntered', chosen, 'encounterStarted(Encounter)', spurned]);
+      expect(room.loot).toEqual([
+        `roomEntered: ${devotionGate} ${chosen}`,
+        `encounterEnd:Encounter: interactIncomingReward:afterCombat:spurnedSource ${spurned}`,
+      ]);
+    },
+  );
 
   it.each([
     ['Opening', 'execution/f-opening', fStart, openingGate],

@@ -77,6 +77,47 @@ export function declaredRequiredRoomActions(room: RoomDeclaration): readonly Roo
  * Complete structural action domain for one authored occurrence of the
  * topology, which holds the doors and cages its rerolls name.
  */
+/**
+ * The reward offer the room's producer draws on: its scope's (a route-start
+ * reward, the materialized offer), else the occurrence's, a rerolled door's
+ * being its effective press's.
+ */
+export function roomIncomingRewardOffer(
+  biome: import('../addresses').BiomeAddress,
+  topology: Pick<BiomeTopology, 'decisions' | 'occurrences'>,
+  occurrence: RoomOccurrence,
+  scope?: {
+    readonly incomingRewardOffer?: ResolvedRewardOffer | null;
+    /** `undefined` means occurrence ownership; `null` is an unset route-start reward. */
+    readonly incomingRewardState?: AuthoredRewardState | null;
+  },
+): ResolvedRewardOffer | undefined {
+  if (scope?.incomingRewardState !== undefined) return scope.incomingRewardState?.offer;
+  if (scope?.incomingRewardOffer !== undefined && scope.incomingRewardOffer !== null)
+    return scope.incomingRewardOffer;
+  if (
+    occurrence.state.kind !== 'counted' &&
+    occurrence.state.kind !== 'fixed' &&
+    occurrence.state.kind !== 'anomaly' &&
+    occurrence.state.kind !== 'ephyraCombat' &&
+    occurrence.state.kind !== 'freeReward'
+  )
+    return undefined;
+  // A rerolled door's room acquires its effective press's reward; its first draw is inert.
+  const rerolled =
+    occurrence.rerolledIncomingReward === undefined
+      ? undefined
+      : biomeRerolledOwners(biome, topology).get(
+          semanticAddressKey(createIncomingRewardAddress(biome, occurrence.occurrenceId)),
+        )?.effectiveOffer;
+  const reward = rerolled ?? occurrence.state.reward;
+  return reward === undefined || reward === null
+    ? undefined
+    : 'offer' in reward
+      ? reward.offer
+      : reward;
+}
+
 export function activeRoomActionReferences(
   catalog: Catalog,
   biome: import('../addresses').BiomeAddress,
@@ -142,33 +183,13 @@ export function activeRoomActionReferences(
         );
     }
   }
-  // A rerolled door's room acquires its effective press's reward; its first draw is inert.
-  const rerolled =
-    occurrence.rerolledIncomingReward === undefined
-      ? undefined
-      : biomeRerolledOwners(biome, topology).get(
-          semanticAddressKey(createIncomingRewardAddress(biome, occurrence.occurrenceId)),
-        )?.effectiveOffer;
-  const stateReward =
-    occurrence.state.kind === 'counted' ||
-    occurrence.state.kind === 'fixed' ||
-    occurrence.state.kind === 'anomaly' ||
-    occurrence.state.kind === 'ephyraCombat' ||
-    occurrence.state.kind === 'freeReward'
-      ? (rerolled ?? occurrence.state.reward)
-      : undefined;
-  const reward =
-    scope?.incomingRewardState !== undefined
-      ? scope.incomingRewardState
-      : (scope?.incomingRewardOffer ?? stateReward);
+  const offer = roomIncomingRewardOffer(biome, topology, occurrence, scope);
   if (
-    reward !== undefined &&
-    reward !== null &&
+    offer !== undefined &&
     (scope?.incomingRewardActive === undefined || scope.incomingRewardActive)
   ) {
     const binding = scope?.incomingRewardBinding ?? room.incomingReward;
     const lifecycleKey = binding.kind === 'none' ? undefined : binding.producerLifecycleKey;
-    const offer = 'offer' in reward ? reward.offer : reward;
     const lifecycle =
       lifecycleKey === undefined
         ? undefined

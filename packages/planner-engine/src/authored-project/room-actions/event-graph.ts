@@ -12,6 +12,7 @@ import {
   encounterAuthoringProfileForKey,
   encounterSetForBinding,
   encounterBindingsBySlot,
+  rewardEncounterDefinitionKey,
   selectedEncounterAuthoringProfileKey,
 } from '../room-state/encounter-envelope';
 import {
@@ -267,6 +268,8 @@ export function assembleRoomEventGraph(options: {
   readonly lifecycleProfileKey: string;
   /** Whether the room's reward runs a producer. */
   readonly producer: boolean;
+  /** The room's reward type, which a reward-context encounter choice resolves by. */
+  readonly rewardType?: string;
   readonly activeEncounterSlotKeys?: readonly string[];
   /** The room reward's pickups, whose role at a gate's point is the row using it. */
   readonly incomingRewardPickups?: readonly RoomActionReference[];
@@ -342,13 +345,18 @@ export function assembleRoomEventGraph(options: {
               : true,
         ),
       );
-    const directDefinition =
+    // The room's resolved encounter: fixed, direct, or the one its reward names.
+    const resolved =
       definition ??
-      (authoring?.resolution.kind === 'direct'
-        ? options.catalog.encounterDefinitions.byKey[authoring.resolution.encounterDefinitionKey]
-        : undefined);
+      (authoring === undefined
+        ? undefined
+        : options.catalog.encounterDefinitions.byKey[
+            authoring.resolution.kind === 'direct'
+              ? authoring.resolution.encounterDefinitionKey
+              : rewardEncounterDefinitionKey(authoring.resolution, options.rewardType)
+          ]);
     // A boss fight's outcome is its Boss defeated.
-    const bossEnding = (directDefinition ?? candidates[0])?.script.endsWithBossDefeated === true;
+    const bossEnding = resolved?.script.endsWithBossDefeated === true;
     const combatHostsOutcome =
       !bossEnding &&
       (options.occurrence.anomalyReplacement !== undefined ||
@@ -357,17 +365,17 @@ export function assembleRoomEventGraph(options: {
       slot.rewardAttachment?.kind === 'rewardWheel'
         ? { rewardWheelKey: slot.rewardAttachment.key }
         : {};
-    if (directDefinition?.script.endsByInteraction === true)
+    if (resolved?.script.endsByInteraction === true)
       return [
         {
           phase: frozen({
             phaseKey: slot.key,
             ...wheel,
-            script: directDefinition.script,
+            script: resolved.script,
             hostsOutcome: true as const,
             ...(fields ? { standsAt: ROOM_ENTERED_POINT } : {}),
           }),
-          definition: directDefinition,
+          definition: resolved,
         },
       ];
     if (fields && slot.activatedByVerb === undefined) return [];
@@ -381,15 +389,11 @@ export function assembleRoomEventGraph(options: {
         phase: frozen({
           phaseKey: slot.key,
           ...wheel,
-          ...((directDefinition ?? candidates[0]) === undefined
-            ? {}
-            : { script: (directDefinition ?? candidates[0])!.script }),
+          ...(resolved === undefined ? {} : { script: resolved.script }),
           ...(hostsOutcome && !bossEnding ? { hostsOutcome: true as const } : {}),
           ...(fields ? { standsAt: ROOM_ENTERED_POINT } : {}),
         }),
-        ...((directDefinition ?? candidates[0]) === undefined
-          ? {}
-          : { definition: directDefinition ?? candidates[0]! }),
+        ...(resolved === undefined ? {} : { definition: resolved }),
         ...(combatHostsOutcome ? { combatHostsOutcome: true as const } : {}),
       },
     ];

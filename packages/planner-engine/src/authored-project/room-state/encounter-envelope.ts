@@ -102,6 +102,23 @@ export function encounterAuthoringProfileForKey(
   return profile;
 }
 
+/**
+ * The definition a reward-context choice names for the room's reward: its
+ * reward type's own, else the default. A first-biome identity is a reached
+ * fact, resolved before this.
+ */
+export function rewardEncounterDefinitionKey(
+  resolution: Extract<EncounterAuthoringProfile['resolution'], { readonly kind: 'rewardContext' }>,
+  rewardType: string | undefined,
+): string {
+  return (
+    (rewardType === undefined
+      ? undefined
+      : resolution.encounterDefinitionKeyByRewardType[rewardType]) ??
+    resolution.defaultEncounterDefinitionKey
+  );
+}
+
 export function encounterAuthoringProfiles(
   set: EncounterSet,
 ): readonly EncounterAuthoringProfile[] {

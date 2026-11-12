@@ -69,7 +69,7 @@ import {
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import type { RewardProducerBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
-import { activeRoomActionReferences, roomActionKey } from './state';
+import { activeRoomActionReferences, roomActionKey, roomIncomingRewardOffer } from './state';
 import {
   roomActionContentSource,
   roomActionItemContent,
@@ -929,12 +929,21 @@ export function assembleRoomActionDomain(options: {
       ...(options.entryActive === undefined ? {} : { entryActive: options.entryActive }),
     },
   );
+  const rewardType = roomIncomingRewardOffer(options.biome, options.topology, options.occurrence, {
+    ...(options.incomingRewardOffer === undefined
+      ? {}
+      : { incomingRewardOffer: options.incomingRewardOffer }),
+    ...(options.incomingRewardState === undefined
+      ? {}
+      : { incomingRewardState: options.incomingRewardState }),
+  })?.rewardType;
   const eventGraph = assembleRoomEventGraph({
     catalog: options.catalog,
     declaration,
     occurrence: options.occurrence,
     lifecycleProfileKey,
     producer,
+    ...(rewardType === undefined ? {} : { rewardType }),
     incomingRewardPickups: structuralReferences.filter(
       (reference) => reference.kind === 'interactIncomingReward',
     ),
