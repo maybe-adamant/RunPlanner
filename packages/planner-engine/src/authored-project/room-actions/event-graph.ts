@@ -726,12 +726,13 @@ function graphPhase(graph: RoomEventGraph, phaseKey: string): RoomEventGraphPhas
 
 /**
  * Where each bound point stands in the room's graph, as a comparable place;
- * only the order of places within one graph is meaningful. Points that
- * happen together share a place: a phase's end effects apply at its end
- * unless its script waits for the room to be ready, and the next phase's
- * wheels open with them. A phase a row places stands where that row opens.
- * A point the room does not play stands at room entry, a gate or wheel at
- * the very start.
+ * only the order of places within one graph is meaningful. Distinct points
+ * share a place only where the game makes them simultaneous: a phase's end
+ * effects apply at its end unless its script waits for the room to be ready
+ * first, a Ship phase's end effects open the next phase's wheels, and the
+ * exits are ready as the doors open. A phase a row places stands where that
+ * row opens. A point the room does not play stands at room entry, a gate or
+ * wheel at the very start.
  */
 export function roomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) => number {
   // Each graph point takes a before and an after place, in graph order.
@@ -743,6 +744,11 @@ export function roomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) 
     if (graph.events.some((event) => event.key === `bossDefeated:${phase.phaseKey}`))
       order.push(`bossDefeated:${phase.phaseKey}`);
     order.push(`encounterEnd:${phase.phaseKey}`);
+    if (
+      phase.script?.waitReadyBeforeEnd === true &&
+      nextWheelsOpen(graph, phase.phaseKey) === undefined
+    )
+      order.push(`endEffects:${phase.phaseKey}`);
   });
   if (graph.events.some((event) => event.kind === 'doorsOpened' && event.generatesOutgoing))
     order.push('doorsOpened');
@@ -785,7 +791,9 @@ export function roomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) 
         if (phase === undefined) return 1;
         const next = nextWheelsOpen(graph, point.phaseKey);
         if (next !== undefined) return after(`wheelsOpen:${next.wheelKey}`);
-        return after(`encounterEnd:${point.phaseKey}`) + (phase.script?.waitReadyBeforeEnd ? 1 : 0);
+        return index.has(`endEffects:${point.phaseKey}`)
+          ? after(`endEffects:${point.phaseKey}`)
+          : after(`encounterEnd:${point.phaseKey}`);
       }
     }
   };
