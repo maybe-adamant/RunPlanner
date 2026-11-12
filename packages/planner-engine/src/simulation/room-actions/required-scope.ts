@@ -1,15 +1,94 @@
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import {
   windowAnchor,
+  type RoomActionBounds,
   type RoomActionWindow,
   type RoomEventGraph,
+  type RoomEventPoint,
 } from '../../authored-project/room-actions/event-graph';
 import type { RoomActionRow, RoomActionRowLabel } from './model';
 
 /** A row before its phase, label and required scope are named. */
-export type RoomActionRowFacts = Omit<RoomActionRow, 'label'> & {
+export type RoomActionRowFacts = Omit<RoomActionRow, 'label' | 'bounds'> & {
   readonly label?: RoomActionRowLabel;
+  readonly bounds?: RoomActionBounds;
 };
+
+const point = <Point extends RoomEventPoint>(value: Point): Point => Object.freeze(value);
+
+function windowBounds(row: RoomActionRowFacts, structure: RoomEventGraph): RoomActionBounds {
+  const phases = structure.phases;
+  const first = phases[0]?.phaseKey;
+  const last = phases.at(-1)?.phaseKey;
+  const doors = point({ kind: 'doorsOpened' });
+  const entered = point({ kind: 'roomEntered' });
+  const wheelPhase = (wheelKey: string) =>
+    phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey ?? wheelKey;
+  const window = row.window;
+  let bounds: RoomActionBounds = { spawn: entered, deadline: doors };
+  switch (window.kind) {
+    case 'standard':
+      bounds =
+        window.phase === 'beforeCombat' && first !== undefined
+          ? {
+              spawn: entered,
+              enabler: point({ kind: 'gate', phaseKey: first }),
+              deadline: point({ kind: 'encounterStarted', phaseKey: first }),
+            }
+          : {
+              spawn: last === undefined ? entered : point({ kind: 'encounterEnd', phaseKey: last }),
+              deadline: doors,
+            };
+      break;
+    case 'encounterEnd': {
+      const next = nextWheelPhaseKey(window.phaseKey, structure);
+      bounds = {
+        spawn: point({ kind: 'endEffects', phaseKey: window.phaseKey }),
+        deadline: next === undefined ? doors : point({ kind: 'gate', phaseKey: next }),
+      };
+      break;
+    }
+    case 'fields':
+      bounds = {
+        spawn:
+          window.phaseKey === undefined
+            ? entered
+            : point({ kind: 'encounterEnd', phaseKey: window.phaseKey }),
+        deadline: doors,
+      };
+      break;
+    case 'postOutgoing':
+      bounds = { spawn: entered, enabler: doors, deadline: point({ kind: 'leave' }) };
+      break;
+    case 'shipPreCombat':
+      bounds = {
+        spawn: point({ kind: 'wheelsOpen', wheelKey: window.wheelKey }),
+        enabler: point({ kind: 'gate', phaseKey: wheelPhase(window.wheelKey) }),
+        deadline: point({ kind: 'encounterStarted', phaseKey: wheelPhase(window.wheelKey) }),
+      };
+      break;
+    case 'shipWheelsOpen':
+      bounds = {
+        spawn: point({ kind: 'wheelsOpen', wheelKey: window.wheelKey }),
+        deadline: point({ kind: 'gate', phaseKey: wheelPhase(window.wheelKey) }),
+      };
+      break;
+    case 'shipPostCombat':
+      bounds = {
+        spawn: point({ kind: 'encounterEnd', phaseKey: wheelPhase(window.wheelKey) }),
+        deadline: point({ kind: 'endEffects', phaseKey: wheelPhase(window.wheelKey) }),
+      };
+      break;
+  }
+  if (
+    row.dependencies.some(
+      (dependency) =>
+        dependency.kind === 'afterCheckpoint' && dependency.checkpointKey === 'exitUsable',
+    )
+  )
+    bounds = { ...bounds, enabler: point({ kind: 'exitsReady' }) };
+  return Object.freeze(bounds);
+}
 
 /** The phase whose wheel opens after this phase ends, when one does. */
 function nextWheelPhaseKey(phaseKey: string, structure: RoomEventGraph): string | undefined {
@@ -131,11 +210,13 @@ export function withRequiredScopes(
       const row = { ...previous };
       delete row.requiredScope;
       delete row.phaseKey;
+      delete row.bounds;
       const phaseKey = rowPhaseKey(row.window, structure);
       return Object.freeze({
         ...row,
         ...(phaseKey === undefined ? {} : { phaseKey }),
         label: rowLabel(row.window, structure),
+        bounds: windowBounds(row, structure),
         ...(row.stale || row.participation !== 'required'
           ? {}
           : {

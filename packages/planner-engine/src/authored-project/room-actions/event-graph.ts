@@ -17,17 +17,42 @@ import {
 } from '../room-state/encounter-envelope';
 
 /**
- * Where a row may stand, until row bounds replace windows: the earliest point
- * its item exists joined with the earliest point it can be used.
+ * A point of the room's event graph that a row's bounds name. Points that
+ * happen together share one place: a phase's end effects apply at its end
+ * unless its script waits for the room to be ready first, and the next
+ * phase's wheels open with them.
  */
+export type RoomEventPoint =
+  | { readonly kind: 'roomEntered' }
+  | { readonly kind: 'wheelsOpen'; readonly wheelKey: string }
+  /** The phase's encounter has begun and waits on its gate row before Combat. */
+  | { readonly kind: 'gate'; readonly phaseKey: string }
+  | { readonly kind: 'encounterStarted'; readonly phaseKey: string }
+  | { readonly kind: 'encounterEnd'; readonly phaseKey: string }
+  | { readonly kind: 'endEffects'; readonly phaseKey: string }
+  | { readonly kind: 'doorsOpened' }
+  /** Every required item is taken, so a locked door can be pressed (`CheckRoomExitsReady`). */
+  | { readonly kind: 'exitsReady' }
+  | { readonly kind: 'leave' };
+
+/**
+ * Where a row may stand, in graph events: its item exists from its spawn, it
+ * can be used once its enabler has happened, and a required row is taken
+ * before its deadline, which an unplaced one stops the walk at.
+ */
+export interface RoomActionBounds {
+  readonly spawn: RoomEventPoint;
+  readonly enabler?: RoomEventPoint;
+  readonly deadline: RoomEventPoint;
+}
+
+/** Where a row may stand, until its bounds replace it. */
 export type RoomActionWindow =
   | { readonly kind: 'standard'; readonly phase: 'beforeCombat' | 'afterCombat' }
-  /** A cross-occurrence delivery must run after this exact encounter's end effects. */
   | { readonly kind: 'encounterEnd'; readonly phaseKey: string }
   | { readonly kind: 'postOutgoing' }
   | { readonly kind: 'fields'; readonly phaseKey?: string }
   | { readonly kind: 'shipPreCombat'; readonly wheelKey: string }
-  /** Open from the wheel's roll at Wheels open until its choice: a wheel offer reroll. */
   | { readonly kind: 'shipWheelsOpen'; readonly wheelKey: string }
   | { readonly kind: 'shipPostCombat'; readonly wheelKey: string };
 

@@ -11,6 +11,7 @@ import {
   windowAnchor,
   roomActionWindowResolves,
   type RoomActionWindow,
+  type RoomEventPoint,
   type RoomEventGraph,
 } from './event-graph';
 import { roomActionKey } from './state';
@@ -48,6 +49,34 @@ export type RoomActionOrderIssue =
       readonly window: RoomActionWindow;
       readonly requiredAction: RoomActionReference;
       readonly requiredWindow: RoomActionWindow;
+    };
+
+/**
+ * Why a row cannot stand where it is placed, in its bounds: it stands before
+ * its spawn or enabler can happen (a required action ordered after it must
+ * come first, or the point never happens in this room), or past its deadline
+ * (an action ordered before it stands only after that point).
+ */
+export type RoomActionBoundBlocker =
+  | {
+      readonly kind: 'beforeSpawn' | 'beforeEnabler';
+      readonly reference: RoomActionReference;
+      readonly detail: string;
+      /** The row's spawn or enabler it stands before. */
+      readonly point: RoomEventPoint;
+      /** A required action ordered after the row whose deadline passes before the point. */
+      readonly requiredAction?: RoomActionReference;
+      /** The point never happens in this room. */
+      readonly unavailable?: true;
+    }
+  | {
+      readonly kind: 'pastDeadline';
+      readonly reference: RoomActionReference;
+      readonly detail: string;
+      /** The point the walk passes before it reaches the row. */
+      readonly deadline: RoomEventPoint;
+      /** The action ordered before the row that stands only after that point. */
+      readonly precedingAction: RoomActionReference;
     };
 
 /** A placement's blockers: the prefix's dependency, window and required-first issues. */

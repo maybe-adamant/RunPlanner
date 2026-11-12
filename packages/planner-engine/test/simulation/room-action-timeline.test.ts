@@ -165,6 +165,10 @@ function assembleRoomLifecycleTimeline(input: {
 
 /** The Timeline places rows by window and rank; it reads no label. */
 const TIMELINE_UNREAD_LABEL = Object.freeze({ kind: 'afterCombat' as const });
+const TIMELINE_UNREAD_BOUNDS = Object.freeze({
+  spawn: Object.freeze({ kind: 'roomEntered' as const }),
+  deadline: Object.freeze({ kind: 'leave' as const }),
+});
 
 function rankedRow(
   reference: RoomActionReference,
@@ -183,6 +187,7 @@ function rankedRow(
     stale: false,
     executable: true,
     label: TIMELINE_UNREAD_LABEL,
+    bounds: TIMELINE_UNREAD_BOUNDS,
   });
 }
 
@@ -268,6 +273,7 @@ describe('room lifecycle timeline', () => {
       stale: false,
       executable: true,
       label: TIMELINE_UNREAD_LABEL,
+      bounds: TIMELINE_UNREAD_BOUNDS,
     });
     const timeline = assembleRoomLifecycleTimeline({
       owner,
@@ -450,6 +456,7 @@ describe('room lifecycle timeline', () => {
       stale: false,
       executable: false,
       label: TIMELINE_UNREAD_LABEL,
+      bounds: TIMELINE_UNREAD_BOUNDS,
     });
     const timeline = assembleRoomLifecycleTimeline({
       owner,
@@ -498,6 +505,7 @@ describe('room lifecycle timeline', () => {
             rank: null,
             executable: false,
             label: TIMELINE_UNREAD_LABEL,
+            bounds: TIMELINE_UNREAD_BOUNDS,
           }),
         ]),
         checkpoints: Object.freeze([]),

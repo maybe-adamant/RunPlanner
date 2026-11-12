@@ -1,6 +1,7 @@
 import type { SemanticAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import type {
+  RoomActionBounds,
   RoomActionWindow,
   RoomEventGraph,
 } from '../../authored-project/room-actions/event-graph';
@@ -22,7 +23,11 @@ export type {
   RoomActionDependency,
   RoomActionParticipation,
 } from '../../authored-project/room-actions/domain';
-export type { RoomActionWindow } from '../../authored-project/room-actions/event-graph';
+export type {
+  RoomActionBounds,
+  RoomActionWindow,
+  RoomEventPoint,
+} from '../../authored-project/room-actions/event-graph';
 
 export type RoomActionRosterContribution =
   RoomActionContribution | RoomActionCheckpointContribution;
@@ -58,6 +63,8 @@ export interface RoomActionRow {
   /** Active mandatory work constrained to encounter progression or only room completion. */
   readonly requiredScope?: 'phase' | 'room';
   readonly window: RoomActionWindow;
+  /** Where the row may stand, in the room's graph events. */
+  readonly bounds: RoomActionBounds;
   /**
    * The event-graph phase the row belongs to: a wheel phase's rows to it, an
    * encounter end's to that phase, or to the next one when its wheel waits on

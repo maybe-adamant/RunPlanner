@@ -70,7 +70,9 @@ export {
 } from './acquisition/acquisition-sources';
 export { roomLifecycleProfileKey, type RoomLifecycleRole } from './room-actions/lifecycle-profile';
 export type {
+  RoomActionBounds,
   RoomEvent,
+  RoomEventPoint,
   RoomEventGraph,
   RoomEventGraphPhase,
   RoomEventTrigger,
@@ -80,6 +82,7 @@ export {
   assessRoomActionInsertion,
   roomActionInsertionRefusal,
   roomActionOrderContext,
+  type RoomActionBoundBlocker,
   type RoomActionInsertionAssessment,
   type RoomActionOrderContext,
   type RoomActionOrderIssue,
