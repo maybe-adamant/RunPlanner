@@ -102,11 +102,11 @@ before assembly and returns the final project and its exact assembly.
   and lie live until the owner places their pickup, and an unplaced required
   one stops the walk at its deadline with its placement finding.
 - A delivery the edit proves displaced (valid before, invalid now: the walk
-  has it due at another host) is unplaced and lies live again where it is due,
-  the same item with its choices. A delivery, a rerolled reward or an Echo
-  replay the edit replaced is discarded as the
+  has it due at another host) is unplaced and lies live again where it is due.
+  A delivery, a rerolled reward or an Echo replay the edit replaced is
+  discarded as the
   [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
-  repairs it. A displaced clocked
+  repairs it: a delivery due at another host arrives there as a new item. A displaced clocked
   pickup is removed only when its trait is no longer held; one whose held trait
   now matures elsewhere stays with its finding. Deliveries and clocked pickups
   are keyed by their source, so no inherited choice is reset for being newly

@@ -1252,9 +1252,8 @@ keepsake selection's equip results) are
 one source and cycle. Hermes deliveries and clocked pickups are likewise keyed
 by their source. Room replacement and other unrelated edits therefore retain
 all of them; edit settlement resets no inherited choice, and one that is
-invalid where it lands keeps its finding. Only a changed purchase re-places a
-Hermes delivery without its old payload; a delivery due at another host keeps
-it. Vanished
+invalid where it lands keeps its finding. Only a changed purchase or a changed
+arrival host re-places a Hermes delivery without its old payload. Vanished
 structural phases are removed under the existing codec and remain recoverable
 through Undo.
 

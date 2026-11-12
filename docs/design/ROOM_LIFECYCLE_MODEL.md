@@ -678,10 +678,10 @@ items beside the removed rows:
 - **A Hermes delivery** whose source no longer produces it (its purchase, or
   for a pickup in the Shrine's room its rush, is gone, or the Shrine with it)
   or whose Shrine slot now stocks another reward, judged in every room as a
-  row on a replaced item is. A delivery the walk now has due at another host
-  is not replaced: a placed one the edit displaces is unplaced, and its
-  payload, choices included, stays the same item and moves to the host that
-  places it.
+  row on a replaced item is; or whose payload lies unplaced at a host while
+  the walk has the delivery due at another, judged only where the walk
+  reaches. A placed delivery the edit displaces is unplaced first and then
+  judged the same way.
 - **A rerolled reward's outcomes** once the press whose item they are is no
   longer its owner's effective press (a later press, an earlier one again, or
   none), or once that press's result changes in place: they reset to the
@@ -1272,9 +1272,13 @@ finding is reported. Each purchase's delivery is one engine obligation (source,
 generation key, reward type, rushed, and once due its host, encounter phase and
 cause: rush, countdown or flush); the frontier, placement assessment, due
 spawn, edit settlement, authored domain and execution assembly all read that
-obligation rather than recomputing the due contact. A delivery is the same
-item wherever it comes due: its retained choices and outcomes (a Mystery
-Boon's pick, a Quick Buck offer) move to the host that places it. A Hub side-room source is
+obligation rather than recomputing the due contact. The game rolls a
+delivered item's offers when it spawns, in its host room, so a delivery whose
+arrival host changes is a new item: it arrives with no choices, and the earlier
+item's payload, with its choices and outcomes (a Mystery Boon's pick, a Quick
+Buck offer), is discarded in the same edit and announced beside the other
+replaced items. Due again at the same host, it is the same item and keeps
+them. A Hub side-room source is
 ordinary for scheduling, but cannot advance an older pending delivery; later
 qualifying main Hub visits can advance or host it. Fixed Boss occurrences are
 ordinary later delivery hosts. The Shrine source action and its later required
