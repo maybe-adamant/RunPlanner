@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -2700,7 +2700,13 @@
           { "slotKey": "Encounter", "encounterKey": "Story_Chronos_01", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "FirstHitHealTrait" },
+            { "generationKey": "initial:secondLeft", "offerKey": "LimitedSwapTraitDrop" },
+            { "generationKey": "initial:secondRight", "offerKey": "MemPointsCommonRange" }
+          ]
+        },
         "purgingPool": { "traits": [], "anchorId": 755023 },
         "keepsakeRack": {},
         "fountain": {}
@@ -2764,5 +2770,5 @@
       }
     }
   ],
-  "planFingerprint": "ef40a4c7"
+  "planFingerprint": "c0222828"
 }

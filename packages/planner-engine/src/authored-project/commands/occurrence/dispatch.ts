@@ -523,31 +523,10 @@ export function applyOccurrenceCommand(
       );
     }
     case 'PurchaseHermesShrineOffer': {
-      const authored = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      const shrine = authored.hermesShrine;
-      if (shrine === undefined) failCommand(command, 'occurrence has no Hermes Shrine');
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      if (occurrence.hermesShrine === undefined)
+        failCommand(command, 'occurrence has no Hermes Shrine');
       requireShrineGeneration(command, command.generationKey);
-      if (command.rewardType !== undefined && command.generationKey !== 'travelDealRefill')
-        failCommand(command, 'only the Travel Deal refill is stocked with its purchase');
-      if (command.rewardType !== undefined)
-        requireSurfaceShopReward(catalog, command, command.rewardType);
-      const occurrence =
-        command.rewardType === undefined
-          ? authored
-          : Object.freeze({
-              ...authored,
-              hermesShrine: Object.freeze({
-                ...shrine,
-                travelDealRefill: Object.freeze({
-                  offer: stockedOffer(
-                    shrine.travelDealRefill?.offer,
-                    command.rewardType,
-                    authored.occurrenceId,
-                    'travelDealRefill',
-                  ),
-                }),
-              }),
-            });
       const offer = offerFor(occurrence.hermesShrine, command.generationKey);
       if (offer === undefined || offer === null) failCommand(command, 'Shrine offer is unresolved');
       const order = occurrence.roomActions.order;

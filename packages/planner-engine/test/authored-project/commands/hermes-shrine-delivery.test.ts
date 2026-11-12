@@ -2051,36 +2051,6 @@ describe('Hermes Shrine purchase actions', () => {
         generationKey: 'initial:first',
       }),
     ).toThrow(/already bought/);
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'PurchaseHermesShrineOffer',
-        occurrence: shrine,
-        generationKey: 'initial:secondLeft',
-        rewardType: 'MaxManaDrop',
-      }),
-    ).toThrow(/only the Travel Deal refill/);
-  });
-
-  it('stocks the Travel Deal refill with its purchase in one edit', () => {
-    const cleared = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: shrine,
-      generationKey: 'travelDealRefill',
-      purchased: false,
-    });
-    const refilled = applyProjectCommand(cleared, catalog, {
-      kind: 'PurchaseHermesShrineOffer',
-      occurrence: shrine,
-      generationKey: 'travelDealRefill',
-      rewardType: 'MaxManaDrop',
-    });
-    expect(shrineRoom(refilled).hermesShrine?.travelDealRefill?.offer).toEqual({
-      rewardType: 'MaxManaDrop',
-      delay: shrineRoom(cleared).hermesShrine?.travelDealRefill?.offer?.delay,
-    });
-    expect(shrineRoom(refilled).roomActions.order.at(-1)).toEqual(
-      withItemContent(refilled, shrine, purchase('travelDealRefill')),
-    );
   });
 
   it('keeps an item delay across a restock and retimes only a delayed purchase', () => {

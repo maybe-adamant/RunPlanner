@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -2810,7 +2810,13 @@
           { "slotKey": "Encounter", "encounterKey": "Story_Chronos_01", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "FirstHitHealTrait" },
+            { "generationKey": "initial:secondLeft", "offerKey": "LimitedSwapTraitDrop" },
+            { "generationKey": "initial:secondRight", "offerKey": "MemPointsCommonRange" }
+          ]
+        },
         "purgingPool": { "traits": [], "anchorId": 755023 },
         "keepsakeRack": {},
         "fountain": {}
@@ -4481,7 +4487,13 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "LastStandShopItem" },
+            { "generationKey": "initial:secondLeft", "offerKey": "TemporaryMoveSpeedTrait" },
+            { "generationKey": "initial:secondRight", "offerKey": "TemporaryImprovedExTrait" }
+          ]
+        },
         "purgingPool": { "traits": [], "anchorId": 637448 },
         "layout": { "flipped": false },
         "keepsakeRack": {},
@@ -4546,5 +4558,5 @@
       }
     }
   ],
-  "planFingerprint": "9fb1aa1e"
+  "planFingerprint": "15c60372"
 }

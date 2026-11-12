@@ -519,7 +519,12 @@ export function applyRoomEnteredTransition(
           }),
         );
       for (const issue of assessment.inventory?.issues ?? []) {
-        const code = issue.kind === 'duplicate' ? 'stygianWellDuplicate' : 'stygianWellWrongGroup';
+        const code =
+          issue.kind === 'missing'
+            ? 'stygianWellMissing'
+            : issue.kind === 'duplicate'
+              ? 'stygianWellDuplicate'
+              : 'stygianWellWrongGroup';
         const origin = createRoomFeatureAddress(room.origin, {
           kind: 'stygianWellOffer',
           generationKey: issue.generationKey,

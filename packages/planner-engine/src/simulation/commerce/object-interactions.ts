@@ -38,7 +38,6 @@ export interface WorldShopInteraction {
 /** One unbought Hermes Shrine item that can be bought there. */
 export interface HermesShrineInteractionOffer {
   readonly generationKey: HermesShrineGenerationKey;
-  /** Null only for a blank Travel Deal refill; the pick then adds its chosen `rewardType`. */
   readonly rewardType: string | null;
   readonly delay: HermesShrineDelay | null;
   readonly buy: CommandOf<'PurchaseHermesShrineOffer'>;

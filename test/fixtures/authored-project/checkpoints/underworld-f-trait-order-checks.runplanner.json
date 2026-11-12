@@ -1744,9 +1744,9 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "EmptyMaxHealthShopItem",
+                  "secondLeft": "TemporaryImprovedExTrait",
+                  "secondRight": "MetaCurrencyRange"
                 }
               },
               "purgingPool": {

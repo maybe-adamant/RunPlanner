@@ -2568,9 +2568,9 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "DamageSelfDrop",
+                  "secondLeft": "TemporaryImprovedSecondaryTrait",
+                  "secondRight": "TemporaryEmptySlotDamageTrait"
                 }
               },
               "purgingPool": {

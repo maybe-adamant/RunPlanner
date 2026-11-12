@@ -208,6 +208,7 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
       offered,
       settled.branch.state.stygianWell,
       settled.branch.state.traitHistory,
+      onShow.filter((itemKey): itemKey is string => itemKey !== null),
     );
     for (const issue of roll.issues)
       addRewardFinding(
@@ -215,9 +216,11 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
         rewardFinding(
           issue.kind === 'notOffered'
             ? 'rollOfferUnavailable'
-            : issue.kind === 'duplicate'
-              ? 'stygianWellDuplicate'
-              : 'stygianWellWrongGroup',
+            : issue.kind === 'missing'
+              ? 'stygianWellMissing'
+              : issue.kind === 'duplicate'
+                ? 'stygianWellDuplicate'
+                : 'stygianWellWrongGroup',
           createRoomFeatureAddress(room.origin, {
             kind: 'stygianWellOffer',
             generationKey: stygianWellGenerationKey(event.rerollId, issue.slotKey),

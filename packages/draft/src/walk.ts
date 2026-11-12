@@ -663,7 +663,7 @@ export class DraftWalk {
         );
       case 'sideRoomGenerationUnavailable':
         return origin.kind === 'localVisitSlot' && this.sideRoomGeneration(origin, reason);
-      case 'hermesShrineInventoryMissing':
+      // Settlement stocks a blank Shrine; an item that turned illegal is redrawn here.
       case 'hermesShrineInventoryWrongGroup':
       case 'hermesShrineInventoryDuplicate':
       case 'hermesShrineInventoryRequirement':
@@ -1051,7 +1051,7 @@ export class DraftWalk {
     return false;
   }
 
-  /** A forced Shrine's inventory: a declared option of the slot's group, never one already tried. */
+  /** A Shrine item that turned illegal: a declared option of the slot's group, never one already tried. */
   private hermesShrineOffer(
     feature: Extract<SemanticAddress, { readonly kind: 'roomFeature' }>,
   ): boolean {

@@ -718,14 +718,10 @@ export type HermesShrineCommand =
       readonly index?: number;
     }
   | {
-      /**
-       * Buys one unbought generation at the end of the room's actions;
-       * `rewardType` first stocks a blank Travel Deal refill.
-       */
+      /** Buys one unbought generation at the end of the room's actions. */
       readonly kind: 'PurchaseHermesShrineOffer';
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').HermesShrineGenerationKey;
-      readonly rewardType?: string;
       /** Where the purchase enters instead of the end: any structurally legal index. */
       readonly index?: number;
     }

@@ -26,6 +26,7 @@ import {
   loadUnderworldFStygianWellCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
+import { settleTestEdit } from '@run-planner/test-fixtures/shared';
 import {
   firstSupportedReroll,
   withArcana,
@@ -381,7 +382,7 @@ describe('Well and Pool roll publication', () => {
       ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
     );
     const apply = (command: Parameters<typeof applyProjectCommand>[2]) => {
-      project = applyProjectCommand(project, catalog, command);
+      project = settleTestEdit(project, command);
     };
     for (const generationKey of [
       'travelDealRefill',

@@ -186,19 +186,11 @@ describe('rows on a replaced item in edit settlement', () => {
       expect(holds(settled.assembly.project, well, purchase)).toBe(false);
     });
 
-    it('stays through unpinning, and goes when re-pinned to another item', () => {
-      const unpinned = settle(loadCheckpoint('underworld-f-stygian-well'), pin(null)).assembly
-        .project;
-      expect(order(unpinned, well)).toContainEqual({
-        ...purchase,
-        content: ['TemporaryBoonRarityTrait'],
-      });
+    it('stays when its slot is restocked with the same item', () => {
+      const project = loadCheckpoint('underworld-f-stygian-well');
       expect(
-        holds(settle(unpinned, pin('TemporaryBoonRarityTrait')).assembly.project, well, purchase),
+        holds(settle(project, pin('TemporaryBoonRarityTrait')).assembly.project, well, purchase),
       ).toBe(true);
-      expect(
-        holds(settle(unpinned, pin('ExtendedShopTrait')).assembly.project, well, purchase),
-      ).toBe(false);
     });
   });
 

@@ -27,6 +27,7 @@ import {
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { settleProjectStock } from '@run-planner/engine/project-migration';
 import { authorLegalTraitOffers } from './trait-offers';
 
 const evaluate = (document: ProjectDocument) => simulateProjectAssembly(catalog, document);
@@ -35,6 +36,14 @@ const evaluate = (document: ProjectDocument) => simulateProjectAssembly(catalog,
 export function settleTestEdit(project: ProjectDocument, command: ProjectCommand): ProjectDocument {
   return settleProjectEdit({ catalog, before: evaluate(project), command, evaluate }).assembly
     .project;
+}
+
+/** The plan with every blank stock slot its walk reaches stocked, as an edit would leave it. */
+export function stockTestProject(project: ProjectDocument): ProjectDocument {
+  const settled = settleProjectStock({ catalog, project, evaluate });
+  if (settled.fault !== undefined)
+    throw new Error(`stock settlement faulted at ${settled.fault.key}`);
+  return settled.assembly.project;
 }
 
 const PLACEMENT_FINDINGS: ReadonlySet<string> = new Set([
@@ -102,13 +111,13 @@ export function collectTestRequiredItems(project: ProjectDocument): ProjectDocum
 }
 
 /**
- * Authors legal trait offers and collects required items in turn until
- * neither changes the plan, so a route reaches as far as both carry it.
+ * Authors legal trait offers, collects required items and stocks blank stock
+ * in turn until none changes the plan, so a route reaches as far as they carry it.
  */
 export function authorTestTraitsAndRequiredItems(project: ProjectDocument): ProjectDocument {
   let current = project;
   for (let pass = 0; pass < 64; pass += 1) {
-    const next = collectTestRequiredItems(authorLegalTraitOffers(current));
+    const next = stockTestProject(collectTestRequiredItems(authorLegalTraitOffers(current)));
     if (next === current) return current;
     current = next;
   }

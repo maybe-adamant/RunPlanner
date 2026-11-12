@@ -1294,9 +1294,9 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "FirstHitHealTrait",
+                  "secondLeft": "LimitedSwapTraitDrop",
+                  "secondRight": "MemPointsCommonRange"
                 }
               },
               "purgingPool": {
@@ -2572,9 +2572,9 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "LastStandShopItem",
+                  "secondLeft": "TemporaryMoveSpeedTrait",
+                  "secondRight": "TemporaryImprovedExTrait"
                 }
               },
               "purgingPool": {

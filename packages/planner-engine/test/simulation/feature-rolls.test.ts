@@ -95,9 +95,13 @@ describe('Stygian Well rolls', () => {
     const capability = well(project);
     // secondRight and the Travel Deal restock in secondLeft were bought: only healing restocks.
     expect(capability.rolls['r1']?.offeredSlotKeys).toEqual(['healing']);
+    // The reroll's edit stocked its blank slot, past the one item on show that the game bans.
+    const restocked = occurrenceOf(project).stygianWell?.rerollOfferKeyBySlot?.['r1']?.healing;
+    expect(capability.rolls['r1']?.candidateItemKeysBySlot.healing).toContain(restocked);
+    expect(restocked).not.toBe('ArmorBoostStore');
     expect(capability.interaction).toMatchObject({
       rollKey: 'r1',
-      offers: [{ generationKey: 'r1:healing', slotKey: 'healing', itemKey: null }],
+      offers: [{ generationKey: 'r1:healing', slotKey: 'healing', itemKey: restocked }],
       reroll: { cost: 2, enabled: true, available: true },
       pendingRoll: { offeredSlotKeys: ['healing'] },
     });
@@ -154,12 +158,13 @@ describe('Stygian Well rolls', () => {
       ),
       evidence: { reason: 'slotNotOffered' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceStygianWellRollOffer',
-      action: wellReroll('r1'),
-      slotKey: 'secondRight',
-      itemKey: null,
-    });
+    for (const slotKey of ['secondRight', 'healing'] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceStygianWellRollOffer',
+        action: wellReroll('r1'),
+        slotKey,
+        itemKey: null,
+      });
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'SetStygianWellPurchase',
@@ -217,16 +222,34 @@ describe('Stygian Well rolls', () => {
     ).toThrow('a slot is pinned only with its purchase');
   });
 
-  it('need a pin only on a bought slot, initial ones included', () => {
+  it('report a blank slot missing until an edit stocks it, initial ones included', () => {
     let project = base();
-    // A blank initial slot is native: no finding until it is bought.
+    const blank = {
+      code: 'stygianWellMissing',
+      origin: semanticAddressKey(
+        createRoomFeatureAddress(room, {
+          kind: 'stygianWellOffer',
+          generationKey: 'initial:healing',
+        }),
+      ),
+      evidence: { reason: 'missing' },
+    };
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: room,
       slotKey: 'healing',
       itemKey: null,
     });
-    expect(findings(project)).toEqual([]);
+    expect(findings(project)).toEqual([blank]);
+    // The next edit's settlement stocks it.
+    const stocked = settle(project, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: room,
+      slotKey: 'secondLeft',
+      itemKey: occurrenceOf(project).stygianWell!.offerKeyBySlot.secondLeft,
+    });
+    expect(findings(stocked)).toEqual([]);
+    expect(occurrenceOf(stocked).stygianWell?.offerKeyBySlot.healing).not.toBeNull();
     project = applyProjectCommand(project, catalog, {
       kind: 'SetStygianWellPurchase',
       occurrence: room,
@@ -292,7 +315,8 @@ describe('Stygian Well rolls', () => {
       kind: 'purchaseStygianWellOffer',
       generationKey: 'initial:secondRight',
     });
-    project = applyProjectCommand(project, catalog, {
+    // Moving the purchase past the reroll restocks its slot there, which that edit stocks.
+    project = settle(project, {
       kind: 'MoveRoomAction',
       action: secondRight,
       toIndex: order(project).length - 1,

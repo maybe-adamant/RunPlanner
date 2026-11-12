@@ -38,6 +38,7 @@ import {
 } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
+import { withFixedTestWellStock } from '../../../support/stygian-well';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -281,7 +282,7 @@ function evaluate(
   initialBranches?: Parameters<typeof evaluateBiomeRewards>[5],
 ) {
   if (authorTraits) project = authorTestTraitsAndRequiredItems(project);
-  project = scheduleTestRequiredRoomActions(project, catalog, biome);
+  project = withFixedTestWellStock(scheduleTestRequiredRoomActions(project, catalog, biome));
   const snapshot = materializeBiome(
     catalog,
     biome,

@@ -1196,9 +1196,9 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "TemporaryHealExpirationTrait",
+                  "secondLeft": "MetaCurrencyRange",
+                  "secondRight": "ExtendedShopTrait"
                 }
               },
               "keepsakeRack": {

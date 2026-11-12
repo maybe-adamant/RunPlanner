@@ -13,7 +13,7 @@ import { stableHash } from './stable-hash';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 103 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 1;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -260,15 +260,16 @@ export type StygianWellSlotKey = 'healing' | 'secondLeft' | 'secondRight';
  */
 export type StygianWellGenerationKey = `${string}:${StygianWellSlotKey}` | 'travelDealRefill';
 /**
- * The Well's observed stock: the initial roll, where a null slot stays native
- * until a purchase needs it, and each later roll a `rerollStygianWell` room
- * action draws. Use and purchases follow from the room's actions.
+ * The Well's stock: the initial roll and each later roll a `rerollStygianWell`
+ * room action draws. A blank slot is stocked by the edit whose settlement first
+ * reaches it, with a stable legal draw. Use and purchases follow from the
+ * room's actions.
  */
 export interface StygianWellState {
   readonly offerKeyBySlot: Readonly<Record<StygianWellSlotKey, string | null>>;
   /**
-   * The pinned slots of each present Well reroll, by its `rerollId`; an
-   * unpinned slot stays native. Absent when nothing is pinned.
+   * The stocked slots of each present Well reroll, by its `rerollId`; a slot
+   * bought earlier in the room is not restocked. Absent when nothing is stocked.
    */
   readonly rerollOfferKeyBySlot?: Readonly<
     Record<string, Readonly<Partial<Record<StygianWellSlotKey, string>>>>

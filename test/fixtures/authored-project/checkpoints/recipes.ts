@@ -1,5 +1,6 @@
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import type { AuthoredProjectCheckpointId } from './manifest';
+import { stockTestProject } from '../settled-edit';
 import { dreamMixedHandoffProject } from '../routes/dream';
 import {
   createNemesisFieldsCheckpoint,
@@ -51,7 +52,7 @@ export interface RecipeBackedCheckpoint {
  * recipe. Imported/user-authored saves intentionally stay out of this table:
  * their static loader and canonical-byte integrity coverage remains primary.
  */
-export const recipeBackedCheckpoints = Object.freeze([
+const recipes = [
   { id: 'dream-mixed-handoff', create: dreamMixedHandoffProject },
   { id: 'underworld-f-pool', create: createUnderworldFPoolCheckpoint },
   { id: 'underworld-f-stygian-well', create: createUnderworldFWellCheckpoint },
@@ -90,4 +91,9 @@ export const recipeBackedCheckpoints = Object.freeze([
   { id: 'nemesis-f-trait-trade', create: createNemesisTraitTradeCheckpoint },
   { id: 'nemesis-h-fields', create: createNemesisFieldsCheckpoint },
   { id: 'nemesis-f-pom-sea-star', create: createNemesisPomSeaStarCheckpoint },
-] as const satisfies readonly RecipeBackedCheckpoint[]);
+] as const satisfies readonly RecipeBackedCheckpoint[];
+
+/** Each recipe's plan as an edit leaves it: every blank stock slot its walk reaches is stocked. */
+export const recipeBackedCheckpoints: readonly RecipeBackedCheckpoint[] = Object.freeze(
+  recipes.map(({ id, create }) => Object.freeze({ id, create: () => stockTestProject(create()) })),
+);
