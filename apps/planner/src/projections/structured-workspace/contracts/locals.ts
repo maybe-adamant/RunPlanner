@@ -417,7 +417,11 @@ export interface WorkspaceFieldsSpatialControl {
   readonly interactionKey: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
+  /** The stored point; null while the slot stands on its default. */
   readonly pointId: number | null;
+  /** The point the slot stands on by default while none is stored. */
+  readonly defaultPointId?: number;
+  /** Each point, null returning the slot to its default. */
   readonly pointChoices: readonly { readonly label: string; readonly value: number | null }[];
 }
 

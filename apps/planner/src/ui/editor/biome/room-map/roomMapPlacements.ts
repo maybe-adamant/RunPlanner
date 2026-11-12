@@ -26,20 +26,21 @@ export function roomMapPlacements(room: WorkspaceRoomSummary): Omit<RoomMapPlace
     ),
     anchorNumbers: new Map(anchors.map((anchor) => [anchor.anchorId, anchor.number])),
     fieldsPoints: new Map(
-      (fields?.spatial ?? []).flatMap((control) =>
-        control.pointId === null || fields === undefined
+      (fields?.spatial ?? []).flatMap((control) => {
+        const pointId = control.pointId ?? control.defaultPointId;
+        return pointId === undefined || fields === undefined
           ? []
           : [
               [
-                control.pointId,
+                pointId,
                 {
                   label: control.label,
                   icon: fieldsSlotIcon(fields, control.target),
                   badge: fieldsSlotBadge(fields, control.target),
                 },
               ] as const,
-            ],
-      ),
+            ];
+      }),
     ),
   };
 }

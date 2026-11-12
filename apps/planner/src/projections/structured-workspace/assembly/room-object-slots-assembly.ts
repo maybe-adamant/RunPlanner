@@ -195,10 +195,15 @@ export function assembleRoomObjectSlots(input: {
                   : { defaultAnchorId: object.defaultAnchorId }),
                 choices: Object.freeze(
                   (object.anchorChoices ?? [])
-                    .filter((choice) => choice.anchorId !== (object.anchorId ?? null))
+                    // The anchor it stands on is not offered; null returns a chosen anchor to its default.
+                    .filter((choice) =>
+                      choice.anchorId === null
+                        ? object.anchorId !== undefined
+                        : choice.anchorId !== (object.anchorId ?? object.defaultAnchorId),
+                    )
                     .map((choice) =>
                       Object.freeze({
-                        key: bind(`anchor:${object.kind}@${choice.anchorId ?? 'game'}`, [
+                        key: bind(`anchor:${object.kind}@${choice.anchorId ?? 'default'}`, [
                           choice.command,
                         ]),
                         anchorId: choice.anchorId,

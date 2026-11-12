@@ -1,4 +1,3 @@
-import type { RoomOccurrence } from '@run-planner/engine/authored-project';
 import {
   nativeExitDoorOrder,
   type Catalog,
@@ -19,7 +18,8 @@ const point = ({ id, x, y }: { readonly id: number; readonly x: number; readonly
 export function assembleRoomMap(
   catalog: Pick<Catalog, 'rooms' | 'exitTypes'>,
   room: RoomDeclaration,
-  occurrence: RoomOccurrence,
+  /** The authored Chaos gate's one-based spawn point, chosen or default. */
+  chaosGateSpawnPointIndex: number | undefined,
 ): WorkspaceRoomMap | undefined {
   const points = room.mapPoints;
   if (points === undefined) return undefined;
@@ -39,16 +39,10 @@ export function assembleRoomMap(
           room.gameName,
           exitDoors.map((door) => ({ doorId: door.id })),
         );
-  const chaos = occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
-  // A room with one SecretPoint can place its gate only there.
   const chaosGate =
-    chaos === undefined
+    chaosGateSpawnPointIndex === undefined
       ? undefined
-      : chaos.spawnPointIndex === undefined || chaos.spawnPointIndex === null
-        ? points.secretPoints.length === 1
-          ? points.secretPoints[0]
-          : undefined
-        : points.secretPoints[chaos.spawnPointIndex - 1];
+      : points.secretPoints[chaosGateSpawnPointIndex - 1];
   return Object.freeze({
     doors: Object.freeze(
       exitDoors.map((door) => {

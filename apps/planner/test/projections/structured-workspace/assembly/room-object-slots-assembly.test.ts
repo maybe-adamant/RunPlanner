@@ -88,10 +88,8 @@ describe('room objects', () => {
     const slots = spotsOf(project);
     const [anchor] = slots.anchors;
     const well = objectOf(slots, 'stygianWell');
-    expect(well.anchor).toMatchObject({
-      defaultAnchorId: anchor!.anchorId,
-      choices: [{ anchorId: anchor!.anchorId }],
-    });
+    // It stands on its default; the room has no other anchor to offer.
+    expect(well.anchor).toMatchObject({ defaultAnchorId: anchor!.anchorId, choices: [] });
     expect(anchor).toMatchObject({ occupant: { object: 'stygianWell' }, default: true });
     expect(slots.commandsOf(well.toggleKey!)).toEqual([
       { kind: 'RemoveStygianWell', occurrence: oneSpot },
@@ -145,10 +143,7 @@ describe('room objects', () => {
     expect(well.anchor).toMatchObject({ choices: [] });
     expect(well.anchor?.pinned).toBeDefined();
     const free = slots.anchors.find((anchor) => anchor.anchorId !== well.anchor?.pinned);
-    expect(pool.anchor).toMatchObject({
-      defaultAnchorId: free!.anchorId,
-      choices: [{ anchorId: free!.anchorId }],
-    });
+    expect(pool.anchor).toMatchObject({ defaultAnchorId: free!.anchorId, choices: [] });
     expect(free).toMatchObject({ occupant: { object: 'purgingPool' }, default: true });
   });
 });

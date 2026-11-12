@@ -640,6 +640,8 @@ export function assembleWorkspaceBiomeSemantics(
       roomObjectInteractions: source.roomObjectInteractions,
       roomAnchorSlots: source.roomAnchorSlots,
       roomLayout: source.roomLayout,
+      fieldsSpatialPositions: source.fieldsSpatialPositions,
+      chaosGatePosition: source.chaosGatePosition,
       spawnedLoot: source.spawnedLoot,
       encounterOutcomes: source.encounterOutcomes,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,

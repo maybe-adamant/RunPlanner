@@ -11,6 +11,7 @@ import {
   type ResolvedRoutePosition,
 } from '@run-planner/engine/authored-project';
 import {
+  createAdditionalExitAddress,
   createJudgmentArcanaAddress,
   createFigurineArcanaAddress,
   createIncomingRewardAddress,
@@ -337,6 +338,10 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly roomLayout?: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomLayoutAuthoring | undefined;
+  /** Where each active Fields slot of the room stands, chosen or default. */
+  readonly fieldsSpatialPositions?: import('../source-index').WorkspaceBiomeSource['fieldsSpatialPositions'];
+  /** Where the room's authored Chaos gate spawns, chosen or default. */
+  readonly chaosGatePosition?: import('../source-index').WorkspaceBiomeSource['chaosGatePosition'];
   /** The loot the room spawns on its own; undefined while unentered. */
   readonly spawnedLoot?: import('../source-index').WorkspaceBiomeSource['spawnedLoot'];
   readonly encounterOutcomes?: import('../source-index').WorkspaceBiomeSource['encounterOutcomes'];
@@ -428,6 +433,14 @@ export function assembleWorkspaceOccurrence(
   );
   const address = createOccurrenceAddress(input.biome, occurrence.occurrenceId);
   const entered = input.evaluatedRoom?.entered ?? false;
+  const fieldsSpatialPositions = input.fieldsSpatialPositions?.(address);
+  const authoredChaosGate = occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
+  const chaosGatePosition =
+    authoredChaosGate === undefined
+      ? undefined
+      : input.chaosGatePosition?.(
+          createAdditionalExitAddress(input.biome, occurrence.occurrenceId, authoredChaosGate.key),
+        );
   const roomControls =
     input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
   const screenRerollAllowance = input.screenRerollAllowance;
@@ -466,6 +479,7 @@ export function assembleWorkspaceOccurrence(
       markerDestinations: input.markerDestinations,
       occurrence: input.occurrence,
       ...(input.startingReward === undefined ? {} : { startingReward: input.startingReward }),
+      ...(fieldsSpatialPositions === undefined ? {} : { fieldsSpatialPositions }),
     },
     room,
   );
@@ -475,6 +489,7 @@ export function assembleWorkspaceOccurrence(
     {
       biome: input.biome,
       catalog: input.catalog,
+      ...(chaosGatePosition === undefined ? {} : { chaosGatePosition }),
       facts: input.facts,
       ...(input.hermesShrineAssessment === undefined
         ? {}
@@ -605,7 +620,7 @@ export function assembleWorkspaceOccurrence(
     authoring: input.roomLayout?.(address),
     marker: (owner) => input.markerDestinations.marker(owner),
   });
-  const roomMap = assembleRoomMap(input.catalog, room, occurrence);
+  const roomMap = assembleRoomMap(input.catalog, room, chaosGatePosition?.spawnPointIndex);
   const lockedDoorsProduct = input.facts.detailsActive
     ? input.roomObjectInteractions?.(address)?.lockedDoors
     : undefined;

@@ -29,6 +29,7 @@ import {
   encounterResolutionContext,
   fieldsOptionalRewardCountSupport,
   type CanonicalAuthoredRoom,
+  type FieldsSpatialPosition,
 } from '@run-planner/engine/simulation';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 import { resolveWorkspaceFixedRewardOffer } from './catalog-room';
@@ -52,6 +53,8 @@ import { rewardWheelOfferLabel } from '@planner/projections/rewards/wheelOfferLa
 
 export interface WorkspaceOccurrenceRoomInput extends WorkspaceOccurrenceRewardAssemblyInput {
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
+  /** Where each active Fields slot stands, chosen or default. */
+  readonly fieldsSpatialPositions?: readonly FieldsSpatialPosition[];
 }
 
 /** A Clockwork door's derived reward on its room: the forced Goal, or a counted reward. */
@@ -509,9 +512,10 @@ function roomLocalForOccurrence(
         );
       }
       const spatialState = occurrence.state.spatial;
-      const pointChoices = (target: FieldsSpatialTarget, pointIds: readonly number[]) =>
+      const pointChoices = (pointIds: readonly number[]) =>
         Object.freeze([
-          Object.freeze({ label: '?', value: null }),
+          // Clearing the stored point returns the slot to its default.
+          Object.freeze({ label: 'Default', value: null }),
           ...pointIds.map((pointId, index) =>
             Object.freeze({ label: `${index + 1}`, value: pointId }),
           ),
@@ -526,13 +530,23 @@ function roomLocalForOccurrence(
           createOccurrenceAddress(input.biome, occurrence.occurrenceId),
           target,
         );
+        const position = input.fieldsSpatialPositions?.find(
+          (candidate) =>
+            semanticAddressKey(
+              createFieldsSpatialAddress(
+                createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+                candidate.target,
+              ),
+            ) === semanticAddressKey(spatialAddress),
+        );
         return Object.freeze({
           address: spatialAddress,
           interactionKey: semanticAddressKey(spatialAddress),
           label,
           marker: input.markerDestinations.marker(spatialAddress),
-          pointChoices: pointChoices(target, pointIds),
+          pointChoices: pointChoices(pointIds),
           pointId,
+          ...(position?.source === 'default' ? { defaultPointId: position.pointId } : {}),
           target,
         });
       };

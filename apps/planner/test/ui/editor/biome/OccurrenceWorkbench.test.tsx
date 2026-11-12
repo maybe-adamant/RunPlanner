@@ -133,9 +133,8 @@ describe('OccurrenceWorkbench', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Chaos Gate position' }));
     expect(points().length).toBeGreaterThan(1);
-    expect(previewed()).toEqual([]);
-    await view.user.keyboard('{ArrowDown}');
-    expect(previewed()).toEqual(['Chaos gate position 1']);
+    // The highlighted point is previewed.
+    expect(previewed()).toHaveLength(1);
     await view.user.keyboard('{Escape}');
     expect(points()).toEqual([]);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
