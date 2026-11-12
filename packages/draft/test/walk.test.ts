@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -6,6 +6,7 @@ import {
   createDefaultRouteLoadout,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createOccurrenceAddress,
   createProjectDocument,
   createRouteAddress,
   type AuthoredTraitOfferTraits,
@@ -13,11 +14,12 @@ import {
   selectedExitTarget,
 } from '@run-planner/engine/authored-project';
 import {
+  liveRoomForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import { draftProject, type DraftSpec } from '../src';
-import type { DraftWalk } from '../src/walk';
+import { DraftWalk } from '../src/walk';
 import { DEFAULT_DRAFT_BUDGET } from '../src/generator';
 import { draftReport } from '../src/report';
 import { startDraftWalk } from './support/draft-walk';
@@ -484,6 +486,130 @@ describe('draft room observations', () => {
         (occurrence) =>
           occurrence.lockedExits !== undefined ||
           occurrence.roomActions.order.some((reference) => reference.kind === 'unlockExit'),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe('draft essence rolls', () => {
+  const spec: DraftSpec = {
+    loadout,
+    world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+    basketByGiver: {},
+    rackKeepsakeKeys: [null, null, null],
+    resourceRoomChance: 0,
+  };
+  /** The rooms each essence roll is for, by game name, while `run` runs. */
+  function rolledRooms(run: () => void): string[] {
+    const rolled: string[] = [];
+    const roll = vi
+      .spyOn(
+        DraftWalk.prototype as unknown as {
+          rollEssence: (biomeKey: string, occurrenceId: string, gameName: string) => void;
+        },
+        'rollEssence',
+      )
+      .mockImplementation((_biomeKey, _occurrenceId, gameName) => {
+        rolled.push(gameName);
+      });
+    try {
+      run();
+    } finally {
+      roll.mockRestore();
+    }
+    return rolled;
+  }
+  function enteredRooms(walk: DraftWalk, biomeKeys: readonly string[]): string[] {
+    return walk.assembly.evaluation.route.biomes
+      .filter((biome) => biomeKeys.includes(biome.biomeKey))
+      .flatMap((biome) =>
+        'history' in biome
+          ? biome.history.ledgers.roomAppearances.flatMap((appearance) =>
+              appearance.origin.kind === 'occurrence' &&
+              appearance.origin.biomeKey === biome.biomeKey
+                ? [appearance.gameName]
+                : [],
+            )
+          : [],
+      );
+  }
+
+  it('rolls every room entered since the previous step, in entry order', () => {
+    const earlier = startDraftWalk(base, spec, 2);
+    earlier.runBiome(0, 12);
+    const crossed = enteredRooms(earlier, ['F']);
+    expect(crossed.length).toBeGreaterThan(1);
+    const walk = startDraftWalk(base, spec, 2, { from: earlier.assembly });
+    expect(rolledRooms(() => walk.runBiome(0, 1))).toEqual(crossed);
+  });
+
+  it('rolls each room once, through the Postboss each biome closes on', () => {
+    const walk = startDraftWalk(base, spec, 2);
+    const rolled = rolledRooms(() => {
+      expect(walk.runBiome(0, 600), walk.failure).toBe(true);
+      expect(walk.runBiome(1, walk.steps + 600), walk.failure).toBe(true);
+    });
+    const entered = enteredRooms(walk, ['F', 'G']);
+    expect(entered).toContain('G_PostBoss01');
+    expect(rolled).toEqual(entered);
+  });
+});
+
+describe('draft trait drops', () => {
+  it("picks up Buried Treasure's and Quick Buck's drops right after the boon that grants them", () => {
+    const spec: DraftSpec = {
+      loadout,
+      world: {
+        godKeys: ['Poseidon', 'Zeus', 'Apollo', 'Hestia'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: {},
+      },
+      basketByGiver: draftBasket(['RoomRewardBonusBoon', 'MoneyMultiplierBoon']),
+      rackKeepsakeKeys: [null, null, null],
+      resourceRoomChance: 0,
+    };
+    const walk = startDraftWalk(base, spec, 4);
+    expect(walk.runBiome(0, 600), walk.failure).toBe(true);
+    const occurrences = walk.project.route.biomes[0]!.topology!.occurrences;
+    const pickedUp = occurrences.flatMap((occurrence) => {
+      const order = occurrence.roomActions.order;
+      return order.some((reference) => reference.kind === 'interactAcquisitionEntry')
+        ? [
+            [
+              occurrence.gameName,
+              ...order.map((reference) =>
+                reference.kind === 'interactAcquisitionEntry' ? reference.entryKey : reference.kind,
+              ),
+            ],
+          ]
+        : [];
+    });
+    // Each boon is the room's reward; its drops follow it in spawn order.
+    expect(pickedUp).toEqual([
+      [
+        'F_Combat02',
+        'interactIncomingReward',
+        'smallGold',
+        'tinyGold1',
+        'tinyGold2',
+        'minorHeal1',
+        'minorHeal2',
+        'bones',
+      ],
+      ['F_Combat21', 'interactIncomingReward', 'quickBuckGold'],
+    ]);
+    const biome = createBiomeAddress('Underworld', 'F');
+    const leftBehind = occurrences.flatMap(
+      (occurrence) =>
+        liveRoomForProjectEvaluationAssembly(
+          catalog,
+          walk.assembly,
+          createOccurrenceAddress(biome, occurrence.occurrenceId),
+        )?.leftBehind ?? [],
+    );
+    expect(
+      leftBehind.filter(
+        (pickup) => pickup.source.kind === 'generated' && pickup.source.family.kind === 'trait',
       ),
     ).toEqual([]);
   });

@@ -29,10 +29,10 @@ import { startDraftWalk } from './support/draft-walk';
  */
 const PINNED_COUNTS = {
   rooms: 107,
-  restored: 95,
-  stoppedInRoom: 1,
-  encounterChosen: 11,
-  livePlacements: 131,
+  restored: 97,
+  stoppedInRoom: 0,
+  encounterChosen: 10,
+  livePlacements: 135,
 };
 
 const PLACEMENT_FINDINGS: ReadonlySet<string> = new Set([
@@ -184,12 +184,12 @@ function restore(
     observe: (session) => ({
       ...session,
       apply: (command, admission) => {
-        const offered =
-          PLACEMENT_COMMANDS.has(command.kind) &&
-          offeredByLiveProduct(session.current(), room, command);
+        // The walk also picks up optional trait drops in other rooms it passes.
+        const placement =
+          PLACEMENT_COMMANDS.has(command.kind) && occurrenceOf(command) === room.occurrenceId;
+        const offered = placement && offeredByLiveProduct(session.current(), room, command);
         const outcome = session.apply(command, admission);
-        if (outcome.kind === 'applied' && PLACEMENT_COMMANDS.has(command.kind))
-          placements.push({ command, offered });
+        if (outcome.kind === 'applied' && placement) placements.push({ command, offered });
         return outcome;
       },
     }),

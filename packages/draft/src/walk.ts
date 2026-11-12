@@ -60,6 +60,8 @@ import {
   prepareRouteStartTraitRequirements,
   routeResourceAuthoring,
   nextRequiredPlacement,
+  liveRoomForProjectEvaluationAssembly,
+  type LiveRoom,
 } from '@run-planner/engine/simulation';
 import { latestRunState } from './report';
 import {
@@ -127,6 +129,43 @@ const WANTED_GOD_WEIGHT = 30;
 
 const RESOURCE_FAMILIES = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
 
+/** Quick Buck and Buried Treasure: their drops are optional, but a player takes them. */
+const PICKED_UP_DROP_TRAITS = ['MoneyMultiplierBoon', 'RoomRewardBonusBoon'] as const;
+
+/**
+ * The earliest pickup of a Quick Buck or Buried Treasure drop not yet placed, by the
+ * commands the live room offers at the first gap from `floor` it is live; `placed`
+ * holds the row keys already tried.
+ */
+function firstTraitDropPlacement(
+  live: LiveRoom,
+  placed: ReadonlySet<string>,
+  floor: number,
+):
+  | { readonly key: string; readonly gap: number; readonly commands: readonly ProjectCommand[] }
+  | undefined {
+  for (const gap of live.gaps.filter((candidate) => candidate.index >= floor))
+    for (const item of gap.items) {
+      if (
+        item.kind !== 'pickup' ||
+        item.lockedUntil !== undefined ||
+        item.source.kind !== 'generated' ||
+        item.source.family.kind !== 'trait' ||
+        !(PICKED_UP_DROP_TRAITS as readonly string[]).includes(item.source.family.traitKey)
+      )
+        continue;
+      const key = roomActionKey(item.reference);
+      if (placed.has(key)) continue;
+      const verb = item.verbs.find((candidate) => candidate.verb === 'pickUp');
+      if (verb === undefined || verb.standing === true) continue;
+      // A move means the pickup already stands later in the order.
+      const first = verb.commands?.[0];
+      if (first === undefined || first.kind === 'MoveRoomAction') continue;
+      return { key, gap: gap.index, commands: verb.commands! };
+    }
+  return undefined;
+}
+
 /**
  * One finding-driven draft walk over a working project. Every value comes from
  * an engine domain and is admitted by the engine's own candidate query.
@@ -140,6 +179,8 @@ export class DraftWalk {
   private nextOccurrence = 0;
   /** Rooms entered per biome that have had their essence roll. */
   private readonly essenceRooms = new Map<number, number>();
+  /** Rooms the walk passed after their Quick Buck and Buried Treasure drops were picked up. */
+  private readonly dropRoomsDone = new Set<string>();
   /** Reward commands this walk applied. */
   private readonly authoredRewards = new Set<string>();
   private stepCount = 0;
@@ -258,6 +299,9 @@ export class DraftWalk {
     this.biomeIndex = biomeIndex;
     this.steering.paceBiome(() => this.rng());
     while (this.stepCount < maxSteps) {
+      // Before the biome closes, so the rooms its last step entered roll too.
+      this.maybePlaceEssence(biomeIndex);
+      this.pickUpTraitDrops(biomeIndex);
       if (this.issueBiomeIndex() > biomeIndex) {
         const rack = this.equipRack(biomeIndex);
         if (rack === 'equipped') {
@@ -270,7 +314,6 @@ export class DraftWalk {
         }
         return true;
       }
-      this.maybePlaceEssence(biomeIndex);
       const issue = this.assembly.evaluation.issue!;
       const reason = issue.reasons[0]!;
       if (!draftEncounterChoice(this.encounterChoices, reason) && !this.repair(reason)) {
@@ -284,25 +327,44 @@ export class DraftWalk {
   }
 
   /**
-   * Each newly entered room places an unplaced resource point at the spec's resource room
-   * chance, preferring an element a waiting basket trait needs.
+   * Each room entered since the previous step, in entry order, places an unplaced resource
+   * point at the spec's resource room chance, preferring an element a waiting basket trait
+   * needs. Rooms this walk enters in an earlier biome roll too; those it starts with were
+   * rolled by the walk that entered them.
    */
   private maybePlaceEssence(biomeIndex: number): void {
-    const biomeKey = this.project.route.itineraryBiomeKeys[biomeIndex];
+    const biomeKeys = this.project.route.itineraryBiomeKeys;
+    for (const [index, biomeKey] of biomeKeys.slice(0, biomeIndex + 1).entries()) {
+      const entered = this.enteredRooms(biomeKey);
+      const rolled = this.essenceRooms.get(index);
+      if (rolled === undefined && index < biomeIndex) {
+        this.essenceRooms.set(index, entered.length);
+        continue;
+      }
+      if (entered.length <= (rolled ?? 0)) continue;
+      this.essenceRooms.set(index, entered.length);
+      for (const room of entered.slice(rolled ?? 0))
+        this.rollEssence(biomeKey, room.occurrenceId, room.gameName);
+    }
+  }
+
+  /** The biome's entered rooms, in entry order. */
+  private enteredRooms(
+    biomeKey: string,
+  ): readonly { readonly occurrenceId: OccurrenceId; readonly gameName: string }[] {
     const biome = this.assembly.evaluation.route.biomes.find((b) => b.biomeKey === biomeKey);
-    if (biome === undefined || !('history' in biome)) return;
-    const entered = biome.history.ledgers.roomAppearances.filter(
-      (appearance) =>
-        appearance.origin.kind === 'occurrence' && appearance.origin.biomeKey === biomeKey,
+    if (biome === undefined || !('history' in biome)) return [];
+    return biome.history.ledgers.roomAppearances.flatMap((appearance) =>
+      appearance.origin.kind === 'occurrence' && appearance.origin.biomeKey === biomeKey
+        ? [{ occurrenceId: appearance.origin.occurrenceId, gameName: appearance.gameName }]
+        : [],
     );
-    if (entered.length <= (this.essenceRooms.get(biomeIndex) ?? 0)) return;
-    this.essenceRooms.set(biomeIndex, entered.length);
-    const latest = entered.at(-1)!;
-    if (latest.origin.kind !== 'occurrence') return;
-    const occurrenceId = latest.origin.occurrenceId;
+  }
+
+  private rollEssence(biomeKey: string, occurrenceId: OccurrenceId, gameName: string): void {
     const route = this.project.route;
     // Only a room that can host an unplaced point rolls.
-    const support = this.roomOf(latest.gameName)?.resourcePointSupport;
+    const support = this.roomOf(gameName)?.resourcePointSupport;
     if (
       support === undefined ||
       support.excludedRouteKeys?.includes(route.routeKey) === true ||
@@ -332,7 +394,7 @@ export class DraftWalk {
           kind: 'ReplaceResourcePlacement',
           route: createRouteAddress(route.routeKey),
           family,
-          value: { biomeKey: biomeKey!, occurrenceId },
+          value: { biomeKey, occurrenceId },
         },
         'noNewFinding',
       );
@@ -340,6 +402,55 @@ export class DraftWalk {
       if (outcome.fault !== undefined) this.faults.push(outcome.fault);
       return;
     }
+  }
+
+  /**
+   * While Quick Buck or Buried Treasure is held, picks up their optional drops in each of
+   * the biome's entered rooms not yet read since the walk passed it, in spawn order, each
+   * at the first gap the engine's live room offers it.
+   */
+  private pickUpTraitDrops(biomeIndex: number): void {
+    const biomeKey = this.project.route.itineraryBiomeKeys[biomeIndex];
+    if (biomeKey === undefined) return;
+    const equipped = latestRunState(this.assembly)?.traits.equippedTraits ?? {};
+    if (!PICKED_UP_DROP_TRAITS.some((key) => key in equipped)) return;
+    const biome = createBiomeAddress(this.project.route.routeKey, biomeKey);
+    for (const room of this.enteredRooms(biomeKey)) {
+      const key = `${biomeKey}/${room.occurrenceId}`;
+      if (this.dropRoomsDone.has(key)) continue;
+      const occurrence = createOccurrenceAddress(biome, room.occurrenceId);
+      const placed = new Set<string>();
+      // Each drop after the one placed before it, in spawn order.
+      let floor = 0;
+      for (;;) {
+        const live = liveRoomForProjectEvaluationAssembly(
+          this.catalog,
+          this.assembly,
+          occurrence,
+          'placements',
+        );
+        if (live === undefined) break;
+        const placement = firstTraitDropPlacement(live, placed, floor);
+        if (placement === undefined) {
+          // A room the walk has passed spawns nothing more.
+          if (live.leftBehind !== undefined) this.dropRoomsDone.add(key);
+          break;
+        }
+        placed.add(placement.key);
+        if (this.applyAll(placement.commands)) floor = placement.gap + 1;
+      }
+    }
+  }
+
+  /** Applies one verb's commands in order, never adding a finding; false at a refusal. */
+  private applyAll(commands: readonly ProjectCommand[]): boolean {
+    for (const command of commands) {
+      const outcome = this.authoring.apply(command, 'noNewFinding');
+      if (outcome.kind !== 'applied') return false;
+      this.appliedCommands.push(command);
+      if (outcome.fault !== undefined) this.faults.push(outcome.fault);
+    }
+    return true;
   }
 
   private candidates(): ProjectCandidateSession {
