@@ -324,6 +324,8 @@ export {
   chaosGatePositionForProjectEvaluationAssembly,
   type ChaosGatePositionAuthoring,
 } from './evaluation/chaos-gate-authoring';
+export { fieldsSpatialPositionsForProjectEvaluationAssembly } from './evaluation/fields-spatial-authoring';
+export type { FieldsSpatialPosition } from './fields/spatial';
 export {
   roomLayoutAuthoringForProjectEvaluationAssembly,
   type RoomLayoutAuthoring,
