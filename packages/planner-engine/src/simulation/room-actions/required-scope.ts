@@ -12,7 +12,12 @@ import {
   type RoomActionBounds,
   type RoomEventGraph,
 } from '../../authored-project/room-actions/event-graph';
-import type { RoomActionContact, RoomActionRow, RoomActionRowLabel } from './model';
+import {
+  isWheelContact,
+  type RoomActionContact,
+  type RoomActionRow,
+  type RoomActionRowLabel,
+} from './model';
 
 /** A row before its contact, label and required scope are named. */
 export type RoomActionRowFacts = Omit<RoomActionRow, 'contact' | 'label'>;
@@ -152,9 +157,7 @@ export function withRequiredScopes(
     const contact = contacts.get(row)!;
     if (
       row.reference.kind === 'completeFieldsCage' ||
-      contact.kind === 'beforeWheelPhase' ||
-      contact.kind === 'beforeWheelChoice' ||
-      contact.kind === 'afterWheelPhase' ||
+      isWheelContact(contact) ||
       // A delivery or clocked drop waits on the room's next gated interaction, which the walk names.
       (!fields &&
         contact.kind !== 'afterDoorsOpen' &&

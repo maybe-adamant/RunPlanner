@@ -5,6 +5,7 @@ import {
   roomActionOpeningPoint,
   roomEventPlaces,
   roomEventPointPasses,
+  roomEventPointKey,
   roomEventPointResolves,
   type RoomEventGraph,
   type RoomEventPoint,
@@ -63,15 +64,6 @@ export function isPlacementBlocker(
   issue: RoomActionOrderIssue,
 ): issue is RoomActionPlacementBlocker {
   return issue.kind !== 'stale' && issue.kind !== 'unrankedRequired';
-}
-
-/** A point as a refusal names it: its kind and the phase or wheel it belongs to. */
-function pointText(point: RoomEventPoint): string {
-  return 'phaseKey' in point
-    ? `${point.kind} ${point.phaseKey}`
-    : 'wheelKey' in point
-      ? `${point.kind} ${point.wheelKey}`
-      : point.kind;
 }
 
 /** The structural facts one occurrence's action order is judged against. */
@@ -187,7 +179,7 @@ function rowAndBoundIssues(
         frozen({
           kind: 'beforeSpawn',
           reference,
-          detail: `waits on ${pointText(spawn)}, which the room never reaches`,
+          detail: `waits on ${roomEventPointKey(spawn)}, which the room never reaches`,
           point: spawn,
           unavailable: true as const,
         }),
@@ -217,7 +209,7 @@ function rowAndBoundIssues(
         frozen({
           kind: 'pastDeadline',
           reference: entry.reference,
-          detail: `must stand before ${pointText(entry.bounds.deadline)}, which ${keyOf(passedAt.reference)} passes`,
+          detail: `must stand before ${roomEventPointKey(entry.bounds.deadline)}, which ${keyOf(passedAt.reference)} passes`,
           deadline: entry.bounds.deadline,
           precedingAction: passedAt.reference,
         }),

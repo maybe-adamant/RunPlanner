@@ -1688,7 +1688,7 @@ describe('single-room lifecycle execution', () => {
       Object.freeze({ kind: 'unlockExit' as const, exitKey }),
     );
     const definition = catalog.encounterDefinitions.byKey.GeneratedG_ExtraDoor!;
-    const walk = (order: readonly RoomActionReference[]) => {
+    const walk = (order: readonly Extract<RoomActionReference, { kind: 'unlockExit' }>[]) => {
       const roster = actionRoster(
         origin,
         order,
@@ -1702,7 +1702,7 @@ describe('single-room lifecycle execution', () => {
       );
       const pressFights = order.map((press) =>
         Object.freeze({
-          phaseKey: `unlockExit:${press.kind === 'unlockExit' ? press.exitKey : ''}`,
+          phaseKey: `unlockExit:${press.exitKey}`,
           script: definition.script,
           envelopeKey: 'unlockExit',
           encounterKey: definition.key,

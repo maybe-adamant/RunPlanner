@@ -1,8 +1,6 @@
 import type { BiomeTransitionCounterAxis } from '../../catalog-schema';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import { biomeEncounterDepthAfterStart } from '../encounters/biome-encounter-depth';
-import { CHALLENGE_SWITCH_ENVELOPE_KEY } from '../../authored-project/acquisition/challenge-switch';
-import { UNLOCK_EXIT_ENVELOPE_KEY } from '../../authored-project/locked-exits';
 import type {
   CanonicalBiomeHistory,
   EncounterHistoryEntry,
@@ -200,23 +198,11 @@ function encounterKey(event: {
   return JSON.stringify([semanticAddressKey(event.origin), event.phaseKey]);
 }
 
-/** A press fight runs outside its room's envelope, from its press between entry and exit. */
-const PRESS_FIGHT_ENVELOPE_KEYS: ReadonlySet<string> = new Set([
-  CHALLENGE_SWITCH_ENVELOPE_KEY,
-  UNLOCK_EXIT_ENVELOPE_KEY,
-]);
-
-function pressFight(
-  event: Extract<HistoryEvent, { readonly kind: 'encounterRecorded' | 'encounterStarted' }>,
-): boolean {
-  return PRESS_FIGHT_ENVELOPE_KEYS.has(event.encounterEnvelopeKey);
-}
-
 function requireEncounterEnvelope(
   envelopesByOrigin: ReadonlyMap<string, string>,
   event: Extract<HistoryEvent, { readonly kind: 'encounterRecorded' | 'encounterStarted' }>,
 ): void {
-  if (pressFight(event)) return;
+  if (event.pressFight === true) return;
   const ownerEnvelope = envelopesByOrigin.get(semanticAddressKey(event.origin));
   if (ownerEnvelope === undefined || ownerEnvelope !== event.encounterEnvelopeKey) {
     throw new HistoryFoldContractError(
@@ -314,6 +300,7 @@ function foldHistoryEventStream(
   const encounterEnvelopesByOrigin = new Map<string, string>();
   const recordedEncounters = new Map<string, EncounterHistoryEntry>();
   const activeEncounters = new Map<string, EncounterHistoryEntry>();
+  const pressFights = new Set<string>();
   const completedEncounters = new Map<
     string,
     Extract<HistoryEvent, { readonly kind: 'encounterCompleted' }>
@@ -573,7 +560,7 @@ function foldHistoryEventStream(
       case 'encounterRecorded': {
         const views = requireRoomViews(viewsByOrigin, event);
         if (
-          pressFight(event)
+          event.pressFight === true
             ? views.entry === undefined || views.exit !== undefined
             : views.preparation === undefined || views.entry !== undefined
         ) {
@@ -604,7 +591,7 @@ function foldHistoryEventStream(
         const recorded = recordedEncounters.get(key);
         // A locked door's fight starts unrecorded.
         if (
-          (recorded === undefined && !pressFight(event)) ||
+          (recorded === undefined && event.pressFight !== true) ||
           (recorded !== undefined &&
             (recorded.encounterEnvelopeKey !== entry.encounterEnvelopeKey ||
               recorded.encounterKey !== entry.encounterKey ||
@@ -627,6 +614,7 @@ function foldHistoryEventStream(
           }),
         );
         activeEncounters.set(key, entry);
+        if (event.pressFight === true) pressFights.add(key);
         ledgers.encounterStarts.push(entry);
         break;
       }
@@ -959,11 +947,7 @@ function foldHistoryEventStream(
     throw new HistoryFoldContractError('history has no biome start event');
   }
   // A switch left mid-fight ends early, never completed (RoomLogic.lua:4213-4216).
-  if (
-    [...activeEncounters.values()].some(
-      (entry) => !PRESS_FIGHT_ENVELOPE_KEYS.has(entry.encounterEnvelopeKey),
-    )
-  ) {
+  if ([...activeEncounters.keys()].some((key) => !pressFights.has(key))) {
     throw new HistoryFoldContractError('history ended with an active encounter');
   }
   if (mode === 'complete' && activeRequiredObjects.size !== 0) {

@@ -18,7 +18,7 @@ import {
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import { doorsReadyAfterRank } from './assemble';
-import type { RoomActionRoster, RoomActionRow } from './model';
+import { isWheelContact, type RoomActionRoster, type RoomActionRow } from './model';
 
 /** A Timeline boundary: one event of the room's graph. */
 export type RoomLifecycleBoundary = RoomEvent;
@@ -265,11 +265,7 @@ export function assembleRoomLifecycleTimeline(
   };
 
   const wheelRow = ({ contact }: RoomActionRow): string | undefined =>
-    contact.kind === 'beforeWheelPhase' ||
-    contact.kind === 'beforeWheelChoice' ||
-    contact.kind === 'afterWheelPhase'
-      ? contact.wheelKey
-      : undefined;
+    isWheelContact(contact) ? contact.wheelKey : undefined;
   // Only a delivery or clocked drop spawns at end effects; the walk names which, so its
   // row stands with the room's last phase and never places a Wheels open.
   const endEffectsRow = (row: RoomActionRow, phaseKey: string): boolean =>
