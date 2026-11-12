@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createAcquisitionRoleAddress,
   createBiomeAddress,
+  createHubRerollAddress,
   createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createGorgonPhaseAddress,
@@ -18,6 +19,7 @@ import {
   createTraitOfferAddress,
   roomActionKey,
   semanticAddressKey,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 import { ordinaryRoutePosition } from '../support/route-position';
@@ -29,7 +31,12 @@ import {
   goldenHBiome,
   loadNemesisFieldsCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOProject,
+  nOccurrenceId,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   authorLegalTraitOffers,
@@ -38,12 +45,15 @@ import {
 } from '@run-planner/test-fixtures/shared';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
+  rerollSettlementForProjectEvaluationAssembly,
   simulateProject,
 } from '../../src/simulation';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
+import { surfaceNForfeitHubBoardProject } from '../support/forfeit-hub-board';
+import { supportedRerollRewards } from '../support/rerolls';
 import { settleRewardSpawn } from '../../src/simulation/rewards/biome/offer-lifecycle/spawned-trait-offers';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
 import { createPreparedProjectCandidateSession } from '../../src/simulation/candidates';
@@ -775,5 +785,75 @@ describe('Vow of Forfeit Red Onion substitution', () => {
         },
       }),
     ).toMatchObject({ kind: 'unavailable' });
+  });
+});
+
+describe('Vow of Forfeit on the Hub board', () => {
+  const n = createBiomeAddress('Surface', 'N');
+  const hub = { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const;
+  const door = (slotKey: string) => createIncomingRewardAddress(n, nOccurrenceId(slotKey));
+  const base = surfaceNForfeitHubBoardProject();
+  // DoorReroll leaves the Boss's Judgment draw unauthored, past every Hub stay.
+  const rewardsOf = (project: ProjectDocument) => {
+    const biome = simulateProject(catalog, project).route?.biomes[0];
+    if (biome === undefined || !('rewards' in biome)) throw new Error('expected an evaluated N');
+    return biome.rewards;
+  };
+  const onionDoors = (project: ProjectDocument) =>
+    (rewardsOf(project).forfeitPeeks ?? []).map((peek) => semanticAddressKey(peek.origin)).sort();
+  /** Presses one board door at an index of the Hub's actions, drawing the first Boon supported there. */
+  function pressBoon(hubSlotKey: string, index: number) {
+    const inserted = applyProjectCommand(base, catalog, {
+      kind: 'InsertHubReroll',
+      hub,
+      hubSlotKey,
+      reward: { rewardType: 'MaxHealthDrop' },
+      index,
+    });
+    const reroll = createHubRerollAddress(n, 'hub', 'r1');
+    const [reward] = supportedRerollRewards(inserted, reroll, ['Boon']);
+    if (reward === undefined) throw new Error(`no Boon is supported for ${hubSlotKey}`);
+    const project = collectTestRequiredItems(
+      applyProjectCommand(inserted, catalog, { kind: 'ReplaceHubRerollReward', reroll, reward }),
+    );
+    expect(
+      rerollSettlementForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, project),
+        reroll,
+      ),
+    ).toMatchObject({ reward });
+    return project;
+  }
+
+  it("previews the Onion on each Boon and Hermes door of a board drawn before Forfeit's use", () => {
+    const rewards = rewardsOf(base);
+    // The first visit's Hermes reward is the one Forfeit takes.
+    expect(
+      rewards.frontier!.events.filter((event) => event.kind === 'rewardForfeited'),
+    ).toMatchObject([{ origin: door('combat05'), rewardType: 'HermesUpgrade' }]);
+    // combat01 and combat02 draw health and mana, which Forfeit never takes.
+    expect(onionDoors(base)).toEqual(
+      ['combat03', 'combat05', 'combat09', 'combat10', 'combat11', 'combat23', 'miniBoss01']
+        .map((slotKey) => semanticAddressKey(door(slotKey)))
+        .sort(),
+    );
+  });
+
+  it("previews the Onion on a door's Boon pressed before Forfeit's use", () => {
+    expect(onionDoors(base)).not.toContain(semanticAddressKey(door('combat01')));
+    expect(rewardsOf(pressBoon('combat01', 0)).forfeitPeeks).toContainEqual(
+      expect.objectContaining({
+        origin: door('combat01'),
+        offer: expect.objectContaining({ rewardType: 'Boon' }),
+      }),
+    );
+  });
+
+  it("shows no Onion on a door's Boon pressed after Forfeit was used", () => {
+    // Pressed once the first visit has taken Forfeit, combat03's new Boon replaces its preview.
+    expect(onionDoors(base)).toContain(semanticAddressKey(door('combat03')));
+    expect(onionDoors(pressBoon('combat03', 2))).not.toContain(
+      semanticAddressKey(door('combat03')),
+    );
   });
 });

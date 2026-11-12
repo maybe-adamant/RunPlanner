@@ -672,6 +672,17 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
           ...settled,
           state: updateLookup(settled.state, progression.rewardLookup.key, boardTypes),
         });
+  // The rerolled board door shows its new reward's Onion preview (AttemptRerollDoor).
+  const slotRoom = hub.board.targets.find(
+    (target) => target.hubSlotKey === reroll.hubSlotKey,
+  )?.room;
+  const { reward } = reroll;
+  const rerolledSpawns =
+    reward === undefined || slotRoom === undefined || reroll.slotEntered
+      ? []
+      : doorRewardSpawns(slotRoom)
+          .filter((spawn) => spawn.origin.kind === 'incomingReward')
+          .map((spawn) => ({ ...spawn, offer: reward }));
   return {
     state: Object.freeze({ ...state, branch, rerolledOffers: transition.rerolledOffers }),
     emissions: [
@@ -680,6 +691,13 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
       ...(transition.settlement === undefined
         ? []
         : [{ kind: 'rerollSettlement' as const, settlement: transition.settlement }]),
+      {
+        kind: 'forfeitPeeks',
+        peeks:
+          settled === undefined
+            ? []
+            : forfeitPeeks(context.catalog, settled.state, rerolledSpawns, event.sequence),
+      },
     ],
   };
 };
@@ -1467,6 +1485,7 @@ const phantomExitCreated: ChronologySeamHandler<'phantomExitCreated'> = (context
 function flushPendingHubBoard(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
+  sequence: number,
 ): { readonly state: ChronologyWalkState; readonly emissions: readonly ChronologyEmission[] } {
   const { pendingHubBoard } = state;
   const flushed = flushHubBoard(context.catalog, pendingHubBoard);
@@ -1507,6 +1526,19 @@ function flushPendingHubBoard(
     emissions: [
       generationFindings(flushed.findings),
       { kind: 'producerFrontiers', frontiers: flushed.producerFrontiers },
+      // The board's doors show their rewards' Onion previews, as any door does.
+      {
+        kind: 'forfeitPeeks',
+        peeks:
+          branch === undefined || hub === undefined
+            ? []
+            : forfeitPeeks(
+                context.catalog,
+                branch.state,
+                hub.board.targets.flatMap((target) => doorRewardSpawns(target.room)),
+                sequence,
+              ),
+      },
     ],
   };
 }
@@ -1519,7 +1551,7 @@ const targetGenerationCompleted: ChronologySeamHandler<'targetGenerationComplete
   const flushed =
     event.origin.kind === 'hubSlot' &&
     state.pendingHubBoard?.participants.length === context.prepared.hubTargetByOrigin.size
-      ? flushPendingHubBoard(context, state)
+      ? flushPendingHubBoard(context, state, event.sequence)
       : { state, emissions: [] };
   const current = flushed.state;
   const batch = current.batchTargetGeneration;
