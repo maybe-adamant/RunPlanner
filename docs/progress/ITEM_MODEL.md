@@ -56,9 +56,11 @@ notes and investigations are outside the repo under
 
 ## C5a: what the live product publishes
 
-- A separate query, `liveInteractionsForProjectEvaluationAssembly`, wraps the
-  live actions product; Draft and Collect all required keep the cheap
-  `liveActions…` and never pay for verbs.
+- One query, `liveRoomForProjectEvaluationAssembly`, publishes the room's
+  gaps, items and verbs. Its default `'interactions'` detail carries every
+  verb; Draft, Collect all required and the timed pickup placement read the
+  cheap `'placements'` detail, which keeps only the verb each row, placement
+  or purchase performs and never pays for conversions or pickers.
 - Every live item (pickup or object) carries `verbs`: kind, participation,
   deadline, the row it stands as or places, and either the ordered commands
   performing it at that gap (empty while standing) or a picker. A picker is
@@ -394,8 +396,8 @@ Shed the Fields Combat Order picker (no schema change):
 
 Consolidation (slice 5), partly dead after slice 2:
 
-- The displaced-placement pass and `staleHermesShrineDelivery` /
-  `dueContactMismatch` now cover only a delivery due at another host or a
+- The displaced-placement pass and the `dueContactMismatch` /
+  `sourceInactive` mismatch reasons now cover only a delivery due at another host or a
   clock drop maturing elsewhere; the phase case is gone. Fold with the
   item-chain settlement path.
 - `clockedTraitPickupPlacementForProjectEvaluationAssembly` (base command,
