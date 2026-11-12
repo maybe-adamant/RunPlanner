@@ -1,4 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
+import { sameRewardOffer } from '../../reward-kernel';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import { createBiomeAddress, semanticAddressKey, type BiomeAddress } from '../addresses';
 import type {
@@ -53,10 +54,6 @@ function canonicalJson(value: unknown): string {
   );
 }
 
-function sameOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boolean {
-  return canonicalJson(left) === canonicalJson(right);
-}
-
 /**
  * The record with its item set to this press, its outcomes unresolved; with
  * none while no press of its owner is effective, since the owner then acquires
@@ -80,7 +77,7 @@ function withUnresolvedItem(
 }
 
 /** Whether the record's effective item holds only its unresolved defaults. */
-export function rerolledOutcomesUnauthored(
+function rerolledOutcomesUnauthored(
   catalog: Catalog,
   routePosition: ResolvedRoutePosition,
   occurrence: RoomOccurrence,
@@ -232,7 +229,7 @@ export function applyRerollCommand(
       const owner = roomRerollOwner(biome, topology, source.occurrenceId, press);
       if (owner === undefined) failCommand(command, 'reroll redraws no reward of its target');
       const current = rerollResult(topology, owner, press.rerollId);
-      if (current !== undefined && sameOffer(current, command.reward)) return document;
+      if (current !== undefined && sameRewardOffer(current, command.reward)) return document;
       return updateOccurrenceTopology(
         document,
         located,
@@ -275,7 +272,7 @@ export function applyRerollCommand(
           const owner = hubRerollOwner(biome, hub, existing);
           if (owner === undefined) failCommand(command, `${existing.hubSlotKey} is not open`);
           const current = rerollResult(topology, owner, rerollId);
-          if (current !== undefined && sameOffer(current, command.reward)) return document;
+          if (current !== undefined && sameRewardOffer(current, command.reward)) return document;
           result = { owner, rerollId, reward: command.reward };
           actions = [...hub.actions];
         }
@@ -435,7 +432,7 @@ export function closeRerolledRecords(
       const changedInPlace =
         priorResult !== undefined &&
         results[record.pressId] !== undefined &&
-        !sameOffer(priorResult, results[record.pressId]!);
+        !sameRewardOffer(priorResult, results[record.pressId]!);
       const follows =
         touched &&
         latest !== record.pressId &&
@@ -478,51 +475,119 @@ export function closeRerolledRecords(
   return next;
 }
 
+/** Each rerolled record the plan holds, with what judging its press and outcomes reads. */
+function heldRecords(catalog: Catalog, document: ProjectDocument) {
+  return document.route.biomes.flatMap((plan) => {
+    const topology = plan.topology;
+    if (topology === null || topology === undefined) return [];
+    const biome = createBiomeAddress(document.route.routeKey, plan.biomeKey);
+    const held = heldRerolledRecords(biome, topology);
+    // Only a biome holding records needs its route position.
+    const located =
+      held.length === 0 ? undefined : locateConfiguredBiome(document, catalog, plan.biomeKey);
+    if (located === undefined) return [];
+    const effective = biomeRerolledOwners(biome, topology);
+    return held.map(({ owner, record }) => {
+      const occurrence = topology.occurrences.find(
+        (candidate) => candidate.occurrenceId === owner.occurrenceId,
+      )!;
+      const effectivePress = effective.get(semanticAddressKey(owner))?.rerolls.at(-1)?.rerollId;
+      const unauthored = () =>
+        rerolledOutcomesUnauthored(catalog, located.routePosition, occurrence, owner, record);
+      return { owner, record, effectivePress, unauthored };
+    });
+  });
+}
+
 /**
- * Resets each rerolled record whose recorded press is no longer its owner's
- * effective one, or that holds authored outcomes with no effective press, to
- * the unresolved acquisition of the effective press's reward (else its own):
- * its outcomes belonged to the replaced item. The same document when none is.
+ * Every rerolled record the plan holds off its press, by owner: its recorded
+ * press is not its owner's effective one, or no press is effective while it
+ * holds authored outcomes. Its outcomes belong to a replaced item.
  */
-export function resetRerolledRewardsOffTheirPress(
+export function rerolledRewardsOffTheirPress(
+  catalog: Catalog,
+  document: ProjectDocument,
+): RerolledRewardOwner[] {
+  return heldRecords(catalog, document).flatMap(({ owner, record, effectivePress, unauthored }) =>
+    (effectivePress === undefined ? !unauthored() : effectivePress !== record.pressId)
+      ? [owner]
+      : [],
+  );
+}
+
+/**
+ * The rerolled items whose authored outcomes an edit itself replaced in the
+ * rooms it kept: its recorded press went, that press's result changed in
+ * place, or no press of its owner is effective any more, so the edit's
+ * closure reset or dropped them.
+ */
+export function rerolledItemsReplacedBetween(
+  catalog: Catalog,
+  before: ProjectDocument,
+  after: ProjectDocument,
+): RerolledRewardOwner[] {
+  return heldRecords(catalog, before).flatMap(({ owner, record, unauthored }) => {
+    const current = after.route.biomes
+      .find((plan) => plan.biomeKey === owner.biomeKey)
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === owner.occurrenceId);
+    // A room the edit removed takes its outcomes with it, unannounced.
+    if (current === undefined) return [];
+    const next = rerolledRecordOf(current, owner);
+    if (next === record) return [];
+    const result = record.results[record.pressId];
+    const nextResult = next?.results[record.pressId];
+    const sameItem =
+      next?.acquisition !== undefined &&
+      next.pressId === record.pressId &&
+      result !== undefined &&
+      nextResult !== undefined &&
+      sameRewardOffer(result, nextResult);
+    return sameItem || unauthored() ? [] : [owner];
+  });
+}
+
+/**
+ * Resets a rerolled record off its press to the unresolved acquisition of the
+ * effective press's reward (else its own): its outcomes belonged to the
+ * replaced item. The same document when the owner holds no record.
+ */
+export function resetRerolledRewardOffItsPress(
   document: ProjectDocument,
   catalog: Catalog,
-  owners: readonly RerolledRewardOwner[],
+  owner: RerolledRewardOwner,
 ): ProjectDocument {
-  let next = document;
-  for (const owner of owners) {
-    const located = locateConfiguredBiome(next, catalog, owner.biomeKey);
-    const topology = located?.plan.topology;
-    if (located === undefined || topology === null || topology === undefined) continue;
-    const biome = createBiomeAddress(located.routeKey, located.plan.biomeKey);
-    const occurrence = topology.occurrences.find(
-      (candidate) => candidate.occurrenceId === owner.occurrenceId,
-    );
-    const record = occurrence === undefined ? undefined : rerolledRecordOf(occurrence, owner);
-    if (occurrence === undefined || record === undefined) continue;
-    const effective = biomeRerolledOwners(biome, topology)
-      .get(semanticAddressKey(owner))
-      ?.rerolls.at(-1)?.rerollId;
-    next = updateOccurrenceTopology(
-      next,
-      located,
-      replaceOccurrence(
-        topology,
-        withRerolledRecord(
+  const located = locateConfiguredBiome(document, catalog, owner.biomeKey);
+  const topology = located?.plan.topology;
+  if (located === undefined || topology === null || topology === undefined) return document;
+  const occurrence = topology.occurrences.find(
+    (candidate) => candidate.occurrenceId === owner.occurrenceId,
+  );
+  const record = occurrence === undefined ? undefined : rerolledRecordOf(occurrence, owner);
+  if (occurrence === undefined || record === undefined) return document;
+  const effective = biomeRerolledOwners(
+    createBiomeAddress(located.routeKey, owner.biomeKey),
+    topology,
+  )
+    .get(semanticAddressKey(owner))
+    ?.rerolls.at(-1)?.rerollId;
+  return updateOccurrenceTopology(
+    document,
+    located,
+    replaceOccurrence(
+      topology,
+      withRerolledRecord(
+        occurrence,
+        owner,
+        withUnresolvedItem(
+          catalog,
+          located.routePosition,
           occurrence,
           owner,
-          withUnresolvedItem(
-            catalog,
-            located.routePosition,
-            occurrence,
-            owner,
-            record.results,
-            effective ?? record.pressId,
-            effective !== undefined,
-          ),
+          record.results,
+          effective ?? record.pressId,
+          effective !== undefined,
         ),
       ),
-    );
-  }
-  return next;
+    ),
+  );
 }

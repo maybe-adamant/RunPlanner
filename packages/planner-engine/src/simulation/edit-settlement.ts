@@ -42,17 +42,12 @@ import type {
 import { roomActionKey } from '../authored-project/room-actions/state';
 import { roomActionsOnReplacedItems } from '../authored-project/room-actions/replaced-items';
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
+import type { RerolledRewardOwner } from '../authored-project/rerolls';
 import {
-  biomeRerolledOwners,
-  heldRerolledRecords,
-  rerolledRecordOf,
-  type RerolledRewardOwner,
-} from '../authored-project/rerolls';
-import {
-  rerolledOutcomesUnauthored,
-  resetRerolledRewardsOffTheirPress,
+  rerolledItemsReplacedBetween,
+  rerolledRewardsOffTheirPress,
+  resetRerolledRewardOffItsPress,
 } from '../authored-project/commands/rerolls';
-import { locateConfiguredBiome } from '../authored-project/commands/contract';
 import {
   discardRetainedHermesShrineDelivery,
   HERMES_SHRINE_DELIVERY_SITE_KEY,
@@ -753,92 +748,6 @@ function replacedDeliveryPayloads(
   return replaced;
 }
 
-/** Each rerolled record the plan holds, with its biome's located route position. */
-function heldRecords(catalog: Catalog, project: ProjectDocument) {
-  return project.route.biomes.flatMap((plan) => {
-    if (plan.topology == null) return [];
-    const biome = createBiomeAddress(project.route.routeKey, plan.biomeKey);
-    const topology = plan.topology;
-    const held = heldRerolledRecords(biome, topology);
-    // Only a biome holding records needs its route position.
-    const located =
-      held.length === 0 ? undefined : locateConfiguredBiome(project, catalog, plan.biomeKey);
-    if (located === undefined) return [];
-    return held.map(({ owner, record }) => ({
-      owner,
-      record,
-      biome,
-      topology,
-      routePosition: located.routePosition,
-      occurrence: topology.occurrences.find(
-        (candidate) => candidate.occurrenceId === owner.occurrenceId,
-      )!,
-    }));
-  });
-}
-
-/**
- * Every rerolled record the plan holds off its press, by owner: its recorded
- * press is not its owner's effective one, or no press is effective while it
- * holds authored outcomes.
- */
-function rerolledRewardsOffPress(
-  catalog: Catalog,
-  held: ReturnType<typeof heldRecords>,
-): RerolledRewardOwner[] {
-  const effective = new Map<string, ReturnType<typeof biomeRerolledOwners>>();
-  return held.flatMap(({ owner, record, biome, topology, routePosition, occurrence }) => {
-    let owners = effective.get(biome.biomeKey);
-    if (owners === undefined) {
-      owners = biomeRerolledOwners(biome, topology);
-      effective.set(biome.biomeKey, owners);
-    }
-    const press = owners.get(semanticAddressKey(owner))?.rerolls.at(-1)?.rerollId;
-    const off =
-      press === undefined
-        ? !rerolledOutcomesUnauthored(catalog, routePosition, occurrence, owner, record)
-        : press !== record.pressId;
-    return off ? [owner] : [];
-  });
-}
-
-/**
- * The rerolled items whose authored outcomes the command itself replaced: its
- * recorded press went, that press's result changed in place, or no press of
- * its owner is effective any more, so the command reset or dropped them.
- */
-function rerolledItemsTheCommandReplaced(
-  catalog: Catalog,
-  before: ReturnType<typeof heldRecords>,
-  after: ProjectDocument,
-): RerolledRewardOwner[] {
-  return before.flatMap(({ owner, record, routePosition, occurrence }) => {
-    const current = occurrenceAt(
-      after,
-      createOccurrenceAddress(
-        createBiomeAddress(owner.routeKey, owner.biomeKey),
-        owner.occurrenceId,
-      ),
-    );
-    // A room the edit removed takes its outcomes with it, unannounced.
-    if (current === undefined) return [];
-    const next = rerolledRecordOf(current, owner);
-    if (next === record) return [];
-    const result = record.results[record.pressId];
-    const nextResult = next?.results[record.pressId];
-    const sameItem =
-      next !== undefined &&
-      next.acquisition !== undefined &&
-      next.pressId === record.pressId &&
-      result !== undefined &&
-      nextResult !== undefined &&
-      JSON.stringify(result) === JSON.stringify(nextResult);
-    return sameItem || rerolledOutcomesUnauthored(catalog, routePosition, occurrence, owner, record)
-      ? []
-      : [owner];
-  });
-}
-
 /**
  * Rerolled rewards an edit left off their press: the press each recorded is no
  * longer its owner's effective one, so its outcomes belong to a replaced item.
@@ -851,7 +760,7 @@ function rerolledRewardsReplaced(
   edited: RoomEdited,
   after: ProjectDocument,
 ): RerolledRewardOwner[] {
-  return rerolledRewardsOffPress(catalog, heldRecords(catalog, after)).filter(
+  return rerolledRewardsOffTheirPress(catalog, after).filter(
     (owner) =>
       !prior.has(semanticAddressKey(owner)) ||
       edited(
@@ -1035,9 +944,8 @@ function settleProject(options: {
   const beforeRosters = enteredRosters(before);
   // What the plan already held replaced before the edit, read once: an upgrade takes every one.
   const priorReplaced = upgrade ? new Set<string>() : replacedItemRowKeys(before.project, catalog);
-  const heldBefore = upgrade ? [] : heldRecords(catalog, before.project);
   const priorOffPress = new Set(
-    upgrade ? [] : rerolledRewardsOffPress(catalog, heldBefore).map(semanticAddressKey),
+    upgrade ? [] : rerolledRewardsOffTheirPress(catalog, before.project).map(semanticAddressKey),
   );
   const priorDeliveriesOffSource = upgrade
     ? new Set<string>()
@@ -1052,7 +960,7 @@ function settleProject(options: {
   // Items whose observations an edit discarded with them, by room.
   const discardedObservations: { owner: OccurrenceAddress; item: SemanticAddress }[] = [];
   if (!upgrade)
-    for (const owner of rerolledItemsTheCommandReplaced(catalog, heldBefore, project))
+    for (const owner of rerolledItemsReplacedBetween(catalog, before.project, project))
       discardedObservations.push({
         owner: createOccurrenceAddress(
           createBiomeAddress(owner.routeKey, owner.biomeKey),
@@ -1389,7 +1297,8 @@ function settleProject(options: {
           item: owner,
         });
       }
-      project = resetRerolledRewardsOffTheirPress(project, catalog, offPress);
+      for (const owner of offPress)
+        project = resetRerolledRewardOffItsPress(project, catalog, owner);
       assembly = evaluate(project);
       continue;
     }
