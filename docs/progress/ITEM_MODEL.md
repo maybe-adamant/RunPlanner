@@ -3,10 +3,11 @@
 Temporary plan; delete at delivery after promoting durable results. Follows
 [LIVE_PICKUPS](LIVE_PICKUPS.md) step C.
 
-## Tracker
+## Tracker (v1, 2026-11-11)
 
-One sequence, in execution order. A new slice is inserted at its position
-and the rest renumber; there are no sub-steps.
+One flat sequence, in execution order, with no sub-steps. A slice added in
+the middle shifts the rest, and the tracker version goes up, so "slice 3 of
+v1" always names one thing. Each version adds a line to the history below.
 
 | # | Slice | Status | Result |
 | --- | --- | --- | --- |
@@ -21,6 +22,8 @@ and the rest renumber; there are no sub-steps.
 | 6 | Live UI: Interact row, gap menu, chronology, copy | | |
 | 7 | Draft and run import on the final engine | | |
 | 8 | Release: check, corpus, merge, 103 with the game module | | |
+
+History: v1 (2026-11-11) replaced the C5a–C5d / step naming.
 
 Decisions and references live beside the slice that needs them; working
 notes and investigations are outside the repo under
