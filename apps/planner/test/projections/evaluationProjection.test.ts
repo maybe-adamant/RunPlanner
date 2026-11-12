@@ -719,7 +719,8 @@ describe('timeline finding guidance', () => {
   });
 
   it.each([
-    ['staleHermesShrineDelivery', 'Shrine delivery is not due here'],
+    ['sourceInactive', 'Shrine delivery is not due here'],
+    ['dueContactMismatch', 'Shrine delivery is not due here'],
     ['staleClockedTraitPickup', 'Supply Chain pickup cannot occur here'],
   ])('titles %s from its source evidence', (reason, title) => {
     expect(

@@ -1247,7 +1247,11 @@ export function presentFinding(
         description: 'Remove the Collect row, or take Champion of Elysium earlier.',
       });
     }
-    if (finding.evidence.reason === 'staleHermesShrineDelivery') {
+    // A delivery whose placement no longer matches its source.
+    if (
+      finding.evidence.reason === 'sourceInactive' ||
+      finding.evidence.reason === 'dueContactMismatch'
+    ) {
       return Object.freeze({ title: 'Shrine delivery is not due here' });
     }
     if (finding.evidence.reason === 'staleClockedTraitPickup') {

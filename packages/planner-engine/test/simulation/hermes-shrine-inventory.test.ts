@@ -1575,7 +1575,8 @@ describe('Hermes Shrine Travel Deal generation', () => {
 
     const left = evaluate(removePickup(project, 'initial:first'));
     expect(left.codes).toEqual([]);
-    expect(left.reasons).not.toContain('staleHermesShrineDelivery');
+    expect(left.reasons).not.toContain('sourceInactive');
+    expect(left.reasons).not.toContain('dueContactMismatch');
     expect(left.refillAcquired).toBe(true);
     expect(left.sources).toBe('initial:first');
 

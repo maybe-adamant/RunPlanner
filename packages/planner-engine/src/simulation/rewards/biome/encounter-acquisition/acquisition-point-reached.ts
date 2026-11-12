@@ -538,7 +538,7 @@ export function applyAcquisitionPointReachedTransition(
         addFinding('rewardSourceUnavailable', entry, {
           reason:
             placement?.assessment.kind === 'invalid'
-              ? 'staleHermesShrineDelivery'
+              ? placement.assessment.reason
               : 'retainedSourceMismatch',
         });
         return publish({ branch: inputs.sourceBranch, findings });

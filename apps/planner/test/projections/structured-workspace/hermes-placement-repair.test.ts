@@ -31,7 +31,7 @@ it('routes a loaded stale delivery finding to its bound unplacement repair and r
   const finding = projected.evaluation.findings.find(
     (finding) =>
       finding.code === 'rewardSourceUnavailable' &&
-      (finding.evidence as { reason?: string } | undefined)?.reason === 'staleHermesShrineDelivery',
+      (finding.evidence as { reason?: string } | undefined)?.reason === 'dueContactMismatch',
   );
   expect(finding).toBeDefined();
   const node = projected.workspace.route.biomes

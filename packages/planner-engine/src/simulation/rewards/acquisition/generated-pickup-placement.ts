@@ -24,6 +24,7 @@ import {
 import { parseClockedTraitGeneratedPickupEntryKey } from '../../../authored-project/acquisition/pickup-producers';
 import {
   hermesShrineDeliveryPickupSource,
+  type GeneratedPickupMismatch,
   type GeneratedPickupPlacementAssessment,
   type GeneratedPickupSource,
 } from '../../../authored-project/generated-pickup-placement';
@@ -55,14 +56,14 @@ function placement(
   owner: OccurrenceAddress,
   reference: PickupReference,
   source: GeneratedPickupSource,
-  /** The reached state's status; none is reached when the state is absent. */
-  status: 'valid' | 'invalid' | 'unassessed' | undefined,
+  /** The reached state's status, or why it is invalid; none is reached when the state is absent. */
+  status: 'valid' | 'unassessed' | GeneratedPickupMismatch | undefined,
   sequence: number,
-  invalidReason: 'sourceInactive' | 'dueContactMismatch' = 'dueContactMismatch',
 ): GeneratedPickupPlacement {
-  const kind = status ?? 'unassessed';
   const assessment: GeneratedPickupPlacementAssessment =
-    kind === 'invalid' ? { kind, source, reason: invalidReason } : { kind, source };
+    status === 'valid' || status === 'unassessed' || status === undefined
+      ? { kind: status ?? 'unassessed', source }
+      : { kind: 'invalid', source, reason: status };
   return Object.freeze({
     address: createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(owner, reference.siteKey),
@@ -141,7 +142,11 @@ export function assessReachedHermesDeliveryPlacement(
       owner,
       reference,
       source,
-      branch === undefined ? undefined : here || laterPhaseKey !== undefined ? 'valid' : 'invalid',
+      branch === undefined
+        ? undefined
+        : here || laterPhaseKey !== undefined
+          ? 'valid'
+          : 'dueContactMismatch',
       sequence,
     ),
     due?.cause === 'rush' ? undefined : walk,
@@ -208,15 +213,14 @@ export function assessReachedClockedPickupPlacement(
         ? undefined
         : laterPhaseKey !== undefined || (maturity !== undefined && reached)
           ? 'valid'
-          : maturity === undefined
-            ? 'invalid'
-            : 'unassessed',
+          : maturity !== undefined
+            ? 'unassessed'
+            : // A producer no longer held drops nothing anywhere; a held one matures elsewhere.
+              // A swap or replacement equips its trait under its own acquisition identity.
+              held === undefined
+              ? 'sourceInactive'
+              : 'dueContactMismatch',
       sequence,
-      // A producer no longer held drops nothing anywhere; a held one matures elsewhere.
-      // A swap or replacement equips its trait under its own acquisition identity.
-      branch !== undefined && maturity === undefined && held === undefined
-        ? 'sourceInactive'
-        : 'dueContactMismatch',
     ),
     walk,
     reached ? frontier.encounterPhaseKey : undefined,

@@ -845,7 +845,9 @@ function staleDeliveryFindings(project: ProjectDocument) {
   return simulateProjectAssembly(catalog, project).evaluation.findings.filter(
     (finding) =>
       finding.code === 'rewardSourceUnavailable' &&
-      (finding.evidence as { reason?: string } | undefined)?.reason === 'staleHermesShrineDelivery',
+      ['sourceInactive', 'dueContactMismatch'].includes(
+        (finding.evidence as { reason?: string } | undefined)?.reason ?? '',
+      ),
   );
 }
 

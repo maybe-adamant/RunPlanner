@@ -21,6 +21,13 @@ export type GeneratedPickupSource =
       readonly acquisitionIdentity: string;
     };
 
+/**
+ * Why a placed timed pickup no longer matches its source: the source no longer
+ * produces it, or it falls due at another contact. The placement assessment
+ * and the walk's finding on the row carry the same reason.
+ */
+export type GeneratedPickupMismatch = 'sourceInactive' | 'dueContactMismatch';
+
 /** Placement truth is separate from required participation and reward completeness. */
 export type GeneratedPickupPlacementAssessment =
   | { readonly kind: 'valid'; readonly source: GeneratedPickupSource }
@@ -28,7 +35,7 @@ export type GeneratedPickupPlacementAssessment =
   | {
       readonly kind: 'invalid';
       readonly source: GeneratedPickupSource;
-      readonly reason: 'sourceInactive' | 'dueContactMismatch';
+      readonly reason: GeneratedPickupMismatch;
     };
 
 export function hermesShrineDeliveryPickupSource(
