@@ -9,19 +9,19 @@ One flat sequence, in execution order, with no sub-steps. A slice added in
 the middle shifts the rest, and the tracker version goes up, so "slice 3 of
 v1" always names one thing. Each version adds a line to the history below.
 
-| # | Slice | Status | Result |
-| --- | --- | --- | --- |
-| — | Item model (C5a–C5c): live product, items and verbs, observations and outcomes on items, thin rows, reroll results on the item, 102 → 103 | done | reviewed |
-| — | Free Shrine rush | done | rush row anywhere after its purchase |
-| — | Lifecycle rewrite so far: baseline snapshots, encounter scripts as catalog data, event graph and Combat moment, catalog profile selection, one selector with the reward deciding the producer, cage Unlock rows (Combat Order picker removed), bounds instead of windows with an event-driven walk | done | plan, candidates and fixtures identical throughout |
-| 1 | Finish the event model: switch and locked-door fights as encounters, walk loops over graph events, findings in bound vocabulary, cleanup | running | |
-| 2 | Delivery timing: drop the stored phase; a delivery is valid after its due spawn and before its deadline | next | |
-| 3 | Docs and full check | | |
-| 4 | Encounter customization: Aetos in the popup, Fig Leaf and Gorgon icons and Timeline notices | | |
-| 5 | Consolidation: one item-chain settlement path, one live query, Forfeit at spawn, size goal ≈ +6.5k engine lines over 55c74eedb (migration counted separately) | | |
-| 6 | Live UI: Interact row, gap menu, chronology, copy | | |
-| 7 | Draft and run import on the final engine | | |
-| 8 | Release: check, corpus, merge, 103 with the game module | | |
+| #   | Slice                                                                                                                                                                                                                                                                                              | Status  | Result                                             |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------- |
+| —   | Item model (C5a–C5c): live product, items and verbs, observations and outcomes on items, thin rows, reroll results on the item, 102 → 103                                                                                                                                                          | done    | reviewed                                           |
+| —   | Free Shrine rush                                                                                                                                                                                                                                                                                   | done    | rush row anywhere after its purchase               |
+| —   | Lifecycle rewrite so far: baseline snapshots, encounter scripts as catalog data, event graph and Combat moment, catalog profile selection, one selector with the reward deciding the producer, cage Unlock rows (Combat Order picker removed), bounds instead of windows with an event-driven walk | done    | plan, candidates and fixtures identical throughout |
+| 1   | Finish the event model: switch and locked-door fights as encounters, walk loops over graph events, findings in bound vocabulary, cleanup                                                                                                                                                           | running |                                                    |
+| 2   | Delivery timing: drop the stored phase; a delivery is valid after its due spawn and before its deadline                                                                                                                                                                                            | next    |                                                    |
+| 3   | Docs and full check                                                                                                                                                                                                                                                                                |         |                                                    |
+| 4   | Encounter customization: Aetos in the popup, Fig Leaf and Gorgon icons and Timeline notices                                                                                                                                                                                                        |         |                                                    |
+| 5   | Consolidation: one item-chain settlement path, one live query, Forfeit at spawn, size goal ≈ +6.5k engine lines over 55c74eedb (migration counted separately)                                                                                                                                      |         |                                                    |
+| 6   | Live UI: Interact row, gap menu, chronology, copy                                                                                                                                                                                                                                                  |         |                                                    |
+| 7   | Draft and run import on the final engine                                                                                                                                                                                                                                                           |         |                                                    |
+| 8   | Release: check, corpus, merge, 103 with the game module                                                                                                                                                                                                                                            |         |                                                    |
 
 History: v1 (2026-11-11) replaced the C5a–C5d / step naming.
 
