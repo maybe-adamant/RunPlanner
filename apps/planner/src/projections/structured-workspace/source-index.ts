@@ -95,8 +95,8 @@ export interface WorkspaceEvaluatedBatchOverlay {
 /** Where the walk stopped inside the room an assessment blocks in, as the engine publishes it. */
 export interface WorkspaceRoomStop {
   readonly kind: 'overview' | 'timeline' | 'exit';
-  /** The room's lifecycle Timeline entry the walk stopped at; later entries are unreached. */
-  readonly anchor?: import('@run-planner/engine/simulation').RoomStopAnchor;
+  /** The index of the room's lifecycle Timeline entry the walk stopped at; later entries are unreached. */
+  readonly entryIndex: number;
   /** `entry`: the walk reached that entry and blocks on its own contact; `before`: it did not. */
   readonly at: 'entry' | 'before';
 }
@@ -1113,7 +1113,7 @@ function createWorkspaceBiomeSource(
         return undefined;
       return Object.freeze({
         kind: stop.kind,
-        ...(stop.anchor === undefined ? {} : { anchor: stop.anchor }),
+        entryIndex: stop.entryIndex,
         at: stop.at,
       });
     },

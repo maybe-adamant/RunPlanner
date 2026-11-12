@@ -541,8 +541,7 @@ describe('a room whose walk stops in it', () => {
     const shown = (entry: Engine): Shown => entry as unknown as Shown;
     const keys = (split: ReturnType<typeof splitAtRoomStop>) =>
       split?.reached.map((entry) => (entry.kind === 'boundary' ? entry.boundary.key : entry.kind));
-    const stopAt = (eventKey: string) =>
-      ({ kind: 'timeline', anchor: { kind: 'event', eventKey }, at: 'entry' }) as const;
+    const stopAt = (entryIndex: number) => ({ kind: 'timeline', entryIndex, at: 'entry' }) as const;
     // A stop at a Combat keeps that Combat to repair its outcome choices there.
     const fight = [
       engine('roomEntered'),
@@ -553,7 +552,7 @@ describe('a room whose walk stops in it', () => {
     expect(
       keys(
         splitAtRoomStop(fight.map(shown), fight, {
-          roomStop: stopAt('encounterStarted:Encounter'),
+          roomStop: stopAt(1),
         }),
       ),
     ).toEqual(['roomEntered', 'encounterStarted:Encounter']);
@@ -566,7 +565,7 @@ describe('a room whose walk stops in it', () => {
     expect(
       keys(
         splitAtRoomStop([start[0]!, start[2]!].map(shown), start, {
-          roomStop: stopAt('encounterBegun:Encounter'),
+          roomStop: stopAt(1),
         }),
       ),
     ).toEqual(['roomEntered']);

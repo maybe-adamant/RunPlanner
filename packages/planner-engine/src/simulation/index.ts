@@ -419,10 +419,8 @@ export type {
   ProjectEvaluation,
   ProjectEvaluationAssembly,
   ProjectRouteEvaluation,
-  RoomStopAnchor,
   RoomStopCoverage,
 } from './evaluation/evaluation-products';
-export { roomStopEntryIndex } from './evaluation/evaluation-products';
 export { transcendentEmbryoBlessingValues } from './keepsakes/trait-effects';
 export {
   assessTraitOffer,

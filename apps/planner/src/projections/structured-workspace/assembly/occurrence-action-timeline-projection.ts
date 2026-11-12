@@ -6,7 +6,6 @@ import {
   roomActionKey,
 } from '@run-planner/engine/authored-project';
 import {
-  roomStopEntryIndex,
   type RoomLifecycleTimeline,
   type RoomActionRosterIssue,
 } from '@run-planner/engine/simulation';
@@ -111,7 +110,7 @@ export function splitAtRoomStop(
   const roomStop = input.roomStop;
   if (roomStop === undefined || roomStop.kind === 'exit') return undefined;
   const blocking = input.blockingRowKeys ?? new Set<string>();
-  const stopIndex = roomStopEntryIndex(lifecycleEntries, roomStop);
+  const stopIndex = roomStop.entryIndex;
   const unreached = new Set(
     lifecycleEntries.slice(stopIndex).flatMap((entry) => lifecycleEntryKey(entry) ?? []),
   );

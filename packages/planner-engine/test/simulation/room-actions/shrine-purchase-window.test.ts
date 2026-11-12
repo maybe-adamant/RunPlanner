@@ -14,7 +14,7 @@ import {
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
-import { roomStopEntryIndex, simulateProject } from '@run-planner/engine/simulation';
+import { simulateProject } from '@run-planner/engine/simulation';
 import {
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNShrineSideRoomDeliveryCheckpoint,
@@ -337,7 +337,7 @@ describe('Shrine purchases after the doors open', () => {
     const entries = rooms(o.materializedPrefix).find(
       (room) => room.occurrenceId === host.occurrenceId,
     )?.roomLifecycleTimeline.entries;
-    const stopped = entries?.[roomStopEntryIndex(entries, o.coverage.roomStop!)];
+    const stopped = entries?.[o.coverage.roomStop!.entryIndex];
     expect(stopped?.kind === 'action' ? stopped.action.key : undefined).toBe(
       roomActionKey(purchase),
     );

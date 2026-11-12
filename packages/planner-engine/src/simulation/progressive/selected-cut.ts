@@ -817,27 +817,9 @@ function roomStop(
     entryIndex: number,
     at: RoomStopCoverage['at'],
   ): RoomStopCoverage => {
-    const entry = entries[entryIndex];
-    return Object.freeze({
-      room: room.origin,
-      kind,
-      ...(entry === undefined
-        ? {}
-        : {
-            anchor: Object.freeze(
-              entry.kind === 'action'
-                ? { kind: 'row' as const, actionKey: entry.action.key }
-                : entry.kind === 'boundary'
-                  ? { kind: 'event' as const, eventKey: entry.boundary.key }
-                  : (() => {
-                      throw new BiomeMaterializationContractError(
-                        `${room.gameName} stops at an automatic effect`,
-                      );
-                    })(),
-            ),
-          }),
-      at,
-    });
+    if (entries[entryIndex]?.kind === 'automaticEffect')
+      throw new BiomeMaterializationContractError(`${room.gameName} stops at an automatic effect`);
+    return Object.freeze({ room: room.origin, kind, entryIndex, at });
   };
   if (!block.timeline)
     return stop(

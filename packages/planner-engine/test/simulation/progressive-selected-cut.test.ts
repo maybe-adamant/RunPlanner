@@ -35,7 +35,6 @@ import {
   generatedEncounterSupportForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
-  roomStopEntryIndex,
 } from '@run-planner/engine/simulation';
 import {
   createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
@@ -305,7 +304,7 @@ function stopAt(evaluation: ReturnType<typeof biomeEvaluation>) {
   const room = rooms.find((candidate) => candidate.occurrenceId === stop.room.occurrenceId);
   if (room === undefined) throw new Error(`${stop.room.occurrenceId} is not materialized`);
   const entries = room.roomLifecycleTimeline.entries;
-  const entry = entries[roomStopEntryIndex(entries, stop)];
+  const entry = entries[stop.entryIndex];
   return {
     room: stop.room.occurrenceId,
     kind: stop.kind,
