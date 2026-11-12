@@ -8,12 +8,12 @@ import {
   createRoomActionAddress,
   createInfernalContractPedestalAddress,
   createShopOfferAddress,
+  isPlacementBlocker,
   roomActionKey,
   semanticAddressKey,
   sitesWithNemesisResultPickups,
   stygianWellGenerationItemKey,
   stygianWellGenerationTwistResultKey,
-  isPlacementBlocker,
   type EncounterPhaseAddress,
   type OccurrenceAddress,
   type RoomOccurrence,
@@ -26,6 +26,7 @@ import {
   type FountainRarityOutcomeAddress,
 } from '@run-planner/engine/authored-project';
 import { requiredFirstTitle } from '@planner/projections/walkStopCopy';
+import { roomEventPointName, type RoomEventPhaseNames } from '@planner/projections/roomEventNames';
 import type { WorkspaceDerivedAcquisitionEntry } from './occurrence-reward-assembly';
 import { observedChallengeSwitchKind } from './challenge-switch-assembly';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -240,43 +241,18 @@ function roomActionsForOccurrence(
     encounterPhases.find((phase) => phase.address.phaseKey === key)?.label ??
     key;
   const graphPhases = roster.eventGraph.phases;
-  const multiPhase = graphPhases.length > 1;
-  // A bound's point, named as its Timeline marker or the choice it waits on.
-  const pointName = (point: RoomEventPoint): string => {
-    switch (point.kind) {
-      case 'roomEntered':
-        return 'Room entered';
-      case 'wheelsOpen': {
-        const phaseKey = graphPhases.find(
-          (phase) => phase.rewardWheelKey === point.wheelKey,
-        )?.phaseKey;
-        return phaseKey === undefined ? 'Wheels open' : `Wheels open · ${phaseLabel(phaseKey)}`;
-      }
-      case 'gate':
-        return graphPhases.some(
-          (phase) => phase.phaseKey === point.phaseKey && phase.rewardWheelKey !== undefined,
-        )
-          ? `choosing the ${phaseLabel(point.phaseKey)} wheel`
-          : multiPhase
-            ? `${phaseLabel(point.phaseKey)}'s Encounter`
-            : 'Encounter';
-      case 'encounterStarted':
-        return !multiPhase
-          ? 'Combat'
-          : roomLocal.kind === 'ship'
-            ? phaseLabel(point.phaseKey)
-            : `${phaseLabel(point.phaseKey)}'s Combat`;
-      case 'encounterEnd':
-      case 'endEffects':
-        return multiPhase ? `the end of ${phaseLabel(point.phaseKey)}` : 'the end of the encounter';
-      case 'doorsOpened':
-        return 'Doors open';
-      case 'exitsReady':
-        return 'every required action';
-      case 'leave':
-        return 'Leave';
-    }
-  };
+  const phaseNames: RoomEventPhaseNames = Object.freeze({
+    label: phaseLabel,
+    multiPhase: graphPhases.length > 1,
+    ship: roomLocal.kind === 'ship',
+    phaseOfWheel: (wheelKey: string) =>
+      graphPhases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey,
+    choosesWheel: (phaseKey: string) =>
+      graphPhases.some(
+        (phase) => phase.phaseKey === phaseKey && phase.rewardWheelKey !== undefined,
+      ),
+  });
+  const pointName = (point: RoomEventPoint): string => roomEventPointName(point, phaseNames);
   const pointIdentity = (point: RoomEventPoint) => [
     point.kind,
     'phaseKey' in point ? point.phaseKey : null,

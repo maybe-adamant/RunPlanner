@@ -796,7 +796,7 @@ function roomStop(
   history: BiomeHistoryPrefix,
   reachedActions: readonly ReachedHistoryRoomAction[],
   rowKeys: readonly string[] | undefined,
-): RoomStopCoverage | undefined {
+): { readonly coverage: RoomStopCoverage; readonly entryIndex: number } | undefined {
   if (block.owner.kind === 'start' || block.owner.kind === 'hub') return undefined;
   const room = block.owner.room;
   const entries = room.roomLifecycleTimeline.entries;
@@ -804,9 +804,9 @@ function roomStop(
     kind: RoomStopCoverage['kind'],
     entryIndex: number,
     at: RoomStopCoverage['at'],
-  ): RoomStopCoverage => {
+  ): { readonly coverage: RoomStopCoverage; readonly entryIndex: number } => {
     const entry = entries[entryIndex];
-    return Object.freeze({
+    const coverage: RoomStopCoverage = Object.freeze({
       room: room.origin,
       kind,
       ...(entry === undefined
@@ -826,6 +826,7 @@ function roomStop(
           }),
       at,
     });
+    return Object.freeze({ coverage, entryIndex });
   };
   if (!block.timeline)
     return stop(
@@ -1347,7 +1348,9 @@ export function publishSelectedCut(
               blockingRowKeys: rowKeys,
             }),
           }),
-      ...(stopInRoom === undefined ? {} : { roomStop: stopInRoom }),
+      ...(stopInRoom === undefined
+        ? {}
+        : { roomStop: stopInRoom.coverage, roomStopEntryIndex: stopInRoom.entryIndex }),
     }),
     candidateArtifacts,
   });

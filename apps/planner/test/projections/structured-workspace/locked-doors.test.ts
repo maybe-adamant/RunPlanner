@@ -121,8 +121,7 @@ describe('locked doors in the structured workspace', () => {
     });
   });
 
-  // The press becomes a graph encounter trigger in the next engine slice.
-  it.todo("marks a pressed door's fight with one Encounter marker right after its press", () => {
+  it("marks a pressed door's fight with one Encounter marker right after its press", () => {
     const project = createGoldenFGHIProject();
     const locked = apply(project, {
       kind: 'ReplaceLockedExit',
@@ -141,10 +140,18 @@ describe('locked doors in the structured workspace', () => {
     const pressed = apply(locked, press.command);
     const summary = room(projectStructuredWorkspaceFixture(pressed).workspace);
     const row = summary.roomActions!.rows.find((candidate) => candidate.label === 'Unlock Door 2');
+    // Begun and started merge into one Encounter marker; its end follows with no Combat.
     expect(entryAfterAction(summary, row!.key)).toMatchObject({
       kind: 'boundary',
+      boundary: { kind: 'encounterStarted', phaseKey: 'unlockExit:exit2' },
       label: 'Encounter',
       beginsEncounter: true,
+    });
+    const entries = summary.roomActions!.timeline.entries;
+    expect(entries.at(-1)).toMatchObject({
+      kind: 'boundary',
+      boundary: { kind: 'encounterEnd', phaseKey: 'unlockExit:exit2' },
+      label: 'Encounter ended',
     });
   });
 });

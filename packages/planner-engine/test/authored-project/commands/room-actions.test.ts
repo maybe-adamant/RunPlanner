@@ -1685,7 +1685,7 @@ describe('room-action commands', () => {
       bought('initial:secondLeft'),
     ]);
     expect(() => applyProjectCommand(project, catalog, { ...secondRight, index: 0 })).toThrow(
-      /index 0 is not a legal position .* a required action of an earlier window/,
+      /index 0 is not a legal position .* a required action whose deadline passes first/,
     );
     // The refill restocks only after the first purchase.
     expect(positionedCommandInsertionIndexes(project, catalog, refill)).toEqual([3]);

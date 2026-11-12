@@ -167,7 +167,7 @@ describe('Oceanus locked door authoring', () => {
     expect(occurrence(restore(order.indexOf(reward))).roomActions.order).toEqual(order);
     expect(occurrence(restore(0)).roomActions.order).toEqual([reward, ...without]);
     expect(() => restore(without.length)).toThrow(
-      /is not a legal position for .*unlockExit.* afterCheckpoint exitUsable/,
+      /is not a legal position for .*unlockExit.* must follow the last required action/,
     );
   });
 

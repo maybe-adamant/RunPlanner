@@ -30,7 +30,9 @@ function markers(timeline: ReturnType<typeof room>['timeline'], phaseKey: string
       candidate.boundary.kind === 'encounterBegun' &&
       candidate.boundary.phaseKey === phaseKey,
   );
-  return entry?.kind === 'boundary' ? entry.markers : undefined;
+  return entry?.kind === 'boundary' && entry.boundary.kind === 'encounterBegun'
+    ? entry.boundary.markers
+    : undefined;
 }
 
 describe('encounter markers', () => {

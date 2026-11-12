@@ -162,8 +162,7 @@ describe('challenge switch in the structured workspace', () => {
     expect(claim?.labelParts?.origin).toBe('Claimed from the challenge switch');
   });
 
-  // The press becomes a graph encounter trigger in the next engine slice.
-  it.todo("marks a pressed switch's fight with one Encounter marker right after its press", () => {
+  it("marks a pressed switch's fight with one Encounter marker right after its press", () => {
     const { workspace } = projectStructuredWorkspaceFixture(
       observed(createGoldenFGHIProject(), 'F', 'golden-f-b5-e1', 'TimeChallengeSwitch_Money', true),
     );
@@ -172,10 +171,17 @@ describe('challenge switch in the structured workspace', () => {
       (entry) => entry.kind === 'action' && entry.actionKey === roomActionKey(use),
     );
     expect(press).toBeGreaterThanOrEqual(0);
+    // Begun and started merge into one Encounter marker; its end follows with no Combat.
     expect(entries[press + 1]).toMatchObject({
       kind: 'boundary',
+      boundary: { kind: 'encounterStarted', phaseKey: 'challengeSwitch' },
       label: 'Encounter',
       beginsEncounter: true,
+    });
+    expect(entries[press + 2]).toMatchObject({
+      kind: 'boundary',
+      boundary: { kind: 'encounterEnd', phaseKey: 'challengeSwitch' },
+      label: 'Encounter ended',
     });
   });
 

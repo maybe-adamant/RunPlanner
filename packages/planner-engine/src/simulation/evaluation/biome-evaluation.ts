@@ -77,6 +77,7 @@ import type {
   TraitOfferCandidateArtifacts,
 } from '../candidates/trait-offer/capability';
 import type {
+  BiomeEvaluationBase,
   BiomeEvaluationPoint,
   PrefixBiomeEvaluationCoverage,
   ProjectBiomeEvaluation,
@@ -286,6 +287,15 @@ function generation(
       ...encounters.findingRegions,
     ]),
   });
+}
+
+/** The stop's entry index, beside the coverage that names it only by its anchor. */
+function roomStopEntry(
+  evaluation: ProgressiveBiomeEvaluation,
+): Pick<BiomeEvaluationBase, 'roomStopEntryIndex'> {
+  return evaluation.roomStopEntryIndex === undefined
+    ? {}
+    : { roomStopEntryIndex: evaluation.roomStopEntryIndex };
 }
 
 function roomTimelineCoverage(
@@ -579,6 +589,7 @@ export function evaluateBiomeAssembly(
           ...(blockedAt === undefined ? {} : { blockedAt }),
           ...roomTimelineCoverage(progressive.evaluation),
         }),
+        ...roomStopEntry(progressive.evaluation),
         materializedPrefix: progressive.evaluation.materializedPrefix,
         ...(progressive.evaluation.assessmentPrefix === undefined
           ? {}
@@ -665,6 +676,7 @@ export function evaluateBiomeAssembly(
           blockedAt,
           ...roomTimelineCoverage(progressive.evaluation),
         }),
+        ...roomStopEntry(progressive.evaluation),
         materializedPrefix: progressive.evaluation.materializedPrefix,
         ...(progressive.evaluation.assessmentPrefix === undefined
           ? {}
@@ -852,6 +864,7 @@ export function evaluateBiomeAssembly(
           : { blockedAt: progressive.evaluation.blockedAt }),
         ...roomTimelineCoverage(progressive.evaluation),
       }),
+      ...roomStopEntry(progressive.evaluation),
       materializedPrefix: progressive.evaluation.materializedPrefix,
       ...(progressive.evaluation.assessmentPrefix === undefined
         ? {}

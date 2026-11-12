@@ -392,7 +392,6 @@ describe('selected O validation', () => {
         code: 'roomActionOrderUnavailable',
         origin: owner,
         evidence: expect.objectContaining({
-          reason: 'requiredFirst',
           requiredAction: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
         }),
       }),
@@ -893,7 +892,6 @@ describe('selected O validation', () => {
       expect.objectContaining({
         code: 'roomActionOrderUnavailable',
         evidence: expect.objectContaining({
-          reason: 'requiredFirst',
           requiredAction: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
         }),
       }),

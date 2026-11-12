@@ -45,6 +45,8 @@ export interface ProgressiveBiomeEvaluation {
   readonly roomTimeline?: import('../evaluation/evaluation-products').RoomTimelineCoverage;
   /** Where the walk stopped inside the room it blocks in, for every room block. */
   readonly roomStop?: import('../evaluation/evaluation-products').RoomStopCoverage;
+  /** The index of the Timeline entry `roomStop` anchors, resolved where the cut stops. */
+  readonly roomStopEntryIndex?: number;
 }
 
 /** The progressive evaluation plus the candidate artifacts it publishes. */

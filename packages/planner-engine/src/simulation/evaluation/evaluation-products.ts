@@ -24,6 +24,12 @@ export interface BiomeEvaluationBase {
   readonly requiredInput?: SemanticAddress;
   readonly requiredInputRegion?: string;
   readonly requiredInputLocation?: import('../progressive/finding-location').OwnerLocation;
+  /**
+   * The index of the entry `coverage.roomStop` anchors in its room's
+   * `roomLifecycleTimeline.entries` (their length past every entry), resolved
+   * once by the cut; candidate evidence carries only the anchor.
+   */
+  readonly roomStopEntryIndex?: number;
 }
 
 interface IncompleteBiomeProjectEvaluationBase extends BiomeEvaluationBase {
@@ -154,26 +160,6 @@ export interface RoomStopCoverage {
    * outcome or delivery, a wheel's offers). `before`: it stopped before reaching it.
    */
   readonly at: 'entry' | 'before';
-}
-
-/** The index of the stop's entry among Timeline entries; their length when it stands past every one. */
-export function roomStopEntryIndex(
-  entries: readonly (
-    | { readonly kind: 'action'; readonly action: { readonly key: string } }
-    | { readonly kind: 'boundary'; readonly boundary: { readonly key: string } }
-    | { readonly kind: 'automaticEffect' }
-  )[],
-  stop: Pick<RoomStopCoverage, 'anchor'>,
-): number {
-  const anchor = stop.anchor;
-  if (anchor === undefined) return entries.length;
-  const index = entries.findIndex((entry) =>
-    anchor.kind === 'row'
-      ? entry.kind === 'action' && entry.action.key === anchor.actionKey
-      : entry.kind === 'boundary' && entry.boundary.key === anchor.eventKey,
-  );
-  if (index < 0) throw new Error(`room stop names no Timeline entry: ${JSON.stringify(anchor)}`);
-  return index;
 }
 
 export interface PrefixBiomeEvaluationCoverage {

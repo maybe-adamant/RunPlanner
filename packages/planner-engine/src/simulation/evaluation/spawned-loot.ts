@@ -40,11 +40,7 @@ import {
   type RoomActionRow,
   type RoomLifecycleTimelineEntry,
 } from '../room-actions';
-import {
-  roomStopEntryIndex,
-  type ProjectEvaluationAssembly,
-  type RoomStopCoverage,
-} from './evaluation-products';
+import { type ProjectEvaluationAssembly, type RoomStopCoverage } from './evaluation-products';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
@@ -419,9 +415,8 @@ export function roomWalk(
     return { entry: () => 'unreached', unreached: true };
   const stop = biome.coverage.roomStop;
   if (stop === undefined || semanticAddressKey(stop.room) !== key) return all;
-  const room = authoredRoom(assembly, occurrence);
-  if (room === undefined) throw new Error(`${key} stopped outside its evaluated biome`);
-  const stopIndex = roomStopEntryIndex(room.roomLifecycleTimeline.entries, stop);
+  const stopIndex = biome.roomStopEntryIndex;
+  if (stopIndex === undefined) throw new Error(`${key} stopped with no resolved Timeline entry`);
   return {
     stop,
     stopIndex,

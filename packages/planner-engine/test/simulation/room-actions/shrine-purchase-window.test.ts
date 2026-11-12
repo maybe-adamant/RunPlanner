@@ -14,7 +14,7 @@ import {
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
-import { roomStopEntryIndex, simulateProject } from '@run-planner/engine/simulation';
+import { simulateProject } from '@run-planner/engine/simulation';
 import {
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNShrineSideRoomDeliveryCheckpoint,
@@ -189,7 +189,7 @@ describe('Shrine purchases after the doors open', () => {
     ).toEqual([
       expect.objectContaining({
         origin: purchase,
-        evidence: expect.objectContaining({ reason: 'requiredFirst', requiredAction: reward }),
+        evidence: expect.objectContaining({ requiredAction: reward }),
       }),
     ]);
   });
@@ -241,7 +241,7 @@ describe('Shrine purchases after the doors open', () => {
           createOccurrenceId(nPostbossId),
           roomActionKey(purchase!),
         ),
-        evidence: expect.objectContaining({ reason: 'requiredFirst' }),
+        evidence: expect.objectContaining({ requiredAction: expect.any(String) }),
       }),
     ]);
   });
@@ -308,7 +308,6 @@ describe('Shrine purchases after the doors open', () => {
         code: 'roomActionOrderUnavailable',
         origin: createRoomActionAddress(oBiome, host.occurrenceId, roomActionKey(purchase)),
         evidence: expect.objectContaining({
-          reason: 'requiredFirst',
           requiredAction: roomActionKey({ kind: 'useFountain' }),
         }),
       }),
@@ -338,7 +337,7 @@ describe('Shrine purchases after the doors open', () => {
     const entries = rooms(o.materializedPrefix).find(
       (room) => room.occurrenceId === host.occurrenceId,
     )?.roomLifecycleTimeline.entries;
-    const stopped = entries?.[roomStopEntryIndex(entries, o.coverage.roomStop!)];
+    const stopped = entries?.[o.roomStopEntryIndex!];
     expect(stopped?.kind === 'action' ? stopped.action.key : undefined).toBe(
       roomActionKey(purchase),
     );

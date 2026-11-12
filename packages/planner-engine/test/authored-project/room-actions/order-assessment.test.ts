@@ -124,7 +124,7 @@ describe('room action insertion legality', () => {
       {
         kind: 'beforeSpawn',
         reference: reward,
-        detail: `must follow ${roomActionKey(before)}, a required action of an earlier window`,
+        detail: `must follow ${roomActionKey(before)}, a required action whose deadline passes first`,
         point: { kind: 'encounterEnd', phaseKey: 'Encounter' },
         requiredAction: before,
       },
@@ -280,7 +280,7 @@ describe('room action insertion legality', () => {
       {
         kind: 'beforeSpawn',
         reference: reward,
-        detail: `must follow ${roomActionKey(before)}, a required action of an earlier window`,
+        detail: `must follow ${roomActionKey(before)}, a required action whose deadline passes first`,
         point: { kind: 'encounterEnd', phaseKey: 'Encounter' },
         requiredAction: before,
       },

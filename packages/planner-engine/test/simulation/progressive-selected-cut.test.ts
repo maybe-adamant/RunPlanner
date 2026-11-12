@@ -35,7 +35,6 @@ import {
   generatedEncounterSupportForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
-  roomStopEntryIndex,
 } from '@run-planner/engine/simulation';
 import {
   createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
@@ -305,7 +304,7 @@ function stopAt(evaluation: ReturnType<typeof biomeEvaluation>) {
   const room = rooms.find((candidate) => candidate.occurrenceId === stop.room.occurrenceId);
   if (room === undefined) throw new Error(`${stop.room.occurrenceId} is not materialized`);
   const entries = room.roomLifecycleTimeline.entries;
-  const entry = entries[roomStopEntryIndex(entries, stop)];
+  const entry = entries[evaluation.roomStopEntryIndex!];
   return {
     room: stop.room.occurrenceId,
     kind: stop.kind,
@@ -1837,8 +1836,8 @@ describe('room stop', () => {
         phase: 'encounterResolution',
         origin: createRoomActionAddress(goldenFBiome, fPostboss, wellPurchaseRow),
         evidence: {
-          reason: 'requiredFirst',
-          detail: `must follow ${roomActionKey({ kind: 'useFountain' })}, a required action of an earlier window`,
+          reason: 'beforeEnabler',
+          point: { kind: 'doorsOpened' },
           requiredAction: roomActionKey({ kind: 'useFountain' }),
         },
       },

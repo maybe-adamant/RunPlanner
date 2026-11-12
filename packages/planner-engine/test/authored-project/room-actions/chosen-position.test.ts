@@ -93,7 +93,7 @@ describe('placing actions at a chosen index', () => {
       });
     expect(at(0)).toMatchObject({
       kind: 'refused',
-      reason: expect.stringMatching(/a required action of an earlier window/),
+      reason: expect.stringMatching(/a required action whose deadline passes first/),
     });
     expect(
       placeRoomActionsAtChosenIndex(

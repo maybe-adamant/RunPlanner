@@ -1044,7 +1044,7 @@ describe('stale room actions in edit settlement', () => {
       expect(settled.assembly.evaluation.findings).toContainEqual(
         expect.objectContaining({
           code: 'roomActionOrderUnavailable',
-          evidence: expect.objectContaining({ reason: 'requiredFirst' }),
+          evidence: expect.objectContaining({ requiredAction: expect.any(String) }),
         }),
       );
     });
