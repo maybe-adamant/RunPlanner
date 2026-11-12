@@ -56,8 +56,8 @@ vi.mock('../../src/simulation/lifecycle', async (importOriginal) => {
  * wheel's choice after a non-final Ship phase; otherwise Doors open for a
  * required row and leaving for an optional one); and the bound "after any
  * end-effects event of this room" must let it stand no earlier than the stored
- * phase does. That last check assumes a ranked row whose bounds hold runs
- * before the next automatic event.
+ * phase does. Automatic events fire eagerly: once the rows ranked before it
+ * have run, every event no row waits on fires before the next ranked row.
  */
 
 type Kind = 'delivery' | 'clocked' | 'flush' | 'rush';
@@ -308,15 +308,18 @@ function witnessRoom(
     )
       failures.push('it ranks after the next wheel click');
 
-    // The row's rank lets it stand no earlier than after the rows ranked before it
-    // and their own events.
-    const previous = fragment.reachedActions.reduce(
+    // The row's rank lets it stand no earlier than after the rows ranked before it,
+    // their own events and the automatic events that fire eagerly after them.
+    const ranked = fragment.reachedActions.reduce(
       (latest, action) =>
         (rankByKey.get(action.actionKey) ?? Infinity) < row.rank!
           ? Math.max(latest, (action.through ?? action.sequence - 1) + 1)
           : latest,
       1,
     );
+    const rowStands = new Set(fragment.reachedActions.map((action) => action.sequence));
+    let previous = ranked;
+    while (previous <= events.length && !rowStands.has(previous)) previous += 1;
     if (kind !== 'rush' && due !== undefined) {
       const bound = kind === 'flush' ? roomEntered : firstEndEffects;
       const today = Math.max(previous, due + 1);
@@ -489,25 +492,6 @@ function authoredWitnesses(): RowWitness[] {
   );
 }
 
-/**
- * Ship deliveries due as Combat1's deferred end effects apply: the Intro's end
- * effects already satisfy "after any end-effects event", so a row ranked right
- * after the wheel's reward pickup would run before Combat1's end effects, its
- * due spawn. These block dropping the phase.
- */
-const SHIP_COMBAT1_BLOCKERS = [
-  'execution/surface-scheduled-lifecycle O/surface-o-combat04 O_Combat04 due Combat1',
-  'execution/surface-shrine-deliveries O/surface-o-combat04 O_Combat04 due Combat1',
-  'execution/surface-shrine-deliveries O/surface-o-combat01 O_Combat01 due Combat1',
-  'execution/surface-shrine-rushed-unranked O/surface-o-combat04 O_Combat04 due Combat1',
-  'execution/surface-shrine-rushed-unranked O/surface-o-combat01 O_Combat01 due Combat1',
-  'execution/surface-start-q-opening O/surface-o-combat04 O_Combat04 due Combat1',
-  'execution/surface-start-q-opening O/surface-o-combat01 O_Combat01 due Combat1',
-  'checkpoint/surface-shrine-travel-deal O/surface-o-combat04 O_Combat04 due Combat1',
-  'checkpoint/surface-scheduled-lifecycle O/surface-o-combat04 O_Combat04 due Combat1',
-  'surface/surfaceShrineTravelDealProject O/surface-o-combat04 O_Combat04 due Combat1',
-];
-
 const rowLabel = (witness: RowWitness) =>
   `${witness.project} ${witness.room} due ${witness.stored ?? witness.kind}`;
 
@@ -550,18 +534,16 @@ describe('delivery and clocked-drop position under the due-spawn judgment', () =
     expect(disagreements).toEqual([]);
   });
 
-  it('stands after its due spawn and before its deadline, except the Ship Combat1 blockers', () => {
-    expect(all.filter((witness) => witness.failure !== undefined).map(rowLabel)).toEqual(
-      SHIP_COMBAT1_BLOCKERS,
-    );
+  it('stands after its due spawn and before its deadline', () => {
+    expect(all.filter((witness) => witness.failure !== undefined).map(rowLabel)).toEqual([]);
   });
 
-  it('adds no finding outside the Ship Combat1 blockers', () => {
+  it('adds no finding', () => {
     expect(
       all
         .filter((witness) => witness.assessment === 'valid' && witness.positionValid === false)
         .map(rowLabel),
-    ).toEqual(SHIP_COMBAT1_BLOCKERS);
+    ).toEqual([]);
     expect(all.filter((witness) => witness.assessment?.startsWith('invalid'))).toEqual([]);
   });
 });
