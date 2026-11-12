@@ -46,12 +46,20 @@ const switchLines = (imported: RunImport) =>
         }`,
     );
 
+/** The switch's rows, without the item content a placed claim records. */
 const switchActions = (imported: RunImport, occurrenceId: string) =>
-  occurrence(imported.project, occurrenceId).roomActions.order.filter(
-    (reference) =>
-      reference.kind === 'interactChallengeSwitch' ||
-      (reference.kind === 'interactAcquisitionEntry' && reference.siteKey === 'challengeSwitch'),
-  );
+  occurrence(imported.project, occurrenceId)
+    .roomActions.order.filter(
+      (reference) =>
+        reference.kind === 'interactChallengeSwitch' ||
+        (reference.kind === 'interactAcquisitionEntry' && reference.siteKey === 'challengeSwitch'),
+    )
+    .map((reference) => {
+      if (!('content' in reference)) return reference;
+      const { content: _content, ...rest } = reference;
+      void _content;
+      return rest;
+    });
 
 describe('run import of used challenge switches', () => {
   const PRESS = 8;
@@ -239,7 +247,7 @@ describe('run import of a switch in a Fields room', () => {
       nectarDropped: true,
     });
     // The exits, and so the press, wait for the cage loot.
-    expect(occurrence(imported.project, 'H-r26').roomActions.order.slice(-3)).toEqual([
+    expect(occurrence(imported.project, 'H-r26').roomActions.order.slice(-3)).toMatchObject([
       { kind: 'interactChallengeSwitch' },
       { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'reward' },
       { kind: 'interactAcquisitionEntry', siteKey: 'challengeSwitch', entryKey: 'nectar' },
