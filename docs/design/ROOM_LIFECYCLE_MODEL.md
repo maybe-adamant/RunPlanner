@@ -753,7 +753,16 @@ deliberate asymmetry: an encounter's spoils take the wheel's post-combat
 contact only when the phase is a Ship wheel phase (its spawn is that phase's
 encounter end), while a delivery or drop spawned by end effects takes the
 encounter-end contact of the phase whose end effects spawn it, even when those
-effects wait on a later wheel.
+effects wait on a later wheel. A Ship wheel's row whose phase the room no
+longer plays keeps that wheel's pre-combat contact, with no phase.
+
+Bounds compare by the order of their points in the structure. Distinct points
+share a place only where the game makes them simultaneous: a phase's end and
+its end effects when its script does not wait for the room to be ready, a Ship
+phase's end effects and the next phase's Wheels open, and the doors opening
+with the exits ready. Waiting end effects stand after their encounter end and
+before the next phase. A Fields cage's points stand where its row opens, so
+cages are ordered by their rows, not by place.
 
 ### Reroll presses
 
