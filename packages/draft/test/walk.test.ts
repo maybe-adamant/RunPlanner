@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createBiomeAddress,
   createDefaultRouteLoadout,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
   createProjectDocument,
+  createRouteAddress,
   type AuthoredTraitOfferTraits,
   type ProjectDocument,
   selectedExitTarget,
@@ -11,7 +16,7 @@ import {
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
-import type { DraftSpec } from '../src';
+import { draftProject, type DraftSpec } from '../src';
 import type { DraftWalk } from '../src/walk';
 import { DEFAULT_DRAFT_BUDGET } from '../src/generator';
 import { draftReport } from '../src/report';
@@ -227,6 +232,88 @@ describe('draft exit choice', () => {
     ).toBe(true);
     const selected = selectedExitTarget(exit);
     expect(selected && roomOf(selected.occurrenceId)).toBe('F_Story01');
+  });
+});
+
+describe('draft Tartarus Goal steering', () => {
+  it('takes the Preboss door, a Clockwork Goal, over a combat door beside it', () => {
+    const underworld = createProjectDocument(catalog, {
+      projectId: 'u',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 4,
+    });
+    const practice = applyProjectCommand(underworld, catalog, {
+      kind: 'ReplacePracticeStart',
+      route: createRouteAddress(underworld.route.routeKey),
+      startPoint: { biomeKey: 'I', point: 'opening' },
+    });
+    const spec: DraftSpec = {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: {},
+      },
+      basketByGiver: draftBasket(['ZeusWeaponBoon', 'ApolloCastBoon']),
+      rackKeepsakeKeys: [null, null, null],
+    };
+    // A seed whose Tartarus offers the Preboss beside a combat door and takes the combat.
+    const result = draftProject(catalog, practice, spec, 23);
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    const biome = result.project.route.biomes.find((b) => b.biomeKey === 'I')!;
+    const roomOf = (occurrenceId: string) =>
+      biome.topology!.occurrences.find((o) => o.occurrenceId === occurrenceId)?.gameName;
+    const kindOf = (occurrenceId: string) => catalog.rooms.byKey[roomOf(occurrenceId) ?? '']?.kind;
+    const decision = biome.topology!.decisions.find(
+      (candidate) =>
+        candidate.kind === 'exit' &&
+        candidate.normal.targets
+          .map((target) => kindOf(target.occurrenceId))
+          .sort()
+          .join() === 'Combat,Preboss',
+    );
+    if (decision?.kind !== 'exit' || decision.source.kind !== 'occurrence')
+      throw new Error('no Preboss beside a combat door');
+    // Drop what the run did past the combat door, then reopen the choice.
+    const biomeAddress = createBiomeAddress(result.project.route.routeKey, 'I');
+    const combat = decision.normal.targets.find(
+      (target) => kindOf(target.occurrenceId) === 'Combat',
+    )!;
+    const trimmed = applyProjectCommand(result.project, catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(biomeAddress, {
+        kind: 'occurrence',
+        occurrenceId: combat.occurrenceId,
+      }),
+    });
+    const open = simulateProjectAssembly(
+      catalog,
+      applyProjectCommand(trimmed, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(biomeAddress, decision.source),
+        value: { kind: 'unresolved' },
+      }),
+    );
+    const taken = (seed: number) => {
+      const walk = startDraftWalk(practice, { ...spec, pursueTartarusGoal: true }, seed, {
+        from: open,
+      });
+      walk.runBiome(practice.route.itineraryBiomeKeys.indexOf('I'), walk.steps + 1);
+      const exit = walk.project.route.biomes
+        .find((b) => b.biomeKey === 'I')!
+        .topology!.decisions.find(
+          (candidate) =>
+            candidate.kind === 'exit' &&
+            candidate.source.kind === 'occurrence' &&
+            decision.source.kind === 'occurrence' &&
+            candidate.source.occurrenceId === decision.source.occurrenceId,
+        );
+      const selected = exit?.kind === 'exit' ? selectedExitTarget(exit) : undefined;
+      return selected && kindOf(selected.occurrenceId);
+    };
+    // The Preboss door is a Clockwork Goal, so rushing the Goal takes it on every seed.
+    const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
+    expect(seeds.map(taken)).toEqual(seeds.map(() => 'Preboss'));
   });
 });
 

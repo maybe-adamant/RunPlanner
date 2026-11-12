@@ -46,6 +46,7 @@ export {
   seaStarDuplicateSourceIsActive,
 } from './acquisition/sea-star';
 export { activeRoomActionReferences } from './room-actions/state';
+export { clockworkExitRewards, type ClockworkDoorReward } from './clockwork-doors';
 export {
   biomePlanContentSource,
   roomActionContentMatches,

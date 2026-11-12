@@ -38,6 +38,7 @@ import {
   resolveBiomeStart,
   routeRoomDeclaration,
   DRAFT_OPTIONS,
+  clockworkExitRewards,
 } from '@run-planner/engine/authored-project';
 import {
   locallyValidRewardOffers,
@@ -93,17 +94,6 @@ import type { DraftWorldProduct } from './world';
 
 /** A pursued Clockwork Goal door: above any boon door (at most 90), below a story room (200). */
 const TARTARUS_GOAL_WEIGHT = 150;
-
-/** A Clockwork combat room left without an authored reward resolves to a Goal. */
-function clockworkGoal(catalog: Catalog, routeKey: string, occurrence: RoomOccurrence): boolean {
-  const mode = routeRoomDeclaration(catalog.rooms.byKey[occurrence.gameName], routeKey)?.mode;
-  return (
-    mode?.kind === 'authored' &&
-    mode.templateKey === 'ClockworkCombat' &&
-    occurrence.state.kind === 'counted' &&
-    occurrence.state.reward === null
-  );
-}
 
 /** An offered reward's exact result; absent when its candidate context is unavailable. */
 function rewardOfferResult(evaluation: ProjectCandidateEvaluation) {
@@ -1068,6 +1058,7 @@ export class DraftWalk {
       const reward = rewardOf(this.occurrence(selection.biomeKey, target.occurrenceId));
       return reward !== undefined && reward !== null && this.steering.queuedNewGod(reward.offer);
     });
+    const clockwork = clockworkExitRewards(this.catalog, this.project, selection);
     const ordered = this.weighted(targets, (target) => {
       const occurrence = this.occurrence(selection.biomeKey, target.occurrenceId);
       if (occurrence === undefined) return 1;
@@ -1084,10 +1075,7 @@ export class DraftWalk {
         reward !== undefined && reward !== null
           ? Math.max(this.steering.offerWeight(reward.offer), 0.01)
           : 1;
-      if (
-        this.spec.pursueTartarusGoal === true &&
-        clockworkGoal(this.catalog, this.project.route.routeKey, occurrence)
-      )
+      if (this.spec.pursueTartarusGoal === true && clockwork.get(target.exitKey) === 'goal')
         return TARTARUS_GOAL_WEIGHT;
       const outranked =
         newGodDoor && this.roomOf(occurrence.gameName)?.kind === 'Shop' ? SHOP_OUTRANKED_FACTOR : 1;

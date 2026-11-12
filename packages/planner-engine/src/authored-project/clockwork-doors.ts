@@ -1,5 +1,6 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../catalog-schema';
-import type { BiomeTopology, ExitDecision, OccurrenceId } from './model';
+import type { ExitDecisionAddress, ExitSelectionAddress } from './addresses';
+import type { BiomeTopology, ExitDecision, OccurrenceId, ProjectDocument } from './model';
 import {
   additionalExitsForDecision,
   batchTakesOverNormalDoors,
@@ -160,4 +161,33 @@ export function forcedDoorReward(
   occurrenceId: OccurrenceId,
 ): ForcedRewardType | undefined {
   return doors?.rewardsByOccurrence.get(occurrenceId) === 'goal' ? 'ClockworkGoal' : undefined;
+}
+
+/**
+ * Each door's Clockwork reward an exit decision on the selected spine offers,
+ * by exit key: the forced Goal or a reward counted toward it, as its batch
+ * derives them from the counters earlier selected doors left. Empty for any
+ * other decision, outside a Clockwork biome, or while its non-goal cap is
+ * unauthored.
+ */
+export function clockworkExitRewards(
+  catalog: Catalog,
+  project: ProjectDocument,
+  decision: ExitDecisionAddress | ExitSelectionAddress,
+): ReadonlyMap<string, ClockworkDoorReward> {
+  const plan = project.route.biomes.find((biome) => biome.biomeKey === decision.biomeKey);
+  const layout = catalog.biomeLayouts.byKey[decision.biomeKey];
+  if (
+    decision.routeKey !== project.route.routeKey ||
+    decision.source.kind !== 'occurrence' ||
+    plan === undefined ||
+    plan.topology === null ||
+    layout === undefined
+  )
+    return new Map();
+  return (
+    clockworkDoors(catalog, layout, plan.topology, plan.state)?.batches.get(
+      decision.source.occurrenceId,
+    )?.rewards ?? new Map()
+  );
 }
