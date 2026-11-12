@@ -1,7 +1,7 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type { ResolvedEncounterPhase } from '../encounters/model';
-import { CHALLENGE_SWITCH_ENVELOPE_KEY } from '../encounters/challenge-switch-phase';
+import { CHALLENGE_SWITCH_ENVELOPE_KEY } from '../../authored-project/acquisition/challenge-switch';
 import type { EncounterHistoryEntry, HistoryStateView } from './model';
 
 export interface RecentEncounterEnvelopeSlotFact {

@@ -65,7 +65,14 @@ function normalizeScript(raw: RawEncounterDefinitionDeclaration, path: string): 
     ...(raw.goldBet === undefined ? [] : (['goldBet'] as const)),
     ...(raw.nemesisRandomEvent === undefined ? [] : (['nemesisRandomEvent'] as const)),
   ];
+  const press = script.press;
+  if (press !== undefined && (script.gate !== undefined || script.waitReadyBeforeEnd === true))
+    fail(`${path}.press`, 'a press fight has no gate and no ready wait');
   return Object.freeze({
+    beginTrigger: press === undefined ? 'automatic' : 'pressRow',
+    endEffects: press === undefined ? 'run' : 'none',
+    records: press?.records ?? true,
+    generatedAt: press?.generatedAt ?? 'preparation',
     gate: normalizeGate(script.gate, `${path}.gate`),
     waitReadyBeforeEnd: script.waitReadyBeforeEnd === true,
     endsByInteraction: raw.nemesisRandomEvent !== undefined,

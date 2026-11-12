@@ -66,6 +66,7 @@ function roster(overrides: Partial<TestRoster> = {}): TestRoster {
       profileKey: 'StandardRewardRoom',
       activeEncounterSlotKeys: Object.freeze([]),
       phases: Object.freeze([]),
+      pressFights: [],
       events: Object.freeze(testGraphEvents([], { generatesOutgoing: true })),
     }),
     rows: Object.freeze([]),
@@ -134,6 +135,7 @@ function structure(
     profileKey,
     activeEncounterSlotKeys: Object.freeze(encounterPhases.map((phase) => phase.slotKey)),
     phases: Object.freeze(phases),
+    pressFights: [],
     events: Object.freeze(events),
   });
 }

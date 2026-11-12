@@ -126,12 +126,14 @@ describe('doors opening without outgoing generation', () => {
     profileKey: 'EphyraSideRoom',
     activeEncounterSlotKeys: ['Encounter'],
     phases: [{ phaseKey: 'Encounter' }],
+    pressFights: [],
     events: gateFreeGraphEvents(['Encounter'], false),
   };
   const postboss: RoomEventGraph = {
     profileKey: 'PostBossRoom',
     activeEncounterSlotKeys: [],
     phases: [],
+    pressFights: [],
     events: gateFreeGraphEvents([], false),
   };
 

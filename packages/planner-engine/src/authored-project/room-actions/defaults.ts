@@ -16,7 +16,7 @@ import {
   type RoomActionContribution,
   type RoomActionDomain,
 } from './domain';
-import { roomActionOpeningPoint, roomEventPlaces } from './event-graph';
+import { fieldsRoom, roomActionOpeningPoint, roomEventPlaces } from './event-graph';
 import { roomLifecycleProfileKey, roomRunsProducer } from './lifecycle-profile';
 import { clockworkDoors, forcedDoorReward } from '../clockwork-doors';
 import { fieldsDefaultActiveCageCount } from '../fields';
@@ -57,10 +57,7 @@ function score(
     action.bounds.spawn.kind === 'encounterEnd' || action.bounds.spawn.kind === 'endEffects'
       ? action.bounds.spawn.phaseKey
       : undefined;
-  const fields = domain.eventGraph.events.some(
-    (event) => event.kind === 'encounterBegun' && event.trigger.kind === 'action',
-  );
-  if (!fields)
+  if (!fieldsRoom(domain.eventGraph))
     return roomEventPlaces(domain.eventGraph)(roomActionOpeningPoint(action.bounds)) * 100;
   const phaseOrder = fieldsPhaseOrder(catalog, domain, order);
   if (reference.kind === 'interactEncounter' || reference.kind === 'interactGorgon') {

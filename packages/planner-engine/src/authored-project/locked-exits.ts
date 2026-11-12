@@ -60,6 +60,16 @@ export function lockedExitsIssue(
 }
 
 /** The locked-door fight a host's press starts. */
+/**
+ * A locked door's fight is a phase of its room outside the room's envelope,
+ * one per door: these keys name it, never a declared slot.
+ */
+export const UNLOCK_EXIT_ENVELOPE_KEY = 'unlockExit';
+
+export function unlockExitPhaseKey(exitKey: string): string {
+  return `unlockExit:${exitKey}`;
+}
+
 export function unlockExitEncounterKey(catalog: Catalog, gameName: string): string | undefined {
   return extraExitLockHost(catalog, gameName)?.encounterKey;
 }

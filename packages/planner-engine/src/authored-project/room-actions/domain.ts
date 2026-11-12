@@ -86,7 +86,9 @@ import {
 } from '../acquisition/entry-source-family';
 import {
   assembleRoomEventGraph,
-  nextWheelPhaseKey,
+  fieldsRoom,
+  nextWheelsOpen,
+  phaseOfWheel,
   roomFightsEnd,
   runsOneEncounter,
   type RoomActionBounds,
@@ -194,7 +196,7 @@ function fieldsBounds(phaseKey: string | undefined): RoomActionBounds {
 
 /** Spawned by a phase's end effects; a Ship phase's wait for the next wheel's choice. */
 function afterEndEffects(graph: RoomEventGraph, phaseKey: string): RoomActionBounds {
-  const next = nextWheelPhaseKey(graph, phaseKey);
+  const next = nextWheelsOpen(graph, phaseKey)?.phaseKey;
   return bounds(
     frozen({ kind: 'endEffects' as const, phaseKey }),
     next === undefined ? DOORS_OPENED : frozen({ kind: 'gate' as const, phaseKey: next }),
@@ -202,7 +204,7 @@ function afterEndEffects(graph: RoomEventGraph, phaseKey: string): RoomActionBou
 }
 
 function wheelPhaseKey(graph: RoomEventGraph, wheelKey: string): string {
-  return graph.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey ?? wheelKey;
+  return phaseOfWheel(graph, wheelKey) ?? wheelKey;
 }
 
 /** A Ship wheel's choice and what stands with it: after its roll, before its phase's Combat. */
@@ -233,13 +235,6 @@ function shopPurchaseBounds(graph: RoomEventGraph): RoomActionBounds {
   return graph.events.some((event) => event.kind === 'doorsOpened' && event.generatesOutgoing)
     ? AFTER_DOORS
     : afterCombat(graph);
-}
-
-/** Whether the room's encounters start at the player's verb (Fields cages). */
-function fieldsRoom(graph: RoomEventGraph): boolean {
-  return graph.events.some(
-    (event) => event.kind === 'encounterBegun' && event.trigger.kind === 'action',
-  );
 }
 
 /**

@@ -18,6 +18,7 @@ const structure: RoomEventGraph = {
   profileKey: 'FieldsCombatRoom',
   activeEncounterSlotKeys: ['Cage01', 'Cage02'],
   phases: [{ phaseKey: 'Cage01' }, { phaseKey: 'Cage02' }],
+  pressFights: [],
   events: testGraphEvents([{ phaseKey: 'Cage01' }, { phaseKey: 'Cage02' }], {
     cages: true,
     generatesOutgoing: false,
@@ -28,6 +29,7 @@ const sequence: RoomEventGraph = {
   profileKey: 'PCombatRoom',
   activeEncounterSlotKeys: ['Cage01', 'Cage02'],
   phases: [{ phaseKey: 'Cage01' }, { phaseKey: 'Cage02' }],
+  pressFights: [],
   events: gateFreeGraphEvents(['Cage01', 'Cage02'], false),
 };
 function row(
@@ -102,6 +104,7 @@ describe('required action scope', () => {
           profileKey: 'OpeningRoom',
           activeEncounterSlotKeys: [],
           phases: [],
+          pressFights: [],
           events: gateFreeGraphEvents([], false),
         },
       )[0]?.requiredScope,

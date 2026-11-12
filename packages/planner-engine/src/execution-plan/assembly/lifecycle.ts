@@ -1,6 +1,8 @@
-import type {
-  RoomActionBounds,
-  RoomEventGraph,
+import {
+  fieldsRoom,
+  wheelOfPhase,
+  type RoomActionBounds,
+  type RoomEventGraph,
 } from '../../authored-project/room-actions/event-graph';
 import type { ExecutionLifecycleWindow } from '../model';
 
@@ -13,8 +15,7 @@ export function wireWindow(
   graph: RoomEventGraph,
 ): ExecutionLifecycleWindow {
   const { spawn, enabler } = bounds;
-  const phaseWheel = (phaseKey: string) =>
-    graph.phases.find((phase) => phase.phaseKey === phaseKey)?.rewardWheelKey;
+  const phaseWheel = (phaseKey: string) => wheelOfPhase(graph, phaseKey);
   // 1. Usable once the doors open.
   if (enabler?.kind === 'doorsOpened' || enabler?.kind === 'exitsReady')
     return Object.freeze({ kind: 'postOutgoing' });
@@ -28,10 +29,7 @@ export function wireWindow(
   if (spoilsWheel !== undefined)
     return Object.freeze({ kind: 'shipPostCombat', wheelKey: spoilsWheel });
   // 4. A Fields cage's freed reward and what its fight spawns share the cage's encounter end.
-  if (
-    spawn.kind === 'encounterEnd' &&
-    graph.events.some((event) => event.kind === 'encounterBegun' && event.trigger.kind === 'action')
-  )
+  if (spawn.kind === 'encounterEnd' && fieldsRoom(graph))
     return Object.freeze({ kind: 'encounterEnd', phaseKey: spawn.phaseKey });
   // 5. Spawned by another encounter's end effects.
   if (spawn.kind === 'endEffects')

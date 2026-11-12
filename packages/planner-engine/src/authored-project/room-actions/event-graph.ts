@@ -14,6 +14,16 @@ import {
   encounterBindingsBySlot,
   selectedEncounterAuthoringProfileKey,
 } from '../room-state/encounter-envelope';
+import {
+  CHALLENGE_SWITCH_ENVELOPE_KEY,
+  CHALLENGE_SWITCH_PHASE_KEY,
+  challengeSwitchEncounterKey,
+} from '../acquisition/challenge-switch';
+import {
+  UNLOCK_EXIT_ENVELOPE_KEY,
+  unlockExitEncounterKey,
+  unlockExitPhaseKey,
+} from '../locked-exits';
 
 /**
  * A point of the room's event graph that a row's bounds name. Points that
@@ -143,6 +153,27 @@ export interface RoomEventGraphPhase {
   readonly script?: EncounterScript;
   /** The phase can host an outcome choice, or the room authors one for it. */
   readonly hostsOutcome?: true;
+  /**
+   * A phase a row places in the room (a Fields cage or Nemesis event, ordered
+   * by its row, or a press fight) happens where that row stands, so its points
+   * have no place of their own: they stand at the point its row opens at.
+   */
+  readonly standsAt?: RoomEventPoint;
+}
+
+/**
+ * A fight a placed row's press begins and starts outside the room's envelope:
+ * a challenge switch's (`StartChallengeEncounter`) or a locked door's
+ * (`AttemptUseDoor`). It has no end effects; a left switch's never ends.
+ */
+export interface RoomPressFight extends RoomEventGraphPhase {
+  readonly script: EncounterScript;
+  readonly envelopeKey: string;
+  readonly encounterKey: string;
+  readonly press: RoomActionReference;
+  readonly standsAt: RoomEventPoint;
+  /** False for a switch left mid-fight (`EndedEarly`, RoomLogic.lua:4213-4216): it never ends. */
+  readonly completes: boolean;
 }
 
 export interface RoomEventGraph {
@@ -150,6 +181,8 @@ export interface RoomEventGraph {
   readonly activeEncounterSlotKeys: readonly string[];
   /** Encounter phases in run order: Fields cages by their activation order. */
   readonly phases: readonly RoomEventGraphPhase[];
+  /** The room's press fights, in press order, after its doors open. */
+  readonly pressFights: readonly RoomPressFight[];
   readonly events: readonly RoomEvent[];
 }
 
@@ -159,6 +192,54 @@ function frozen<T>(value: T): T {
 
 const AUTOMATIC = frozen({ kind: 'automatic' as const });
 const DOORS_PREDICATE = frozen({ kind: 'doorsPredicate' as const });
+const ROOM_ENTERED_POINT = frozen({ kind: 'roomEntered' as const });
+// A switch is usable once the doors open (`DoUnlockRoomExits`), a locked door once the exits are ready.
+const DOORS_OPENED_POINT = frozen({ kind: 'doorsOpened' as const });
+
+/** The fight a placed row's press begins, when the room holds one there. */
+function pressFight(
+  catalog: Catalog,
+  occurrence: RoomOccurrence,
+  press: RoomActionReference,
+): RoomPressFight | undefined {
+  const observed = occurrence.challengeSwitch;
+  const fight =
+    press.kind === 'interactChallengeSwitch' && observed !== undefined
+      ? {
+          phaseKey: CHALLENGE_SWITCH_PHASE_KEY,
+          envelopeKey: CHALLENGE_SWITCH_ENVELOPE_KEY,
+          encounterKey: challengeSwitchEncounterKey(
+            catalog,
+            occurrence.gameName,
+            observed.variantKey,
+          ),
+          completes: observed.outcome !== 'left',
+        }
+      : press.kind === 'unlockExit' && (occurrence.lockedExits ?? []).includes(press.exitKey)
+        ? {
+            phaseKey: unlockExitPhaseKey(press.exitKey),
+            envelopeKey: UNLOCK_EXIT_ENVELOPE_KEY,
+            encounterKey: unlockExitEncounterKey(catalog, occurrence.gameName),
+            completes: true,
+          }
+        : undefined;
+  const definition =
+    fight?.encounterKey === undefined
+      ? undefined
+      : catalog.encounterDefinitions.byKey[fight.encounterKey];
+  if (fight === undefined || definition === undefined) return undefined;
+  if (definition.script.beginTrigger !== 'pressRow')
+    throw new Error(`${occurrence.gameName} ${definition.key} is not a press fight`);
+  return frozen({
+    phaseKey: fight.phaseKey,
+    script: definition.script,
+    envelopeKey: fight.envelopeKey,
+    encounterKey: definition.key,
+    press,
+    standsAt: DOORS_OPENED_POINT,
+    completes: fight.completes,
+  });
+}
 
 /**
  * Whether the room runs one encounter on its own: not native
@@ -282,6 +363,7 @@ export function assembleRoomEventGraph(options: {
             ...wheel,
             script: directDefinition.script,
             hostsOutcome: true as const,
+            ...(fields ? { standsAt: ROOM_ENTERED_POINT } : {}),
           }),
           definition: directDefinition,
         },
@@ -301,6 +383,7 @@ export function assembleRoomEventGraph(options: {
             ? {}
             : { script: (directDefinition ?? candidates[0])!.script }),
           ...(hostsOutcome && !bossEnding ? { hostsOutcome: true as const } : {}),
+          ...(fields ? { standsAt: ROOM_ENTERED_POINT } : {}),
         }),
         ...((directDefinition ?? candidates[0]) === undefined
           ? {}
@@ -465,15 +548,47 @@ export function assembleRoomEventGraph(options: {
       trigger: DOORS_PREDICATE,
     }),
   );
+  // Each press begins and starts its fight at once.
+  const pressFights = options.occurrence.roomActions.order.flatMap((reference) => {
+    const fight = pressFight(options.catalog, options.occurrence, reference);
+    return fight === undefined ? [] : [fight];
+  });
+  for (const fight of pressFights) {
+    events.push(
+      frozen({
+        kind: 'encounterBegun',
+        key: `encounterBegun:${fight.phaseKey}`,
+        phaseKey: fight.phaseKey,
+        trigger: frozen({ kind: 'action', action: fight.press }),
+        markers: 'merged',
+      }),
+      frozen({
+        kind: 'encounterStarted',
+        key: `encounterStarted:${fight.phaseKey}`,
+        phaseKey: fight.phaseKey,
+        trigger: AUTOMATIC,
+      }),
+    );
+    if (fight.completes)
+      events.push(
+        frozen({
+          kind: 'encounterEnd',
+          key: `encounterEnd:${fight.phaseKey}`,
+          phaseKey: fight.phaseKey,
+          trigger: AUTOMATIC,
+        }),
+      );
+  }
   return frozen({
     profileKey: options.lifecycleProfileKey,
     activeEncounterSlotKeys: frozen(activeSlots.map((slot) => slot.key)),
     phases: frozen(ordered.map((slot) => slot.phase)),
+    pressFights: frozen(pressFights),
     events: frozen(events),
   });
 }
 
-/** Whether an event belongs to the phases and wheels kept. */
+/** Whether an event belongs to the phases and wheels kept; press fights are always kept. */
 function eventActive(
   event: RoomEvent,
   active: ReadonlySet<string>,
@@ -493,17 +608,27 @@ function eventActive(
   }
 }
 
+function activeKeys(graph: RoomEventGraph, phaseKeys: Iterable<string>) {
+  const active = new Set(phaseKeys);
+  const wheelKeys = new Set(
+    graph.phases.flatMap((phase) =>
+      active.has(phase.phaseKey) && phase.rewardWheelKey !== undefined
+        ? [phase.rewardWheelKey]
+        : [],
+    ),
+  );
+  for (const fight of graph.pressFights) active.add(fight.phaseKey);
+  return { active, wheelKeys };
+}
+
 /** Restrict one graph to an engine-assessed active phase prefix. */
 export function scopeRoomEventGraph(
   graph: RoomEventGraph,
   activePhaseKeys: readonly string[],
 ): RoomEventGraph {
-  const active = new Set(activePhaseKeys);
+  const { active, wheelKeys } = activeKeys(graph, activePhaseKeys);
   const phases = graph.phases.filter((phase) => active.has(phase.phaseKey));
-  const activeWheelKeys = new Set(
-    phases.flatMap((phase) => (phase.rewardWheelKey === undefined ? [] : [phase.rewardWheelKey])),
-  );
-  const events = graph.events.filter((event) => eventActive(event, active, activeWheelKeys));
+  const events = graph.events.filter((event) => eventActive(event, active, wheelKeys));
   if (
     phases.length === graph.phases.length &&
     events.length === graph.events.length &&
@@ -515,28 +640,56 @@ export function scopeRoomEventGraph(
     profileKey: graph.profileKey,
     activeEncounterSlotKeys: frozen(graph.activeEncounterSlotKeys.filter((key) => active.has(key))),
     phases: frozen(phases),
+    pressFights: graph.pressFights,
     events: frozen(events),
   });
 }
 
 /** Whether a scoped phase prefix keeps this event. */
 export function roomEventActive(graph: RoomEventGraph, event: RoomEvent): boolean {
-  const active = new Set(graph.activeEncounterSlotKeys);
-  const activeWheelKeys = new Set(
-    graph.phases.flatMap((phase) =>
-      phase.rewardWheelKey === undefined ? [] : [phase.rewardWheelKey],
-    ),
-  );
-  return eventActive(event, active, activeWheelKeys);
+  const { active, wheelKeys } = activeKeys(graph, graph.activeEncounterSlotKeys);
+  return eventActive(event, active, wheelKeys);
 }
 
-/** Whether the player's verb starts the phase's encounter wherever its row stands (a Fields cage). */
-function verbActivated(graph: RoomEventGraph, phaseKey: string): boolean {
+function cageBegun(event: RoomEvent): boolean {
+  return (
+    event.kind === 'encounterBegun' &&
+    event.trigger.kind === 'action' &&
+    event.trigger.action.kind === 'completeFieldsCage'
+  );
+}
+
+/** Whether the room's envelope encounters begin at a cage's row (Fields). */
+export function fieldsRoom(graph: RoomEventGraph): boolean {
+  return graph.events.some(cageBegun);
+}
+
+/** Whether a Fields cage's row begins this phase's encounter. */
+export function cagePhase(graph: RoomEventGraph, phaseKey: string): boolean {
   return graph.events.some(
-    (event) =>
-      event.kind === 'encounterBegun' &&
-      event.phaseKey === phaseKey &&
-      event.trigger.kind === 'action',
+    (event) => cageBegun(event) && 'phaseKey' in event && event.phaseKey === phaseKey,
+  );
+}
+
+/** Whether the room plays this envelope phase. */
+export function playsPhase(graph: RoomEventGraph, phaseKey: string): boolean {
+  return graph.phases.some((phase) => phase.phaseKey === phaseKey);
+}
+
+/** The phase a Ship wheel belongs to. */
+export function phaseOfWheel(graph: RoomEventGraph, wheelKey: string): string | undefined {
+  return graph.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey;
+}
+
+/** The Ship wheel a phase opens, when it opens one. */
+export function wheelOfPhase(graph: RoomEventGraph, phaseKey: string): string | undefined {
+  return graph.phases.find((phase) => phase.phaseKey === phaseKey)?.rewardWheelKey;
+}
+
+function graphPhase(graph: RoomEventGraph, phaseKey: string): RoomEventGraphPhase | undefined {
+  return (
+    graph.phases.find((phase) => phase.phaseKey === phaseKey) ??
+    graph.pressFights.find((fight) => fight.phaseKey === phaseKey)
   );
 }
 
@@ -545,10 +698,9 @@ function verbActivated(graph: RoomEventGraph, phaseKey: string): boolean {
  * only the order of places within one graph is meaningful. Points that
  * happen together share a place: a phase's end effects apply at its end
  * unless its script waits for the room to be ready, and the next phase's
- * wheels open with them. A room whose encounters the player starts (Fields
- * cages) gives its phases no fixed place: they happen where their rows stand,
- * so every phase point stands with room entry. A point the room does not
- * play stands at room entry, a gate or wheel at the very start.
+ * wheels open with them. A phase a row places stands where that row opens.
+ * A point the room does not play stands at room entry, a gate or wheel at
+ * the very start.
  */
 export function roomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) => number {
   // Each graph point takes a before and an after place, in graph order.
@@ -567,51 +719,43 @@ export function roomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) 
   const index = new Map(order.map((key, position) => [key, position]));
   const before = (key: string) => (index.get(key) ?? 0) * 2;
   const after = (key: string) => (index.get(key) ?? 0) * 2 + 1;
-  const free = graph.phases.some((phase) => verbActivated(graph, phase.phaseKey));
   const phaseIndex = (phaseKey: string) =>
     graph.phases.findIndex((phase) => phase.phaseKey === phaseKey);
-  const wheelPhase = (wheelKey: string) =>
-    graph.phases.findIndex((phase) => phase.rewardWheelKey === wheelKey);
   const place = (point: RoomEventPoint): number => {
     switch (point.kind) {
       case 'roomEntered':
         return 1;
       case 'wheelsOpen': {
-        const at = wheelPhase(point.wheelKey);
-        if (at < 0) return 0;
-        return at > 0
+        const phaseKey = phaseOfWheel(graph, point.wheelKey);
+        if (phaseKey === undefined) return 0;
+        return phaseIndex(phaseKey) > 0
           ? after(`wheelsOpen:${point.wheelKey}`)
-          : before(`encounterStarted:${graph.phases[at]!.phaseKey}`);
-      }
-      case 'gate': {
-        if (free) return 1;
-        const at = phaseIndex(point.phaseKey);
-        if (at < 0) return 0;
-        return index.has(`gate:${point.phaseKey}`)
-          ? after(`gate:${point.phaseKey}`)
-          : before(`encounterStarted:${point.phaseKey}`);
-      }
-      case 'encounterStarted':
-        return free || phaseIndex(point.phaseKey) < 0
-          ? 1
-          : after(`encounterStarted:${point.phaseKey}`);
-      case 'encounterEnd':
-        return free || phaseIndex(point.phaseKey) < 0 ? 1 : after(`encounterEnd:${point.phaseKey}`);
-      case 'endEffects': {
-        const at = phaseIndex(point.phaseKey);
-        if (free || at < 0) return 1;
-        const next = nextWheelsOpen(graph, point.phaseKey);
-        if (next !== undefined) return after(`wheelsOpen:${next.wheelKey}`);
-        return (
-          after(`encounterEnd:${point.phaseKey}`) +
-          (graph.phases[at]!.script?.waitReadyBeforeEnd === true ? 1 : 0)
-        );
+          : before(`encounterStarted:${phaseKey}`);
       }
       case 'doorsOpened':
       case 'exitsReady':
         return index.has('doorsOpened') ? after('doorsOpened') : before('leave');
       case 'leave':
         return after('leave');
+    }
+    const phase = graphPhase(graph, point.phaseKey);
+    if (phase?.standsAt !== undefined) return place(phase.standsAt);
+    switch (point.kind) {
+      case 'gate':
+        if (phase === undefined) return 0;
+        return index.has(`gate:${point.phaseKey}`)
+          ? after(`gate:${point.phaseKey}`)
+          : before(`encounterStarted:${point.phaseKey}`);
+      case 'encounterStarted':
+        return phase === undefined ? 1 : after(`encounterStarted:${point.phaseKey}`);
+      case 'encounterEnd':
+        return phase === undefined ? 1 : after(`encounterEnd:${point.phaseKey}`);
+      case 'endEffects': {
+        if (phase === undefined) return 1;
+        const next = nextWheelsOpen(graph, point.phaseKey);
+        if (next !== undefined) return after(`wheelsOpen:${next.wheelKey}`);
+        return after(`encounterEnd:${point.phaseKey}`) + (phase.script?.waitReadyBeforeEnd ? 1 : 0);
+      }
     }
   };
   return place;
@@ -621,12 +765,12 @@ export function roomEventPlaces(graph: RoomEventGraph): (point: RoomEventPoint) 
 export function roomEventPointResolves(graph: RoomEventGraph, point: RoomEventPoint): boolean {
   switch (point.kind) {
     case 'wheelsOpen':
-      return graph.phases.some((phase) => phase.rewardWheelKey === point.wheelKey);
+      return phaseOfWheel(graph, point.wheelKey) !== undefined;
     case 'gate':
     case 'encounterStarted':
     case 'encounterEnd':
     case 'endEffects':
-      return graph.phases.some((phase) => phase.phaseKey === point.phaseKey);
+      return graphPhase(graph, point.phaseKey) !== undefined;
     case 'roomEntered':
     case 'doorsOpened':
     case 'exitsReady':
@@ -660,9 +804,4 @@ export function nextWheelsOpen(
     (event): event is Extract<RoomEvent, { readonly kind: 'wheelsOpen' }> =>
       event.kind === 'wheelsOpen' && event.afterPhaseKey === phaseKey,
   );
-}
-
-/** The phase whose wheels open with this phase's end effects, when one does. */
-export function nextWheelPhaseKey(graph: RoomEventGraph, phaseKey: string): string | undefined {
-  return nextWheelsOpen(graph, phaseKey)?.phaseKey;
 }

@@ -2062,6 +2062,10 @@ describe('encounter scripts', () => {
       ),
     ).toEqual({
       GeneratedF: {
+        beginTrigger: 'automatic',
+        endEffects: 'run',
+        records: true,
+        generatedAt: 'preparation',
         gate: { kind: 'none' },
         waitReadyBeforeEnd: false,
         endsByInteraction: false,
@@ -2069,6 +2073,10 @@ describe('encounter scripts', () => {
         hostsOutcome: ['gorgon'],
       },
       GeneratedO_Intro01: {
+        beginTrigger: 'automatic',
+        endEffects: 'run',
+        records: true,
+        generatedAt: 'preparation',
         gate: { kind: 'none' },
         waitReadyBeforeEnd: true,
         endsByInteraction: false,
@@ -2076,6 +2084,10 @@ describe('encounter scripts', () => {
         hostsOutcome: [],
       },
       HeraclesCombatO: {
+        beginTrigger: 'automatic',
+        endEffects: 'run',
+        records: true,
+        generatedAt: 'preparation',
         gate: { kind: 'none' },
         waitReadyBeforeEnd: true,
         endsByInteraction: false,
@@ -2083,12 +2095,56 @@ describe('encounter scripts', () => {
         hostsOutcome: [],
       },
       NemesisRandomEvent: {
+        beginTrigger: 'automatic',
+        endEffects: 'run',
+        records: true,
+        generatedAt: 'preparation',
         gate: { kind: 'none' },
         waitReadyBeforeEnd: false,
         endsByInteraction: true,
         endsWithBossDefeated: false,
         hostsOutcome: ['nemesisRandomEvent'],
       },
+    });
+  });
+
+  it('declares the switch and locked-door fights as press fights', () => {
+    const press = (key: string) => {
+      const script = catalog.encounterDefinitions.byKey[key]?.script;
+      return script === undefined
+        ? undefined
+        : {
+            beginTrigger: script.beginTrigger,
+            endEffects: script.endEffects,
+            records: script.records,
+            generatedAt: script.generatedAt,
+          };
+    };
+    const switchFight = {
+      beginTrigger: 'pressRow',
+      endEffects: 'none',
+      records: true,
+      generatedAt: 'entry',
+    };
+    expect({
+      TimeChallengeG: press('TimeChallengeG'),
+      PerfectClearChallengeF: press('PerfectClearChallengeF'),
+      EliteChallengeQ: press('EliteChallengeQ'),
+      GeneratedG_ExtraDoor: press('GeneratedG_ExtraDoor'),
+      pressFights: catalog.encounterDefinitions.values.filter(
+        (definition) => definition.script.beginTrigger === 'pressRow',
+      ).length,
+    }).toEqual({
+      TimeChallengeG: switchFight,
+      PerfectClearChallengeF: switchFight,
+      EliteChallengeQ: switchFight,
+      GeneratedG_ExtraDoor: {
+        beginTrigger: 'pressRow',
+        endEffects: 'none',
+        records: false,
+        generatedAt: 'start',
+      },
+      pressFights: 25,
     });
   });
 

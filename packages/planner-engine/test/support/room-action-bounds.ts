@@ -1,5 +1,5 @@
 import {
-  nextWheelPhaseKey,
+  nextWheelsOpen,
   roomFightsEnd,
   type RoomActionBounds,
   type RoomEventGraph,
@@ -47,7 +47,7 @@ export function boundsForPlacement(
         deadline: doors,
       };
     case 'afterEncounterEnd': {
-      const next = nextWheelPhaseKey(graph, placement.phaseKey);
+      const next = nextWheelsOpen(graph, placement.phaseKey)?.phaseKey;
       return {
         spawn: point({ kind: 'endEffects', phaseKey: placement.phaseKey }),
         deadline: next === undefined ? doors : point({ kind: 'gate', phaseKey: next }),

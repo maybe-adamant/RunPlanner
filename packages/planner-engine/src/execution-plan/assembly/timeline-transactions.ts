@@ -518,7 +518,13 @@ export function executionTimelineTransactions(
     if (timeline.kind === 'boundary') {
       const boundary = timeline.boundary;
       if (boundary.kind === 'roomEntered') continue;
-      if (boundary.kind === 'encounterStarted') {
+      // A press fight runs at its row's press.
+      if (
+        boundary.kind === 'encounterStarted' &&
+        !room.roomLifecycleTimeline.graph.pressFights.some(
+          (fight) => fight.phaseKey === boundary.phaseKey,
+        )
+      ) {
         const phase = room.encounterPhases.find(
           (candidate) => candidate.slotKey === boundary.phaseKey,
         );

@@ -54,6 +54,11 @@ export interface RawEncounterEnvelopeDeclaration {
 export interface RawEncounterScriptDeclaration {
   readonly gate?: EncounterGate;
   readonly waitReadyBeforeEnd?: true;
+  /** A fight a row's press begins and starts, with no end effects; absent for the room's own encounters. */
+  readonly press?: {
+    readonly records: boolean;
+    readonly generatedAt: 'entry' | 'start';
+  };
 }
 
 export interface RawEncounterDefinitionDeclaration {

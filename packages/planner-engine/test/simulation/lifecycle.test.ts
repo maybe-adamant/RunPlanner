@@ -230,7 +230,12 @@ function actionRoster(
             rewardWheelKey: wheelKey,
           })),
         ]
-      : phaseKeys.map((phaseKey) => ({ phaseKey }));
+      : phaseKeys.map((phaseKey) => ({
+          phaseKey,
+          ...(profileKey === 'FieldsCombatRoom'
+            ? { standsAt: Object.freeze({ kind: 'roomEntered' as const }) }
+            : {}),
+        }));
   const events = testGraphEvents(phasesForStructure, {
     cages: profileKey === 'FieldsCombatRoom',
     generatesOutgoing:
@@ -242,6 +247,7 @@ function actionRoster(
     profileKey,
     activeEncounterSlotKeys: Object.freeze(phaseKeys),
     phases: Object.freeze(phasesForStructure),
+    pressFights: [],
     events: Object.freeze(events),
   });
   return assembleRoomActionRoster({

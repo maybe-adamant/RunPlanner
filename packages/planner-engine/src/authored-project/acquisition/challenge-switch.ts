@@ -22,6 +22,13 @@ export const CHALLENGE_SWITCH_NECTAR_ENTRY_KEY = 'nectar';
 
 export const CHALLENGE_SWITCH_ACTION = Object.freeze({ kind: 'interactChallengeSwitch' as const });
 
+/**
+ * A switch's encounter is a phase of its room outside the room's envelope:
+ * this key names it, never a declared slot.
+ */
+export const CHALLENGE_SWITCH_PHASE_KEY = 'challengeSwitch';
+export const CHALLENGE_SWITCH_ENVELOPE_KEY = 'challengeSwitch';
+
 export function challengeSwitchHost(
   catalog: Catalog,
   gameName: string,

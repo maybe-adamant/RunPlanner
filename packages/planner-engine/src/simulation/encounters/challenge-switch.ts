@@ -4,14 +4,14 @@ import type {
   ChallengeSwitchKind,
 } from '../../catalog-schema';
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
+import { challengeSwitchPhaseAddress } from './challenge-switch-phase';
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
+import { resolveEntryDeclaration } from '../../authored-project/room-state/entry-resolution';
 import {
   CHALLENGE_SWITCH_ENVELOPE_KEY,
   CHALLENGE_SWITCH_PHASE_KEY,
-  challengeSwitchPhaseAddress,
-} from './challenge-switch-phase';
-import type { ResolvedRoutePosition } from '../../authored-project/route-context';
-import { resolveEntryDeclaration } from '../../authored-project/room-state/entry-resolution';
-import { challengeSwitchEncounterKey } from '../../authored-project/acquisition/challenge-switch';
+  challengeSwitchEncounterKey,
+} from '../../authored-project/acquisition/challenge-switch';
 import { assessEliteChallengeChoice, type EliteChallengeIssue } from '../commerce/challenge-switch';
 import type { HistoryStateView } from '../history/model';
 import type { CanonicalAuthoredRoom } from '../materialization';

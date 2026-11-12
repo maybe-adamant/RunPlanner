@@ -5,6 +5,7 @@ import type {
 } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import {
+  cagePhase,
   roomActionOpeningPoint,
   roomEventActive,
   roomEventPlaces,
@@ -277,15 +278,15 @@ export function assembleRoomLifecycleTimeline(
   const phaseByKey = new Map(structure.phases.map((phase) => [phase.phaseKey, phase]));
   const finalPhaseKey = structure.phases.at(-1)?.phaseKey;
 
-  // A Fields cage's encounter begins with its activation row.
-  const cagePhase = (phase: RoomEventGraphPhase): boolean =>
-    structure.events.some(
-      (event) =>
-        event.kind === 'encounterBegun' &&
-        event.phaseKey === phase.phaseKey &&
-        event.trigger.kind === 'action' &&
-        event.trigger.action.kind === 'completeFieldsCage',
+  /** The row whose press or cage begins a phase's encounter, when a row does. */
+  const beginningRow = (phaseKey: string): RoomActionReference | undefined => {
+    const begun = structure.events.find(
+      (event) => event.kind === 'encounterBegun' && event.phaseKey === phaseKey,
     );
+    return begun?.kind === 'encounterBegun' && begun.trigger.kind === 'action'
+      ? begun.trigger.action
+      : undefined;
+  };
 
   const wheelRow = (row: RoomActionRow): string | undefined =>
     row.label.kind === 'beforeWheelPhase' ||
@@ -299,7 +300,7 @@ export function assembleRoomLifecycleTimeline(
   const rowsForPhase = (phase: RoomEventGraphPhase): readonly RoomActionRow[] =>
     rankedRows.filter((row) => {
       if (phase.rewardWheelKey !== undefined) return wheelRow(row) === phase.rewardWheelKey;
-      if (cagePhase(phase))
+      if (cagePhase(structure, phase.phaseKey))
         return (
           (row.bounds.spawn.kind === 'encounterEnd' &&
             row.bounds.spawn.phaseKey === phase.phaseKey) ||
@@ -367,10 +368,10 @@ export function assembleRoomLifecycleTimeline(
     point: Extract<RoomLifecycleBoundary, { readonly kind: 'encounterStarted' }>,
     begun: Extract<RoomLifecycleBoundary, { readonly kind: 'encounterBegun' }> | undefined,
   ): RoomLifecycleBoundaryEntry => {
-    const gate = point.trigger.kind === 'action' ? point.trigger.action : undefined;
-    const cage = begun?.trigger.kind === 'action' ? begun.trigger.action : undefined;
-    // A cage's row begins its fight, and a wheel's choice or a gate pickup starts it.
-    const start = cage?.kind === 'completeFieldsCage' ? cage : gate;
+    // A cage's or press's row begins its fight, and a wheel's choice or a gate pickup starts it.
+    const start =
+      (begun?.trigger.kind === 'action' ? begun.trigger.action : undefined) ??
+      (point.trigger.kind === 'action' ? point.trigger.action : undefined);
     if (start !== undefined) {
       const placed = actionRank(roster, start);
       if (placed !== undefined) return boundaryEntry(point, placed, 'after');
@@ -428,18 +429,12 @@ export function assembleRoomLifecycleTimeline(
         );
       }
       case 'encounterEnd': {
+        // A fight its row begins ends with that row.
+        const begunBy = beginningRow(point.phaseKey);
+        if (begunBy !== undefined)
+          return boundaryEntry(point, actionRank(roster, begunBy) ?? 0, 'after');
         const phase = phaseByKey.get(point.phaseKey);
         if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
-        if (cagePhase(phase)) {
-          return boundaryEntry(
-            point,
-            actionRank(roster, {
-              kind: 'completeFieldsCage',
-              phaseKey: phase.phaseKey,
-            }) ?? 0,
-            'after',
-          );
-        }
         const phaseRows = rowsForPhase(phase);
         const firstPostCombatRank = firstPostCombatRankForPhase(phase);
         const rank =

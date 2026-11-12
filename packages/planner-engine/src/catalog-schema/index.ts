@@ -541,6 +541,20 @@ export type EncounterOutcomeKind = 'aetosWave' | 'gorgon' | 'goldBet' | 'nemesis
  * skipped end effects and a reward spawned at the start.
  */
 export interface EncounterScript {
+  /**
+   * What begins it: the room's own flow, or the press of a row outside the
+   * room's envelope (a challenge switch, a locked door), which starts it at once.
+   */
+  readonly beginTrigger: 'automatic' | 'pressRow';
+  /** Whether its end runs `EndEncounterEffects`; only the room's own encounters do (RoomLogic.lua:2937). */
+  readonly endEffects: 'run' | 'none';
+  /** Whether starting it records it (`RecordEncounter`); a locked door's fight never is. */
+  readonly records: boolean;
+  /**
+   * When its composition is generated: with the room's preparation, at room
+   * entry (`HandleSecretSpawns`), or as it starts (`AttemptUseDoor`).
+   */
+  readonly generatedAt: 'preparation' | 'entry' | 'start';
   readonly gate: EncounterGate;
   /** The event list ends by waiting for every required object (`WaitForNextEncounterReady`). */
   readonly waitReadyBeforeEnd: boolean;

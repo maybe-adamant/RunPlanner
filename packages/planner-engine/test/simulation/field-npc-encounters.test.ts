@@ -249,6 +249,10 @@ function historyProbeCatalog(roomWindow = 5): Catalog {
     label: 'Previous room probe',
     kind: 'combat',
     script: Object.freeze({
+      beginTrigger: 'automatic' as const,
+      endEffects: 'run' as const,
+      records: true,
+      generatedAt: 'preparation' as const,
       gate: Object.freeze({ kind: 'none' as const }),
       waitReadyBeforeEnd: false,
       endsByInteraction: false,

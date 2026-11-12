@@ -4,8 +4,8 @@ import { biomeEncounterDepthAfterStart } from '../encounters/biome-encounter-dep
 import {
   CHALLENGE_SWITCH_ENVELOPE_KEY,
   CHALLENGE_SWITCH_PHASE_KEY,
-} from '../encounters/challenge-switch-phase';
-import { UNLOCK_EXIT_ENVELOPE_KEY, unlockExitPhaseKey } from '../encounters/unlock-exit';
+} from '../../authored-project/acquisition/challenge-switch';
+import { UNLOCK_EXIT_ENVELOPE_KEY, unlockExitPhaseKey } from '../../authored-project/locked-exits';
 import type {
   CanonicalBiomeHistory,
   EncounterHistoryEntry,

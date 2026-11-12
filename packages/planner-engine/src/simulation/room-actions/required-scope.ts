@@ -1,7 +1,12 @@
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import {
-  nextWheelPhaseKey,
+  cagePhase,
+  fieldsRoom,
+  nextWheelsOpen,
+  phaseOfWheel,
+  playsPhase,
   roomActionOpeningPoint,
+  wheelOfPhase,
   roomEventPlaces,
   type RoomActionBounds,
   type RoomEventGraph,
@@ -12,35 +17,6 @@ import type { RoomActionRow, RoomActionRowLabel } from './model';
 export type RoomActionRowFacts = Omit<RoomActionRow, 'label'> & {
   readonly label?: RoomActionRowLabel;
 };
-
-function playedPhase(structure: RoomEventGraph, phaseKey: string): boolean {
-  return structure.phases.some((phase) => phase.phaseKey === phaseKey);
-}
-
-function phaseWheelKey(structure: RoomEventGraph, phaseKey: string): string | undefined {
-  return structure.phases.find((phase) => phase.phaseKey === phaseKey)?.rewardWheelKey;
-}
-
-function wheelPhaseKey(structure: RoomEventGraph, wheelKey: string): string | undefined {
-  return structure.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey;
-}
-
-/** Whether the player's verb starts this phase's encounter (a Fields cage). */
-function verbPhase(structure: RoomEventGraph, phaseKey: string): boolean {
-  return structure.events.some(
-    (event) =>
-      event.kind === 'encounterBegun' &&
-      event.phaseKey === phaseKey &&
-      event.trigger.kind === 'action',
-  );
-}
-
-/** Whether the player's verb starts the room's encounters (Fields cages). */
-function fieldsRoom(structure: RoomEventGraph): boolean {
-  return structure.events.some(
-    (event) => event.kind === 'encounterBegun' && event.trigger.kind === 'action',
-  );
-}
 
 /**
  * The label a row's bounds name: after the doors open, before a phase's
@@ -54,13 +30,13 @@ function boundsLabel(bounds: RoomActionBounds, structure: RoomEventGraph): RoomA
     kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase',
     wheelKey: string,
   ): RoomActionRowLabel => {
-    const phaseKey = wheelPhaseKey(structure, wheelKey);
+    const phaseKey = phaseOfWheel(structure, wheelKey);
     return Object.freeze({ kind, wheelKey, ...(phaseKey === undefined ? {} : { phaseKey }) });
   };
   if (enabler?.kind === 'doorsOpened' || enabler?.kind === 'exitsReady')
     return Object.freeze({ kind: 'afterDoorsOpen' });
   if (enabler?.kind === 'gate') {
-    const wheelKey = phaseWheelKey(structure, enabler.phaseKey);
+    const wheelKey = wheelOfPhase(structure, enabler.phaseKey);
     return wheelKey === undefined
       ? Object.freeze({ kind: 'beforeCombat' })
       : wheel('beforeWheelPhase', wheelKey);
@@ -70,8 +46,8 @@ function boundsLabel(bounds: RoomActionBounds, structure: RoomEventGraph): RoomA
       return wheel('beforeWheelChoice', spawn.wheelKey);
     case 'endEffects': {
       // A Fields cage's due pickups stand with the room's free cage rows.
-      if (verbPhase(structure, spawn.phaseKey)) return Object.freeze({ kind: 'fields' });
-      const next = nextWheelPhaseKey(structure, spawn.phaseKey);
+      if (cagePhase(structure, spawn.phaseKey)) return Object.freeze({ kind: 'fields' });
+      const next = nextWheelsOpen(structure, spawn.phaseKey)?.phaseKey;
       return Object.freeze({
         kind: 'afterEncounterEnd',
         phaseKey: spawn.phaseKey,
@@ -79,7 +55,7 @@ function boundsLabel(bounds: RoomActionBounds, structure: RoomEventGraph): RoomA
       });
     }
     case 'encounterEnd': {
-      const wheelKey = phaseWheelKey(structure, spawn.phaseKey);
+      const wheelKey = wheelOfPhase(structure, spawn.phaseKey);
       if (wheelKey !== undefined) return wheel('afterWheelPhase', wheelKey);
       return Object.freeze({ kind: fieldsRoom(structure) ? 'fields' : 'afterCombat' });
     }
@@ -98,18 +74,18 @@ function boundsPhaseKey(bounds: RoomActionBounds, structure: RoomEventGraph): st
   const last = structure.phases.at(-1)?.phaseKey;
   const { spawn, enabler } = bounds;
   if (enabler?.kind === 'gate')
-    return playedPhase(structure, enabler.phaseKey) ? enabler.phaseKey : undefined;
+    return playsPhase(structure, enabler.phaseKey) ? enabler.phaseKey : undefined;
   if (enabler !== undefined) return last;
   switch (spawn.kind) {
     case 'wheelsOpen':
-      return wheelPhaseKey(structure, spawn.wheelKey);
+      return phaseOfWheel(structure, spawn.wheelKey);
     case 'endEffects':
-      return playedPhase(structure, spawn.phaseKey)
-        ? (nextWheelPhaseKey(structure, spawn.phaseKey) ?? spawn.phaseKey)
+      return playsPhase(structure, spawn.phaseKey)
+        ? (nextWheelsOpen(structure, spawn.phaseKey)?.phaseKey ?? spawn.phaseKey)
         : undefined;
     case 'encounterEnd':
-      return playedPhase(structure, spawn.phaseKey) &&
-        (fieldsRoom(structure) || phaseWheelKey(structure, spawn.phaseKey) !== undefined)
+      return playsPhase(structure, spawn.phaseKey) &&
+        (fieldsRoom(structure) || wheelOfPhase(structure, spawn.phaseKey) !== undefined)
         ? spawn.phaseKey
         : last;
     default:

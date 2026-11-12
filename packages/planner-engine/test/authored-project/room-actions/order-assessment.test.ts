@@ -29,6 +29,7 @@ const structure: RoomEventGraph = {
   profileKey: 'StandardRewardRoom',
   activeEncounterSlotKeys: ['Encounter'],
   phases: [{ phaseKey: 'Encounter' }],
+  pressFights: [],
   events: gateFreeGraphEvents(['Encounter'], true),
 };
 

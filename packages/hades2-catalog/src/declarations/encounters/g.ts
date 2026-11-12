@@ -290,6 +290,8 @@ export const gEncounterDefinitions = [
     key: 'GeneratedG_ExtraDoor',
     label: 'Locked door fight',
     kind: 'combat',
+    // The press generates and starts it, never recording it (RoomLogic.lua:762-789).
+    script: { press: { records: false, generatedAt: 'start' } },
     countsEncounterDepth: true,
     advancesHermesShrineDeliveryUses: false,
     blocksGorgon: true,

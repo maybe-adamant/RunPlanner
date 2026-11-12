@@ -55,6 +55,7 @@ const structure: RoomEventGraph = {
   profileKey: 'Combat',
   activeEncounterSlotKeys: ['Encounter'],
   phases: [{ phaseKey: 'Encounter' }],
+  pressFights: [],
   events: gateFreeGraphEvents(['Encounter'], true),
 };
 

@@ -1,5 +1,5 @@
-import { unlockExitPhaseKey } from '../../simulation/encounters/unlock-exit';
-import { CHALLENGE_SWITCH_PHASE_KEY } from '../../simulation/encounters/challenge-switch-phase';
+import { unlockExitPhaseKey } from '../../authored-project/locked-exits';
+import { CHALLENGE_SWITCH_PHASE_KEY } from '../../authored-project/acquisition/challenge-switch';
 import {
   INITIAL_ROLL_KEY,
   PURGING_POOL_SLOT_KEYS,
