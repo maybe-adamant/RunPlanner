@@ -11,10 +11,10 @@ import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
-import type { ForfeitPeek } from '../../acquisition/contracts';
 import { materializeFieldsOptionalOfferPoint } from './fields-optional-materialization';
 import { applyRewardWheelOfferPointMaterialization } from './reward-wheel-offer-point-materialized';
 import { applyShopOfferPointMaterialization } from './shop-offer-point-materialized';
+import type { ForfeitPeek } from './spawned-trait-offers';
 
 export interface OfferPointMaterializedTransitionInputs {
   readonly catalog: Catalog;

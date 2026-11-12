@@ -206,7 +206,7 @@ interface RewardSimulationBase {
    * Rewards whose latest preview, before they spawned, showed Forfeit would
    * take them (the door's or wheel's Onion); absent when none did.
    */
-  readonly forfeitPeeks?: readonly import('./acquisition/contracts').ForfeitPeek[];
+  readonly forfeitPeeks?: readonly import('./biome/offer-lifecycle/spawned-trait-offers').ForfeitPeek[];
 }
 
 /** A start inside its biome, at its Preboss or completion Boss. */

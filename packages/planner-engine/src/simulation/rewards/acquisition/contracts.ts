@@ -118,19 +118,6 @@ export interface DerivedAcquisitionEntryFrontier {
   ) => import('../producer-frontiers').RewardProducerCandidateResult;
 }
 
-/**
- * The game's Onion preview of one reward before it spawns: whether Forfeit
- * would take it (RewardPresentation.lua:279-286), read without consuming it.
- * A later preview of the same owner replaces it.
- */
-export interface ForfeitPeek {
-  readonly owner: import('../../../authored-project/addresses').TraitOfferOwnerAddress;
-  readonly offer: ResolvedRewardOffer;
-  readonly producerLifecycleKey: string;
-  readonly historySequence: number;
-  readonly takes: boolean;
-}
-
 export interface AcquisitionRoleFrontier {
   readonly address: import('../../../authored-project/addresses').AcquisitionRoleAddress;
   /** Exact active Room Action that reached this role, when it is consequential. */

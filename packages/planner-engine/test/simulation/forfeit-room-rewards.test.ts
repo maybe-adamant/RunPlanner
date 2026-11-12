@@ -198,7 +198,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       f.history.events.find((event) => event.sequence === forfeited.historySequence)?.kind,
     ).toBe('encounterCompleted');
     expect(f.rewards.forfeitPeeks).toContainEqual(
-      expect.objectContaining({ owner: forfeited.origin, takes: true }),
+      expect.objectContaining({ origin: forfeited.origin, takes: true }),
     );
     expect(
       acquisitionConversionCandidateForProjectEvaluationAssembly(
@@ -231,7 +231,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     });
     expect(onion!.historySequence).toBeGreaterThan(forfeited.historySequence);
     expect(o.rewards.forfeitPeeks).toContainEqual(
-      expect.objectContaining({ owner: forfeited.origin, takes: true }),
+      expect.objectContaining({ origin: forfeited.origin, takes: true }),
     );
   });
 
@@ -320,7 +320,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     expect(fieldsForfeits).toEqual([forfeited]);
     // The door into the Fields room previewed the Onion on the first cage's Hermes reward.
     expect(replay.evaluation.rewards.forfeitPeeks).toContainEqual(
-      expect.objectContaining({ owner: fieldsCage1, takes: true }),
+      expect.objectContaining({ origin: fieldsCage1, takes: true }),
     );
     expect(laterBoon).toMatchObject({
       acquisition: { acquisition: { gameName: 'HestiaUpgrade' } },
@@ -601,7 +601,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       expect(forfeitEvents(blocked)).toEqual([]);
       const o = blocked.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O');
       expect(o !== undefined && 'rewards' in o ? o.rewards.forfeitPeeks : undefined).toContainEqual(
-        expect.objectContaining({ owner: offer2, takes: true }),
+        expect.objectContaining({ origin: offer2, takes: true }),
       );
       expect(
         acquisitionConversionCandidateForProjectEvaluationAssembly(

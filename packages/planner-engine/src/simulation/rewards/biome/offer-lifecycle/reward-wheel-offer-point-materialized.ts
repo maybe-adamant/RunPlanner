@@ -19,8 +19,7 @@ import {
   processOfferGenerationCohort,
 } from '../../offer-generation';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
-import type { ForfeitPeek } from '../../acquisition/contracts';
-import { forfeitPeeks } from './spawned-trait-offers';
+import { forfeitPeeks, type ForfeitPeek } from './spawned-trait-offers';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import { historyFindingChronology } from '../finding-chronology';
 import type { RewardProducerFrontier } from '../../producer-frontiers';

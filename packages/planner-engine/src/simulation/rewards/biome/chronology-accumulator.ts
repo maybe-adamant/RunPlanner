@@ -63,10 +63,10 @@ export interface FountainRaritySettlement {
 }
 import type {
   AcquisitionRoleFrontier,
-  ForfeitPeek,
   GeneratedPickupPlacement,
   DerivedAcquisitionEntryFrontier,
 } from '../acquisition/contracts';
+import type { ForfeitPeek } from './offer-lifecycle/spawned-trait-offers';
 import type { RewardBranchState } from '../branch-primitives';
 import type { RerollSurfaceCapability, RerollSurfaceCapture } from './reroll-surfaces';
 import { addRewardFinding, mergeRewardFindingEmissions } from '../findings';
@@ -734,7 +734,7 @@ export function createChronologyAccumulator(
         recordAcquisitionRoleFrontiers(emission.frontiers);
         return;
       case 'forfeitPeeks':
-        for (const peek of emission.peeks) forfeitPeeks.set(semanticAddressKey(peek.owner), peek);
+        for (const peek of emission.peeks) forfeitPeeks.set(semanticAddressKey(peek.origin), peek);
         return;
       case 'traitOfferCandidateContacts':
         recordTraitOfferCandidateContacts(emission.contacts);

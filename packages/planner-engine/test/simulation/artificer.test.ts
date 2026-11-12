@@ -1051,7 +1051,7 @@ describe('The Artificer', () => {
         ],
         1,
       ),
-    ).toMatchObject([{ owner: devotionDoor, takes: false }]);
+    ).toMatchObject([{ origin: devotionDoor, takes: false }]);
 
     // Forfeit stays for the biome's next eligible Boon spawn.
     const nextBoon = createIncomingRewardAddress(biome, createOccurrenceId('after-devotion'));

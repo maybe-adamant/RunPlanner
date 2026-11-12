@@ -35,7 +35,6 @@ import {
 import { consumeRoomRewardForfeit } from '../../../arcana-fear';
 import { consumeOlympianProviderMaterialized } from '../../../keepsakes/reward-effects';
 import type { SimulationState } from '../../../state/model';
-import type { ForfeitPeek } from '../../acquisition/contracts';
 
 function withState(
   branch: RewardBranchState,
@@ -92,6 +91,15 @@ export interface RewardSpawn {
    * or Hermes reward Forfeit may replace; Devotion, deliveries and purchases do not.
    */
   readonly forfeitEligible: boolean;
+}
+
+/**
+ * The game's Onion preview of one reward before it spawns: whether Forfeit
+ * would take it (RewardPresentation.lua:279-286), read without consuming it.
+ * A later preview of the same owner replaces it.
+ */
+export interface ForfeitPeek extends RewardSpawn {
+  readonly takes: boolean;
 }
 
 function forfeitRewardType(spawn: RewardSpawn): 'Boon' | 'HermesUpgrade' | undefined {
@@ -176,13 +184,7 @@ export function forfeitPeeks(
 ): readonly ForfeitPeek[] {
   return Object.freeze(
     spawns.map((spawn) =>
-      Object.freeze({
-        owner: spawn.origin,
-        offer: spawn.offer,
-        producerLifecycleKey: spawn.producerLifecycleKey,
-        historySequence,
-        takes: forfeitWouldTake(catalog, state, spawn, historySequence),
-      }),
+      Object.freeze({ ...spawn, takes: forfeitWouldTake(catalog, state, spawn, historySequence) }),
     ),
   );
 }

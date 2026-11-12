@@ -17,12 +17,13 @@ import {
   assessTimePieceConversion,
 } from './conversions';
 import type { AcquisitionSource } from './source';
-import type { DerivedAcquisitionEntryFrontier, ForfeitPeek } from './contracts';
+import type { DerivedAcquisitionEntryFrontier } from './contracts';
 import type { SimulationState } from '../../state/model';
 import { forfeitedPickupOf } from '../../state/pending-resource-pickups';
 import {
   forfeitRealization,
   forfeitWouldTake,
+  type ForfeitPeek,
 } from '../biome/offer-lifecycle/spawned-trait-offers';
 import { createAnvilCandidateCapability, type AnvilCandidateCapability } from '../anvil-settlement';
 import {
@@ -231,26 +232,16 @@ export function createAcquisitionConversionCandidateArtifacts(
     const recorded = forfeitedPickupOf(frontier, address.owner, address.acquisitionRole);
     if (recorded !== undefined) return recorded;
     const peek = privatePeeks.get(semanticAddressKey(address.owner));
-    const spawn =
-      peek?.takes === true
-        ? {
-            origin: peek.owner,
-            offer: peek.offer,
-            producerLifecycleKey: peek.producerLifecycleKey,
-            forfeitEligible: true,
-          }
-        : undefined;
-    const binding =
-      spawn === undefined
-        ? undefined
-        : catalog.rewards.producerLifecycles.byKey[spawn.producerLifecycleKey]?.rewardTypes.byKey[
-            spawn.offer.rewardType
-          ]?.acquisitionLifecycle.find((candidate) => candidate.role === address.acquisitionRole);
-    return spawn === undefined ||
-      binding === undefined ||
-      !forfeitWouldTake(catalog, frontier, spawn, Number.MAX_SAFE_INTEGER)
+    if (peek?.takes !== true) return undefined;
+    const binding = catalog.rewards.producerLifecycles.byKey[
+      peek.producerLifecycleKey
+    ]?.rewardTypes.byKey[peek.offer.rewardType]?.acquisitionLifecycle.find(
+      (candidate) => candidate.role === address.acquisitionRole,
+    );
+    return binding === undefined ||
+      !forfeitWouldTake(catalog, frontier, peek, Number.MAX_SAFE_INTEGER)
       ? undefined
-      : forfeitRealization(catalog, spawn.offer, binding, 'RoomRewardConsolationPrize');
+      : forfeitRealization(catalog, peek.offer, binding, 'RoomRewardConsolationPrize');
   };
   const at = (address: AcquisitionRoleAddress) => {
     const key = semanticAddressKey(address);
