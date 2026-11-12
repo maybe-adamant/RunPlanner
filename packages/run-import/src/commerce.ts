@@ -46,7 +46,7 @@ import type {
   RunRecordStore,
   RunRecordStoreKind,
 } from './run-record/model';
-import { insertRoomAction, removeRoomAction, roomActionAddress } from './actions';
+import { collectedPast, insertRoomAction, placeLiveRoomAction, roomActionAddress } from './actions';
 import type { RunImportContext } from './import';
 import type { RunImportArea } from './report';
 import { isQuestionFinding } from './areas';
@@ -825,6 +825,7 @@ export function importCommerce(context: RunImportContext): void {
   for (const { biomeKey, occurrence } of pendingOccurrences(context)) {
     importShopPurchases(context, biomeKey, occurrence);
     importShrine(context, biomeKey, occurrence);
+    pickUpRushedItems(context, biomeKey, occurrence);
     importWell(context, biomeKey, occurrence);
     importPool(context, biomeKey, occurrence);
   }
@@ -863,9 +864,9 @@ function importShopPurchases(
   const slots = context.catalog.rewards.shops.byKey[shop.profileKey]?.slots.values ?? [];
   // Purchases wait for the profile's whole inventory.
   if (slots.some((slot) => (shop.offers[slot.key]?.reward ?? null) === null)) return;
-  context.used.add(used);
   const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
   if (visit.store.purchases === undefined) {
+    context.used.add(used);
     context.note({
       area: 'shop',
       reason: 'notInRecord',
@@ -874,7 +875,31 @@ function importShopPurchases(
     });
     return;
   }
-  for (const purchase of purchaseOrder(context, shop, visit.room, visit.store.purchases)) {
+  const purchases = purchaseOrder(context, shop, visit.room, visit.store.purchases);
+  const placed = (offerKey: string) =>
+    authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrence.occurrenceId,
+    )?.roomActions.order.some(
+      (action) => action.kind === 'interactShopOffer' && action.offerKey === offerKey,
+    ) === true;
+  for (const [index, purchase] of purchases.entries()) {
+    const bought = `${used}:${index}`;
+    if (context.used.has(bought)) continue;
+    // The record's next purchase follows what the one before it spawned, so it waits until
+    // the walk passes that purchase and its required items are collected.
+    const previous = index === 0 ? undefined : slots[purchases[index - 1]!.slot - 1]?.key;
+    if (
+      previous !== undefined &&
+      placed(previous) &&
+      !collectedPast(context, biomeKey, occurrence.occurrenceId, {
+        kind: 'interactShopOffer',
+        offerKey: previous,
+      })
+    )
+      return;
+    context.used.add(bought);
     const offerKey = slots[purchase.slot - 1]?.key;
     const offer =
       offerKey === undefined
@@ -908,6 +933,7 @@ function importShopPurchases(
       record: record(visit.roomIndex),
     });
   }
+  context.used.add(used);
 }
 
 /** Each giver's stamped screen picks in a room, earliest first: an acquired trait, or the one a level-up raised. */
@@ -1165,23 +1191,40 @@ function importShrinePurchase(
     });
     return;
   }
-  // A rushed item left on the floor is not picked up.
+  // A rushed item left on the floor is not picked up; a collected one is, once it lies live.
   const rewardType = visit.store.stock.find((option) => option.slot === purchase.slot)?.name;
-  if (rewardType !== undefined && !collected(context, visit.room, rewardType)) {
-    const occurrence = authoredOccurrence(context.assembly().project, biomeKey, occurrenceId);
-    const pickup = occurrence?.roomActions.order.find(
-      (entry) =>
-        entry.kind === 'interactAcquisitionEntry' &&
-        entry.siteKey === 'hermesShrineDelivery' &&
-        entry.entryKey === hermesShrineDeliveryEntryKey(address, generationKey),
-    );
-    if (pickup !== undefined && !removeRoomAction(context, biomeKey, occurrenceId, pickup))
-      context.note({
-        area: 'shop',
-        reason: 'refused',
-        address: feature,
-        record: record(visit.roomIndex),
-      });
+  if (rewardType !== undefined && collected(context, visit.room, rewardType))
+    context.used.add(rushedPickupKey(occurrenceId, generationKey));
+}
+
+const rushedPickupKey = (occurrenceId: string, generationKey: string) =>
+  `rushedPickup:${occurrenceId}:${generationKey}`;
+
+/**
+ * Picks up each collected rushed item of a Shrine room where the live room
+ * offers it: it spawns as its rush settles, which can wait on a Travel Deal
+ * refill the walk answers later.
+ */
+function pickUpRushedItems(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+): void {
+  const address = createOccurrenceAddress(
+    createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+    occurrence.occurrenceId,
+  );
+  for (const row of occurrence.roomActions.order) {
+    if (
+      row.kind !== 'rushHermesShrineOffer' ||
+      !context.used.has(rushedPickupKey(occurrence.occurrenceId, row.generationKey))
+    )
+      continue;
+    placeLiveRoomAction(context, biomeKey, occurrence.occurrenceId, {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(address, row.generationKey),
+    });
   }
 }
 

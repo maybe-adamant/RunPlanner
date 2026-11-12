@@ -114,6 +114,29 @@ describe('run import of the Surface victory', () => {
           : [],
       ),
     ).toEqual(['smallGold', 'tinyGold1', 'tinyGold2', 'minorHeal1', 'minorHeal2', 'bones']);
+    // The record's later purchases follow the pickups its first purchase spawned.
+    expect(
+      occurrence(imported.project, 'Q-r49').roomActions.order.map((action) =>
+        action.kind === 'interactShopOffer'
+          ? action.offerKey
+          : action.kind === 'interactAcquisitionEntry'
+            ? action.entryKey
+            : action.kind,
+      ),
+    ).toEqual([
+      'MixedProgress1',
+      'travelDealRefill',
+      'smallGold',
+      'seaStarDuplicate',
+      'tinyGold1',
+      'seaStarDuplicate',
+      'tinyGold2',
+      'minorHeal1',
+      'minorHeal2',
+      'bones',
+      'LargeSurvival',
+      'Survival',
+    ]);
     // Only which of the two tiny gold pickups was duplicated is not saved.
     expect(
       imported.report.entries.filter((entry) => entry.area === 'reward').map(describeEntry),

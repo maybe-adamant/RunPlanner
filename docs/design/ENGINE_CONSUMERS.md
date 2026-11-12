@@ -102,7 +102,8 @@ A consumer asks the engine what is possible; it never decides it.
   objects live at each gap through the walk's frontier, each with its verbs
   and the commands that perform them there. Draft places a room's required
   rows from its placements alone, taking a required action's canonical
-  restore where one is offered.
+  restore where one is offered. The run import collects a room's required
+  rows through the engine's collection, which places them the same way.
 - Hypothetical questions are engine-owned queries; the consumer supplies only
   its choice policy or its observation:
   - **Carrier-child completion** authors every selected-outcome child an offer

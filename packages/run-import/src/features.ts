@@ -721,7 +721,21 @@ export function chaosUnpickedCurses(
   };
 }
 
-/** Keepsake racks and fountains: optional room actions authored once their room is entered. */
+/**
+ * Keepsake racks, authored once their room is entered and before its stores:
+ * the keepsake taken there can pay a Well or Pool reroll after it.
+ */
+export function importKeepsakeRacks(context: RunImportContext): void {
+  const project = context.assembly().project;
+  for (const biome of project.route.biomes)
+    for (const occurrence of biome.topology?.occurrences ?? []) {
+      const roomIndex = context.occurrences.visitsOf(occurrence.occurrenceId)[0];
+      if (roomIndex !== undefined && context.pending(occurrence.occurrenceId))
+        importRack(context, biome.biomeKey, occurrence, roomIndex);
+    }
+}
+
+/** Fountains, trait pickups and Sea Star duplicates, authored once their room is entered. */
 export function importFeatures(context: RunImportContext): void {
   const project = context.assembly().project;
   for (const biome of project.route.biomes)
@@ -734,7 +748,6 @@ export function importFeatures(context: RunImportContext): void {
       const solved = !waits && wheelsSolved(context, roomIndex) && !context.used.has(released);
       if (!context.pending(occurrence.occurrenceId) && !solved) continue;
       if (solved) context.used.add(released);
-      importRack(context, biome.biomeKey, occurrence, roomIndex);
       importFountain(context, biome.biomeKey, occurrence, roomIndex);
       if (!waits) importTraitPickups(context, biome.biomeKey, occurrence, roomIndex);
       importSeaStar(context, biome.biomeKey, occurrence, roomIndex);
@@ -880,13 +893,23 @@ function placeSeaStarDuplicate(
     source.action === undefined
       ? -1
       : order.findIndex((entry) => roomActionKey(entry) === roomActionKey(source.action!));
+  const duplicate: RoomActionReference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey,
+    entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+  };
   const duplicateIndex = order.findIndex(
-    (entry) =>
-      entry.kind === 'interactAcquisitionEntry' &&
-      entry.siteKey === siteKey &&
-      entry.entryKey === SEA_STAR_DUPLICATE_ENTRY_KEY,
+    (entry) => roomActionKey(entry) === roomActionKey(duplicate),
   );
-  if (sourceIndex < 0 || duplicateIndex < 0 || duplicateIndex === sourceIndex + 1) return true;
+  if (sourceIndex < 0 || duplicateIndex === sourceIndex + 1) return true;
+  // The proc leaves its duplicate lying live; it is picked up right after its source.
+  if (duplicateIndex < 0)
+    return context.apply({
+      kind: 'InsertRoomAction',
+      action: roomActionAddress(context, biomeKey, occurrence.occurrenceId, duplicate),
+      reference: duplicate,
+      index: sourceIndex + 1,
+    });
   return context.apply({
     kind: 'MoveRoomAction',
     action: roomActionAddress(context, biomeKey, occurrence.occurrenceId, order[duplicateIndex]!),
@@ -1076,32 +1099,33 @@ function importRack(
     occurrence.occurrenceId,
   );
   const selection = createPostbossKeepsakeSelectionAddress(address);
-  if (room.keepsakeSwap !== undefined) {
-    const command: ProjectCommand = {
-      kind: 'ReplacePostbossKeepsake',
-      selection,
-      keepsakeKey: room.keepsakeSwap.to,
-    };
-    if (!context.applyValid(command))
-      context.note({
-        area: 'rack',
-        reason: 'refused',
-        address: selection,
-        record: record(roomIndex),
-      });
-    return;
-  }
-  // A rack left untouched has no interaction.
-  if (
-    (room.uses['GiftRack'] ?? 0) === 0 &&
-    !removeRoomAction(context, biomeKey, occurrence.occurrenceId, { kind: 'interactKeepsakeRack' })
-  )
+  const refused = () =>
     context.note({
       area: 'rack',
       reason: 'refused',
       address: selection,
       record: record(roomIndex),
     });
+  const rack: RoomActionReference = { kind: 'interactKeepsakeRack' };
+  const present = occurrence.roomActions.order.some((entry) => entry.kind === rack.kind);
+  // A rack left untouched has no interaction; a used one is placed before its keepsake is chosen.
+  if (room.keepsakeSwap === undefined && (room.uses['GiftRack'] ?? 0) === 0) {
+    if (present && !removeRoomAction(context, biomeKey, occurrence.occurrenceId, rack)) refused();
+    return;
+  }
+  if (!insertRoomAction(context, biomeKey, occurrence.occurrenceId, rack)) {
+    refused();
+    return;
+  }
+  if (
+    room.keepsakeSwap !== undefined &&
+    !context.applyValid({
+      kind: 'ReplacePostbossKeepsake',
+      selection,
+      keepsakeKey: room.keepsakeSwap.to,
+    })
+  )
+    refused();
 }
 
 function importFountain(
