@@ -1,6 +1,13 @@
-import type { RoomActionPlacementBlocker } from '../../authored-project/room-actions/order-assessment';
+import {
+  isPlacementBlocker,
+  type RoomActionPlacementBlocker,
+} from '../../authored-project/room-actions/order-assessment';
 import type { Catalog } from '../../catalog-schema';
-import { isRequiredMissingInputFinding, type SemanticFinding } from '../model';
+import {
+  isRequiredMissingInputFinding,
+  type FindingEvidence,
+  type SemanticFinding,
+} from '../model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import {
   createBiomeAddress,
@@ -129,32 +136,31 @@ export function talentDropClosureLifecycleState(context: ProgressiveBiomeContext
 
 type RequiredActionDeadline = import('../lifecycle/model').RequiredActionDeadline;
 
-/** A placement blocker as finding evidence, in the order vocabulary findings publish. */
-function orderIssueEvidence(issue: RoomActionPlacementBlocker): SemanticFinding['evidence'] {
+/**
+ * A placement blocker as finding evidence, in its bound's vocabulary: the
+ * point the row stands before, or the deadline it stands past, and the action
+ * that must come first or that stands only after that deadline.
+ */
+function orderIssueEvidence(issue: RoomActionPlacementBlocker): FindingEvidence {
   switch (issue.kind) {
     case 'dependency':
-      return {
-        reason: 'dependency',
-        detail: issue.detail,
-        dependencyKind: 'afterAction',
-        checkpointUnavailable: false,
-      };
+      return { reason: 'dependency', prerequisite: roomActionKey(issue.dependency.action) };
     case 'pastDeadline':
-      return { reason: 'window', detail: issue.detail };
+      return {
+        reason: 'pastDeadline',
+        deadline: issue.deadline,
+        precedingAction: roomActionKey(issue.precedingAction),
+      };
     case 'beforeSpawn':
     case 'beforeEnabler':
-      return issue.requiredAction !== undefined
-        ? {
-            reason: 'requiredFirst',
-            detail: issue.detail,
-            requiredAction: roomActionKey(issue.requiredAction),
-          }
-        : {
-            reason: 'dependency',
-            detail: issue.detail,
-            dependencyKind: 'afterCheckpoint',
-            checkpointUnavailable: issue.unavailable === true,
-          };
+      return {
+        reason: issue.kind,
+        point: issue.point,
+        ...(issue.requiredAction === undefined
+          ? {}
+          : { requiredAction: roomActionKey(issue.requiredAction) }),
+        ...(issue.unavailable === true ? { unavailable: true } : {}),
+      };
   }
 }
 
@@ -194,8 +200,7 @@ function lifecycleBlockFindings(
     );
     // Otherwise a crossing blocks at whichever of its two actions execution reaches first.
     const reasons = issues.flatMap((issue): SemanticFinding[] =>
-      issue.kind !== 'stale' &&
-      issue.kind !== 'unrankedRequired' &&
+      isPlacementBlocker(issue) &&
       (roomActionKey(issue.reference) === row.key ||
         (issue.kind === 'pastDeadline' &&
           !requiredFirst &&

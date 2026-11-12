@@ -294,7 +294,7 @@ describe('Hermes Shrine delivery placement', () => {
     const atFour = applyProjectCommand(project, catalog, { ...purchase, index: 4 });
     expect(order(atFour)).toEqual([...before.slice(0, 4), bought, ...before.slice(4)]);
     expect(() => applyProjectCommand(project, catalog, { ...purchase, index: 1 })).toThrow(
-      /index 1 is not a legal position .* a required action of an earlier window/,
+      /index 1 is not a legal position .* a required action whose deadline passes first/,
     );
     expect(order(applyProjectCommand(project, catalog, { ...purchase, index: 3 }))).toEqual([
       ...before.slice(0, 3),

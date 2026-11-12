@@ -189,7 +189,7 @@ describe('Shrine purchases after the doors open', () => {
     ).toEqual([
       expect.objectContaining({
         origin: purchase,
-        evidence: expect.objectContaining({ reason: 'requiredFirst', requiredAction: reward }),
+        evidence: expect.objectContaining({ requiredAction: reward }),
       }),
     ]);
   });
@@ -241,7 +241,7 @@ describe('Shrine purchases after the doors open', () => {
           createOccurrenceId(nPostbossId),
           roomActionKey(purchase!),
         ),
-        evidence: expect.objectContaining({ reason: 'requiredFirst' }),
+        evidence: expect.objectContaining({ requiredAction: expect.any(String) }),
       }),
     ]);
   });
@@ -308,7 +308,6 @@ describe('Shrine purchases after the doors open', () => {
         code: 'roomActionOrderUnavailable',
         origin: createRoomActionAddress(oBiome, host.occurrenceId, roomActionKey(purchase)),
         evidence: expect.objectContaining({
-          reason: 'requiredFirst',
           requiredAction: roomActionKey({ kind: 'useFountain' }),
         }),
       }),

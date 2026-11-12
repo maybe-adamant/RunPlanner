@@ -1,9 +1,11 @@
 import { challengeSwitchRuleSentence, challengeSwitchRuleTitle } from './challengeSwitchCopy';
 import { requiredFirstTitle } from './walkStopCopy';
+import { roomEventPointName } from './roomEventNames';
 import {
   routeRoomDeclaration,
   semanticAddressKey,
   type ProjectDocument,
+  type RoomEventPoint,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
@@ -890,6 +892,59 @@ export function presentTraitOfferGenerationFinding(
   return Object.freeze(filler === undefined ? { title } : { title, description: filler });
 }
 
+/** A placement finding's repair, read from the bound its row stands outside. */
+function orderUnavailableCopy(
+  finding: SemanticFinding,
+  labels: FindingLabels | undefined,
+): FindingPresentation {
+  const evidence = finding.evidence;
+  const point = roomEventPointEvidence(
+    evidence.reason === 'pastDeadline' ? evidence.deadline : evidence.point,
+  );
+  switch (evidence.reason) {
+    case 'beforeSpawn':
+    case 'beforeEnabler':
+      if (evidence.requiredAction !== undefined)
+        return Object.freeze({ title: requiredFirstTitle(requiredFirstLabel(finding, labels)) });
+      if (evidence.unavailable === true)
+        return Object.freeze({ title: 'Room phase for this action is gone' });
+      return Object.freeze({
+        title: 'Action out of order',
+        ...(point === undefined
+          ? {}
+          : { description: `Move it after ${roomEventPointName(point)}.` }),
+      });
+    case 'pastDeadline': {
+      // The row ordered first stands only after the deadline the other must precede.
+      const preceding =
+        finding.origin.kind === 'roomAction' &&
+        finding.origin.actionKey === evidenceString(evidence.precedingAction);
+      return Object.freeze({
+        title: 'Action out of order',
+        ...(point === undefined
+          ? {}
+          : {
+              description: `Move it ${preceding ? 'after' : 'before'} ${roomEventPointName(point)}.`,
+            }),
+      });
+    }
+    default:
+      return Object.freeze({
+        title: 'Action out of order',
+        description: 'Move it after its prerequisite.',
+      });
+  }
+}
+
+/** A point the engine carries in finding evidence. */
+function roomEventPointEvidence(value: unknown): RoomEventPoint | undefined {
+  return value !== null &&
+    typeof value === 'object' &&
+    typeof (value as { kind?: unknown }).kind === 'string'
+    ? (value as RoomEventPoint)
+    : undefined;
+}
+
 /** The required action a row must follow, by its own row in the finding's room. */
 function requiredFirstLabel(
   finding: SemanticFinding,
@@ -1216,23 +1271,7 @@ export function presentFinding(
     const title = requiredPlacementTitle(finding, labels);
     if (title !== undefined) return Object.freeze({ title: fittingTitle([title]) });
   }
-  if (finding.code === 'roomActionOrderUnavailable') {
-    if (finding.evidence.reason === 'requiredFirst')
-      return Object.freeze({
-        title: requiredFirstTitle(requiredFirstLabel(finding, labels)),
-      });
-    if (finding.evidence.reason === 'dependency' && finding.evidence.checkpointUnavailable === true)
-      return Object.freeze({ title: 'Room phase for this action is gone' });
-    return Object.freeze({
-      title: 'Action out of order',
-      description:
-        finding.evidence.reason === 'dependency'
-          ? finding.evidence.dependencyKind === 'beforeCheckpoint'
-            ? 'Move it before its required checkpoint.'
-            : 'Move it after its prerequisite.'
-          : 'Move it into its allowed room phase.',
-    });
-  }
+  if (finding.code === 'roomActionOrderUnavailable') return orderUnavailableCopy(finding, labels);
   if (isChaosGatePositionFinding(finding)) {
     return Object.freeze({
       title: 'Chaos gate position unavailable',

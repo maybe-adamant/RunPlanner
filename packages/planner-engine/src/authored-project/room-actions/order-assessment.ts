@@ -57,6 +57,22 @@ export type RoomActionOrderIssue =
   | { readonly kind: 'unrankedRequired'; readonly reference: RoomActionReference }
   | RoomActionPlacementBlocker;
 
+/** Whether an order issue blocks the row's placement rather than its presence. */
+export function isPlacementBlocker(
+  issue: RoomActionOrderIssue,
+): issue is RoomActionPlacementBlocker {
+  return issue.kind !== 'stale' && issue.kind !== 'unrankedRequired';
+}
+
+/** A point as a refusal names it: its kind and the phase or wheel it belongs to. */
+function pointText(point: RoomEventPoint): string {
+  return 'phaseKey' in point
+    ? `${point.kind} ${point.phaseKey}`
+    : 'wheelKey' in point
+      ? `${point.kind} ${point.wheelKey}`
+      : point.kind;
+}
+
 /** The structural facts one occurrence's action order is judged against. */
 export interface RoomActionOrderContext {
   readonly active: ReadonlyMap<string, RoomActionContribution>;
@@ -173,7 +189,7 @@ function rowAndBoundIssues(
         frozen({
           kind: 'beforeSpawn',
           reference,
-          detail: `has unknown checkpoint combat:${spawn.phaseKey}`,
+          detail: `waits on ${pointText(spawn)}, which the room never reaches`,
           point: spawn,
           unavailable: true as const,
         }),
@@ -189,7 +205,7 @@ function rowAndBoundIssues(
           frozen({
             kind: 'beforeEnabler',
             reference,
-            detail: 'afterCheckpoint exitUsable',
+            detail: 'must follow the last required action',
             point: enabler,
           }),
         );
@@ -201,7 +217,7 @@ function rowAndBoundIssues(
         frozen({
           kind: 'pastDeadline',
           reference: entry.reference,
-          detail: 'crosses a fixed lifecycle window',
+          detail: `must stand before ${pointText(roomActionOpeningPoint(left.bounds))}, after which ${keyOf(left.reference)} stands`,
           deadline: roomActionOpeningPoint(left.bounds),
           precedingAction: left.reference,
         }),
@@ -289,7 +305,7 @@ function requiredFirstIssue(
   return frozen({
     kind: openingKind(entry),
     reference: entry.reference,
-    detail: `must follow ${keyOf(required.reference)}, a required action of an earlier window`,
+    detail: `must follow ${keyOf(required.reference)}, a required action whose deadline passes first`,
     point: roomActionOpeningPoint(entry.bounds),
     requiredAction: required.reference,
   });
@@ -339,10 +355,7 @@ export function assessRoomActionPlacement(
 ): RoomActionPlacementAssessment {
   const { rows, crossings } = rowAndBoundIssues(order, context, lastIndex);
   const blockers: readonly RoomActionPlacementBlocker[] = frozen([
-    ...[...rows, ...crossings].filter(
-      (issue): issue is RoomActionPlacementBlocker =>
-        issue.kind !== 'stale' && issue.kind !== 'unrankedRequired',
-    ),
+    ...[...rows, ...crossings].filter(isPlacementBlocker),
     ...requiredFirstBlockers(order, lastIndex, context),
   ]);
   const terminalIndex =

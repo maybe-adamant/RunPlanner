@@ -11,6 +11,7 @@ import {
   type RoomActionRosterIssue,
 } from '@run-planner/engine/simulation';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
+import { phaseMarker, roomEventMarker } from '@planner/projections/roomEventNames';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type {
   WorkspaceRoomLifecycleBoundary,
@@ -33,21 +34,13 @@ function lifecycleBoundaryLabel(
   phaseLabel: string | undefined,
 ): string {
   switch (boundary.kind) {
-    case 'roomEntered':
-      return 'Room entered';
-    case 'encounterBegun':
-      return 'Encounter';
     case 'encounterStarted':
-      return mergedWithBegin ? 'Encounter' : 'Combat';
-    case 'encounterEnd':
-      return 'Encounter ended';
-    case 'bossDefeated':
-      return 'Boss defeated';
+      return mergedWithBegin ? roomEventMarker.encounterBegun : roomEventMarker.encounterStarted;
     // Wheels open names the phase whose combat its wheel starts.
     case 'wheelsOpen':
-      return phaseLabel === undefined ? 'Wheels open' : `Wheels open · ${phaseLabel}`;
-    case 'doorsOpened':
-      return 'Doors open';
+      return phaseMarker(roomEventMarker.wheelsOpen, phaseLabel);
+    default:
+      return roomEventMarker[boundary.kind];
   }
 }
 

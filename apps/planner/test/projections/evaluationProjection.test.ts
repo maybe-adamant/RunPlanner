@@ -625,42 +625,65 @@ describe('Path of Stars screen finding copy', () => {
 
 describe('timeline finding guidance', () => {
   const origin = createProjectAddress();
-  const finding = (
-    reason: string,
-    dependencyKind?: string,
-    checkpointUnavailable?: boolean,
-  ): SemanticFinding => ({
+  const finding = (evidence: SemanticFinding['evidence']): SemanticFinding => ({
     code: 'roomActionOrderUnavailable',
     phase: 'encounterResolution',
     origin,
-    evidence: {
-      reason,
-      ...(dependencyKind === undefined ? {} : { dependencyKind }),
-      ...(checkpointUnavailable === undefined ? {} : { checkpointUnavailable }),
-    },
+    evidence,
   });
 
-  it('names the order repair from its dependency evidence', () => {
-    expect(presentFinding(finding('dependency', 'afterCheckpoint'))).toEqual({
+  it('names the order repair from the bound its row stands outside', () => {
+    expect(
+      presentFinding(finding({ reason: 'dependency', prerequisite: 'interactLocalReward' })),
+    ).toEqual({
       title: 'Action out of order',
       description: 'Move it after its prerequisite.',
     });
-    expect(presentFinding(finding('dependency', 'beforeCheckpoint')).description).toBe(
-      'Move it before its required checkpoint.',
-    );
-    expect(presentFinding(finding('window')).description).toBe(
-      'Move it into its allowed room phase.',
-    );
-    expect(presentFinding(finding('dependency', 'afterCheckpoint', true))).toEqual({
-      title: 'Room phase for this action is gone',
+    expect(
+      presentFinding(finding({ reason: 'beforeEnabler', point: { kind: 'exitsReady' } })),
+    ).toEqual({
+      title: 'Action out of order',
+      description: 'Move it after the last required action.',
     });
+    expect(
+      presentFinding(
+        finding({
+          reason: 'pastDeadline',
+          deadline: { kind: 'doorsOpened' },
+          precedingAction: 'useFountain',
+        }),
+      ).description,
+    ).toBe('Move it before Doors open.');
+    expect(
+      presentFinding(
+        finding({
+          reason: 'beforeSpawn',
+          point: { kind: 'encounterEnd', phaseKey: 'Cage2' },
+          unavailable: true,
+        }),
+      ),
+    ).toEqual({ title: 'Room phase for this action is gone' });
+  });
+
+  it('moves the row ordered first past the deadline it stands after', () => {
+    const preceding = createRoomActionAddress(biome, createOccurrenceId('room'), 'useFountain');
+    expect(
+      presentFinding({
+        ...finding({
+          reason: 'pastDeadline',
+          deadline: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+          precedingAction: 'useFountain',
+        }),
+        origin: preceding,
+      }).description,
+    ).toBe('Move it after Encounter ended.');
   });
 
   it('names the required action a row must follow by its row in the room', () => {
     const requiredAction = roomActionKey({ kind: 'useFountain' });
     const requiredFirst: SemanticFinding = {
-      ...finding('requiredFirst'),
-      evidence: { reason: 'requiredFirst', requiredAction },
+      ...finding({}),
+      evidence: { reason: 'beforeEnabler', point: { kind: 'doorsOpened' }, requiredAction },
     };
     const rows = new Map([[requiredAction, 'Use Fountain of Restoration']]);
     expect(

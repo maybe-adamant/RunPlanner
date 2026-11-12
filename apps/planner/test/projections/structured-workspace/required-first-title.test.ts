@@ -53,7 +53,7 @@ function titleAndRefusal(project: ProjectDocument, occurrenceId: string, kind: s
   const finding = evaluation.findings.find(
     (candidate) =>
       candidate.code === 'roomActionOrderUnavailable' &&
-      candidate.evidence.reason === 'requiredFirst',
+      candidate.evidence.requiredAction !== undefined,
   );
   if (finding === undefined) throw new Error('no required-first finding');
   const refused = roomActions(project, occurrenceId).actions.proposals.find(

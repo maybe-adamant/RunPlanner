@@ -1837,8 +1837,8 @@ describe('room stop', () => {
         phase: 'encounterResolution',
         origin: createRoomActionAddress(goldenFBiome, fPostboss, wellPurchaseRow),
         evidence: {
-          reason: 'requiredFirst',
-          detail: `must follow ${roomActionKey({ kind: 'useFountain' })}, a required action of an earlier window`,
+          reason: 'beforeEnabler',
+          point: { kind: 'doorsOpened' },
           requiredAction: roomActionKey({ kind: 'useFountain' }),
         },
       },

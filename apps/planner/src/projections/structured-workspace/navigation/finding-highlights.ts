@@ -24,8 +24,8 @@ function roomActionControl(finding: SemanticFinding): WorkspaceFindingControl | 
     case 'roomActionPlacementRequired':
       return 'place';
     case 'roomActionOrderUnavailable':
-      // An action ordered after a checkpoint that no longer exists should not exist.
-      return finding.evidence.checkpointUnavailable === true ? 'delete' : 'move';
+      // An action waiting on a point its room never reaches should not exist.
+      return finding.evidence.unavailable === true ? 'delete' : 'move';
     // A press the game refuses or the pool cannot pay for, or a row for an
     // item replaced since, is removed.
     case 'roomActionItemReplaced':
