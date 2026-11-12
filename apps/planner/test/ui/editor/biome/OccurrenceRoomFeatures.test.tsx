@@ -25,7 +25,7 @@ import {
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected } from '@planner/state/editorSessionSlice';
 import {
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
 import {
@@ -73,17 +73,18 @@ async function chooseNemesisEvent(
 /** Meets Nemesis from the live row, as the owner would: her contact is the next row. */
 function meetNemesis(view: ReturnType<typeof renderOccurrenceWorkbench>, occurrenceId: string) {
   const key = roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' });
-  const live = liveActionsForProjectEvaluationAssembly(
+  const live = liveRoomForProjectEvaluationAssembly(
     catalog,
     view.application.store.getState().projectWorkspace.assembly!,
     createOccurrenceAddress(goldenFBiome, createOccurrenceId(occurrenceId)),
+    'placements',
   );
-  const place = live?.gaps
-    .filter((gap) => gap.index === live.frontier)
-    .flatMap((gap) => gap.items.flatMap((item) => item.actions))
-    .find((action) => action.kind === 'place' && roomActionKey(action.reference) === key);
-  if (place?.kind !== 'place') throw new Error('Nemesis is not live at the frontier');
-  act(() => view.application.store.dispatch(authoredProjectCommandDispatched(place.command)));
+  const place = live?.gaps[live.frontier]?.items
+    .flatMap((item) => item.verbs)
+    .find((verb) => verb.standing !== true && roomActionKey(verb.reference!) === key)
+    ?.commands?.[0];
+  if (place === undefined) throw new Error('Nemesis is not live at the frontier');
+  act(() => view.application.store.dispatch(authoredProjectCommandDispatched(place)));
 }
 
 describe('OccurrenceRoomFeatures', () => {

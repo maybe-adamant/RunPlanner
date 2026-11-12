@@ -16,7 +16,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -150,7 +150,7 @@ describe("Gold Gold Gold's duplicate left unplaced", () => {
 
   it('lies live from a fresh purchase and stands at its deadline, never placed', () => {
     const assembly = evaluate(freshPurchase());
-    const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, shop)!;
+    const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, shop, 'placements')!;
     const pickup = (gap: (typeof live.gaps)[number]) =>
       gap.items.find(
         (item) =>
@@ -167,15 +167,17 @@ describe("Gold Gold Gold's duplicate left unplaced", () => {
     expect(pickup(live.gaps[0]!)).toBeUndefined();
     expect(pickup(live.gaps[1]!)).toMatchObject({
       participation: 'required',
-      actions: [
+      verbs: [
         {
-          kind: 'place',
-          command: {
-            kind: 'PlaceEchoGoldPickup',
-            entry: expect.objectContaining({ entryKey: 'echoDoubleShopReward' }),
-            sourceOfferKey: 'Boon',
-            index: 1,
-          },
+          verb: 'pickUp',
+          commands: [
+            {
+              kind: 'PlaceEchoGoldPickup',
+              entry: expect.objectContaining({ entryKey: 'echoDoubleShopReward' }),
+              sourceOfferKey: 'Boon',
+              index: 1,
+            },
+          ],
         },
       ],
     });
@@ -188,7 +190,7 @@ describe("Gold Gold Gold's duplicate left unplaced", () => {
       purchased: false,
     });
     const assembly = evaluate(unbought);
-    const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, shop)!;
+    const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, shop, 'placements')!;
 
     expect(assembly.evaluation.findings.filter(isDuplicate)).toEqual([]);
     expect(
@@ -223,7 +225,8 @@ describe("Gold Gold Gold's duplicate left unplaced", () => {
       .find(
         (candidate) =>
           candidate.occurrenceId !== shop.occurrenceId &&
-          liveActionsForProjectEvaluationAssembly(catalog, assembly, candidate) !== undefined &&
+          liveRoomForProjectEvaluationAssembly(catalog, assembly, candidate, 'placements') !==
+            undefined &&
           roomRows(project, candidate).some(
             (reference) => reference.kind === 'interactIncomingReward',
           ),

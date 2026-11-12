@@ -29,6 +29,7 @@ import {
   type OccurrenceId,
   type ProjectCommand,
   type ProjectDocument,
+  type RoomActionReference,
   type RoomOccurrence,
   type SemanticAddress,
   type TargetAddress,
@@ -58,9 +59,9 @@ import {
   type RewardOfferExclusionReason,
   prepareRouteStartTraitRequirements,
   routeResourceAuthoring,
-  liveActionsForProjectEvaluationAssembly,
-  type LiveAction,
-  type RoomLiveActions,
+  liveRoomForProjectEvaluationAssembly,
+  type LiveRoom,
+  type LiveVerb,
 } from '@run-planner/engine/simulation';
 import { latestRunState } from './report';
 import {
@@ -131,37 +132,50 @@ function originRoom(origin: SemanticAddress): OccurrenceAddress | undefined {
   );
 }
 
-type LivePlacement = Extract<LiveAction, { readonly kind: 'place' }>;
+/** A verb placing a row not yet placed: the row and the one command placing it. */
+interface LivePlacement {
+  readonly reference: RoomActionReference;
+  readonly command: ProjectCommand;
+}
+
+/**
+ * The placement a verb performs; none while its row stands, for a move, or while a picker
+ * supplies its command (a Travel Deal item's value). A choice the placed row still needs
+ * (a Pom's level) is its own finding once placed.
+ */
+function placementOf(verb: LiveVerb): LivePlacement | undefined {
+  const command = verb.standing === true ? undefined : verb.commands?.[0];
+  return command === undefined || command.kind === 'MoveRoomAction' || verb.reference === undefined
+    ? undefined
+    : { reference: verb.reference, command };
+}
 
 /**
  * The first required item live at the walk's frontier, in the engine's item order, that the
- * product offers a place command for, never one already placed by this repair: its canonical
+ * product offers a placement for, never one already placed by this repair: its canonical
  * restore wherever the product offers it, otherwise its placement at the frontier.
  */
-function requiredPlacement(
-  live: RoomLiveActions,
-  placed: ReadonlySet<string>,
-): LivePlacement | undefined {
-  const offered = live.gaps.flatMap((gap) => gap.items.flatMap((item) => item.actions));
+function requiredPlacement(live: LiveRoom, placed: ReadonlySet<string>): LivePlacement | undefined {
+  const offered = live.gaps.flatMap((gap) => gap.items.flatMap((item) => item.verbs));
   for (const item of live.gaps[live.frontier]?.items ?? []) {
-    const actions: readonly LiveAction[] =
+    const verbs: readonly LiveVerb[] =
       item.kind === 'pickup'
         ? item.participation === 'required'
-          ? item.actions
+          ? item.verbs
           : []
-        : item.actions.filter((action) => action.participation === 'required');
-    for (const action of actions) {
-      // A choice the placed row still needs (a Pom's level) is its own finding once placed.
-      if (action.kind !== 'place' || action.needsChoice === 'travelDealItem') continue;
-      const key = roomActionKey(action.reference);
+        : item.verbs.filter((verb) => verb.participation === 'required');
+    for (const verb of verbs) {
+      const placement = placementOf(verb);
+      if (placement === undefined) continue;
+      const key = roomActionKey(placement.reference);
       if (placed.has(key)) continue;
       const canonical = offered.find(
-        (candidate): candidate is LivePlacement =>
-          candidate.kind === 'place' &&
+        (candidate) =>
           candidate.canonical === true &&
+          candidate.reference !== undefined &&
           roomActionKey(candidate.reference) === key,
       );
-      return canonical ?? action;
+      return (canonical === undefined ? undefined : placementOf(canonical)) ?? placement;
     }
   }
   return undefined;
@@ -1593,7 +1607,12 @@ export class DraftWalk {
     const placed = new Set<string>();
     let changed = false;
     for (;;) {
-      const live = liveActionsForProjectEvaluationAssembly(this.catalog, this.assembly, room);
+      const live = liveRoomForProjectEvaluationAssembly(
+        this.catalog,
+        this.assembly,
+        room,
+        'placements',
+      );
       if (live === undefined) return changed;
       const placement = requiredPlacement(live, placed);
       if (placement === undefined) return changed;

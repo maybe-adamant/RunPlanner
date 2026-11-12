@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import { createBiomeAddress, createOccurrenceAddress, type OccurrenceAddress } from '../addresses';
-import type { ProjectDocument } from '../model';
+import type { ProjectDocument, RoomActionReference } from '../model';
 import {
   chosenRoomActionIndexes,
   placeRoomActionsAtChosenIndex,
@@ -55,56 +55,48 @@ function commandOccurrence(command: PositionedCommand): OccurrenceAddress {
   }
 }
 
-/** The actions the command placed, in the order they move together. */
-function placedActions(placed: ProjectDocument, command: PositionedCommand): PlacedRoomActions {
-  const occurrence = commandOccurrence(command);
-  let keys: string[];
+/** The room action a positioned command places first. */
+export function positionedCommandReference(command: PositionedCommand): RoomActionReference {
   switch (command.kind) {
     case 'PlaceHermesShrineDelivery':
     case 'PlaceClockedTraitPickup':
     case 'PlaceEchoGoldPickup':
-      keys = [
-        roomActionKey({
-          kind: 'interactAcquisitionEntry',
-          siteKey: command.entry.site.pointKey,
-          entryKey: command.entry.entryKey,
-        }),
-      ];
-      break;
+      return Object.freeze({
+        kind: 'interactAcquisitionEntry',
+        siteKey: command.entry.site.pointKey,
+        entryKey: command.entry.entryKey,
+      });
     case 'ReplaceShopPurchaseParticipation':
-      keys = [roomActionKey({ kind: 'interactShopOffer', offerKey: command.offer.offerKey })];
-      break;
+      return Object.freeze({ kind: 'interactShopOffer', offerKey: command.offer.offerKey });
     case 'PurchaseShopTravelDealRefill':
-      keys = [
-        roomActionKey({
-          kind: 'interactAcquisitionEntry',
-          siteKey: 'roomExit',
-          entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
-        }),
-      ];
-      break;
+      return Object.freeze({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+      });
     case 'SetStygianWellPurchase':
-      keys = [
-        roomActionKey({
-          kind: 'purchaseStygianWellOffer',
-          generationKey: command.generationKey,
-        }),
-      ];
-      break;
+      return Object.freeze({
+        kind: 'purchaseStygianWellOffer',
+        generationKey: command.generationKey,
+      });
     case 'SetHermesShrinePurchase':
-    case 'PurchaseHermesShrineOffer': {
-      keys = [
-        roomActionKey({ kind: 'purchaseHermesShrineOffer', generationKey: command.generationKey }),
-      ];
-      break;
-    }
+    case 'PurchaseHermesShrineOffer':
+      return Object.freeze({
+        kind: 'purchaseHermesShrineOffer',
+        generationKey: command.generationKey,
+      });
     case 'SetHermesShrineRush':
-      keys = [
-        roomActionKey({ kind: 'rushHermesShrineOffer', generationKey: command.generationKey }),
-      ];
-      break;
+      return Object.freeze({ kind: 'rushHermesShrineOffer', generationKey: command.generationKey });
   }
-  return Object.freeze({ document: placed, occurrence, keys: Object.freeze(keys) });
+}
+
+/** The actions the command placed, in the order they move together. */
+function placedActions(placed: ProjectDocument, command: PositionedCommand): PlacedRoomActions {
+  return Object.freeze({
+    document: placed,
+    occurrence: commandOccurrence(command),
+    keys: Object.freeze([roomActionKey(positionedCommandReference(command))]),
+  });
 }
 
 /**

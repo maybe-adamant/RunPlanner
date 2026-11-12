@@ -64,7 +64,7 @@ import {
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   roomLayoutAuthoringForProjectEvaluationAssembly,
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
   simulateProject,
@@ -173,25 +173,27 @@ function placeLiveItem(
   reference: RoomActionReference,
 ): GalleryStep {
   return (project) => {
-    const live = liveActionsForProjectEvaluationAssembly(
+    const live = liveRoomForProjectEvaluationAssembly(
       catalog,
       simulateProjectAssembly(catalog, project),
       occurrenceAddress(project, biomeKey, occurrenceId),
+      'placements',
     );
     const placements = (live?.gaps ?? []).flatMap((gap) =>
       gap.items.flatMap((item) =>
-        item.actions.flatMap((action) =>
-          action.kind === 'place' && roomActionKey(action.reference) === roomActionKey(reference)
-            ? [action]
-            : [],
+        item.verbs.filter(
+          (verb) =>
+            verb.standing !== true &&
+            verb.commands !== undefined &&
+            roomActionKey(verb.reference!) === roomActionKey(reference),
         ),
       ),
     );
     if (placements.length === 0) throw new Error(`${occurrenceId} has no live ${reference.kind}`);
-    const canonical = placements.find((action) => action.canonical === true);
+    const canonical = placements.find((verb) => verb.canonical === true);
     if (canonical === undefined)
       throw new Error(`${occurrenceId} names no canonical placement for ${reference.kind}`);
-    return canonical.command;
+    return canonical.commands![0]!;
   };
 }
 

@@ -40,11 +40,11 @@ import {
   surfaceShrineDeliverySources,
 } from '@run-planner/test-fixtures/surface';
 import {
-  liveInteractionsForProjectEvaluationAssembly,
-  type LiveInteractionItem,
+  liveRoomForProjectEvaluationAssembly,
+  type LiveItem,
+  type LiveRoom,
   type LiveVerb,
-  type RoomLiveInteractions,
-} from '../../src/simulation/evaluation/live-interactions';
+} from '../../src/simulation/evaluation/live-room';
 import {
   canonicalRoom,
   goldenCheckpoints,
@@ -54,7 +54,7 @@ import {
   throughBiome,
   walkAccepts,
   withRoomOrder,
-} from '../support/live-actions';
+} from '../support/live-room';
 import { firstSupportedReroll, withArcana, withJudgment } from '../support/rerolls';
 
 const fBiome = createBiomeAddress('Underworld', 'F');
@@ -66,8 +66,8 @@ function interactions(
   project: ProjectDocument,
   address: OccurrenceAddress,
   assembly: ProjectEvaluationAssembly = simulateProjectAssembly(catalog, project),
-): RoomLiveInteractions {
-  const live = liveInteractionsForProjectEvaluationAssembly(catalog, assembly, address);
+): LiveRoom {
+  const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, address);
   if (live === undefined) throw new Error(`${address.occurrenceId} is not reached`);
   return live;
 }
@@ -80,16 +80,16 @@ function reachedRooms(project: ProjectDocument, assembly: ProjectEvaluationAssem
         createBiomeAddress(project.route.routeKey, biome.biomeKey),
         occurrence.occurrenceId,
       );
-      const live = liveInteractionsForProjectEvaluationAssembly(catalog, assembly, address);
+      const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, address);
       return live === undefined ? [] : [{ address, live }];
     }),
   );
 }
 
 /** Every verb of one room, with the gap it stands at and its item. */
-function roomVerbs(live: RoomLiveInteractions) {
+function roomVerbs(live: LiveRoom) {
   return live.gaps.flatMap((gap) =>
-    gap.items.flatMap(({ item, verbs }) => verbs.map((verb) => ({ gap: gap.index, item, verb }))),
+    gap.items.flatMap((item) => item.verbs.map((verb) => ({ gap: gap.index, item, verb }))),
   );
 }
 
@@ -98,7 +98,7 @@ function walkPasses(
   project: ProjectDocument,
   assembly: ProjectEvaluationAssembly,
   address: OccurrenceAddress,
-  live: RoomLiveInteractions,
+  live: LiveRoom,
 ): boolean {
   const stop = roomStop(assembly, address);
   return (
@@ -118,11 +118,11 @@ function roomStop(assembly: ProjectEvaluationAssembly, address: OccurrenceAddres
 }
 
 /** Whether anything required is live at the frontier. */
-function requiredLive(live: RoomLiveInteractions): boolean {
-  return live.gaps[live.frontier]!.items.some(({ item, verbs }) =>
+function requiredLive(live: LiveRoom): boolean {
+  return live.gaps[live.frontier]!.items.some((item) =>
     item.kind === 'pickup'
       ? item.participation === 'required'
-      : verbs.some((verb) => verb.participation === 'required'),
+      : item.verbs.some((verb) => verb.participation === 'required'),
   );
 }
 
@@ -175,7 +175,7 @@ function goldifies(project: ProjectDocument) {
   const assembly = simulateProjectAssembly(catalog, project);
   return (project.route.biomes[0]!.topology?.occurrences ?? []).flatMap((occurrence) => {
     const address = createOccurrenceAddress(fBiome, occurrence.occurrenceId);
-    const live = liveInteractionsForProjectEvaluationAssembly(catalog, assembly, address);
+    const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, address);
     return (live === undefined ? [] : roomVerbs(live))
       .filter(({ verb }) => verb.verb === 'goldify')
       .map(({ gap, verb }) => ({ id: occurrence.occurrenceId as string, address, gap, verb }));
@@ -411,15 +411,7 @@ describe('live interactions at a gap', () => {
     );
     const objectVerbs = (document: ProjectDocument) =>
       roomVerbs(interactions(document, fWell)).filter(({ item }) => item.kind === 'object');
-    const summary = ({
-      gap,
-      item,
-      verb,
-    }: {
-      gap: number;
-      item: LiveInteractionItem['item'];
-      verb: LiveVerb;
-    }) => [
+    const summary = ({ gap, item, verb }: { gap: number; item: LiveItem; verb: LiveVerb }) => [
       gap,
       item.kind === 'object' ? item.object : 'pickup',
       verb.verb,
@@ -622,10 +614,8 @@ describe('live interactions at a gap', () => {
     );
     const frontierItems = loose.gaps[loose.frontier]!.items;
     expect(
-      frontierItems.some(({ verbs }) => verbs.some((verb) => verb.verb === 'choose')) &&
-        frontierItems.some(
-          ({ item }) => item.kind === 'pickup' && item.participation === 'required',
-        ),
+      frontierItems.some((item) => item.verbs.some((verb) => verb.verb === 'choose')) &&
+        frontierItems.some((item) => item.kind === 'pickup' && item.participation === 'required'),
     ).toBe(true);
     expect(loose.progression).toBeUndefined();
 
@@ -638,8 +628,8 @@ describe('live interactions at a gap', () => {
     const taken = withRoomOrder(fg, room, roomOrder(fg, room).toSpliced(rewardIndex, 1));
     const untaken = interactions(taken, room);
     expect(untaken.progression).toBeUndefined();
-    const pickUp = untaken.gaps[untaken.frontier]!.items.flatMap(({ item, verbs }) =>
-      item.kind === 'pickup' ? verbs.filter((verb) => verb.verb === 'pickUp') : [],
+    const pickUp = untaken.gaps[untaken.frontier]!.items.flatMap((item) =>
+      item.kind === 'pickup' ? item.verbs.filter((verb) => verb.verb === 'pickUp') : [],
     )[0]!;
     const restored = applyProjectCommand(taken, catalog, pickUp.commands![0]!);
     expect(interactions(restored, room).progression).toEqual({ kind: 'leaveRoom' });
@@ -657,8 +647,8 @@ describe('live interactions at a gap', () => {
           listed += 1;
           if (
             item.participation !== 'optional' ||
-            item.actions.some((action) => action.kind === 'placed') ||
-            !live.gaps[live.frontier]!.items.some((entry) => entry.item === item)
+            item.verbs.some((verb) => verb.standing === true) ||
+            !live.gaps[live.frontier]!.items.includes(item)
           )
             failures.push(`${id} ${address.occurrenceId}: ${roomActionKey(item.reference)}`);
         }

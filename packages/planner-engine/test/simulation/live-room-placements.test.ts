@@ -40,10 +40,10 @@ import {
   surfaceShrineDeliverySources,
 } from '@run-planner/test-fixtures/surface';
 import {
-  liveActionsForProjectEvaluationAssembly,
-  type LiveAction,
-  type RoomLiveActions,
-} from '../../src/simulation/evaluation/live-actions';
+  liveRoomForProjectEvaluationAssembly,
+  type LiveRoom,
+  type LiveVerb,
+} from '../../src/simulation/evaluation/live-room';
 import {
   canonicalRoom,
   goldenCheckpoints,
@@ -51,9 +51,10 @@ import {
   reachedRooms,
   roomOrder,
   throughBiome,
+  verbStep,
   walkAccepts,
   withRoomOrder,
-} from '../support/live-actions';
+} from '../support/live-room';
 
 const oPostboss = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-preboss:postboss'));
 const oShrine = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-combat07'));
@@ -74,8 +75,16 @@ const FEATURE_OWNED: ReadonlySet<string> = new Set([
   'interactKeepsakeRack',
 ]);
 
-function actionsAt(live: RoomLiveActions, gap: number): readonly LiveAction[] {
-  return live.gaps[gap]?.items.flatMap((item) => item.actions) ?? [];
+function verbsAt(live: LiveRoom, gap: number): readonly LiveVerb[] {
+  return live.gaps[gap]?.items.flatMap((item) => item.verbs) ?? [];
+}
+
+/** The live product as Draft and Collect all required read it: each step's one verb. */
+function placementsOf(
+  assembly: ProjectEvaluationAssembly,
+  address: OccurrenceAddress,
+): LiveRoom | undefined {
+  return liveRoomForProjectEvaluationAssembly(catalog, assembly, address, 'placements');
 }
 
 /** The room with Gold Gold Gold's duplicate unplaced: its row and its entry gone. */
@@ -159,7 +168,7 @@ function auditRoom(
   const failures: string[] = [];
   project = throughBiome(project, address.biomeKey);
   const assembly = simulateProjectAssembly(catalog, project);
-  const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, address)!;
+  const live = placementsOf(assembly, address)!;
   const room = canonicalRoom(assembly, address)!;
   const before = placementFindings(assembly, address);
   const biome = createBiomeAddress(address.routeKey, address.biomeKey);
@@ -167,20 +176,21 @@ function auditRoom(
   const offeredGaps = new Map<string, Set<number>>();
   const positioned = new Map<string, ProjectCommand>();
   for (const gap of live.gaps)
-    for (const action of gap.items.flatMap((item) => item.actions)) {
-      if (action.kind === 'placed') continue;
-      if (action.kind === 'place' && action.needsChoice === 'travelDealItem') continue;
-      if (only !== undefined && action.command.kind !== only) continue;
-      const key = roomActionKey(action.reference);
+    for (const verb of gap.items.flatMap((item) => item.verbs)) {
+      // A standing row, or a Travel Deal item whose picker supplies the command.
+      const offered = verb.standing === true ? undefined : verb.commands?.[0];
+      if (offered === undefined) continue;
+      if (only !== undefined && offered.kind !== only) continue;
+      const key = roomActionKey(verb.reference!);
       offeredGaps.set(key, (offeredGaps.get(key) ?? new Set()).add(gap.index));
-      if (POSITIONED.has(action.command.kind)) {
-        const { index: _index, ...command } = action.command as ProjectCommand & { index?: number };
+      if (POSITIONED.has(offered.kind)) {
+        const { index: _index, ...command } = offered as ProjectCommand & { index?: number };
         void _index;
         positioned.set(key, command as ProjectCommand);
-        counts.families?.add(action.command.kind);
+        counts.families?.add(offered.kind);
       }
       counts.sound += 1;
-      if (!walkAccepts(project, before, address, [action.command], key))
+      if (!walkAccepts(project, before, address, [offered], key))
         failures.push(`${id} ${address.occurrenceId} @${gap.index}: offered ${key} refused`);
     }
   const spawnGaps = new Map(
@@ -219,7 +229,7 @@ function auditRoom(
   return failures;
 }
 
-describe('live actions at a gap', () => {
+describe('live placements at a gap', () => {
   const evaluated = goldenCheckpoints.map(({ entry, load }) => {
     const project = load();
     return { id: entry.id, project, assembly: simulateProjectAssembly(catalog, project) };
@@ -241,8 +251,8 @@ describe('live actions at a gap', () => {
           if (stale.has(key)) continue;
           rows += 1;
           if (
-            !actionsAt(live, index).some(
-              (action) => action.kind === 'placed' && roomActionKey(action.reference) === key,
+            !verbsAt(live, index).some(
+              (verb) => verb.standing === true && roomActionKey(verb.reference!) === key,
             )
           )
             failures.push(`${id} ${address.occurrenceId} #${index} ${key}`);
@@ -283,7 +293,7 @@ describe('live actions at a gap', () => {
       readonly project: ProjectDocument;
       readonly assembly: ProjectEvaluationAssembly;
       readonly address: OccurrenceAddress;
-      readonly live: RoomLiveActions;
+      readonly live: LiveRoom;
     }[] = [];
     // A room in a plan's last biomes re-evaluates least once edited, so it represents its shape.
     const candidates = evaluated
@@ -413,11 +423,7 @@ describe('live actions at a gap', () => {
       occurrence: oShrine,
       generationKey: 'initial:secondRight',
     });
-    const live = liveActionsForProjectEvaluationAssembly(
-      catalog,
-      simulateProjectAssembly(catalog, project),
-      oShrine,
-    )!;
+    const live = placementsOf(simulateProjectAssembly(catalog, project), oShrine)!;
     const rushKey = roomActionKey({
       kind: 'rushHermesShrineOffer',
       generationKey: 'initial:secondLeft',
@@ -431,7 +437,7 @@ describe('live actions at a gap', () => {
       gap.items.some(
         (item) =>
           item.kind === 'object' &&
-          item.actions.some((action) => roomActionKey(action.reference) === rushKey),
+          item.verbs.some((verb) => roomActionKey(verb.reference!) === rushKey),
       )
         ? [gap.index]
         : [],
@@ -456,14 +462,14 @@ describe('live actions at a gap', () => {
       for (let own = 0; own < order.length && tried < 6; own += 1) {
         const key = roomActionKey(order[own]!);
         const item = live.gaps[own]!.items.find((candidate) =>
-          candidate.actions.some(
-            (action) => action.kind === 'placed' && roomActionKey(action.reference) === key,
+          candidate.verbs.some(
+            (verb) => verb.standing === true && roomActionKey(verb.reference!) === key,
           ),
         );
         const deadline =
           item?.kind === 'pickup'
             ? item.deadline
-            : item?.actions.find((action) => roomActionKey(action.reference) === key)?.deadline;
+            : item?.verbs.find((verb) => roomActionKey(verb.reference!) === key)?.deadline;
         // The row's own gap and the one after it are the same position; the next gap is past it.
         if (deadline === undefined) continue;
         const past = deadline + (deadline === own ? 2 : 1);
@@ -522,15 +528,17 @@ describe('live actions at a gap', () => {
         const index = row.rank - 1;
         const without = withRoomOrder(project, address, order.toSpliced(index, 1));
         const after = simulateProjectAssembly(catalog, without);
-        const reached = liveActionsForProjectEvaluationAssembly(catalog, after, address)!;
+        const reached = placementsOf(after, address)!;
         const offered =
           reached.frontier >= index &&
-          actionsAt(reached, index).some(
-            (action) =>
-              action.kind === 'place' &&
-              roomActionKey(action.reference) === row.key &&
+          verbsAt(reached, index).some(
+            (verb) =>
+              verbStep(verb) === 'place' &&
+              roomActionKey(verb.reference!) === row.key &&
               roomActionKey(
-                roomOrder(applyProjectCommand(without, catalog, action.command), address)[index]!,
+                roomOrder(applyProjectCommand(without, catalog, verb.commands![0]!), address)[
+                  index
+                ]!,
               ) === row.key,
           );
         if (!offered || placementFindings(after, address).size === 0)
@@ -554,20 +562,15 @@ describe('live actions at a gap', () => {
       createBiomeAddress('Surface', 'P'),
       createOccurrenceId('surface-p-1-1-p_combat03'),
     );
-    const live = liveActionsForProjectEvaluationAssembly(
-      catalog,
-      simulateProjectAssembly(catalog, project),
-      room,
-    )!;
+    const live = placementsOf(simulateProjectAssembly(catalog, project), room)!;
     // The walk passes the encounter end the delivery spawns at and stops before Doors open.
     expect(live.frontier).toBe(2);
     const unplaced = live.gaps[2]!.items.flatMap((item) =>
       item.kind === 'pickup' &&
-      item.actions.some(
-        (action) =>
-          action.kind === 'place' &&
-          (action.command.kind === 'PlaceHermesShrineDelivery' ||
-            action.command.kind === 'PlaceClockedTraitPickup'),
+      item.verbs.some(
+        (verb) =>
+          verb.commands?.[0]?.kind === 'PlaceHermesShrineDelivery' ||
+          verb.commands?.[0]?.kind === 'PlaceClockedTraitPickup',
       )
         ? [item]
         : [],
@@ -577,18 +580,17 @@ describe('live actions at a gap', () => {
         item.source.kind === 'generated' ? item.source.family.kind : item.source.kind,
         item.participation,
         item.deadline,
-        item.actions.map((action) => (action.kind === 'place' ? action.needsChoice : '')),
+        item.verbs.map((verb) => verb.choice?.picker),
       ]),
     ).toEqual([
       // It may go anywhere after the encounter end, the room's last gap included.
       ['hermesShrineDelivery', 'required', 3, [undefined]],
       ['trait', 'optional', undefined, ['levelResolution']],
     ]);
-    const delivery = unplaced[0]!.actions[0]!;
-    if (delivery.kind !== 'place') throw new Error('the delivery is not placeable');
-    expect(delivery.command).toMatchObject({ index: 2 });
-    const placed = roomOrder(applyProjectCommand(project, catalog, delivery.command), room);
-    expect(roomActionKey(placed[2]!)).toBe(roomActionKey(delivery.reference));
+    const delivery = unplaced[0]!.verbs[0]!;
+    expect(delivery.commands).toMatchObject([{ index: 2 }]);
+    const placed = roomOrder(applyProjectCommand(project, catalog, delivery.commands![0]!), room);
+    expect(roomActionKey(placed[2]!)).toBe(roomActionKey(delivery.reference!));
   });
 
   it('lets a Ship delivery left unplaced lie from Wheels open until the next wheel choice', () => {
@@ -660,7 +662,7 @@ describe('live actions at a gap', () => {
     );
 
     // The pickup spawns at Wheels open and is due at the choice, its only gap.
-    const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, ship)!;
+    const live = placementsOf(assembly, ship)!;
     expect(live.frontier).toBe(0);
     const pickup = live.gaps[0]!.items.find(
       (item) => item.kind === 'pickup' && roomActionKey(item.reference) === deliveryKey,
@@ -669,10 +671,9 @@ describe('live actions at a gap', () => {
       spawn: { gap: 0, moment: 'wheelsOpen:Intro' },
       deadline: 0,
     });
-    const place = pickup!.actions[0]!;
-    if (place.kind !== 'place') throw new Error('the delivery is not placeable');
-    expect(place.command).toMatchObject({ kind: 'PlaceHermesShrineDelivery', index: 0 });
-    const repaired = applyProjectCommand(project, catalog, place.command);
+    const [place] = pickup!.verbs[0]!.commands!;
+    expect(place).toMatchObject({ kind: 'PlaceHermesShrineDelivery', index: 0 });
+    const repaired = applyProjectCommand(project, catalog, place!);
     expect(roomOrder(repaired, ship).map(roomActionKey)).toEqual(order.map(roomActionKey));
   });
 });

@@ -13,7 +13,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -104,18 +104,13 @@ function withOrder(
 
 /** The keys of the required rows the walk reached in the room, read from the live product. */
 function requiredRows(assembly: ProjectEvaluationAssembly, room: OccurrenceAddress) {
-  const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, room);
+  const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, room, 'placements');
   const keys = new Set<string>();
   for (const gap of live?.gaps ?? [])
     for (const item of gap.items)
-      for (const action of item.actions)
-        if (
-          action.kind === 'placed' &&
-          (item.kind === 'pickup'
-            ? item.participation === 'required'
-            : 'participation' in action && action.participation === 'required')
-        )
-          keys.add(roomActionKey(action.reference));
+      for (const verb of item.verbs)
+        if (verb.standing === true && verb.participation === 'required')
+          keys.add(roomActionKey(verb.reference!));
   return keys;
 }
 
@@ -160,12 +155,12 @@ function offeredByLiveProduct(
   room: OccurrenceAddress,
   command: ProjectCommand,
 ): boolean {
-  const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, room);
+  const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, room, 'placements');
   return (
     live?.gaps.some((gap) =>
       gap.items.some((item) =>
-        item.actions.some(
-          (action) => action.kind === 'place' && isDeepStrictEqual(action.command, command),
+        item.verbs.some(
+          (verb) => verb.standing !== true && isDeepStrictEqual(verb.commands?.[0], command),
         ),
       ),
     ) ?? false
@@ -265,7 +260,12 @@ describe('Draft places what a room requires from the live product', () => {
             continue;
           }
           // A later row of a room the walk stops in waits for that stop's own repair.
-          const live = liveActionsForProjectEvaluationAssembly(catalog, walk.assembly, room);
+          const live = liveRoomForProjectEvaluationAssembly(
+            catalog,
+            walk.assembly,
+            room,
+            'placements',
+          );
           if (issue !== undefined && live?.frontier !== roomOrder(walk.project, room).length) {
             counts.stoppedInRoom += 1;
             continue;
@@ -300,9 +300,9 @@ describe('Draft places what a room requires from the live product', () => {
       ),
     );
     // The reward spawns as the fight completes; its encounter's end effects wait on it.
-    const live = liveActionsForProjectEvaluationAssembly(catalog, stripped, room)!;
+    const live = liveRoomForProjectEvaluationAssembly(catalog, stripped, room, 'placements')!;
     const offered = live.gaps[live.frontier]!.items.flatMap((item) =>
-      item.actions.map((action) => roomActionKey(action.reference)),
+      item.verbs.map((verb) => roomActionKey(verb.reference!)),
     );
     expect(offered).toContain(roomActionKey(reward));
     const { walk, placements } = restore(

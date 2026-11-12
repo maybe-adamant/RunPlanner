@@ -27,7 +27,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -42,7 +42,7 @@ import { createSurfaceOSameRoomHermesDeliveriesCheckpoint } from '@run-planner/t
 import { placeTestLivePickupsAtSite } from '@run-planner/test-fixtures/shared';
 import { roomActionsOnReplacedItems } from '../../../src/authored-project/room-actions/replaced-items';
 import { withArcana, withGoldenUnderworldJudgments, withJudgment } from '../../support/rerolls';
-import { liveInteractionsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/live-interactions';
+import { verbStep } from '../../support/live-room';
 
 const f = createBiomeAddress('Underworld', 'F');
 const g = createBiomeAddress('Underworld', 'G');
@@ -334,46 +334,26 @@ describe('rows on a replaced item in edit settlement', () => {
     it('is its current item, unplaced with its place verb, never placed or standing', () => {
       const project = swapped();
       const assembly = evaluate(project);
-      const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, room)!;
-      const actions = live.gaps.flatMap((gap) =>
-        gap.items.flatMap((item) =>
-          item.actions.filter(
-            (action) => roomActionKey(action.reference) === roomActionKey(pickup),
-          ),
-        ),
-      );
-      expect(actions.some((action) => action.kind === 'placed')).toBe(false);
-      expect(actions.length).toBeGreaterThan(0);
-      for (const action of actions) {
-        expect(action).toMatchObject({ kind: 'place', reference: current });
-        expect(action.kind === 'place' && action.command).toMatchObject({
-          kind: 'InsertRoomAction',
-          reference: current,
-        });
-      }
       // The Timeline's reward entry offers placing the new reward, never a standing row.
-      const verbs = liveInteractionsForProjectEvaluationAssembly(
-        catalog,
-        assembly,
-        room,
-      )!.gaps.flatMap((gap) =>
-        gap.items.flatMap((item) =>
-          item.verbs.filter(
-            (verb) =>
-              verb.reference !== undefined &&
-              roomActionKey(verb.reference) === roomActionKey(pickup),
+      const verbs = liveRoomForProjectEvaluationAssembly(catalog, assembly, room)!.gaps.flatMap(
+        (gap) =>
+          gap.items.flatMap((item) =>
+            item.verbs.filter(
+              (verb) =>
+                verb.reference !== undefined &&
+                roomActionKey(verb.reference) === roomActionKey(pickup),
+            ),
           ),
-        ),
       );
       expect(verbs.length).toBeGreaterThan(0);
       expect(verbs.some((verb) => verb.standing === true)).toBe(false);
+      for (const verb of verbs)
+        expect(verb).toMatchObject({
+          reference: current,
+          commands: [{ kind: 'InsertRoomAction', reference: current }],
+        });
       // Placing it takes the replaced row's place.
-      const place = actions.find((action) => action.kind === 'place');
-      const placed = applyProjectCommand(
-        project,
-        catalog,
-        place!.kind === 'place' ? place!.command : swap(),
-      );
+      const placed = applyProjectCommand(project, catalog, verbs[0]!.commands![0]!);
       expect(order(placed, room)).toEqual([current]);
       expect(
         evaluate(placed).evaluation.findings.some(
@@ -381,10 +361,6 @@ describe('rows on a replaced item in edit settlement', () => {
         ),
       ).toBe(false);
     });
-
-    function swap(): ProjectCommand {
-      throw new Error('no place action');
-    }
   });
 
   describe('presses', () => {
@@ -735,14 +711,19 @@ describe('rows on a replaced item in edit settlement', () => {
         siteKey: 'hermesShrineDelivery',
         entryKey: combatEntry.entryKey,
       });
-      const live = liveActionsForProjectEvaluationAssembly(catalog, settled.assembly, host)!;
-      const actions = live.gaps.flatMap((gap) =>
+      const live = liveRoomForProjectEvaluationAssembly(
+        catalog,
+        settled.assembly,
+        host,
+        'placements',
+      )!;
+      const verbs = live.gaps.flatMap((gap) =>
         gap.items.flatMap((item) =>
-          item.actions.filter((action) => roomActionKey(action.reference) === key),
+          item.verbs.filter((verb) => roomActionKey(verb.reference!) === key),
         ),
       );
-      expect(actions.length).toBeGreaterThan(0);
-      expect(actions.every((action) => action.kind === 'place')).toBe(true);
+      expect(verbs.length).toBeGreaterThan(0);
+      expect(verbs.every((verb) => verbStep(verb) === 'place')).toBe(true);
     });
 
     const o = createBiomeAddress('Surface', 'O');

@@ -369,12 +369,12 @@ export {
   type SpawnedLootSource,
 } from './evaluation/spawned-loot';
 export {
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   timedPickupPlacementForProjectEvaluationAssembly,
   type TimedPickupPlacementCommand,
-  type LiveAction,
-  type RoomLiveActions,
-} from './evaluation/live-actions';
+  type LiveRoom,
+  type LiveVerb,
+} from './evaluation/live-room';
 export { GoldLedgerContractError } from './commerce/gold/ledger';
 export type {
   GoldBalance,
