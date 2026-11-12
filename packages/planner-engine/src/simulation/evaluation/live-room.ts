@@ -814,12 +814,12 @@ function atIndex(command: ProjectCommand, index: number): ProjectCommand {
     : (frozen({ ...command, index }) as ProjectCommand);
 }
 
+const DERIVED_PLACEMENT_KINDS: ReadonlySet<ProjectCommand['kind']> = new Set<
+  DerivedPickupPlacementCommand['kind']
+>(['PlaceHermesShrineDelivery', 'PlaceClockedTraitPickup', 'PlaceEchoGoldPickup']);
+
 function isDerivedPlacement(command: ProjectCommand): command is DerivedPickupPlacementCommand {
-  return (
-    command.kind === 'PlaceHermesShrineDelivery' ||
-    command.kind === 'PlaceClockedTraitPickup' ||
-    command.kind === 'PlaceEchoGoldPickup'
-  );
+  return DERIVED_PLACEMENT_KINDS.has(command.kind);
 }
 
 /** Whether an item or action must be acted on, and for a required one its last legal gap. */
@@ -1251,9 +1251,9 @@ export function liveRoomForProjectEvaluationAssembly(
 }
 
 /** The command placing a due delivery or a matured clocked drop. */
-export type TimedPickupPlacementCommand = Extract<
-  ProjectCommand,
-  { readonly kind: 'PlaceHermesShrineDelivery' | 'PlaceClockedTraitPickup' }
+export type TimedPickupPlacementCommand = Exclude<
+  DerivedPickupPlacementCommand,
+  { readonly kind: 'PlaceEchoGoldPickup' }
 >;
 
 /**
@@ -1275,10 +1275,11 @@ export function timedPickupPlacementForProjectEvaluationAssembly(
     if (roomActionKey(item.reference) !== key) continue;
     const command = item.verbs[0]?.commands?.[0];
     if (
-      command?.kind === 'PlaceHermesShrineDelivery' ||
-      command?.kind === 'PlaceClockedTraitPickup'
+      command !== undefined &&
+      isDerivedPlacement(command) &&
+      command.kind !== 'PlaceEchoGoldPickup'
     )
-      return atIndex(command, item.lastIndex) as TimedPickupPlacementCommand;
+      return frozen({ ...command, index: item.lastIndex });
   }
   return undefined;
 }
