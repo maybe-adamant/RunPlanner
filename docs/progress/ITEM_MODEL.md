@@ -1,17 +1,30 @@
 # Part 2, step C5: the item model
 
-Status: owner model approved (2026-11-10); schema 103 scope expanded for
-the later slices. C5a delivered on `live-pickups`; C5b waves A, B, C and D
-merged; wave E (C5b-4, reroll results on the rerolled item) delivered and
-reviewed. C5c (same-key swap) landed inside C5b through item content on rows.
-C5d: C5d-1 (the free Shrine rush) delivered on `c5d-rush`; C5d-2 (dropping
-`encounterPhaseKey`) in progress. Temporary plan; delete at delivery after
-promoting durable results. Follows [LIVE_PICKUPS](LIVE_PICKUPS.md) step C.
+Temporary plan; delete at delivery after promoting durable results. Follows
+[LIVE_PICKUPS](LIVE_PICKUPS.md) step C.
 
-Investigations (read-only, 2026-11-10):
+## Tracker
 
-- `/home/ayyatma/run-planner-investigations/live-pickups/existence-vs-interaction.md`
-- `/home/ayyatma/run-planner-investigations/live-pickups/lifecycle-triggers.md`
+One sequence, in execution order. A new slice is inserted at its position
+and the rest renumber; there are no sub-steps.
+
+| # | Slice | Status | Result |
+| --- | --- | --- | --- |
+| — | Item model (C5a–C5c): live product, items and verbs, observations and outcomes on items, thin rows, reroll results on the item, 102 → 103 | done | reviewed |
+| — | Free Shrine rush | done | rush row anywhere after its purchase |
+| — | Lifecycle rewrite so far: baseline snapshots, encounter scripts as catalog data, event graph and Combat moment, catalog profile selection, one selector with the reward deciding the producer, cage Unlock rows (Combat Order picker removed), bounds instead of windows with an event-driven walk | done | plan, candidates and fixtures identical throughout |
+| 1 | Finish the event model: switch and locked-door fights as encounters, walk loops over graph events, findings in bound vocabulary, cleanup | running | |
+| 2 | Delivery timing: drop the stored phase; a delivery is valid after its due spawn and before its deadline | next | |
+| 3 | Docs and full check | | |
+| 4 | Encounter customization: Aetos in the popup, Fig Leaf and Gorgon icons and Timeline notices | | |
+| 5 | Consolidation: one item-chain settlement path, one live query, Forfeit at spawn, size goal ≈ +6.5k engine lines over 55c74eedb (migration counted separately) | | |
+| 6 | Live UI: Interact row, gap menu, chronology, copy | | |
+| 7 | Draft and run import on the final engine | | |
+| 8 | Release: check, corpus, merge, 103 with the game module | | |
+
+Decisions and references live beside the slice that needs them; working
+notes and investigations are outside the repo under
+`/home/ayyatma/run-planner-investigations/live-pickups/` (reference only).
 
 ## Owner model
 
