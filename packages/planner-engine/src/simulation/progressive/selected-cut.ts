@@ -808,7 +808,7 @@ function roomStop(
   history: BiomeHistoryPrefix,
   reachedActions: readonly ReachedHistoryRoomAction[],
   rowKeys: readonly string[] | undefined,
-): RoomStopCoverage | undefined {
+): { readonly coverage: RoomStopCoverage; readonly entryIndex: number } | undefined {
   if (block.owner.kind === 'start' || block.owner.kind === 'hub') return undefined;
   const room = block.owner.room;
   const entries = room.roomLifecycleTimeline.entries;
@@ -816,10 +816,29 @@ function roomStop(
     kind: RoomStopCoverage['kind'],
     entryIndex: number,
     at: RoomStopCoverage['at'],
-  ): RoomStopCoverage => {
-    if (entries[entryIndex]?.kind === 'automaticEffect')
-      throw new BiomeMaterializationContractError(`${room.gameName} stops at an automatic effect`);
-    return Object.freeze({ room: room.origin, kind, entryIndex, at });
+  ): { readonly coverage: RoomStopCoverage; readonly entryIndex: number } => {
+    const entry = entries[entryIndex];
+    const coverage: RoomStopCoverage = Object.freeze({
+      room: room.origin,
+      kind,
+      ...(entry === undefined
+        ? {}
+        : {
+            anchor: Object.freeze(
+              entry.kind === 'action'
+                ? { kind: 'row' as const, actionKey: entry.action.key }
+                : entry.kind === 'boundary'
+                  ? { kind: 'event' as const, eventKey: entry.boundary.key }
+                  : (() => {
+                      throw new BiomeMaterializationContractError(
+                        `${room.gameName} stops at an automatic effect`,
+                      );
+                    })(),
+            ),
+          }),
+      at,
+    });
+    return Object.freeze({ coverage, entryIndex });
   };
   if (!block.timeline)
     return stop(
@@ -1348,7 +1367,9 @@ export function publishSelectedCut(
               blockingRowKeys: rowKeys,
             }),
           }),
-      ...(stopInRoom === undefined ? {} : { roomStop: stopInRoom }),
+      ...(stopInRoom === undefined
+        ? {}
+        : { roomStop: stopInRoom.coverage, roomStopEntryIndex: stopInRoom.entryIndex }),
     }),
     candidateArtifacts,
   });

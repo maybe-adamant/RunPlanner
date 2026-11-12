@@ -24,6 +24,12 @@ export interface BiomeEvaluationBase {
   readonly requiredInput?: SemanticAddress;
   readonly requiredInputRegion?: string;
   readonly requiredInputLocation?: import('../progressive/finding-location').OwnerLocation;
+  /**
+   * The index of the entry `coverage.roomStop` anchors in its room's
+   * `roomLifecycleTimeline.entries` (their length past every entry), resolved
+   * once by the cut; candidate evidence carries only the anchor.
+   */
+  readonly roomStopEntryIndex?: number;
 }
 
 interface IncompleteBiomeProjectEvaluationBase extends BiomeEvaluationBase {
@@ -132,17 +138,22 @@ export interface RoomTimelineCoverage {
   readonly blockingRowKeys: readonly string[];
 }
 
+/** A Timeline entry by its stable identity: a row by its action key, a boundary by its event key. */
+export type RoomStopAnchor =
+  | { readonly kind: 'row'; readonly actionKey: string }
+  | { readonly kind: 'event'; readonly eventKey: string };
+
 /**
  * Where the walk stopped inside the room it blocks in. Entries of the room's
- * lifecycle Timeline before `entryIndex` are reached and every entry after it
- * is not; `at` says whether the entry at `entryIndex` was reached. An Overview
- * stop is past entry only, and an exit stop is past every entry.
+ * lifecycle Timeline before the `anchor` entry are reached and every entry
+ * after it is not; `at` says whether the anchor entry was reached. No anchor
+ * stands past every entry. An Overview stop is past entry only, and an exit
+ * stop is past every entry.
  */
 export interface RoomStopCoverage {
   readonly room: OccurrenceAddress;
   readonly kind: 'overview' | 'timeline' | 'exit';
-  /** Index in the room's `roomLifecycleTimeline.entries`; their length past every entry. */
-  readonly entryIndex: number;
+  readonly anchor?: RoomStopAnchor;
   /**
    * `entry`: the walk reached that entry and blocks on its own contact (a blocking
    * row, the doors opening, a phase start, Boss defeated, an encounter end's due

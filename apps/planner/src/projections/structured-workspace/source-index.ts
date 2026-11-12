@@ -1109,11 +1109,16 @@ function createWorkspaceBiomeSource(
     roomStop: (owner: OccurrenceAddress) => {
       const stop =
         evaluation?.coverage.kind === 'prefix' ? evaluation.coverage.roomStop : undefined;
-      if (stop === undefined || semanticAddressKey(stop.room) !== semanticAddressKey(owner))
+      const entryIndex = evaluation?.roomStopEntryIndex;
+      if (
+        stop === undefined ||
+        entryIndex === undefined ||
+        semanticAddressKey(stop.room) !== semanticAddressKey(owner)
+      )
         return undefined;
       return Object.freeze({
         kind: stop.kind,
-        entryIndex: stop.entryIndex,
+        entryIndex,
         at: stop.at,
       });
     },

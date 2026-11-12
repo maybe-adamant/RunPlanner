@@ -649,7 +649,7 @@ describe('live actions at a gap', () => {
     const stop = biome.coverage.kind === 'prefix' ? biome.coverage.roomStop : undefined;
     expect(stop).toMatchObject({ kind: 'timeline', at: 'before' });
     const entries = room.roomLifecycleTimeline.entries;
-    const stopIndex = stop!.entryIndex;
+    const stopIndex = biome.roomStopEntryIndex!;
     const stopEntry = entries[stopIndex]!;
     const previous = entries[stopIndex - 1]!;
     // Wheel 1's encounter begins as its wheels open.

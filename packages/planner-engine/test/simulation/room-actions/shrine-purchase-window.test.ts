@@ -337,7 +337,7 @@ describe('Shrine purchases after the doors open', () => {
     const entries = rooms(o.materializedPrefix).find(
       (room) => room.occurrenceId === host.occurrenceId,
     )?.roomLifecycleTimeline.entries;
-    const stopped = entries?.[o.coverage.roomStop!.entryIndex];
+    const stopped = entries?.[o.roomStopEntryIndex!];
     expect(stopped?.kind === 'action' ? stopped.action.key : undefined).toBe(
       roomActionKey(purchase),
     );
