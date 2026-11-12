@@ -100,6 +100,8 @@ export {
 export {
   assessRoomActionPlacements,
   assembleRoomActionRoster,
+  type RoomActionContact,
+  type TimedPickupDueContact,
   type RoomActionProposal,
   type RoomActionRoster,
   type RoomActionRosterIssue,

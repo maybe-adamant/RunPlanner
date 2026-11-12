@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createAcquisitionSiteAddress,
   createBiomeAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
   roomActionKey,
 } from '@run-planner/engine/authored-project';
 import { createAuthoringSession } from '@run-planner/engine/authoring';
 import {
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -86,6 +89,23 @@ describe('a Ship delivery ranked between the wheel choice and its phase pickup',
     expect(kinds.indexOf('encounterEndEffectsApplied Intro')).toBeLessThan(
       kinds.indexOf('offerPointMaterialized'),
     );
+  });
+
+  it('publishes its due contact, the one its placed row has', () => {
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(biome, shipId),
+      'hermesShrineDelivery',
+    );
+    const capability = derivedAcquisitionEntriesForProjectEvaluationAssembly(start, site).find(
+      (entry) => entry.address.entryKey === (delivery.reference as { entryKey: string }).entryKey,
+    );
+    const placed = shipRoom(start).roomActionRoster.rows.find((row) => row.key === delivery.key)!;
+    expect(capability).toMatchObject({
+      phaseKey: 'Combat1',
+      contact: { kind: 'afterEncounterEnd', endedPhaseKey: 'Combat1', phaseKey: 'Combat1' },
+      label: { kind: 'afterEncounterEnd', phaseKey: 'Combat1' },
+    });
+    expect([capability?.contact, capability?.label]).toEqual([placed.contact, placed.label]);
   });
 
   it('is flagged by its stored phase today, and Combat1 never ends', () => {

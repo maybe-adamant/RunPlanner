@@ -1,4 +1,5 @@
 import { roomActionKey } from '../../authored-project/room-actions/state';
+import { timedPickupDueBounds } from '../../authored-project/room-actions/domain';
 import {
   cagePhase,
   fieldsRoom,
@@ -88,6 +89,45 @@ function contactLabel(contact: RoomActionContact): RoomActionRowLabel {
     default:
       return Object.freeze({ kind: contact.kind });
   }
+}
+
+/** A row's contact and label, classified from its bounds. */
+export function roomActionRowContact(
+  bounds: RoomActionBounds,
+  graph: RoomEventGraph,
+): { readonly contact: RoomActionContact; readonly label: RoomActionRowLabel } {
+  const contact = roomActionContact(bounds, graph);
+  return Object.freeze({ contact, label: contactLabel(contact) });
+}
+
+/**
+ * Where a due delivery or clocked drop meets the room: the phase it groups
+ * with (the next wheel phase when that wheel's choice waits on it), its
+ * contact and its label.
+ */
+export interface TimedPickupDueContact {
+  readonly phaseKey?: string;
+  readonly contact: RoomActionContact;
+  readonly label: RoomActionRowLabel;
+}
+
+/**
+ * The contact of a delivery or clocked drop at its due spawn: the phase whose
+ * end effects spawned it, or none for a Preboss flush.
+ */
+export function timedPickupDueContact(
+  graph: RoomEventGraph,
+  endedPhaseKey: string | undefined,
+): TimedPickupDueContact {
+  const { contact, label } = roomActionRowContact(
+    timedPickupDueBounds(graph, endedPhaseKey),
+    graph,
+  );
+  return Object.freeze({
+    ...(contact.phaseKey === undefined ? {} : { phaseKey: contact.phaseKey }),
+    contact,
+    label,
+  });
 }
 
 /**

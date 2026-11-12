@@ -216,6 +216,18 @@ function afterEndEffects(graph: RoomEventGraph, phaseKey: string): RoomActionBou
   );
 }
 
+/**
+ * Where a delivery or clocked drop stands once its due spawn is known: after
+ * the end effects of the phase it arrived at, or after the room's fights for
+ * a Preboss flush (no phase).
+ */
+export function timedPickupDueBounds(
+  graph: RoomEventGraph,
+  endedPhaseKey: string | undefined,
+): RoomActionBounds {
+  return endedPhaseKey === undefined ? afterCombat(graph) : afterEndEffects(graph, endedPhaseKey);
+}
+
 function wheelPhaseKey(graph: RoomEventGraph, wheelKey: string): string {
   return phaseOfWheel(graph, wheelKey) ?? wheelKey;
 }

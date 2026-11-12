@@ -97,6 +97,8 @@ export interface DerivedAcquisitionEntryFrontier {
   readonly traitKey?: string;
   /** Exact encounter end that matured a cross-occurrence Shrine delivery. */
   readonly encounterPhaseKey?: string;
+  /** Where a due delivery or clocked drop meets its room, from its due spawn. */
+  readonly dueContact?: import('../../room-actions').TimedPickupDueContact;
   readonly participation?: 'required' | 'optional';
   /** The retained authored identity disagrees with this exact derived source. */
   readonly retainedSourceMismatch?: boolean;

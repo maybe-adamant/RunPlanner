@@ -6,6 +6,8 @@ export {
   performedRoomActions,
   scopeRoomActionRoster,
 } from './assemble';
+export { roomActionRowContact, timedPickupDueContact } from './required-scope';
+export type { TimedPickupDueContact } from './required-scope';
 export {
   appendSteadyGrowthTimelineEffects,
   appendTranscendentEmbryoTimelineEffects,

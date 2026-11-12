@@ -11,6 +11,7 @@ import {
   hermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
+import { timedPickupDueContact } from '../../../room-actions';
 import { ownerRegion } from '../../../finding-regions';
 import type {
   GeneratedPickupPlacement,
@@ -103,6 +104,14 @@ export function dueHermesShrineDeliveryFrontier(
         kind: 'hermesShrineDelivery',
         rewardTypes: Object.freeze([delivery.rewardType]),
         ...(encounterPhaseKey === undefined ? {} : { encounterPhaseKey }),
+        ...(room?.roomActionRoster === undefined
+          ? {}
+          : {
+              dueContact: timedPickupDueContact(
+                room.roomActionRoster.eventGraph,
+                encounterPhaseKey,
+              ),
+            }),
         ...(fixedReward === null ? {} : { fixedReward }),
         retainedSourceMismatch:
           retained !== undefined &&

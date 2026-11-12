@@ -34,6 +34,14 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   readonly fixedReward?: AuthoredRewardState;
   readonly producerLifecycleKey?: string;
   readonly encounterPhaseKey?: string;
+  /**
+   * A due delivery's or clocked drop's phase on the Timeline: its due spawn's,
+   * or the next wheel phase when that wheel's choice waits on it.
+   */
+  readonly phaseKey?: string;
+  /** Where a due delivery or clocked drop meets its room, and how the editor names it. */
+  readonly contact?: import('../../room-actions').RoomActionContact;
+  readonly label?: import('../../room-actions').RoomActionRowLabel;
   readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
@@ -94,6 +102,15 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
     ...(first.encounterPhaseKey === undefined
       ? {}
       : { encounterPhaseKey: first.encounterPhaseKey }),
+    ...(first.dueContact === undefined
+      ? {}
+      : {
+          ...(first.dueContact.phaseKey === undefined
+            ? {}
+            : { phaseKey: first.dueContact.phaseKey }),
+          contact: first.dueContact.contact,
+          label: first.dueContact.label,
+        }),
     ...(first.participation === undefined ? {} : { participation: first.participation }),
     ...(first.retainedSourceMismatch === undefined
       ? {}

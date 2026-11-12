@@ -20,6 +20,7 @@ import {
 } from '../../../../authored-project/addresses';
 import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
+import { timedPickupDueContact } from '../../../room-actions';
 import { ownerRegion } from '../../../finding-regions';
 import {
   advanceChaosClock,
@@ -526,6 +527,14 @@ export function applyEncounterEndEffectsTransition(
             producerLifecycleKey: maturity.producerLifecycleKey,
             traitKey: maturity.traitKey,
             encounterPhaseKey: event.phaseKey,
+            ...(room?.roomActionRoster === undefined
+              ? {}
+              : {
+                  dueContact: timedPickupDueContact(
+                    room.roomActionRoster.eventGraph,
+                    event.phaseKey,
+                  ),
+                }),
             participation: 'optional',
             beforeEntry: final,
           }),
