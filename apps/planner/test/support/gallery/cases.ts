@@ -1582,6 +1582,33 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-preboss-shop'),
   },
   {
+    id: 'live-row-shop-travel-deal-first',
+    label: 'Live row: a Travel Deal World Shop before its first purchase, which restocks',
+    shows: ['live row', 'object menu', 'Travel Deal refill after the purchase'],
+    project: () =>
+      withoutRoomActionOrder(
+        loadUnderworldWorldShopTravelDealCheckpoint(),
+        'F',
+        'golden-f-preboss-shop',
+      ),
+    target: room('F', 'golden-f-preboss-shop'),
+    openPicker: 'World Shop',
+  },
+  {
+    id: 'live-row-shop-travel-deal-refill',
+    label: 'Live row: a World Shop’s stocked Travel Deal item, bought once',
+    shows: ['live row', 'object menu', 'Travel Deal refill buy'],
+    project: () =>
+      withoutRoomActionOrder(
+        loadUnderworldWorldShopTravelDealCheckpoint(),
+        'F',
+        'golden-f-preboss-shop',
+        1,
+      ),
+    target: room('F', 'golden-f-preboss-shop'),
+    openPicker: 'World Shop',
+  },
+  {
     id: 'live-row-postboss',
     label: 'Live row: a Postboss with its fountain, rack and Hermes Shrine',
     shows: ['live row', 'objects'],
