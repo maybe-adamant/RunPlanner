@@ -797,8 +797,15 @@ describe('live interactions at a gap', () => {
       verb.commands?.map((command) => command.kind),
     ];
     const refill = shopState(plan).travelDealRefill!;
-    // Nothing bought yet: Travel Deal restocks whatever is bought first.
-    const unbought = withShopRefill(withRoomOrder(plan, worldShop, []), undefined);
+    // Nothing bought yet: Travel Deal restocks whatever is bought first, and its item, even
+    // one a saved plan still holds, cannot be bought before then.
+    const stockedEarly = withRoomOrder(plan, worldShop, []);
+    expect(
+      shopVerbs(stockedEarly).filter(
+        (verb) => roomActionKey(verb.reference!) === roomActionKey(travelDealRefillPurchase),
+      ),
+    ).toEqual([]);
+    const unbought = withShopRefill(stockedEarly, undefined);
     const first = shopVerbs(unbought);
     expect(first.length).toBeGreaterThan(0);
     expect(new Set(first.map((verb) => verb.choice?.picker))).toEqual(

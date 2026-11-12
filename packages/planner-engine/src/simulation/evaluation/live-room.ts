@@ -1140,8 +1140,13 @@ export function liveRoomForProjectEvaluationAssembly(
     for (const { row, object, owner } of objectRows) {
       const step = rowStep(row, gap);
       if (step === undefined) continue;
-      // An unplaced row its object's purchase places is bought through that purchase alone.
-      if (step.kind !== 'standing' && boughtKeys.has(row.key)) continue;
+      // An unplaced row its object's purchase places is bought through that purchase alone,
+      // and a Travel Deal item only once a purchase has restocked it.
+      if (
+        step.kind !== 'standing' &&
+        (boughtKeys.has(row.key) || row.sourceFamily?.kind === 'shopTravelDealRefill')
+      )
+        continue;
       if (step.kind !== 'standing' && waits(row) && onGround(gap)) continue;
       add(
         object,
