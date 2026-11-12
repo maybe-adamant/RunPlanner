@@ -71,24 +71,12 @@ export type RoomLifecycleEvent =
       /** Starting and claiming the challenge switch; neither an encounter end nor a store draw. */
       readonly kind: 'challengeSwitchInteracted';
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
-      /**
-       * The switch's encounter, recorded, started and completed by the press
-       * (`StartChallengeEncounter`, EncounterLogic.lua:2073-2113); history
-       * composition attaches it from the room's entry preparation.
-       */
-      readonly encounter?: ChallengeSwitchEncounterRun;
     })
   | (RoomLifecycleEventBase & {
-      /**
-       * Pressing a locked door: its fight starts at the press (`AttemptUseDoor`
-       * generates and starts it) and is fought out, opening the door. Neither a
-       * recorded encounter nor an encounter end, and it spawns no reward.
-       */
+      /** Pressing a locked door; its fight follows as the door's press fight, opening the door. */
       readonly kind: 'exitUnlocked';
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
       readonly exitKey: string;
-      /** The fight; history composition attaches it from the press's view. */
-      readonly encounter?: UnlockExitEncounterRun;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'requiredObjectSpawned';
@@ -111,6 +99,8 @@ export type RoomLifecycleEvent =
       readonly phaseKind: EncounterPhaseKind;
       readonly execution: 'normal' | 'skippedByFigLeaf';
       readonly figLeafSkipOwner: boolean;
+      /** A press fight's composition; history composition attaches it as the fight is prepared. */
+      readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterDepthAdvanced';
@@ -212,26 +202,6 @@ export type RoomLifecycleEvent =
       readonly storeKey: string;
     })
   | (RoomLifecycleEventBase & { readonly kind: 'roomExited' });
-
-/** One run of a switch's encounter, outside the room's envelope. */
-export interface ChallengeSwitchEncounterRun {
-  readonly encounterKey: string;
-  readonly phaseKind: EncounterPhaseKind;
-  /** Native StartEncounter applies the inherited `CountsForRoomEncounterDepth`. */
-  readonly countsEncounterDepth: boolean;
-  /** False when the player left mid-fight (`EndedEarly`): started, never completed. */
-  readonly completed: boolean;
-  readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
-}
-
-/** One locked door's fight, outside the room's envelope. */
-export interface UnlockExitEncounterRun {
-  readonly encounterKey: string;
-  readonly phaseKind: EncounterPhaseKind;
-  /** Native StartEncounter applies the inherited `CountsForRoomEncounterDepth`. */
-  readonly countsEncounterDepth: boolean;
-  readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
-}
 
 export interface RoomLifecycleProducerInput {
   readonly lifecycleProfileKey: string;

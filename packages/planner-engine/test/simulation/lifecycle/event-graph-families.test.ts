@@ -245,6 +245,7 @@ const fPreboss = at('Underworld', 'F', 'golden-f-preboss-shop');
 const fMidShop = at('Underworld', 'F', 'midshop-pom-b5-e1');
 const fCombat06 = at('Underworld', 'F', 'golden-f-b5-e1');
 const gCombat01 = at('Underworld', 'G', 'golden-g-b1-e1');
+const fCombat12 = at('Underworld', 'F', 'golden-f-b8-e1');
 const gNemesis = at('Underworld', 'G', 'golden-g-b4-e1');
 const gAnomaly = at('Underworld', 'G', 'golden-g-b3-e2');
 const hFields = at('Underworld', 'H', 'golden-h-combat05');
@@ -915,20 +916,63 @@ describe('the rest', () => {
   });
 
   it.each([
-    ['challenge switch', 'execution/underworld-f-switches', fCombat06, 'interactChallengeSwitch'],
-    ['locked door', 'execution/underworld-g-locked-doors', gCombat01, 'unlockExit'],
-  ] as const)('fights the %s after Doors open, with no end effects', (_, entry, origin, press) => {
-    const room = observe(corpusRun(entry), origin);
-    const pressed = room.rank(press);
+    [
+      'challenge switch',
+      'execution/underworld-f-switches',
+      fCombat06,
+      'interactChallengeSwitch',
+      'challengeSwitch',
+      true,
+    ],
+    [
+      'locked door',
+      'execution/underworld-g-locked-doors',
+      gCombat01,
+      'unlockExit',
+      'unlockExit:exit2',
+      false,
+    ],
+  ] as const)(
+    'fights the %s right after its press, after Doors open, with no end effects',
+    (_, entry, origin, press, phase, records) => {
+      const room = observe(corpusRun(entry), origin);
+      const pressed = room.rank(press);
 
-    expectInOrder(room.timeline, ['encounterEnd(Encounter)', 'doorsOpened', pressed]);
-    expect(
-      room.walk
-        .slice(position(room.walk, pressed))
-        .filter((token) => /^encounter(Completed|EndEffectsApplied|End)\b/.test(token)),
-    ).toEqual([]);
-    expect(room.walk.filter((token) => token.startsWith('encounterEndEffectsApplied'))).toEqual([
-      'encounterEndEffectsApplied(Encounter)',
+      // Its Encounter and Combat stand right after the press, its end with them.
+      expectInOrder(room.timeline, ['encounterEnd(Encounter)', 'doorsOpened', pressed]);
+      const at = position(room.timeline, pressed);
+      expect(room.timeline.slice(at + 1, at + 4)).toEqual([
+        `encounterBegun(${phase})`,
+        `encounterStarted(${phase})`,
+        `encounterEnd(${phase})`,
+      ]);
+      // The press runs its fight at once: recorded only by a switch, counted, completed.
+      const after = position(room.walk, pressed);
+      expect(room.walk.slice(after + 2, after + (records ? 6 : 5))).toEqual([
+        ...(records ? [`encounterRecorded(${phase})`] : []),
+        `encounterStarted(${phase})`,
+        `encounterDepthAdvanced(${phase})`,
+        `encounterCompleted(${phase})`,
+      ]);
+      expect(room.walk.filter((token) => token.startsWith('encounterEndEffectsApplied'))).toEqual([
+        'encounterEndEffectsApplied(Encounter)',
+      ]);
+    },
+  );
+
+  it('starts a left switch’s fight at its press and never ends it', () => {
+    const room = observe(corpusRun('execution/underworld-f-switches-failed-left'), fCombat12);
+    const after = position(room.walk, room.rank('interactChallengeSwitch'));
+
+    expect(room.walk.slice(after + 2, after + 6)).toEqual([
+      'encounterRecorded(challengeSwitch)',
+      'encounterStarted(challengeSwitch)',
+      'encounterDepthAdvanced(challengeSwitch)',
+      'roomCommitted',
+    ]);
+    expect(room.timeline.filter((token) => token.endsWith('(challengeSwitch)'))).toEqual([
+      'encounterBegun(challengeSwitch)',
+      'encounterStarted(challengeSwitch)',
     ]);
   });
 

@@ -144,8 +144,9 @@ optional authored composition through the ordinary generated assessment, and
 an Elite switch assesses its pinned elite and forced attributes against the
 RoomSet's elite set, the draw order and each draw's blocks (attributes are
 drawn when the fight starts, the elite at entry). Its findings stay on the
-switch's Overview owner and stop the room there. It is recorded, started and
-counted for encounter depth at the press, not at entry, so an unused switch
+switch's Overview owner and stop the room there. Its script makes it a press
+fight generated at entry: it is recorded, started and counted for encounter
+depth as its own phase at the press, not at entry, so an unused switch
 leaves no encounter record; a once-per-run enemy an unused switch's
 composition would draw is therefore not blacklisted. Its kills drain its own
 money store. Not modeled: Elite attribute game-state requirements and the run's
@@ -160,7 +161,8 @@ because the game generates it there; its optional authored composition is
 assessed through the ordinary generated assessment and its findings stay on
 the press, stopping the Timeline there. It is started, completed and counted
 for encounter depth at the press but never recorded, and its kills drain its
-own money store.
+own money store. Its script makes it a press fight generated at its start,
+which is the press.
 
 ## Generated composition
 

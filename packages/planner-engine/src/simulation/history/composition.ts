@@ -5,8 +5,7 @@ import {
   semanticAddressKey,
   type BiomeAddress,
 } from '../../authored-project/addresses';
-import { prepareChallengeSwitchEncounter } from '../encounters/challenge-switch';
-import { prepareUnlockExitEncounter } from '../encounters/unlock-exit';
+import { preparePressFight } from '../encounters/press-fight';
 import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
 import { prepareRoomEncounterPhases, type EncounterAuthoringRoom } from '../encounters/preparation';
 import {
@@ -458,8 +457,12 @@ export function appendRoomLifecycle(
           ? (() => {
               const phase = effectiveEncounterPhases.find(
                 (candidate) => candidate.slotKey === sourceEvent.phaseKey,
-              )!;
-              if (phase.aetosWaves === undefined && phase.aetosWave === undefined)
+              );
+              // A press fight hosts no Aetos.
+              if (
+                phase === undefined ||
+                (phase.aetosWaves === undefined && phase.aetosWave === undefined)
+              )
                 return sourceEvent;
               return Object.freeze({
                 ...sourceEvent,
@@ -471,11 +474,10 @@ export function appendRoomLifecycle(
                 ),
               });
             })()
-          : sourceEvent.kind === 'challengeSwitchInteracted' && room.kind === 'authored'
-            ? withChallengeSwitchEncounter(catalog, room, writer, sourceEvent, fail)
-            : sourceEvent.kind === 'exitUnlocked' && room.kind === 'authored'
-              ? withUnlockExitEncounter(catalog, room, writer, sourceEvent, fail)
-              : sourceEvent;
+          : (sourceEvent.kind === 'encounterRecorded' || sourceEvent.kind === 'encounterStarted') &&
+              room.kind === 'authored'
+            ? withPressFightComposition(catalog, room, writer, sourceEvent, fail)
+            : sourceEvent;
       if (
         options.stopAfterOutgoing &&
         options.continueThroughPostOutgoingActions === true &&
@@ -532,68 +534,29 @@ export function appendRoomLifecycle(
 }
 
 /**
- * The switch press runs the encounter native generated at the room's entry
- * (RoomLogic.lua:4983-4992), so it is prepared at the entry view.
+ * A press fight's composition, generated where its script says: at the room's
+ * entry view for a switch (RoomLogic.lua:4983-4992), at the press for a locked
+ * door (`AttemptUseDoor`). The room's own phases come prepared.
  */
-function withChallengeSwitchEncounter(
+function withPressFightComposition(
   catalog: Catalog,
   room: Extract<CanonicalLifecycleRoom, { readonly kind: 'authored' }>,
   writer: HistorySegmentWriter,
-  event: Extract<RoomLifecycleEvent, { readonly kind: 'challengeSwitchInteracted' }>,
+  event: Extract<RoomLifecycleEvent, { readonly kind: 'encounterRecorded' | 'encounterStarted' }>,
   fail: (detail: string) => never,
 ): RoomLifecycleEvent {
-  if (room.challengeSwitch === undefined) return event;
-  const entry = writer.roomEntry(room.origin);
-  if (entry === undefined) fail(`${room.gameName} pressed its switch before entry`);
-  const prepared = prepareChallengeSwitchEncounter(catalog, room, writer.routePosition, entry);
-  if (prepared === undefined) return event;
-  const { phase } = prepared;
-  return Object.freeze({
-    ...event,
-    encounter: Object.freeze({
-      encounterKey: phase.encounterKey,
-      phaseKind: phase.kind,
-      countsEncounterDepth: phase.countsEncounterDepth,
-      completed: room.challengeSwitch.outcome !== 'left',
-      ...(phase.generatedCustomization === undefined
-        ? {}
-        : { generatedCustomization: phase.generatedCustomization }),
-    }),
-  });
-}
-
-/** A locked door's press runs the fight `AttemptUseDoor` generates there, at the press's view. */
-function withUnlockExitEncounter(
-  catalog: Catalog,
-  room: Extract<CanonicalLifecycleRoom, { readonly kind: 'authored' }>,
-  writer: HistorySegmentWriter,
-  event: Extract<RoomLifecycleEvent, { readonly kind: 'exitUnlocked' }>,
-  fail: (detail: string) => never,
-): RoomLifecycleEvent {
-  const action = room.roomActionRoster.rows.find(
-    (row) => row.reference.kind === 'unlockExit' && row.reference.exitKey === event.exitKey,
-  )?.reference;
-  if (action?.kind !== 'unlockExit') fail(`${room.gameName} pressed a door it does not lock`);
-  const prepared = prepareUnlockExitEncounter(
-    catalog,
-    room,
-    writer.routePosition,
-    action,
-    writer.current(),
+  const fight = room.roomActionRoster.eventGraph.pressFights.find(
+    (candidate) => candidate.phaseKey === event.phaseKey,
   );
-  if (prepared === undefined) return event;
-  const { phase } = prepared;
-  return Object.freeze({
-    ...event,
-    encounter: Object.freeze({
-      encounterKey: phase.encounterKey,
-      phaseKind: phase.kind,
-      countsEncounterDepth: phase.countsEncounterDepth,
-      ...(phase.generatedCustomization === undefined
-        ? {}
-        : { generatedCustomization: phase.generatedCustomization }),
-    }),
-  });
+  if (fight === undefined) return event;
+  const view =
+    fight.script.generatedAt === 'entry' ? writer.roomEntry(room.origin) : writer.current();
+  if (view === undefined) fail(`${room.gameName} pressed ${event.phaseKey} before entry`);
+  const prepared = preparePressFight(catalog, room, writer.routePosition, fight, view);
+  const customization = prepared?.phase.generatedCustomization;
+  return customization === undefined
+    ? event
+    : Object.freeze({ ...event, generatedCustomization: customization });
 }
 
 interface BiomeHistoryPrefixOptions {

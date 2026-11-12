@@ -286,8 +286,11 @@ encounter and a Ship phase's next Wheels open follow that end with no row
 between them. Otherwise it starts right after its trigger row: the Opening or
 Devotion pickup, the wheel choice or the cage Unlock, and its Encounter and
 Combat markers stand right after that row, so moving the row moves them and
-the fight. A challenge switch press and a locked-door press run their fight at
-the press itself. Eris's talk starts no fight.
+the fight. A challenge switch press and a locked-door press begin and start
+their fight, a press fight outside the room's envelope, at once: its merged
+Encounter and Combat marker stands right after the press, after Doors open. A
+press fight never runs end effects, and the walk runs it as the press's own
+phase events. Eris's talk starts no fight.
 
 **Noncombat and Story encounters.** The game still records and runs a Story
 encounter through `StartEncounter`, but its `EncounterType = NonCombat` skips
@@ -1235,9 +1238,9 @@ A challenge switch is an Overview fact of room entry: entry records its
 appearance (the native spacing counter is set at entry, used or not), prepares
 its encounter with the entry's vow ranks and assesses its spawn rules, whose
 findings stop the room at its Overview. Its one optional press is a doors-open
-action (`postOutgoing`). The press records, starts and, unless the fight is
-left, completes the encounter in the encounter ledgers and advances biome and
-route encounter depth, but fires no encounter-end effects. It draws from no
+action (`postOutgoing`). The press runs the switch's press fight: it is
+recorded, started and, unless left, completed in the encounter ledgers and
+advances biome and route encounter depth, but fires no encounter-end effects. It draws from no
 counted store; its claim pickups are optional rows ranked right after it and
 settle through the ordinary acquisition machinery. A press whose fight is
 left ends the room's actions: nothing is claimed and no action may follow it.
@@ -1246,7 +1249,7 @@ An Oceanus locked door is an observation of the room's doors opening: the
 room's `lockedExits` change nothing until a door is pressed. Each press is an
 optional doors-open action (`postOutgoing`) that follows every required action
 (the exit checkpoint), and a reroll of that door follows the press. The press
-starts and completes its fight in the encounter ledgers without a record and
+runs the door's press fight, started and completed without a record, which
 advances biome and route encounter depth, with no encounter-end effects and no
 reward; it never ends the room, since its fight cannot be left. Leaving
 through a door still locked blocks at the room's exit.

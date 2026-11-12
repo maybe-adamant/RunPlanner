@@ -108,6 +108,7 @@ import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlemen
 import { spawnInfernalContractPedestal } from './offer-lifecycle/infernal-contract-pedestal';
 import { createBiomeRewardFacts } from '../facts';
 import { prepareUnlockExitEncounter } from '../../encounters/unlock-exit';
+import { pressFightOf } from '../../../authored-project/room-actions/event-graph';
 import { extraExitLockHost } from '../../../authored-project/locked-exits';
 import { rerollKindEnabled } from '../../arcana-fear';
 import {
@@ -1877,6 +1878,23 @@ const advanceOnly: ChronologySeamHandler<HistoryEvent['kind']> = (_context, stat
   emissions: [],
 });
 
+/**
+ * A press fight's start and end settle nothing of the room's: no reward
+ * spawns, no Fig Leaf, no outcome; the press row settles what it does.
+ */
+function unlessPressFight<K extends HistoryEvent['kind']>(
+  handler: ChronologySeamHandler<K>,
+): ChronologySeamHandler<K> {
+  return (context, state, event) => {
+    const room = authoredRoom(context, event.origin);
+    return room !== undefined &&
+      'phaseKey' in event &&
+      pressFightOf(room.roomActionRoster.eventGraph, event.phaseKey) !== undefined
+      ? advanceOnly(context, state, event)
+      : handler(context, state, event);
+  };
+}
+
 /** A seam's handler for events of kind `K`. */
 interface ChronologySeam<K extends HistoryEvent['kind']> {
   step(
@@ -1915,9 +1933,9 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     hubRewardRerolled: { step: hubRewardRerolled },
     requiredObjectSpawned: { step: advanceOnly },
     encounterRecorded: { step: advanceOnly },
-    encounterStarted: { step: encounterStarted },
+    encounterStarted: { step: unlessPressFight(encounterStarted) },
     encounterDepthAdvanced: { step: advanceOnly },
-    encounterCompleted: { step: encounterSettled },
+    encounterCompleted: { step: unlessPressFight(encounterSettled) },
     encounterEndEffectsApplied: { step: encounterEndEffectsApplied },
     bossDefeated: { step: encounterSettled },
     encounterInteractionReached: { step: encounterSettled },

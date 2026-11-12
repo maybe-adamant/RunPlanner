@@ -17,6 +17,7 @@ import {
   runsOneEncounter,
 } from '../../authored-project/room-actions/event-graph';
 import { roomWalkSteps, type RoomWalkStep } from './overview';
+import { resolvedEncounterPhaseForDefinition } from '../encounters/resolve';
 import { doorsReadyAfterRank, type RoomActionRow } from '../room-actions';
 import { purgingPoolSalePoint } from '../commerce/feature-rolls';
 
@@ -214,18 +215,8 @@ const lifecycleEffectRegistry = Object.freeze({
   },
   recordEncounter: (context, state) => {
     let next = state;
-    for (const phase of context.encounterPhases) {
-      next = appendEvent(next, context, {
-        kind: 'encounterRecorded',
-        phaseKey: phase.slotKey,
-        encounterEnvelopeKey: phase.envelopeKey,
-        encounterKey: phase.encounterKey,
-        phaseKind: phase.kind,
-        ...(phase.generatedCustomization === undefined
-          ? {}
-          : { generatedCustomization: phase.generatedCustomization }),
-      });
-    }
+    for (const phase of context.encounterPhases)
+      next = encounterEffects.recordEncounter({ ...context, encounterPhase: phase }, next);
     return next;
   },
   recordRequiredObjectCompletions: (context, state) => {
@@ -299,8 +290,21 @@ const lifecycleEffectRegistry = Object.freeze({
   recordExit: (context, state) => appendEvent(state, context, { kind: 'roomExited' }),
 }) satisfies Readonly<Record<RoomLifecycleEffectKind, EffectHandler>>;
 
-/** What a phase's encounter does as it runs: its wheels open, combat starts, it ends. */
+/** What a phase's encounter does as it runs: it is recorded, its wheels open, combat starts, it ends. */
 const encounterEffects = Object.freeze({
+  recordEncounter: (context, state) => {
+    const phase = requireEncounterPhase(context);
+    return appendEvent(state, context, {
+      kind: 'encounterRecorded',
+      phaseKey: phase.slotKey,
+      encounterEnvelopeKey: phase.envelopeKey,
+      encounterKey: phase.encounterKey,
+      phaseKind: phase.kind,
+      ...(phase.generatedCustomization === undefined
+        ? {}
+        : { generatedCustomization: phase.generatedCustomization }),
+    });
+  },
   recordPhaseOfferPoint: (context, state) => {
     const attachment = requireEncounterPhase(context).rewardAttachment;
     if (attachment?.kind !== 'rewardWheel' || wheelOffersRolled(state, attachment.key))
@@ -341,11 +345,13 @@ const encounterEffects = Object.freeze({
       execution: context.figLeafSkipped === true ? 'skippedByFigLeaf' : 'normal',
       figLeafSkipOwner: context.figLeafSkipOwner === true,
     } as const;
-    const endEffects = !encounterAllowsEndEffects(phase)
-      ? 'none'
-      : waitsForReady(context, phase)
-        ? 'deferred'
-        : 'applied';
+    const endEffects =
+      !encounterAllowsEndEffects(phase) ||
+      context.catalog.encounterDefinitions.byKey[phase.encounterKey]?.script.endEffects === 'none'
+        ? 'none'
+        : waitsForReady(context, phase)
+          ? 'deferred'
+          : 'applied';
     const completed =
       context.catalog.encounterDefinitions.byKey[phase.encounterKey]?.script
         .endsWithBossDefeated === true
@@ -654,6 +660,31 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     return roster.rows.find((row) => row.key === key && !row.stale);
   };
 
+  /**
+   * The fight a press begins runs at once: recorded when its script records,
+   * started, counted for depth and, unless left, completed, with no end effects.
+   */
+  const pressFight = (
+    row: RoomActionRow,
+    operationContext: OperationContext,
+    state: ExecutionState,
+  ): ExecutionState => {
+    const fight = eventGraph.pressFights.find(
+      (candidate) => roomActionKey(candidate.press) === row.key,
+    );
+    if (fight === undefined) return state;
+    const phase = resolvedEncounterPhaseForDefinition(
+      context.catalog,
+      { slotKey: fight.phaseKey, envelopeKey: fight.envelopeKey, figLeafSkip: false },
+      fight.encounterKey,
+    );
+    const fightContext = { ...operationContext, encounterPhase: phase };
+    let next = fight.script.records ? encounterEffects.recordEncounter(fightContext, state) : state;
+    next = encounterEffects.recordEncounterStart(fightContext, next);
+    next = encounterEffects.advanceEncounterDepth(fightContext, next);
+    return fight.completes ? encounterEffects.recordEncounterCompletion(fightContext, next) : next;
+  };
+
   const playerAction = (
     row: RoomActionRow,
     operationIndex: number,
@@ -757,16 +788,26 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
         });
       case 'interactChallengeSwitch':
-        return appendEvent(state, operationContext, {
-          kind: 'challengeSwitchInteracted',
-          owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
-        });
+        return pressFight(
+          row,
+          operationContext,
+          appendEvent(state, operationContext, {
+            kind: 'challengeSwitchInteracted',
+            owner:
+              row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
+          }),
+        );
       case 'unlockExit':
-        return appendEvent(state, operationContext, {
-          kind: 'exitUnlocked',
-          owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
-          exitKey: row.reference.exitKey,
-        });
+        return pressFight(
+          row,
+          operationContext,
+          appendEvent(state, operationContext, {
+            kind: 'exitUnlocked',
+            owner:
+              row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
+            exitKey: row.reference.exitKey,
+          }),
+        );
       // A wheel reroll's window opens at its wheel's roll, so its offers precede it.
       case 'reroll':
         return appendEvent(state, operationContext, {

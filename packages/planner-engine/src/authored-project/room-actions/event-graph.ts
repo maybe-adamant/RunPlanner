@@ -671,6 +671,11 @@ export function cagePhase(graph: RoomEventGraph, phaseKey: string): boolean {
   );
 }
 
+/** The press fight a phase key names, when the room holds one. */
+export function pressFightOf(graph: RoomEventGraph, phaseKey: string): RoomPressFight | undefined {
+  return graph.pressFights.find((fight) => fight.phaseKey === phaseKey);
+}
+
 /** Whether the room plays this envelope phase. */
 export function playsPhase(graph: RoomEventGraph, phaseKey: string): boolean {
   return graph.phases.some((phase) => phase.phaseKey === phaseKey);

@@ -1495,4 +1495,85 @@ describe('single-room lifecycle execution', () => {
       );
     }
   });
+
+  it('starts each door’s fight right after its press, wherever the press stands', () => {
+    const presses = (['exit2', 'exit3'] as const).map((exitKey) =>
+      Object.freeze({ kind: 'unlockExit' as const, exitKey }),
+    );
+    const definition = catalog.encounterDefinitions.byKey.GeneratedG_ExtraDoor!;
+    const walk = (order: readonly RoomActionReference[]) => {
+      const roster = actionRoster(
+        origin,
+        order,
+        presses.map((reference) => ({
+          reference,
+          participation: 'optional' as const,
+          placement: { kind: 'afterDoorsOpen' as const },
+          dependencies: [],
+        })),
+        'RewardlessCombatRoom',
+      );
+      const pressFights = order.map((press) =>
+        Object.freeze({
+          phaseKey: `unlockExit:${press.kind === 'unlockExit' ? press.exitKey : ''}`,
+          script: definition.script,
+          envelopeKey: 'unlockExit',
+          encounterKey: definition.key,
+          press,
+          standsAt: Object.freeze({ kind: 'doorsOpened' as const }),
+          completes: true,
+        }),
+      );
+      const eventGraph: RoomEventGraph = Object.freeze({
+        ...roster.eventGraph,
+        pressFights,
+        events: Object.freeze([
+          ...roster.eventGraph.events,
+          ...pressFights.flatMap((fight) => [
+            Object.freeze({
+              kind: 'encounterBegun' as const,
+              key: `encounterBegun:${fight.phaseKey}`,
+              phaseKey: fight.phaseKey,
+              trigger: Object.freeze({ kind: 'action' as const, action: fight.press }),
+              markers: 'merged' as const,
+            }),
+            Object.freeze({
+              kind: 'encounterStarted' as const,
+              key: `encounterStarted:${fight.phaseKey}`,
+              phaseKey: fight.phaseKey,
+              trigger: Object.freeze({ kind: 'automatic' as const }),
+            }),
+            Object.freeze({
+              kind: 'encounterEnd' as const,
+              key: `encounterEnd:${fight.phaseKey}`,
+              phaseKey: fight.phaseKey,
+              trigger: Object.freeze({ kind: 'automatic' as const }),
+            }),
+          ]),
+        ]),
+      });
+      return executeRoomLifecycle(
+        catalog,
+        inputWithoutProducer({
+          lifecycleProfileKey: 'RewardlessCombatRoom',
+          roomActionRoster: Object.freeze({ ...roster, eventGraph }),
+        }),
+      ).events.flatMap((event) =>
+        event.kind === 'exitUnlocked'
+          ? [`press ${event.exitKey}`]
+          : 'phaseKey' in event && event.phaseKey.startsWith('unlockExit:')
+            ? [`${event.kind} ${event.phaseKey}`]
+            : [],
+      );
+    };
+    const fight = (exitKey: string) => [
+      `press ${exitKey}`,
+      `encounterStarted unlockExit:${exitKey}`,
+      `encounterDepthAdvanced unlockExit:${exitKey}`,
+      `encounterCompleted unlockExit:${exitKey}`,
+    ];
+
+    expect(walk(presses)).toEqual([...fight('exit2'), ...fight('exit3')]);
+    expect(walk([...presses].reverse())).toEqual([...fight('exit3'), ...fight('exit2')]);
+  });
 });

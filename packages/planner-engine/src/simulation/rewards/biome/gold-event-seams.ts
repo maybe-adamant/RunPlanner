@@ -10,6 +10,8 @@ import {
   type RoomActionAddress,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
+import { pressFightOf } from '../../../authored-project/room-actions/event-graph';
+import { roomActionKey } from '../../../authored-project/room-actions/state';
 import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../../../authored-project/infernal-contract-pedestal';
 import { purgingPoolSalePoint } from '../../commerce/feature-rolls';
 import type { RouteLoadout } from '../../../authored-project/model';
@@ -170,8 +172,17 @@ function walkedRoomAction(
   room: CanonicalAuthoredRoom,
   event: HistoryEvent,
 ): RoomActionAddress | undefined {
+  // A press fight's events belong to its press row.
+  const fight =
+    'phaseKey' in event
+      ? pressFightOf(room.roomActionRoster.eventGraph, event.phaseKey)
+      : undefined;
   const row = room.roomActionRoster.rows.find(
-    (candidate) => candidate.rank !== null && rowSettledBy(event, candidate),
+    (candidate) =>
+      candidate.rank !== null &&
+      (fight === undefined
+        ? rowSettledBy(event, candidate)
+        : candidate.key === roomActionKey(fight.press)),
   );
   return row === undefined
     ? undefined
@@ -449,11 +460,17 @@ export function withPoolSaleGold(
  * it at the room's entry: by its known roster (an authored composition, or the
  * Elite's pinned elite) or else its biome's generated-combat policy.
  */
+/** A press fight as it starts: its encounter and generated composition. */
+type PressFightRun = Pick<
+  Extract<HistoryEvent, { readonly kind: 'encounterStarted' }>,
+  'encounterKey' | 'generatedCustomization'
+>;
+
 function challengeSwitchEnemyGold(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
   room: CanonicalAuthoredRoom,
-  run: import('../../lifecycle/model').ChallengeSwitchEncounterRun,
+  run: PressFightRun,
 ): Detection {
   const { catalog } = context;
   const roomKey = semanticAddressKey(room.origin);
@@ -512,7 +529,7 @@ function unlockExitEnemyGold(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
   room: CanonicalAuthoredRoom,
-  run: import('../../lifecycle/model').UnlockExitEncounterRun,
+  run: PressFightRun,
   multipliers: GoldMultipliers | undefined,
 ): Detection {
   const roomKey = semanticAddressKey(room.origin);
@@ -559,10 +576,16 @@ export function withGoldEvents(
   const room = authoredRoom(context, event.origin);
   const roomOrigin: OccurrenceAddress | undefined = room?.origin;
   let state = next;
+  // A press fight pays its own enemies, apart from the room's encounters.
+  const fight =
+    room !== undefined && 'phaseKey' in event
+      ? pressFightOf(room.roomActionRoster.eventGraph, event.phaseKey)
+      : undefined;
   // Recorded too: a Fields Passive encounter is prepared but never run as a phase.
   if (
     (event.kind === 'encounterStarted' || event.kind === 'encounterRecorded') &&
-    room !== undefined
+    room !== undefined &&
+    fight === undefined
   )
     state = Object.freeze({
       ...state,
@@ -571,7 +594,7 @@ export function withGoldEvents(
         event.encounterKey,
       ),
     });
-  if (event.kind === 'encounterRecorded' && room !== undefined) {
+  if (event.kind === 'encounterRecorded' && room !== undefined && fight === undefined) {
     // A phase whose roster nothing leaves to native pays from that roster; a
     // broken roster contract faults its gold, never the walk.
     let recorded: GoldRecordedRoster | undefined;
@@ -617,7 +640,9 @@ export function withGoldEvents(
   // that phase's Heracles bounty).
   if (
     (event.kind === 'roomEntered' ||
-      (event.kind === 'encounterCompleted' && event.execution === 'normal')) &&
+      (event.kind === 'encounterCompleted' &&
+        event.execution === 'normal' &&
+        fight === undefined)) &&
     roomKey !== undefined &&
     next.branch !== undefined
   ) {
@@ -630,10 +655,10 @@ export function withGoldEvents(
       readings.set(`${roomKey}::encounterEnd::${event.phaseKey}`, reading);
     state = Object.freeze({ ...state, goldSpawnReadings: readings });
   }
-  // A finished switch challenge fixes its claim's gold as it ends, inside the press.
+  // A finished switch challenge fixes its claim's gold as it ends.
   if (
-    event.kind === 'challengeSwitchInteracted' &&
-    event.encounter?.completed === true &&
+    event.kind === 'encounterCompleted' &&
+    fight?.press.kind === 'interactChallengeSwitch' &&
     roomKey !== undefined &&
     next.branch !== undefined
   )
@@ -1100,21 +1125,33 @@ export function withGoldEvents(
             { fight: phase, source: 'medea' },
           );
       }
-      // A left fight's kills are not estimated: they pay nothing here.
-      if (event.kind === 'challengeSwitchInteracted' && event.encounter?.completed === true)
-        detect(
-          'enemyGold:challengeSwitch',
-          createRoomFeatureAddress(room.origin, { kind: 'challengeSwitch' }),
-          challengeSwitchEnemyGold(context, state, room, event.encounter),
-          { fight: event.owner, source: 'enemies' },
-        );
-      if (event.kind === 'exitUnlocked' && event.encounter !== undefined)
-        detect(
-          'enemyGold:unlockExit',
-          event.owner,
-          unlockExitEnemyGold(context, state, room, event.encounter, before),
-          { fight: event.owner, source: 'enemies' },
-        );
+      // A press fight pays as it starts; a left fight's kills are not estimated.
+      const press =
+        event.kind === 'encounterStarted' && fight?.completes === true
+          ? createRoomActionAddress(
+              createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+              room.occurrenceId,
+              roomActionKey(fight.press),
+            )
+          : undefined;
+      if (event.kind === 'encounterStarted' && press !== undefined)
+        if (fight?.press.kind === 'interactChallengeSwitch')
+          detect(
+            'enemyGold:challengeSwitch',
+            createRoomFeatureAddress(room.origin, { kind: 'challengeSwitch' }),
+            challengeSwitchEnemyGold(context, state, room, event),
+            { fight: press, source: 'enemies' },
+          );
+        else
+          detect(
+            'enemyGold:unlockExit',
+            press,
+            unlockExitEnemyGold(context, state, room, event, before),
+            {
+              fight: press,
+              source: 'enemies',
+            },
+          );
       // GOLD_ESTIMATE_ASSUMPTIONS.md "Urn upgrade owned", "Urns per occurrence".
       const declaration = catalog.rooms.byKey[room.gameName];
       if (

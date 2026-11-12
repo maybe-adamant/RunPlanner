@@ -1,4 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
+import { pressFightOf } from '../../authored-project/room-actions/event-graph';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { createBiomeAddress, semanticAddressKey } from '../../authored-project/addresses';
 import type {
@@ -502,7 +503,8 @@ function appendClockworkAwareRoomLifecycle(
         (goal && event.kind === 'roomEntered') ||
         (counted &&
           room.incomingReward?.offer.rewardType !== 'Devotion' &&
-          event.kind === 'encounterCompleted')
+          event.kind === 'encounterCompleted' &&
+          pressFightOf(room.roomActionRoster.eventGraph, event.phaseKey) === undefined)
       ) {
         emitClockworkReward(afterWriter);
       }
