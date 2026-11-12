@@ -5,8 +5,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createOccurrenceAddress,
-  createAcquisitionEntryAddress,
-  createAcquisitionSiteAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
@@ -96,7 +94,7 @@ it('preserves scheduled timed choices through an equivalent room picker edit and
   application.dispose();
 });
 
-it('inserts a purchased Hermes delivery automatically with its reorder handle and one Undo', async () => {
+it('leaves a purchased Hermes delivery live at its host until it is placed, then reorders it', async () => {
   const project = loadSurfaceNOHermesShrineDeliveryCheckpoint();
   const application = createApplication();
   application.store.dispatch(authoredProjectReplaced(project));
@@ -113,31 +111,39 @@ it('inserts a purchased Hermes delivery automatically with its reorder handle an
     within(slotRow(3)).getByRole('button', { name: /^Reorder (Buy|Rush) Max Magick/ }),
   ).toBeTruthy();
   const key = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
-  const host = history.present.route.biomes
-    .find((biome) => biome.biomeKey === 'O')!
+  // The delivery lies live at its host until the owner places it there.
+  const placement = application.store
+    .getState()
+    .projectWorkspace.assembly!.evaluation.findings.find(
+      (finding) =>
+        finding.code === 'hermesShrineDeliveryPlacementRequired' &&
+        finding.origin.kind === 'acquisitionEntry' &&
+        finding.origin.entryKey === key,
+    );
+  expect(placement).toBeDefined();
+  act(() => application.store.dispatch(semanticOwnerNavigated(placement!.origin)));
+  const unplaced = timelineRow('Collect Max Magick');
+  expect(within(unplaced).queryByRole('button', { name: /Reorder Collect Max Magick/ })).toBeNull();
+  await view.user.click(within(unplaced).getByRole('button', { name: 'Restore delivery' }));
+  expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(2);
+  const host = application.store
+    .getState()
+    .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'O')!
     .topology!.occurrences.find((room) =>
       room.roomActions.order.some(
         (reference) => reference.kind === 'interactAcquisitionEntry' && reference.entryKey === key,
       ),
     );
-  expect(host).toBeDefined();
-  act(() =>
-    application.store.dispatch(
-      semanticOwnerNavigated(
-        createAcquisitionEntryAddress(
-          createAcquisitionSiteAddress(
-            createOccurrenceAddress(oBiome, host!.occurrenceId),
-            'hermesShrineDelivery',
-          ),
-          key,
-        ),
-      ),
-    ),
+  expect(host?.occurrenceId).toBe(
+    placement!.origin.kind === 'acquisitionEntry' &&
+      placement!.origin.site.owner.kind === 'occurrence'
+      ? placement!.origin.site.owner.occurrenceId
+      : undefined,
   );
   const row = timelineRow('Collect Max Magick');
   expect(within(row).getByRole('button', { name: /Reorder Collect Max Magick/ })).toBeTruthy();
   expect(within(row).queryByRole('button', { name: 'Restore delivery' })).toBeNull();
-  expect(within(row).queryByRole('button', { name: 'Remove action' })).toBeNull();
+  await view.user.click(screen.getByRole('button', { name: 'Undo' }));
   await view.user.click(screen.getByRole('button', { name: 'Undo' }));
   expect(application.store.getState().projectWorkspace.history!.present).toBe(project);
   application.dispose();
