@@ -1,22 +1,13 @@
 import {
   acquisitionSiteStorageKey,
-  artificerAcquisitionSite,
-  artificerReplacementEntryKey,
-  authoredAcquisitionSources,
-  roomActionKey,
-  semanticAddressKey,
-  type RoomActionReference,
   createAcquisitionRoleAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
-  createOccurrenceAddress,
-  type OccurrenceId,
   type AcquisitionEntryAddress,
   type AcquisitionRoleAddress,
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { roomActionAddress } from './actions';
 import type { RunImportContext } from './import';
 import { authoredOccurrence, deliveredIncomingReward, occurrenceIdOf } from './occurrences';
 
@@ -105,12 +96,7 @@ export function convertAcquisition(
     return true;
   }
   if (kind !== 'artificer') return true;
-  const converted = () =>
-    context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition });
-  let after = converted();
-  // The replacement spawns as its source converts; the player takes it right after.
-  if (after.kind !== 'acquisitionConversion' && placeReplacement(context, acquisition))
-    after = converted();
+  const after = context.candidates().evaluate({ kind: 'acquisitionConversion', acquisition });
   const entry =
     after.kind === 'acquisitionConversion' ? after.result.artificerReplacementAddress : undefined;
   const types =
@@ -149,44 +135,6 @@ export function convertAcquisition(
     record,
   });
   return true;
-}
-
-/** Places the Artificer replacement's pickup directly after the row its conversion acquires. */
-function placeReplacement(context: RunImportContext, acquisition: AcquisitionRoleAddress): boolean {
-  const occurrenceId = occurrenceIdOf(acquisition);
-  if (occurrenceId === undefined) return false;
-  const biome = createBiomeAddress(acquisition.routeKey, acquisition.biomeKey);
-  const occurrence = authoredOccurrence(
-    context.assembly().project,
-    acquisition.biomeKey,
-    occurrenceId,
-  );
-  if (occurrence === undefined) return false;
-  const source = authoredAcquisitionSources(biome, occurrence).find(
-    (candidate) => semanticAddressKey(candidate.acquisition) === semanticAddressKey(acquisition),
-  )?.action;
-  const order = occurrence.roomActions.order;
-  const index =
-    source === undefined
-      ? -1
-      : order.findIndex((entry) => roomActionKey(entry) === roomActionKey(source));
-  if (index < 0) return false;
-  const replacement: RoomActionReference = {
-    kind: 'interactAcquisitionEntry',
-    siteKey: acquisitionSiteStorageKey(
-      artificerAcquisitionSite(
-        createOccurrenceAddress(biome, occurrenceId as OccurrenceId),
-        acquisition.owner,
-      ),
-    ),
-    entryKey: artificerReplacementEntryKey(acquisition.owner, acquisition.acquisitionRole),
-  };
-  return context.apply({
-    kind: 'InsertRoomAction',
-    action: roomActionAddress(context, acquisition.biomeKey, occurrenceId, replacement),
-    reference: replacement,
-    index: index + 1,
-  });
 }
 
 /** A room reward's placed Artificer replacement: its entry, its reward, and the types the engine admits there. */

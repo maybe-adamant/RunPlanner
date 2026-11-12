@@ -305,12 +305,16 @@ export function assembleRoomActionRoster(options: {
   });
 }
 
-type DoorsRow = Pick<RoomActionRow, 'participation' | 'rank' | 'stale' | 'bounds'>;
+type DoorsRow = Pick<
+  RoomActionRow,
+  'key' | 'participation' | 'rank' | 'stale' | 'bounds' | 'dependencies'
+>;
 
 /**
  * When the doors can open: after the last placed required row they wait on,
  * every required row but those that follow them. A required row they wait on
- * still unplaced holds them; the walk also waits for every encounter to end.
+ * still unplaced holds them, once the row that spawns it is taken (an optional
+ * pickup the Artificer transforms); the walk also waits for every encounter to end.
  */
 export function doorsReadyAfterRank<Row extends DoorsRow>(
   rows: readonly Row[],
@@ -322,9 +326,16 @@ export function doorsReadyAfterRank<Row extends DoorsRow>(
       row.bounds.enabler?.kind !== 'doorsOpened' &&
       row.bounds.enabler?.kind !== 'exitsReady',
   );
+  const unplaced = waitedOn.filter((row) => row.rank === null);
+  const rankOf = new Map(rows.map((row) => [row.key, row.stale ? null : row.rank]));
+  const sourceRanks = unplaced.flatMap((row) =>
+    row.dependencies.flatMap((dependency) =>
+      dependency.authoringOnly === true ? [] : [rankOf.get(roomActionKey(dependency.action)) ?? 0],
+    ),
+  );
   return {
-    afterRank: waitedOn.reduce((rank, row) => Math.max(rank, row.rank ?? 0), 0),
-    unplaced: waitedOn.filter((row) => row.rank === null),
+    afterRank: Math.max(0, ...waitedOn.map((row) => row.rank ?? 0), ...sourceRanks),
+    unplaced,
   };
 }
 

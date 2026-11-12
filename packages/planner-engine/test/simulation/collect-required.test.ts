@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  acquisitionSiteStorageKey,
   applyProjectCommand,
+  createAcquisitionRoleAddress,
   createBiomeAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -9,6 +11,7 @@ import {
   createProjectHistory,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
+  createRoomActionAddress,
   createShopOfferAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -23,6 +26,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
   liveRoomForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
@@ -454,6 +458,75 @@ describe('Collect all required', () => {
     expect(roomOrder(second.assembly.project, room).map(roomActionKey)).toEqual(
       roomOrder(project, room).map(roomActionKey),
     );
+  });
+
+  it("collects a Fields optional reward's Artificer replacement right after the pickup it converts", () => {
+    const hBiome = createBiomeAddress('Underworld', 'H');
+    const roomId = createOccurrenceId('golden-h-combat02');
+    const room = createOccurrenceAddress(hBiome, roomId);
+    const reward = createLocalRewardAddress(hBiome, roomId, 'optionalRewards', 'optional1');
+    const acquisition = createAcquisitionRoleAddress(reward, 'self');
+    const pickup: RoomActionReference = {
+      kind: 'interactLocalReward',
+      groupKey: 'optionalRewards',
+      slotKey: 'optional1',
+    };
+    let project = applyProjectCommand(loadUnderworldGeneratedCompositionCheckpoint(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward,
+      value: { rewardType: 'MetaCardPointsCommonDrop' },
+    });
+    // Taken after the last cage's reward, once the doors are open.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(hBiome, roomId, roomActionKey(pickup)),
+      reference: pickup,
+      index: 4,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'artificer' },
+    });
+    const converted = evaluate(project);
+    // The replacement is due as the room is left, like its source, not before the doors open:
+    // the walk reaches the converted pickup and its conversion capability.
+    const replacement = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        room,
+        `artificerSource:${encodeURIComponent(semanticAddressKey(reward))}`,
+      ),
+      `artificer:${encodeURIComponent(semanticAddressKey(reward))}:self`,
+    );
+    expect(issueKey(converted)).toBe(`rewardMissing ${semanticAddressKey(replacement)}`);
+    expect(
+      acquisitionConversionCandidateForProjectEvaluationAssembly(converted, acquisition)
+        ?.artificerAssessment?.supported,
+    ).toBe(true);
+
+    const chosen = evaluate(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceAcquisitionEntryOffer',
+        entry: replacement,
+        value: { rewardType: 'RoomMoneyDrop' },
+      }),
+    );
+    const collected = collectRequiredItems({ catalog, before: chosen, occurrence: room, evaluate });
+
+    expect(collected.stop).toBe('complete');
+    expect(placements(collected.commands)).toEqual([
+      `InsertRoomAction ${roomActionKey({
+        kind: 'interactAcquisitionEntry',
+        siteKey: acquisitionSiteStorageKey(replacement.site),
+        entryKey: replacement.entryKey,
+      })}@5`,
+    ]);
+    expect(collected.assembly.evaluation.issue).toBeUndefined();
   });
 
   it('collects a pickup before acting on an object at the same index, whatever the item order', () => {
