@@ -345,39 +345,47 @@ of Denial records up to two exact unselected materialized keys on that same
 trait event. The folded banned set is route-wide eligibility history;
 suppressing Denial stops new bans but never removes existing ones.
 
-Effective Vow of Forfeit is narrower: for qualifying RoomReward sources it
-substitutes the first supported incoming `Boon` or `HermesUpgrade` in each
-biome with a required `RoomRewardConsolationPrize` (Red Onion). The authored
-offer and bag result remain, while a `rewardForfeited` event records the fixed
-replacement and the canonical concrete acquisition settles the Onion. This
-also covers a picked Thessaly Ship-wheel reward, a Fields cage reward, and an
-Artificer-generated RoomReward Boon/Hermes replacement; it does not inspect the
-resolved giver.
+Effective Vow of Forfeit is narrower, and it is decided as a reward spawns.
+The first `Boon` or `HermesUpgrade` reward of a biome that spawns as a room
+reward, supported or not, becomes a required `RoomRewardConsolationPrize` (Red
+Onion): an ordinary room reward, a Fields cage reward, a picked Thessaly
+Ship-wheel reward and an Artificer-generated replacement all count, and the
+resolved giver is not inspected. The authored offer and bag result remain,
+while a `rewardForfeited` event records the replacement on the spawned object;
+its pickup settles the Onion without spending Forfeit again. A replaced reward
+spends no Olympian keepsake use; any other room reward spends the uses that
+force its god as it spawns
+([provider force](../audits/loadout-and-progression/OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md#provider-force-consumption-is-loot-materialization)).
+Devotion, Hermes deliveries and Shop purchases neither trigger nor consume
+Forfeit.
 
-Fields fixes this outcome on selected room entry in active cage-list order,
-independently of later cage activation and pickup order; the entry-fixed
-realization is published for the cage's acquisition roles from that entry.
-Between choosing a Ship wheel offer and collecting its reward after that
-wheel's combat, no other Forfeit-eligible RoomReward spawn can occur in the
-room: Artificer outputs cannot intercede there, and NPC interactions never touch
-the RoomReward spawn path. A picked `Boon` or `HermesUpgrade` wheel offer whose
-biome use is unconsumed at the pick therefore has its Red Onion
-realization published from the pick, while consumption and the
-`rewardForfeited` event stay at pickup settlement, so event order is
-unchanged. Entry- and pick-fixed realizations are retained when a later
-contact in the same room blocks, including a block that withholds the room's
-lifecycle. Unentered offered rooms do not consume the use. Pickup settles the
-fixed replacement without spending Forfeit again.
+**The one exception.** An Opening reward the room does not create at its
+encounter's start is decided at its pickup, and Devotion spends each god's
+keepsake use at that god's pickup, where the game spends both as the room's
+encounter starts. Nothing generates between the two points, so the outcome is
+the same.
 
-Other required rewards, such as miniboss rewards, retain acquisition-time
-settlement where it yields the same modeled outcome. Native spawn timing alone
-does not require a separate simulation phase; earlier consumption is needed
-when coexisting rewards make pickup order observably different. Shops,
-Devotion, and other acquisitions outside the qualifying native RoomReward spawn
-path do not trigger or consume Forfeit. The Red Onion keeps its normal pickup,
-Time Piece, and Sea Star contacts, but cannot start a trait offer, Artificer
-conversion, or Echo last-reward recreation. The Arcana/Fear ledger retains only
-the per-biome consumed flag needed by later settlement and Run State.
+Each host spawns at its own moment: an ordinary reward at its encounter's end
+(an H miniboss's at that encounter's start), a picked wheel reward after its
+phase's combat, an Artificer replacement at the conversion, and Fields cages
+together on selected room entry in active cage-list order. A Fields Onion
+therefore stays with its cage whatever order the cages are unlocked and
+picked up, and a cage's completion spends no keepsake use. Unentered offered
+rooms spawn nothing and consume nothing. The decision is state on the spawned
+object, so it stands when a later contact in the same room blocks, including a
+block that withholds the room's lifecycle.
+
+Before a reward spawns, the game previews its Onion without spending the use;
+the engine publishes the same read-only preview on doors (and, into a Fields
+room, each cage), on Ship-wheel offers, on door, cage and wheel rerolls, and
+on Hub board doors at their first draw and their rerolls, refreshed when the
+Hub is restored.
+
+The Red Onion keeps its normal pickup, Time Piece, and Sea Star contacts, but
+cannot start a trait offer, Artificer conversion, or Echo last-reward
+recreation. The Arcana/Fear ledger retains only the per-biome consumed flag
+needed by later settlement and Run State, set from the replaced reward's
+spawn.
 
 ## Timed outcomes
 

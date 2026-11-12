@@ -51,7 +51,7 @@ flowchart LR
   control to the already-generated selected target.
 
 Within this skeleton the occurrence's [Room Action order](#room-action-order)
-places purchases, pickups and interactions in their legal windows.
+places purchases, pickups and interactions within their bounds.
 
 ### Key terms
 
@@ -133,7 +133,7 @@ The editor must not persist lifecycle operations or history snapshots.
 Application and React code may label and group lifecycle facts, but must not
 position a semantic boundary by comparing display labels, biome names, or
 incidental numeric action ranks when the profile or roster already owns the
-relevant window or checkpoint relation.
+relevant bound or checkpoint relation.
 
 ## Lifecycle Operations
 
@@ -307,7 +307,7 @@ encounter. Its phase has Encounter and Encounter ended boundaries, the
 interaction inside them, its [outcome](#encounter-outcome) right after the
 interaction, and the event's result pickup after the end. In Fields
 the Passive event orders among the cages by its interaction, each boundary
-directly around it. The boundaries only shape the Timeline and window
+directly around it. The boundaries only shape the Timeline and row
 positions: no encounter start or completion is executed for a Fields Passive
 event, and its history is unchanged.
 
@@ -390,12 +390,19 @@ lifecycle events or a second room model. The
 [simulation authority](SIMULATION_AND_VALIDATION.md#selected-cut) owns what a
 block in each stage publishes.
 
-The Postboss Purging Pool inventory is the declared exception: Overview content
-pinned at fountain use. The Pool unlocks only when the required fountain is
-used, and nothing between that use and opening the Pool removes a listed boon or
-changes its rarity, so it opens with the inventory present at fountain use
+One rule divides the two. The Overview holds the facts no in-room action can
+change: each encounter's identity and wave make-up, a boss's stage picks (a
+fixed part of its encounter script), stocks, which objects are present, and the
+room's layout. The Timeline holds what depends on in-room events or their
+order: Fig Leaf, the Gorgon condition, Aetos, purchases and interactions. The
+Postboss Purging Pool inventory is therefore a Timeline fact, assessed after
+the required fountain use: the Pool unlocks only at that use, whose rarity
+effects can change a listed boon, and nothing between that use and opening the
+Pool removes a listed boon or changes its rarity
 ([source audit](../audits/room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#source-contacts-and-realized-hosts);
-[Room features](#room-features-at-cleanup)).
+[Room features](#room-features-at-cleanup)). Plan settings shown on the entry
+room (its biome's settings, the start room's identity) are plan choices, not
+facts of the room.
 
 ## Room Action Order
 
@@ -413,8 +420,8 @@ order, evaluates each action against history from earlier authored actions,
 and never retries another permutation. A later plan compiler consumes
 the same order without choosing a different witness order.
 
-Mandatory entries derive their required classification and legal lifecycle
-window from the engine's structural action domain; membership and position
+Mandatory entries derive their required classification and their bounds in
+the room's events from the engine's structural action domain; membership and position
 are the required participation and chronology. Only the owner places a row:
 a room is created with none, and no command, settlement or upgrade inserts a
 required interaction on its own, whether a pickup (a room reward, a Boss's
@@ -478,11 +485,13 @@ judged through its last row, each row by its own prefix. The judgement is
 structural; it never reads affordability or other simulated state, which
 stays a finding.
 
-Insert and move proposals carry the typed dependency and fixed-window
-blockers of that prefix, each naming its affected action and its prerequisite
-or conflicting action windows; a required action of an earlier window after k
-is its own blocker naming the action that must come first. An action whose window follows its authored order (the Postboss rack) never
-takes part in window crossing or required-first order.
+Insert and move proposals carry the typed dependency and bound blockers of
+that prefix, each naming its affected action: a row standing before its spawn
+or enabler can happen (naming the required action ordered after it that must
+come first, or that the point never happens in the room), or past its
+deadline (naming the nearest earlier action whose opening passes it). The
+Postboss keepsake rack is not a required room object: it stands wherever it
+is placed, and no bound of its own or of another row is judged against it.
 The application labels this evidence for placement explanations; it neither
 infers legality nor attributes an existing blocker to the proposed action.
 Authorable proposals, canonical required restores, and removals carry no
@@ -506,9 +515,9 @@ the same rule.
 
 Defaults are anchored differently. A required action's canonical restore is
 its deterministic default, anchored to the front: before the first retained
-action of a later window (or of the same window and later contribution order),
-after its dependencies. It is advice, marked on the roster's insertion and the
-live product's placement, and the slot an insertion without a chosen position
+action that opens later (or opens at the same point and comes later in
+contribution order), after its dependencies. It is advice, marked on the
+roster's insertion and the live room's placement, and the slot an insertion without a chosen position
 takes; nothing applies it on its own, and it is not a deadline, so it may
 precede other legal indices. Purchases and other object interactions are
 anchored to the end: without a chosen position they append, their latest legal
@@ -518,7 +527,7 @@ Missing required authorship remains a supported incomplete state with one
 canonical restore position among its legal ones.
 
 Active required roster rows also expose `requiredScope`: `phase` when their
-fixed window or dependency chain constrains them to encounter progression,
+bounds or dependency chain constrains them to encounter progression,
 otherwise `room`. Optional and stale rows have no required scope. This derived
 classification does not change participation, legal order, or authored state.
 Fields cage rewards remain room-scoped despite their source phase; a contact
@@ -659,7 +668,7 @@ it, silently in the room the edit addresses and announced in any other; one
 that a saved plan already held goes at the next edit of its room. Unpinning an
 item keeps its rows, since an unobserved item matches any content. A row with
 no active action is stale, never item-replaced, whatever content it recorded.
-Until it goes, the live product shows the item the row's place holds now as
+Until it goes, the live room shows the item the row's place holds now as
 unplaced, never the row as placed: placing that item takes the row's place.
 Derived items (a Sea Star duplicate, a Shrine delivery, an Artificer
 replacement, a Nemesis result) are judged the same way by their payload, so a
@@ -714,7 +723,7 @@ same frozen structure is carried by the roster and consumed by required-action
 scheduling, lifecycle execution, checkpoint assembly, and the room timeline.
 None of those consumers may reconstruct phase membership or boundary order
 from authored action ranks. Structure construction, active-phase scoping, and
-window ordering share that owner; the action domain retains action
+bound ordering share that owner; the action domain retains action
 contributions, required participation, and dependency assembly.
 
 When encounter preparation assesses a suffix as dormant, the engine scopes
@@ -828,7 +837,9 @@ the pickup it copies, a rushed Shrine item under its rush in the Shrine's
 own room) is listed under that source action instead. Each item carries its reward owner,
 what it spawns as (its reward, which for a Nemesis result is the one her
 outcome spawns, or the concrete pickup where that differs: one role of a
-reward that spawns per role, a forfeited reward's Red Onion), source,
+reward that spawns per role, or the Red Onion of a reward
+[Forfeit](TRAIT_OFFERS.md#fear-and-reward-settlement) replaced as it
+spawned), source,
 participation and placement: its ranked action, or the command that places it,
 an unplaced item that needs an input once placed (a Pom Slice's Pom) marked as
 needing that choice. Items come from the active action domain and the reached due
@@ -877,7 +888,7 @@ unplaced one is due there, after the phase's other post-combat rows.
 The game refuses a Ship wheel's choice and keeps the doors shut while any
 object of the room's required set lies on the ground
 (`HasRoomRequiredObject`); a wheel's reroll is not refused. One engine rule
-states this for the walk and the live product alike: a required item on the
+states this for the walk and the live room alike: a required item on the
 ground is due before the next row that waits for it, the next wheel's choice
 or anything the doors opening enables, and otherwise before Doors open. The
 pickups a Ship phase's end effects spawn are therefore due at the next wheel's
@@ -887,7 +898,7 @@ pickup taken before combat (an Opening reward, Devotion's choice) and an
 action that starts a fight (a cage's completion, a wheel's choice) lead to
 that fight, so the fight waits on them; whether a fight follows is the room
 profile's fact, an encounter later among its operations. An unplaced cage or wheel choice is
-due after the executable rows of its window the walk reaches before it, such
+due after the executable rows opening with it that the walk reaches before it, such
 as the earlier cage's reward or a delivery its wheels opening spawned, unless
 a required action due by then is missing; playing forward therefore
 clears and collects a Fields room cage by cage.
@@ -899,8 +910,8 @@ from the room's first end effects to Doors open (a drop, optional, to the
 room's exit), and the walk judges the row against its due spawn. A row ranked
 before the spawn takes nothing and carries the order finding; one past its
 required-object deadline leaves the waiting row's order finding naming it. No placement after Doors open is legal:
-Doors open follows every placed required action, and a row of the
-post-outgoing window before the delivery crosses its window. A rushed
+Doors open follows every placed required action, and a delivery ranked after
+a doors-open row stands past its deadline. A rushed
 same-room delivery is optional loot spawned once the doors are already
 usable; it has no door deadline.
 
@@ -910,7 +921,7 @@ Two kinds of item are live at a gap, and nothing else:
   it spawned in (its moment's boundary, or the gap after the action whose
   settlement spawned it) through the gap of the row that collects it. A
   pickup not yet spawned or already collected is absent. Each keeps its reward
-  owner, source and participation, with the collect row's window, the gap it
+  owner, source and participation, with its deadline when required, the gap it
   spawned in and, while still caged, the unlock that frees it.
 - **Active objects**: a World Shop, the Contract pedestal, a Hermes Shrine, a
   Stygian Well, a Pool of Purging, the fountain, the keepsake rack, Eris, an
@@ -928,7 +939,8 @@ command accepts, judged by the one rule every positioned command shares. A
 command that still needs a choice, a Pom level or a blank Travel Deal item,
 says so; the indices it accepts do not depend on the value chosen. A required
 item carries its deadline: the last gap of the whole order at which it may
-stand, from the same placements its offered actions come from.
+stand, from the same placements its offered actions come from. An unplaced
+derived pickup also carries the last index its placement command accepts.
 
 Each item keeps the classification its owner gives it today: a Boss's forced
 drop, a countdown delivery and Gold Gold Gold's duplicate are pickups with
@@ -937,9 +949,8 @@ completion are actions on objects. An object's new purchases are read where
 the room's reached actions end, which is the same set at every gap, since an
 item bought earlier is a row; a room stopped in its Overview offers none.
 
-A companion query publishes the same product verb by verb, so the live
-product's own consumers do not pay for it. Each item lists its **verbs** at
-the gap: the distinct interactions (pick up, goldify, transform, buy, rush,
+The live room is one product, and each item lists its **verbs** at the
+gap: the distinct interactions (pick up, goldify, transform, buy, rush,
 sell, reroll, choose, talk to, unlock, use, press), each with its
 participation, its deadline when required, and the commands that perform it
 there as one edit, or the picker it needs. A legal action is one verb; the
@@ -959,7 +970,9 @@ whose commands it supplies (a reroll press's reward, a Pool sale's trait, a
 blank Travel Deal item) or **after** one that applies as is (a Pom's level,
 a rerolled list, the rack's keepsake, the Artificer's replacement). Each verb
 is one edit against the current plan; verbs offered at one gap are
-alternatives, never composed.
+alternatives, never composed. A consumer that only places what a room
+requires asks for the placements alone: each row's, placement's or purchase's
+own verb, without a standing row's conversions or the verbs a picker creates.
 
 At the frontier the room publishes its **progression**: leaving, once the
 walk passes the room with nothing required live, or choosing the next Ship
@@ -1386,7 +1399,7 @@ Between Ship phases the points run: the previous phase's **Encounter ended**
 open** (the next encounter's setup rolls its wheels, so their store and offers
 are fixed here), then in any authored order the pickups those end effects
 spawned and the wheel's rerolls, then the wheel's choice and the next
-encounter's start. The pickups' and rerolls' windows open at Wheels open and
+encounter's start. The pickups' and rerolls' bounds open at Wheels open and
 close at the choice, which waits on every required pickup since the previous
 phase's end; that internal point is not a Timeline event. A pickup taken there
 never feeds the wheel's offers (neither their candidate context, store ledger

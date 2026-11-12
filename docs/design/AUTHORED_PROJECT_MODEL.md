@@ -992,7 +992,7 @@ stamps the rows of the biomes it changes that recorded none while their item
 is observed, both before it applies (so a row records the item it was placed
 for, not the one the edit swaps in) and after;
 stamping alone is not an edit of the room. Engine-built references (the
-roster's, the live product's) carry content; `InsertRoomAction` refuses a
+roster's, the live room's) carry content; `InsertRoomAction` refuses a
 reference whose content its item does not hold, and placing the current item
 of an item-replaced row takes that row's place. The codec accepts any
 recorded content; a row whose item holds other content is

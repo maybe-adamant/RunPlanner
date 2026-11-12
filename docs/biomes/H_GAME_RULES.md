@@ -186,8 +186,12 @@ Vow of Forfeit use replaces the first Boon/Hermes object in that list with a
 required Red Onion. The original offer still owns its bag/source evidence;
 the replacement is a fixed acquisition outcome, not a new selectable bag
 reward. Reordering cage combat or pickup actions cannot move the Onion, and
-its pickup cannot consume Forfeit a second time. Unentered offered siblings
-and dormant cages do not participate in this spawn pass.
+its pickup cannot consume Forfeit a second time. Every other cage reward
+spends any Olympian keepsake use forcing its god as it spawns; completing a
+cage spends none
+([Forfeit and keepsake use at spawn](../design/TRAIT_OFFERS.md#fear-and-reward-settlement)).
+Unentered offered siblings and dormant cages do not participate in this spawn
+pass.
 
 Natively, Fields rejects a new cage while another required encounter or an
 object with `BlockFieldsEncounterStart` remains active. It then runs the
