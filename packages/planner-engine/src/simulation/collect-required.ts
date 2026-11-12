@@ -23,14 +23,22 @@ import {
 } from './evaluation/live-room';
 import { roomWalk } from './evaluation/evaluated-room';
 
-/** A verb placing a row not yet placed: the row and the one command placing it. */
-interface LivePlacement {
+/** A required row not yet placed and the one command the live product offers to place it. */
+export interface RequiredPlacement {
   readonly reference: RoomActionReference;
   readonly command: ProjectCommand;
 }
 
+/**
+ * A room's next required placement where the walk stands, or none; not
+ * reached when the walk does not enter the room or stops before it.
+ */
+export type NextRequiredPlacement =
+  | { readonly reached: false }
+  | { readonly reached: true; readonly placement: RequiredPlacement | undefined };
+
 /** The placement a verb performs; none while it stands, for a move, or while a picker supplies it. */
-function placementOf(verb: LiveVerb): LivePlacement | undefined {
+function placementOf(verb: LiveVerb): RequiredPlacement | undefined {
   const command = verb.standing === true ? undefined : verb.commands?.[0];
   return command === undefined || command.kind === 'MoveRoomAction' || verb.reference === undefined
     ? undefined
@@ -66,8 +74,8 @@ function placementIndex(command: ProjectCommand, frontier: number): number {
 }
 
 /** A required placement offered at the frontier, with what orders it among the others. */
-interface RequiredPlacement {
-  readonly placement: LivePlacement;
+interface OrderedPlacement {
+  readonly placement: RequiredPlacement;
   /** The action index it takes. */
   readonly index: number;
   /** Whether it collects loot lying on the ground rather than acting on an object. */
@@ -81,7 +89,7 @@ interface RequiredPlacement {
  * the next cage, a delivery the wheels opening spawned before the next wheel's
  * choice); then, for determinism, its row's kind and key.
  */
-function comesFirst(left: RequiredPlacement, right: RequiredPlacement): boolean {
+function comesFirst(left: OrderedPlacement, right: OrderedPlacement): boolean {
   if (left.index !== right.index) return left.index < right.index;
   if (left.pickup !== right.pickup) return left.pickup;
   const leftKind = left.placement.reference.kind;
@@ -101,11 +109,11 @@ function comesFirst(left: RequiredPlacement, right: RequiredPlacement): boolean 
  * as `comesFirst` says. A caged pickup waits for its unlock, and a placement
  * that still needs a Travel Deal item's value is left to its owner.
  */
-export function nextRequiredPlacement(
+export function requiredPlacementAt(
   live: LiveRoom,
   collected: ReadonlySet<string>,
-): LivePlacement | undefined {
-  const canonical = new Map<string, LivePlacement>();
+): RequiredPlacement | undefined {
+  const canonical = new Map<string, RequiredPlacement>();
   // Past the last row this collection placed.
   let floor = 0;
   for (const gap of live.gaps)
@@ -120,7 +128,7 @@ export function nextRequiredPlacement(
       }
   // The walk stopped at or before a row this collection placed: nothing is collected behind it.
   if (live.frontier < floor) return undefined;
-  let next: RequiredPlacement | undefined;
+  let next: OrderedPlacement | undefined;
   for (const item of live.gaps[live.frontier]?.items ?? []) {
     const verbs: readonly LiveVerb[] =
       item.kind === 'pickup'
@@ -136,7 +144,7 @@ export function nextRequiredPlacement(
         restore !== undefined && placementIndex(restore.command, live.frontier) >= floor
           ? restore
           : offered;
-      const candidate: RequiredPlacement = {
+      const candidate: OrderedPlacement = {
         placement,
         index: placementIndex(placement.command, live.frontier),
         pickup: item.kind === 'pickup',
@@ -145,6 +153,24 @@ export function nextRequiredPlacement(
     }
   }
   return next?.placement;
+}
+
+/**
+ * The next required item a room's walk leaves to collect, as
+ * `requiredPlacementAt` orders it over the room's live placements. `collected`
+ * holds the row keys this caller already placed in the room, so nothing is
+ * collected behind one of them. Placing it is the caller's edit.
+ */
+export function nextRequiredPlacement(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  occurrence: OccurrenceAddress,
+  collected: ReadonlySet<string>,
+): NextRequiredPlacement {
+  const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, occurrence, 'placements');
+  return live === undefined
+    ? Object.freeze({ reached: false })
+    : Object.freeze({ reached: true, placement: requiredPlacementAt(live, collected) });
 }
 
 /**
@@ -186,9 +212,9 @@ export function collectRequiredItems(options: CollectRequiredOptions): Collected
   };
 
   for (;;) {
-    const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, occurrence, 'placements');
-    if (live === undefined) return result('unreached');
-    const placement = nextRequiredPlacement(live, placed);
+    const next = nextRequiredPlacement(catalog, assembly, occurrence, placed);
+    if (!next.reached) return result('unreached');
+    const placement = next.placement;
     if (placement === undefined)
       return result(roomWalk(assembly, occurrence).stop === undefined ? 'complete' : 'blocked');
     const key = roomActionKey(placement.reference);

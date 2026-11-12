@@ -29,7 +29,6 @@ import {
   type OccurrenceId,
   type ProjectCommand,
   type ProjectDocument,
-  type RoomActionReference,
   type RoomOccurrence,
   type SemanticAddress,
   type TargetAddress,
@@ -59,9 +58,7 @@ import {
   type RewardOfferExclusionReason,
   prepareRouteStartTraitRequirements,
   routeResourceAuthoring,
-  liveRoomForProjectEvaluationAssembly,
-  type LiveRoom,
-  type LiveVerb,
+  nextRequiredPlacement,
 } from '@run-planner/engine/simulation';
 import { latestRunState } from './report';
 import {
@@ -130,55 +127,6 @@ function originRoom(origin: SemanticAddress): OccurrenceAddress | undefined {
     createBiomeAddress(origin.routeKey, origin.biomeKey),
     origin.occurrenceId,
   );
-}
-
-/** A verb placing a row not yet placed: the row and the one command placing it. */
-interface LivePlacement {
-  readonly reference: RoomActionReference;
-  readonly command: ProjectCommand;
-}
-
-/**
- * The placement a verb performs; none while its row stands, for a move, or while a picker
- * supplies its command (a Travel Deal item's value). A choice the placed row still needs
- * (a Pom's level) is its own finding once placed.
- */
-function placementOf(verb: LiveVerb): LivePlacement | undefined {
-  const command = verb.standing === true ? undefined : verb.commands?.[0];
-  return command === undefined || command.kind === 'MoveRoomAction' || verb.reference === undefined
-    ? undefined
-    : { reference: verb.reference, command };
-}
-
-/**
- * The first required item live at the walk's frontier, in the engine's item order, that the
- * product offers a placement for, never one already placed by this repair: its canonical
- * restore wherever the product offers it, otherwise its placement at the frontier.
- */
-function requiredPlacement(live: LiveRoom, placed: ReadonlySet<string>): LivePlacement | undefined {
-  const offered = live.gaps.flatMap((gap) => gap.items.flatMap((item) => item.verbs));
-  for (const item of live.gaps[live.frontier]?.items ?? []) {
-    const verbs: readonly LiveVerb[] =
-      item.kind === 'pickup'
-        ? item.participation === 'required'
-          ? item.verbs
-          : []
-        : item.verbs.filter((verb) => verb.participation === 'required');
-    for (const verb of verbs) {
-      const placement = placementOf(verb);
-      if (placement === undefined) continue;
-      const key = roomActionKey(placement.reference);
-      if (placed.has(key)) continue;
-      const canonical = offered.find(
-        (candidate) =>
-          candidate.canonical === true &&
-          candidate.reference !== undefined &&
-          roomActionKey(candidate.reference) === key,
-      );
-      return (canonical === undefined ? undefined : placementOf(canonical)) ?? placement;
-    }
-  }
-  return undefined;
 }
 
 /** A Shop door beside a door to a new god with queued traits. */
@@ -1590,10 +1538,9 @@ export class DraftWalk {
   // --- Other owners --------------------------------------------------------
 
   /**
-   * Places what the origin's room still requires where the walk stands, each by the command the
-   * engine's live product offers for it: its canonical restore when offered, otherwise at the
-   * frontier. Places one at a time until nothing required is placeable there or an edit is
-   * refused; optional pickups and purchases stay the walk's own choices.
+   * Places what the origin's room still requires where the walk stands, one at a time by the
+   * engine's next required placement, until nothing required is placeable there, an edit is
+   * refused or a placement comes back; optional pickups and purchases stay the walk's choices.
    */
   private placeRequiredActions(origin: SemanticAddress): boolean {
     if (origin.kind === 'incomingReward') {
@@ -1607,17 +1554,13 @@ export class DraftWalk {
     const placed = new Set<string>();
     let changed = false;
     for (;;) {
-      const live = liveRoomForProjectEvaluationAssembly(
-        this.catalog,
-        this.assembly,
-        room,
-        'placements',
-      );
-      if (live === undefined) return changed;
-      const placement = requiredPlacement(live, placed);
+      const next = nextRequiredPlacement(this.catalog, this.assembly, room, placed);
+      const placement = next.reached ? next.placement : undefined;
       if (placement === undefined) return changed;
-      placed.add(roomActionKey(placement.reference));
-      // A refused placement is the walk's dead end here, never a reason to place it elsewhere.
+      const key = roomActionKey(placement.reference);
+      // A placement offered again did not hold; a refused one is the walk's dead end here.
+      if (placed.has(key)) return changed;
+      placed.add(key);
       if (!this.apply(placement.command)) return changed;
       changed = true;
     }

@@ -489,9 +489,12 @@ export {
 } from './edit-settlement';
 export {
   collectRequiredItems,
+  nextRequiredPlacement,
   type CollectedRequiredItems,
   type CollectRequiredOptions,
   type CollectRequiredStop,
+  type NextRequiredPlacement,
+  type RequiredPlacement,
 } from './collect-required';
 export type { RequirementEvaluationEvidence } from '../requirements/evidence';
 export type { RewardOfferExclusionReason } from './rewards/offer-exclusions';
