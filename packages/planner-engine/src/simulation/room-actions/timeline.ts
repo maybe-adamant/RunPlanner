@@ -29,12 +29,6 @@ export type RoomLifecycleTimelineEntry =
       /** The ranked action position at which the seam is rendered. */
       readonly rank: number;
       readonly placement: 'before' | 'after';
-      /**
-       * An encounter's begin only: whether it shows as one marker with its Combat
-       * (no gate between them and no Nemesis bet or Anomaly capture hosted there)
-       * or as its own.
-       */
-      readonly markers?: 'merged' | 'split';
     }
   | {
       readonly kind: 'action';
@@ -240,15 +234,7 @@ function boundaryEntry(
   rank: number,
   placement: 'before' | 'after',
 ): RoomLifecycleBoundaryEntry {
-  return Object.freeze({
-    kind: 'boundary',
-    boundary: point,
-    rank,
-    placement,
-    ...(point.kind === 'encounterBegun' && point.markers !== 'none'
-      ? { markers: point.markers }
-      : {}),
-  });
+  return Object.freeze({ kind: 'boundary', boundary: point, rank, placement });
 }
 
 /** The graph's events that stand on the Timeline: every event with a marker. */

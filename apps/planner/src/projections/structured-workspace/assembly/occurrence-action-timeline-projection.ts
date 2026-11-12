@@ -227,7 +227,7 @@ function projectRoomLifecycleTimeline(
     timeline.entries.flatMap((entry) =>
       entry.kind === 'boundary' &&
       entry.boundary.kind === 'encounterBegun' &&
-      entry.markers === 'merged'
+      entry.boundary.markers === 'merged'
         ? [entry.boundary.phaseKey]
         : [],
     ),

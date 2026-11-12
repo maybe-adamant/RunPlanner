@@ -108,7 +108,7 @@ function timelineEntryText(entry: RoomLifecycleTimelineEntry): string {
           : 'phaseKey' in boundary
             ? ` ${boundary.phaseKey}`
             : '';
-      const merged = entry.markers === 'merged' ? ' merged' : '';
+      const merged = 'markers' in boundary && boundary.markers === 'merged' ? ' merged' : '';
       return `${boundary.kind}${subject}${merged}`;
     }
     case 'action':
