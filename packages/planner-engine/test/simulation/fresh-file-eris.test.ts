@@ -12,7 +12,11 @@ import {
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject, type RunStateSnapshot } from '@run-planner/engine/simulation';
+import {
+  simulateProject,
+  simulateProjectAssembly,
+  type RunStateSnapshot,
+} from '@run-planner/engine/simulation';
 import {
   createFreshFileRouteProject,
   freshFileGBiome,
@@ -27,6 +31,7 @@ import { replaceSimulationTraitHistory } from '../../src/simulation/state/transi
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { recordFixedAcquisitionTraitGrant } from '../../src/simulation/traits/offers';
 import { initializeTestRewardBranch } from '../support/arcana-fear';
+import { corpusRooms } from '../support/lifecycle-snapshots';
 import { reachedFrontier } from '../support/reward-frontier';
 
 let cached: ProjectDocument | undefined;
@@ -109,6 +114,30 @@ describe('Fresh File Eris', () => {
           : [],
       ),
     ).toEqual(['erisInteracted', 'acquisitionPointReached', 'outgoingGenerationCheckpoint']);
+  });
+
+  it('starts no encounter with her talk', () => {
+    const assembly = simulateProjectAssembly(catalog, freshRoute());
+    const intro = corpusRooms(assembly).find((room) => room.occurrenceId === freshFileGIntroId);
+    if (intro === undefined) throw new Error('G_Intro is not evaluated');
+    const graph = intro.roomActionRoster.eventGraph;
+    expect(graph.phases).toEqual([]);
+    // Only an encounter's begin or start takes a row's verb as its trigger.
+    expect(
+      graph.events.filter(
+        (event) => event.kind === 'encounterBegun' || event.kind === 'encounterStarted',
+      ),
+    ).toEqual([]);
+    const g = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
+    if (g === undefined || !('history' in g)) throw new Error('G has no history');
+    const introEvents = g.history.events.filter(
+      (event) =>
+        'origin' in event &&
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === freshFileGIntroId,
+    );
+    expect(introEvents.map((event) => event.kind)).toContain('erisInteracted');
+    expect(introEvents.filter((event) => event.kind.startsWith('encounter'))).toEqual([]);
   });
 
   it('credits the gift and applies the curse; an unspawned intro derives nothing', () => {
