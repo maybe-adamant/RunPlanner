@@ -13,7 +13,6 @@ import type {
 import type {
   WorkspaceRoomActionRow,
   WorkspaceRoomActions,
-  WorkspaceRoomLifecycleBoundary,
   WorkspaceRoomLifecycleTimelineEntry,
   WorkspaceTimelineWait,
 } from '../contracts/timeline';
@@ -64,14 +63,6 @@ function shipWorkbenchPresentation(
   );
   // The tab shown before a phase's own: where its gate and the wheel it is chosen at stand.
   const precedingTab = (phaseIndex: number) => Math.max(0, phaseIndex - 1);
-  const checkpointKeyForBoundary = (boundary: WorkspaceRoomLifecycleBoundary): string => {
-    switch (boundary.kind) {
-      case 'encounterEnd':
-        return `combat:${boundary.phaseKey}`;
-      default:
-        return boundary.key;
-    }
-  };
   const actionByKey = new Map(roomActions?.rows.map((row) => [row.key, row]) ?? []);
   const phaseRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
   const phaseUnplacedRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
@@ -108,10 +99,6 @@ function shipWorkbenchPresentation(
   const phaseNotReached = roomLocal.phases.map(
     () => [] as NonNullable<WorkspaceRoomActions['timeline']['notReached']>[number][],
   );
-  const phaseCheckpointEntries = roomLocal.phases.map(
-    () => [] as WorkspaceRoomActions['checkpoints'][number][],
-  );
-  const tabByBoundaryKey = new Map<string, number>();
   if (roomActions !== undefined) {
     // Entries keep the engine's order; a tab runs from its phase's Combat through the gate
     // that starts the next phase's Combat, and the Intro from the room's entry.
@@ -122,7 +109,6 @@ function shipWorkbenchPresentation(
         tabIndex = Math.max(tabIndex, phaseIndexForKey(entry.boundary.phaseKey));
       if (entry.kind !== 'action') {
         phaseTimelineEntries[tabIndex]!.push(entry);
-        if (entry.kind === 'boundary') tabByBoundaryKey.set(entry.boundary.key, tabIndex);
         continue;
       }
       const row = actionByKey.get(entry.actionKey);
@@ -143,18 +129,6 @@ function shipWorkbenchPresentation(
             ? roomLocal.phases.length - 1
             : tabForUnrankedRow(row)
       ]!.push(entry);
-    }
-    for (const checkpoint of roomActions.checkpoints) {
-      if (checkpoint.key === 'exitUsable') continue;
-      const matchingBoundary = roomActions.timeline.entries.find(
-        (entry) =>
-          entry.kind === 'boundary' && checkpointKeyForBoundary(entry.boundary) === checkpoint.key,
-      );
-      const phaseIndex =
-        matchingBoundary?.kind === 'boundary'
-          ? (tabByBoundaryKey.get(matchingBoundary.boundary.key) ?? roomLocal.phases.length - 1)
-          : roomLocal.phases.length - 1;
-      phaseCheckpointEntries[phaseIndex]!.push(checkpoint);
     }
     for (const row of roomActions.optionalRows) {
       phaseOptionalRows[tabForUnrankedRow(row)]!.push(row);
@@ -187,7 +161,6 @@ function shipWorkbenchPresentation(
       tab: roomTabForPhase(roomLocal, phase.key),
       actionRows: Object.freeze(phaseRows[index]!),
       unplacedRows: Object.freeze(phaseUnplacedRows[index]!),
-      checkpoints: Object.freeze(phaseCheckpointEntries[index]!),
       ...(encounter === undefined ? {} : { encounter }),
       key: phase.key,
       label: phase.label,

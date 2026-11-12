@@ -1484,7 +1484,7 @@ describe('OccurrenceRoomActions', () => {
     expect(reasons).toContain('Choose Combat 1 wheel before collecting its reward.');
     expect(reasons.some((reason) => reason.includes('wheel1 next phase usable'))).toBe(false);
     const timingProposals = projected.room.roomActions!.proposals.filter((proposal) =>
-      proposal.explanations[0]?.includes(' belongs '),
+      / must come (before|after) /.test(proposal.explanations[0] ?? ''),
     );
     expect(timingProposals.length).toBeGreaterThan(0);
     for (const proposal of timingProposals) {
@@ -1494,7 +1494,9 @@ describe('OccurrenceRoomActions', () => {
       expect(proposal.explanations.length).toBeLessThanOrEqual(2);
       expect(new Set(proposal.explanations).size).toBe(proposal.explanations.length);
       expect(proposal.explanations[0]).toMatch(
-        new RegExp(`^${row.label} belongs (before|after) Combat [123]\\.$`),
+        new RegExp(
+          `^${row.label} must come (before|after) (Combat [123]|the end of Combat [123]|choosing the Combat [123] wheel)\\.$`,
+        ),
       );
     }
     openRoomTab('Combat 1 Timeline');

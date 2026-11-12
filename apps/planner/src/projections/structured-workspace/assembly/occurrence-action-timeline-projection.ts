@@ -51,14 +51,6 @@ function lifecycleBoundaryLabel(
   }
 }
 
-function lifecycleBoundaryCheckpointKey(boundary: WorkspaceRoomLifecycleBoundary): string {
-  switch (boundary.kind) {
-    case 'encounterEnd':
-      return `combat:${boundary.phaseKey}`;
-    default:
-      return boundary.key;
-  }
-}
 type NotReachedEntry = WorkspaceNotReachedEntry;
 
 /** A banner's encounter events that hold an authored value, which never vanishes. */
@@ -397,7 +389,6 @@ function projectRoomLifecycleTimeline(
             phaseLabel(boundary),
           ),
           ...(beginsEncounter(boundary) ? { beginsEncounter: true as const } : {}),
-          checkpointKey: lifecycleBoundaryCheckpointKey(boundary),
           dropIndex: Math.max(0, entry.rank - (entry.placement === 'before' ? 1 : 0)),
           placement: entry.placement,
           rank: entry.rank,
@@ -468,10 +459,6 @@ function projectRoomLifecycleTimeline(
     ),
     entries: Object.freeze(entries),
     doorsAfterRank: timeline.doorsAfterRank,
-    suppressedCheckpointKeys: Object.freeze([
-      'exitUsable',
-      ...entries.flatMap((entry) => (entry.kind !== 'boundary' ? [] : [entry.checkpointKey])),
-    ]),
   });
 }
 

@@ -1,8 +1,7 @@
 import { useContext, type LiHTMLAttributes, type ReactNode } from 'react';
 import { TimelineMapStageContext } from './timelineMapStage';
 
-export type TimelineRowKind =
-  'action' | 'boundary' | 'checkpoint' | 'continuation' | 'effect' | 'insertion';
+export type TimelineRowKind = 'action' | 'boundary' | 'continuation' | 'effect' | 'insertion';
 
 /**
  * One Room Timeline row: handle, one sentence (its label, then its decisions),

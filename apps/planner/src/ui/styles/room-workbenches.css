@@ -854,11 +854,7 @@
 
 /* A single card has nothing to connect, so it draws neither spine nor tick. */
 .room-action-list:has(> :only-child)::before,
-.room-action-list
-  > .timeline-row:only-child:not(
-    [data-timeline-row-kind='boundary'],
-    [data-timeline-row-kind='checkpoint']
-  )::before {
+.room-action-list > .timeline-row:only-child:not([data-timeline-row-kind='boundary'])::before {
   display: none;
 }
 
@@ -879,10 +875,7 @@
 }
 
 /* Rows are plain lines; hover and focus lift them slightly. */
-.timeline-row:not([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):is(
-    :hover,
-    :focus-within
-  ) {
+.timeline-row:not([data-timeline-row-kind='boundary']):is(:hover, :focus-within) {
   background: rgb(255 255 255 / 3.5%);
 }
 
@@ -929,31 +922,26 @@
 }
 
 /* A banner's title starts at the handle column; its gold keeps the money column. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='sentence'] {
+.timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='sentence'] {
   grid-column: 1 / 3;
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+.timeline-row[data-timeline-row-kind='boundary']
   > :is([data-timeline-cell='handle'], [data-timeline-cell='actions']) {
   display: none;
 }
 
 /* A banner without gold runs its sentence to the row's end. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):has(
-    > [data-timeline-cell='money']:empty
-  )
+.timeline-row[data-timeline-row-kind='boundary']:has(> [data-timeline-cell='money']:empty)
   > [data-timeline-cell='sentence'] {
   grid-column: 1 / -1;
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='money']:empty {
+.timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='money']:empty {
   display: none;
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='money'] {
+.timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='money'] {
   align-self: center;
   min-height: 0;
 }
@@ -1340,7 +1328,7 @@
 }
 
 /* Row kinds differ only in border, background and type. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
+.timeline-row[data-timeline-row-kind='boundary'] {
   min-height: 30px;
   margin-top: 4px;
   padding-block: 1px;
@@ -1352,10 +1340,7 @@
 }
 
 /* A lifecycle band is a quiet time marker: a node on the spine instead of a tick. */
-.timeline-row:is(
-    [data-timeline-row-kind='boundary'],
-    [data-timeline-row-kind='checkpoint']
-  )::before {
+.timeline-row[data-timeline-row-kind='boundary']::before {
   top: calc(50% - 4px);
   left: -16px;
   width: 8px;
@@ -1364,8 +1349,7 @@
   background: var(--timeline-node);
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > .timeline-cell-handle {
+.timeline-row[data-timeline-row-kind='boundary'] > .timeline-cell-handle {
   min-block-size: 0;
 }
 
@@ -2168,7 +2152,7 @@
 }
 
 /* Every banner shares one band: start, end and lifecycle banners alike. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
+.timeline-row[data-timeline-row-kind='boundary'] {
   border-top-color: rgb(255 255 255 / 16%);
   background: rgb(255 255 255 / 4.5%);
   color: var(--text);
@@ -2213,20 +2197,19 @@
  * Every banner keeps its title, separators, tags and inline items on one centre
  * line, with symmetric padding; the spine dot sits at the band's centre.
  */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
+.timeline-row[data-timeline-row-kind='boundary'] {
   align-items: center;
   padding-block: 4px;
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='sentence'] {
+.timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='sentence'] {
   /* A title line is as tall as one control, so every banner title sits alike. */
   min-height: var(--timeline-control-height, 26px);
   gap: 4px 14px;
   line-height: 1.25;
 }
 
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+.timeline-row[data-timeline-row-kind='boundary']
   > [data-timeline-cell='sentence']
   > [data-timeline-cell='label']
   > * {

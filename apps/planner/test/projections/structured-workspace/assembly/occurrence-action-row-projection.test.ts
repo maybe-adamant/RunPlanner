@@ -855,7 +855,6 @@ describe('structured workspace actions assembly', () => {
     expect(pickupIndex).toBeGreaterThan(endIndex);
     expect(steadyIndex).toBe(pickupIndex + 1);
     expect(encounterEnd).toMatchObject({
-      checkpointKey: 'combat:Combat1',
       label: 'Encounter ended',
     });
     expect(assembled.assembly.node.room.roomActions?.steadyGrowth).toEqual([
@@ -1197,40 +1196,9 @@ describe('structured workspace actions assembly', () => {
           entry.actionKey === roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
       ),
     ).toEqual([expect.objectContaining({ kind: 'action', presentation: 'rewardWheelAnchor' })]);
-    expect(shipActions.checkpoints.map((checkpoint) => checkpoint.key)).not.toContain(
-      'outgoingGeneration',
-    );
     expect(
       ship.node.room.workbench.phases.flatMap((phase) => phase.actionRows.map((row) => row.key)),
     ).toEqual(shipActions.rows.filter((row) => !row.stale).map((row) => row.key));
-    expect(
-      ship.node.room.workbench.phases.flatMap((phase) =>
-        phase.checkpoints.map((checkpoint) => checkpoint.key),
-      ),
-    ).toEqual(
-      expect.arrayContaining(
-        shipActions.checkpoints
-          .filter((checkpoint) => checkpoint.key !== 'exitUsable')
-          .map((checkpoint) => checkpoint.key),
-      ),
-    );
-    expect(
-      ship.node.room.workbench.phases.flatMap((phase) =>
-        phase.checkpoints.map((checkpoint) => checkpoint.key),
-      ),
-    ).toHaveLength(
-      shipActions.checkpoints.filter((checkpoint) => checkpoint.key !== 'exitUsable').length,
-    );
-    expect(
-      ship.node.room.workbench.phases
-        .find((phase) => phase.key === 'Intro')
-        ?.checkpoints.map((checkpoint) => checkpoint.key),
-    ).not.toContain('outgoingGeneration');
-    expect(
-      ship.node.room.workbench.phases.flatMap((phase) =>
-        phase.checkpoints.map((checkpoint) => checkpoint.key),
-      ),
-    ).not.toContain('outgoingGeneration');
     expect(ship.node.room.roomLocal.wheels[0]?.offers[0]?.control.owner.address).toEqual(
       createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
     );

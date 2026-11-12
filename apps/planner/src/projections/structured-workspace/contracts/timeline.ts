@@ -244,11 +244,6 @@ export type WorkspaceTravelDealLine =
 
 export interface WorkspaceRoomActions {
   readonly timeline: WorkspaceRoomLifecycleTimeline;
-  readonly checkpoints: readonly {
-    readonly key: string;
-    readonly label: string;
-    readonly afterRank: number;
-  }[];
   readonly interactionKey: string;
   readonly owner: OccurrenceAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
@@ -367,8 +362,6 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly boundary: WorkspaceRoomLifecycleBoundary;
       /** Projection-owned text; React does not reconstruct boundary wording. */
       readonly label: string;
-      /** Projection-owned lifecycle checkpoint identity for suppression and placement. */
-      readonly checkpointKey: string;
       /** Projection-owned insertion position immediately adjacent to this boundary. */
       readonly dropIndex: number;
       readonly rank: number;
@@ -562,8 +555,6 @@ export interface WorkspaceRoomLifecycleTimeline {
   readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
   /** The doors open after this many ranked rows. */
   readonly doorsAfterRank: number;
-  /** Checkpoints represented by lifecycle boundary rows rather than duplicate list items. */
-  readonly suppressedCheckpointKeys: readonly string[];
 }
 
 export interface WorkspaceRoomActionInteraction {

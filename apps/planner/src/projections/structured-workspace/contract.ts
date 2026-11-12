@@ -563,7 +563,6 @@ export interface WorkspaceShipPhasePresentation {
   /** Active required actions owned by this phase but not yet inserted. */
   readonly unplacedRows: readonly WorkspaceRoomActionRow[];
   readonly actionRows: readonly WorkspaceRoomActionRow[];
-  readonly checkpoints: WorkspaceRoomActions['checkpoints'];
   readonly encounter?: WorkspaceEncounterPhase;
   readonly key: string;
   readonly label: string;

@@ -123,16 +123,6 @@ describe('occurrence room workbench', () => {
       'wheel2',
       undefined,
     ]);
-    expect(
-      ship.workbench.phases
-        .find((phase) => phase.key === 'Combat1')
-        ?.checkpoints.map((checkpoint) => checkpoint.key),
-    ).not.toContain('outgoingGeneration');
-    expect(
-      ship.workbench.phases.flatMap((phase) =>
-        phase.checkpoints.map((checkpoint) => checkpoint.key),
-      ),
-    ).not.toContain('outgoingGeneration');
   });
 
   it.each([
