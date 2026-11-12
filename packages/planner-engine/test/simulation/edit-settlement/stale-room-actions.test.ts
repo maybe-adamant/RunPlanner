@@ -28,7 +28,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -71,6 +71,7 @@ import {
   withGoldenUnderworldJudgments,
 } from '../../support/rerolls';
 import { underworldGLockedDoorsProject } from '../../execution-plan/support/plan-end-switch-fixtures';
+import { verbStep } from '../../support/live-room';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
 const settle = (project: ProjectDocument, command: ProjectCommand) =>
@@ -257,13 +258,13 @@ describe('stale room actions in edit settlement', () => {
       room: OccurrenceAddress,
     ): readonly string[] => {
       const keys = new Set<string>();
-      for (const gap of liveActionsForProjectEvaluationAssembly(catalog, assembly, room)?.gaps ??
-        [])
+      for (const gap of liveRoomForProjectEvaluationAssembly(catalog, assembly, room, 'placements')
+        ?.gaps ?? [])
         for (const item of gap.items)
           if (
             item.kind === 'pickup' &&
             item.reference.kind === 'interactIncomingReward' &&
-            item.actions.some((action) => action.kind === 'place')
+            item.verbs.some((verb) => verbStep(verb) === 'place')
           )
             keys.add(roomActionKey(item.reference));
       return [...keys];

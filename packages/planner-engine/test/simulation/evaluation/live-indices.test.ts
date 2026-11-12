@@ -5,9 +5,10 @@ import { describe, it } from 'vitest';
 import { roomActionKey } from '@run-planner/engine/authored-project';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../../../src/authored-project/acquisition/pickup-producers';
 import {
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   type LivePickup,
-} from '../../../src/simulation/evaluation/live-actions';
+} from '../../../src/simulation/evaluation/live-room';
+import { verbStep } from '../../support/live-room';
 import {
   assertLifecycleSnapshot,
   byRoomVariant,
@@ -61,7 +62,12 @@ describe('live delivery and drop placement indices', () => {
     for (const { entry, assembly } of corpusAssemblies()) {
       for (const room of corpusRooms(assembly)) {
         if (!room.entered) continue;
-        const live = liveActionsForProjectEvaluationAssembly(entry.catalog, assembly, room.origin);
+        const live = liveRoomForProjectEvaluationAssembly(
+          entry.catalog,
+          assembly,
+          room.origin,
+          'placements',
+        );
         if (live === undefined) continue;
         const items = new Map<string, ItemIndices>();
         for (const gap of live.gaps)
@@ -81,10 +87,9 @@ describe('live delivery and drop placement indices', () => {
               deadline: new Set<number>(),
               locked: [],
             };
-            for (const action of item.actions) {
-              if (action.kind === 'place' && action.canonical === true)
-                indices.canonical.push(gap.index);
-              indices[action.kind].push(gap.index);
+            for (const verb of item.verbs) {
+              if (verb.canonical === true) indices.canonical.push(gap.index);
+              indices[verbStep(verb)].push(gap.index);
             }
             if (item.lockedUntil !== undefined) indices.locked.push(gap.index);
             if (item.deadline !== undefined) indices.deadline.add(item.deadline);

@@ -226,11 +226,13 @@ describe('placing actions at a chosen index', () => {
         goldenShop,
         {
           kind: 'PlaceEchoGoldPickup',
-          site: createAcquisitionSiteAddress(
-            createOccurrenceAddress(goldenFBiome, goldenShop),
-            'roomExit',
+          entry: createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(
+              createOccurrenceAddress(goldenFBiome, goldenShop),
+              'roomExit',
+            ),
+            'echoDoubleShopReward',
           ),
-          entryKey: 'echoDoubleShopReward',
           sourceOfferKey: 'Boon',
         },
       ],

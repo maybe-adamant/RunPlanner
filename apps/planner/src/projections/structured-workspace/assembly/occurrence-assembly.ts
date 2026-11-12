@@ -1227,11 +1227,7 @@ export function assembleWorkspaceOccurrence(
       const placementEntry =
         placementCommand === undefined
           ? undefined
-          : input.markerDestinations.marker(
-              'entry' in placementCommand
-                ? placementCommand.entry
-                : createAcquisitionEntryAddress(placementCommand.site, placementCommand.entryKey),
-            );
+          : input.markerDestinations.marker(placementCommand.entry);
       const invalidPlacementEntry =
         row.placementAssessment?.kind === 'invalid' &&
         row.reference.kind === 'interactAcquisitionEntry'

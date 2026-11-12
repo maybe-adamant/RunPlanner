@@ -1,5 +1,4 @@
 import {
-  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
   createOccurrenceAddress,
@@ -881,8 +880,7 @@ function roomActionsForOccurrence(
               placement: Object.freeze({
                 command: Object.freeze({
                   kind: 'PlaceEchoGoldPickup' as const,
-                  site: goldCapability.address.site,
-                  entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+                  entry: goldCapability.address,
                   sourceOfferKey: goldCapability.sourceOfferKey,
                 }),
                 focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),

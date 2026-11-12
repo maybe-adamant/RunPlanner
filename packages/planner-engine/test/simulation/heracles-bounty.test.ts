@@ -57,7 +57,7 @@ import { settlePickupAcquisitionSite } from '../../src/simulation/rewards/acquis
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
 import { factsWithHistory } from '@run-planner/engine/reward-kernel';
 import { initializeTestRewardBranch } from '../support/arcana-fear';
-import { canonicalRoom } from '../support/live-actions';
+import { canonicalRoom } from '../support/live-room';
 import { baseFacts } from './shop-trait-purchase-support';
 
 const combat05 = nOccurrenceId('combat05');

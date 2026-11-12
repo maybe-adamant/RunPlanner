@@ -1,6 +1,5 @@
 import type { ResolvedRewardOffer, ShopOptionSelection } from '../../reward-kernel/model';
 import type {
-  AcquisitionSiteAddress,
   AcquisitionEntryAddress,
   AdditionalExitAddress,
   BatchRewardStoreAddress,
@@ -812,10 +811,9 @@ export type AcquisitionSiteCommand =
       readonly value: ResolvedRewardOffer;
     }
   | {
-      /** Places Echo's free duplicate with unresolved acquisition details. */
+      /** Places Echo's free duplicate of a World Shop purchase with unresolved acquisition details. */
       readonly kind: 'PlaceEchoGoldPickup';
-      readonly site: AcquisitionSiteAddress;
-      readonly entryKey: 'echoDoubleShopReward';
+      readonly entry: AcquisitionEntryAddress;
       readonly sourceOfferKey: string;
       /**
        * Where a newly placed pickup enters the room's actions: any structurally
@@ -823,6 +821,12 @@ export type AcquisitionSiteCommand =
        */
       readonly index?: number;
     };
+
+/** Places a derived pickup's entry: a due delivery, a matured clocked drop or Echo's Gold duplicate. */
+export type DerivedPickupPlacementCommand = Extract<
+  AcquisitionSiteCommand,
+  { readonly kind: 'PlaceHermesShrineDelivery' | 'PlaceClockedTraitPickup' | 'PlaceEchoGoldPickup' }
+>;
 
 export type EncounterOccurrenceCommand =
   | {

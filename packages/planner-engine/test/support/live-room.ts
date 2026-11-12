@@ -20,7 +20,10 @@ import {
   candidateBiome,
   candidateBiomeRooms,
 } from '../../src/simulation/candidates/evaluated-biome';
-import { liveActionsForProjectEvaluationAssembly } from '../../src/simulation/evaluation/live-actions';
+import {
+  liveRoomForProjectEvaluationAssembly,
+  type LiveVerb,
+} from '../../src/simulation/evaluation/live-room';
 
 /** Golden Underworld and Surface plans, the live product's witnesses. */
 export const goldenCheckpoints = checkpointRegistry.filter(
@@ -57,7 +60,7 @@ export function canonicalRoom(assembly: ProjectEvaluationAssembly, address: Occu
       );
 }
 
-/** Every entered room the walk reaches, with its live actions. */
+/** Every entered room the walk reaches, with its live placements. */
 export function reachedRooms(project: ProjectDocument, assembly: ProjectEvaluationAssembly) {
   return project.route.biomes.flatMap((biome) =>
     (biome.topology?.occurrences ?? []).flatMap((occurrence) => {
@@ -65,10 +68,16 @@ export function reachedRooms(project: ProjectDocument, assembly: ProjectEvaluati
         createBiomeAddress(project.route.routeKey, biome.biomeKey),
         occurrence.occurrenceId,
       );
-      const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, address);
+      const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, address, 'placements');
       return live === undefined ? [] : [{ address, live }];
     }),
   );
+}
+
+/** How a verb puts its row at its gap: standing there, moved there or newly placed there. */
+export function verbStep(verb: LiveVerb): 'placed' | 'move' | 'place' {
+  if (verb.standing === true) return 'placed';
+  return verb.commands?.[0]?.kind === 'MoveRoomAction' ? 'move' : 'place';
 }
 
 /** The room an address lies in: the first occurrence it names, nearest first. */
@@ -120,7 +129,7 @@ export function walkAccepts(
   );
   if (index < 0) return false;
   const assembly = simulateProjectAssembly(catalog, after);
-  const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, address);
+  const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, address, 'placements');
   return (
     live !== undefined &&
     live.frontier >= index &&

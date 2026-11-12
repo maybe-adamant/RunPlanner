@@ -40,7 +40,7 @@ import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -98,6 +98,7 @@ import {
   openTimeTraitOfferContexts,
 } from '../support/simulation-state';
 import { reachedFrontier } from '../support/reward-frontier';
+import { verbStep } from '../support/live-room';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -2967,13 +2968,19 @@ describe('Echo Gate C Reward Reward Reward', () => {
         decodeProjectDocument(JSON.parse(encodeProjectDocument(settled.assembly.project)), catalog),
       ).toEqual(settled.assembly.project);
       // The new replay lies live, unplaced, with its place verb.
-      const live = liveActionsForProjectEvaluationAssembly(catalog, settled.assembly, bridge);
+      const live = liveRoomForProjectEvaluationAssembly(
+        catalog,
+        settled.assembly,
+        bridge,
+        'placements',
+      );
       expect(
         live?.gaps.some((gap) =>
           gap.items.some((item) =>
-            item.actions.some(
-              (action) =>
-                action.kind === 'place' && roomActionKey(action.reference) === roomActionKey(row!),
+            item.verbs.some(
+              (verb) =>
+                verbStep(verb) === 'place' &&
+                roomActionKey(verb.reference!) === roomActionKey(row!),
             ),
           ),
         ),

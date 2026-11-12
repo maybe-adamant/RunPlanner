@@ -10,6 +10,7 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
+  createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   publishProjectHistoryEdit,
   redoProjectHistory,
@@ -22,10 +23,10 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
-  type RoomLiveActions,
+  type LiveRoom,
 } from '@run-planner/engine/simulation';
 import { checkpointRegistry } from '@run-planner/test-fixtures/checkpoints/registry';
 import {
@@ -120,19 +121,13 @@ function rowsOf(
   room: OccurrenceAddress,
   requiredOnly = false,
 ): ReadonlySet<string> {
-  const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, room);
+  const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, room, 'placements');
   const keys = new Set<string>();
   for (const gap of live?.gaps ?? [])
     for (const item of gap.items)
-      for (const action of item.actions)
-        if (
-          action.kind === 'placed' &&
-          (!requiredOnly ||
-            (item.kind === 'pickup'
-              ? item.participation === 'required'
-              : 'participation' in action && action.participation === 'required'))
-        )
-          keys.add(roomActionKey(action.reference));
+      for (const verb of item.verbs)
+        if (verb.standing === true && (!requiredOnly || verb.participation === 'required'))
+          keys.add(roomActionKey(verb.reference!));
   return keys;
 }
 
@@ -158,16 +153,11 @@ function commandKey(command: ProjectCommand): string {
     case 'InsertRoomAction':
       return roomActionKey(command.reference);
     case 'PlaceHermesShrineDelivery':
+    case 'PlaceEchoGoldPickup':
       return roomActionKey({
         kind: 'interactAcquisitionEntry',
         siteKey: command.entry.site.pointKey,
         entryKey: command.entry.entryKey,
-      });
-    case 'PlaceEchoGoldPickup':
-      return roomActionKey({
-        kind: 'interactAcquisitionEntry',
-        siteKey: command.site.pointKey,
-        entryKey: command.entryKey,
       });
     default:
       throw new Error(`unexpected placement ${command.kind}`);
@@ -336,8 +326,10 @@ describe('Collect all required', () => {
     project = authorLegalTraitOffers(
       applyProjectCommand(project, catalog, {
         kind: 'PlaceEchoGoldPickup',
-        site: createAcquisitionSiteAddress(shop, 'roomExit'),
-        entryKey: 'echoDoubleShopReward',
+        entry: createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(shop, 'roomExit'),
+          'echoDoubleShopReward',
+        ),
         sourceOfferKey: 'Boon',
       }),
     );
@@ -466,9 +458,9 @@ describe('Collect all required', () => {
 
   it('collects a pickup before acting on an object at the same index, whatever the item order', () => {
     const place = (reference: RoomActionReference) => ({
-      kind: 'place' as const,
+      participation: 'required' as const,
       reference,
-      command: { kind: 'InsertRoomAction', reference, index: 2 } as unknown as ProjectCommand,
+      commands: [{ kind: 'InsertRoomAction', reference, index: 2 } as unknown as ProjectCommand],
     });
     const choice = { kind: 'chooseRewardWheel', wheelKey: 'wheel2' } as const;
     const delivery = {
@@ -488,18 +480,18 @@ describe('Collect all required', () => {
               kind: 'object',
               object: 'rewardWheel',
               owner: ship,
-              actions: [{ ...place(choice), participation: 'required' }],
+              verbs: [place(choice)],
             },
             {
               kind: 'pickup',
               participation: 'required',
               reference: delivery,
-              actions: [place(delivery)],
+              verbs: [place(delivery)],
             },
           ],
         },
       ],
-    } as unknown as RoomLiveActions;
+    } as unknown as LiveRoom;
     expect(nextRequiredPlacement(live, new Set())?.reference).toEqual(delivery);
   });
 

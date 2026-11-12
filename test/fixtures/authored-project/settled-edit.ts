@@ -22,7 +22,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   collectRequiredItems,
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
+  type LiveVerb,
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -114,6 +115,12 @@ export function authorTestTraitsAndRequiredItems(project: ProjectDocument): Proj
   throw new Error('trait offers and required items did not settle');
 }
 
+/** The command a live verb places a new row with; none while standing or for a move. */
+function placement(verb: LiveVerb): ProjectCommand | undefined {
+  const command = verb.standing === true ? undefined : verb.commands?.[0];
+  return command?.kind === 'MoveRoomAction' ? undefined : command;
+}
+
 /**
  * Picks up one live item in a reached room, as the owner would from the live
  * row: by the canonical placement the live product offers, otherwise at the
@@ -125,16 +132,17 @@ export function placeTestLivePickup(
   actionKey: string,
 ): ProjectDocument {
   const before = evaluate(project);
-  const live = liveActionsForProjectEvaluationAssembly(catalog, before, occurrence);
+  const live = liveRoomForProjectEvaluationAssembly(catalog, before, occurrence, 'placements');
   if (live === undefined) throw new Error(`${occurrence.occurrenceId} is not reached`);
   let canonical: ProjectCommand | undefined;
   let frontier: ProjectCommand | undefined;
   for (const gap of live.gaps)
     for (const item of gap.items)
-      for (const action of item.actions) {
-        if (action.kind !== 'place' || roomActionKey(action.reference) !== actionKey) continue;
-        if (action.canonical === true) canonical = action.command;
-        if (gap.index === live.frontier) frontier ??= action.command;
+      for (const verb of item.verbs) {
+        const command = placement(verb);
+        if (command === undefined || roomActionKey(verb.reference!) !== actionKey) continue;
+        if (verb.canonical === true) canonical = command;
+        if (gap.index === live.frontier) frontier ??= command;
       }
   const command = canonical ?? frontier;
   if (command === undefined)
@@ -154,7 +162,12 @@ export function placeTestLivePickupsAtSite(
   let current = project;
   const placed = new Set<string>();
   for (;;) {
-    const live = liveActionsForProjectEvaluationAssembly(catalog, evaluate(current), occurrence);
+    const live = liveRoomForProjectEvaluationAssembly(
+      catalog,
+      evaluate(current),
+      occurrence,
+      'placements',
+    );
     const next = live?.gaps
       .flatMap((gap) => gap.items)
       .find(
@@ -163,7 +176,7 @@ export function placeTestLivePickupsAtSite(
           item.reference.kind === 'interactAcquisitionEntry' &&
           item.reference.siteKey === siteKey &&
           !placed.has(roomActionKey(item.reference)) &&
-          item.actions.some((action) => action.kind === 'place'),
+          item.verbs.some((verb) => placement(verb) !== undefined),
       );
     if (next === undefined || next.kind !== 'pickup') return current;
     const key = roomActionKey(next.reference);
@@ -183,12 +196,17 @@ function roomOrder(project: ProjectDocument, occurrence: OccurrenceAddress) {
 
 /** The keys of the items the live row offers to pick up in a reached room. */
 function livePlaceableKeys(project: ProjectDocument, occurrence: OccurrenceAddress): Set<string> {
-  const live = liveActionsForProjectEvaluationAssembly(catalog, evaluate(project), occurrence);
+  const live = liveRoomForProjectEvaluationAssembly(
+    catalog,
+    evaluate(project),
+    occurrence,
+    'placements',
+  );
   return new Set(
     (live?.gaps ?? []).flatMap((gap) =>
       gap.items.flatMap((item) =>
-        item.actions.flatMap((action) =>
-          action.kind === 'place' ? [roomActionKey(action.reference)] : [],
+        item.verbs.flatMap((verb) =>
+          placement(verb) === undefined ? [] : [roomActionKey(verb.reference!)],
         ),
       ),
     ),
@@ -244,7 +262,9 @@ export function replaceTestPlacedItem(
         ? []
         : [{ row, index }],
     );
-  if (liveActionsForProjectEvaluationAssembly(catalog, settled, occurrence) !== undefined) {
+  if (
+    liveRoomForProjectEvaluationAssembly(catalog, settled, occurrence, 'placements') !== undefined
+  ) {
     const collected = collectRequiredItems({ catalog, before: settled, occurrence, evaluate });
     if (collected.fault !== undefined)
       throw new Error(`Collect all required faulted at ${collected.fault.key}`);

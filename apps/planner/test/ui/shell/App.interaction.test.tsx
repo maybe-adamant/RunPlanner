@@ -1856,8 +1856,7 @@ describe('planner history interaction', () => {
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'PlaceEchoGoldPickup',
-        site,
-        entryKey: 'echoDoubleShopReward',
+        entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
         sourceOfferKey: derived.sourceOfferKey,
       }),
     );

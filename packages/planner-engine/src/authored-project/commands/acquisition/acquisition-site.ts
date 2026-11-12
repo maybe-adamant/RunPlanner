@@ -341,15 +341,15 @@ export function applyAcquisitionSiteCommand(
     return removeHermesShrineDeliveryFromOtherHosts(updated, command.entry.entryKey, site.owner);
   }
   if (command.kind === 'PlaceEchoGoldPickup') {
-    if (command.site.owner.kind !== 'occurrence' || command.site.pointKey !== 'roomExit')
+    const site = command.entry.site;
+    if (site.owner.kind !== 'occurrence' || site.pointKey !== 'roomExit')
       failCommand(command, 'is not an authorable Shop acquisition site');
-    const topology = requireTopology(located.plan, command);
-    const occurrence = requireOccurrence(located.plan, command.site.owner.occurrenceId, command);
-    const profileKey =
-      occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
-    if (profileKey === undefined) failCommand(command, 'has no materialized Shop');
-    if (command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY)
+    if (command.entry.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY)
       failCommand(command, 'has an unknown derived Shop entry');
+    const topology = requireTopology(located.plan, command);
+    const occurrence = requireOccurrence(located.plan, site.owner.occurrenceId, command);
+    if (occurrence.state.kind !== 'shop' || occurrence.state.shop?.profileKey === undefined)
+      failCommand(command, 'has no materialized Shop');
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
     const derivedValue = derivedShopEntryValue(
       catalog,
@@ -361,13 +361,11 @@ export function applyAcquisitionSiteCommand(
     const reference = Object.freeze({
       kind: 'interactAcquisitionEntry' as const,
       siteKey: 'roomExit',
-      entryKey: command.entryKey,
+      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
     });
-    const placed = occurrence.roomActions.order.some(
-      (action) => roomActionKey(action) === roomActionKey(reference),
-    );
-    if (placed) refuseIndexWhenPlaced(command);
     const order = occurrence.roomActions.order;
+    const placed = order.some((action) => roomActionKey(action) === roomActionKey(reference));
+    if (placed) refuseIndexWhenPlaced(command);
     const appended = Object.freeze({
       ...occurrence,
       roomActions: Object.freeze({
@@ -378,7 +376,8 @@ export function applyAcquisitionSiteCommand(
         roomExit: Object.freeze({
           pickupEntries: Object.freeze({
             ...pickupEntries,
-            [command.entryKey]: pickupEntries[command.entryKey] ?? derivedValue,
+            [ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]:
+              pickupEntries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY] ?? derivedValue,
           }),
         }),
       }),

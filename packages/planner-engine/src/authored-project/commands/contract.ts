@@ -1,7 +1,7 @@
 import { resolveRoutePosition, type ResolvedRoutePosition } from '../route-context';
 import { INITIAL_ROLL_KEY } from '../feature-rolls';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
-import type { AcquisitionSiteAddress, SemanticAddress } from '../addresses';
+import type { SemanticAddress } from '../addresses';
 import {
   semanticAddressKey,
   createBiomeAddress,
@@ -37,7 +37,7 @@ export class ProjectCommandContractError extends Error {
 
   constructor(
     commandKind: CommandContractSubject['kind'],
-    address: SemanticAddress | AcquisitionSiteAddress,
+    address: SemanticAddress,
     detail: string,
     options?: ErrorOptions,
   ) {
@@ -50,9 +50,7 @@ export class ProjectCommandContractError extends Error {
   }
 }
 
-function commandContractAddress(
-  command: CommandContractSubject,
-): SemanticAddress | AcquisitionSiteAddress {
+function commandContractAddress(command: CommandContractSubject): SemanticAddress {
   switch (command.kind) {
     case 'RenameProject':
       return command.project;
@@ -221,10 +219,9 @@ function commandContractAddress(
       return command.pedestal;
     case 'ReplacePhantomExit':
       return command.exit;
-    case 'PlaceEchoGoldPickup':
-      return command.site;
     case 'PlaceHermesShrineDelivery':
     case 'PlaceClockedTraitPickup':
+    case 'PlaceEchoGoldPickup':
       return command.entry;
     case 'ReplaceAcquisitionEntryOffer':
       return command.entry;
@@ -263,9 +260,7 @@ function commandContractAddress(
   }
 }
 
-export function projectCommandAddress(
-  command: ProjectCommand,
-): SemanticAddress | AcquisitionSiteAddress {
+export function projectCommandAddress(command: ProjectCommand): SemanticAddress {
   switch (command.kind) {
     case 'ReplaceFieldsOptionalRewardCount':
       return createRoomFeatureAddress(command.occurrence, { kind: 'fieldsOptionalRewardCount' });

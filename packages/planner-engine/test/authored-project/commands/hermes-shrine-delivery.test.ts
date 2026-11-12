@@ -55,7 +55,7 @@ import {
   surfaceShrineTravelDealProject,
 } from '@run-planner/test-fixtures/surface';
 import { createEnteredNLocalProject, nLocalOccurrenceId } from '../support/complete-n-project';
-import { withRoomOrder } from '../../support/live-actions';
+import { withRoomOrder } from '../../support/live-room';
 import { assessGeneratedPickupPlacement } from '../../../src/authored-project/generated-pickup-placement';
 import { assessRoomActionPlacements } from '../../../src/simulation';
 import { initializeTestRewardBranch } from '../../support/arcana-fear';

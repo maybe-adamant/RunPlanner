@@ -7,7 +7,7 @@ import {
 } from '../authored-project/addresses';
 import { ProjectCommandContractError } from '../authored-project/commands/contract';
 import type { ProjectCommand } from '../authored-project/commands/types';
-import type { ProjectDocument } from '../authored-project/model';
+import type { ProjectDocument, RoomActionReference } from '../authored-project/model';
 import { roomActionKey } from '../authored-project/room-actions/key';
 import {
   settleProjectEdit,
@@ -17,13 +17,25 @@ import {
 } from './edit-settlement';
 import type { ProjectEvaluationAssembly } from './evaluation/evaluation-products';
 import {
-  liveActionsForProjectEvaluationAssembly,
-  type LiveAction,
-  type RoomLiveActions,
-} from './evaluation/live-actions';
-import { roomWalk } from './evaluation/spawned-loot';
+  liveRoomForProjectEvaluationAssembly,
+  type LiveRoom,
+  type LiveVerb,
+} from './evaluation/live-room';
+import { roomWalk } from './evaluation/evaluated-room';
 
-type LivePlacement = Extract<LiveAction, { readonly kind: 'place' }>;
+/** A verb placing a row not yet placed: the row and the one command placing it. */
+interface LivePlacement {
+  readonly reference: RoomActionReference;
+  readonly command: ProjectCommand;
+}
+
+/** The placement a verb performs; none while it stands, for a move, or while a picker supplies it. */
+function placementOf(verb: LiveVerb): LivePlacement | undefined {
+  const command = verb.standing === true ? undefined : verb.commands?.[0];
+  return command === undefined || command.kind === 'MoveRoomAction' || verb.reference === undefined
+    ? undefined
+    : { reference: verb.reference, command };
+}
 
 /** Placements one collection may settle before it reports non-convergence. */
 const PLACEMENT_LIMIT = 256;
@@ -90,7 +102,7 @@ function comesFirst(left: RequiredPlacement, right: RequiredPlacement): boolean 
  * that still needs a Travel Deal item's value is left to its owner.
  */
 export function nextRequiredPlacement(
-  live: RoomLiveActions,
+  live: LiveRoom,
   collected: ReadonlySet<string>,
 ): LivePlacement | undefined {
   const canonical = new Map<string, LivePlacement>();
@@ -98,29 +110,32 @@ export function nextRequiredPlacement(
   let floor = 0;
   for (const gap of live.gaps)
     for (const item of gap.items)
-      for (const action of item.actions) {
-        const key = roomActionKey(action.reference);
-        if (action.kind === 'place' && action.canonical === true) canonical.set(key, action);
-        else if (action.kind === 'placed' && collected.has(key))
+      for (const verb of item.verbs) {
+        if (verb.reference === undefined) continue;
+        const key = roomActionKey(verb.reference);
+        const placement = placementOf(verb);
+        if (placement !== undefined && verb.canonical === true) canonical.set(key, placement);
+        else if (verb.standing === true && collected.has(key))
           floor = Math.max(floor, gap.index + 1);
       }
   // The walk stopped at or before a row this collection placed: nothing is collected behind it.
   if (live.frontier < floor) return undefined;
   let next: RequiredPlacement | undefined;
   for (const item of live.gaps[live.frontier]?.items ?? []) {
-    const actions: readonly LiveAction[] =
+    const verbs: readonly LiveVerb[] =
       item.kind === 'pickup'
         ? item.participation === 'required' && item.lockedUntil === undefined
-          ? item.actions
+          ? item.verbs
           : []
-        : item.actions.filter((action) => action.participation === 'required');
-    for (const action of actions) {
-      if (action.kind !== 'place' || action.needsChoice === 'travelDealItem') continue;
-      const restore = canonical.get(roomActionKey(action.reference));
+        : item.verbs.filter((verb) => verb.participation === 'required');
+    for (const verb of verbs) {
+      const offered = placementOf(verb);
+      if (offered === undefined) continue;
+      const restore = canonical.get(roomActionKey(offered.reference));
       const placement =
         restore !== undefined && placementIndex(restore.command, live.frontier) >= floor
           ? restore
-          : action;
+          : offered;
       const candidate: RequiredPlacement = {
         placement,
         index: placementIndex(placement.command, live.frontier),
@@ -171,7 +186,7 @@ export function collectRequiredItems(options: CollectRequiredOptions): Collected
   };
 
   for (;;) {
-    const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, occurrence);
+    const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, occurrence, 'placements');
     if (live === undefined) return result('unreached');
     const placement = nextRequiredPlacement(live, placed);
     if (placement === undefined)

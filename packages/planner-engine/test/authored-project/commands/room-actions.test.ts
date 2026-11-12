@@ -62,7 +62,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 
 import { createCompleteNProject } from '../support/complete-n-project';
-import { canonicalRoom } from '../../support/live-actions';
+import { canonicalRoom } from '../../support/live-room';
 import { gBiome, gProject } from '../support/configured-projects';
 import {
   replaceTestRoomActionOrder,

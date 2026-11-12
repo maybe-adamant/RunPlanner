@@ -12,7 +12,7 @@ import {
 import { createAuthoringSession } from '@run-planner/engine/authoring';
 import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -143,17 +143,18 @@ describe('a Ship delivery ranked between the wheel choice and its phase pickup',
   });
 
   it('is not offered by the live product before its due spawn', () => {
-    const live = liveActionsForProjectEvaluationAssembly(
+    const live = liveRoomForProjectEvaluationAssembly(
       catalog,
       start,
       createOccurrenceAddress(biome, shipId),
+      'placements',
     );
     const offered = (live?.gaps ?? []).flatMap((gap) =>
       gap.items.some(
         (item) =>
           item.kind === 'pickup' &&
           roomActionKey(item.reference) === delivery.key &&
-          item.actions.some((action) => action.kind !== 'placed'),
+          item.verbs.some((verb) => verb.standing !== true),
       )
         ? [gap.index]
         : [],

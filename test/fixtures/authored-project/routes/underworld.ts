@@ -1529,8 +1529,7 @@ export function createEchoGoldIAnvilDuplicateProject(
   const site = createAcquisitionSiteAddress(shop, 'roomExit');
   project = applyProjectCommand(project, catalog, {
     kind: 'PlaceEchoGoldPickup',
-    site,
-    entryKey: 'echoDoubleShopReward',
+    entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
     sourceOfferKey: 'PremiumProgress',
   });
   return duplicateResult === undefined

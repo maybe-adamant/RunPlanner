@@ -661,8 +661,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     const place = (index?: number) =>
       applyProjectCommand(bought, catalog, {
         kind: 'PlaceEchoGoldPickup',
-        site,
-        entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+        entry: createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
         sourceOfferKey: 'Boon',
         ...(index === undefined ? {} : { index }),
       });
@@ -694,8 +693,7 @@ describe('Gold Gold Gold Shop pickups', () => {
         .topology!.occurrences.find((room) => room.occurrenceId === shopOccurrenceId)!;
     const placed = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      entry: createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
       sourceOfferKey: 'Boon',
     });
     expect(
@@ -759,8 +757,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     if (blindBox === undefined) throw new Error('missing Blind Box source');
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site: entry.site,
-      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      entry: createAcquisitionEntryAddress(entry.site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
       sourceOfferKey: 'Boon',
     });
     history = applyProjectHistoryCommand(history, catalog, {
@@ -821,8 +818,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     });
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      entry: createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY),
       sourceOfferKey: 'travelDealRefill',
     });
     history = applyProjectHistoryCommand(history, catalog, {

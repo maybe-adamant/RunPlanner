@@ -36,7 +36,7 @@ import {
   hermesShrineCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
-  liveActionsForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   timedPickupPlacementForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -99,6 +99,7 @@ import {
   initializeTestRewardBranchForRoute,
 } from '../support/arcana-fear';
 import { reachedFrontier } from '../support/reward-frontier';
+import { verbStep } from '../support/live-room';
 
 /** Picks up a rushed Shrine item right after its rush. */
 function takeRushedItem(
@@ -1941,16 +1942,13 @@ describe('Hermes Shrine pickup settlement', () => {
       kind: 'timeline',
       at: 'before',
     });
-    const live = liveActionsForProjectEvaluationAssembly(catalog, assembly, preboss)!;
+    const live = liveRoomForProjectEvaluationAssembly(catalog, assembly, preboss, 'placements')!;
     expect(
       live.gaps[live.frontier]!.items.some(
         (item) =>
           item.kind === 'pickup' &&
           item.participation === 'required' &&
-          item.actions.some(
-            (action) =>
-              action.kind === 'place' && action.command.kind === 'PlaceHermesShrineDelivery',
-          ),
+          item.verbs.some((verb) => verb.commands?.[0]?.kind === 'PlaceHermesShrineDelivery'),
       ),
     ).toBe(true);
   });
@@ -2551,16 +2549,17 @@ it('keeps an earlier proven same-room placement when a later sibling blocks', ()
     hostRoom?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[combatEntry.entryKey]?.offer,
   ).toEqual(aphrodite.value);
   expect(hostRoom?.roomActions.order.map(roomActionKey)).not.toContain(deliveryKey);
-  const live = liveActionsForProjectEvaluationAssembly(
+  const live = liveRoomForProjectEvaluationAssembly(
     catalog,
     simulateProjectAssembly(catalog, project),
     host,
+    'placements',
   );
   expect(
     live?.gaps.some((gap) =>
       gap.items.some((item) =>
-        item.actions.some(
-          (action) => action.kind === 'place' && roomActionKey(action.reference) === deliveryKey,
+        item.verbs.some(
+          (verb) => verbStep(verb) === 'place' && roomActionKey(verb.reference!) === deliveryKey,
         ),
       ),
     ),
