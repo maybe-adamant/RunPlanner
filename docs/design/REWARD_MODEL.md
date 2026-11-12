@@ -1142,8 +1142,11 @@ nor convertible. A fight left early claims nothing.
 Heracles's bounty uses the producer its encounter's kill bounty names
 (`HeraclesBountyPickup`) at the phase's `heraclesBounty` site: one required
 `RoomMoneyDrop` that his encounter's end drops for every phase that fights his
-encounter, and none for a Fig Leaf skip. No action spawns it, so its row
-follows his phase's combat checkpoint rather than a source row. It is an
+encounter, and none for a Fig Leaf skip. No action spawns it: its row spawns
+at his own phase's encounter end, and since the game counts it among the
+room's required objects, it is due before his encounter ends where his script
+waits for the room to be ready (O), and otherwise before the next wheel's
+choice or Doors open. It is an
 ordinary pickup: last-reward eligible, so Echo's replay recreates it, and
 duplicable by Sea Star through the authored duplicate; neither Time Piece nor
 the Artificer converts it. Selecting or replacing his encounter derives the

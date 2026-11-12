@@ -308,7 +308,9 @@ identity order is fluid; the sequence of Start/End encounter pairs is not. A
 cage reward may remain unpicked across a later cage start because
 `StartFieldsEncounter` blocks only an incomplete required encounter or an
 object with `BlockFieldsEncounterStart`. Ordinary cage rewards have no such
-flag; Athena does.
+flag; Athena does. Neither does a matured Hermes delivery or clock drop a
+cage's end effects spawn: though required, it holds only the doors, so it may
+be taken any time after its cage.
 
 The planner simplification that a cage encounter is one atomic barrier remains
 source-compatible. The product need not model reward interaction during an
@@ -371,7 +373,16 @@ The wheels are usable from then on, but `UseShipWheelForward`, `Left` and
 `Right` refuse while `HasRoomRequiredObject()`
 (`PresentationBiomeO.lua:880-928`), so a required object the previous phase's
 end effects spawned, such as a matured delivery, is taken after the roll and
-before the choice. Rerolling a wheel is not refused meanwhile: `AttemptReroll`
+before the choice. `HasRoomRequiredObject` counts every object in
+`MapState.RoomRequiredObjects` whose `RoomRequiredGameStateRequirements`, if
+any, hold; the same check holds the doors (`RoomLogic.lua:3106`) and the end of
+an encounter that waits for the room to be ready (`WaitForNextEncounterReady`,
+`RoomLogic.lua:1369-1373`). Heracles's bounty is such an object:
+`HeraclesPostCombat` spawns it only when `PlayerMoneyObjective > 0` and
+registers it with no requirements and no `NotRequiredPickup`
+(`EnemyAILogic.lua:5331-5338`), so it holds the wheel, the doors and the end of
+`HeraclesCombatO`, which waits ready; in O he can fight the first phase with a
+Ship phase after him (`RoomDataO.lua:1915-1930`). Rerolling a wheel is not refused meanwhile: `AttemptReroll`
 (`InteractLogic.lua:1351-1385`, reached from the Reroll control at
 `GiftLogic.lua:55-77`) has no required-object guard. `UseShipWheel` fixes the selected reward/store on that
 exact encounter. Only then do encounter-start effects and

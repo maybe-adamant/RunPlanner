@@ -101,11 +101,12 @@ before assembly and returns the final project and its exact assembly.
   Gold Gold Gold's duplicate and a matured clocked pickup arrive on their own
   and lie live until the owner places their pickup, and an unplaced required
   one stops the walk at its deadline with its placement finding.
-- A delivery the edit proves displaced (valid before, invalid now) is
-  unplaced and lies live again at its reached due contact. A delivery, a
-  rerolled reward or an Echo replay the edit replaced is discarded as the
+- A delivery the edit proves displaced (valid before, invalid now: the walk
+  has it due at another host) is unplaced and lies live again where it is due,
+  the same item with its choices. A delivery, a rerolled reward or an Echo
+  replay the edit replaced is discarded as the
   [policy](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
-  repairs it: a delivery due at another host arrives there as a new item. A displaced clocked
+  repairs it. A displaced clocked
   pickup is removed only when its trait is no longer held; one whose held trait
   now matures elsewhere stays with its finding. Deliveries and clocked pickups
   are keyed by their source, so no inherited choice is reset for being newly
@@ -778,8 +779,13 @@ Three responsibilities stay separate:
 Generated pickup placement assessment is separate from required participation
 and reward completeness. Hermes deliveries and clocked trait pickups publish
 exact source, entry and reached-contact evidence as valid, invalid or unassessed.
-Rejection at the reached state proves invalidity; with no reached state the
-placement is unassessed. Missing candidate capability is not evidence of a stale source.
+Their arrival is the walk's, never stored: a row is valid in the room the walk
+has the item due in, after its due spawn and before its deadline, which the
+[required-object rule](ROOM_LIFECYCLE_MODEL.md#live-at-a-point) names. A row
+before the spawn takes nothing and carries its order finding; a row past the
+deadline leaves the waiting row's order finding naming it. Rejection at the
+reached state proves invalidity (due in another room, or a source no longer
+held); with no reached state the placement is unassessed. Missing candidate capability is not evidence of a stale source.
 A valid placement with missing or mismatched reward details retains its reward
 repair instead of becoming an obsolete placement.
 

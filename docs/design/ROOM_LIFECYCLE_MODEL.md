@@ -678,10 +678,10 @@ items beside the removed rows:
 - **A Hermes delivery** whose source no longer produces it (its purchase, or
   for a pickup in the Shrine's room its rush, is gone, or the Shrine with it)
   or whose Shrine slot now stocks another reward, judged in every room as a
-  row on a replaced item is; or whose payload lies unplaced at a host while
-  the walk has the delivery due at another, judged only where the walk
-  reaches. A placed delivery the edit displaces is unplaced first and then
-  judged the same way.
+  row on a replaced item is. A delivery the walk now has due at another host
+  is not replaced: a placed one the edit displaces is unplaced, and its
+  payload, choices included, stays the same item and moves to the host that
+  places it.
 - **A rerolled reward's outcomes** once the press whose item they are is no
   longer its owner's effective press (a later press, an earlier one again, or
   none), or once that press's result changes in place: they reset to the
@@ -795,12 +795,14 @@ cocoons stand from entry with the reward hidden, neither spawned nor locked:
 breaking the reward cocoon spawns it and ends her encounter
 (`EncounterEventsArachneCombat` waits for `ArachneRewardFound`), so it is an
 ordinary encounter-end spawn, and collecting it opens the doors. A Boss's forced
-drop and a Ship wheel's reward spawn at their phase's end. After the reward,
-an encounter's end spawns its due Hermes deliveries in purchase order, then
-matured clock drops such as Supply Chain's, then Heracles's bounty; in a Ship
-phase a wheel follows they appear at that wheel's Wheels open, after the phase's
-reward and NPC are resolved, and after the final phase they follow the wheel
-reward as a separate moment. A Fields cage's
+drop and a Ship wheel's reward spawn at their phase's end. Heracles's bounty
+spawns at his own encounter's end (`HeraclesPostCombat`), before that
+encounter can end, in whichever phase he fights. After the reward, an
+encounter's end effects spawn its due Hermes deliveries in purchase order,
+then matured clock drops such as Supply Chain's; in a Ship phase a wheel
+follows they appear at that wheel's Wheels open, after the phase's reward and
+NPC are resolved, and after the final phase they follow the wheel reward as a
+separate moment. A Fields cage's
 end effects spawn their pickups beside its still-caged reward, both taken any
 time after that cage. Fields cage and
 optional rewards spawn on entry, each cage marked by the phase that frees it,
@@ -870,9 +872,17 @@ waits for the room to be ready (`WaitForNextEncounterReady`), otherwise as the
 doors open. An optional item is due when the room is left, except a wheel's
 reroll, which its wheel's choice ends. A Ship phase's end
 effects wait until its wheel reward and required contacts are taken, so an
-unplaced one is due there, after the phase's other post-combat rows. The
-pickups those end effects spawn are due at the next wheel's choice, after its
-Wheels open has rolled the offers; after the final phase, before Doors open. A
+unplaced one is due there, after the phase's other post-combat rows.
+
+The game refuses a Ship wheel's choice and keeps the doors shut while any
+object of the room's required set lies on the ground
+(`HasRoomRequiredObject`); a wheel's reroll is not refused. One engine rule
+states this for the walk and the live product alike: a required item on the
+ground is due before the next row that waits for it, the next wheel's choice
+or anything the doors opening enables, and otherwise before Doors open. The
+pickups a Ship phase's end effects spawn are therefore due at the next wheel's
+choice, after its Wheels open has rolled the offers; after the final phase,
+before Doors open. A
 pickup taken before combat (an Opening reward, Devotion's choice) and an
 action that starts a fight (a cage's completion, a wheel's choice) lead to
 that fight, so the fight waits on them; whether a fight follows is the room
@@ -883,8 +893,12 @@ a required action due by then is missing; playing forward therefore
 clears and collects a Fields room cage by cage.
 
 A countdown Hermes delivery and the fourth-biome Preboss flush are required
-objects the game registers as blocking the exit, so in a room's last or only
-phase they are due before Doors open. No placement after Doors open is legal:
+objects the game registers as blocking the exit. Where a delivery or matured
+clock drop arrives is derived by the walk, never stored: its row's bounds span
+from the room's first end effects to Doors open (a drop, optional, to the
+room's exit), and the walk judges the row against its due spawn. A row ranked
+before the spawn takes nothing and carries the order finding; one past its
+required-object deadline leaves the waiting row's order finding naming it. No placement after Doors open is legal:
 Doors open follows every placed required action, and a row of the
 post-outgoing window before the delivery crosses its window. A rushed
 same-room delivery is optional loot spawned once the doors are already
@@ -1258,11 +1272,9 @@ finding is reported. Each purchase's delivery is one engine obligation (source,
 generation key, reward type, rushed, and once due its host, encounter phase and
 cause: rush, countdown or flush); the frontier, placement assessment, due
 spawn, edit settlement, authored domain and execution assembly all read that
-obligation rather than recomputing the due contact. A delivery that comes due
-at another host than the one holding its retained item is a new item: it
-arrives with no choices, and the earlier item, with its choices and outcomes
-(a Mystery Boon's pick, a Quick Buck offer), goes in the same edit. Due again at the same
-host, it is the same item and keeps them. A Hub side-room source is
+obligation rather than recomputing the due contact. A delivery is the same
+item wherever it comes due: its retained choices and outcomes (a Mystery
+Boon's pick, a Quick Buck offer) move to the host that places it. A Hub side-room source is
 ordinary for scheduling, but cannot advance an older pending delivery; later
 qualifying main Hub visits can advance or host it. Fixed Boss occurrences are
 ordinary later delivery hosts. The Shrine source action and its later required

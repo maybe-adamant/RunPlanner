@@ -937,7 +937,10 @@ by `UnplaceGeneratedDelivery`; its item is then live again with its finding.
 placement commands `PlaceHermesShrineDelivery`, `PlaceClockedTraitPickup` and
 `PlaceEchoGoldPickup` take the same optional index for a pickup they newly
 place; absent, it lands at the command's default, and an index for a pickup
-already placed is refused. Rows of a room the run does not enter remain
+already placed is refused. A delivery's or clocked drop's row is only
+`interactAcquisitionEntry` with its site and entry: where it falls due is the
+walk's, never stored, and the engine's placement query publishes the command
+placing it at the last index it may take. Rows of a room the run does not enter remain
 authored untouched, and reactivation of the same key reuses its retained
 position rather than adding a duplicate. Stale, source-gone and invalid rows follow
 [rows whose context or source is gone](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
@@ -1249,8 +1252,9 @@ keepsake selection's equip results) are
 one source and cycle. Hermes deliveries and clocked pickups are likewise keyed
 by their source. Room replacement and other unrelated edits therefore retain
 all of them; edit settlement resets no inherited choice, and one that is
-invalid where it lands keeps its finding. Only a changed purchase or a moved
-due contact re-places a Hermes delivery without its old payload. Vanished
+invalid where it lands keeps its finding. Only a changed purchase re-places a
+Hermes delivery without its old payload; a delivery due at another host keeps
+it. Vanished
 structural phases are removed under the existing codec and remain recoverable
 through Undo.
 
