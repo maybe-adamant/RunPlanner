@@ -20,6 +20,7 @@ import {
   openLeavePicker,
   renderWorkspace,
 } from '@planner-test/support/biome-workbench';
+import { takeLive } from '@planner-test/support/live-row';
 
 afterEach(() => cleanup());
 
@@ -75,8 +76,7 @@ describe('locked doors', () => {
     };
     expect((await exitNames()).some((name) => name.startsWith('Door 2'))).toBe(false);
 
-    await user.click(screen.getByRole('button', { name: 'Doors' }));
-    await user.click(await screen.findByRole('option', { name: 'Unlock Door 2' }));
+    await takeLive(user, 'Locked doors', 'Unlock Door 2');
     expect(hostRoom(application).roomActions.order.at(-1)).toEqual({
       kind: 'unlockExit',
       exitKey: 'exit2',

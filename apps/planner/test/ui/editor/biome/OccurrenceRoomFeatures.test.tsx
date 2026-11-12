@@ -45,6 +45,7 @@ import {
   openRoomTab,
   reachedAnomalyProject,
 } from '@planner-test/support/occurrence-workbench';
+import { takeLive } from '@planner-test/support/live-row';
 import {
   renderDecisionWorkbench,
   renderOccurrenceWorkbench,
@@ -348,6 +349,8 @@ describe('OccurrenceRoomFeatures', () => {
       siteKey: 'nemesisGenerated:Encounter',
       entryKey: 'result',
     });
+    // Her item lies on the ground until it is picked up from the live row.
+    await takeLive(view.user, 'Max Health', 'Pick up');
     await waitFor(() =>
       expect(
         [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].some(
@@ -358,6 +361,8 @@ describe('OccurrenceRoomFeatures', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past.length).toBeGreaterThan(
       historyBefore,
     );
+    // Undo takes back the pickup, then her answer.
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() => expect(outcome().textContent).toBe('Declined'));
     expect(
@@ -607,9 +612,8 @@ describe('OccurrenceRoomFeatures', () => {
     await waitFor(() => expect(result().textContent).toBe('Failed'));
     expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
     expect(within(sentence()).getByRole('button', { name: 'Reward' })).toBeTruthy();
-    // Her Consolation spawns under her row and is collected, never the planned item.
-    const chip = document.querySelector<HTMLElement>('[data-spawned-loot="action"] button')!;
-    await view.user.click(chip);
+    // Her Consolation spawns and is picked up, never the planned item.
+    await takeLive(view.user, 'Red Onion', 'Pick up');
     const collect = await waitFor(() => {
       const row = document.querySelector<HTMLElement>(
         `[data-room-action-key="${CSS.escape(

@@ -14,7 +14,7 @@ import { doorsOpenToggle, type BannerToggle } from './doorSummary';
 /**
  * A room's doors on its Timeline: the Doors open row (a compact state that
  * expands into the doors' editor), the room's last row saying how it is
- * left, and the Doors object.
+ * left.
  */
 export interface TimelineDoorsContent {
   /** The doors' compact state on the Doors open row: a chip per door. */
@@ -38,8 +38,6 @@ export interface TimelineDoorsContent {
   readonly endsPlan?: true;
   /** False where the room shows no doors, only its last row. */
   readonly doorsOpenRow?: false;
-  /** The Doors object in the Add area, where presses on the doors are added. */
-  readonly object?: ReactNode;
   /** The presses on the doors, each edited on its own Timeline row. */
   readonly rerolls?: WorkspaceRoomRerolls;
   /** The doors as first drawn, which each press row shows as it leaves them. */

@@ -1002,15 +1002,6 @@
   opacity: 0.6;
 }
 
-/* Object and feature entries start where the Optional actions heading does. */
-.timeline-row.room-action-feature-roll > [data-timeline-cell='handle'] {
-  display: none;
-}
-
-.timeline-row.room-action-feature-roll > [data-timeline-cell='sentence'] {
-  grid-column: 1 / 3;
-}
-
 /* Narrow lists keep their columns; a narrower money column leaves the sentence more room. */
 @container timeline-list (max-width: 46rem) {
   .room-action-list {
@@ -1774,7 +1765,6 @@
 }
 
 /* Pools are grouped by a light heading, not another box. */
-.room-action-optional-pool,
 .room-action-repairs,
 .room-action-not-reached {
   display: grid;
@@ -1791,28 +1781,11 @@
   display: none;
 }
 
-/* Unplaced pools sit outside the chronology, so their lists draw no spine or ticks. */
-.room-action-optional-pool > .room-action-list::before,
-.room-action-optional-pool > .room-action-list > .timeline-row::before {
-  display: none;
-}
-
-:is(
-    .room-action-optional-pool,
-    .room-action-repairs,
-    .room-action-not-reached,
-    .ship-action-repairs
-  )
-  > .local-reward-heading {
+:is(.room-action-repairs, .room-action-not-reached, .ship-action-repairs) > .local-reward-heading {
   padding-inline: var(--timeline-title-x) 0;
 }
 
-:is(
-    .room-action-optional-pool,
-    .room-action-repairs,
-    .room-action-not-reached,
-    .ship-action-repairs
-  )
+:is(.room-action-repairs, .room-action-not-reached, .ship-action-repairs)
   > .local-reward-heading
   :is(h4, h5) {
   color: #aaa7af;
@@ -2084,68 +2057,6 @@
   grid-template-columns: var(--overview-secondary-width);
 }
 
-/* The room's one Add… menu: Places open their flows, Actions add in one click. */
-.room-add {
-  margin-top: 8px;
-  padding-left: var(--timeline-gutter);
-}
-
-/* The Add area: a line of room objects and a line of action sources. */
-.room-add {
-  display: grid;
-  gap: 6px;
-}
-
-.room-add-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-}
-
-.room-add-line-label {
-  min-width: 4.5rem;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.room-add .room-add-entries {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.room-add .room-add-entries::before {
-  display: none;
-}
-
-.room-add .room-add-entries > .timeline-row {
-  display: flex;
-  gap: 6px;
-  padding: 0;
-  border: 0;
-  background: none;
-}
-
-.room-add .room-add-entries > .timeline-row::before,
-.room-add
-  .room-add-entries
-  > .timeline-row
-  > :is(
-    [data-timeline-cell='handle'],
-    [data-timeline-cell='money'],
-    [data-timeline-cell='actions']
-  ) {
-  display: none;
-}
-
 /* An encounter phase reads as one light group: its rows share a tint. */
 .timeline-row[data-phase] {
   background: rgb(255 255 255 / 2%);
@@ -2168,11 +2079,9 @@
   margin-top: 0;
 }
 
-/* The Add area and Timeline repairs share the timeline's width and its content edge. */
-.room-actions-workbench > .room-add,
+/* Timeline repairs share the timeline's width and its content edge. */
 .room-actions-workbench .room-action-repairs,
-.room-actions-workbench .room-action-not-reached,
-.ship-phase > .room-add {
+.room-actions-workbench .room-action-not-reached {
   width: var(--timeline-working-width, min(60rem, 100%));
   padding-left: var(--timeline-title-x);
 }
@@ -2185,12 +2094,6 @@
   :is(.room-action-repairs, .room-action-not-reached)
   > .local-reward-heading {
   padding-left: var(--timeline-title-x);
-}
-
-/* The Objects line is a row of entries, not a timeline-wide list. */
-.room-add .room-add-entries {
-  width: auto;
-  min-width: 0;
 }
 
 /*
@@ -2263,27 +2166,6 @@
   color: var(--muted);
 }
 
-/* Below the timeline the Add area has no title and hides when there is nothing to add. */
-.room-add-title {
-  display: none;
-  margin: 0;
-  color: #aaa7af;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.room-add[data-empty] {
-  display: none;
-}
-
-.room-add-empty {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
 .room-workbench-panel {
   container: room-panel / inline-size;
 }
@@ -2291,60 +2173,6 @@
 /* The room's readable width: the Timeline and Overview stop growing here (see responsive.css). */
 .room-overview-workbench {
   max-width: 60rem;
-}
-
-/*
- * The medium and wide bands: the optional actions beside the Timeline, always
- * present so the Timeline keeps its place, in view while a tall Timeline
- * scrolls. The Timeline grows to 60rem; the side column takes what is left.
- */
-@container room-panel (min-width: 63.5rem) {
-  :is(.room-actions-workbench, .ship-phase):has(> .room-add) {
-    grid-template-columns: minmax(46rem, 60rem) minmax(16rem, 1fr);
-    justify-content: start;
-    align-items: start;
-    column-gap: 1.5rem;
-  }
-
-  :is(.room-actions-workbench, .ship-phase):has(> .room-add) > * {
-    grid-column: 1;
-  }
-
-  /*
-   * One row: the timeline column beside the Add area, so the panel is only as tall
-   * as the taller of the two and the column sticks while the timeline scrolls.
-   */
-  :is(.room-actions-workbench, .ship-phase) > .room-add,
-  :is(.room-actions-workbench, .ship-phase) > .room-add[data-empty] {
-    position: sticky;
-    top: 52px;
-    display: grid;
-    grid-row: 1;
-    grid-column: 2;
-    align-content: start;
-    align-self: start;
-    gap: 12px;
-    width: auto;
-    max-height: calc(100 * var(--app-vh, 1vh) - 72px);
-    margin: 0;
-    padding: 0;
-    overflow-y: auto;
-  }
-
-  .room-add-title {
-    display: block;
-  }
-
-  .room-add .room-add-line {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  .room-add .room-add-entries {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 
 .hub-timeline-map-marker[data-plan-end='pastEnd'] {
@@ -3599,4 +3427,68 @@ span.hub-board-status-line {
 .room-action-not-reached > .room-action-list[inert] {
   block-size: 0;
   overflow: hidden;
+}
+
+/* A live thing's verb list wraps its chip without a box of its own. */
+.live-action-menu {
+  display: contents;
+}
+
+/* A thing standing for a row off the Timeline holds that row's finding anchor. */
+.live-chip-anchor {
+  display: inline-flex;
+}
+
+/* The live row: what can be done next, in its groups. */
+.timeline-row.timeline-live-row {
+  margin-top: 4px;
+  border-left: 3px dashed var(--border);
+}
+
+.live-row-groups {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+.live-row-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--badged-chip-gap, 6px);
+}
+
+.live-row-group + .live-row-group {
+  padding-inline-start: 14px;
+  border-inline-start: 1px solid var(--border);
+}
+
+.live-row-group-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.timeline-chip.live-chip[data-live-group='optional'] {
+  border: 1px dashed var(--border);
+}
+
+.timeline-chip.live-chip[data-live-group='required'] {
+  border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
+}
+
+.timeline-chip.live-chip[aria-disabled='true'] {
+  opacity: 0.6;
+}
+
+.timeline-chip.live-chip.live-chip-text-face {
+  width: auto;
+  height: auto;
+  padding: 3px 8px;
+  color: var(--text);
+  font-size: 0.8rem;
+  white-space: nowrap;
 }

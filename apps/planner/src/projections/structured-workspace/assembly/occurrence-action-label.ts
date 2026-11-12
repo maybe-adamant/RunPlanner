@@ -614,21 +614,7 @@ export function occurrenceActionLabelParts(
   }
 }
 
-/** The Add area entry an optional action is offered under: a room object or a source family. */
-export interface OccurrenceActionAddGroup {
-  readonly key: string;
-  readonly label: string;
-  readonly object?: 'worldShop' | 'hermesShrine' | 'challengeSwitch';
-}
-
-const addGroup = (
-  key: string,
-  label: string,
-  object?: OccurrenceActionAddGroup['object'],
-): OccurrenceActionAddGroup =>
-  Object.freeze({ key, label, ...(object === undefined ? {} : { object }) });
-
-/** How a pickup's source family names its row, tells its origin and groups it in the Add area. */
+/** How a pickup's source family names its row and tells its origin. */
 function sourceFamilyPresentation(
   catalog: Catalog,
   family: AcquisitionEntrySourceFamily | undefined,
@@ -637,80 +623,35 @@ function sourceFamilyPresentation(
       readonly name: string;
       readonly unresolvedName: string;
       readonly origin: string;
-      readonly group: OccurrenceActionAddGroup;
     }
   | undefined {
   if (family === undefined) return undefined;
-  const source = (
-    name: string,
-    origin: string,
-    group: OccurrenceActionAddGroup,
-    unresolvedName = `${name} reward`,
-  ) => Object.freeze({ name, unresolvedName, origin, group });
+  const source = (name: string, origin: string, unresolvedName = `${name} reward`) =>
+    Object.freeze({ name, unresolvedName, origin });
   switch (family.kind) {
     case 'trait': {
       const label = catalog.traits.byKey[family.traitKey]?.label ?? family.traitKey;
-      return source(
-        label,
-        `Created by ${label}`,
-        addGroup(`trait:${family.traitKey}`, label),
-        label,
-      );
+      return source(label, `Created by ${label}`, label);
     }
     case 'echo':
-      return source('Echo', 'Created by Echo', addGroup('echo', 'Echo'));
+      return source('Echo', 'Created by Echo');
     case 'artificer':
-      return source('Artificer', 'Created by the Artificer', addGroup('artificer', 'Artificer'));
+      return source('Artificer', 'Created by the Artificer');
     case 'seaStar':
-      return source('Sea Star', 'Duplicated by Sea Star', addGroup('seaStar', 'Sea Star'));
+      return source('Sea Star', 'Duplicated by Sea Star');
     case 'nemesisEvent':
-      return source('Nemesis', 'From a Nemesis event', addGroup('nemesis', 'Nemesis'));
+      return source('Nemesis', 'From a Nemesis event');
     case 'erisGift':
-      return source('Eris', 'A gift from Eris', addGroup('eris', 'Eris'));
+      return source('Eris', 'A gift from Eris');
     case 'heraclesBounty':
-      return source('Heracles', 'Heracles’s bounty', addGroup('heracles', 'Heracles'));
+      return source('Heracles', 'Heracles’s bounty');
     case 'hermesShrineDelivery':
-      return source(
-        'Delivery',
-        'Delivered from the Hermes Shrine',
-        addGroup('object:hermesShrine', 'Hermes Shrine', 'hermesShrine'),
-        'Delivery',
-      );
+      return source('Delivery', 'Delivered from the Hermes Shrine', 'Delivery');
     case 'challengeSwitch':
-      return source(
-        'Switch reward',
-        'Claimed from the challenge switch',
-        addGroup('object:challengeSwitch', 'Challenge Switch', 'challengeSwitch'),
-      );
+      return source('Switch reward', 'Claimed from the challenge switch');
     case 'shopTravelDealRefill':
-      return source(
-        'Travel Deal Offer',
-        'Restocked by Travel Deal',
-        addGroup('object:worldShop', 'World Shop', 'worldShop'),
-        'Travel Deal Offer',
-      );
+      return source('Travel Deal Offer', 'Restocked by Travel Deal', 'Travel Deal Offer');
   }
-}
-
-/** Groups an optional action by what produced it, for the room's Add area. */
-export function occurrenceActionAddGroup(
-  catalog: Catalog,
-  reference: import('@run-planner/engine/authored-project').RoomActionReference,
-  roomLocal: WorkspaceRoomLocal,
-  sourceFamily?: AcquisitionEntrySourceFamily,
-): OccurrenceActionAddGroup {
-  // Fields optional rewards group by the room's own local product.
-  if (
-    reference.kind === 'interactLocalReward' &&
-    roomLocal.kind === 'fields' &&
-    roomLocal.optionalRewards.some(
-      (candidate) =>
-        candidate.control.owner.address.kind === 'localReward' &&
-        candidate.control.owner.address.slotKey === reference.slotKey,
-    )
-  )
-    return addGroup('optionalRewards', 'Optional rewards');
-  return sourceFamilyPresentation(catalog, sourceFamily)?.group ?? addGroup('other', 'Actions');
 }
 
 /** Concise identity for a retained delivery outside evaluated lifecycle coverage. */

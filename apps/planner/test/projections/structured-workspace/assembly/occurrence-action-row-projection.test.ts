@@ -465,7 +465,7 @@ describe('structured workspace actions assembly', () => {
       const key = roomActionKey(reference);
       const actions = assemble(project, 'Underworld', 'F', occurrenceId).assembly.node.room
         .roomActions;
-      const optional = actions?.optionalRows.find((row) => row.key === key);
+      const optional = actions?.rows.find((row) => row.key === key);
       expect(optional).toMatchObject({ label, participation: 'optional', rank: null });
       expect(optional?.rewardPayload?.control.offer).toBeNull();
       expect(optional?.rewardPayload?.inlineLevelResolutions).toEqual([]);
@@ -515,12 +515,8 @@ describe('structured workspace actions assembly', () => {
       siteKey: 'nemesisGenerated:Encounter',
       entryKey: 'result',
     });
-    const actions = assemble(project, 'Underworld', 'F', occurrenceId).assembly.node.room
-      .roomActions;
-    expect(actions?.optionalRows.some((row) => row.key === key)).toBe(false);
     const placed = assemble(collectTestRequiredItems(project), 'Underworld', 'F', occurrenceId)
       .assembly.node.room.roomActions;
-    expect(placed?.optionalRows.some((row) => row.key === key)).toBe(false);
     expect(placed?.rows.find((row) => row.key === key)).toMatchObject({
       label: 'Collect Pom',
       participation: 'required',
@@ -566,7 +562,7 @@ describe('structured workspace actions assembly', () => {
       (candidateSite) =>
         semanticAddressKey(candidateSite) === semanticAddressKey(site) ? entries : [],
     );
-    const rows = assembly.node.room.roomActions?.optionalRows.filter(
+    const rows = assembly.node.room.roomActions?.rows.filter(
       (row) =>
         row.reference.kind === 'interactAcquisitionEntry' &&
         row.reference.entryKey.startsWith('clockedTraitGenerated:'),
@@ -969,7 +965,7 @@ describe('structured workspace actions assembly', () => {
       entryKey,
     );
     const dueRoom = assemble(project, 'Surface', 'O', hostId).assembly.node.room;
-    const dueRow = dueRoom.roomActions?.repairRows.find(
+    const dueRow = dueRoom.roomActions?.rows.find(
       (row) =>
         row.reference.kind === 'interactAcquisitionEntry' &&
         row.reference.siteKey === 'hermesShrineDelivery' &&
@@ -1105,8 +1101,12 @@ describe('structured workspace actions assembly', () => {
       )?.rewardPayload?.showOffer,
     ).toBe(false);
     expect(
-      roomActions.optionalRows.map((row) =>
-        row.reference.kind === 'interactLocalReward' ? row.reference.slotKey : row.reference.kind,
+      roomActions.rows.flatMap((row) =>
+        row.rank !== null || row.participation !== 'optional'
+          ? []
+          : row.reference.kind === 'interactLocalReward'
+            ? row.reference.slotKey
+            : row.reference.kind,
       ),
     ).toEqual(['optional1', 'optional2']);
     expect(roomActions.repairRows).toEqual([]);

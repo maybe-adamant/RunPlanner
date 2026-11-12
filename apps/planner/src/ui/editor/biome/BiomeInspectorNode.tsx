@@ -14,12 +14,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { BatchDoorsDetail, BatchDoorsRepair, DoorRowsHeader } from './DecisionWorkbench';
 import { DoorRows } from './DoorRows';
-import {
-  batchDoorChips,
-  batchDoorFindingOwners,
-  batchDoorPressIcon,
-  batchDoorsStatus,
-} from './doorSummary';
+import { batchDoorChips, batchDoorFindingOwners, batchDoorsStatus } from './doorSummary';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { PhantomExitDoor } from './PhantomExitDoor';
@@ -34,7 +29,6 @@ import {
   StartRoomIdentityEditor,
 } from './BiomeInspectorControls';
 import { ReadOnlyFindingScope } from '@planner/ui/feedback/useFindingTarget';
-import { DoorsRerollEntry } from './RoomRerolls';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { BatchExitPicker, LeavePicker, type LeaveOption } from './LeavePicker';
 import { HubRoomLeave, SideRoomLeave, SideVisitLeaves } from './SideVisitLeaves';
@@ -199,15 +193,9 @@ function roomTimelineDoors({
           ),
         };
 
-  // A lock host's Doors object also presses its locked doors; the room cannot be left through one still locked.
+  // The room cannot be left through a door still locked.
   const lockedDoors = node.room.lockedDoors;
-  const unlocks = {
-    lockedAtLeave: lockedDoors?.lockedAtLeave ?? [],
-    options:
-      lockedDoors?.unlocks === undefined || lockedDoors.unlocks.options.length === 0
-        ? undefined
-        : lockedDoors.unlocks,
-  };
+  const lockedAtLeave = lockedDoors?.lockedAtLeave ?? [];
   // A locked door's findings, on its press or on the exit picked through it, need the doors.
   const unlockOwners = (node.room.roomActions?.rows ?? []).flatMap((row) =>
     row.reference.kind === 'unlockExit' ? [row.address] : [],
@@ -239,7 +227,7 @@ function roomTimelineDoors({
       leave: leaveRow(
         <BatchExitPicker
           interactions={interactions}
-          lockedAtLeave={unlocks.lockedAtLeave}
+          lockedAtLeave={lockedAtLeave}
           node={batch}
           planEnd={planEnd}
         />,
@@ -248,20 +236,7 @@ function roomTimelineDoors({
       ),
       ...(batch.rerolls === undefined ? {} : { rerolls: batch.rerolls }),
       ...(batch.doorSteps === undefined ? {} : { steps: batch.doorSteps }),
-      ...(batch.rerolls === undefined && unlocks.options === undefined
-        ? {}
-        : {
-            chips: batchDoorChips(batch),
-            object: (
-              <DoorsRerollEntry
-                interactions={interactions}
-                key="doors"
-                pressIcon={batchDoorPressIcon(batch)}
-                {...(batch.rerolls === undefined ? {} : { rerolls: batch.rerolls })}
-                {...(unlocks.options === undefined ? {} : { unlocks: unlocks.options })}
-              />
-            ),
-          }),
+      ...(batch.rerolls === undefined ? {} : { chips: batchDoorChips(batch) }),
     };
   }
   switch (outgoing?.kind) {

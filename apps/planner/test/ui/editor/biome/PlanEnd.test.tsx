@@ -36,6 +36,7 @@ import {
   openLeavePicker,
   renderWorkspace,
 } from '@planner-test/support/biome-workbench';
+import { takeLive } from '@planner-test/support/live-row';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import { hintOf } from '@planner-test/support/hints';
 
@@ -281,10 +282,7 @@ describe('plan end in the biome workspace', () => {
     );
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     expect(leaveTrigger().textContent).toBe('End plan');
-    await user.click(screen.getByRole('button', { name: 'Doors' }));
-    await user.click(
-      within(await screen.findByRole('listbox')).getByRole('option', { name: /^Reroll Door 2/ }),
-    );
+    await takeLive(user, 'Doors', 'Reroll…', /^Door 2/);
     // The press asks for its reward like any room's; take the first possible one.
     await screen.findByRole('listbox');
     while (screen.queryByRole('listbox') !== null) {

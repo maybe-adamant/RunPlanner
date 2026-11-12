@@ -5,8 +5,8 @@ export type TimelineRowKind = 'action' | 'boundary' | 'continuation' | 'effect' 
 
 /**
  * One Room Timeline row: handle, one sentence (its label, then its decisions),
- * money and the trash. A placement control (Add, Restore, Take) stands in the
- * money zone of a row outside the order. Every cell stays mounted so the money
+ * money and the trash. A placement control stands in the money zone of a row
+ * outside the order. Every cell stays mounted so the money
  * and trash columns align down the Timeline. A notice tells what the game did:
  * it wears a dot where an action has its handle.
  */

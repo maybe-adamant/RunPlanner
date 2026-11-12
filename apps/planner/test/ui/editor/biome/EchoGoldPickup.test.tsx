@@ -18,6 +18,7 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { act, cleanup, screen, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 import { slotRow } from '@planner-test/support/timeline-rows';
+import { liveChip, takeLive } from '@planner-test/support/live-row';
 import {
   createEchoGoldHPrebossProject,
   createEchoGoldIAnvilDuplicateProject,
@@ -147,8 +148,8 @@ it('restores an imported missing duplicated Boon and exposes its fresh trait edi
   ).toBe(false);
   expect(screen.queryByText(/^Gold Gold Gold duplicate of/)).toBeNull();
   openRoomTab('Room Timeline');
-  expect(goldRow().queryByRole('button', { name: 'Reward' })).toBeNull();
-  await view.user.click(goldRow().getByRole('button', { name: 'Restore pickup' }));
+  expect(queryGoldRow()).toBeNull();
+  await takeLive(view.user, /^Gold Gold Gold duplicate/, 'Pick up');
   expect(findings().some((finding) => finding.code === 'echoGoldPickupPlacementRequired')).toBe(
     false,
   );
@@ -223,13 +224,9 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
       semanticAddressKey(finding.origin).includes('echoDoubleShopReward'),
     ),
   ).toBe(false);
-  // The optional Gold pickup waits as a chip under its purchase, with no reward editor, until taken.
+  // The optional Gold pickup waits on the live row, with no reward editor, until taken.
   expect(queryGoldRow()).toBeNull();
-  const spawnedGold = () =>
-    within(document.querySelector<HTMLElement>('[data-spawned-loot="action"]')!).getByRole(
-      'button',
-    );
-  await view.user.click(spawnedGold());
+  await takeLive(view.user, /^Gold Gold Gold duplicate/, 'Pick up');
   await selectGod(goldRow());
   settleTrait('echoDoubleShopReward');
   expect(
@@ -238,9 +235,9 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
     ),
   ).toBe(false);
   await view.user.click(goldRow().getByRole('button', { name: /Remove .* from timeline/ }));
-  // Removed, its chip waits again and its reward editor leaves with the row.
+  // Removed, it waits on the live row again and its reward editor leaves with the row.
   expect(queryGoldRow()).toBeNull();
-  expect(spawnedGold().hasAttribute('data-spawn-placed')).toBe(false);
+  expect(liveChip(/^Gold Gold Gold duplicate/)).toBeTruthy();
   expect(
     workspaceProjection(view.application).interactions.traitOffers.has(
       semanticAddressKey(createTraitOfferAddress(gold, 'hiddenSource')),

@@ -14,6 +14,7 @@ import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { type PlannerApplication } from '@planner/composition/createApplication';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { openLeavePicker, renderWorkspace } from '@planner-test/support/biome-workbench';
+import { takeLive } from '@planner-test/support/live-row';
 
 afterEach(cleanup);
 
@@ -45,9 +46,10 @@ async function openDoors(view: ReturnType<typeof renderWorkspace>) {
   return within(details);
 }
 
-/** The room's Doors object, where a press on a door is added. */
-function doorsObject(): HTMLElement {
-  return screen.getByRole('button', { name: 'Doors' });
+/** The room's Doors on the live row, where a press on a door is added. */
+function doorsChip(): HTMLElement | null {
+  const row = document.querySelector<HTMLElement>('.timeline-live-row');
+  return row === null ? null : within(row).queryByRole('button', { name: 'Doors' });
 }
 
 /** The room's door presses on its Timeline, in order. */
@@ -55,16 +57,9 @@ function pressRows(): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>('[data-door-press]')];
 }
 
-async function choose(view: ReturnType<typeof renderWorkspace>, picker: HTMLElement, name: RegExp) {
-  await view.user.click(picker);
-  await view.user.click(
-    await within(await screen.findByRole('listbox')).findByRole('option', { name }),
-  );
-}
-
-/** Appends a press: a door, then the first reward the picker that opens next offers. */
+/** Appends a press: its door, then the first reward the picker that opens next offers. */
 async function appendPress(view: ReturnType<typeof renderWorkspace>, door: RegExp) {
-  await choose(view, doorsObject(), door);
+  await takeLive(view.user, 'Doors', 'Reroll…', door);
   await screen.findByRole('listbox');
   // A staged reward (a Boon) asks for its god next; each step takes the first possible row.
   while (screen.queryByRole('listbox') !== null) {
@@ -75,7 +70,7 @@ async function appendPress(view: ReturnType<typeof renderWorkspace>, door: RegEx
 }
 
 describe('RoomRerolls', () => {
-  it('appends presses from the Doors object as Timeline rows and removes a press', async () => {
+  it('appends presses from the live row as Timeline rows and removes a press', async () => {
     const view = renderWorkspace(
       withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']),
       'Underworld',
@@ -84,17 +79,7 @@ describe('RoomRerolls', () => {
     await openDoors(view);
     // The reward is asked for once a door is chosen.
     expect(screen.queryByRole('button', { name: 'New reroll reward' })).toBeNull();
-    // Each option names its door and the rerolls left before the press, and what it spends.
-    await view.user.click(doorsObject());
-    const option = within(await screen.findByRole('listbox')).getByRole('option', {
-      name: /^Reroll Door 2/,
-    });
-    expect(option.textContent).toContain('· 3 (\u22121)');
-    expect(option.querySelector('.contextual-picker-item-trail-icon')).not.toBeNull();
-    await view.user.keyboard('{Escape}');
-    expect(doorsObject().querySelector('img')).toBeNull();
-
-    await appendPress(view, /^Reroll Door 2/);
+    await appendPress(view, /^Door 2/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(1));
     const [row] = pressRows();
     expect(within(row!).getByText('Reroll')).toBeTruthy();
@@ -104,7 +89,7 @@ describe('RoomRerolls', () => {
     expect(screen.queryAllByRole('img', { name: /^Rerolled into / })).toHaveLength(0);
     expect(within(row!).getByRole('list', { name: 'Door summary' })).toBeTruthy();
 
-    await appendPress(view, /^Reroll Door 1/);
+    await appendPress(view, /^Door 1/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(2));
     const [first, second] = presses(view.application);
     await view.user.click(
@@ -114,46 +99,24 @@ describe('RoomRerolls', () => {
     expect(first).not.toEqual(second);
   });
 
-  it('disables the Doors object at an empty pool and hides it without the card', async () => {
+  it('offers no door press at an empty pool or without the card', async () => {
     let view = renderWorkspace(
       withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']),
       'Underworld',
       'F',
     );
     await openDoors(view);
-    for (const door of [/^Reroll Door 2/, /^Reroll Door 1/, /^Reroll Door 2/]) {
+    for (const door of [/^Door 2/, /^Door 1/, /^Door 2/]) {
       const count = presses(view.application).length;
       await appendPress(view, door);
       await waitFor(() => expect(presses(view.application)).toHaveLength(count + 1));
     }
-    expect(doorsObject().getAttribute('data-hint')).toBe('No rerolls left.');
+    expect(doorsChip()).toBeNull();
     cleanup();
 
     view = renderWorkspace(loadUnderworldFGCheckpoint(), 'Underworld', 'F');
     await openDoors(view);
-    expect(screen.queryByRole('button', { name: 'Doors' })).toBeNull();
-  });
-
-  it('returns focus to the Doors object when the pending reward is dismissed or chosen', async () => {
-    const view = renderWorkspace(
-      withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']),
-      'Underworld',
-      'F',
-    );
-    await openDoors(view);
-
-    // Escape on the reward picker drops the pending press.
-    await choose(view, doorsObject(), /^Reroll Door 2/);
-    await screen.findByRole('listbox');
-    await view.user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
-    expect(presses(view.application)).toHaveLength(0);
-    await waitFor(() => expect(document.activeElement).toBe(doorsObject()));
-
-    // Choosing the reward appends the press.
-    await appendPress(view, /^Reroll Door 2/);
-    await waitFor(() => expect(presses(view.application)).toHaveLength(1));
-    await waitFor(() => expect(document.activeElement).toBe(doorsObject()));
+    expect(doorsChip()).toBeNull();
   });
 
   it('edits a press reward on its own Timeline row and shows the final reward on the Leave row', async () => {
@@ -163,7 +126,7 @@ describe('RoomRerolls', () => {
       'F',
     );
     await openDoors(view);
-    await appendPress(view, /^Reroll Door 2/);
+    await appendPress(view, /^Door 2/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(1));
     const [press] = presses(view.application);
     if (press?.kind !== 'reroll') throw new Error('Door 2 press is missing');

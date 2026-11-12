@@ -17,7 +17,6 @@ import type {
 import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
-import { hintOf } from '@planner-test/support/hints';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
 import { queryTimelineRow, timelineRow } from '@planner-test/support/timeline-rows';
 
@@ -46,6 +45,11 @@ function boonForm(): ProjectDocument {
   });
 }
 
+/** The Pedestal's chip on the live row, while it can be picked up. */
+function livePedestal(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('.timeline-live-row button[aria-label="Pedestal"]');
+}
+
 function pedestal(): HTMLElement {
   fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
   return screen.getByRole('group', { name: 'Pedestal configuration' });
@@ -58,19 +62,16 @@ describe('Pedestal panel', () => {
     // The Overview authors the item only.
     expect(within(panel).queryByRole('checkbox')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const entry = screen.getByRole('button', { name: 'Pedestal' });
-    expect(entry).toHaveProperty('disabled', true);
-    // The missing item stops the room's Overview, so its Timeline entry waits.
-    expect(hintOf(entry)).toBe('Waits on an earlier choice.');
+    // The missing item stops the room's Overview, so the Pedestal is not live.
+    expect(livePedestal()).toBeNull();
 
     await view.user.click(within(pedestal()).getByRole('button', { name: /^Pedestal/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Big Pom of Power'));
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    await pickRoomObjectAction(view.user, 'Pedestal', 'Collect Double Pom');
+    await pickRoomObjectAction(view.user, 'Pedestal', 'Pick up Double Pom');
     const row = timelineRow('Collect Double Pom');
     // Collected: nothing more to do, and the row deletes the collect.
-    expect(screen.getByRole('button', { name: 'Pedestal' })).toHaveProperty('disabled', true);
-    expect(hintOf(screen.getByRole('button', { name: 'Pedestal' }))).toBe('Already collected.');
+    expect(livePedestal()).toBeNull();
     await view.user.click(within(row).getByRole('button', { name: /^Remove .* from timeline$/ }));
     expect(queryTimelineRow('Collect Double Pom')).toBeNull();
   });
@@ -103,8 +104,8 @@ describe('Pedestal panel', () => {
     await view.user.click(within(pedestal()).getByRole('button', { name: /^Pedestal/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    // The restocked item is collected again from the Pedestal's entry.
-    await pickRoomObjectAction(view.user, 'Pedestal', 'Collect Mystery Boon');
+    // The restocked item is picked up again from the live row.
+    await pickRoomObjectAction(view.user, 'Pedestal', 'Pick up Mystery Boon');
     const row = timelineRow(/^Collect Mystery Boon/);
     await view.user.click(within(row).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));

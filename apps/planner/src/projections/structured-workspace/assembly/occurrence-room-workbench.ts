@@ -65,7 +65,6 @@ function shipWorkbenchPresentation(
   const precedingTab = (phaseIndex: number) => Math.max(0, phaseIndex - 1);
   const actionByKey = new Map(roomActions?.rows.map((row) => [row.key, row]) ?? []);
   const phaseRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
-  const phaseUnplacedRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
   const repairRows: WorkspaceRoomActionRow[] = [];
   // A row off the Timeline sits on its engine phase's tab, but a row a wheel's choice waits
   // on stands with the fight before it, as its gate does.
@@ -92,7 +91,6 @@ function shipWorkbenchPresentation(
         return phaseIndexOrLast(row.phaseKey);
     }
   };
-  const phaseOptionalRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
   const phaseTimelineEntries = roomLocal.phases.map(
     () => [] as WorkspaceRoomLifecycleTimelineEntry[],
   );
@@ -130,17 +128,8 @@ function shipWorkbenchPresentation(
             : tabForUnrankedRow(row)
       ]!.push(entry);
     }
-    for (const row of roomActions.optionalRows) {
-      phaseOptionalRows[tabForUnrankedRow(row)]!.push(row);
-    }
   }
-  for (const row of roomActions?.repairRows ?? []) {
-    if (!row.stale && row.rank === null) {
-      phaseUnplacedRows[tabForUnrankedRow(row)]!.push(row);
-    } else {
-      repairRows.push(row);
-    }
-  }
+  repairRows.push(...(roomActions?.repairRows ?? []));
   // A phase the stopped walk has not reached waits on the last phase it did reach.
   const stopped = roomActions?.timeline.notReached !== undefined;
   const waitsOn = (index: number): WorkspaceTimelineWait | undefined => {
@@ -153,6 +142,11 @@ function shipWorkbenchPresentation(
       ? undefined
       : Object.freeze({ kind: 'phase' as const, phaseLabel: roomLocal.phases[reached]!.label });
   };
+  // The walk's frontier, and the live row, stand in the furthest phase it reached.
+  const liveIndex =
+    roomActions?.live === undefined
+      ? -1
+      : roomLocal.phases.findLastIndex((_, index) => waitsOn(index) === undefined);
   const phases: WorkspaceShipPhasePresentation[] = roomLocal.phases.map((phase, index) => {
     const phaseWaitsOn = waitsOn(index);
     const encounter = encounterPhases.find((candidate) => candidate.address.phaseKey === phase.key);
@@ -160,7 +154,6 @@ function shipWorkbenchPresentation(
     return Object.freeze({
       tab: roomTabForPhase(roomLocal, phase.key),
       actionRows: Object.freeze(phaseRows[index]!),
-      unplacedRows: Object.freeze(phaseUnplacedRows[index]!),
       ...(encounter === undefined ? {} : { encounter }),
       key: phase.key,
       label: phase.label,
@@ -169,10 +162,7 @@ function shipWorkbenchPresentation(
         ? {}
         : { notReached: Object.freeze(phaseNotReached[index]!) }),
       ...(phaseWaitsOn === undefined ? {} : { waitsOn: phaseWaitsOn }),
-      optionalRows: Object.freeze(phaseOptionalRows[index]!),
-      ...(index !== roomLocal.phases.length - 1 || roomActions?.objectEntries === undefined
-        ? {}
-        : { objectEntries: roomActions.objectEntries }),
+      ...(index === liveIndex ? { holdsLive: true as const } : {}),
       ...(wheel === undefined ? {} : { wheel }),
     });
   });

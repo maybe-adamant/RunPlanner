@@ -213,10 +213,10 @@ it('marks the next visit’s room picker for an incomplete Hub visit order', asy
   await waitFor(() => expect(document.activeElement).toBe(picker));
 });
 
-it('marks Restore on an Anomaly its source cannot produce', async () => {
+it('marks the live chip of a required contact an Anomaly source still owes', async () => {
   const view = renderWorkspace(artemisSourceAnomalyProject(), 'Underworld', 'G');
-  const door = await openFirstFinding(view);
-  expect(paintedFindings()).toEqual([within(door).getByRole('button', { name: /^Restore / })]);
+  const chip = await openFirstFinding(view);
+  expect(paintedFindings()).toEqual([within(chip).getByRole('button', { name: 'Artemis' })]);
 });
 
 it('renders a Fields cage with an ordering issue as a movable row', async () => {

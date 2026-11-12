@@ -56,11 +56,7 @@ import type {
 } from '../contracts/timeline';
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
-import {
-  occurrenceActionAddGroup,
-  occurrenceActionLabel,
-  occurrenceActionLabelParts,
-} from './occurrence-action-label';
+import { occurrenceActionLabel, occurrenceActionLabelParts } from './occurrence-action-label';
 import { assembleFeatureRerollSlots } from './feature-roll-assembly';
 import {
   projectRoomLifecycleTimeline,
@@ -587,7 +583,6 @@ function roomActionsForOccurrence(
         address,
         key: row.key,
         label: labelParts.label,
-        addGroup: occurrenceActionAddGroup(input.catalog, row.reference, roomLocal, sourceFamily),
         ...(sourceFamily === undefined ? {} : { sourceFamily }),
         ...(challengeSwitchKind === undefined ? {} : { challengeSwitchKind }),
         ...(labelParts.slot === undefined ? {} : { slot: labelParts.slot }),
@@ -706,12 +701,6 @@ function roomActionsForOccurrence(
         Object.freeze({
           address: actionAddress,
           key: roomActionKey(reference),
-          addGroup: occurrenceActionAddGroup(
-            input.catalog,
-            reference,
-            roomLocal,
-            capability.sourceFamily,
-          ),
           label: occurrenceActionLabel(
             input.catalog,
             reference,
@@ -784,12 +773,6 @@ function roomActionsForOccurrence(
         Object.freeze({
           address: actionAddress,
           key: roomActionKey(reference),
-          addGroup: occurrenceActionAddGroup(
-            input.catalog,
-            reference,
-            roomLocal,
-            capability.sourceFamily,
-          ),
           label: labelParts.label,
           // Its one reward type names and shows the drop before it is placed.
           ...(labelParts.name === undefined
@@ -845,12 +828,6 @@ function roomActionsForOccurrence(
             Object.freeze({
               address: actionAddress,
               key: roomActionKey(reference),
-              addGroup: occurrenceActionAddGroup(
-                input.catalog,
-                reference,
-                roomLocal,
-                goldCapability.sourceFamily,
-              ),
               label: occurrenceActionLabel(
                 input.catalog,
                 reference,
@@ -914,29 +891,8 @@ function roomActionsForOccurrence(
         : [projected];
     }),
   );
-  const unplacedOptionalRows = Object.freeze([
-    ...unrankedOrStaleRows.filter(
-      (row) =>
-        row.rank === null &&
-        !row.stale &&
-        row.participation === 'optional' &&
-        !row.participationOwnedByOverview &&
-        !addedFromEntry(row),
-    ),
-    ...clockedTraitPickupRows,
-    ...goldPickupRows.filter((row) => row.participation === 'optional'),
-  ]);
-  const optionalKeys = new Set(unplacedOptionalRows.map((row) => row.key));
-  const repairRows = Object.freeze([
-    ...unrankedOrStaleRows.filter(
-      (row) =>
-        !optionalKeys.has(row.key) &&
-        (row.stale ||
-          (!row.participationOwnedByOverview && !(row.rank === null && addedFromEntry(row)))),
-    ),
-    ...dueShrineRows,
-    ...goldPickupRows.filter((row) => row.participation === 'required'),
-  ]);
+  // Unplaced rows are live things now; only stale rows stand outside the order.
+  const repairRows = Object.freeze(unrankedOrStaleRows.filter((row) => row.stale));
   // The engine places each published outcome at its landing; this room keeps only its own.
   const steadyGrowthOutcomes = input.steadyGrowthOutcomes ?? [];
   const transcendentEmbryoOutcomes = input.transcendentEmbryoOutcomes ?? [];
@@ -1037,28 +993,7 @@ function roomActionsForOccurrence(
     input.spawnedLoot,
     projectedTimeline.entries,
     allProjectedRows,
-    proposals,
     roomLocal,
-  );
-  // Spawned loot is placed from its spawn row, where that row is shown.
-  const shownRowKeys = new Set(
-    spawned.entries.flatMap((entry) =>
-      entry.kind === 'action' && entry.presentation === 'row' ? [entry.actionKey] : [],
-    ),
-  );
-  const spawnPlacedKeys = new Set([
-    ...[
-      ...spawned.entries.flatMap((entry) => (entry.kind === 'spawned' ? entry.groups : [])),
-      ...spawned.actionSpawns.flatMap((spawn) =>
-        shownRowKeys.has(spawn.sourceActionKey) ? spawn.groups : [],
-      ),
-    ].flatMap((group) => group.items.map((item) => item.actionKey)),
-    ...spawned.copies.flatMap((copy) =>
-      shownRowKeys.has(copy.sourceActionKey) ? [copy.item.actionKey] : [],
-    ),
-  ]);
-  const optionalRows = Object.freeze(
-    unplacedOptionalRows.filter((row) => !spawnPlacedKeys.has(row.key)),
   );
   // The Timeline ends where the room's walk stops; what spawns past it is not yet shown.
   const stop = splitAtRoomStop(spawned.entries, lifecycleTimeline.entries, input);
@@ -1075,7 +1010,6 @@ function roomActionsForOccurrence(
     ...(spawned.copies.length === 0 ? {} : { spawnCopies: spawned.copies }),
     interactionKey: semanticAddressKey(owner),
     owner,
-    optionalRows,
     proposals: Object.freeze(proposals),
     repairRows,
     rows: allProjectedRows,
@@ -1313,24 +1247,6 @@ export function goldBalanceLabel(moments: GoldMoments): WorkspaceGoldAmount {
 }
 
 type PurchaseRowProducts = Pick<WorkspaceRoomActionRow, 'travelDealLine' | 'purchaseRemoval'>;
-
-/** An action added from a room object's Timeline entry rather than the optional actions. */
-function addedFromEntry({
-  reference,
-  sourceFamily,
-}: Pick<WorkspaceRoomActionRow, 'reference' | 'sourceFamily'>): boolean {
-  return (
-    reference.kind === 'purchaseStygianWellOffer' ||
-    reference.kind === 'sellPurgingPoolTrait' ||
-    reference.kind === 'rerollStygianWell' ||
-    reference.kind === 'rerollPurgingPool' ||
-    reference.kind === 'interactShopOffer' ||
-    reference.kind === 'interactInfernalContractPedestal' ||
-    reference.kind === 'purchaseHermesShrineOffer' ||
-    reference.kind === 'rushHermesShrineOffer' ||
-    sourceFamily?.kind === 'shopTravelDealRefill'
-  );
-}
 
 /**
  * Purchase and collect rows: the Travel Deal line under the purchase the engine

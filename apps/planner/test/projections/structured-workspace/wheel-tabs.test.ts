@@ -10,7 +10,6 @@ import {
   createRewardWheelOfferAddress,
   semanticAddressKey,
   type ProjectDocument,
-  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -294,34 +293,5 @@ describe('ship wheels on the Timeline of the phase before their combat', () => {
       'select wheel',
     ]);
     expect(sequenceOf('Combat2')).not.toContain('wheelsOpen');
-  });
-  it('keeps an unplaced delivery on the tab of the fight whose end matures it', () => {
-    const shipNode = (project: ProjectDocument) => {
-      const node = requireWorkspaceBiome(
-        projectStructuredWorkspaceFixture(project).workspace,
-        'O',
-      ).nodes.find(
-        (candidate) =>
-          candidate.kind === 'occurrenceWorkbench' &&
-          candidate.room.occurrenceId === oOccurrenceIds.combat02,
-      );
-      if (node?.kind !== 'occurrenceWorkbench' || node.room.workbench.kind !== 'ship')
-        throw new Error('the ship room is not projected');
-      return { room: node.room, phases: node.room.workbench.phases };
-    };
-    const isDelivery = (row: { readonly reference: RoomActionReference }) =>
-      row.reference.kind === 'interactAcquisitionEntry' &&
-      row.reference.siteKey === 'hermesShrineDelivery';
-    const placed = authorLegalTraitOffers(
-      placeDueHermesShrineDeliveries(threePhaseDeliveryProject()),
-    );
-    const delivery = shipNode(placed).room.roomActions!.rows.find(isDelivery)!;
-    const { phases } = shipNode(
-      applyProjectCommand(placed, catalog, {
-        kind: 'UnplaceGeneratedDelivery',
-        action: delivery.address,
-      }),
-    );
-    expect(phases.map((phase) => phase.unplacedRows.filter(isDelivery).length)).toEqual([0, 1, 0]);
   });
 });

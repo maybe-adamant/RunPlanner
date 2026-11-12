@@ -75,7 +75,7 @@ const grouped = (groups: readonly WorkspaceSpawnGroup[]) =>
 const items = (groups: readonly WorkspaceSpawnGroup[]) => groups.flatMap((group) => group.items);
 
 const placement = (item: WorkspaceSpawnedItem) =>
-  `${item.participation} ${item.placement.kind}${item.place === undefined ? '' : ` ${item.place.badge}`}`;
+  `${item.participation} ${item.placed ? 'placed' : 'unplaced'}${item.place === undefined ? '' : ` ${item.place.badge}`}`;
 
 function notice(entries: readonly WorkspaceRoomLifecycleTimelineEntry[], key: string) {
   const found = entries.find(
@@ -119,26 +119,8 @@ describe('spawn notices', () => {
     )!;
     expect(items(spawned.groups)[0]).toMatchObject({
       actionKey: reward.key,
-      placement: { kind: 'placed', owner: reward.address },
+      placed: true,
     });
-    const drop = items(spawned.groups)[3]!;
-    if (drop.placement.kind !== 'unplaced') throw new Error('the second drop is placed');
-    expect(drop.placement.intent.command.kind).toBe('PlaceClockedTraitPickup');
-    // The engine says its Pom Slice asks for its Pom once placed.
-    expect(drop.hint).toBe('Pick up Pom Slice — choose its Pom');
-  });
-
-  it('places spawned optional loot from its spawn row, not the Optional actions', () => {
-    const room = roomOf(
-      loadSurfaceScheduledLifecycleCheckpoint(),
-      'P',
-      createOccurrenceId('surface-p-1-1-p_combat03'),
-    );
-    const actions = room.roomActions!;
-    const drop = items(notice(actions.timeline.entries, 'encounterEnd:Combat').groups)[3]!;
-    expect(drop.placement.kind).toBe('unplaced');
-    expect(actions.rows.find((row) => row.key === drop.actionKey)?.rank).toBeNull();
-    expect(actions.optionalRows.map((row) => row.key)).not.toContain(drop.actionKey);
   });
 
   it('notifies an O combat phase at its end and again after its wheel reward', () => {
@@ -176,12 +158,6 @@ describe('spawn notices', () => {
       'optional unplaced O1',
       'optional unplaced O2',
     ]);
-    // Its optional rewards are placed from their chips alone.
-    const optionalKeys = room.roomActions!.optionalRows.map((row) => row.key);
-    for (const item of spawned.filter((candidate) => candidate.participation === 'optional')) {
-      expect(item.placement.kind).toBe('unplaced');
-      expect(optionalKeys).not.toContain(item.actionKey);
-    }
   });
 
   it('lists Quick Buck’s gold under the reward pickup that grants it', () => {
@@ -301,7 +277,7 @@ describe('converted and copied loot', () => {
     const replacement = actions.rows.find((row) => row.sourceFamily?.kind === 'artificer')!;
     expect(items(spawn!.groups)[0]).toMatchObject({
       actionKey: replacement.key,
-      placement: { kind: 'placed', owner: replacement.address },
+      placed: true,
     });
   });
 
@@ -315,7 +291,7 @@ describe('converted and copied loot', () => {
         source: expect.objectContaining({ name: 'Sea Star' }),
         item: expect.objectContaining({
           actionKey: copy.key,
-          placement: { kind: 'placed', owner: copy.address },
+          placed: true,
         }),
       }),
     ]);
@@ -341,23 +317,6 @@ describe('converted and copied loot', () => {
     expect(items(spawn!.groups).map(placement)).toEqual(['optional placed']);
   });
 
-  it('places a rushed item left behind from its spawn row; the Add area keeps only objects', () => {
-    const room = galleryRoom('optional-actions-rush-unplaced', 'O', 'surface-o-combat02');
-    const actions = room.roomActions!;
-    const pickup = actions.rows.find((row) => row.sourceFamily?.kind === 'hermesShrineDelivery')!;
-    expect(pickup.rank).toBeNull();
-    const rush = actions.rows.find((row) => row.reference.kind === 'rushHermesShrineOffer')!;
-    const spawn = actions.actionSpawns!.find((entry) => entry.sourceActionKey === rush.key)!;
-    const item = items(spawn.groups)[0]!;
-    expect(item.actionKey).toBe(pickup.key);
-    if (item.placement.kind !== 'unplaced') throw new Error('the rushed item is placed');
-    expect(item.placement.intent.command.kind).toBe('InsertRoomAction');
-    // Beside the Shrine and switch objects, only the switch's use remains to add.
-    expect(actions.optionalRows.map((row) => row.reference.kind)).toEqual([
-      'interactChallengeSwitch',
-    ]);
-  });
-
   it('leaves the World Shop’s Travel Deal refill a World Shop purchase', () => {
     const actions = galleryRoom(
       'world-shop-travel-deal',
@@ -365,8 +324,7 @@ describe('converted and copied loot', () => {
       'golden-f-preboss-shop',
     ).roomActions!;
     const refill = actions.rows.find((row) => row.sourceFamily?.kind === 'shopTravelDealRefill')!;
-    expect(refill.addGroup).toMatchObject({ object: 'worldShop' });
+    expect(refill.sourceFamily?.kind).toBe('shopTravelDealRefill');
     expect(actions.actionSpawns ?? []).toEqual([]);
-    expect(actions.optionalRows).toEqual([]);
   });
 });

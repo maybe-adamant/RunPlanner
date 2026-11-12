@@ -40,7 +40,8 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { workspaceProjection } from '../support/biome-workbench';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
-import { slotRow, timelineRow } from '@planner-test/support/timeline-rows';
+import { takeLive } from '@planner-test/support/live-row';
+import { queryTimelineRow, slotRow, timelineRow } from '@planner-test/support/timeline-rows';
 
 afterEach(cleanup);
 
@@ -76,7 +77,6 @@ it('preserves scheduled timed choices through an equivalent room picker edit and
   expect(history.past).toHaveLength(1);
   act(() => application.store.dispatch(semanticOwnerNavigated(owner)));
   await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-  expect(screen.queryByRole('button', { name: 'Restore delivery' })).toBeNull();
   // The delivery keeps its timeline row; its origin is the row's hint.
   const delivery = document.querySelector<HTMLElement>(
     '[data-room-action-key*="hermesShrineDelivery"]',
@@ -122,9 +122,8 @@ it('leaves a purchased Hermes delivery live at its host until it is placed, then
     );
   expect(placement).toBeDefined();
   act(() => application.store.dispatch(semanticOwnerNavigated(placement!.origin)));
-  const unplaced = timelineRow('Collect Max Magick');
-  expect(within(unplaced).queryByRole('button', { name: /Reorder Collect Max Magick/ })).toBeNull();
-  await view.user.click(within(unplaced).getByRole('button', { name: 'Restore delivery' }));
+  expect(queryTimelineRow('Collect Max Magick')).toBeNull();
+  await takeLive(view.user, 'Max Magick', 'Pick up');
   expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(2);
   const host = application.store
     .getState()
@@ -142,7 +141,6 @@ it('leaves a purchased Hermes delivery live at its host until it is placed, then
   );
   const row = timelineRow('Collect Max Magick');
   expect(within(row).getByRole('button', { name: /Reorder Collect Max Magick/ })).toBeTruthy();
-  expect(within(row).queryByRole('button', { name: 'Restore delivery' })).toBeNull();
   await view.user.click(screen.getByRole('button', { name: 'Undo' }));
   await view.user.click(screen.getByRole('button', { name: 'Undo' }));
   expect(application.store.getState().projectWorkspace.history!.present).toBe(project);

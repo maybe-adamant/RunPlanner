@@ -6,12 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createBiomeAddress,
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
-  createOccurrenceId,
-  createRoomActionAddress,
-  roomActionKey,
   type AuthoredNemesisRandomEventOutcome,
 } from '@run-planner/engine/authored-project';
 import type { WorkspaceOccurrenceWorkbenchNode } from '@planner/projections/structured-workspace';
@@ -36,6 +32,7 @@ import {
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { renderOccurrenceWorkbench, workspaceBiome } from '@planner-test/support/biome-workbench';
+import { takeLive } from '@planner-test/support/live-row';
 import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
 
 afterEach(cleanup);
@@ -75,23 +72,6 @@ describe('spawn notice items', () => {
     expect(document.activeElement?.getAttribute('data-room-action-key')).toBe(reward.key);
   });
 
-  it('places an unplaced optional item in one edit', async () => {
-    const view = render();
-    const unplaced = () =>
-      roomActions(view).rows.filter(
-        (row) => row.rank === null && row.sourceFamily?.kind === 'trait' && !row.stale,
-      );
-    expect(unplaced()).toHaveLength(1);
-    const drop = spawnedItems().at(-1)!;
-    expect(drop.hasAttribute('data-spawn-placed')).toBe(false);
-    await view.user.click(drop);
-    await waitFor(() => expect(unplaced()).toHaveLength(0));
-    expect(spawnedItems().at(-1)!.hasAttribute('data-spawn-placed')).toBe(true);
-    expect(
-      drop.closest('[data-spawned-loot]')?.querySelector('[aria-live="polite"]')?.textContent,
-    ).toMatch(/added to the timeline\.$/);
-  });
-
   it('opens a placed Pom Slice’s Pom choice at once', async () => {
     const view = render();
     expect(
@@ -99,19 +79,12 @@ describe('spawn notice items', () => {
         name: 'Supply Chain',
       }),
     ).toBeTruthy();
-    await view.user.click(spawnedItems().at(-1)!);
+    await takeLive(view.user, /^Pom Slice/, 'Pick up');
     await waitFor(() =>
       expect(view.application.store.getState().editorSession.levelResolutionDialogTarget).toEqual(
         expect.objectContaining({ kind: 'levelResolution' }),
       ),
     );
-  });
-
-  it('leaves spawned pickups out of the Optional actions', () => {
-    render();
-    const optional = screen.getByRole('region', { name: 'Optional actions' });
-    expect(within(optional).queryByRole('button', { name: /Supply Chain/ })).toBeNull();
-    expect(within(optional).getByText('Nothing optional to add here')).toBeTruthy();
   });
 });
 
@@ -143,41 +116,6 @@ describe('converted and copied loot', () => {
     expect(controls.at(-1)!.getAttribute('aria-label')).toMatch(/^Sea Star copy of \S/);
     await view.user.click(within(originalRow).getByRole('button', { name: /^Sea Star copy of / }));
     expect(document.activeElement?.getAttribute('data-room-action-key')).toBe(copy.key);
-  });
-
-  it('places a rushed Shrine item left behind from the spawn row under its purchase', async () => {
-    const postboss = 'surface-n-preboss:postboss';
-    const checkpoint = loadSurfaceShrineTravelDealCheckpoint();
-    const pickup = checkpoint.route.biomes
-      .find((biome) => biome.biomeKey === 'N')!
-      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === postboss)!
-      .roomActions.order.find(
-        (reference) =>
-          reference.kind === 'interactAcquisitionEntry' &&
-          reference.siteKey === 'hermesShrineDelivery',
-      )!;
-    const project = applyProjectCommand(checkpoint, catalog, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(
-        createBiomeAddress('Surface', 'N'),
-        createOccurrenceId(postboss),
-        roomActionKey(pickup),
-      ),
-    });
-    const view = renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(postboss));
-    openRoomTab('Room Timeline');
-    const optional = screen.getByRole('region', { name: 'Optional actions' });
-    expect(within(optional).queryByRole('button', { name: /Big Heal/ })).toBeNull();
-    const chip = within(screen.getByRole('listitem', { name: 'Spawned' })).getByRole('button', {
-      name: 'Big Heal',
-    });
-    expect(chip.hasAttribute('data-spawn-placed')).toBe(false);
-    await view.user.click(chip);
-    await waitFor(() =>
-      expect(
-        document.querySelector(`[data-room-action-key="${CSS.escape(roomActionKey(pickup))}"]`),
-      ).not.toBeNull(),
-    );
   });
 });
 
@@ -264,10 +202,12 @@ describe('Nemesis results', () => {
     );
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(room));
     openRoomTab('Room Timeline');
-    return [...document.querySelectorAll<HTMLElement>('[data-spawned-loot] button')].map((chip) => [
-      chip.querySelector('img:not(.corner-badge)')?.getAttribute('src'),
-      sourceBadge(chip),
-    ]);
+    return [...document.querySelectorAll<HTMLElement>('[data-spawned-loot] .timeline-chip')].map(
+      (chip) => [
+        chip.querySelector('img:not(.corner-badge)')?.getAttribute('src'),
+        sourceBadge(chip),
+      ],
+    );
   }
 
   const nemesis = pickupSourceBadgeIcon({ kind: 'nemesisEvent' });
@@ -355,7 +295,7 @@ describe('locked loot', () => {
   const spawnRows = (kind: 'moment' | 'unlocks') => [
     ...document.querySelectorAll<HTMLElement>(`[data-spawned-loot="${kind}"]`),
   ];
-  const chips = (row: HTMLElement) => within(row).getAllByRole('button');
+  const chips = (row: HTMLElement) => [...row.querySelectorAll<HTMLElement>('.timeline-chip')];
   // A locked chip says so in its name; the lock badge itself is only drawn.
   const chipLocks = (row: HTMLElement) =>
     chips(row).map((chip) => chip.getAttribute('aria-label')?.endsWith(', locked') ?? false);

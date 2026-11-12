@@ -466,7 +466,7 @@ describe('a room whose walk stops in it', () => {
   });
 
   it('ends before the doors open while a required pickup is not placed', () => {
-    const timeline = galleryTimeline('required-unplaced', 'golden-f-b1-e1');
+    const timeline = galleryTimeline('live-row-required', 'golden-f-b1-e1');
     expect(shape(timeline.entries)).toEqual(['roomEntered', 'encounterStarted', 'encounterEnd']);
     expect(timeline.notReached).toEqual([]);
     expect(timeline.doorsWait).toBe(true);

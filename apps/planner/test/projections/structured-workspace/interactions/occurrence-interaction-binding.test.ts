@@ -198,7 +198,7 @@ describe('structured workspace interaction binding', () => {
     expect(assembly.preliminaryFocusDestinations.has(semanticAddressKey(combat2))).toBe(true);
   });
 
-  it('binds Ship-wheel values and Shop actions from occurrence requirements', () => {
+  it('binds Ship-wheel values and Shop room actions from occurrence requirements', () => {
     const surface = loadSurfaceNOPQProject();
     const ship = bind(surface, 'Surface', 'O').interactions;
     const enteredShop = enteredShopProject();
@@ -229,11 +229,5 @@ describe('structured workspace interaction binding', () => {
     expect(shop.roomActions.get(semanticAddressKey(shopOwner))).toMatchObject({
       owner: shopOwner,
     });
-    // The Shop's entry binds even while its room's actions are unreached.
-    const entry = shop.roomObjectEntries.get(
-      `roomObject:worldShop:${semanticAddressKey(shopOwner)}`,
-    );
-    expect(entry).toMatchObject({ owner: shopOwner });
-    expect(() => entry?.intentFor('buy:MajorNonBoon')).toThrow(/is not an option/);
   });
 });

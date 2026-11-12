@@ -115,7 +115,7 @@ describe('challenge switch rows on the room Overview', () => {
     await addSwitch(user, 'Infernal Trove');
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
 
-    await pickRoomObjectAction(user, 'Infernal Trove', 'Use Infernal Trove');
+    await pickRoomObjectAction(user, 'Infernal Trove', 'Press Infernal Trove');
     expect(
       hostRoom(application).roomActions.order.some(
         (reference) => reference.kind === 'interactChallengeSwitch',
@@ -129,7 +129,7 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     await addSwitch(user, 'Unseen Sigil');
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await pickRoomObjectAction(user, 'Unseen Sigil', 'Use Unseen Sigil');
+    await pickRoomObjectAction(user, 'Unseen Sigil', 'Press Unseen Sigil');
 
     await user.click(screen.getByRole('button', { name: 'Switch outcome: succeed' }));
     await user.click(screen.getByRole('option', { name: 'succeed with Nectar' }));

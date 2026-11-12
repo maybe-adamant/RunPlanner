@@ -27,13 +27,14 @@ describe('occurrence room workbench', () => {
     result = assemble(project, 'Surface', 'O', oOccurrenceIds.combat04);
     const workbench = result.assembly.node.room.workbench;
     if (workbench.kind !== 'ship') throw new Error('Missing Ship');
-    const due = workbench.phases
-      .find((phase) => phase.key === 'Combat1')
-      ?.unplacedRows.find((row) => row.key === delivery.key);
+    const due = workbench.roomActions?.rows.find(
+      (row) => row.key === delivery.key && row.rank === null,
+    );
     if (due?.placement === undefined) throw new Error('Missing phase-local delivery placement');
     expect(workbench.repairRows.map((row) => row.key)).not.toContain(due.key);
+    // Due before the Intro's wheel choice, it is taken from the live row on the Intro tab.
     expect(result.markers.destinations().get(due.marker.focusKey)?.roomTab).toBe(
-      'shipCombat1Actions',
+      'shipIntroActions',
     );
     project = applyProjectCommand(project, catalog, due.placement.command);
     result = assemble(project, 'Surface', 'O', oOccurrenceIds.combat04);

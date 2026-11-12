@@ -10,7 +10,6 @@ import type { WorkspaceRoomLocal } from '../contracts/locals';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import type {
   WorkspaceActionSpawn,
-  WorkspaceRoomActionProposal,
   WorkspaceRoomActionRow,
   WorkspaceRoomLifecycleTimelineEntry,
   WorkspaceSpawnGroup,
@@ -21,8 +20,6 @@ import type {
 
 type TimelineEntry = WorkspaceRoomLifecycleTimelineEntry;
 type SpawnedEntry = Extract<TimelineEntry, { readonly kind: 'spawned' }>;
-
-const NO_POSITION = 'No position to add this action.';
 
 /** The name a spawned item's chip carries: its row's name, else its whole label. */
 function itemLabel(row: WorkspaceRoomActionRow | undefined): string {
@@ -46,78 +43,25 @@ function fieldsPlace(
     : Object.freeze({ badge: local.badge, label: local.label });
 }
 
-/** The choice an item's pickup asks for, as the engine publishes it, named in its hint. */
-function pickupChoice(item: SpawnedLootItem): string | undefined {
-  switch (item.needsChoice) {
-    case 'levelResolution':
-      return 'Pom';
-    case undefined:
-      return undefined;
-  }
-}
-
-function itemHint(
-  item: SpawnedLootItem,
-  name: string,
-  placement: WorkspaceSpawnedItem['placement'],
-): string {
-  switch (placement.kind) {
-    case 'placed':
-      return `Go to ${name}`;
-    case 'unavailable':
-      return `${name}: ${placement.reason}`;
-    case 'unplaced': {
-      if (item.participation === 'required')
-        return item.source.kind === 'generated' &&
-          item.source.family.kind === 'hermesShrineDelivery'
-          ? 'Collect the delivery'
-          : `Collect ${name}`;
-      const choice = pickupChoice(item);
-      return choice === undefined ? `Pick up ${name}` : `Pick up ${name} — choose its ${choice}`;
-    }
-  }
-}
-
 function projectItem(
   item: SpawnedLootItem,
   rowByKey: ReadonlyMap<string, WorkspaceRoomActionRow>,
-  proposals: readonly WorkspaceRoomActionProposal[],
   roomLocal: WorkspaceRoomLocal,
   unlocked: boolean,
 ): WorkspaceSpawnedItem {
   const actionKey = roomActionKey(item.reference);
   const row = rowByKey.get(actionKey);
   const place = fieldsPlace(roomLocal, item);
-  const placement: WorkspaceSpawnedItem['placement'] =
-    item.placement.kind === 'placed'
-      ? Object.freeze({ kind: 'placed' as const, owner: row?.address ?? item.placement.action })
-      : item.placement.command !== undefined
-        ? Object.freeze({
-            kind: 'unplaced' as const,
-            intent: Object.freeze({ command: item.placement.command }),
-          })
-        : Object.freeze({
-            kind: 'unavailable' as const,
-            // The engine's own placement explanation, where its insertion has one.
-            reason:
-              proposals.find(
-                (proposal) =>
-                  proposal.kind === 'insert' &&
-                  roomActionKey(proposal.reference) === actionKey &&
-                  proposal.explanations.length > 0,
-              )?.explanations[0] ?? NO_POSITION,
-          });
   const label = itemLabel(row);
   return Object.freeze({
     key: semanticAddressKey(item.owner),
     actionKey,
     label,
     ...(item.reward === undefined ? {} : { reward: item.reward }),
-    hint: itemHint(item, place === undefined ? label : `${label} · ${place.label}`, placement),
     participation: item.participation,
     ...(place === undefined ? {} : { place }),
     ...(item.lockedUntil === undefined || unlocked ? {} : { locked: true as const }),
-    placement,
+    placed: item.placement.kind === 'placed',
   });
 }
 
@@ -268,7 +212,6 @@ export function projectSpawnedLoot(
   loot: RoomSpawnedLoot | undefined,
   entries: readonly TimelineEntry[],
   rows: readonly WorkspaceRoomActionRow[],
-  proposals: readonly WorkspaceRoomActionProposal[],
   roomLocal: WorkspaceRoomLocal,
 ): {
   readonly entries: readonly TimelineEntry[];
@@ -278,10 +221,9 @@ export function projectSpawnedLoot(
   if (loot === undefined)
     return { entries, actionSpawns: Object.freeze([]), copies: Object.freeze([]) };
   const rowByKey = new Map(rows.map((row) => [row.key, row]));
-  const item = (spawned: SpawnedLootItem) =>
-    projectItem(spawned, rowByKey, proposals, roomLocal, false);
+  const item = (spawned: SpawnedLootItem) => projectItem(spawned, rowByKey, roomLocal, false);
   const unlockedItem = (spawned: SpawnedLootItem) =>
-    projectItem(spawned, rowByKey, proposals, roomLocal, true);
+    projectItem(spawned, rowByKey, roomLocal, true);
   const unlockNotice = (unlock: SpawnUnlock): SpawnedEntry =>
     Object.freeze({
       kind: 'spawned' as const,

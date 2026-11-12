@@ -232,20 +232,31 @@ function OpenedCase({
       window.clearTimeout(stop);
     };
   }, [entry, view]);
-  // A case showing an Optional actions list opens its picker once it is enabled, as a user would.
+  // A case showing a live thing's verbs opens its chip's list, then a verb's values, as a user would.
   const pickerOpened = useRef(false);
   useEffect(() => {
     if (view !== 'timeline' || pickersClosed || entry.openPicker === undefined) return;
     const name = entry.openPicker;
+    const verb = entry.openVerb;
+    let verbOpened = verb === undefined;
     const timer = window.setInterval(() => {
-      const trigger = frame.current?.querySelector<HTMLButtonElement>(
-        `.room-add button[aria-label="${CSS.escape(name)}"]`,
-      );
-      if (pickerOpened.current || trigger === null || trigger === undefined || trigger.disabled)
+      if (!pickerOpened.current) {
+        const trigger = frame.current?.querySelector<HTMLButtonElement>(
+          `.timeline-live-row button[aria-label="${CSS.escape(name)}"]`,
+        );
+        if (trigger === null || trigger === undefined) return;
+        pickerOpened.current = true;
+        trigger.click();
+        if (verbOpened) window.clearInterval(timer);
         return;
-      pickerOpened.current = true;
+      }
+      const item = [...document.querySelectorAll<HTMLElement>('[cmdk-item]')].find((candidate) =>
+        candidate.textContent?.startsWith(verb ?? ''),
+      );
+      if (verbOpened || item === undefined) return;
+      verbOpened = true;
       window.clearInterval(timer);
-      trigger.click();
+      item.click();
     }, 50);
     const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
     return () => {

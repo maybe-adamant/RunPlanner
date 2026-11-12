@@ -33,6 +33,14 @@ function room(
   return node.room;
 }
 
+/** The live row's press of the room's one locked door. */
+function unlockPress(summary: WorkspaceOccurrenceWorkbenchNode['room']) {
+  const verb = summary.roomActions?.live?.items.find((item) => item.object === 'lockedDoors')
+    ?.verbs[0];
+  if (verb?.action.kind !== 'apply') throw new Error('no live unlock');
+  return verb.action.intent.commands[0]!;
+}
+
 const entryAfterAction = (summary: WorkspaceOccurrenceWorkbenchNode['room'], actionKey: string) => {
   const entries = summary.roomActions!.timeline.entries;
   return entries[
@@ -89,20 +97,18 @@ describe('locked doors in the structured workspace', () => {
       kind: 'ReplaceLockedExitCustomization',
       exitKey: 'exit2',
     });
-    expect(lockedDoors.unlocks?.options).toEqual([{ exitKey: 'exit2', label: 'Unlock Door 2' }]);
-    // The press is the Doors object's, never a generic Add action.
-    const press = lockedWorkspace.interactions.roomObjectEntries
-      .get(lockedDoors.unlocks!.interactionKey)!
-      .intentFor('exit2');
-    expect(press.command).toMatchObject({
+    const press = unlockPress(room(lockedWorkspace));
+    expect(press).toMatchObject({
       kind: 'InsertRoomAction',
       reference: { kind: 'unlockExit', exitKey: 'exit2' },
     });
-    const pressed = apply(locked, press.command);
+    const pressed = apply(locked, press);
     const { workspace } = projectStructuredWorkspaceFixture(pressed);
     const summary = room(workspace);
     expect(summary.lockedDoors?.lockedAtLeave).toEqual([]);
-    expect(summary.lockedDoors?.unlocks?.options).toEqual([]);
+    expect(summary.roomActions?.live?.items.some((item) => item.object === 'lockedDoors')).toBe(
+      false,
+    );
     expect(summary.lockedDoors?.doors[0]?.fight).toBeUndefined();
     const row = summary.roomActions!.rows.find((candidate) => candidate.label === 'Unlock Door 2');
     expect(row?.unlockExitEncounter).toMatchObject({
@@ -133,11 +139,7 @@ describe('locked doors in the structured workspace', () => {
       locked: true,
     });
     const lockedWorkspace = projectStructuredWorkspaceFixture(locked).workspace;
-    const unlocks = room(lockedWorkspace).lockedDoors!.unlocks!;
-    const press = lockedWorkspace.interactions.roomObjectEntries
-      .get(unlocks.interactionKey)!
-      .intentFor('exit2');
-    const pressed = apply(locked, press.command);
+    const pressed = apply(locked, unlockPress(room(lockedWorkspace)));
     const summary = room(projectStructuredWorkspaceFixture(pressed).workspace);
     const row = summary.roomActions!.rows.find((candidate) => candidate.label === 'Unlock Door 2');
     // Begun and started merge into one Encounter marker; its end follows with no Combat.

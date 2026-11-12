@@ -14,8 +14,6 @@ import {
   projectStructuredWorkspaceFixture,
   requireWorkspaceBiome,
 } from '@planner-test/fixtures/structuredWorkspace';
-import type { WorkspaceRoomFeature } from '@planner/projections/structured-workspace';
-import { withItemContent } from '@run-planner/test-fixtures/shared';
 
 const f = createBiomeAddress('Underworld', 'F');
 const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
@@ -61,27 +59,6 @@ function postboss(projected: Projected) {
   throw new Error('F has no projected Postboss');
 }
 
-/** One feature's entry above the optional actions of the Postboss timeline. */
-function entryOf(projected: Projected, feature: 'stygianWell' | 'purgingPool') {
-  const node = postboss(projected);
-  const actions = node.room.roomActions?.featureRolls?.find((entry) => entry.feature === feature);
-  if (actions === undefined) throw new Error(`the Postboss has no ${feature} entry`);
-  const interaction = projected.workspace.interactions.featureRollActions.get(
-    actions.interactionKey,
-  );
-  if (interaction === undefined) throw new Error(`the ${feature} entry is unbound`);
-  return { node, actions, interaction };
-}
-
-function wellOf(projected: Projected) {
-  const entry = entryOf(projected, 'stygianWell');
-  const well = entry.node.room.workbench.features.find(
-    (feature): feature is Extract<WorkspaceRoomFeature, { readonly kind: 'stygianWell' }> =>
-      feature.kind === 'stygianWell',
-  )!;
-  return { ...entry, well };
-}
-
 function apply(project: ProjectDocument, command: Parameters<typeof applyProjectCommand>[2]) {
   return applyProjectCommand(project, catalog, command);
 }
@@ -91,101 +68,26 @@ const order = (project: ProjectDocument) =>
     (occurrence) => occurrence.occurrenceId === postbossId,
   )!.roomActions.order;
 
-describe('Stygian Well Interact', () => {
+describe('Stygian Well rerolls', () => {
   const base = withScreenRerolls(
     withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
   );
 
-  it('lists what can be done at the end of the room, each pick appending one action', () => {
-    const projected = projectStructuredWorkspaceFixture(base);
-    const { well, actions, interaction } = wellOf(projected);
-    // The panel shows the initial stock only.
-    expect(well.slots.map((slot) => slot.generationKey)).toEqual([
-      'initial:healing',
-      'initial:secondLeft',
-      'initial:secondRight',
-    ]);
-    expect(actions.options).toEqual([
-      {
-        key: 'buy:initial:healing',
-        kind: 'offer',
-        label: 'Buy Splintered Shield',
-        item: 'ArmorBoostStore',
-      },
-      expect.objectContaining({
-        key: 'reroll',
-        kind: 'reroll',
-        label: 'Reroll Inventory',
-        status: expect.stringMatching(/^· \d+ \(−1\)$/),
-      }),
-    ]);
-    expect(interaction.intentFor('reroll').command).toEqual({
-      kind: 'InsertStygianWellReroll',
-      occurrence: room,
-      index: order(base).length,
-    });
-    expect(interaction.intentFor('buy:initial:healing').command).toEqual({
-      kind: 'SetStygianWellPurchase',
-      occurrence: room,
-      generationKey: 'initial:healing',
-      purchased: true,
-    });
-  });
-
-  it('buys a blank initial slot with the item chosen then', () => {
-    const blank = apply(base, {
-      kind: 'ReplaceStygianWellOffer',
-      occurrence: room,
-      slotKey: 'healing',
-      itemKey: null,
-    });
-    const { actions, interaction } = wellOf(projectStructuredWorkspaceFixture(blank));
-    expect(actions.options[0]).toEqual({
-      key: 'buy:initial:healing',
-      kind: 'offer',
-      label: 'Buy Offer 1…',
-      needsChoice: true,
-    });
-    const [itemKey] = interaction
-      .choices('buy:initial:healing')
-      .sections.flatMap((section) => section.items.map((item) => item.value));
-    expect(interaction.choiceIntentFor('buy:initial:healing', itemKey!).command).toEqual({
-      kind: 'SetStygianWellPurchase',
-      occurrence: room,
-      generationKey: 'initial:healing',
-      purchased: true,
-      itemKey,
-    });
-  });
-
-  it('buys an unpinned reroll slot with its item, and pins slots on the reroll row', () => {
+  it('pins slots on the reroll row, and buys a rerolled slot with its item', () => {
     const rerolled = apply(base, {
       kind: 'InsertStygianWellReroll',
       occurrence: room,
       index: order(base).length,
     });
     const projected = projectStructuredWorkspaceFixture(rerolled);
-    const { node, actions, interaction } = wellOf(projected);
-    expect(actions.options).toEqual([
-      { key: 'buy:r1:healing', kind: 'offer', label: 'Buy Offer 1…', needsChoice: true },
-      expect.objectContaining({
-        key: 'reroll',
-        kind: 'reroll',
-        label: 'Reroll Inventory',
-        status: expect.stringMatching(/^· \d+ \(−2\)$/),
-      }),
-    ]);
-    const items = interaction
-      .choices('buy:r1:healing')
-      .sections.flatMap((section) => section.items.map((item) => item.value));
-    expect(items).toContain('HealDropRange');
-    expect(interaction.choiceIntentFor('buy:r1:healing', 'HealDropRange').command).toEqual({
-      kind: 'SetStygianWellPurchase',
+    const node = postboss(projected);
+    const purchase = {
+      kind: 'SetStygianWellPurchase' as const,
       occurrence: room,
-      generationKey: 'r1:healing',
+      generationKey: 'r1:healing' as const,
       purchased: true,
       itemKey: 'HealDropRange',
-    });
+    };
     // The reroll's row pins what it restocks; an unpinned slot stays native.
     const row = node.room.roomActions!.rows.find(
       (candidate) => candidate.reference.kind === 'rerollStygianWell',
@@ -203,17 +105,15 @@ describe('Stygian Well Interact', () => {
       slotKey: 'healing',
       itemKey: 'HealDropRange',
     });
-    const bought = projectStructuredWorkspaceFixture(
-      apply(rerolled, interaction.choiceIntentFor('buy:r1:healing', 'HealDropRange').command),
-    );
-    const purchase = postboss(bought).room.roomActions!.rows.find(
+    const bought = projectStructuredWorkspaceFixture(apply(rerolled, purchase));
+    const purchased = postboss(bought).room.roomActions!.rows.find(
       (candidate) =>
         candidate.reference.kind === 'purchaseStygianWellOffer' &&
         candidate.reference.generationKey === 'r1:healing',
     );
-    expect(purchase?.label).toMatch(/^Buy .+$/);
-    expect(purchase?.roll).toBe(2);
-    expect(purchase?.purchaseRemoval?.command).toEqual({
+    expect(purchased?.label).toMatch(/^Buy .+$/);
+    expect(purchased?.roll).toBe(2);
+    expect(purchased?.purchaseRemoval?.command).toEqual({
       kind: 'SetStygianWellPurchase',
       occurrence: room,
       generationKey: 'r1:healing',
@@ -253,110 +153,5 @@ describe('Stygian Well Interact', () => {
     expect(projected.workspace.findingsByRepairTarget.get(semanticAddressKey(owner))).toEqual([
       expect.objectContaining({ code: 'rollOfferUnavailable' }),
     ]);
-  });
-
-  it('hides the reroll without the card, and locks it once the pool is spent', () => {
-    const plain = withScreenRerolls(
-      withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
-      ['CastCount', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
-    );
-    expect(
-      wellOf(projectStructuredWorkspaceFixture(plain)).actions.options.map((option) => option.kind),
-    ).toEqual(['offer']);
-    // Four rerolls cost 1 + 2 + 3 + 4: the whole pool of 10.
-    let project = base;
-    for (let count = 0; count < 4; count += 1)
-      project = apply(project, {
-        kind: 'InsertStygianWellReroll',
-        occurrence: room,
-        index: order(project).length,
-      });
-    const reroll = wellOf(projectStructuredWorkspaceFixture(project)).actions.options.at(-1);
-    expect(reroll).toMatchObject({
-      kind: 'reroll',
-      label: 'Reroll Inventory',
-      status: expect.stringMatching(/^· \d+ \(−5\)$/),
-      locked: 'poolEmpty',
-    });
-  });
-
-  it('locks the entry once everything is bought and no reroll is offered', () => {
-    const plain = withScreenRerolls(
-      withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
-      ['CastCount', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
-    );
-    const { actions, interaction } = wellOf(projectStructuredWorkspaceFixture(plain));
-    expect(actions.locked).toBeUndefined();
-    const bought = apply(plain, interaction.intentFor(actions.options[0]!.key).command);
-    expect(wellOf(projectStructuredWorkspaceFixture(bought)).actions).toMatchObject({
-      options: [],
-      locked: 'allBought',
-    });
-  });
-});
-
-describe('Pool of Purging Interact', () => {
-  const base = withScreenRerolls(
-    withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
-  );
-
-  const poolOf = (projected: Projected) => entryOf(projected, 'purgingPool');
-
-  it('sells a listed trait, or a rerolled slot with its trait, at the end of the room', () => {
-    const { actions, interaction } = poolOf(projectStructuredWorkspaceFixture(base));
-    const sale = actions.options[0]!;
-    expect(sale).toMatchObject({ kind: 'offer', label: expect.stringMatching(/^Sell /) });
-    expect(interaction.intentFor(sale.key).command).toEqual({
-      kind: 'InsertRoomAction',
-      action: expect.objectContaining({ kind: 'roomAction' }),
-      reference: { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
-      index: order(base).length,
-    });
-    const rerolled = apply(base, interaction.intentFor('reroll').command);
-    const after = poolOf(projectStructuredWorkspaceFixture(rerolled));
-    const unpinned = after.actions.options.find((option) => option.needsChoice === true)!;
-    expect(unpinned.label).toMatch(/^Sell Offer \d…$/);
-    const [traitKey] = after.interaction
-      .choices(unpinned.key)
-      .sections.flatMap((section) => section.items.map((item) => item.value));
-    expect(after.interaction.choiceIntentFor(unpinned.key, traitKey!).command).toMatchObject({
-      kind: 'SellPurgingPoolRollSlot',
-      rollKey: 'r1',
-      traitKey,
-      index: order(rerolled).length,
-    });
-  });
-
-  it('sells a blank slot of the initial list with the trait chosen then', () => {
-    const blank = apply(base, {
-      kind: 'ReplacePurgingPoolSlot',
-      occurrence: room,
-      slotKey: 'left',
-      traitKey: null,
-    });
-    const { actions, interaction } = poolOf(projectStructuredWorkspaceFixture(blank));
-    const sale = actions.options.find((option) => option.key.includes('"left"'))!;
-    expect(sale).toEqual({
-      key: sale.key,
-      kind: 'offer',
-      label: 'Sell Offer 1…',
-      needsChoice: true,
-    });
-    const [traitKey] = interaction
-      .choices(sale.key)
-      .sections.flatMap((section) => section.items.map((item) => item.value));
-    const command = interaction.choiceIntentFor(sale.key, traitKey!).command;
-    expect(command).toEqual({
-      kind: 'SellPurgingPoolRollSlot',
-      occurrence: room,
-      rollKey: 'initial',
-      slotKey: 'left',
-      traitKey,
-      index: order(blank).length,
-    });
-    const sold = apply(blank, command);
-    expect(order(sold).at(-1)).toEqual(
-      withItemContent(sold, room, { kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
-    );
   });
 });

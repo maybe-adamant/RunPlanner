@@ -1,9 +1,8 @@
-import { FeatureRollEntry, FeatureRollSlots } from './commerce/FeatureRollInteract';
+import { FeatureRollSlots } from './commerce/FeatureRollInteract';
 import { StopNotice } from './StopNotice';
 import { ArtworkChip } from '../rewards/TimelineChip';
 import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { EncounterOutcomeChoice } from '@run-planner/engine/simulation';
-import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -20,7 +19,6 @@ import {
   findingRevealEvent,
   useFindingAnchor,
   useFindingMark,
-  type FindingMarkProps,
 } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 export { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
@@ -30,6 +28,7 @@ import { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
 import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 import { TimelineRow } from './TimelineRow';
+import { LiveRow } from './LiveActions';
 import { TimelineMapStageContext, type TimelineMapStage } from './timelineMapStage';
 import { RowRewardName } from './RowRewardName';
 import { RowNpcName } from './RowNpcName';
@@ -41,32 +40,24 @@ import {
   RoomActionInlineReward,
   RoomActionVerb,
 } from './RoomActionInlineEditors';
-import { RoomActionPlacementControl, RoomActionRemovalControl } from './RoomActionOrderingControls';
+import { RoomActionRemovalControl } from './RoomActionOrderingControls';
 import { roomActionReorderPositions } from './room-action-placement';
 import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
-import { RoomAddArea, RoomAddEntry, type RoomAddAction, type RoomAddGroup } from './RoomAddMenu';
 import { useTimelineReorder } from './useTimelineReorder';
-import { DoorRerollRowReward, DoorsRerollEntry } from './RoomRerolls';
+import { DoorRerollRowReward } from './RoomRerolls';
 import { UnlockedDoor } from './DecisionWorkbench';
 import { UnlockExitFightControl } from './UnlockExitFightControl';
 import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
 import { doorsOpenToggle, wheelOfferChips } from './doorSummary';
 import { NemesisEventPending, NemesisInteractionSentence } from './NemesisEventEditor';
 import { StygianWellTwistChips } from './commerce/StygianWellTwist';
-import { RoomObjectEntry } from './commerce/RoomObjectEntry';
-import { roomObjectEntryIcon } from './commerce/roomObjectEntryIcon';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
 import { SpawnCopyChips, SpawnedLootRow } from './SpawnedLootRow';
-import { roomActionItemIcon } from './roomActionItemIcon';
 import { FightGoldAmount, GoldAmount, PurchaseCost } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
-import {
-  challengeSwitchIcon,
-  roomActionIcon,
-  sourceFamilyIcon,
-} from '@planner/ui/artwork/roomArtwork';
+import { roomActionIcon } from '@planner/ui/artwork/roomArtwork';
 import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import {
@@ -88,227 +79,6 @@ function inlineMysteryBoonOfferVerb(row: WorkspaceRoomActions['rows'][number]) {
     (row.rewardPayload.control.offer?.rewardType ??
       row.rewardPayload.control.authoringSeed?.rewardType) === 'BlindBoxLoot';
   return mystery ? row.labelParts : undefined;
-}
-
-// The Add area: room objects in game order, then optional actions by source family.
-const objectOrder = [
-  'worldShop',
-  'hermesShrine',
-  'stygianWell',
-  'purgingPool',
-  'challengeSwitch',
-  'championItem',
-];
-
-const objectOfReference = (
-  reference: WorkspaceRoomActions['rows'][number]['reference'],
-): string | undefined => {
-  switch (reference.kind) {
-    case 'interactShopOffer':
-      return 'worldShop';
-    case 'purchaseHermesShrineOffer':
-    case 'rushHermesShrineOffer':
-      return 'hermesShrine';
-    case 'purchaseStygianWellOffer':
-    case 'rerollStygianWell':
-      return 'stygianWell';
-    case 'sellPurgingPoolTrait':
-    case 'rerollPurgingPool':
-      return 'purgingPool';
-    case 'interactInfernalContractPedestal':
-      return 'championItem';
-    default:
-      return undefined;
-  }
-};
-
-function WorkbenchAddArea({
-  addAction,
-  doors,
-  extraObjects = [],
-  featureRolls,
-  interactions,
-  objectEntries,
-  objectRows,
-  optionalRows,
-}: {
-  /** The room's Doors object, where this list hosts the doors. */
-  readonly doors?: TimelineDoors | undefined;
-  /** Further object entries this list hosts, such as a Ship phase's Wheel. */
-  readonly extraObjects?: readonly ReactNode[];
-  /** The timeline's rows, whose purchase, sale and reroll findings mark their object. */
-  readonly objectRows: readonly WorkspaceRoomActions['rows'][number][];
-  readonly addAction: (row: WorkspaceRoomActions['rows'][number]) => RoomAddAction;
-  readonly featureRolls: NonNullable<WorkspaceRoomActions['featureRolls']>;
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly objectEntries: NonNullable<WorkspaceRoomActions['objectEntries']>;
-  readonly optionalRows: readonly WorkspaceRoomActions['rows'][number][];
-}) {
-  const findingMark = useFindingMark();
-  const objectMark = (object: string): FindingMarkProps | undefined => {
-    const marks = objectRows
-      .filter((row) => objectOfReference(row.reference) === object)
-      .map((row) => findingMark(row.address))
-      .filter((mark) => mark['data-has-findings']);
-    if (marks.length === 0) return undefined;
-    return {
-      'data-semantic-owner': marks[0]!['data-semantic-owner'],
-      'data-has-findings': true,
-      'aria-description': marks.map((mark) => mark['aria-description']).join(' '),
-    };
-  };
-  const withMark = (mark: FindingMarkProps | undefined) =>
-    mark === undefined ? {} : { findingMark: mark };
-  const groups = new Map<
-    string,
-    {
-      label: string;
-      object?: NonNullable<(typeof optionalRows)[number]['addGroup']>['object'];
-      rows: (typeof optionalRows)[number][];
-    }
-  >();
-  const objectActionRows: (typeof optionalRows)[number][] = [];
-  const switchKind = [...optionalRows, ...objectRows].find(
-    (row) => row.challengeSwitchKind !== undefined,
-  )?.challengeSwitchKind;
-  const switchGroup: NonNullable<(typeof optionalRows)[number]['addGroup']> = {
-    key: 'object:challengeSwitch',
-    label: switchKind === undefined ? 'Challenge Switch' : challengeSwitchKindLabel(switchKind),
-    object: 'challengeSwitch',
-  };
-  for (const row of optionalRows) {
-    // A locked door is pressed from the Doors object.
-    if (row.reference.kind === 'unlockExit') continue;
-    // The rack is a room object used in one step.
-    if (row.reference.kind === 'interactKeepsakeRack') {
-      objectActionRows.push(row);
-      continue;
-    }
-    // The switch's press and its claim pickups share one entry, named by the switch.
-    const group =
-      row.reference.kind === 'interactChallengeSwitch' || row.addGroup?.object === 'challengeSwitch'
-        ? switchGroup
-        : (row.addGroup ?? { key: 'other', label: 'Actions' });
-    const entry = groups.get(group.key) ?? {
-      label: group.label,
-      ...(group.object === undefined ? {} : { object: group.object }),
-      rows: [],
-    };
-    entry.rows.push(row);
-    groups.set(group.key, entry);
-  }
-  const toGroup = (
-    key: string,
-    entry: { label: string; rows: (typeof optionalRows)[number][] },
-  ): RoomAddGroup => {
-    // A family named after its source shows that source's icon, like an object.
-    const icon = sourceFamilyIcon(entry.rows[0]?.sourceFamily);
-    return {
-      key,
-      label: entry.label,
-      ...(icon === undefined ? {} : { icon }),
-      actions: entry.rows.map(addAction),
-    };
-  };
-  // An object's own pickups join its entry where the object is in the room.
-  const hostedGroup = (object: string) =>
-    [...groups.entries()].find(([, entry]) => entry.object === object);
-  const objectNodes = [
-    ...objectEntries.map((entry) => {
-      const hosted = hostedGroup(entry.object);
-      return {
-        rank: objectOrder.indexOf(entry.object),
-        node: (
-          <RoomObjectEntry
-            entry={entry}
-            {...(hosted === undefined
-              ? {}
-              : { extraActions: toGroup(hosted[0], hosted[1]).actions })}
-            {...withMark(objectMark(entry.object))}
-            interactions={interactions}
-            key={entry.interactionKey}
-          />
-        ),
-      };
-    }),
-    ...featureRolls.map((rolls) => ({
-      rank: objectOrder.indexOf(rolls.feature),
-      node: (
-        <FeatureRollEntry
-          actions={rolls}
-          {...withMark(objectMark(rolls.feature))}
-          interactions={interactions}
-          key={rolls.interactionKey}
-        />
-      ),
-    })),
-    // A room object's own optional pickups (a Shrine delivery) sit beside it; a
-    // challenge switch's use and claims are its own object entry.
-    ...[...groups.entries()]
-      .filter(
-        ([, entry]) =>
-          entry.object !== undefined &&
-          !objectEntries.some((objectEntry) => objectEntry.object === entry.object),
-      )
-      .map(([key, entry]) => {
-        const group = toGroup(key, entry);
-        return {
-          rank: objectOrder.indexOf(entry.object!) + 0.5,
-          node: (
-            <RoomAddEntry
-              group={{
-                ...group,
-                icon:
-                  entry.object === 'challengeSwitch'
-                    ? switchKind === undefined
-                      ? undefined
-                      : challengeSwitchIcon(switchKind)
-                    : (group.icon ?? roomObjectEntryIcon[entry.object!]),
-              }}
-              key={key}
-              object={entry.object!}
-            />
-          ),
-        };
-      }),
-    ...(doors?.object === undefined ? [] : [{ rank: objectOrder.length + 1, node: doors.object }]),
-    ...extraObjects.map((node) => ({ rank: objectOrder.length + 1, node })),
-    ...objectActionRows.map((row) => {
-      const action = addAction(row);
-      return {
-        rank: objectOrder.length,
-        node: (
-          <li key={row.key}>
-            <button
-              {...action.findingMark}
-              {...hintProps(action.unavailable, action.findingMark?.['aria-description'])}
-              aria-disabled={action.unavailable === undefined ? undefined : true}
-              className="secondary-action action-compact"
-              onClick={(event) => {
-                if (action.unavailable === undefined) action.onSelect(event.currentTarget);
-              }}
-              type="button"
-            >
-              {action.icon === undefined ? null : (
-                <ArtworkIcon className="artwork-label-icon" source={action.icon} />
-              )}
-              {row.reference.kind === 'interactKeepsakeRack' ? 'Keepsake Rack' : row.label}
-            </button>
-          </li>
-        ),
-      };
-    }),
-  ]
-    .sort((left, right) => left.rank - right.rank)
-    .map((entry) => entry.node);
-  return (
-    <RoomAddArea
-      groups={[...groups.entries()]
-        .filter(([, entry]) => entry.object === undefined)
-        .map(([key, entry]) => toGroup(key, entry))}
-      objects={objectNodes}
-    />
-  );
 }
 
 /**
@@ -579,11 +349,6 @@ export function RoomActionsWorkbench({
                 {doorsTail([])}
               </ol>
             </div>
-            {/* Its Doors object stays beside the doors without any room actions. */}
-            <RoomAddArea
-              groups={[]}
-              objects={roomDoors.object === undefined ? [] : [roomDoors.object]}
-            />
           </>
         )}
       </section>
@@ -812,7 +577,6 @@ export function RoomActionsWorkbench({
       reference.kind === 'unlockExit'
         ? doors?.summary?.chips.find((chip) => chip.key === reference.exitKey)
         : undefined;
-    const placement = row.placement;
     const actionAccent = row.stale
       ? undefined
       : row.participation === 'optional'
@@ -830,31 +594,6 @@ export function RoomActionsWorkbench({
       }
       if (removable?.structurallyAuthorable === true) apply(removable.key);
     };
-    const placementControl =
-      placement === undefined ? (
-        <RoomActionPlacementControl
-          findingMark={findingMark(row.address, 'place')}
-          onApply={apply}
-          proposals={proposals}
-          row={row}
-        />
-      ) : (
-        <button
-          {...findingMark(row.address, 'place')}
-          aria-label={
-            row.participation === 'required'
-              ? placement.command.kind === 'PlaceHermesShrineDelivery'
-                ? 'Restore delivery'
-                : 'Restore pickup'
-              : 'Take pickup'
-          }
-          className="secondary-action action-compact"
-          onClick={() => executeIntent(placement)}
-          type="button"
-        >
-          {row.participation === 'required' ? 'Restore' : 'Take'}
-        </button>
-      );
     const sourceBadge = pickupSourceBadgeIcon(row.sourceFamily, row.challengeSwitchKind);
     // The row's name: a reward's icon, an NPC's portrait, or its words.
     const rowName =
@@ -1099,15 +838,13 @@ export function RoomActionsWorkbench({
               />
             )
           }
-          placement={placementControl}
           removal={
             <RoomActionRemovalControl
               findingMark={findingMark(row.address, 'delete')}
               onRemove={removeRow}
-              proposals={placement === undefined ? proposals : []}
+              proposals={proposals}
               row={row}
               showRemoval={
-                placement === undefined &&
                 row.reference.kind !== 'interactKeepsakeRack' &&
                 row.reference.kind !== 'interactEris' &&
                 (!row.participationOwnedByOverview ||
@@ -1133,38 +870,6 @@ export function RoomActionsWorkbench({
           ))}
       </Fragment>
     );
-  };
-  // An optional action adds in one click where it has one place; otherwise its place is chosen.
-  const addAction = (row: WorkspaceRoomActions['rows'][number]): RoomAddAction => {
-    const icon = roomActionItemIcon(row);
-    const base = {
-      key: row.key,
-      label: row.label,
-      address: row.address,
-      ...(icon === undefined ? {} : { icon }),
-      findingMark: findingMark(row.address, 'place'),
-    };
-    const placement = row.placement;
-    if (placement !== undefined) return { ...base, onSelect: () => executeIntent(placement) };
-    const insertions = row.proposalKeys.flatMap((key) => {
-      const proposal = actions?.proposals.find(
-        (candidate) => candidate.key === key && candidate.kind === 'insert',
-      );
-      return proposal?.structurallyAuthorable === true ? [proposal] : [];
-    });
-    if (insertions.length === 0)
-      return { ...base, unavailable: 'No position to add this action.', onSelect: () => undefined };
-    // A new action appends at its last legal place, as a purchase does; it is then dragged.
-    const last = insertions.reduce((latest, proposal) =>
-      (proposal.toIndex ?? 0) > (latest.toIndex ?? 0) ? proposal : latest,
-    );
-    return {
-      ...base,
-      onSelect: () => {
-        apply(last.key);
-        setAnnouncement(`${row.label} added to the timeline.`);
-      },
-    };
   };
   const renderAutomaticEffect = (
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'automaticEffect' }>,
@@ -1215,6 +920,15 @@ export function RoomActionsWorkbench({
       ? []
       : [<Fragment key={entry.actionKey}>{renderRow(row, entry.supplement, true)}</Fragment>];
   };
+  const liveRow =
+    actions?.live === undefined ? null : (
+      <LiveRow
+        announce={setAnnouncement}
+        biomeKey={actions.owner.biomeKey}
+        interactions={interactions}
+        live={actions.live}
+      />
+    );
   if (mode.kind !== 'roomTimeline') {
     return (
       <section aria-label="Ship combat structure" className="ship-combat-editor">
@@ -1276,6 +990,7 @@ export function RoomActionsWorkbench({
                     (phase.actionRows.length === 0 && phase.timeline.length === 0) ? null : (
                       <ol aria-label={`${phase.label} timeline`} className="room-action-list">
                         {withMapStage(phase.timeline, renderPhaseTimelineEntry)}
+                        {phase.holdsLive === true ? liveRow : null}
                         {doorsTail(phase.timeline)}
                       </ol>
                     )}
@@ -1294,41 +1009,7 @@ export function RoomActionsWorkbench({
                         {phase.notReached.flatMap(renderNotReached)}
                       </NotReachedGroup>
                     )}
-                    {phase.unplacedRows.length === 0 ? null : (
-                      <section aria-label="Required actions" className="room-action-optional-pool">
-                        <div className="local-reward-heading">
-                          <h5>Required actions</h5>
-                        </div>
-                        <ol
-                          aria-label={`${phase.label} required actions`}
-                          className="room-action-list"
-                        >
-                          {phase.unplacedRows.map((row) => renderRow(row))}
-                        </ol>
-                      </section>
-                    )}
                   </div>
-                  <WorkbenchAddArea
-                    addAction={addAction}
-                    doors={roomDoors}
-                    extraObjects={
-                      phase.wheelRerolls === undefined
-                        ? []
-                        : [
-                            <DoorsRerollEntry
-                              interactions={interactions}
-                              key="wheel"
-                              name="Wheel"
-                              rerolls={phase.wheelRerolls}
-                            />,
-                          ]
-                    }
-                    featureRolls={[]}
-                    interactions={interactions}
-                    objectEntries={phase.objectEntries ?? []}
-                    objectRows={phase.actionRows}
-                    optionalRows={phase.optionalRows}
-                  />
                 </section>
               );
             })}
@@ -1370,7 +1051,6 @@ export function RoomActionsWorkbench({
       {...findingAnchor(actions.owner)}
       tabIndex={-1}
     >
-      {/* The timeline and its repairs form one column; the Add area sits beside or below it. */}
       <div className="room-timeline-main">
         <p aria-live="polite" className="visually-hidden">
           {announcement}
@@ -1378,13 +1058,15 @@ export function RoomActionsWorkbench({
         {actions.timeline.waitsOn === undefined ? (
           <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
             {timelineRows}
+            {liveRow}
             {doorsTail(actions.timeline.entries)}
           </ol>
         ) : (
           <>
             <StopNotice at={actions.timeline.waitsOn} />
-            {doorsTail([]) === null ? null : (
+            {doorsTail([]) === null && liveRow === null ? null : (
               <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
+                {liveRow}
                 {doorsTail([])}
               </ol>
             )}
@@ -1408,15 +1090,6 @@ export function RoomActionsWorkbench({
         )}
         <TimelineReorderStatus session={reorder} />
       </div>
-      <WorkbenchAddArea
-        addAction={addAction}
-        doors={roomDoors}
-        featureRolls={actions.featureRolls ?? []}
-        interactions={interactions}
-        objectEntries={actions.objectEntries ?? []}
-        objectRows={actions.rows}
-        optionalRows={actions.optionalRows}
-      />
     </section>
   );
 }

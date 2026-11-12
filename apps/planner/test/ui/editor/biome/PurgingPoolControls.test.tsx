@@ -19,6 +19,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 import type { PlannerApplication } from '@planner/composition/createApplication';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
+import { liveChip } from '@planner-test/support/live-row';
 import {
   completionOccurrenceById,
   occurrenceById,
@@ -72,16 +73,16 @@ it('leaves a blank Pool slot native, with no finding', () => {
   expect(pool.hasAttribute('data-has-findings')).toBe(false);
 });
 
-it('sells each slot still on the list from its Timeline entry, and removes a stale sale on its row', async () => {
+it('sells a slot still on the list from the live row, and removes a stale sale on its row', async () => {
   const { view, pool } = renderPostboss(
     withPoolSlot(withPoolSlot(createUnderworldFPoolCheckpoint(), 'left', null), 'middle', null),
   );
   expect(within(pool).queryByRole('checkbox', { name: /^Sold/ })).toBeNull();
-  // The Pool's Timeline entry offers every slot still on the list, blank ones included.
+  // The Pool on the live row sells what its list can still show.
   openRoomTab('Room Timeline');
-  await view.user.click(screen.getByRole('button', { name: 'Pool of Purging' }));
+  await view.user.click(liveChip('Pool of Purging'));
   const options = within(await screen.findByRole('listbox')).getAllByRole('option');
-  expect(options.map((option) => option.textContent?.startsWith('Sell '))).toEqual([true, true]);
+  expect(options.every((option) => option.textContent?.startsWith('Sell'))).toBe(true);
   await view.user.keyboard('{Escape}');
 
   await view.user.click(screen.getByRole('button', { name: /^Remove Sell .* from timeline$/ }));

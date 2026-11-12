@@ -48,6 +48,7 @@ import {
   rerollSurfaceForProjectEvaluationAssembly,
   hubStaysForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
+  liveRoomForProjectEvaluationAssembly,
   encounterOutcomesForProjectEvaluationAssembly,
   fieldsSpatialPositionsForProjectEvaluationAssembly,
   chaosGatePositionForProjectEvaluationAssembly,
@@ -421,6 +422,16 @@ export function createStructuredWorkspaceProjection(
         (occurrence) =>
           fieldsSpatialPositionsForProjectEvaluationAssembly(catalog, assembly, occurrence),
         (gate) => chaosGatePositionForProjectEvaluationAssembly(catalog, assembly, gate),
+        (occurrence) => {
+          try {
+            return liveRoomForProjectEvaluationAssembly(catalog, assembly, occurrence);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return undefined;
+            }
+            throw error;
+          }
+        },
       );
       const routeSource = sources.route;
       const authoredRoute =

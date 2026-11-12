@@ -240,6 +240,10 @@ export interface WorkspaceBiomeSource {
   readonly spawnedLoot: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomSpawnedLoot | undefined;
+  /** What is live at each gap of a reached room's actions; undefined while unreached. */
+  readonly roomLive: (
+    occurrence: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').LiveRoom | undefined;
   /** Each phase's Encounter outcome that hosts a choice; undefined while unentered. */
   readonly encounterOutcomes: (
     occurrence: OccurrenceAddress,
@@ -852,6 +856,7 @@ function createWorkspaceBiomeSource(
   encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'],
   fieldsSpatialPositions: WorkspaceBiomeSource['fieldsSpatialPositions'],
   chaosGatePosition: WorkspaceBiomeSource['chaosGatePosition'],
+  roomLive: WorkspaceBiomeSource['roomLive'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -1179,6 +1184,7 @@ function createWorkspaceBiomeSource(
     encounterOutcomes,
     fieldsSpatialPositions,
     chaosGatePosition,
+    roomLive,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -1280,6 +1286,7 @@ export function createWorkspaceProjectSourceIndex(
   encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'] = () => undefined,
   fieldsSpatialPositions: WorkspaceBiomeSource['fieldsSpatialPositions'] = () => undefined,
   chaosGatePosition: WorkspaceBiomeSource['chaosGatePosition'] = () => undefined,
+  roomLive: WorkspaceBiomeSource['roomLive'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1373,6 +1380,7 @@ export function createWorkspaceProjectSourceIndex(
             encounterOutcomes,
             fieldsSpatialPositions,
             chaosGatePosition,
+            roomLive,
           ),
         ),
       ),
