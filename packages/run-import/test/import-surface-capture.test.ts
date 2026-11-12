@@ -106,12 +106,19 @@ describe('run import of the Surface capture', () => {
         secondRight: { rewardType: 'ShopHermesUpgrade' },
       },
     });
-    expect(reprieve.roomActions.order).toEqual(
-      expect.arrayContaining([
-        { kind: 'useFountain' },
-        { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondRight', rushed: true },
-      ]),
+    // The rush is its own row after the purchase; the rushed item is picked up after it.
+    const shrine = reprieve.roomActions.order.filter(
+      (action) =>
+        action.kind === 'purchaseHermesShrineOffer' ||
+        action.kind === 'rushHermesShrineOffer' ||
+        action.kind === 'interactAcquisitionEntry',
     );
+    expect(reprieve.roomActions.order).toContainEqual({ kind: 'useFountain' });
+    expect(shrine.slice(-3)).toMatchObject([
+      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondRight' },
+      { kind: 'rushHermesShrineOffer', generationKey: 'initial:secondRight' },
+      { kind: 'interactAcquisitionEntry', siteKey: 'hermesShrineDelivery' },
+    ]);
   });
 
   it('places gathering points and reads an offered side room reward from its door', () => {
