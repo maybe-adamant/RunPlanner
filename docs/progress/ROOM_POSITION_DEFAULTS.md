@@ -1,16 +1,18 @@
 # Room position defaults
 
-Status: engine slice delivered (schema 102.1); game module and planner steps
-pending. Temporary plan; delete at delivery. The model lives in
+Status: engine slice (schema 102.1), planner and game module delivered; the
+owner's in-game test is pending in
+[room layout steering](../testing/ROOM_LAYOUT_STEERING_LIVE_ACCEPTANCE.md).
+Temporary plan; delete at delivery. The model lives in
 [position defaults](../design/SIMULATION_AND_VALIDATION.md#position-defaults).
 
 ## Work
 
-1. Game module: steer every published position; the partial-pool native
-   fallback path goes. Needs the owner's in-game test.
-2. Planner: drop the "the game decides" (`?`) options; show defaults as
-   ordinary positions. A planned run is predictable, and the game module
-   steers every position.
+1. Game module: steers every published position; the partial-pool native
+   fallback path is gone. Done; needs the owner's in-game test.
+2. Planner: the `?` options are gone; Layout shows each default as an
+   ordinary position, marked Default in the open list, and a chosen position
+   returns to its default through its Default choice. Done.
 
 ## Ephyra End plan before side visits (planner)
 
