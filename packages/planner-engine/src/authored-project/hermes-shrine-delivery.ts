@@ -54,10 +54,14 @@ export interface HermesDeliveryDueContact {
 
 /** A rushed item is delivered in the Shrine room itself. */
 export function isSameRoomDelivery(source: OccurrenceAddress, host: OccurrenceAddress): boolean {
+  return sameOccurrence(source, host);
+}
+
+function sameOccurrence(left: OccurrenceAddress, right: OccurrenceAddress): boolean {
   return (
-    source.routeKey === host.routeKey &&
-    source.biomeKey === host.biomeKey &&
-    source.occurrenceId === host.occurrenceId
+    left.routeKey === right.routeKey &&
+    left.biomeKey === right.biomeKey &&
+    left.occurrenceId === right.occurrenceId
   );
 }
 
@@ -282,14 +286,20 @@ export function hermesShrineDeliverySourceIsStructurallyActive(
 
 function mapOccurrences(
   document: ProjectDocument,
-  transform: (routeKey: string, biomeKey: string, occurrence: RoomOccurrence) => RoomOccurrence,
+  transform: (host: OccurrenceAddress, occurrence: RoomOccurrence) => RoomOccurrence,
 ): ProjectDocument {
   let changed = false;
   const route = document.route;
   const biomes = route.biomes.map((biome) => {
     if (biome.topology === null) return biome;
     const occurrences = biome.topology.occurrences.map((occurrence) => {
-      const next = transform(route.routeKey, biome.biomeKey, occurrence);
+      const host: OccurrenceAddress = {
+        kind: 'occurrence',
+        routeKey: route.routeKey,
+        biomeKey: biome.biomeKey,
+        occurrenceId: occurrence.occurrenceId,
+      };
+      const next = transform(host, occurrence);
       if (next !== occurrence) changed = true;
       return next;
     });
@@ -310,40 +320,18 @@ function mapOccurrences(
     : document;
 }
 
-function occurrenceMatchesAddress(
-  routeKey: string,
-  biomeKey: string,
-  occurrence: RoomOccurrence,
-  address: OccurrenceAddress,
-): boolean {
-  return (
-    routeKey === address.routeKey &&
-    biomeKey === address.biomeKey &&
-    occurrence.occurrenceId === address.occurrenceId
-  );
-}
-
-/**
- * A timing edit invalidates the prior active host before simulation derives a
- * replacement. Retained payload remains dormant until the new exact host is
- * placed, while every old timeline footprint is removed atomically.
- */
-export function unplaceHermesShrineDelivery(
+/** The plan without the delivery rows a predicate names, by host and entry key. */
+function withoutDeliveryRows(
   document: ProjectDocument,
-  entryKey: string,
-  keepActionAt?: OccurrenceAddress,
+  removes: (host: OccurrenceAddress, entryKey: string) => boolean,
 ): ProjectDocument {
-  return mapOccurrences(document, (routeKey, biomeKey, occurrence) => {
-    const nextOrder = occurrence.roomActions.order.filter((reference) => {
-      if (
+  return mapOccurrences(document, (host, occurrence) => {
+    const nextOrder = occurrence.roomActions.order.filter(
+      (reference) =>
         reference.kind !== 'interactAcquisitionEntry' ||
         reference.siteKey !== HERMES_SHRINE_DELIVERY_SITE_KEY ||
-        reference.entryKey !== entryKey
-      )
-        return true;
-      if (keepActionAt === undefined) return false;
-      return occurrenceMatchesAddress(routeKey, biomeKey, occurrence, keepActionAt);
-    });
+        !removes(host, reference.entryKey),
+    );
     return nextOrder.length === occurrence.roomActions.order.length
       ? occurrence
       : Object.freeze({
@@ -357,6 +345,23 @@ export function unplaceHermesShrineDelivery(
 }
 
 /**
+ * A timing edit invalidates the prior active host before simulation derives a
+ * replacement. Retained payload remains dormant until the new exact host is
+ * placed, while every old timeline footprint is removed atomically.
+ */
+export function unplaceHermesShrineDelivery(
+  document: ProjectDocument,
+  entryKey: string,
+  keepActionAt?: OccurrenceAddress,
+): ProjectDocument {
+  return withoutDeliveryRows(
+    document,
+    (host, key) =>
+      key === entryKey && (keepActionAt === undefined || !sameOccurrence(host, keepActionAt)),
+  );
+}
+
+/**
  * Removing a Shrine feature invalidates every active delivery it sourced,
  * regardless of the later occurrence that was selected as its host. Delivery
  * payload remains in its existing site as dormant repair detail.
@@ -365,29 +370,13 @@ export function unplaceHermesShrineDeliveriesFromSource(
   document: ProjectDocument,
   source: OccurrenceAddress,
 ): ProjectDocument {
-  return mapOccurrences(document, (routeKey, biomeKey, occurrence) => {
-    const nextOrder = occurrence.roomActions.order.filter((reference) => {
-      if (
-        reference.kind !== 'interactAcquisitionEntry' ||
-        reference.siteKey !== HERMES_SHRINE_DELIVERY_SITE_KEY
-      )
-        return true;
-      const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey);
-      return !(
-        parsed?.routeKey === source.routeKey &&
-        parsed.biomeKey === source.biomeKey &&
-        parsed.sourceOccurrenceId === source.occurrenceId
-      );
-    });
-    return nextOrder.length === occurrence.roomActions.order.length
-      ? occurrence
-      : Object.freeze({
-          ...occurrence,
-          roomActions: Object.freeze({
-            ...occurrence.roomActions,
-            order: Object.freeze(nextOrder),
-          }),
-        });
+  return withoutDeliveryRows(document, (_host, entryKey) => {
+    const parsed = parseHermesShrineDeliveryEntryKey(entryKey);
+    return (
+      parsed?.routeKey === source.routeKey &&
+      parsed.biomeKey === source.biomeKey &&
+      parsed.sourceOccurrenceId === source.occurrenceId
+    );
   });
 }
 
@@ -442,12 +431,9 @@ export function discardRetainedHermesShrineDelivery(
   entryKey: string,
   host: OccurrenceAddress,
 ): ProjectDocument {
-  const discarded = mapOccurrences(document, (routeKey, biomeKey, occurrence) => {
+  const discarded = mapOccurrences(document, (at, occurrence) => {
     const site = occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY];
-    if (
-      !occurrenceMatchesAddress(routeKey, biomeKey, occurrence, host) ||
-      site?.pickupEntries?.[entryKey] === undefined
-    )
+    if (!sameOccurrence(at, host) || site?.pickupEntries?.[entryKey] === undefined)
       return occurrence;
     const pickupEntries = { ...site.pickupEntries };
     delete pickupEntries[entryKey];
@@ -479,9 +465,8 @@ export function removeHermesShrineDeliveryFromOtherHosts(
   entryKey: string,
   host?: OccurrenceAddress,
 ): ProjectDocument {
-  return mapOccurrences(document, (routeKey, biomeKey, occurrence) => {
-    if (host !== undefined && occurrenceMatchesAddress(routeKey, biomeKey, occurrence, host))
-      return occurrence;
+  return mapOccurrences(document, (at, occurrence) => {
+    if (host !== undefined && sameOccurrence(at, host)) return occurrence;
     const site = occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY];
     const hasEntry = site?.pickupEntries?.[entryKey] !== undefined;
     const actionKey = roomActionKey({
