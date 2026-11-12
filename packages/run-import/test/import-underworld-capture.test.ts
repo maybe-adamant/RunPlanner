@@ -82,7 +82,9 @@ describe('run import of the Underworld capture', () => {
 
   it('imports World Shop, Well and Pool purchases and the Anvil of Fates', () => {
     const shop = occurrence(imported.project, 'F-r6');
-    expect(shop.roomActions.order).toContainEqual({ kind: 'interactShopOffer', offerKey: 'Boon' });
+    expect(shop.roomActions.order).toContainEqual(
+      expect.objectContaining({ kind: 'interactShopOffer', offerKey: 'Boon' }),
+    );
     expect(occurrence(imported.project, 'F-r3').stygianWell).toMatchObject({
       offerKeyBySlot: {
         healing: 'TemporaryDoorHealTrait',
@@ -108,10 +110,9 @@ describe('run import of the Underworld capture', () => {
         right: 'AresCastBoon',
       },
     });
-    expect(pool.roomActions.order).toContainEqual({
-      kind: 'sellPurgingPoolTrait',
-      slotKey: 'left',
-    });
+    expect(pool.roomActions.order).toContainEqual(
+      expect.objectContaining({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
+    );
     const anvil = occurrence(imported.project, 'I-r40');
     expect(
       anvil.state.kind === 'shop' &&

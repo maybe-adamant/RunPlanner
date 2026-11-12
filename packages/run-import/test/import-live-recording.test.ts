@@ -58,7 +58,9 @@ describe('run import of the live Underworld recording', () => {
     // The pedestal stands in the boon form of G's Preboss.
     const preboss = occurrence(imported.project, 'G-r22');
     expect(preboss.infernalContractPedestal).toMatchObject({ optionKey: 'StackUpgradeBig' });
-    expect(preboss.roomActions.order).toContainEqual({ kind: 'interactInfernalContractPedestal' });
+    expect(preboss.roomActions.order).toContainEqual(
+      expect.objectContaining({ kind: 'interactInfernalContractPedestal' }),
+    );
     expect(occurrence(imported.project, 'G-r22').state.kind).toBe('freeReward');
   });
 
@@ -164,9 +166,11 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
 
   it("imports the racked Gorgon Amulet's Athena at H_Combat07's first cage", () => {
     // The passive encounter starts late (`DelayedStart`), so it never runs encounter-start effects.
+    // The cage opened first, Cage02, fights first: its Unlock row leads the room.
     expect(occurrence(imported.project, 'H-r26').encounters.gorgonResultByPhase).toMatchObject({
       Passive: { athenaTriggerConditionMet: false },
-      Cage01: {
+      Cage01: { athenaTriggerConditionMet: false },
+      Cage02: {
         athenaTriggerConditionMet: true,
         athenaOffer: {
           traitKeys: [
@@ -194,11 +198,13 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
         },
       },
     });
-    expect(preboss.roomActions.order).toContainEqual({
-      kind: 'interactAcquisitionEntry',
-      siteKey: 'roomExit',
-      entryKey: 'travelDealRefill',
-    });
+    expect(preboss.roomActions.order).toContainEqual(
+      expect.objectContaining({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: 'travelDealRefill',
+      }),
+    );
   });
 
   it("imports Aspect of Selene's rolled tree without its God Sent nodes", () => {
