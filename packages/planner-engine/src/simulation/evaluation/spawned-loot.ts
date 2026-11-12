@@ -223,61 +223,53 @@ function resolvesLevel(levels: LevelResolutions, role?: string): boolean {
   );
 }
 
-/** Whether collecting the row's authored reward resolves a Pom level. */
-function rowResolvesLevel(room: CanonicalAuthoredRoom, reference: RoomActionReference): boolean {
+/** The reward a collect row acquires, as the room's settled products hold it. */
+function rowReward(
+  room: CanonicalAuthoredRoom,
+  reference: RoomActionReference,
+):
+  | {
+      readonly offer: ResolvedRewardOffer;
+      readonly levelResolutionsByAcquisitionRole?: LevelResolutions;
+    }
+  | undefined {
   switch (reference.kind) {
     case 'interactIncomingReward':
-      return resolvesLevel(
-        room.incomingReward?.levelResolutionsByAcquisitionRole,
-        reference.acquisitionRole,
-      );
+      return room.incomingReward;
     case 'interactLocalReward':
-      return resolvesLevel(
-        [...(room.localRewards ?? []), ...(room.fieldsOptionalRewards ?? [])].find(
-          (reward) =>
-            reward.groupKey === reference.groupKey && reward.slotKey === reference.slotKey,
-        )?.levelResolutionsByAcquisitionRole,
+      return [...(room.localRewards ?? []), ...(room.fieldsOptionalRewards ?? [])].find(
+        (reward) => reward.groupKey === reference.groupKey && reward.slotKey === reference.slotKey,
       );
     case 'interactWheelReward':
-      return resolvesLevel(
-        room.rewardWheels
-          ?.find((wheel) => wheel.wheelKey === reference.wheelKey)
-          ?.offers.find((offer) => offer.picked)?.levelResolutionsByAcquisitionRole,
-      );
+      return room.rewardWheels
+        ?.find((wheel) => wheel.wheelKey === reference.wheelKey)
+        ?.offers.find((offer) => offer.picked);
     case 'interactAcquisitionEntry':
-      return resolvesLevel(
-        room.acquisitionSites[reference.siteKey]?.entries[reference.entryKey]
-          ?.levelResolutionsByAcquisitionRole,
-      );
+      return room.acquisitionSites[reference.siteKey]?.entries[reference.entryKey] ?? undefined;
     default:
-      return false;
+      return undefined;
   }
 }
 
-/** The offer a collect row acquires, as the room's settled products hold it. */
+/** Whether collecting the row's authored reward resolves a Pom level. */
+function rowResolvesLevel(room: CanonicalAuthoredRoom, reference: RoomActionReference): boolean {
+  return resolvesLevel(
+    rowReward(room, reference)?.levelResolutionsByAcquisitionRole,
+    reference.kind === 'interactIncomingReward' ? reference.acquisitionRole : undefined,
+  );
+}
+
+/** The offer a collect row acquires; a producer pickup's fixed type before its entry is authored. */
 function rowOffer(
   room: CanonicalAuthoredRoom,
   reference: RoomActionReference,
 ): ResolvedRewardOffer | undefined {
-  switch (reference.kind) {
-    case 'interactIncomingReward':
-      return room.incomingReward?.offer;
-    case 'interactLocalReward':
-      return [...(room.localRewards ?? []), ...(room.fieldsOptionalRewards ?? [])].find(
-        (reward) => reward.groupKey === reference.groupKey && reward.slotKey === reference.slotKey,
-      )?.offer;
-    case 'interactWheelReward':
-      return room.rewardWheels
-        ?.find((wheel) => wheel.wheelKey === reference.wheelKey)
-        ?.offers.find((offer) => offer.picked)?.offer;
-    case 'interactAcquisitionEntry':
-      return (
-        room.acquisitionSites[reference.siteKey]?.entries[reference.entryKey]?.offer ??
-        fixedPickupOffer(room, reference.siteKey, reference.entryKey)
-      );
-    default:
-      return undefined;
-  }
+  return (
+    rowReward(room, reference)?.offer ??
+    (reference.kind === 'interactAcquisitionEntry'
+      ? fixedPickupOffer(room, reference.siteKey, reference.entryKey)
+      : undefined)
+  );
 }
 
 /** A producer pickup whose reward type its source fixes, before its entry is authored. */
