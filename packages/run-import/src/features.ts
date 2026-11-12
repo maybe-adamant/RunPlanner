@@ -880,13 +880,23 @@ function placeSeaStarDuplicate(
     source.action === undefined
       ? -1
       : order.findIndex((entry) => roomActionKey(entry) === roomActionKey(source.action!));
+  const duplicate: RoomActionReference = {
+    kind: 'interactAcquisitionEntry',
+    siteKey,
+    entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+  };
   const duplicateIndex = order.findIndex(
-    (entry) =>
-      entry.kind === 'interactAcquisitionEntry' &&
-      entry.siteKey === siteKey &&
-      entry.entryKey === SEA_STAR_DUPLICATE_ENTRY_KEY,
+    (entry) => roomActionKey(entry) === roomActionKey(duplicate),
   );
-  if (sourceIndex < 0 || duplicateIndex < 0 || duplicateIndex === sourceIndex + 1) return true;
+  if (sourceIndex < 0 || duplicateIndex === sourceIndex + 1) return true;
+  // The proc leaves its duplicate lying live; it is picked up right after its source.
+  if (duplicateIndex < 0)
+    return context.apply({
+      kind: 'InsertRoomAction',
+      action: roomActionAddress(context, biomeKey, occurrence.occurrenceId, duplicate),
+      reference: duplicate,
+      index: sourceIndex + 1,
+    });
   return context.apply({
     kind: 'MoveRoomAction',
     action: roomActionAddress(context, biomeKey, occurrence.occurrenceId, order[duplicateIndex]!),

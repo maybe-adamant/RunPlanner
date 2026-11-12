@@ -46,7 +46,11 @@ import type {
   RunRecordStore,
   RunRecordStoreKind,
 } from './run-record/model';
-import { insertRoomAction, removeRoomAction, roomActionAddress } from './actions';
+import {
+  insertRoomAction,
+  placeLiveRoomAction,
+  roomActionAddress,
+} from './actions';
 import type { RunImportContext } from './import';
 import type { RunImportArea } from './report';
 import { isQuestionFinding } from './areas';
@@ -1165,17 +1169,15 @@ function importShrinePurchase(
     });
     return;
   }
-  // A rushed item left on the floor is not picked up.
+  // A rushed item lies in the room; one left on the floor is not picked up.
   const rewardType = visit.store.stock.find((option) => option.slot === purchase.slot)?.name;
-  if (rewardType !== undefined && !collected(context, visit.room, rewardType)) {
-    const occurrence = authoredOccurrence(context.assembly().project, biomeKey, occurrenceId);
-    const pickup = occurrence?.roomActions.order.find(
-      (entry) =>
-        entry.kind === 'interactAcquisitionEntry' &&
-        entry.siteKey === 'hermesShrineDelivery' &&
-        entry.entryKey === hermesShrineDeliveryEntryKey(address, generationKey),
-    );
-    if (pickup !== undefined && !removeRoomAction(context, biomeKey, occurrenceId, pickup))
+  if (rewardType !== undefined && collected(context, visit.room, rewardType)) {
+    const pickup: RoomActionReference = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(address, generationKey),
+    };
+    if (!placeLiveRoomAction(context, biomeKey, occurrenceId, pickup))
       context.note({
         area: 'shop',
         reason: 'refused',

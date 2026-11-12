@@ -9,7 +9,10 @@ import {
   roomActionDomainForOccurrence,
   scheduleRequiredRoomActions,
 } from '@run-planner/engine/authored-project';
-import type { SemanticFinding } from '@run-planner/engine/simulation';
+import {
+  liveRoomForProjectEvaluationAssembly,
+  type SemanticFinding,
+} from '@run-planner/engine/simulation';
 import type { RunImportContext } from './import';
 
 /** The address of one room action of an occurrence. */
@@ -79,6 +82,50 @@ export function insertRoomAction(
       index: native.index,
     })
   );
+}
+
+/**
+ * Places a live item's row by the command the engine's live room offers for
+ * it: its canonical position, else at the walk's frontier in the room, else
+ * the latest gap offered. True when the row already stands.
+ */
+export function placeLiveRoomAction(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrenceId: string,
+  reference: RoomActionReference,
+): boolean {
+  const project = context.assembly().project;
+  const room = createOccurrenceAddress(
+    createBiomeAddress(project.route.routeKey, biomeKey),
+    occurrenceId as OccurrenceId,
+  );
+  const live = liveRoomForProjectEvaluationAssembly(
+    context.catalog,
+    context.assembly(),
+    room,
+    'placements',
+  );
+  if (live === undefined) return false;
+  const key = roomActionKey(reference);
+  const verbs = live.gaps.flatMap((gap) =>
+    gap.items.flatMap((item) =>
+      item.verbs.flatMap((verb) =>
+        verb.reference !== undefined && roomActionKey(verb.reference) === key
+          ? [{ gap: gap.index, verb }]
+          : [],
+      ),
+    ),
+  );
+  if (verbs.some(({ verb }) => verb.standing === true)) return true;
+  const placements = verbs.filter(
+    ({ verb }) => verb.commands?.[0] !== undefined && verb.commands[0].kind !== 'MoveRoomAction',
+  );
+  const chosen =
+    placements.find(({ verb }) => verb.canonical === true) ??
+    placements.find(({ gap }) => gap === live.frontier) ??
+    placements.at(-1);
+  return chosen !== undefined && context.applyValid(chosen.verb.commands![0]!);
 }
 
 /** Removes a room action, unless that adds a finding. */
