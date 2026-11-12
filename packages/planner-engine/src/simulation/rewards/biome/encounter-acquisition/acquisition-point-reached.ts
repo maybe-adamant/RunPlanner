@@ -1,3 +1,4 @@
+import { roomRunsCages } from '../../../encounters/model';
 import {
   assessReachedHermesDeliveryPlacement,
   assessReachedClockedPickupPlacement,
@@ -313,7 +314,7 @@ export function applyAcquisitionPointReachedTransition(
   const localParts = event.point.startsWith('localReward:')
     ? event.point.slice('localReward:'.length).split(':')
     : undefined;
-  if (room.lifecycleProfileKey === 'FieldsCombatRoom' && localParts !== undefined) {
+  if (roomRunsCages(room) && localParts !== undefined) {
     const [groupKey, slotKey] = localParts;
     const localReward =
       groupKey === 'cages'

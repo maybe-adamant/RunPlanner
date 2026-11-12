@@ -1,3 +1,4 @@
+import { roomRunsCages } from '../../../encounters/model';
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import { semanticAddressKey, type SemanticAddress } from '../../../../authored-project/addresses';
 import { createUnresolvedAcquisitionRewardState } from '../../../../authored-project/traits/state';
@@ -59,7 +60,7 @@ export function materializeFieldsOptionalOfferPoint(
   const view = roomView.offerPoints?.find(
     (candidate) => candidate.offerPoint === event.offerPoint,
   )?.before;
-  if (view === undefined || room.lifecycleProfileKey !== 'FieldsCombatRoom') {
+  if (view === undefined || !roomRunsCages(room)) {
     throw new BiomeRewardSimulationContractError(
       `${room.gameName} has no Fields optional materialization`,
     );

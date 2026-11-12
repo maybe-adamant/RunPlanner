@@ -1,3 +1,4 @@
+import { roomOpensRewardWheels } from '../../encounters/model';
 import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
@@ -1062,7 +1063,7 @@ const encounterStarted: ChronologySeamHandler<'encounterStarted'> = (context, st
   const sourceRoom = context.rooms.get(semanticAddressKey(event.origin));
   const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
   let runStateCheckpoint: ChronologySeamStep['runStateCheckpoint'];
-  if (room !== undefined && room.lifecycleProfileKey === 'ShipCombatRoom') {
+  if (room !== undefined && roomOpensRewardWheels(room)) {
     const view = context.views
       .get(semanticAddressKey(event.origin))
       ?.encounterStarts.find((candidate) => candidate.phaseKey === event.phaseKey)?.before;

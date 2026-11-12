@@ -1,3 +1,4 @@
+import { roomOpensRewardWheels, roomRunsCages } from '../../../encounters/model';
 import { spawnDueHermesDeliveries } from '../offer-lifecycle/spawned-trait-offers';
 import { routeRoomShop } from '../../../../authored-project/route-profile';
 import type { Catalog } from '../../../../catalog-schema';
@@ -131,7 +132,7 @@ export function applyRoomEntryEffects(
   });
   const findings: LifecycleFinding[] = [];
   const fixedAcquisitionRealizations: FixedAcquisitionRealization[] = [];
-  if (room?.lifecycleProfileKey === 'FieldsCombatRoom') {
+  if (room !== undefined && roomRunsCages(room)) {
     for (const localReward of room.localRewards ?? []) {
       let replacement: 'RoomRewardConsolationPrize' | undefined;
       next = mapReached(next, (branch) => {
@@ -401,16 +402,12 @@ export function applyRoomEnteredTransition(
         );
     }
   }
-  if (
-    room !== undefined &&
-    room.lifecycleProfileKey !== 'ShipCombatRoom' &&
-    roomView?.entry === undefined
-  )
+  if (room !== undefined && !roomOpensRewardWheels(room) && roomView?.entry === undefined)
     throw new BiomeRewardSimulationContractError(
       `${room.gameName} has no room-entry Run State view`,
     );
   const checkpoint =
-    room !== undefined && room.lifecycleProfileKey !== 'ShipCombatRoom'
+    room !== undefined && !roomOpensRewardWheels(room)
       ? Object.freeze({
           owner: createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' }),
           room,

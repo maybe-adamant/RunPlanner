@@ -19,6 +19,20 @@ export interface MaterializedEncounterPhase {
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
 }
 
+interface PhasedRoom {
+  readonly encounterPhases: readonly MaterializedEncounterPhase[];
+}
+
+/** A Ship room: its combat phases each open a reward wheel. */
+export function roomOpensRewardWheels(room: PhasedRoom): boolean {
+  return room.encounterPhases.some((phase) => phase.rewardAttachment?.kind === 'rewardWheel');
+}
+
+/** A Fields room: the player starts each active cage's encounter beside its Passive phase. */
+export function roomRunsCages(room: PhasedRoom): boolean {
+  return room.encounterPhases.some((phase) => phase.rewardAttachment?.kind === 'localReward');
+}
+
 /** Why the resolved encounter cannot steer with a phase's authored customization value. */
 export type EncounterCustomizationUnsupportedReason =
   /** The resolved encounter does not declare the decision its authored owner did. */

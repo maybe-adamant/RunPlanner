@@ -1,3 +1,4 @@
+import { roomRunsCages } from '../../../encounters/model';
 import { routeRoomDeclaration } from '../../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
@@ -641,7 +642,7 @@ export function applyEncounterSettlementTransition(inputs: {
     );
     const rewards =
       room.localRewards?.filter((reward) => reward.encounterPhaseKey === event.phaseKey) ?? [];
-    if (room.lifecycleProfileKey === 'FieldsCombatRoom' || rewards.length === 0)
+    if (roomRunsCages(room) || rewards.length === 0)
       return Object.freeze({
         branch: advanceReachedBranch(reached, event.sequence),
         findings: Object.freeze([...findings.values()]),
