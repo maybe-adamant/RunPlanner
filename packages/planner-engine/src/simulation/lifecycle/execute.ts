@@ -1064,8 +1064,8 @@ type WalkStep = (state: ExecutionState) => ExecutionState;
 
 /**
  * The room's walk through its stages: prepared, entered, its encounters run
- * by its event graph between its reward points before and after combat, its
- * doors opened, and left.
+ * by its event graph, its reward points after combat, its doors opened, and
+ * left.
  */
 export function executeRoomLifecycle(
   catalog: Catalog,
@@ -1079,12 +1079,13 @@ export function executeRoomLifecycle(
     operationIndex: ROOM_WALK_STAGES[stage],
   });
   const when = (condition: boolean, ...steps: WalkStep[]): WalkStep[] => (condition ? steps : []);
-  // A gate's point is taken as its pickup starts the fight.
+  // A gate's point is taken as its pickup starts the fight; the point before
+  // combat no gate takes, as the encounters begin.
   const points = (
     input.producer === undefined || profile.producer.kind === 'none' ? [] : profile.producer.points
   ).filter((point) => !schedule.gatePoints.has(point));
   const rewardPoint =
-    (stage: 'beforeCombat' | 'afterCombat') =>
+    (stage: 'encounters' | 'afterCombat') =>
     (point: ProducerLifecyclePointKey): WalkStep =>
     (state) =>
       schedule.rewardPoint(point, ROOM_WALK_STAGES[stage], state);
@@ -1101,7 +1102,7 @@ export function executeRoomLifecycle(
     ...when(profile.requiredObjects, (state) =>
       roomEffects.requiredObjects(at('requiredObjectsSpawn'), state, 'requiredObjectSpawned'),
     ),
-    ...points.filter((point) => point === 'beforeCombat').map(rewardPoint('beforeCombat')),
+    ...points.filter((point) => point === 'beforeCombat').map(rewardPoint('encounters')),
     ...when(
       profile.runsEncounters &&
         (catalog.encounterEnvelopes.byKey[input.encounterEnvelopeKey]?.slots.length ?? 0) > 0,

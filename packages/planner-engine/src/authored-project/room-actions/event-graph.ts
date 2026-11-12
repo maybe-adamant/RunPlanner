@@ -2,7 +2,6 @@ import {
   isCombatBearingEncounterPhaseKind,
   type Catalog,
   type EncounterDefinition,
-  type EncounterEnvelope,
   type EncounterScript,
   type RoomDeclaration,
 } from '../../catalog-schema';
@@ -234,18 +233,6 @@ function pressFight(
         standsAt: DOORS_OPENED_POINT,
         completes: completes!,
       });
-}
-
-/**
- * Whether the room runs one encounter on its own: not native
- * `MultipleEncountersData` and no encounter a player's verb starts (Fields cages).
- */
-export function runsOneEncounter(envelope: EncounterEnvelope): boolean {
-  return (
-    envelope.slots.length > 0 &&
-    !envelope.multiEncounter &&
-    envelope.slots.every((slot) => slot.activatedByVerb === undefined)
-  );
 }
 
 interface GraphSlot {

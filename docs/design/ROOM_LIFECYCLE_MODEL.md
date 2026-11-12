@@ -967,9 +967,9 @@ of its counted choice; such a room runs the same steps without them. A Goal
 forced beside a Preboss's shop leaves the shop's producer. The walk reaches a
 producer only once its reward is chosen.
 
-The walk's order is fixed: prepare, enter, the reward point before combat,
-the encounters as the room's event graph runs them, the points after combat,
-Doors open, leave. A profile declares only what it adds to that order: its
+The walk's order is fixed: prepare, enter, the encounters as the room's event
+graph runs them, the points after combat, Doors open, leave. The reward point
+before combat is reached as the encounters begin. A profile declares only what it adds to that order: its
 producer points, whether its encounters run (a Shop's is recorded but never
 started), an offer point before or after entry, the Ephyra pylon's required
 objects, whether Doors open generates doors, and an acquisition point settled

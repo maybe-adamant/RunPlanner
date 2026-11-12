@@ -9,7 +9,6 @@ export const ROOM_WALK_STAGES = Object.freeze({
   enter: 2,
   offerAfterEntry: 3,
   requiredObjectsSpawn: 4,
-  beforeCombat: 5,
   encounters: 6,
   afterCombat: 7,
   doorsOpened: 8,

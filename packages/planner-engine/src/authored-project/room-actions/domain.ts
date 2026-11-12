@@ -90,7 +90,6 @@ import {
   nextWheelsOpen,
   phaseOfWheel,
   roomFightsEnd,
-  runsOneEncounter,
   type RoomActionBounds,
   type RoomEventGraph,
   type RoomEventPoint,
@@ -252,34 +251,26 @@ function shopPurchaseBounds(graph: RoomEventGraph): RoomActionBounds {
 }
 
 /**
- * A gate pickup and the reward before combat are taken before a single
- * encounter's combat, which the gate starts; a multi-encounter room's reward
- * follows its fights.
+ * A gate pickup is taken before the combat its use starts; the reward before
+ * combat, before the room's first. Any other reward follows the room's fights.
  */
-function incomingRewardBounds(
-  catalog: Catalog,
-  declaration: RoomDeclaration,
-  graph: RoomEventGraph,
-  producerPoint: string,
-): RoomActionBounds {
-  const envelope = catalog.encounterEnvelopes.byKey[declaration.encounterEnvelopeKey];
-  const first = graph.phases[0]?.phaseKey;
-  const gates =
-    producerPoint === 'beforeCombat' ||
-    graph.events.some(
-      (event) =>
-        event.kind === 'encounterStarted' &&
-        event.trigger.kind === 'action' &&
-        event.trigger.action.kind === 'interactIncomingReward' &&
-        event.trigger.action.producerPoint === producerPoint,
-    );
-  return envelope !== undefined && runsOneEncounter(envelope) && gates && first !== undefined
-    ? bounds(
+function incomingRewardBounds(graph: RoomEventGraph, producerPoint: string): RoomActionBounds {
+  const gated =
+    graph.events.flatMap((event) =>
+      event.kind === 'encounterStarted' &&
+      event.trigger.kind === 'action' &&
+      event.trigger.action.kind === 'interactIncomingReward' &&
+      event.trigger.action.producerPoint === producerPoint
+        ? [event.phaseKey]
+        : [],
+    )[0] ?? (producerPoint === 'beforeCombat' ? graph.phases[0]?.phaseKey : undefined);
+  return gated === undefined
+    ? afterCombat(graph)
+    : bounds(
         ROOM_ENTERED,
-        frozen({ kind: 'encounterStarted' as const, phaseKey: first }),
-        frozen({ kind: 'gate' as const, phaseKey: first }),
-      )
-    : afterCombat(graph);
+        frozen({ kind: 'encounterStarted' as const, phaseKey: gated }),
+        frozen({ kind: 'gate' as const, phaseKey: gated }),
+      );
 }
 
 function phaseRewardAttachment(
@@ -478,7 +469,7 @@ function baseContribution(
         occurrence,
         reference,
         'required',
-        incomingRewardBounds(catalog, declaration, graph, reference.producerPoint),
+        incomingRewardBounds(graph, reference.producerPoint),
         [],
         createAcquisitionRoleAddress(
           createIncomingRewardAddress(biome, occurrence.occurrenceId),
