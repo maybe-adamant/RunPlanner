@@ -23,7 +23,7 @@ import {
 import type { OrdinaryBatchGenerationAssessment } from '../generation/model';
 import { biomeHistoryThrough, type BiomeHistoryPrefix, type HistoryEvent } from '../history';
 import type { ReachedHistoryRoomAction } from '../history/model';
-import { roomOverviewStepCount, roomWalkSteps } from '../lifecycle';
+import { ROOM_TIMELINE_STAGE, ROOM_WALK_STAGES } from '../lifecycle';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { RoomStopCoverage } from '../evaluation/evaluation-products';
 import {
@@ -251,19 +251,7 @@ function positionRoom(
   const roomKey = key(room.origin);
   const owner = cutOwner(prefix, roomKey);
   if (owner.kind === 'start') return undefined;
-  const profile = catalog.roomLifecycleProfiles.byKey[owner.room.lifecycleProfileKey];
-  if (profile === undefined)
-    throw new BiomeMaterializationContractError(
-      `${owner.room.gameName} has unknown lifecycle profile ${owner.room.lifecycleProfileKey}`,
-    );
-  // Route overlays and entry rules rebind encounters, never the envelope or the profile's
-  // steps, so the declared room places every operation where its routed variant does.
-  const declaration = catalog.rooms.byKey[owner.room.gameName];
-  if (declaration === undefined)
-    throw new BiomeMaterializationContractError(`${owner.room.gameName} has no room declaration`);
-  const overviewEnd = roomOverviewStepCount(
-    roomWalkSteps(catalog, profile, declaration, owner.room.runsProducer),
-  );
+  const overviewEnd = ROOM_TIMELINE_STAGE;
   const roomEvents = history.events.filter(
     (candidate): candidate is LifecycleEvent =>
       lifecycleEvent(candidate) && key(candidate.origin) === roomKey,
@@ -882,20 +870,13 @@ function roomStop(
     passed.some((event) => event.kind === 'roomCommitted')
   )
     return stop('exit', entries.length, 'before');
-  // Only the positions of outgoing generation and exit work are read; a routed variant
-  // keeps them (see positionRoom).
-  const declaration = catalog.rooms.byKey[room.gameName];
-  if (declaration === undefined)
-    throw new BiomeMaterializationContractError(`${room.gameName} has no room declaration`);
-  const steps = roomWalkSteps(catalog, profile, declaration, room.runsProducer);
-  const generation = steps.findIndex(
-    (step) => step.kind === 'operation' && step.operation.kind === 'generateOutgoingBatch',
-  );
-  const exitWork = steps.findIndex(
-    (step) =>
-      step.kind === 'operation' &&
-      (step.operation.kind === 'settleAcquisitionPoint' || step.operation.kind === 'commitRoom'),
-  );
+  // Doors open generates the room's doors in its own stage; exit work is the leave stage.
+  const generation = room.roomActionRoster.eventGraph.events.some(
+    (event) => event.kind === 'doorsOpened' && event.generatesOutgoing,
+  )
+    ? ROOM_WALK_STAGES.doorsOpened
+    : -1;
+  const exitWork = ROOM_WALK_STAGES.leave;
   const generated = generation >= 0 && passed.some((event) => event.operationIndex >= generation);
   const phaseEvent = (kind: HistoryEvent['kind'], phaseKey: string, event: HistoryEvent) =>
     event.kind === kind && 'phaseKey' in event && event.phaseKey === phaseKey;

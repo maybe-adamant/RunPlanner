@@ -1,15 +1,9 @@
 import type {
-  RoomLifecycleProducerPolicy,
-  RoomLifecycleStep,
+  RoomLifecycleProfile,
   RoomRoleLifecycleProfileKeys,
 } from '@run-planner/engine/catalog-schema';
 
-export interface RawRoomLifecycleProfileDeclaration {
-  readonly key: string;
-  readonly encounterEnvelopeKeys: readonly string[];
-  readonly producer: RoomLifecycleProducerPolicy;
-  readonly steps: readonly RoomLifecycleStep[];
-}
+export type RawRoomLifecycleProfileDeclaration = RoomLifecycleProfile;
 
 /**
  * The lifecycle a room template runs. A fixed template lists its lifecycles; a

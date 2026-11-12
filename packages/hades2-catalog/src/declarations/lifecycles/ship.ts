@@ -5,16 +5,8 @@ export const shipRoomLifecycleProfiles = [
     key: 'ShipCombatRoom',
     encounterEnvelopeKeys: ['ShipEncounter'],
     producer: { kind: 'none' },
-    steps: [
-      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
-      { kind: 'enterRoom', effects: ['recordAppearance'] },
-      { kind: 'runEncounterScripts' },
-      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
-      {
-        kind: 'commitRoom',
-        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
-      },
-      { kind: 'exitRoom', effects: ['recordExit'] },
-    ],
+    runsEncounters: true,
+    requiredObjects: false,
+    generatesOutgoing: true,
   },
 ] as const satisfies readonly RawRoomLifecycleProfileDeclaration[];

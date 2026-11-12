@@ -850,46 +850,6 @@ export type EncounterSlotBinding =
       readonly shadowEncounterDefinitionKey?: string;
     };
 
-export type RoomLifecycleEffectKind =
-  | 'advanceRoomCounters'
-  | 'recordAppearance'
-  | 'recordCommit'
-  | 'recordEncounter'
-  | 'recordEnteredRewardStore'
-  | 'recordExit'
-  | 'recordOfferPoint'
-  | 'recordOutgoingGeneration'
-  | 'recordPreparation'
-  | 'recordProducerPoint'
-  | 'recordRequiredObjectCompletions'
-  | 'recordRequiredObjectSpawns'
-  | 'recordAcquisitionPoint';
-
-interface RoomLifecycleOperationBase {
-  readonly effects: readonly RoomLifecycleEffectKind[];
-}
-
-export type RoomLifecycleOperation =
-  | (RoomLifecycleOperationBase & { readonly kind: 'prepareRoom' })
-  | (RoomLifecycleOperationBase & {
-      readonly kind: 'materializeOfferPoint';
-      readonly offerPoint: string;
-    })
-  | (RoomLifecycleOperationBase & { readonly kind: 'enterRoom' })
-  | (RoomLifecycleOperationBase & { readonly kind: 'spawnRequiredObjects' })
-  | (RoomLifecycleOperationBase & { readonly kind: 'completeRequiredObjects' })
-  | (RoomLifecycleOperationBase & {
-      readonly kind: 'advanceProducer';
-      readonly point: ProducerLifecyclePointKey;
-    })
-  | (RoomLifecycleOperationBase & { readonly kind: 'generateOutgoingBatch' })
-  | (RoomLifecycleOperationBase & {
-      readonly kind: 'settleAcquisitionPoint';
-      readonly point: string;
-    })
-  | (RoomLifecycleOperationBase & { readonly kind: 'commitRoom' })
-  | (RoomLifecycleOperationBase & { readonly kind: 'exitRoom' });
-
 /**
  * The producer a room's pickable reward runs under. Whether the room has one
  * follows from its reward: a room without a pickable reward runs no producer.
@@ -906,31 +866,27 @@ export type RoomLifecycleProducerPolicy =
       readonly points: readonly ProducerLifecyclePointKey[];
     };
 
-/** A room-level lifecycle step; one step runs the room's encounter scripts. */
-export type RoomLifecycleStep =
-  | Extract<
-      RoomLifecycleOperation,
-      {
-        readonly kind:
-          | 'prepareRoom'
-          | 'materializeOfferPoint'
-          | 'enterRoom'
-          | 'spawnRequiredObjects'
-          | 'completeRequiredObjects'
-          | 'generateOutgoingBatch'
-          | 'settleAcquisitionPoint'
-          | 'commitRoom'
-          | 'exitRoom';
-      }
-    >
-  | { readonly kind: 'runEncounterScripts' };
-
-/** A room's lifecycle: its room-level steps and its reward's points. */
+/**
+ * A room's lifecycle: what it adds to its event graph's walk (prepare, enter,
+ * the encounters, Doors open, leave) and its reward's points.
+ */
 export interface RoomLifecycleProfile {
   readonly key: string;
   readonly encounterEnvelopeKeys: readonly string[];
   readonly producer: RoomLifecycleProducerPolicy;
-  readonly steps: readonly RoomLifecycleStep[];
+  /** The offer point the room materializes, before its entry (Shop inventory) or after it (Fields optionals). */
+  readonly offerPoint?: {
+    readonly key: string;
+    readonly at: 'beforeEntry' | 'afterEntry';
+  };
+  /** Whether its encounters run; a Shop's is prepared and recorded but never started. */
+  readonly runsEncounters: boolean;
+  /** The Ephyra pylon: required objects spawned right after entry and completed after the fights. */
+  readonly requiredObjects: boolean;
+  /** Doors open generates the room's outgoing doors; otherwise it only unlocks the exit. */
+  readonly generatesOutgoing: boolean;
+  /** An acquisition point settled as the room is left, before it commits. */
+  readonly exitAcquisitionPoint?: string;
 }
 
 export type RoomKind =

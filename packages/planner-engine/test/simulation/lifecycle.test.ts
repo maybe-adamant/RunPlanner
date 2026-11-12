@@ -238,10 +238,7 @@ function actionRoster(
         }));
   const events = testGraphEvents(phasesForStructure, {
     cages: profileKey === 'FieldsCombatRoom',
-    generatesOutgoing:
-      catalog.roomLifecycleProfiles.byKey[profileKey]?.steps.some(
-        (step) => step.kind === 'generateOutgoingBatch',
-      ) === true,
+    generatesOutgoing: catalog.roomLifecycleProfiles.byKey[profileKey]?.generatesOutgoing === true,
   });
   const eventGraph: RoomEventGraph = Object.freeze({
     profileKey,

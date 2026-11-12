@@ -15,10 +15,8 @@ import {
 import type {
   EncounterDefinition,
   RoomDeclaration,
-  RoomLifecycleOperation,
   RoomLifecycleProfile,
 } from '@run-planner/engine/catalog-schema';
-import { roomWalkSteps, type RoomWalkStep } from '../../../src/simulation/lifecycle/overview';
 
 const snapshotPath = './compiled-operations.snapshot.json';
 
@@ -28,20 +26,6 @@ const specializations = new Map(
     room.lifecycleProfileKey === undefined ? [] : [[room.gameName, room.lifecycleProfileKey]],
   ),
 );
-
-function operationText(operation: RoomLifecycleOperation): string {
-  const subject =
-    operation.kind === 'materializeOfferPoint'
-      ? ` ${operation.offerPoint}`
-      : operation.kind === 'settleAcquisitionPoint' || operation.kind === 'advanceProducer'
-        ? ` ${operation.point}`
-        : '';
-  return `${operation.kind}${subject}: ${operation.effects.join(', ')}`;
-}
-
-function stepText(step: RoomWalkStep): string {
-  return step.kind === 'operation' ? operationText(step.operation) : step.kind;
-}
 
 /** The fields an encounter's lifecycle reads: its kind, start, outcome and end. */
 function encounterText(definition: EncounterDefinition): string {
@@ -201,44 +185,24 @@ function selections(): readonly Selection[] {
   return result;
 }
 
-/**
- * The operations every room selecting the profile composes, keyed by the
- * profile; a room whose encounters compose differently adds its own entry.
- */
-function profileOperations(
-  profile: RoomLifecycleProfile,
-  all: readonly Selection[],
-): readonly (readonly [string, readonly string[]])[] {
-  const byList = new Map<string, { operations: readonly string[]; labels: string[] }>();
-  for (const selection of all) {
-    if (selection.profileKey !== profile.key) continue;
-    if (!profile.encounterEnvelopeKeys.includes(selection.declaration.encounterEnvelopeKey))
+/** A profile's walk facts; every room selecting it must admit its envelope. */
+function profileFacts(profile: RoomLifecycleProfile, all: readonly Selection[]) {
+  for (const selection of all)
+    if (
+      selection.profileKey === profile.key &&
+      !profile.encounterEnvelopeKeys.includes(selection.declaration.encounterEnvelopeKey)
+    )
       throw new Error(`${selection.label} selects ${profile.key} for its envelope`);
-    const operations = roomWalkSteps(
-      catalog,
-      profile,
-      selection.declaration,
-      selection.producer,
-    ).map(stepText);
-    const key = JSON.stringify(operations);
-    const group = byList.get(key) ?? { operations, labels: [] };
-    group.labels.push(selection.label);
-    byList.set(key, group);
-  }
-  const groups = [...byList.values()].sort(
-    (left, right) => right.labels.length - left.labels.length,
-  );
-  const [common, ...variants] = groups;
-  if (common === undefined) throw new Error(`${profile.key} is selected by no room`);
   return [
-    [profile.key, common.operations],
-    ...variants.map(
-      (variant) =>
-        [
-          `${profile.key} (${[...new Set(variant.labels)].sort().join(', ')})`,
-          variant.operations,
-        ] as const,
-    ),
+    profile.runsEncounters ? 'runsEncounters' : 'recordsEncounters',
+    ...(profile.offerPoint === undefined
+      ? []
+      : [`offerPoint ${profile.offerPoint.key} ${profile.offerPoint.at}`]),
+    ...(profile.requiredObjects ? ['requiredObjects'] : []),
+    ...(profile.generatesOutgoing ? ['generatesOutgoing'] : []),
+    ...(profile.exitAcquisitionPoint === undefined
+      ? []
+      : [`exitAcquisitionPoint ${profile.exitAcquisitionPoint}`]),
   ];
 }
 
@@ -267,19 +231,17 @@ function compiledOperations() {
   const all = selections();
   return {
     profiles: Object.fromEntries(
-      catalog.roomLifecycleProfiles.values.flatMap((profile) =>
-        profileOperations(profile, all).map(([key, operations]) => [
-          key,
-          {
-            envelopes: profile.encounterEnvelopeKeys.join(', '),
-            producer:
-              profile.producer.kind === 'none'
-                ? 'none'
-                : `required ${profile.producer.lifecycleProfileKeys.join(', ')}`,
-            operations,
-          },
-        ]),
-      ),
+      catalog.roomLifecycleProfiles.values.map((profile) => [
+        profile.key,
+        {
+          envelopes: profile.encounterEnvelopeKeys.join(', '),
+          producer:
+            profile.producer.kind === 'none'
+              ? 'none'
+              : `required ${profile.producer.lifecycleProfileKeys.join(', ')}: ${profile.producer.points.join(', ')}`,
+          walk: profileFacts(profile, all),
+        },
+      ]),
     ),
     rooms: Object.fromEntries(
       [...catalog.rooms.values]
@@ -308,50 +270,5 @@ describe('compiled room lifecycle operations', () => {
       parser: 'json',
     });
     await expect(text).toMatchFileSnapshot(snapshotPath);
-  });
-
-  // Chronology cuts read a room's operation positions from its declared room and
-  // its producer (progressive/selected-cut.ts); every routed variant must keep them.
-  it("keep every room-level step at one position across a profile's routed variants", () => {
-    const all = selections();
-    for (const profile of catalog.roomLifecycleProfiles.values)
-      for (const producer of [true, false]) {
-        const positions = all
-          .filter(
-            (selection) => selection.profileKey === profile.key && selection.producer === producer,
-          )
-          .map((selection) => {
-            const steps = roomWalkSteps(
-              catalog,
-              profile,
-              selection.declaration,
-              selection.producer,
-            );
-            const kind = (step: RoomWalkStep) =>
-              step.kind === 'operation' ? step.operation.kind : step.kind;
-            return {
-              label: selection.label,
-              count: steps.length,
-              outgoing: steps.findIndex((step) => kind(step) === 'generateOutgoingBatch'),
-              overviewEnd: steps.findIndex(
-                (step) =>
-                  kind(step) !== 'prepareRoom' &&
-                  kind(step) !== 'materializeOfferPoint' &&
-                  kind(step) !== 'enterRoom',
-              ),
-              steps: steps.flatMap((step, index) =>
-                step.kind !== 'operation' || step.operation.kind === 'advanceProducer'
-                  ? []
-                  : [`${index} ${step.operation.kind}`],
-              ),
-            };
-          });
-        const [first, ...rest] = positions;
-        for (const variant of rest)
-          expect(
-            { ...variant, label: first!.label },
-            `${variant.label} places the ${profile.key} steps`,
-          ).toEqual(first);
-      }
   });
 });

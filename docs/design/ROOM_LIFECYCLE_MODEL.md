@@ -749,6 +749,13 @@ cage-completion action remains a repair row but cannot erase that cycle. Ship
 phase grouping consumes the same structure's phase attachment; the application
 does not place wheel or action rows by rank arithmetic.
 
+A row's published execution contact is a projection of its bounds. One
+deliberate asymmetry: an encounter's spoils take the wheel's post-combat
+contact only when the phase is a Ship wheel phase (its spawn is that phase's
+encounter end), while a delivery or drop spawned by end effects takes the
+encounter-end contact of the phase whose end effects spawn it, even when those
+effects wait on a later wheel.
+
 ### Reroll presses
 
 Door and Fields cage reroll presses are optional ranked actions in the source
@@ -945,6 +952,16 @@ without the run-start reward, or when its door forces a Clockwork Goal in place
 of its counted choice; such a room runs the same steps without them. A Goal
 forced beside a Preboss's shop leaves the shop's producer. The walk reaches a
 producer only once its reward is chosen.
+
+The walk's order is fixed: prepare, enter, the reward point before combat,
+the encounters as the room's event graph runs them, the points after combat,
+Doors open, leave. A profile declares only what it adds to that order: its
+producer points, whether its encounters run (a Shop's is recorded but never
+started), an offer point before or after entry, the Ephyra pylon's required
+objects, whether Doors open generates doors, and an acquisition point settled
+as the room is left. A gate's point is not a stop of its own: the gate pickup
+is taken as it starts its fight. The listings below name the operations in
+that order.
 
 ### Standard Reward Room
 

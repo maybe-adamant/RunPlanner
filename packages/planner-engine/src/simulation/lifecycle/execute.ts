@@ -1,10 +1,8 @@
+import type { Catalog, RoomLifecycleProfile } from '../../catalog-schema';
 import type {
-  Catalog,
-  RoomLifecycleEffectKind,
-  RoomLifecycleOperation,
-  RoomLifecycleProfile,
-} from '../../catalog-schema';
-import type { ProducerRewardLifecycleDeclaration } from '../../reward-kernel/model';
+  ProducerLifecyclePointKey,
+  ProducerRewardLifecycleDeclaration,
+} from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
 import type { RoomHistoryFragment, RoomLifecycleEvent, RoomLifecycleExecutionInput } from './model';
 import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../../authored-project/infernal-contract-pedestal';
@@ -16,18 +14,15 @@ import {
   roomEventPlaces,
   runsOneEncounter,
 } from '../../authored-project/room-actions/event-graph';
-import { roomWalkSteps, type RoomWalkStep } from './overview';
+import { ROOM_WALK_STAGES } from './overview';
 import { resolvedEncounterPhaseForDefinition } from '../encounters/resolve';
 import { doorsReadyAfterRank, type RoomActionRow } from '../room-actions';
 import { purgingPoolSalePoint } from '../commerce/feature-rolls';
-
-type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];
 
 interface ExecutionContext {
   readonly catalog: Catalog;
   readonly input: RoomLifecycleExecutionInput;
   readonly profile: RoomLifecycleProfile;
-  readonly steps: readonly RoomWalkStep[];
   readonly encounterPhases: readonly ResolvedEncounterPhase[];
   readonly producerRewardLifecycle?: ProducerRewardLifecycleDeclaration;
 }
@@ -49,13 +44,15 @@ interface ExecutionState {
 interface RoomActionSchedule {
   /** The phases the room's encounters run, in run order. */
   readonly runPhases: readonly ResolvedEncounterPhase[];
+  /** A single-encounter room takes its due deliveries with the rows after its fight. */
+  readonly oneEncounter: boolean;
   /**
    * A room reward point: each pickup taken there runs with the rows before it.
    * An unplaced pickup a fight waits on stops the walk at that fight; one
    * nothing waits on lies on the ground, and the point passes uncollected.
    */
   readonly rewardPoint: (
-    operation: Extract<RoomLifecycleOperation, { readonly kind: 'advanceProducer' }>,
+    point: ProducerLifecyclePointKey,
     operationIndex: number,
     state: ExecutionState,
   ) => ExecutionState;
@@ -111,20 +108,6 @@ function appendEvent(
   return Object.freeze({ ...state, events: Object.freeze([...state.events, event]) });
 }
 
-function requireOperation<Kind extends RoomLifecycleOperationKind>(
-  context: OperationContext,
-  kind: Kind,
-): Extract<RoomLifecycleOperation, { readonly kind: Kind }> {
-  const step = context.steps[context.operationIndex];
-  const operation = step?.kind === 'operation' ? step.operation : undefined;
-  if (operation?.kind !== kind) {
-    throw new LifecycleExecutionContractError(
-      `effect expected ${kind} at operation ${context.operationIndex}`,
-    );
-  }
-  return operation as Extract<RoomLifecycleOperation, { readonly kind: Kind }>;
-}
-
 function requireEncounterPhase(context: OperationContext): ResolvedEncounterPhase {
   if (context.encounterPhase === undefined) {
     throw new LifecycleExecutionContractError(
@@ -172,16 +155,17 @@ function appendEncounterEndEffects(
   });
 }
 
-const lifecycleEffectRegistry = Object.freeze({
-  recordPreparation: (context, state) => appendEvent(state, context, { kind: 'roomPrepared' }),
-  recordOfferPoint: (context, state) => {
-    const operation = requireOperation(context, 'materializeOfferPoint');
-    return appendEvent(state, context, {
-      kind: 'offerPointMaterialized',
-      offerPoint: operation.offerPoint,
-    });
+/** What the room itself does as the walk passes its stages. */
+const roomEffects = {
+  prepare: (context: OperationContext, state: ExecutionState): ExecutionState => {
+    let next = appendEvent(state, context, { kind: 'roomPrepared' });
+    for (const phase of context.encounterPhases)
+      next = encounterEffects.recordEncounter({ ...context, encounterPhase: phase }, next);
+    return next;
   },
-  recordAppearance: (context, state) =>
+  offerPoint: (context: OperationContext, state: ExecutionState, offerPoint: string) =>
+    appendEvent(state, context, { kind: 'offerPointMaterialized', offerPoint }),
+  enter: (context: OperationContext, state: ExecutionState) =>
     appendEvent(state, context, {
       kind: 'roomEntered',
       surfaceShopPresent: context.input.surfaceShopPresent === true,
@@ -196,47 +180,31 @@ const lifecycleEffectRegistry = Object.freeze({
         ? {}
         : { enteredBiomeDepthCache: context.input.counterEffects.enteredBiomeDepthCache }),
     }),
-  recordRequiredObjectSpawns: (context, state) => {
-    const requiredObjects = context.input.requiredObjects;
-    if (requiredObjects === undefined || requiredObjects.length === 0) {
-      throw new LifecycleExecutionContractError(
-        `${context.profile.key} spawned missing required objects`,
+  requiredObjects: (
+    context: OperationContext,
+    state: ExecutionState,
+    kind: 'requiredObjectSpawned' | 'requiredObjectCompleted',
+  ): ExecutionState => {
+    let next = state;
+    for (const object of context.input.requiredObjects ?? [])
+      next = appendEvent(
+        next,
+        context,
+        kind === 'requiredObjectSpawned'
+          ? {
+              kind,
+              objectKey: object.key,
+              completionRequirement: object.completionRequirement,
+            }
+          : { kind, objectKey: object.key },
       );
-    }
-    let next = state;
-    for (const object of requiredObjects) {
-      next = appendEvent(next, context, {
-        kind: 'requiredObjectSpawned',
-        objectKey: object.key,
-        completionRequirement: object.completionRequirement,
-      });
-    }
     return next;
   },
-  recordEncounter: (context, state) => {
-    let next = state;
-    for (const phase of context.encounterPhases)
-      next = encounterEffects.recordEncounter({ ...context, encounterPhase: phase }, next);
-    return next;
-  },
-  recordRequiredObjectCompletions: (context, state) => {
-    const requiredObjects = context.input.requiredObjects;
-    if (requiredObjects === undefined || requiredObjects.length === 0) {
-      throw new LifecycleExecutionContractError(
-        `${context.profile.key} completed missing required objects`,
-      );
-    }
-    let next = state;
-    for (const object of requiredObjects) {
-      next = appendEvent(next, context, {
-        kind: 'requiredObjectCompleted',
-        objectKey: object.key,
-      });
-    }
-    return next;
-  },
-  recordProducerPoint: (context, state) => {
-    const operation = requireOperation(context, 'advanceProducer');
+  producerPoint: (
+    context: OperationContext,
+    state: ExecutionState,
+    point: ProducerLifecyclePointKey,
+  ): ExecutionState => {
     const producer = context.input.producer;
     const lifecycle = context.producerRewardLifecycle;
     if (producer === undefined || lifecycle === undefined) {
@@ -244,13 +212,10 @@ const lifecycleEffectRegistry = Object.freeze({
         `${context.profile.key} advanced a missing producer`,
       );
     }
-    let next = appendEvent(state, context, {
-      kind: 'producerPointReached',
-      point: operation.point,
-    });
+    let next = appendEvent(state, context, { kind: 'producerPointReached', point });
     if (producer.acquisitionEnabled === false) return next;
     for (const binding of lifecycle.acquisitionLifecycle) {
-      if (binding.lifecyclePoint === operation.point) {
+      if (binding.lifecyclePoint === point) {
         next = appendEvent(next, context, {
           kind: 'producerRoleAdvanced',
           producerLifecycleKey: producer.lifecycleProfileKey,
@@ -262,33 +227,21 @@ const lifecycleEffectRegistry = Object.freeze({
     }
     return next;
   },
-  recordOutgoingGeneration: (context, state) =>
-    appendEvent(state, context, { kind: 'outgoingGenerationCheckpoint' }),
-  recordAcquisitionPoint: (context, state) => {
-    if (context.input.roomActionRoster !== undefined) return state;
-    const operation = requireOperation(context, 'settleAcquisitionPoint');
-    return appendEvent(state, context, {
-      kind: 'acquisitionPointReached',
-      point: operation.point,
-    });
-  },
-  recordCommit: (context, state) => appendEvent(state, context, { kind: 'roomCommitted' }),
-  advanceRoomCounters: (context, state) =>
-    appendEvent(state, context, {
+  commit: (context: OperationContext, state: ExecutionState): ExecutionState => {
+    const committed = appendEvent(appendEvent(state, context, { kind: 'roomCommitted' }), context, {
       kind: 'roomCountersAdvanced',
       ...(context.input.counterEffects.resetsBiomeDepthCache === true
         ? { biomeDepthCacheReset: true as const }
         : {}),
-    }),
-  recordEnteredRewardStore: (context, state) =>
-    context.input.enteredRewardStoreKey === undefined
-      ? state
-      : appendEvent(state, context, {
+    });
+    return context.input.enteredRewardStoreKey === undefined
+      ? committed
+      : appendEvent(committed, context, {
           kind: 'enteredRewardStoreRecorded',
           storeKey: context.input.enteredRewardStoreKey,
-        }),
-  recordExit: (context, state) => appendEvent(state, context, { kind: 'roomExited' }),
-}) satisfies Readonly<Record<RoomLifecycleEffectKind, EffectHandler>>;
+        });
+  },
+};
 
 /** What a phase's encounter does as it runs: it is recorded, its wheels open, combat starts, it ends. */
 const encounterEffects = Object.freeze({
@@ -366,16 +319,20 @@ const encounterEffects = Object.freeze({
   },
 }) satisfies Readonly<Record<string, EffectHandler>>;
 
-function applyEffects(
-  operation: RoomLifecycleOperation,
-  context: OperationContext,
-  state: ExecutionState,
-): ExecutionState {
-  let next = state;
-  for (const effect of operation.effects) {
-    next = lifecycleEffectRegistry[effect](context, next);
-  }
-  return next;
+/** The reward point whose pickup the phase's gate uses to start its fight. */
+function gatePoint(
+  context: ExecutionContext,
+  phase: ResolvedEncounterPhase,
+): ProducerLifecyclePointKey | undefined {
+  const gate = context.catalog.encounterDefinitions.byKey[phase.encounterKey]?.script.gate;
+  const producer = context.input.producer;
+  if (gate?.kind !== 'useItemRole' || producer === undefined) return undefined;
+  // Whatever reward the room holds, its gate role's point is the one its lifecycle declares.
+  return context.catalog.rewards.producerLifecycles.byKey[
+    producer.lifecycleProfileKey
+  ]?.rewardTypes.values
+    .flatMap((reward) => reward.acquisitionLifecycle)
+    .find((binding) => binding.role === gate.role)?.lifecyclePoint;
 }
 
 function figLeafSkipsPhase(context: ExecutionContext, phaseKey: string): boolean {
@@ -434,7 +391,6 @@ function resolveExecutionContext(
     );
   }
   const producer = input.producer;
-  const steps = roomWalkSteps(catalog, profile, declaration, producer !== undefined);
   const selectedPhases = input.encounterPhases ?? Object.freeze([]);
   if (
     selectedPhases.length > envelope.slots.length ||
@@ -482,19 +438,13 @@ function resolveExecutionContext(
   }
 
   const hasRequiredObjects = (input.requiredObjects?.length ?? 0) > 0;
-  const hasRequiredObjectOperations = steps.some(
-    (step) =>
-      step.kind === 'operation' &&
-      (step.operation.kind === 'spawnRequiredObjects' ||
-        step.operation.kind === 'completeRequiredObjects'),
-  );
-  if (hasRequiredObjects !== hasRequiredObjectOperations) {
+  if (hasRequiredObjects !== profile.requiredObjects) {
     throw new LifecycleExecutionContractError(
       `${profile.key} required-object operations do not match lifecycle input`,
     );
   }
   if (producer === undefined)
-    return { catalog, input, profile, steps, encounterPhases: Object.freeze([...selectedPhases]) };
+    return { catalog, input, profile, encounterPhases: Object.freeze([...selectedPhases]) };
   if (profile.producer.kind === 'none') {
     throw new LifecycleExecutionContractError(`${profile.key} does not accept a producer`);
   }
@@ -515,13 +465,7 @@ function resolveExecutionContext(
       `${producer.offer.rewardType} is unsupported by ${producerLifecycle.key}`,
     );
   }
-  const profilePoints = new Set(
-    steps.flatMap((step) =>
-      step.kind === 'operation' && step.operation.kind === 'advanceProducer'
-        ? [step.operation.point]
-        : [],
-    ),
-  );
+  const profilePoints = new Set(profile.producer.points);
   for (const binding of producerRewardLifecycle.acquisitionLifecycle) {
     if (!profilePoints.has(binding.lifecyclePoint)) {
       throw new LifecycleExecutionContractError(
@@ -533,7 +477,6 @@ function resolveExecutionContext(
     catalog,
     input,
     profile,
-    steps,
     encounterPhases: Object.freeze([...selectedPhases]),
     producerRewardLifecycle,
   };
@@ -880,19 +823,6 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     return state;
   };
 
-  /** An event a row's verb triggers (a gate pickup, a wheel's choice, a cage) waits on that row. */
-  const awaitTrigger = (
-    reference: RoomActionReference,
-    operationIndex: number,
-    initial: ExecutionState,
-  ): ExecutionState => {
-    const target = liveRow(reference);
-    if (target === undefined) return initial;
-    if (initial.reachedActions?.some((action) => action.actionKey === target.key) === true)
-      return initial;
-    return advance({ kind: 'trigger', row: target, emit: false }, operationIndex, initial);
-  };
-
   /**
    * Doors open: once every required row they wait on is taken (the single
    * doors predicate), after the rows ranked before the last of them.
@@ -910,9 +840,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   const leave = (operationIndex: number, initial: ExecutionState): ExecutionState => {
     if (initial.blockedAt !== undefined) return initial;
     // A room without doors schedules its Shrine's deliveries as it is left.
-    const doorless = !context.steps.some(
-      (step) => step.kind === 'operation' && step.operation.kind === 'generateOutgoingBatch',
-    );
+    const doorless = !context.profile.generatesOutgoing;
     const state = advance(
       { kind: 'rank', rank: Number.POSITIVE_INFINITY },
       operationIndex,
@@ -930,14 +858,14 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
    * point passes uncollected.
    */
   const rewardPoint = (
-    operation: Extract<RoomLifecycleOperation, { readonly kind: 'advanceProducer' }>,
+    point: ProducerLifecyclePointKey,
     operationIndex: number,
     initial: ExecutionState,
   ): ExecutionState => {
     if (initial.blockedAt !== undefined) return initial;
     const pickups = (context.producerRewardLifecycle?.acquisitionLifecycle ?? []).flatMap(
       (binding) => {
-        if (binding.lifecyclePoint !== operation.point) return [];
+        if (binding.lifecyclePoint !== point) return [];
         const row = liveRow({
           kind: 'interactIncomingReward',
           producerPoint: binding.lifecyclePoint,
@@ -967,7 +895,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       if (state.blockedAt !== undefined) return state;
     }
     const eventsBefore = state.events.length;
-    state = applyEffects(operation, { ...context, operationIndex }, state);
+    state = roomEffects.producerPoint({ ...context, operationIndex }, state, point);
     if (state.events.length === eventsBefore) return state;
     // A pickup settles with its point's events; rows reached before it keep their own.
     const keys = new Set(pickups.map((row) => row.key));
@@ -991,23 +919,23 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   // A multi-encounter or cage room runs the fights its graph orders (Fields cages by
   // activation); no fight runs for a Nemesis random event, which her talk row settles.
   const envelope = context.catalog.encounterEnvelopes.byKey[context.input.encounterEnvelopeKey];
-  const runPhases =
-    envelope !== undefined && runsOneEncounter(envelope)
-      ? context.encounterPhases
-      : (() => {
-          const byKey = new Map(context.encounterPhases.map((phase) => [phase.slotKey, phase]));
-          return Object.freeze(
-            eventGraph.phases.flatMap((phase) => {
-              if (phase.script?.endsByInteraction === true) return [];
-              const resolved = byKey.get(phase.phaseKey);
-              if (resolved === undefined)
-                throw new LifecycleExecutionContractError(
-                  `${eventGraph.profileKey} graph selected missing phase ${phase.phaseKey}`,
-                );
-              return [resolved];
-            }),
-          );
-        })();
+  const oneEncounter = envelope !== undefined && runsOneEncounter(envelope);
+  const runPhases = oneEncounter
+    ? context.encounterPhases
+    : (() => {
+        const byKey = new Map(context.encounterPhases.map((phase) => [phase.slotKey, phase]));
+        return Object.freeze(
+          eventGraph.phases.flatMap((phase) => {
+            if (phase.script?.endsByInteraction === true) return [];
+            const resolved = byKey.get(phase.phaseKey);
+            if (resolved === undefined)
+              throw new LifecycleExecutionContractError(
+                `${eventGraph.profileKey} graph selected missing phase ${phase.phaseKey}`,
+              );
+            return [resolved];
+          }),
+        );
+      })();
 
   const graphEvent = (kind: 'encounterBegun' | 'encounterStarted', phaseKey: string) =>
     eventGraph.events.find((event) => event.kind === kind && event.phaseKey === phaseKey);
@@ -1025,9 +953,19 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     for (const kind of ['encounterBegun', 'encounterStarted'] as const) {
       const event = graphEvent(kind, phase.slotKey);
       if (event?.trigger.kind !== 'action') continue;
-      state = awaitTrigger(event.trigger.action, operationIndex, state);
+      const trigger = event.trigger.action;
+      const target = trigger.kind === 'interactIncomingReward' ? undefined : liveRow(trigger);
+      if (
+        target === undefined ||
+        state.reachedActions?.some((action) => action.actionKey === target.key)
+      )
+        continue;
+      state = advance({ kind: 'trigger', row: target, emit: false }, operationIndex, state);
       if (state.blockedAt !== undefined) return state;
     }
+    // A gate's pickup is taken at its reward point, which starts the fight.
+    const gate = gatePoint(context, phase);
+    if (gate !== undefined) state = rewardPoint(gate, operationIndex, state);
     return state;
   };
 
@@ -1100,6 +1038,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
 
   return Object.freeze({
     runPhases,
+    oneEncounter,
     rewardPoint,
     doorsOpen,
     doorsOpened: scheduleShrineDeliveries,
@@ -1118,94 +1057,121 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
  */
 function runEncounters(
   context: ExecutionContext,
-  combatIndex: number,
-  endIndex: number,
   initial: ExecutionState,
   schedule: RoomActionSchedule | undefined,
 ): ExecutionState {
   let state = initial;
-  const phases = schedule?.runPhases ?? context.encounterPhases;
-  for (const phase of phases) {
+  const operationIndex = ROOM_WALK_STAGES.encounters;
+  for (const phase of schedule?.runPhases ?? context.encounterPhases) {
     const skipped = figLeafSkipsPhase(context, phase.slotKey);
-    const figLeaf = {
+    const fight: OperationContext = {
+      ...context,
+      operationIndex,
+      encounterPhase: phase,
       ...(skipped ? { figLeafSkipped: true } : {}),
       ...(skipped && phase.figLeafSkip && phase.canEncounterSkip ? { figLeafSkipOwner: true } : {}),
     };
-    const combat: OperationContext = {
-      ...context,
-      operationIndex: combatIndex,
-      encounterPhase: phase,
-      ...figLeaf,
-    };
-    const end: OperationContext = { ...combat, operationIndex: endIndex };
-    if (schedule === undefined) state = encounterEffects.recordPhaseOfferPoint(combat, state);
-    else {
-      state = schedule.beforeCombat(phase, combatIndex, state);
+    if (schedule === undefined) {
+      state = encounterEffects.recordPhaseOfferPoint(fight, state);
+      const gate = gatePoint(context, phase);
+      if (gate !== undefined) state = roomEffects.producerPoint(fight, state, gate);
+    } else {
+      state = schedule.beforeCombat(phase, operationIndex, state);
       if (state.blockedAt !== undefined) return state;
     }
-    state = encounterEffects.recordEncounterStart(combat, state);
-    state = encounterEffects.advanceEncounterDepth(combat, state);
-    state = encounterEffects.recordEncounterCompletion(end, state);
+    state = encounterEffects.recordEncounterStart(fight, state);
+    state = encounterEffects.advanceEncounterDepth(fight, state);
+    state = encounterEffects.recordEncounterCompletion(fight, state);
     if (schedule === undefined) continue;
-    state = schedule.readyWait(phase, endIndex, state);
+    state = schedule.readyWait(phase, operationIndex, state);
     if (state.blockedAt !== undefined) return state;
-    if (waitsForReady(context, phase)) state = appendEncounterEndEffects(end, state);
-    // A multi-encounter run takes them before its next phase; a single encounter's
-    // follow with the rows after it.
-    if (combatIndex === endIndex) {
-      state = schedule.afterEndEffects(phase, endIndex, state);
+    if (waitsForReady(context, phase)) state = appendEncounterEndEffects(fight, state);
+    if (!schedule.oneEncounter) {
+      state = schedule.afterEndEffects(phase, operationIndex, state);
       if (state.blockedAt !== undefined) return state;
     }
   }
   return state;
 }
 
+type WalkStep = (state: ExecutionState) => ExecutionState;
+
+/**
+ * The room's walk through its stages: prepared, entered, its encounters run
+ * by its event graph between its reward points before and after combat, its
+ * doors opened, and left.
+ */
 export function executeRoomLifecycle(
   catalog: Catalog,
   input: RoomLifecycleExecutionInput,
 ): RoomHistoryFragment {
   const context = resolveExecutionContext(catalog, input);
+  const { profile } = context;
   const schedule =
     input.roomActionRoster === undefined ? undefined : createRoomActionSchedule(context);
+  const at = (stage: keyof typeof ROOM_WALK_STAGES): OperationContext => ({
+    ...context,
+    operationIndex: ROOM_WALK_STAGES[stage],
+  });
+  const when = (condition: boolean, ...steps: WalkStep[]): WalkStep[] => (condition ? steps : []);
+  // A gate's point is taken as its pickup starts the fight.
+  const gates = new Set(context.encounterPhases.map((phase) => gatePoint(context, phase)));
+  const points = (
+    input.producer === undefined || profile.producer.kind === 'none' ? [] : profile.producer.points
+  ).filter((point) => !gates.has(point));
+  const rewardPoint =
+    (stage: 'beforeCombat' | 'afterCombat') =>
+    (point: ProducerLifecyclePointKey): WalkStep =>
+    (state) =>
+      schedule === undefined
+        ? roomEffects.producerPoint(at(stage), state, point)
+        : schedule.rewardPoint(point, ROOM_WALK_STAGES[stage], state);
+  const offerPoint = profile.offerPoint;
+  const exitPoint = profile.exitAcquisitionPoint;
+  const walk: readonly WalkStep[] = [
+    (state) => roomEffects.prepare(at('prepare'), state),
+    ...when(offerPoint?.at === 'beforeEntry', (state) =>
+      roomEffects.offerPoint(at('offerBeforeEntry'), state, offerPoint!.key),
+    ),
+    (state) => roomEffects.enter(at('enter'), state),
+    ...when(offerPoint?.at === 'afterEntry', (state) =>
+      roomEffects.offerPoint(at('offerAfterEntry'), state, offerPoint!.key),
+    ),
+    ...when(profile.requiredObjects, (state) =>
+      roomEffects.requiredObjects(at('requiredObjectsSpawn'), state, 'requiredObjectSpawned'),
+    ),
+    ...points.filter((point) => point === 'beforeCombat').map(rewardPoint('beforeCombat')),
+    ...when(
+      profile.runsEncounters &&
+        (catalog.encounterEnvelopes.byKey[input.encounterEnvelopeKey]?.slots.length ?? 0) > 0,
+      (state) => runEncounters(context, state, schedule),
+    ),
+    ...when(profile.requiredObjects, (state) =>
+      roomEffects.requiredObjects(at('afterCombat'), state, 'requiredObjectCompleted'),
+    ),
+    ...points.filter((point) => point !== 'beforeCombat').map(rewardPoint('afterCombat')),
+    ...when(
+      profile.generatesOutgoing,
+      (state) => schedule?.doorsOpen(ROOM_WALK_STAGES.doorsOpened, state) ?? state,
+      (state) => appendEvent(state, at('doorsOpened'), { kind: 'outgoingGenerationCheckpoint' }),
+      (state) => schedule?.doorsOpened(ROOM_WALK_STAGES.doorsOpened, state) ?? state,
+    ),
+    (state) => schedule?.leave(ROOM_WALK_STAGES.leave, state) ?? state,
+    // Without a roster nothing is reached: the exit's acquisition point only records itself.
+    ...when(exitPoint !== undefined && schedule === undefined, (state) =>
+      appendEvent(state, at('leave'), { kind: 'acquisitionPointReached', point: exitPoint! }),
+    ),
+    (state) => roomEffects.commit(at('leave'), state),
+    (state) => appendEvent(state, at('exit'), { kind: 'roomExited' }),
+  ];
   let state: ExecutionState = Object.freeze({ events: Object.freeze([]) });
-  for (const [operationIndex, step] of context.steps.entries()) {
-    if (step.kind === 'encounterEnds') continue;
-    if (step.kind === 'encounters') {
-      const ends = context.steps[operationIndex + 1]?.kind === 'encounterEnds';
-      state = runEncounters(
-        context,
-        operationIndex,
-        ends ? operationIndex + 1 : operationIndex,
-        state,
-        schedule,
-      );
-      if (state.blockedAt !== undefined) break;
-      continue;
-    }
-    const operation = step.operation;
-    if (schedule !== undefined && operation.kind === 'advanceProducer') {
-      state = schedule.rewardPoint(operation, operationIndex, state);
-      if (state.blockedAt !== undefined) break;
-      continue;
-    }
-    if (schedule !== undefined) {
-      if (operation.kind === 'generateOutgoingBatch')
-        state = schedule.doorsOpen(operationIndex, state);
-      else if (operation.kind === 'settleAcquisitionPoint' || operation.kind === 'commitRoom')
-        state = schedule.leave(operationIndex, state);
-      if (state.blockedAt !== undefined) break;
-    }
-    // Without a roster nothing is reached: a room reward point only records its events.
-    state = applyEffects(operation, { ...context, operationIndex }, state);
+  for (const step of walk) {
+    state = step(state);
     if (state.blockedAt !== undefined) break;
-    if (schedule !== undefined && operation.kind === 'generateOutgoingBatch') {
-      state = schedule.doorsOpened(operationIndex, state);
-      if (state.blockedAt !== undefined) break;
-    }
   }
   return Object.freeze({
     origin: input.origin,
-    lifecycleProfileKey: context.profile.key,
+    lifecycleProfileKey: profile.key,
     encounterEnvelopeKey: context.input.encounterEnvelopeKey,
     events: state.events,
     reachedActions: state.reachedActions ?? Object.freeze([]),

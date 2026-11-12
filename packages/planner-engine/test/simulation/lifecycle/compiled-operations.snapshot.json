@@ -2,289 +2,93 @@
   "profiles": {
     "StandardRewardRoom": {
       "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "advanceProducer beforeCombat: recordProducerPoint",
-        "encounters",
-        "encounterEnds",
-        "advanceProducer afterCombat: recordProducerPoint",
-        "advanceProducer roomRewardPickup: recordProducerPoint",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
-    },
-    "StandardRewardRoom (Dream I_Combat01 no producer, Dream I_Combat02 no producer, Dream I_Combat03 no producer, Dream I_Combat04 no producer, Dream I_Combat05 no producer, Dream I_Combat06 no producer, Dream I_Combat07 no producer, Dream I_Combat08 no producer, Dream I_Combat09 no producer, Dream I_Combat10 no producer, Dream I_Combat11 no producer, Dream I_Combat12 no producer, Dream I_Combat13 no producer, Dream I_Combat14 no producer, Dream I_Combat15 no producer, Dream I_Combat16 no producer, Dream I_Combat17 no producer, Dream I_Combat18 no producer, Dream I_Combat19 no producer, Dream I_Combat20 no producer, Dream I_Combat21 no producer, Dream I_Combat22 no producer, Dream I_Combat23 no producer, Dream I_Combat24 no producer, FreshFile I_Combat01 no producer, FreshFile I_Combat02 no producer, FreshFile I_Combat03 no producer, FreshFile I_Combat04 no producer, FreshFile I_Combat05 no producer, FreshFile I_Combat06 no producer, FreshFile I_Combat07 no producer, FreshFile I_Combat08 no producer, FreshFile I_Combat09 no producer, FreshFile I_Combat10 no producer, FreshFile I_Combat11 no producer, FreshFile I_Combat12 no producer, FreshFile I_Combat13 no producer, FreshFile I_Combat14 no producer, FreshFile I_Combat15 no producer, FreshFile I_Combat16 no producer, FreshFile I_Combat17 no producer, FreshFile I_Combat18 no producer, FreshFile I_Combat19 no producer, FreshFile I_Combat20 no producer, FreshFile I_Combat21 no producer, FreshFile I_Combat22 no producer, FreshFile I_Combat23 no producer, FreshFile I_Combat24 no producer, Surface I_Combat01 no producer, Surface I_Combat02 no producer, Surface I_Combat03 no producer, Surface I_Combat04 no producer, Surface I_Combat05 no producer, Surface I_Combat06 no producer, Surface I_Combat07 no producer, Surface I_Combat08 no producer, Surface I_Combat09 no producer, Surface I_Combat10 no producer, Surface I_Combat11 no producer, Surface I_Combat12 no producer, Surface I_Combat13 no producer, Surface I_Combat14 no producer, Surface I_Combat15 no producer, Surface I_Combat16 no producer, Surface I_Combat17 no producer, Surface I_Combat18 no producer, Surface I_Combat19 no producer, Surface I_Combat20 no producer, Surface I_Combat21 no producer, Surface I_Combat22 no producer, Surface I_Combat23 no producer, Surface I_Combat24 no producer, Underworld I_Combat01 no producer, Underworld I_Combat02 no producer, Underworld I_Combat03 no producer, Underworld I_Combat04 no producer, Underworld I_Combat05 no producer, Underworld I_Combat06 no producer, Underworld I_Combat07 no producer, Underworld I_Combat08 no producer, Underworld I_Combat09 no producer, Underworld I_Combat10 no producer, Underworld I_Combat11 no producer, Underworld I_Combat12 no producer, Underworld I_Combat13 no producer, Underworld I_Combat14 no producer, Underworld I_Combat15 no producer, Underworld I_Combat16 no producer, Underworld I_Combat17 no producer, Underworld I_Combat18 no producer, Underworld I_Combat19 no producer, Underworld I_Combat20 no producer, Underworld I_Combat21 no producer, Underworld I_Combat22 no producer, Underworld I_Combat23 no producer, Underworld I_Combat24 no producer)": {
-      "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "encounters",
-        "encounterEnds",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
+      "walk": ["runsEncounters", "generatesOutgoing"]
     },
     "OpeningRewardRoom": {
       "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "encounters",
-        "encounterEnds",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
-    },
-    "OpeningRewardRoom (Surface N_Opening01 start, Underworld F_Opening01 start, Underworld F_Opening02 start, Underworld F_Opening03 start)": {
-      "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "advanceProducer roomRewardPickup: recordProducerPoint",
-        "encounters",
-        "encounterEnds",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
-    },
-    "OpeningRewardRoom (Dream P_Intro start)": {
-      "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "encounters",
-        "encounterEnds",
-        "advanceProducer roomRewardPickup: recordProducerPoint",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "producer": "required RoomReward: roomRewardPickup",
+      "walk": ["runsEncounters", "generatesOutgoing"]
     },
     "OpeningRewardNoEncounterRoom": {
       "envelopes": "EmptyEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
-    },
-    "OpeningRewardNoEncounterRoom (Dream G_Intro start, Dream H_Intro start, Dream I_Intro start, Dream O_Intro start, Dream Q_Intro start)": {
-      "envelopes": "EmptyEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "advanceProducer roomRewardPickup: recordProducerPoint",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "producer": "required RoomReward: roomRewardPickup",
+      "walk": ["runsEncounters", "generatesOutgoing"]
     },
     "RewardlessCombatRoom": {
       "envelopes": "SingleEncounter",
       "producer": "none",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "encounters",
-        "encounterEnds",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "walk": ["runsEncounters", "generatesOutgoing"]
     },
     "PCombatRoom": {
       "envelopes": "PEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "advanceProducer beforeCombat: recordProducerPoint",
-        "encounters",
-        "advanceProducer afterCombat: recordProducerPoint",
-        "advanceProducer roomRewardPickup: recordProducerPoint",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
+      "walk": ["runsEncounters", "generatesOutgoing"]
     },
     "EphyraMainRoom": {
       "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "spawnRequiredObjects: recordRequiredObjectSpawns",
-        "advanceProducer beforeCombat: recordProducerPoint",
-        "encounters",
-        "encounterEnds",
-        "completeRequiredObjects: recordRequiredObjectCompletions",
-        "advanceProducer afterCombat: recordProducerPoint",
-        "advanceProducer roomRewardPickup: recordProducerPoint",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
+      "walk": ["runsEncounters", "requiredObjects", "generatesOutgoing"]
     },
     "EphyraSideRoom": {
       "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "advanceProducer beforeCombat: recordProducerPoint",
-        "encounters",
-        "encounterEnds",
-        "advanceProducer afterCombat: recordProducerPoint",
-        "advanceProducer roomRewardPickup: recordProducerPoint",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
+      "walk": ["runsEncounters"]
     },
     "EphyraHubRoom": {
       "envelopes": "EmptyEncounter",
       "producer": "none",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "walk": ["recordsEncounters", "generatesOutgoing"]
     },
     "StoryPickupRoom": {
       "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "advanceProducer beforeCombat: recordProducerPoint",
-        "encounters",
-        "encounterEnds",
-        "advanceProducer afterCombat: recordProducerPoint",
-        "advanceProducer roomRewardPickup: recordProducerPoint",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "settleAcquisitionPoint roomExit: recordAcquisitionPoint",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
+      "walk": ["runsEncounters", "generatesOutgoing", "exitAcquisitionPoint roomExit"]
     },
     "DevotionRoom": {
       "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "advanceProducer beforeCombat: recordProducerPoint",
-        "encounters",
-        "encounterEnds",
-        "advanceProducer afterCombat: recordProducerPoint",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "producer": "required RoomReward: beforeCombat, afterCombat",
+      "walk": ["runsEncounters", "generatesOutgoing"]
     },
     "FieldsCombatRoom": {
       "envelopes": "FieldsEncounter",
       "producer": "none",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "materializeOfferPoint fieldsOptionalRewards: recordOfferPoint",
-        "encounters",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "walk": ["runsEncounters", "offerPoint fieldsOptionalRewards afterEntry", "generatesOutgoing"]
     },
     "ShipCombatRoom": {
       "envelopes": "ShipEncounter",
       "producer": "none",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "encounters",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "walk": ["runsEncounters", "generatesOutgoing"]
     },
     "WorldShopRoom": {
       "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "materializeOfferPoint shopInventory: recordOfferPoint",
-        "enterRoom: recordAppearance",
-        "generateOutgoingBatch: recordOutgoingGeneration",
-        "settleAcquisitionPoint roomExit: recordAcquisitionPoint",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
+      "producer": "required RoomReward: ",
+      "walk": [
+        "recordsEncounters",
+        "offerPoint shopInventory beforeEntry",
+        "generatesOutgoing",
+        "exitAcquisitionPoint roomExit"
       ]
     },
     "PrebossFreeRewardRoom": {
       "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "advanceProducer beforeCombat: recordProducerPoint",
-        "encounters",
-        "encounterEnds",
-        "advanceProducer afterCombat: recordProducerPoint",
-        "advanceProducer roomRewardPickup: recordProducerPoint",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "producer": "required RoomReward: beforeCombat, afterCombat, roomRewardPickup",
+      "walk": ["runsEncounters"]
     },
     "PrebossShopRoom": {
       "envelopes": "SingleEncounter",
-      "producer": "required RoomReward",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "materializeOfferPoint shopInventory: recordOfferPoint",
-        "enterRoom: recordAppearance",
-        "settleAcquisitionPoint roomExit: recordAcquisitionPoint",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
+      "producer": "required RoomReward: ",
+      "walk": [
+        "recordsEncounters",
+        "offerPoint shopInventory beforeEntry",
+        "exitAcquisitionPoint roomExit"
       ]
     },
-    "BossRoom": {
-      "envelopes": "SingleEncounter",
-      "producer": "none",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "encounters",
-        "encounterEnds",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
-    },
+    "BossRoom": { "envelopes": "SingleEncounter", "producer": "none", "walk": ["runsEncounters"] },
     "PostBossRoom": {
       "envelopes": "SingleEncounter",
       "producer": "none",
-      "operations": [
-        "prepareRoom: recordPreparation, recordEncounter",
-        "enterRoom: recordAppearance",
-        "encounters",
-        "encounterEnds",
-        "commitRoom: recordCommit, advanceRoomCounters, recordEnteredRewardStore",
-        "exitRoom: recordExit"
-      ]
+      "walk": ["runsEncounters"]
     }
   },
   "rooms": {

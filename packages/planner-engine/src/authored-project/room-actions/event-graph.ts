@@ -544,7 +544,7 @@ export function assembleRoomEventGraph(options: {
     frozen({
       kind: 'doorsOpened',
       key: 'doorsOpened',
-      generatesOutgoing: profile.steps.some((step) => step.kind === 'generateOutgoingBatch'),
+      generatesOutgoing: profile.generatesOutgoing,
       trigger: DOORS_PREDICATE,
     }),
   );

@@ -5,10 +5,8 @@ import type {
   EncounterSet,
   EncounterSlotBinding,
   RoomDeclaration,
-  RoomLifecycleEffectKind,
   RoomLifecycleProfile,
   RoomLifecycleProducerPolicy,
-  RoomLifecycleStep,
   TraitDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog, RewardProducerBinding } from '@run-planner/engine/reward-kernel';
@@ -21,21 +19,6 @@ import type { RawRoomLifecycleProfileDeclaration } from '../declarations';
 import { createCollection, freezeUniqueStrings, requireNonEmpty } from './common';
 import { fail } from './errors';
 
-const effectKinds = {
-  advanceRoomCounters: true,
-  recordAppearance: true,
-  recordCommit: true,
-  recordEncounter: true,
-  recordEnteredRewardStore: true,
-  recordExit: true,
-  recordOfferPoint: true,
-  recordOutgoingGeneration: true,
-  recordPreparation: true,
-  recordRequiredObjectCompletions: true,
-  recordRequiredObjectSpawns: true,
-  recordAcquisitionPoint: true,
-} as const satisfies Partial<Readonly<Record<RoomLifecycleEffectKind, true>>>;
-
 const producerLifecyclePoints = {
   afterCombat: true,
   afterUnwrap: true,
@@ -45,74 +28,6 @@ const producerLifecyclePoints = {
   roomRewardPickup: true,
   roomExit: true,
 } as const satisfies Readonly<Record<ProducerLifecyclePointKey, true>>;
-
-type EffectStep = Exclude<RoomLifecycleStep, { readonly kind: 'runEncounterScripts' }>;
-
-const expectedEffects = {
-  prepareRoom: ['recordPreparation', 'recordEncounter'],
-  materializeOfferPoint: ['recordOfferPoint'],
-  enterRoom: ['recordAppearance'],
-  spawnRequiredObjects: ['recordRequiredObjectSpawns'],
-  completeRequiredObjects: ['recordRequiredObjectCompletions'],
-  generateOutgoingBatch: ['recordOutgoingGeneration'],
-  settleAcquisitionPoint: ['recordAcquisitionPoint'],
-  commitRoom: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
-  exitRoom: ['recordExit'],
-} as const satisfies Readonly<Record<EffectStep['kind'], readonly RoomLifecycleEffectKind[]>>;
-
-function normalizeEffects(
-  raw: readonly RoomLifecycleEffectKind[],
-  stepKind: EffectStep['kind'],
-  path: string,
-): readonly RoomLifecycleEffectKind[] {
-  const effects = freezeUniqueStrings(raw, path) as readonly RoomLifecycleEffectKind[];
-  for (const [index, effect] of effects.entries()) {
-    if (!Object.hasOwn(effectKinds, effect)) {
-      fail(`${path}[${index}]`, `unknown lifecycle effect ${String(effect)}`);
-    }
-  }
-  const expected: readonly RoomLifecycleEffectKind[] = expectedEffects[stepKind];
-  if (
-    effects.length !== expected.length ||
-    effects.some((effect, index) => effect !== expected[index])
-  ) {
-    fail(path, `${stepKind} requires effects ${expected.join(', ')}`);
-  }
-  return effects;
-}
-
-function normalizeStep(raw: RoomLifecycleStep, path: string): RoomLifecycleStep {
-  const receivedKind: unknown = (raw as { readonly kind?: unknown }).kind;
-  switch (raw.kind) {
-    case 'runEncounterScripts':
-      return Object.freeze({ kind: raw.kind });
-    case 'prepareRoom':
-    case 'enterRoom':
-    case 'spawnRequiredObjects':
-    case 'completeRequiredObjects':
-    case 'generateOutgoingBatch':
-    case 'commitRoom':
-    case 'exitRoom':
-      return Object.freeze({
-        kind: raw.kind,
-        effects: normalizeEffects(raw.effects, raw.kind, `${path}.effects`),
-      });
-    case 'materializeOfferPoint':
-      return Object.freeze({
-        kind: raw.kind,
-        offerPoint: requireNonEmpty(raw.offerPoint, `${path}.offerPoint`),
-        effects: normalizeEffects(raw.effects, raw.kind, `${path}.effects`),
-      });
-    case 'settleAcquisitionPoint':
-      return Object.freeze({
-        kind: raw.kind,
-        point: requireNonEmpty(raw.point, `${path}.point`),
-        effects: normalizeEffects(raw.effects, raw.kind, `${path}.effects`),
-      });
-    default:
-      fail(`${path}.kind`, `unknown lifecycle step ${String(receivedKind)}`);
-  }
-}
 
 function normalizeProducerPolicy(
   raw: RoomLifecycleProducerPolicy,
@@ -150,108 +65,6 @@ function normalizeProducerPolicy(
   return Object.freeze({ kind: 'required', lifecycleProfileKeys, points });
 }
 
-function validateStepSequence(
-  steps: readonly RoomLifecycleStep[],
-  producer: RoomLifecycleProducerPolicy,
-  path: string,
-): void {
-  if (steps.length === 0) {
-    fail(path, 'must not be empty');
-  }
-  if (steps[0]?.kind !== 'prepareRoom') {
-    fail(`${path}[0].kind`, 'lifecycle must begin with prepareRoom');
-  }
-  if (steps.at(-1)?.kind !== 'exitRoom') {
-    fail(`${path}[${steps.length - 1}].kind`, 'lifecycle must end with exitRoom');
-  }
-  for (const required of ['prepareRoom', 'enterRoom', 'commitRoom', 'exitRoom'] as const) {
-    if (steps.filter((step) => step.kind === required).length !== 1) {
-      fail(path, `lifecycle requires exactly one ${required}`);
-    }
-  }
-  const indexOf = (kind: RoomLifecycleStep['kind']) =>
-    steps.findIndex((step) => step.kind === kind);
-  const enterIndex = indexOf('enterRoom');
-  const commitIndex = indexOf('commitRoom');
-  if (!(
-    indexOf('prepareRoom') < enterIndex &&
-    enterIndex < commitIndex &&
-    commitIndex < indexOf('exitRoom')
-  )) {
-    fail(path, 'prepareRoom, enterRoom, commitRoom, and exitRoom are out of order');
-  }
-
-  const materializedOfferPoints = new Set<string>();
-  const settledAcquisitionPoints = new Set<string>();
-  let scriptsRun = false;
-  let requiredObjectsSpawned = false;
-  let requiredObjectsCompleted = false;
-  let outgoingGenerationCount = 0;
-  for (const [index, step] of steps.entries()) {
-    if (index > commitIndex && step.kind !== 'exitRoom') {
-      fail(`${path}[${index}].kind`, 'only exitRoom may follow commitRoom');
-    }
-    if (
-      index < enterIndex &&
-      step.kind !== 'prepareRoom' &&
-      step.kind !== 'materializeOfferPoint'
-    ) {
-      fail(`${path}[${index}].kind`, `${step.kind} cannot precede enterRoom`);
-    }
-    if (step.kind === 'materializeOfferPoint') {
-      if (materializedOfferPoints.has(step.offerPoint)) {
-        fail(`${path}[${index}].offerPoint`, `duplicates offer point ${step.offerPoint}`);
-      }
-      materializedOfferPoints.add(step.offerPoint);
-    } else if (step.kind === 'settleAcquisitionPoint') {
-      if (settledAcquisitionPoints.has(step.point)) {
-        fail(`${path}[${index}].point`, `duplicates acquisition point ${step.point}`);
-      }
-      settledAcquisitionPoints.add(step.point);
-    } else if (step.kind === 'runEncounterScripts') {
-      if (scriptsRun) fail(`${path}[${index}].kind`, 'lifecycle runs its encounter scripts once');
-      scriptsRun = true;
-    } else if (step.kind === 'spawnRequiredObjects') {
-      if (requiredObjectsSpawned || index !== enterIndex + 1) {
-        fail(
-          `${path}[${index}].kind`,
-          'required objects must spawn once immediately after room entry',
-        );
-      }
-      requiredObjectsSpawned = true;
-    } else if (step.kind === 'completeRequiredObjects') {
-      if (
-        !requiredObjectsSpawned ||
-        requiredObjectsCompleted ||
-        steps[index - 1]?.kind !== 'runEncounterScripts'
-      ) {
-        fail(
-          `${path}[${index}].kind`,
-          'required objects must complete once right after the encounter scripts',
-        );
-      }
-      requiredObjectsCompleted = true;
-    } else if (step.kind === 'generateOutgoingBatch') {
-      if (requiredObjectsSpawned && !requiredObjectsCompleted) {
-        fail(`${path}[${index}].kind`, 'generateOutgoingBatch requires completed required objects');
-      }
-      if (indexOf('runEncounterScripts') > index) {
-        fail(`${path}[${index}].kind`, 'generateOutgoingBatch follows the encounter scripts');
-      }
-      outgoingGenerationCount += 1;
-      if (outgoingGenerationCount > 1) {
-        fail(`${path}[${index}].kind`, 'lifecycle may generate at most one outgoing batch');
-      }
-    }
-  }
-  if (requiredObjectsSpawned !== requiredObjectsCompleted) {
-    fail(path, 'required-object spawn and completion operations must be paired');
-  }
-  if (producer.kind === 'required' && producer.points.length > 0 && !scriptsRun) {
-    fail(path, 'producer points require the encounter scripts step');
-  }
-}
-
 export function normalizeRoomLifecycleProfiles(
   rawProfiles: readonly RawRoomLifecycleProfileDeclaration[],
   encounterEnvelopes: CatalogCollection<EncounterEnvelope>,
@@ -281,11 +94,34 @@ export function normalizeRoomLifecycleProfiles(
         producerLifecycles,
         `${path}.producer`,
       );
-      const steps = Object.freeze(
-        raw.steps.map((step, stepIndex) => normalizeStep(step, `${path}.steps[${stepIndex}]`)),
-      );
-      validateStepSequence(steps, producer, `${path}.steps`);
-      return Object.freeze({ key, encounterEnvelopeKeys, producer, steps });
+      if (producer.kind === 'required' && producer.points.length > 0 && !raw.runsEncounters)
+        fail(`${path}.producer.points`, 'producer points require the room to run its encounters');
+      if (raw.requiredObjects && !raw.runsEncounters)
+        fail(`${path}.requiredObjects`, 'required objects complete after the encounters');
+      return Object.freeze({
+        key,
+        encounterEnvelopeKeys,
+        producer,
+        ...(raw.offerPoint === undefined
+          ? {}
+          : {
+              offerPoint: Object.freeze({
+                key: requireNonEmpty(raw.offerPoint.key, `${path}.offerPoint.key`),
+                at: raw.offerPoint.at,
+              }),
+            }),
+        runsEncounters: raw.runsEncounters,
+        requiredObjects: raw.requiredObjects,
+        generatesOutgoing: raw.generatesOutgoing,
+        ...(raw.exitAcquisitionPoint === undefined
+          ? {}
+          : {
+              exitAcquisitionPoint: requireNonEmpty(
+                raw.exitAcquisitionPoint,
+                `${path}.exitAcquisitionPoint`,
+              ),
+            }),
+      });
     }),
     'roomLifecycleProfiles',
     (profile) => profile.key,

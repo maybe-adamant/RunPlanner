@@ -79,9 +79,6 @@ describe('room lifecycle catalog', () => {
       kind: 'none',
     });
     expect(Object.isFrozen(catalog.roomLifecycleProfiles.values)).toBe(true);
-    expect(Object.isFrozen(catalog.roomLifecycleProfiles.byKey.StandardRewardRoom?.steps)).toBe(
-      true,
-    );
   });
 
   it('declares how each envelope runs its encounters', () => {
@@ -337,39 +334,12 @@ describe('room lifecycle catalog', () => {
     });
   });
 
-  it('rejects unknown step, effect and producer references', () => {
+  it('rejects unknown producer references and points without encounters', () => {
     const base = declarations.roomLifecycleProfiles[0];
     if (base === undefined) {
       throw new Error('standard lifecycle declaration is missing');
     }
     const cases = [
-      {
-        profile: { ...base, steps: [{ kind: 'mystery', effects: [] }, ...base.steps.slice(1)] },
-        error: new CatalogContractError(
-          'roomLifecycleProfiles[0].steps[0].kind',
-          'unknown lifecycle step mystery',
-        ),
-      },
-      {
-        profile: {
-          ...base,
-          steps: [{ kind: 'prepareRoom', effects: ['mystery'] }, ...base.steps.slice(1)],
-        },
-        error: new CatalogContractError(
-          'roomLifecycleProfiles[0].steps[0].effects[0]',
-          'unknown lifecycle effect mystery',
-        ),
-      },
-      {
-        profile: {
-          ...base,
-          steps: [{ kind: 'prepareRoom', effects: ['recordAppearance'] }, ...base.steps.slice(1)],
-        },
-        error: new CatalogContractError(
-          'roomLifecycleProfiles[0].steps[0].effects',
-          'prepareRoom requires effects recordPreparation, recordEncounter',
-        ),
-      },
       {
         profile: {
           ...base,
@@ -398,13 +368,22 @@ describe('room lifecycle catalog', () => {
         ),
       },
       {
+        profile: { ...base, runsEncounters: false },
+        error: new CatalogContractError(
+          'roomLifecycleProfiles[0].producer.points',
+          'producer points require the room to run its encounters',
+        ),
+      },
+      {
         profile: {
           ...base,
-          steps: base.steps.filter((step) => step.kind !== 'runEncounterScripts'),
+          producer: { kind: 'none' },
+          runsEncounters: false,
+          requiredObjects: true,
         },
         error: new CatalogContractError(
-          'roomLifecycleProfiles[0].steps',
-          'producer points require the encounter scripts step',
+          'roomLifecycleProfiles[0].requiredObjects',
+          'required objects complete after the encounters',
         ),
       },
     ] as const;
@@ -418,121 +397,6 @@ describe('room lifecycle catalog', () => {
               fixture.profile,
               ...declarations.roomLifecycleProfiles.slice(1),
             ],
-          }),
-        ),
-      ).toThrowError(fixture.error);
-    }
-  });
-
-  it('rejects outgoing generation before the encounter scripts', () => {
-    const base = declarations.roomLifecycleProfiles[0];
-    const outgoing = base?.steps.find((step) => step.kind === 'generateOutgoingBatch');
-    if (base === undefined || outgoing === undefined) {
-      throw new Error('standard lifecycle declaration is incomplete');
-    }
-    const steps = base.steps.filter((step) => step !== outgoing);
-    const scripts = steps.findIndex((step) => step.kind === 'runEncounterScripts');
-
-    expect(() =>
-      createCatalog(
-        malformedCatalog({
-          ...declarations,
-          roomLifecycleProfiles: [
-            { ...base, steps: [...steps.slice(0, scripts), outgoing, ...steps.slice(scripts)] },
-            ...declarations.roomLifecycleProfiles.slice(1),
-          ],
-        }),
-      ),
-    ).toThrowError(
-      new CatalogContractError(
-        `roomLifecycleProfiles[0].steps[${scripts}].kind`,
-        'generateOutgoingBatch follows the encounter scripts',
-      ),
-    );
-  });
-
-  it('rejects duplicate explicit acquisition-point settlement', () => {
-    const shopProfile = declarations.roomLifecycleProfiles.find(
-      (profile) => profile.key === 'WorldShopRoom',
-    );
-    if (shopProfile === undefined) {
-      throw new Error('World Shop lifecycle declaration is missing');
-    }
-    const profileIndex = declarations.roomLifecycleProfiles.indexOf(shopProfile);
-    const settlementIndex = shopProfile.steps.findIndex(
-      (step) => step.kind === 'settleAcquisitionPoint',
-    );
-    const settlement = shopProfile.steps[settlementIndex];
-    if (settlement?.kind !== 'settleAcquisitionPoint') {
-      throw new Error('World Shop lifecycle settlement is malformed');
-    }
-    const steps = [...shopProfile.steps];
-    steps.splice(settlementIndex + 1, 0, settlement);
-
-    expect(() =>
-      createCatalog(
-        malformedCatalog({
-          ...declarations,
-          roomLifecycleProfiles: declarations.roomLifecycleProfiles.map((profile) =>
-            profile.key === shopProfile.key ? { ...profile, steps } : profile,
-          ),
-        }),
-      ),
-    ).toThrowError(
-      new CatalogContractError(
-        `roomLifecycleProfiles[${profileIndex}].steps[${settlementIndex + 1}].point`,
-        'duplicates acquisition point roomExit',
-      ),
-    );
-  });
-
-  it('rejects required-object timing outside the room-entry and encounter boundary', () => {
-    const base = declarations.roomLifecycleProfiles.find(
-      (profile) => profile.key === 'EphyraMainRoom',
-    );
-    if (base === undefined) {
-      throw new Error('Ephyra main lifecycle declaration is missing');
-    }
-    const profileIndex = declarations.roomLifecycleProfiles.indexOf(base);
-    const indexOf = (kind: string) => base.steps.findIndex((step) => step.kind === kind);
-    const spawnIndex = indexOf('spawnRequiredObjects');
-    const scriptsIndex = indexOf('runEncounterScripts');
-    const completionIndex = indexOf('completeRequiredObjects');
-    const outgoingIndex = indexOf('generateOutgoingBatch');
-    if (spawnIndex < 0 || scriptsIndex < 0 || completionIndex < 0 || outgoingIndex < 0) {
-      throw new Error('Ephyra main lifecycle declaration is incomplete');
-    }
-    const swapped = (left: number, right: number) => {
-      const steps = [...base.steps];
-      [steps[left], steps[right]] = [steps[right]!, steps[left]!];
-      return steps;
-    };
-
-    const cases = [
-      {
-        steps: swapped(spawnIndex, scriptsIndex),
-        error: new CatalogContractError(
-          `roomLifecycleProfiles[${profileIndex}].steps[${scriptsIndex}].kind`,
-          'required objects must spawn once immediately after room entry',
-        ),
-      },
-      {
-        steps: swapped(completionIndex, outgoingIndex),
-        error: new CatalogContractError(
-          `roomLifecycleProfiles[${profileIndex}].steps[${completionIndex}].kind`,
-          'generateOutgoingBatch requires completed required objects',
-        ),
-      },
-    ];
-
-    for (const fixture of cases) {
-      expect(() =>
-        createCatalog(
-          malformedCatalog({
-            ...declarations,
-            roomLifecycleProfiles: declarations.roomLifecycleProfiles.map((profile) =>
-              profile.key === base.key ? { ...base, steps: fixture.steps } : profile,
-            ),
           }),
         ),
       ).toThrowError(fixture.error);

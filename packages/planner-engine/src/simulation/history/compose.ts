@@ -436,12 +436,7 @@ function postOutgoingAcquisitionPoint(
   const profile = catalog.roomLifecycleProfiles.byKey[room.lifecycleProfileKey];
   if (profile === undefined)
     fail(`${room.gameName} has unknown lifecycle profile ${room.lifecycleProfileKey}`);
-  let outgoingSeen = false;
-  for (const operation of profile.steps) {
-    if (operation.kind === 'generateOutgoingBatch') outgoingSeen = true;
-    if (outgoingSeen && operation.kind === 'settleAcquisitionPoint') return operation.point;
-  }
-  return undefined;
+  return profile.generatesOutgoing ? profile.exitAcquisitionPoint : undefined;
 }
 
 function postOutgoingAcquisitionOption(catalog: Catalog, room: CanonicalAuthoredRoom) {
