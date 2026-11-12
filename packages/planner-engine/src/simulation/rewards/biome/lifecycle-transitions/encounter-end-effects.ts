@@ -1,3 +1,4 @@
+import { roomRunsCages } from '../../../encounters/model';
 import {
   applyTraitOfferTransition,
   invalidatedTraitOffers,
@@ -366,7 +367,7 @@ export function applyEncounterEndEffectsTransition(
   if (
     declaration?.advancesExperimentalHammerUses === true &&
     declaration.ignoreEncounterUses !== true &&
-    !(room?.lifecycleProfileKey === 'FieldsCombatRoom' && event.phaseKey === 'Passive')
+    !(room !== undefined && roomRunsCages(room) && event.phaseKey === 'Passive')
   )
     next = mapReached(next, (branch) =>
       advanceExperimentalHammerForEndEffects(catalog, branch, event.origin, event.sequence),

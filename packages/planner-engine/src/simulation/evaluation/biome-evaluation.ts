@@ -1,3 +1,4 @@
+import { roomOpensRewardWheels } from '../encounters/model';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
 import {
@@ -161,7 +162,7 @@ function structurallyEligibleRunStateOwners(
   }
   for (const link of prefix.fixedRoomLinks ?? []) appendRoom(link.target);
   for (const room of enteredRooms) {
-    if (room.lifecycleProfileKey === 'ShipCombatRoom') {
+    if (roomOpensRewardWheels(room)) {
       for (const phase of room.encounterPhases) {
         owners.push(
           createRoomRunStateCheckpointAddress(room.origin, {

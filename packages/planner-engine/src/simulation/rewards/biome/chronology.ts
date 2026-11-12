@@ -1,3 +1,4 @@
+import { roomOpensRewardWheels } from '../../encounters/model';
 import { physicalExitKey } from '../../../authored-project/topology/query';
 import { withEchoKeepsakeGold, withGoldEvents, withRunStartGold } from './gold-event-seams';
 import type { Catalog } from '../../../catalog-schema';
@@ -249,7 +250,7 @@ function captureFailedOverviewEntry(
   );
   if (
     room?.kind !== 'authored' ||
-    room.lifecycleProfileKey === 'ShipCombatRoom' ||
+    roomOpensRewardWheels(room) ||
     entry === undefined ||
     entered === undefined
   )
