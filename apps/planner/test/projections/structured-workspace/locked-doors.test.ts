@@ -33,6 +33,13 @@ function room(
   return node.room;
 }
 
+const entryAfterAction = (summary: WorkspaceOccurrenceWorkbenchNode['room'], actionKey: string) => {
+  const entries = summary.roomActions!.timeline.entries;
+  return entries[
+    entries.findIndex((entry) => entry.kind === 'action' && entry.actionKey === actionKey) + 1
+  ];
+};
+
 const apply = (project: ProjectDocument, command: ProjectCommand) =>
   applyProjectCommand(project, catalog, command as ProjectCommand);
 
@@ -111,6 +118,33 @@ describe('locked doors in the structured workspace', () => {
       exitKey: 'exit2',
       decisionKey: 'generatedComposition',
       value: null,
+    });
+  });
+
+  // The press becomes a graph encounter trigger in the next engine slice.
+  it.todo("marks a pressed door's fight with one Encounter marker right after its press", () => {
+    const project = createGoldenFGHIProject();
+    const locked = apply(project, {
+      kind: 'ReplaceLockedExit',
+      occurrence: createOccurrenceAddress(
+        createBiomeAddress(project.route.routeKey, 'G'),
+        createOccurrenceId(HOST),
+      ),
+      exitKey: 'exit2',
+      locked: true,
+    });
+    const lockedWorkspace = projectStructuredWorkspaceFixture(locked).workspace;
+    const unlocks = room(lockedWorkspace).lockedDoors!.unlocks!;
+    const press = lockedWorkspace.interactions.roomObjectEntries
+      .get(unlocks.interactionKey)!
+      .intentFor('exit2');
+    const pressed = apply(locked, press.command);
+    const summary = room(projectStructuredWorkspaceFixture(pressed).workspace);
+    const row = summary.roomActions!.rows.find((candidate) => candidate.label === 'Unlock Door 2');
+    expect(entryAfterAction(summary, row!.key)).toMatchObject({
+      kind: 'boundary',
+      label: 'Encounter',
+      beginsEncounter: true,
     });
   });
 });

@@ -162,6 +162,23 @@ describe('challenge switch in the structured workspace', () => {
     expect(claim?.labelParts?.origin).toBe('Claimed from the challenge switch');
   });
 
+  // The press becomes a graph encounter trigger in the next engine slice.
+  it.todo("marks a pressed switch's fight with one Encounter marker right after its press", () => {
+    const { workspace } = projectStructuredWorkspaceFixture(
+      observed(createGoldenFGHIProject(), 'F', 'golden-f-b5-e1', 'TimeChallengeSwitch_Money', true),
+    );
+    const entries = room(workspace, 'F', 'golden-f-b5-e1').roomActions!.timeline.entries;
+    const press = entries.findIndex(
+      (entry) => entry.kind === 'action' && entry.actionKey === roomActionKey(use),
+    );
+    expect(press).toBeGreaterThanOrEqual(0);
+    expect(entries[press + 1]).toMatchObject({
+      kind: 'boundary',
+      label: 'Encounter',
+      beginsEncounter: true,
+    });
+  });
+
   it("narrows each Elite attribute draw by the earlier ones and binds the elite's pin", () => {
     const surface = loadSurfaceNOPQProject();
     const owner = host(surface, 'P', 'surface-p-6-1-p_combat10');

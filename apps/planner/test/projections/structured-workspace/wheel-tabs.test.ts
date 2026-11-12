@@ -237,14 +237,6 @@ describe('ship wheels on the Timeline of the phase before their combat', () => {
       ),
     );
     expect(wheelsOpen).toEqual([['wheel1'], ['wheel2'], []]);
-    for (const phase of room.workbench.phases) {
-      expect(phase.checkpoints.map((checkpoint) => checkpoint.key)).not.toContainEqual(
-        expect.stringMatching(/^nextPhase/),
-      );
-      expect(phase.checkpoints.map((checkpoint) => checkpoint.label)).not.toContainEqual(
-        expect.stringContaining('ready to advance'),
-      );
-    }
   });
 
   it('shows a delivery the phase end matured as the next wheel opens, after the NPC is answered', () => {

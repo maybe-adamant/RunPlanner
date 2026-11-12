@@ -426,7 +426,6 @@ describe('boss defeat', () => {
       ),
     ).toEqual(['roomEntered', 'encounterStarted', 'bossDefeated', 'encounterEnd', 'doorsOpened']);
     expect(banners(room, 'bossDefeated')[0]?.label).toBe('Boss defeated');
-    expect(room.roomActions?.timeline.suppressedCheckpointKeys).toContain('bossDefeated:Encounter');
   });
 });
 

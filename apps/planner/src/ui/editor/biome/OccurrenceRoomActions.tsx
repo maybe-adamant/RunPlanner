@@ -593,33 +593,11 @@ export function RoomActionsWorkbench({
     actions === undefined
       ? undefined
       : requireWorkspaceInteraction(interactions.roomActions, actions.interactionKey);
-  const rankedKeys =
-    actions?.timeline.entries.flatMap((entry) =>
-      entry.kind === 'action' ? [entry.actionKey] : [],
-    ) ?? [];
-  const rankedRows = actions?.rows.filter((row) => rankedKeys.includes(row.key)) ?? [];
   const apply = (proposalKey: string): void => {
     const proposal = interaction?.proposals.find((candidate) => candidate.key === proposalKey);
     if (interaction === undefined || proposal?.structurallyAuthorable !== true) return;
     executeIntent(interaction.intentFor(proposalKey));
   };
-  const checkpointRows = (
-    afterRank: number,
-    checkpoints: WorkspaceRoomActions['checkpoints'] = actions?.checkpoints ?? [],
-  ) =>
-    checkpoints
-      .filter(
-        (checkpoint) =>
-          actions?.timeline.suppressedCheckpointKeys.includes(checkpoint.key) !== true,
-      )
-      .filter((checkpoint) => checkpoint.afterRank === afterRank)
-      .map((checkpoint) => (
-        <TimelineRow
-          key={`checkpoint:${checkpoint.key}`}
-          kind="checkpoint"
-          label={<strong>{checkpoint.label}</strong>}
-        />
-      ));
   const renderSupplement = (
     supplement: Extract<
       WorkspaceRoomLifecycleTimelineEntry,
@@ -769,7 +747,6 @@ export function RoomActionsWorkbench({
   };
   const renderRow = (
     row: WorkspaceRoomActions['rows'][number],
-    checkpoints: WorkspaceRoomActions['checkpoints'] = actions?.checkpoints ?? [],
     supplement?: Extract<
       WorkspaceRoomLifecycleTimelineEntry,
       { readonly kind: 'action' }
@@ -1154,7 +1131,6 @@ export function RoomActionsWorkbench({
               source
             />
           ))}
-        {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
       </Fragment>
     );
   };
@@ -1237,7 +1213,7 @@ export function RoomActionsWorkbench({
     const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
     return row === undefined
       ? []
-      : [<Fragment key={entry.actionKey}>{renderRow(row, [], entry.supplement, true)}</Fragment>];
+      : [<Fragment key={entry.actionKey}>{renderRow(row, entry.supplement, true)}</Fragment>];
   };
   if (mode.kind !== 'roomTimeline') {
     return (
@@ -1253,9 +1229,6 @@ export function RoomActionsWorkbench({
           </p>
           <div className="ship-phase-list" ref={attachRoot}>
             {(mode.kind === 'shipPhase' ? [mode.phase] : []).map((phase) => {
-              const timelineActionRanks = new Set(
-                phase.timeline.flatMap((entry) => (entry.kind === 'action' ? [entry.rank] : [])),
-              );
               const choiceAnchored = wheelChoiceAnchored(phase.timeline);
               const selectWheel =
                 phaseWheel === undefined
@@ -1290,18 +1263,8 @@ export function RoomActionsWorkbench({
                 const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
                 return row === undefined
                   ? []
-                  : [
-                      <Fragment key={entry.actionKey}>
-                        {renderRow(row, phase.checkpoints, entry.supplement)}
-                      </Fragment>,
-                    ];
+                  : [<Fragment key={entry.actionKey}>{renderRow(row, entry.supplement)}</Fragment>];
               };
-              const trailingCheckpoints = phase.checkpoints.filter(
-                (checkpoint) =>
-                  actions?.timeline.suppressedCheckpointKeys.includes(checkpoint.key) !== true &&
-                  checkpoint.afterRank !== 0 &&
-                  !timelineActionRanks.has(checkpoint.afterRank),
-              );
               return (
                 <section
                   aria-label={`${phase.label} ship phase`}
@@ -1310,30 +1273,9 @@ export function RoomActionsWorkbench({
                 >
                   <div className="room-timeline-main">
                     {phase.waitsOn !== undefined ||
-                    (phase.actionRows.length === 0 &&
-                      phase.checkpoints.length === 0 &&
-                      phase.timeline.length === 0) ? null : (
+                    (phase.actionRows.length === 0 && phase.timeline.length === 0) ? null : (
                       <ol aria-label={`${phase.label} timeline`} className="room-action-list">
-                        {checkpointRows(0, phase.checkpoints)}
                         {withMapStage(phase.timeline, renderPhaseTimelineEntry)}
-                        {trailingCheckpoints.map((checkpoint) => {
-                          const afterRank = mapOpening(phase.timeline).afterRank;
-                          return (
-                            <TimelineMapStageContext.Provider
-                              key={`checkpoint:${checkpoint.key}`}
-                              value={
-                                afterRank !== undefined && checkpoint.afterRank > afterRank
-                                  ? 'open'
-                                  : 'closed'
-                              }
-                            >
-                              <TimelineRow
-                                kind="checkpoint"
-                                label={<strong>{checkpoint.label}</strong>}
-                              />
-                            </TimelineMapStageContext.Provider>
-                          );
-                        })}
                         {doorsTail(phase.timeline)}
                       </ol>
                     )}
@@ -1361,7 +1303,7 @@ export function RoomActionsWorkbench({
                           aria-label={`${phase.label} required actions`}
                           className="room-action-list"
                         >
-                          {phase.unplacedRows.map((row) => renderRow(row, phase.checkpoints))}
+                          {phase.unplacedRows.map((row) => renderRow(row))}
                         </ol>
                       </section>
                     )}
@@ -1396,7 +1338,7 @@ export function RoomActionsWorkbench({
                   <h4>Inactive actions</h4>
                 </div>
                 <ol aria-label="Inactive Ship actions" className="room-action-list">
-                  {mode.rows.map((row) => renderRow(row, []))}
+                  {mode.rows.map((row) => renderRow(row))}
                 </ol>
               </section>
             )}
@@ -1418,7 +1360,7 @@ export function RoomActionsWorkbench({
     const row = actionByKey.get(entry.actionKey);
     return row === undefined
       ? []
-      : [<Fragment key={entry.actionKey}>{renderRow(row, [], entry.supplement)}</Fragment>];
+      : [<Fragment key={entry.actionKey}>{renderRow(row, entry.supplement)}</Fragment>];
   };
   const timelineRows = withMapStage(actions.timeline.entries, renderTimelineEntry);
   return (
@@ -1436,7 +1378,6 @@ export function RoomActionsWorkbench({
         {actions.timeline.waitsOn === undefined ? (
           <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
             {timelineRows}
-            {rankedRows.length === 0 ? checkpointRows(0) : null}
             {doorsTail(actions.timeline.entries)}
           </ol>
         ) : (

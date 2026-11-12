@@ -16,8 +16,10 @@ import {
   type EncounterPhaseAddress,
   type OccurrenceAddress,
   type RoomOccurrence,
+  type RoomActionPlacementBlocker,
   type RoomActionReference,
   type RoomActionSemanticAddress,
+  type RoomEventPoint,
   type RoomRunStateCheckpointAddress,
   type SemanticAddress,
   type FountainRarityOutcomeAddress,
@@ -39,7 +41,6 @@ import type {
   GoldLedger,
   GoldMoments,
   RoomActionRow,
-  RoomActionRowLabel,
 } from '@run-planner/engine/simulation';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
@@ -237,47 +238,49 @@ function roomActionsForOccurrence(
       : undefined) ??
     encounterPhases.find((phase) => phase.address.phaseKey === key)?.label ??
     key;
-  const checkpointLabel = (key: string): string => {
-    if (key.startsWith('combat:')) return `${phaseLabel(key.slice('combat:'.length))} complete`;
-    if (key === 'outgoingGeneration') return 'the next rooms are generated';
-    if (key === 'exitUsable') return 'the doors can be used';
-    return key;
-  };
-  const timingLabel = (timing: RoomActionRowLabel): string => {
-    switch (timing.kind) {
-      case 'beforeCombat':
-        return 'before combat';
-      case 'afterCombat':
-        return 'after combat';
-      case 'afterEncounterEnd':
-        return timing.beforeWheelChoicePhaseKey === undefined
-          ? `after ${phaseLabel(timing.phaseKey)} ends`
-          : `after ${phaseLabel(timing.phaseKey)} ends, before choosing the ${phaseLabel(timing.beforeWheelChoicePhaseKey)} wheel`;
-      case 'afterDoorsOpen':
-        return 'after the next rooms are generated';
-      case 'fields':
-        return 'during the Fields room';
-      case 'beforeWheelPhase':
-        return `before ${phaseLabel(timing.phaseKey ?? timing.wheelKey)}`;
-      case 'beforeWheelChoice':
-        return `before choosing the ${phaseLabel(timing.phaseKey ?? timing.wheelKey)} wheel`;
-      case 'afterWheelPhase':
-        return `after ${phaseLabel(timing.phaseKey ?? timing.wheelKey)}`;
+  const graphPhases = roster.eventGraph.phases;
+  const multiPhase = graphPhases.length > 1;
+  // A bound's point, named as its Timeline marker or the choice it waits on.
+  const pointName = (point: RoomEventPoint): string => {
+    switch (point.kind) {
+      case 'roomEntered':
+        return 'Room entered';
+      case 'wheelsOpen': {
+        const phaseKey = graphPhases.find(
+          (phase) => phase.rewardWheelKey === point.wheelKey,
+        )?.phaseKey;
+        return phaseKey === undefined ? 'Wheels open' : `Wheels open · ${phaseLabel(phaseKey)}`;
+      }
+      case 'gate':
+        return graphPhases.some(
+          (phase) => phase.phaseKey === point.phaseKey && phase.rewardWheelKey !== undefined,
+        )
+          ? `choosing the ${phaseLabel(point.phaseKey)} wheel`
+          : multiPhase
+            ? `${phaseLabel(point.phaseKey)}'s Encounter`
+            : 'Encounter';
+      case 'encounterStarted':
+        return !multiPhase
+          ? 'Combat'
+          : roomLocal.kind === 'ship'
+            ? phaseLabel(point.phaseKey)
+            : `${phaseLabel(point.phaseKey)}'s Combat`;
+      case 'encounterEnd':
+      case 'endEffects':
+        return multiPhase ? `the end of ${phaseLabel(point.phaseKey)}` : 'the end of the encounter';
+      case 'doorsOpened':
+        return 'Doors open';
+      case 'exitsReady':
+        return 'every required action';
+      case 'leave':
+        return 'Leave';
     }
   };
-  // A blocker names its rows; each row carries when the engine places it.
-  const timingOf = (reference: RoomActionReference): RoomActionRowLabel => {
-    const key = roomActionKey(reference);
-    const row = roster.rows.find(
-      (candidate) =>
-        candidate.key === key ||
-        (candidate.itemReference !== undefined && roomActionKey(candidate.itemReference) === key),
-    );
-    if (row === undefined) {
-      throw new StructuredWorkspaceProjectionContractError(`Room action blocker ${key} has no row`);
-    }
-    return row.label;
-  };
+  const pointIdentity = (point: RoomEventPoint) => [
+    point.kind,
+    'phaseKey' in point ? point.phaseKey : null,
+    'wheelKey' in point ? point.wheelKey : null,
+  ];
   const requiredKeys = new Set(
     roster.rows.flatMap((row) => (row.participation === 'required' ? [row.key] : [])),
   );
@@ -299,15 +302,14 @@ function roomActionsForOccurrence(
     const key = roomActionKey(entry.proposal.reference);
     proposalKeysByAction.set(key, [...(proposalKeysByAction.get(key) ?? []), entry.key]);
   }
-  type Blocker = import('@run-planner/engine/simulation').RoomActionProposal['blockers'][number];
-  const blockerIdentity = (blocker: Blocker): string =>
+  const blockerIdentity = (blocker: RoomActionPlacementBlocker): string =>
     JSON.stringify(
       blocker.kind === 'pastDeadline'
         ? [
             blocker.kind,
             roomActionKey(blocker.reference),
             roomActionKey(blocker.precedingAction),
-            blocker.deadline,
+            pointIdentity(blocker.deadline),
           ]
         : blocker.kind === 'dependency'
           ? [
@@ -318,26 +320,30 @@ function roomActionsForOccurrence(
           : [
               blocker.kind,
               roomActionKey(blocker.reference),
+              pointIdentity(blocker.point),
               blocker.requiredAction === undefined ? null : roomActionKey(blocker.requiredAction),
-              blocker.point,
               blocker.unavailable === true,
             ],
     );
   const existingBlockers = new Set(
-    roster.issues.flatMap((issue) =>
-      issue.kind === 'stale' || issue.kind === 'unrankedRequired' ? [] : [blockerIdentity(issue)],
-    ),
+    roster.issues
+      .filter(
+        (issue): issue is RoomActionPlacementBlocker =>
+          issue.kind !== 'stale' && issue.kind !== 'unrankedRequired',
+      )
+      .map(blockerIdentity),
   );
   const explanationFor = (
     proposal: import('@run-planner/engine/simulation').RoomActionProposal,
   ): readonly string[] => {
-    if (proposal.blockers.length === 0) return Object.freeze([]);
+    const blockers = proposal.blockers;
+    if (blockers.length === 0) return Object.freeze([]);
     const proposedKey = roomActionKey(proposal.reference);
-    const introduced = proposal.blockers.filter(
+    const introduced = blockers.filter(
       (blocker) => !existingBlockers.has(blockerIdentity(blocker)),
     );
-    const candidates = introduced.length > 0 ? introduced : proposal.blockers;
-    const concernsProposal = (blocker: Blocker) =>
+    const candidates = introduced.length > 0 ? introduced : blockers;
+    const concernsProposal = (blocker: RoomActionPlacementBlocker) =>
       roomActionKey(blocker.reference) === proposedKey ||
       (blocker.kind === 'pastDeadline'
         ? roomActionKey(blocker.precedingAction) === proposedKey
@@ -345,8 +351,8 @@ function roomActionsForOccurrence(
           ? roomActionKey(blocker.dependency.action) === proposedKey
           : blocker.requiredAction !== undefined &&
             roomActionKey(blocker.requiredAction) === proposedKey);
-    // The most direct blockers first: what must precede the moved action, then its window.
-    const rank = (entry: Blocker) =>
+    // The most direct blockers first: what must precede the moved action, then its deadline.
+    const rank = (entry: RoomActionPlacementBlocker) =>
       (concernsProposal(entry) ? 0 : 2) + (entry.kind === 'pastDeadline' ? 1 : 0);
     const ranked = [...candidates].sort((left, right) => rank(left) - rank(right));
     const prefix = introduced.length === 0 ? 'Existing timeline issue: ' : '';
@@ -356,65 +362,58 @@ function roomActionsForOccurrence(
       ].slice(0, 2),
     );
   };
-  const blockerSentence = (blocker: Blocker, proposedKey: string): string => {
+  const blockerSentence = (blocker: RoomActionPlacementBlocker, proposedKey: string): string => {
     const label = actionLabel(blocker.reference);
-    let explanation: string;
-    if (blocker.kind === 'pastDeadline') {
-      const movedPreceding = roomActionKey(blocker.precedingAction) === proposedKey;
-      const subject = movedPreceding ? blocker.precedingAction : blocker.reference;
-      explanation = `${movedPreceding ? actionLabel(subject) : label} belongs ${timingLabel(timingOf(subject))}.`;
-    } else if (blocker.kind !== 'dependency' && blocker.requiredAction !== undefined) {
-      explanation = `${requiredFirstTitle(actionLabel(blocker.requiredAction))}.`;
-    } else if (blocker.kind === 'dependency') {
-      const prerequisite = blocker.dependency.action;
-      const movingDependent = roomActionKey(blocker.reference) === proposedKey;
-      const movingPrerequisite = roomActionKey(prerequisite) === proposedKey;
-      // An Artificer replacement depends on the reward it converts.
-      const artificerSource = allProjectedRows.find(
-        (row) => row.key === roomActionKey(prerequisite),
-      );
-      const artificer =
-        roster.rows.find((row) => row.key === roomActionKey(blocker.reference))?.sourceFamily
-          ?.kind === 'artificer' && artificerSource?.rewardPayload !== undefined;
-      const cageReward =
-        blocker.reference.kind === 'interactLocalReward' &&
-        prerequisite.kind === 'completeFieldsCage';
-      const cageInteraction =
-        (blocker.reference.kind === 'interactEncounter' ||
-          blocker.reference.kind === 'interactGorgon') &&
-        prerequisite.kind === 'completeFieldsCage';
-      const nextCage =
-        blocker.reference.kind === 'completeFieldsCage' &&
-        (prerequisite.kind === 'interactEncounter' || prerequisite.kind === 'interactGorgon');
-      const wheelReward =
-        blocker.reference.kind === 'interactWheelReward' &&
-        prerequisite.kind === 'chooseRewardWheel';
-      // A cage's own explanations name it by its cage, not its Unlock row's reward.
-      const cageName = (phaseKey: string) =>
-        encounterPhases.find((phase) => phase.address.phaseKey === phaseKey)?.label ?? phaseKey;
-      if (artificer)
-        // The source reads as the transformation its verb now names.
-        explanation = `${artificerSource?.labelParts === undefined ? actionLabel(prerequisite) : `Transform ${artificerSource.labelParts.name}`} first to create ${movingDependent ? 'this reward' : label}.`;
-      else if (cageReward)
-        explanation = `Unlock ${cageName(prerequisite.phaseKey)} to release ${movingDependent ? 'this reward' : label}.`;
-      else if (cageInteraction)
-        explanation =
-          blocker.reference.kind === 'interactGorgon'
-            ? `Unlock ${cageName(prerequisite.phaseKey)} to make Athena available.`
-            : `Unlock ${cageName(prerequisite.phaseKey)}, then ${label}.`;
-      else if (nextCage)
-        explanation = `${actionLabel(prerequisite)} before unlocking ${cageName(blocker.reference.phaseKey)}.`;
-      else if (wheelReward)
-        explanation = `${actionLabel(prerequisite)} before collecting its reward.`;
-      else if (movingDependent) explanation = `Requires: ${actionLabel(prerequisite)}.`;
-      else if (movingPrerequisite) explanation = `${label} requires this action first.`;
-      else explanation = `${label} requires ${actionLabel(prerequisite)} first.`;
-    } else if (blocker.unavailable === true && blocker.point.kind === 'encounterEnd') {
-      explanation = `${label} requires a checkpoint this room cannot reach: ${checkpointLabel(`combat:${blocker.point.phaseKey}`)}.`;
-    } else {
-      explanation = `${label} must come after ${checkpointLabel('exitUsable')}.`;
+    if (blocker.kind === 'pastDeadline')
+      // The moved action ordered first stands only after the point the other must precede.
+      return roomActionKey(blocker.precedingAction) === proposedKey
+        ? `${actionLabel(blocker.precedingAction)} must come after ${pointName(blocker.deadline)}.`
+        : `${label} must come before ${pointName(blocker.deadline)}.`;
+    if (blocker.kind !== 'dependency') {
+      if (blocker.requiredAction !== undefined)
+        return `${requiredFirstTitle(actionLabel(blocker.requiredAction))}.`;
+      return blocker.unavailable === true
+        ? `${label} waits on ${pointName(blocker.point)}, which this room never reaches.`
+        : `${label} waits on ${pointName(blocker.point)}.`;
     }
-    return explanation;
+    const prerequisite = blocker.dependency.action;
+    const movingDependent = roomActionKey(blocker.reference) === proposedKey;
+    const movingPrerequisite = roomActionKey(prerequisite) === proposedKey;
+    // An Artificer replacement depends on the reward it converts.
+    const artificerSource = allProjectedRows.find((row) => row.key === roomActionKey(prerequisite));
+    const artificer =
+      roster.rows.find((row) => row.key === roomActionKey(blocker.reference))?.sourceFamily
+        ?.kind === 'artificer' && artificerSource?.rewardPayload !== undefined;
+    const cageReward =
+      blocker.reference.kind === 'interactLocalReward' &&
+      prerequisite.kind === 'completeFieldsCage';
+    const cageInteraction =
+      (blocker.reference.kind === 'interactEncounter' ||
+        blocker.reference.kind === 'interactGorgon') &&
+      prerequisite.kind === 'completeFieldsCage';
+    const nextCage =
+      blocker.reference.kind === 'completeFieldsCage' &&
+      (prerequisite.kind === 'interactEncounter' || prerequisite.kind === 'interactGorgon');
+    const wheelReward =
+      blocker.reference.kind === 'interactWheelReward' && prerequisite.kind === 'chooseRewardWheel';
+    // A cage's own explanations name it by its cage, not its Unlock row's reward.
+    const cageName = (phaseKey: string) =>
+      encounterPhases.find((phase) => phase.address.phaseKey === phaseKey)?.label ?? phaseKey;
+    if (artificer)
+      // The source reads as the transformation its verb now names.
+      return `${artificerSource?.labelParts === undefined ? actionLabel(prerequisite) : `Transform ${artificerSource.labelParts.name}`} first to create ${movingDependent ? 'this reward' : label}.`;
+    if (cageReward)
+      return `Unlock ${cageName(prerequisite.phaseKey)} to release ${movingDependent ? 'this reward' : label}.`;
+    if (cageInteraction)
+      return blocker.reference.kind === 'interactGorgon'
+        ? `Unlock ${cageName(prerequisite.phaseKey)} to make Athena available.`
+        : `Unlock ${cageName(prerequisite.phaseKey)}, then ${label}.`;
+    if (nextCage)
+      return `${actionLabel(prerequisite)} before unlocking ${cageName(blocker.reference.phaseKey)}.`;
+    if (wheelReward) return `${actionLabel(prerequisite)} before collecting its reward.`;
+    if (movingDependent) return `Requires: ${actionLabel(prerequisite)}.`;
+    if (movingPrerequisite) return `${label} requires this action first.`;
+    return `${label} requires ${actionLabel(prerequisite)} first.`;
   };
   const projectProposals = () =>
     proposalEntries.map(({ proposal, key }) =>
@@ -1145,26 +1144,6 @@ function roomActionsForOccurrence(
     }),
     ...(spawned.actionSpawns.length === 0 ? {} : { actionSpawns: spawned.actionSpawns }),
     ...(spawned.copies.length === 0 ? {} : { spawnCopies: spawned.copies }),
-    checkpoints: Object.freeze([
-      ...roster.eventGraph.phases.map((phase) =>
-        Object.freeze({
-          key: `combat:${phase.phaseKey}`,
-          label: `${phase.phaseKey} complete`,
-          afterRank:
-            lifecycleTimeline.entries.find(
-              (entry) =>
-                entry.kind === 'boundary' &&
-                entry.boundary.kind === 'encounterEnd' &&
-                entry.boundary.phaseKey === phase.phaseKey,
-            )?.rank ?? 0,
-        }),
-      ),
-      Object.freeze({
-        key: 'exitUsable',
-        label: 'Exit usable',
-        afterRank: lifecycleTimeline.doorsAfterRank,
-      }),
-    ]),
     interactionKey: semanticAddressKey(owner),
     owner,
     optionalRows,
