@@ -164,8 +164,7 @@ describe('occurrence room facts', () => {
     if (source === undefined) throw new Error('selected Shop Boon is missing');
     project = applyProjectCommand(project, catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: 'echoDoubleShopReward',
+      entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
       sourceOfferKey: 'Boon',
     });
     const duplicate = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');

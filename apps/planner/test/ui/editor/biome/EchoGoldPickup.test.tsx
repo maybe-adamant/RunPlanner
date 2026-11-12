@@ -77,8 +77,7 @@ it('keeps a stale Gold pickup removable after its triggering purchase is cleared
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'PlaceEchoGoldPickup',
-    site,
-    entryKey: 'echoDoubleShopReward',
+    entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
     sourceOfferKey: 'Minor',
   });
   project = applyProjectCommand(project, catalog, {
@@ -276,8 +275,7 @@ it('repairs a retained consumable when its Gold source changes to a Mystery Boon
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'PlaceEchoGoldPickup',
-    site,
-    entryKey: 'echoDoubleShopReward',
+    entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
     sourceOfferKey: 'Minor',
   });
   project = applyProjectCommand(project, catalog, {

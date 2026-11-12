@@ -270,16 +270,11 @@ function purchaseReference(command: PositionedCommand): RoomActionReference {
       return frozen({ kind: 'rushHermesShrineOffer', generationKey: command.generationKey });
     case 'PlaceHermesShrineDelivery':
     case 'PlaceClockedTraitPickup':
+    case 'PlaceEchoGoldPickup':
       return frozen({
         kind: 'interactAcquisitionEntry',
         siteKey: command.entry.site.pointKey,
         entryKey: command.entry.entryKey,
-      });
-    case 'PlaceEchoGoldPickup':
-      return frozen({
-        kind: 'interactAcquisitionEntry',
-        siteKey: command.site.pointKey,
-        entryKey: command.entryKey,
       });
   }
 }

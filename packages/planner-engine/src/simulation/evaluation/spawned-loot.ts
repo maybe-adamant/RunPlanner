@@ -927,8 +927,7 @@ export function spawnedLootForProjectEvaluationAssembly(
         entry.participation ?? 'optional',
         frozen({
           kind: 'PlaceEchoGoldPickup',
-          site: exitSite,
-          entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+          entry: entry.address,
           sourceOfferKey: entry.sourceOfferKey,
         }),
         entry,

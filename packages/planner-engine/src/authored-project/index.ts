@@ -391,6 +391,7 @@ export {
   ProjectCommandContractError,
 } from './commands/dispatch';
 export type { PositionedCommand } from './commands/chosen-index';
+export type { DerivedPickupPlacementCommand } from './commands/types';
 export { authoredTraitOfferAt } from './commands/trait-offer';
 export {
   forcedChaosOccurrenceKeys,

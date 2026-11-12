@@ -1,10 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import {
-  createBiomeAddress,
-  createOccurrenceAddress,
-  type AcquisitionSiteAddress,
-  type OccurrenceAddress,
-} from '../addresses';
+import { createBiomeAddress, createOccurrenceAddress, type OccurrenceAddress } from '../addresses';
 import type { ProjectDocument } from '../model';
 import {
   chosenRoomActionIndexes,
@@ -36,6 +31,7 @@ export type PositionedCommand = Extract<
   }
 >;
 
+/** The room a derived pickup's entry belongs to, or the object's own room. */
 function commandOccurrence(command: PositionedCommand): OccurrenceAddress {
   switch (command.kind) {
     case 'ReplaceShopPurchaseParticipation':
@@ -45,21 +41,18 @@ function commandOccurrence(command: PositionedCommand): OccurrenceAddress {
       );
     case 'PlaceHermesShrineDelivery':
     case 'PlaceClockedTraitPickup':
-      return siteOccurrence(command.entry.site);
-    case 'PlaceEchoGoldPickup':
-      return siteOccurrence(command.site);
+    case 'PlaceEchoGoldPickup': {
+      const site = command.entry.site;
+      if (site.owner.kind !== 'occurrence')
+        throw new Error(`${site.pointKey} is not an occurrence's acquisition site`);
+      return createOccurrenceAddress(
+        createBiomeAddress(site.routeKey, site.biomeKey),
+        site.owner.occurrenceId,
+      );
+    }
     default:
       return command.occurrence;
   }
-}
-
-function siteOccurrence(site: AcquisitionSiteAddress): OccurrenceAddress {
-  if (site.owner.kind !== 'occurrence')
-    throw new Error(`${site.pointKey} is not an occurrence's acquisition site`);
-  return createOccurrenceAddress(
-    createBiomeAddress(site.routeKey, site.biomeKey),
-    site.owner.occurrenceId,
-  );
 }
 
 /** The actions the command placed, in the order they move together. */
@@ -69,20 +62,12 @@ function placedActions(placed: ProjectDocument, command: PositionedCommand): Pla
   switch (command.kind) {
     case 'PlaceHermesShrineDelivery':
     case 'PlaceClockedTraitPickup':
+    case 'PlaceEchoGoldPickup':
       keys = [
         roomActionKey({
           kind: 'interactAcquisitionEntry',
           siteKey: command.entry.site.pointKey,
           entryKey: command.entry.entryKey,
-        }),
-      ];
-      break;
-    case 'PlaceEchoGoldPickup':
-      keys = [
-        roomActionKey({
-          kind: 'interactAcquisitionEntry',
-          siteKey: command.site.pointKey,
-          entryKey: command.entryKey,
         }),
       ];
       break;

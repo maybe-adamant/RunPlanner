@@ -70,8 +70,7 @@ describe('required Echo Gold activation', () => {
     expect(gold(changed.project)).toBeUndefined();
     const restored = settle(changed.project, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: 'echoDoubleShopReward',
+      entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
       sourceOfferKey: 'Boon',
     });
     expect(gold(restored.project)).toBeDefined();
@@ -108,8 +107,7 @@ describe('required Echo Gold activation', () => {
     });
     duplicated = applyProjectCommand(duplicated, catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: 'echoDoubleShopReward',
+      entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
       sourceOfferKey: 'Minor',
     });
     duplicated = applyProjectCommand(duplicated, catalog, {
@@ -154,8 +152,7 @@ describe('required Echo Gold activation', () => {
     const second = createShopOfferAddress(goldenHBiome, owner.occurrenceId, 'Minor');
     let initial = applyProjectCommand(settle(project, purchase).project, catalog, {
       kind: 'PlaceEchoGoldPickup',
-      site,
-      entryKey: 'echoDoubleShopReward',
+      entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
       sourceOfferKey: 'Boon',
     });
     initial = applyProjectCommand(initial, catalog, {
@@ -212,8 +209,7 @@ describe('required Echo Gold activation', () => {
     const placed = authorLegalTraitOffers(
       settle(settle(project, purchase).project, {
         kind: 'PlaceEchoGoldPickup',
-        site,
-        entryKey: 'echoDoubleShopReward',
+        entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
         sourceOfferKey: 'Boon',
       }).project,
     );
@@ -231,8 +227,7 @@ describe('required Echo Gold activation', () => {
       authorLegalTraitOffers(
         settle(settle(project, purchase).project, {
           kind: 'PlaceEchoGoldPickup',
-          site,
-          entryKey: 'echoDoubleShopReward',
+          entry: createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
           sourceOfferKey: 'Boon',
         }).project,
       ),

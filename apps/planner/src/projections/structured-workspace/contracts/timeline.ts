@@ -1,5 +1,6 @@
 import type {
   AuthoredTranscendentEmbryoOutcome,
+  DerivedPickupPlacementCommand,
   FigurineArcanaAddress,
   FountainRarityOutcomeAddress,
   JudgmentArcanaAddress,
@@ -142,15 +143,7 @@ export interface WorkspaceRoomActionRow {
   /** Participation is authored by an inventory control (Overview or a Travel Deal line). */
   readonly participationOwnedByOverview: boolean;
   /** Engine-published exact materialization command for one derived acquisition entry. */
-  readonly placement?: WorkspaceCommandIntent<
-    Extract<
-      ProjectCommand,
-      {
-        readonly kind:
-          'PlaceHermesShrineDelivery' | 'PlaceClockedTraitPickup' | 'PlaceEchoGoldPickup';
-      }
-    >
-  >;
+  readonly placement?: WorkspaceCommandIntent<DerivedPickupPlacementCommand>;
   readonly rank: number | null;
   /** Artificer output identity authored at this source transformation checkpoint. */
   readonly artificerOutput?: {

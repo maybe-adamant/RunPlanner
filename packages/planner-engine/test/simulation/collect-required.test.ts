@@ -10,6 +10,7 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
+  createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   publishProjectHistoryEdit,
   redoProjectHistory,
@@ -158,16 +159,11 @@ function commandKey(command: ProjectCommand): string {
     case 'InsertRoomAction':
       return roomActionKey(command.reference);
     case 'PlaceHermesShrineDelivery':
+    case 'PlaceEchoGoldPickup':
       return roomActionKey({
         kind: 'interactAcquisitionEntry',
         siteKey: command.entry.site.pointKey,
         entryKey: command.entry.entryKey,
-      });
-    case 'PlaceEchoGoldPickup':
-      return roomActionKey({
-        kind: 'interactAcquisitionEntry',
-        siteKey: command.site.pointKey,
-        entryKey: command.entryKey,
       });
     default:
       throw new Error(`unexpected placement ${command.kind}`);
@@ -336,8 +332,10 @@ describe('Collect all required', () => {
     project = authorLegalTraitOffers(
       applyProjectCommand(project, catalog, {
         kind: 'PlaceEchoGoldPickup',
-        site: createAcquisitionSiteAddress(shop, 'roomExit'),
-        entryKey: 'echoDoubleShopReward',
+        entry: createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(shop, 'roomExit'),
+          'echoDoubleShopReward',
+        ),
         sourceOfferKey: 'Boon',
       }),
     );

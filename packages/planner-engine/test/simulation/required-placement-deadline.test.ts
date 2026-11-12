@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
   createOccurrenceAddress,
@@ -136,8 +137,10 @@ describe("Gold Gold Gold's duplicate left unplaced", () => {
     return authorLegalTraitOffers(
       applyProjectCommand(freshPurchase(), catalog, {
         kind: 'PlaceEchoGoldPickup',
-        site: createAcquisitionSiteAddress(shop, 'roomExit'),
-        entryKey: 'echoDoubleShopReward',
+        entry: createAcquisitionEntryAddress(
+          createAcquisitionSiteAddress(shop, 'roomExit'),
+          'echoDoubleShopReward',
+        ),
         sourceOfferKey: 'Boon',
       }),
     );
@@ -169,7 +172,7 @@ describe("Gold Gold Gold's duplicate left unplaced", () => {
           kind: 'place',
           command: {
             kind: 'PlaceEchoGoldPickup',
-            entryKey: 'echoDoubleShopReward',
+            entry: expect.objectContaining({ entryKey: 'echoDoubleShopReward' }),
             sourceOfferKey: 'Boon',
             index: 1,
           },
