@@ -721,7 +721,6 @@ export function spawnedLootForProjectEvaluationAssembly(
         : 'encounterEnd';
 
   const unlockKey = (phaseKey: string) => momentKey('encounterEnd', phaseKey);
-  const beforeCombat = (row: RoomActionRow) => row.contact.kind === 'beforeCombat';
 
   // Rewards, which each moment spawns before its other loot.
   for (const row of liveRows) {
@@ -730,7 +729,8 @@ export function spawnedLootForProjectEvaluationAssembly(
       case 'interactIncomingReward': {
         const roomReward = { kind: 'roomReward' } as const;
         // Roles before combat (an Opening reward, Devotion's choice) are there on entry.
-        if (beforeCombat(row)) add('roomEntered', undefined, fromRow(row, roomReward));
+        if (row.contact.kind === 'beforeCombat')
+          add('roomEntered', undefined, fromRow(row, roomReward));
         else if (startSpawnPhase !== undefined)
           // An H miniboss cages its reward until the encounter ends.
           add(

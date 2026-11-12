@@ -80,13 +80,11 @@ function appendAutomaticTimelineEffects(
     ),
     ...effects,
   ];
-  for (const effect of allEffects) {
-    const key = effect.phaseKey;
-    const current = byPhase.get(key) ?? [];
-    current.push(effect);
-    byPhase.set(key, current);
-  }
+  for (const effect of allEffects)
+    byPhase.set(effect.phaseKey, [...(byPhase.get(effect.phaseKey) ?? []), effect]);
   const order = (effect: AutomaticEffect) => (effect.effect === 'steadyGrowth' ? 0 : 1);
+  const phaseEffects = (phaseKey: string) =>
+    (byPhase.get(phaseKey) ?? []).sort((left, right) => order(left) - order(right));
   const shipPostCombatActionIndexByPhase = new Map<string, number>();
   let latestEncounterEndPhaseKey: string | undefined;
   timeline.entries.forEach((entry, index) => {
@@ -97,23 +95,18 @@ function appendAutomaticTimelineEffects(
     if (
       entry.kind === 'action' &&
       entry.action.participation === 'required' &&
-      entry.action.contact.kind === 'afterWheelPhase'
-    ) {
-      if (latestEncounterEndPhaseKey !== undefined)
-        shipPostCombatActionIndexByPhase.set(latestEncounterEndPhaseKey, index);
-    }
+      entry.action.contact.kind === 'afterWheelPhase' &&
+      latestEncounterEndPhaseKey !== undefined
+    )
+      shipPostCombatActionIndexByPhase.set(latestEncounterEndPhaseKey, index);
   });
   const entries: RoomLifecycleTimelineEntry[] = [];
   for (const [index, entry] of timeline.entries.entries()) {
     const boundary = entry.kind === 'boundary' ? entry.boundary : undefined;
     if (boundary?.kind === 'encounterEnd') {
       entries.push(entry);
-      if (!shipPostCombatActionIndexByPhase.has(boundary.phaseKey)) {
-        for (const effect of (byPhase.get(boundary.phaseKey) ?? []).sort(
-          (left, right) => order(left) - order(right),
-        ))
-          entries.push(effect);
-      }
+      if (!shipPostCombatActionIndexByPhase.has(boundary.phaseKey))
+        entries.push(...phaseEffects(boundary.phaseKey));
       continue;
     }
     if (entry.kind === 'automaticEffect') continue;
@@ -121,11 +114,7 @@ function appendAutomaticTimelineEffects(
     const phaseKey = [...shipPostCombatActionIndexByPhase.entries()].find(
       ([, actionIndex]) => actionIndex === index,
     )?.[0];
-    if (phaseKey !== undefined)
-      for (const effect of (byPhase.get(phaseKey) ?? []).sort(
-        (left, right) => order(left) - order(right),
-      ))
-        entries.push(effect);
+    if (phaseKey !== undefined) entries.push(...phaseEffects(phaseKey));
   }
   return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
 }
@@ -309,10 +298,6 @@ export function assembleRoomLifecycleTimeline(
       : firstRank(phaseRows, (row) => row.contact.kind === 'afterWheelPhase');
   };
 
-  // A wheel's rerolls, choice and spoils stand in its phase's encounter, begun as its wheels open.
-  const shipPhaseKeyForAction = (row: RoomActionRow): string | undefined =>
-    wheelRow(row) === undefined ? undefined : row.contact.phaseKey;
-
   const place = roomEventPlaces(structure);
   const opening = (row: RoomActionRow) => place(roomActionOpeningPoint(row.bounds));
 
@@ -488,7 +473,8 @@ export function assembleRoomLifecycleTimeline(
     const row = rowByRank.get(slot + 1);
     if (row !== undefined) {
       const phaseKey =
-        shipPhaseKeyForAction(row) ??
+        // A wheel's rerolls, choice and spoils stand in its phase's encounter.
+        (wheelRow(row) === undefined ? undefined : row.contact.phaseKey) ??
         ('phaseKey' in row.reference ? row.reference.phaseKey : undefined);
       entries.push(
         Object.freeze({

@@ -16,12 +16,7 @@ import type { RoomActionContact, RoomActionRow, RoomActionRowLabel } from './mod
 /** A row before its contact, label and required scope are named. */
 export type RoomActionRowFacts = Omit<RoomActionRow, 'contact' | 'label'>;
 
-/**
- * The one classification of a row's bounds: after the doors open, before a
- * phase's Combat (a wheel phase's choice), at a wheel's roll, after an
- * encounter's end effects, after a wheel phase's fight, during a Fields room,
- * or after the room's fights.
- */
+/** The one classification of a row's bounds; the first rule that matches wins. */
 function roomActionContact(bounds: RoomActionBounds, graph: RoomEventGraph): RoomActionContact {
   const last = graph.phases.at(-1)?.phaseKey;
   const phase = (phaseKey: string | undefined) => (phaseKey === undefined ? {} : { phaseKey });
