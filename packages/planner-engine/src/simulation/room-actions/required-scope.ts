@@ -26,15 +26,11 @@ function roomActionContact(bounds: RoomActionBounds, graph: RoomEventGraph): Roo
     return Object.freeze({ kind: 'afterDoorsOpen', ...phase(last) });
   if (enabler?.kind === 'gate') {
     const wheelKey = wheelOfPhase(graph, enabler.phaseKey);
-    return Object.freeze(
-      wheelKey !== undefined
-        ? { kind: 'beforeWheelPhase', wheelKey, ...played(enabler.phaseKey) }
-        : {
-            kind: 'beforeCombat',
-            ...played(enabler.phaseKey),
-            ...(spawn.kind === 'wheelsOpen' ? { wheelKey: spawn.wheelKey } : {}),
-          },
-    );
+    if (wheelKey !== undefined)
+      return Object.freeze({ kind: 'beforeWheelPhase', wheelKey, ...played(enabler.phaseKey) });
+    // A wheel row whose phase the room no longer plays stays at its wheel's roll.
+    if (spawn.kind !== 'wheelsOpen')
+      return Object.freeze({ kind: 'beforeCombat', ...played(enabler.phaseKey) });
   }
   switch (spawn.kind) {
     case 'wheelsOpen':

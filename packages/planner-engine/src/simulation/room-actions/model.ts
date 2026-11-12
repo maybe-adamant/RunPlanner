@@ -51,13 +51,11 @@ export type RoomActionContact =
   /** Usable once the doors open or the exits are ready, or after the room's combat. */
   | { readonly kind: 'afterDoorsOpen' | 'afterCombat'; readonly phaseKey?: string }
   /** Before a phase's Combat, which its use starts. */
-  | {
-      readonly kind: 'beforeCombat';
-      readonly phaseKey?: string;
-      /** The wheel whose roll spawns it when the room no longer plays that wheel's phase. */
-      readonly wheelKey?: string;
-    }
-  /** At a Ship wheel phase's gate, from its wheel's roll, or after its fight. */
+  | { readonly kind: 'beforeCombat'; readonly phaseKey?: string }
+  /**
+   * At a Ship wheel phase's gate, from its wheel's roll (also a gate row whose
+   * phase the room no longer plays), or after its fight.
+   */
   | {
       readonly kind: 'beforeWheelPhase' | 'beforeWheelChoice' | 'afterWheelPhase';
       readonly wheelKey: string;

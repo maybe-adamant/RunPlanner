@@ -7,11 +7,10 @@ export function wireWindow(contact: RoomActionContact): ExecutionLifecycleWindow
     case 'afterDoorsOpen':
       return Object.freeze({ kind: 'postOutgoing' });
     case 'beforeCombat':
+      return Object.freeze({ kind: 'standard', phase: 'beforeCombat' });
     case 'beforeWheelPhase':
     case 'beforeWheelChoice':
-      return contact.wheelKey === undefined
-        ? Object.freeze({ kind: 'standard', phase: 'beforeCombat' })
-        : Object.freeze({ kind: 'shipPreCombat', wheelKey: contact.wheelKey });
+      return Object.freeze({ kind: 'shipPreCombat', wheelKey: contact.wheelKey });
     case 'afterWheelPhase':
       return Object.freeze({ kind: 'shipPostCombat', wheelKey: contact.wheelKey });
     case 'afterEncounterEnd':

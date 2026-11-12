@@ -86,6 +86,30 @@ describe('required action scope', () => {
     expect(scopeRoomActionRoster(roster, ['Cage01']).rows[0]).toMatchObject({ stale: true });
     expect(scopeRoomActionRoster(roster, ['Cage01']).rows[0]?.requiredScope).toBeUndefined();
   });
+  it("keeps a wheel's pre-combat contact when the room no longer plays its phase", () => {
+    const ship: RoomEventGraph = {
+      profileKey: 'ShipCombatRoom',
+      activeEncounterSlotKeys: ['Intro'],
+      phases: [{ phaseKey: 'Intro' }],
+      pressFights: [],
+      events: testGraphEvents([{ phaseKey: 'Intro' }], { generatesOutgoing: true }),
+    };
+    const choose = row(
+      { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
+      {
+        bounds: {
+          spawn: { kind: 'wheelsOpen', wheelKey: 'wheel1' },
+          enabler: { kind: 'gate', phaseKey: 'Combat1' },
+          deadline: { kind: 'encounterStarted', phaseKey: 'Combat1' },
+        },
+      },
+      ship,
+    );
+    expect(withRequiredScopes([choose], ship)[0]?.contact).toEqual({
+      kind: 'beforeWheelChoice',
+      wheelKey: 'wheel1',
+    });
+  });
   it('does not invent a phase obligation in an encounterless lifecycle', () => {
     expect(
       withRequiredScopes(
