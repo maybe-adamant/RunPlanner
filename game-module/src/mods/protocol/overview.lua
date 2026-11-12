@@ -252,7 +252,7 @@ local function featureRerolls(value, label, decodeRoll)
     return rows
 end
 
--- An object's optional ChallengeSwitchBase anchor; absent leaves native placement.
+-- An object's chosen or default ChallengeSwitchBase anchor; absent for a pinned Well.
 local function anchorId(record, label)
     if record.anchorId ~= nil and not p.int(record.anchorId, label .. ".anchorId", 1) then
         return p.fail(label .. " has invalid anchor")
@@ -478,7 +478,7 @@ local function additional(value, label)
     return rows
 end
 
--- Authored Fields points; a slot without one stays native.
+-- Each active Fields slot's chosen or default point.
 local function fields(value, label)
     local record, errorMessage = p.exact(
         value,

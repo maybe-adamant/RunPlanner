@@ -337,11 +337,15 @@ local function secondDraw(values)
     return value
 end
 
-function TestFieldsFeatures.testUnplannedSlotsDrawNativelyWithoutPlannedPoints()
+function TestFieldsFeatures.testEveryPublishedSlotTakesItsPointAndOtherDrawsStayNative()
     local callbacks, _, mismatches, diagnostics = fixture({
-        cagePoints = { { slotKey = "cage2", pointId = 12 } },
+        cagePoints = {
+            { slotKey = "cage1", pointId = 13 },
+            { slotKey = "cage2", pointId = 12 },
+            { slotKey = "cage3", pointId = 11 },
+        },
         optionalRewards = {
-            { slotKey = "optional1", reward = { rewardType = "MaxHealthDrop" } },
+            { slotKey = "optional1", pointId = 22, reward = { rewardType = "MaxHealthDrop" } },
             { slotKey = "optional2", pointId = 21, reward = { rewardType = "MaxHealthDrop" } },
         },
         nemesisPointId = 23,
@@ -359,13 +363,27 @@ function TestFieldsFeatures.testUnplannedSlotsDrawNativelyWithoutPlannedPoints()
         for _ = 1, 2 do drawn[#drawn + 1] = callbacks.RemoveRandomValue(nil, {}, secondDraw, optional) end
         return true
     end, nativeRoom, {})
-    -- cage1 draws over {11, 13} (12 is planned), cage2 takes 12, cage3 the rest;
-    -- optional1 draws over {22} (21 planned, 23 the Nemesis point), optional2 takes 21.
     lu.assertEquals(drawn, { 13, 12, 11, 22, 21 })
     lu.assertEquals(cages, {})
     lu.assertEquals(optional, { 23 })
     lu.assertEquals(mismatches, {})
     lu.assertNil(diagnostics["fields-point"])
+end
+
+function TestFieldsFeatures.testAnUnpublishedSlotDrawsFullyNatively()
+    local callbacks, _, _, diagnostics = fixture({
+        cagePoints = { { slotKey = "cage2", pointId = 12 } },
+        optionalRewards = {},
+    })
+    local cages = { 11, 12, 13 }
+    local drawn = {}
+    callbacks.SpawnRewardCages(nil, {}, function()
+        for _ = 1, 2 do drawn[#drawn + 1] = callbacks.RemoveRandomValue(nil, {}, secondDraw, cages) end
+        return true
+    end, { OptionalRewardChances = {}, BonusRewardStoreName = "FieldsOptionalRewards" }, {})
+    -- cage1's native draw takes 12, so cage2's point is unavailable.
+    lu.assertEquals(drawn, { 12, 13 })
+    lu.assertEquals(diagnostics["fields-point"], { expected = 12, observed = nil })
 end
 
 function TestFieldsFeatures.testUnavailablePlannedPointDiagnosesAndDrawsNatively()

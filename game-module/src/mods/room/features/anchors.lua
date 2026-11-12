@@ -1,9 +1,8 @@
 -- Room object anchors. HandleSecretSpawns places the Well, Pool, Shrine,
 -- challenge switch and Meta Reward Stand, in that order, each by one draw from
 -- the room's ChallengeSwitchBase pool (a Well-pinned room's Well takes its pin
--- without a draw). A published anchorId replaces its object's draw; every other
--- draw stays native over the pool without the anchors still planned, so native
--- never takes a planned anchor.
+-- without a draw). Every planned object publishes its anchorId, which replaces
+-- its draw; the Meta Reward Stand, drawing last, takes a native draw.
 local placement = type(import) == "function" and import("mods/room/features/placement.lua")
     or require("mods.room.features.placement")
 local anchors = {}
@@ -111,11 +110,7 @@ function anchors.attach(module, session, getState, report, room)
             if taken ~= nil then return taken end
             session.diagnostic(current.state, "room-anchor-unavailable", { object = kind, anchorId = wanted })
         end
-        local reserved = {}
-        for other, anchorId in pairs(current.planned) do
-            if not current.drawn[other] then reserved[anchorId] = true end
-        end
-        return placement.drawExcluding(base, values, reserved, ...)
+        return base(values, ...)
     end)
 end
 

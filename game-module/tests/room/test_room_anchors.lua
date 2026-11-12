@@ -1,6 +1,6 @@
 -- Room object anchors through the composed room feature hooks: each object's
--- ChallengeSwitchBase draw takes its published anchor, unplanned draws never
--- take a planned anchor, and the Fields point scope never captures them.
+-- ChallengeSwitchBase draw takes its published anchor, every other draw stays
+-- native, and the Fields point scope never captures them.
 -- luacheck: globals TestRoomAnchors
 local lu = require("luaunit")
 local featureHooks = require("mods.room.features.hooks")
@@ -97,18 +97,32 @@ local function objects(room)
         id(room.MetaRewardStand) }
 end
 
-function TestRoomAnchors.testPlannedAnchorsAreTakenAndUnplannedObjectsDrawAroundThem()
+function TestRoomAnchors.testEveryPublishedAnchorIsTakenAndTheMetaRewardStandDrawsWhatIsLeft()
     local callbacks, diagnostics = harness({
-        stygianWell = { offers = {} },
+        stygianWell = { offers = {}, anchorId = 3 },
         purgingPool = { anchorId = 1 },
         hermesShrine = { offers = {}, anchorId = 4 },
         challengeSwitch = { variantKey = "Switch", anchorId = 2 },
     })
     local room = spawn(callbacks, { IsMetaRewardStandEligible = true, switch = true },
         { Name = "F_Combat01", __runPlannerExecutionRoomId = "room", ForceWellShop = true, ForceSurfaceShop = true })
-    -- The Well draws over {3, 5}; the Meta Reward Stand takes what is left.
     lu.assertEquals(objects(room), { 3, 1, 4, 2, 5 })
     lu.assertEquals(diagnostics, {})
+end
+
+function TestRoomAnchors.testAnUnpublishedDrawStaysFullyNative()
+    local callbacks, diagnostics = harness({
+        stygianWell = { offers = {} },
+        purgingPool = { anchorId = 1 },
+    })
+    local room = spawn(callbacks, { IsSellTraitShopEligible = true },
+        { Name = "F_Combat01", __runPlannerExecutionRoomId = "room", ForceWellShop = true })
+    -- The Well's native draw takes 1, so the Pool's anchor is unavailable.
+    lu.assertEquals(objects(room), { 1, 2, false, false, false })
+    lu.assertEquals(diagnostics, {
+        { kind = "room-anchor-unavailable", observed = { object = "purgingPool", anchorId = 1 } },
+        { kind = "room-anchor", observed = { object = "purgingPool", expected = 1, observed = 2 } },
+    })
 end
 
 function TestRoomAnchors.testWithoutPlannedAnchorsEveryDrawStaysNative()

@@ -53,18 +53,4 @@ function placement.take(values, wanted)
     return wanted
 end
 
--- A native draw from the pool without the reserved points. With nothing else
--- left the draw stays fully native.
-function placement.drawExcluding(base, values, reserved, ...)
-    if next(reserved) == nil then return base(values, ...) end
-    local pool = {}
-    for _, value in ipairs(remaining(values)) do
-        if not reserved[value] then pool[#pool + 1] = value end
-    end
-    if #pool == 0 then return base(values, ...) end
-    local picked = base(pool, ...)
-    if picked ~= nil then placement.take(values, picked) end
-    return picked
-end
-
 return placement
