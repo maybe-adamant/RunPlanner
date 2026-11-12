@@ -279,6 +279,16 @@ occurrences execute their own preparation and lifecycle in authored
 ordered history therefore supports ordinary rooms, O/P/H multi-phase rooms,
 and N side-room occurrences without a second encounter engine.
 
+**What starts an encounter.** Every encounter starts either automatically
+or right after a placed trigger row. It starts automatically at room entry,
+or at the previous encounter's end: an ordered multi-encounter room's next
+encounter and a Ship phase's next Wheels open follow that end with no row
+between them. Otherwise it starts right after its trigger row: the Opening or
+Devotion pickup, the wheel choice or the cage Unlock, and its Encounter and
+Combat markers stand right after that row, so moving the row moves them and
+the fight. A challenge switch press and a locked-door press run their fight at
+the press itself. Eris's talk starts no fight.
+
 **Noncombat and Story encounters.** The game still records and runs a Story
 encounter through `StartEncounter`, but its `EncounterType = NonCombat` skips
 combat start/end effects. The planner preserves the encounter identity,
