@@ -2,6 +2,7 @@ import { replaceSimulationTraitHistory } from '../../state/transitions';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
@@ -80,6 +81,7 @@ import {
 } from './conversions';
 import { resolvedAcquisitionSource, type AcquisitionSource } from './source';
 import {
+  isPendingTraitOffer,
   spawnPendingTraitOffers,
   traitOfferRoomOccurrence,
 } from '../../state/pending-trait-offers';
@@ -225,10 +227,11 @@ export function applyProducerRoleHistory(
       resolution.role,
       resolution.lifecyclePoint,
     );
-    // An object the walk did not spawn earlier (an Opening or Devotion gate
-    // reward) spawns at this contact; one already spawned keeps its decision.
+    // Loot the walk did not spawn earlier (an Opening or Devotion gate reward)
+    // spawns at this contact; loot already spawned keeps its spawn's decision.
     const spawnedBranch =
-      incoming.roomRewardForfeitEligible === true
+      incoming.roomRewardForfeitEligible === true &&
+      !isPendingTraitOffer(branch.state, createTraitOfferAddress(incoming.origin, resolution.role))
         ? settleRewardSpawn(
             catalog,
             branch,

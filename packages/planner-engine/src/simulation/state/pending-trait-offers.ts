@@ -180,6 +180,15 @@ export function spawnPendingTraitOffers(
   return next;
 }
 
+/** Whether an earlier contact spawned this loot and it is still unopened. */
+export function isPendingTraitOffer(state: SimulationState, address: SemanticAddress): boolean {
+  const room = traitOfferRoomKey(address);
+  return (
+    room !== undefined &&
+    state.pendingTraitOffers[room]?.[semanticAddressKey(address)] !== undefined
+  );
+}
+
 /** Removes an opened loot; its options were read when the screen opened. */
 export function openPendingTraitOffer(
   state: SimulationState,
