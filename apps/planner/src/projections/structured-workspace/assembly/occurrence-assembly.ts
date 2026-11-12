@@ -645,7 +645,6 @@ export function assembleWorkspaceOccurrence(
       : projectRoomLive({
           catalog: input.catalog,
           owner: address,
-          occurrence,
           live: engineLive,
           rows: assembledRoomActions.rows,
           labelParts: (reference) =>
@@ -659,7 +658,6 @@ export function assembleWorkspaceOccurrence(
                 : undefined,
               occurrence,
             ),
-          interactions: input.roomObjectInteractions?.(address),
         });
   const roomActions =
     assembledRoomActions === undefined || live === undefined

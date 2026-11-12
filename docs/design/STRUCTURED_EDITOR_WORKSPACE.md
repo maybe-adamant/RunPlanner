@@ -544,9 +544,9 @@ its item or trait in the same pick) and Reroll with its cost, disabled with a
 hint when screen rerolls are not enabled, nothing is left to reroll or the
 pool cannot pay. A World Shop offers each unbought item; a Shrine offers Buy
 for each unbought item and Rush for each bought one not yet rushed, one pick
-and one Undo step each; once
-its Travel Deal item is live, either offers to buy it, a blank one taking its
-item in the same pick; a Pedestal offers its collect. Every entry is
+and one Undo step each; the purchase or rush Travel Deal restocks on opens
+its row's refill choice, and once its Travel Deal item is stocked, either
+offers to buy it; a Pedestal offers its collect. Every entry is
 shown while its object is present and is disabled with the reason when nothing
 can be done there (everything bought or sold, the only option left a reroll
 that cannot be made, the item collected or not yet chosen, the pedestal

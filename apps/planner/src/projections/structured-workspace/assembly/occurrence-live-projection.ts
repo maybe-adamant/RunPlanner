@@ -5,16 +5,13 @@ import {
   roomActionKey,
   semanticAddressKey,
   type OccurrenceAddress,
-  type ProjectCommand,
   type RoomActionReference,
-  type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import type { LiveRoom, LiveVerb, RoomObjectInteractions } from '@run-planner/engine/simulation';
+import type { LiveRoom, LiveVerb } from '@run-planner/engine/simulation';
 
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import type {
-  WorkspaceLiveChoice,
   WorkspaceLiveFace,
   WorkspaceLiveItem,
   WorkspaceLiveObjectKind,
@@ -62,59 +59,6 @@ const verbWords: Readonly<Record<LiveVerb['verb'], string>> = {
   press: 'Press',
 };
 
-type TravelDealCommand = Extract<
-  ProjectCommand,
-  { readonly kind: 'PurchaseShopTravelDealRefill' | 'PurchaseHermesShrineOffer' }
->;
-
-/**
- * What a blank Travel Deal item can stock at the gap, each a purchase with that value: a World
- * Shop refill's offered values, or a Shrine refill's candidate rewards.
- */
-function travelDealChoices(
-  catalog: Catalog,
-  occurrence: RoomOccurrence,
-  interactions: RoomObjectInteractions | undefined,
-  reference: RoomActionReference,
-  index: number,
-): readonly WorkspaceLiveChoice[] {
-  const rewardLabel = (rewardType: string): string =>
-    catalog.rewards.rewardTypes.byKey[rewardType]?.label ?? rewardType;
-  const choice = (key: string, label: string, rewardType: string, command: TravelDealCommand) =>
-    Object.freeze({
-      key,
-      label,
-      icon: Object.freeze({ rewardType }),
-      intent: Object.freeze({ command: Object.freeze({ ...command, index }) }),
-    });
-  if (reference.kind === 'purchaseHermesShrineOffer') {
-    const refill = interactions?.hermesShrine?.travelDealRefill;
-    if (refill === undefined) return [];
-    return refill.candidateRewardTypes.map((rewardType) =>
-      choice(rewardType, rewardLabel(rewardType), rewardType, { ...refill.buy, rewardType }),
-    );
-  }
-  const refill = interactions?.worldShop?.travelDealRefill;
-  if (refill === undefined) return [];
-  const profileKey =
-    occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
-  const profile = profileKey === undefined ? undefined : catalog.rewards.shops.byKey[profileKey];
-  const optionLabel = (optionKey: string): string =>
-    profile?.groups.values.find((group) => group.options.byKey[optionKey] !== undefined)?.options
-      .byKey[optionKey]?.label ?? optionKey;
-  return refill.values.map((value) => {
-    const source =
-      value.offer.payload?.kind === 'BoonSource' ? value.offer.payload.source : undefined;
-    const name = optionLabel(value.optionKey);
-    return choice(
-      JSON.stringify(value),
-      source === undefined ? name : `${name} · ${rewardLabel(source)}`,
-      source ?? value.offer.rewardType,
-      { ...refill.command, value },
-    );
-  });
-}
-
 /**
  * Adapts the engine's live room at its frontier to the Timeline's live row: each thing live
  * there with the verbs it offers, named and pictured as the rows they act on. What is live,
@@ -123,12 +67,10 @@ function travelDealChoices(
 export function projectRoomLive(input: {
   readonly catalog: Catalog;
   readonly owner: OccurrenceAddress;
-  readonly occurrence: RoomOccurrence;
   readonly live: LiveRoom;
   readonly rows: readonly WorkspaceRoomActionRow[];
   /** Names a reference that is not a Timeline row yet, such as an unbought item. */
   readonly labelParts: (reference: RoomActionReference) => OccurrenceActionLabelParts;
-  readonly interactions: RoomObjectInteractions | undefined;
 }): WorkspaceRoomLive | undefined {
   const { catalog, live, owner } = input;
   const gap = live.gaps.find((candidate) => candidate.index === live.frontier);
@@ -167,19 +109,6 @@ export function projectRoomLive(input: {
     const choice = verb.choice;
     if (choice?.timing === 'before') {
       switch (choice.picker) {
-        case 'travelDealItem': {
-          if (verb.reference === undefined) return undefined;
-          const choices = travelDealChoices(
-            catalog,
-            input.occurrence,
-            input.interactions,
-            verb.reference,
-            gap.index,
-          );
-          return choices.length === 0
-            ? undefined
-            : Object.freeze({ kind: 'choose' as const, choices: Object.freeze(choices) });
-        }
         case 'purgingPoolSale':
           return Object.freeze({
             kind: 'choose' as const,

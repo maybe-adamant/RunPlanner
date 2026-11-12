@@ -11,15 +11,21 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   createRouteStartKeepsakeSelectionAddress,
+  createShopOfferAddress,
   roomActionKey,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
   semanticAddressKey,
   type OccurrenceAddress,
   type ProjectCommand,
   type ProjectDocument,
+  type RoomActionReference,
+  type RoomOccurrence,
+  type ShopState,
 } from '@run-planner/engine/authored-project';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
+  roomObjectInteractionsForProjectEvaluationAssembly,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
   type ProjectEvaluationAssembly,
@@ -38,6 +44,7 @@ import {
   placeDueHermesShrineDeliveries,
   surfaceShrineDeliveriesProject,
   surfaceShrineDeliverySources,
+  surfaceShrineTravelDealProject,
 } from '@run-planner/test-fixtures/surface';
 import {
   liveRoomForProjectEvaluationAssembly,
@@ -61,6 +68,95 @@ const fBiome = createBiomeAddress('Underworld', 'F');
 const worldShop = createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-preboss-shop'));
 const fWell = createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-preboss-shop:postboss'));
 const fRoom = (id: string) => createOccurrenceAddress(fBiome, createOccurrenceId(id));
+
+const travelDealRefillPurchase: RoomActionReference = {
+  kind: 'interactAcquisitionEntry',
+  siteKey: 'roomExit',
+  entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+};
+
+function withOccurrence(
+  project: ProjectDocument,
+  address: OccurrenceAddress,
+  update: (occurrence: RoomOccurrence) => RoomOccurrence,
+): ProjectDocument {
+  return {
+    ...project,
+    route: {
+      ...project.route,
+      biomes: project.route.biomes.map((biome) =>
+        biome.biomeKey !== address.biomeKey || biome.topology === null
+          ? biome
+          : {
+              ...biome,
+              topology: {
+                ...biome.topology,
+                occurrences: biome.topology.occurrences.map((occurrence) =>
+                  occurrence.occurrenceId === address.occurrenceId
+                    ? update(occurrence)
+                    : occurrence,
+                ),
+              },
+            },
+      ),
+    },
+  };
+}
+
+function shopState(project: ProjectDocument): ShopState {
+  const occurrence = project.route.biomes
+    .find((biome) => biome.biomeKey === worldShop.biomeKey)
+    ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === worldShop.occurrenceId);
+  if (occurrence?.state.kind !== 'shop' || occurrence.state.shop === undefined)
+    throw new Error('the World Shop has no inventory');
+  return occurrence.state.shop;
+}
+
+/** The World Shop with its Travel Deal item blank and its purchase removed, as a saved plan holds it. */
+function withShopRefill(
+  project: ProjectDocument,
+  refill: ShopState['travelDealRefill'],
+): ProjectDocument {
+  return withOccurrence(project, worldShop, (occurrence) => {
+    if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) return occurrence;
+    const { travelDealRefill: _dropped, ...shop } = occurrence.state.shop;
+    void _dropped;
+    return {
+      ...occurrence,
+      state: {
+        ...occurrence.state,
+        shop: refill === undefined ? shop : { ...shop, travelDealRefill: refill },
+      },
+      roomActions: {
+        ...occurrence.roomActions,
+        order: occurrence.roomActions.order.filter(
+          (reference) => roomActionKey(reference) !== roomActionKey(travelDealRefillPurchase),
+        ),
+      },
+    };
+  });
+}
+
+/** The Shrine with its Travel Deal refill blank, as a saved plan holds it. */
+function withShrineRefill(
+  project: ProjectDocument,
+  address: OccurrenceAddress,
+  refill: undefined,
+): ProjectDocument {
+  return withOccurrence(project, address, (occurrence) => {
+    if (occurrence.hermesShrine === undefined) return occurrence;
+    const { travelDealRefill: _dropped, ...shrine } = occurrence.hermesShrine;
+    void _dropped;
+    return { ...occurrence, hermesShrine: refill ?? shrine };
+  });
+}
+
+function objectInteractions(project: ProjectDocument, address: OccurrenceAddress) {
+  return roomObjectInteractionsForProjectEvaluationAssembly(
+    simulateProjectAssembly(catalog, project),
+    address,
+  );
+}
 
 function interactions(
   project: ProjectDocument,
@@ -683,5 +779,145 @@ describe('live interactions at a gap', () => {
     expect(live.leftBehind?.map((item) => roomActionKey(item.reference))).toContain(
       roomActionKey(sample.order[sample.index]!),
     );
+  });
+
+  it('offers the purchase Travel Deal restocks with its refill picker after it', () => {
+    const plan = throughBiome(loadUnderworldWorldShopTravelDealCheckpoint(), 'F');
+    const shopVerbs = (document: ProjectDocument) =>
+      interactions(document, worldShop)
+        .gaps.at(-1)!
+        .items.flatMap((item) =>
+          item.kind === 'object' && item.object === 'worldShop'
+            ? item.verbs.filter((verb) => verb.standing !== true)
+            : [],
+        );
+    const summary = (verb: LiveVerb) => [
+      roomActionKey(verb.reference!),
+      verb.choice?.picker,
+      verb.commands?.map((command) => command.kind),
+    ];
+    const refill = shopState(plan).travelDealRefill!;
+    // Nothing bought yet: Travel Deal restocks whatever is bought first.
+    const unbought = withShopRefill(withRoomOrder(plan, worldShop, []), undefined);
+    const first = shopVerbs(unbought);
+    expect(first.length).toBeGreaterThan(0);
+    expect(new Set(first.map((verb) => verb.choice?.picker))).toEqual(
+      new Set(['travelDealRefill']),
+    );
+    // The purchase stops the walk at its own row until the restocked item is chosen.
+    // The plan's own first purchase, whose item needs no further choice.
+    const trigger = first.find(
+      (verb) =>
+        verb.reference?.kind === 'interactShopOffer' && verb.reference.offerKey === 'MajorNonBoon',
+    )!;
+    const bought = applyProjectCommand(unbought, catalog, trigger.commands![0]!);
+    const stopped = interactions(bought, worldShop);
+    expect(stopped.frontier).toBe(0);
+    expect(
+      simulateProjectAssembly(catalog, bought).evaluation.findings.map((finding) => finding.code),
+    ).toEqual(['rewardMissing']);
+    // Chosen, the walk passes the purchase and the refill is an ordinary buy, offered once.
+    const stocked = applyProjectCommand(bought, catalog, {
+      kind: 'ReplaceShopOfferOption',
+      offer: createShopOfferAddress(fBiome, worldShop.occurrenceId, TRAVEL_DEAL_REFILL_ENTRY_KEY),
+      value: { optionKey: refill.optionKey!, offer: refill.reward!.offer },
+    });
+    expect(interactions(stocked, worldShop).frontier).toBe(1);
+    const later = shopVerbs(stocked);
+    expect(later.map(summary)).toEqual([
+      ...first
+        .filter((verb) => verb !== trigger)
+        .map((verb) => [
+          roomActionKey(verb.reference!),
+          undefined,
+          ['ReplaceShopPurchaseParticipation'],
+        ]),
+      [roomActionKey(travelDealRefillPurchase), undefined, ['PurchaseShopTravelDealRefill']],
+    ]);
+    const buyRefill = later.at(-1)!;
+    expect(verbAccepted(stocked, worldShop, buyRefill, 1)).toBe(true);
+  });
+
+  it('offers the rush Travel Deal refills on with its refill picker after it', () => {
+    const shrineAddress = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    const shrineVerbs = (document: ProjectDocument) => {
+      const live = interactions(document, shrineAddress);
+      return live.gaps[live.frontier]!.items.flatMap((item) =>
+        item.kind === 'object' && item.object === 'hermesShrine'
+          ? item.verbs.filter((verb) => verb.standing !== true)
+          : [],
+      );
+    };
+    const summary = (verb: LiveVerb) => [
+      verb.verb,
+      roomActionKey(verb.reference!),
+      verb.choice?.picker,
+      verb.commands?.map((command) => command.kind),
+    ];
+    let plan = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: shrineAddress,
+      generationKey: 'travelDealRefill',
+      purchased: false,
+    });
+    plan = applyProjectCommand(plan, catalog, {
+      kind: 'SetHermesShrineRush',
+      occurrence: shrineAddress,
+      generationKey: 'initial:first',
+      rushed: false,
+    });
+    plan = withShrineRefill(plan, shrineAddress, undefined);
+    const rush = shrineVerbs(plan).find((verb) => verb.verb === 'rush')!;
+    expect(summary(rush)).toEqual([
+      'rush',
+      roomActionKey({ kind: 'rushHermesShrineOffer', generationKey: 'initial:first' }),
+      'travelDealRefill',
+      ['SetHermesShrineRush'],
+    ]);
+    // A blank refill is not bought: it stops the walk at the rush that refills it.
+    expect(
+      shrineVerbs(plan)
+        .filter((verb) => roomActionKey(verb.reference!).includes('travelDeal'))
+        .map(summary),
+    ).toEqual([]);
+    const rushed = applyProjectCommand(plan, catalog, rush.commands![0]!);
+    expect(
+      simulateProjectAssembly(catalog, rushed).evaluation.findings.map((finding) => finding.code),
+    ).toContain('hermesShrineTravelDealRefillMissing');
+    const stocked = applyProjectCommand(rushed, catalog, {
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence: shrineAddress,
+      value: {
+        rewardType: objectInteractions(rushed, shrineAddress)!.hermesShrine!.travelDealRefill!
+          .candidateRewardTypes[0]!,
+      },
+    });
+    const refillBuy = shrineVerbs(stocked).find(
+      (verb) =>
+        verb.reference?.kind === 'purchaseHermesShrineOffer' &&
+        verb.reference.generationKey === 'travelDealRefill',
+    )!;
+    expect(summary(refillBuy).slice(2)).toEqual([undefined, ['PurchaseHermesShrineOffer']]);
+    // Once refilled, no later rush carries the picker.
+    expect(shrineVerbs(stocked).filter((verb) => verb.choice !== undefined)).toEqual([]);
+  });
+
+  it('offers a caged pickup nothing to do until its cage unlocks', () => {
+    let locked = 0;
+    const failures: string[] = [];
+    for (const { id, project, assembly } of evaluated)
+      for (const { address, live } of reachedRooms(project, assembly))
+        for (const gap of live.gaps)
+          for (const item of gap.items) {
+            if (item.kind !== 'pickup' || item.lockedUntil === undefined) continue;
+            locked += 1;
+            if (item.verbs.some((verb) => verb.standing !== true))
+              failures.push(`${id} ${address.occurrenceId} @${gap.index}`);
+          }
+    expect(failures).toEqual([]);
+    expect(locked).toBeGreaterThan(0);
   });
 });

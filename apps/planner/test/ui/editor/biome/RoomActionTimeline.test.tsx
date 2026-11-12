@@ -1667,8 +1667,9 @@ describe('OccurrenceRoomActions', () => {
     const options = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
       .map((option) => option.textContent);
-    // Each unbought item is offered by the row it adds; the bought Slot 2 item is not.
-    expect(options).toEqual(['Buy Armor · Travel Deal', 'Buy Apollo', 'Buy Max Magick']);
+    // Each unbought item is offered by the row it adds, the Travel Deal item once and last;
+    // the bought Slot 2 item is not.
+    expect(options).toEqual(['Buy Apollo', 'Buy Max Magick', 'Buy Armor · Travel Deal']);
     expect(options).not.toContain('Buy Heal');
     await view.user.click(screen.getByRole('option', { name: 'Buy Armor · Travel Deal' }));
     expect(order()?.at(-1)).toEqual(recordedIn(view, goldenFBiome, shopId, [reference])[0]);

@@ -19,6 +19,11 @@ export interface WorldShopInteraction {
     readonly offerKey: string;
     readonly command: CommandOf<'ReplaceShopPurchaseParticipation'>;
   }[];
+  /**
+   * Travel Deal is held and no purchase has restocked yet: the next item bought
+   * restocks its slot, and that purchase settles the restocked item.
+   */
+  readonly travelDealRestocksNextPurchase: boolean;
   /** The Travel Deal item, once its first purchase made it live and while it is unbought. */
   readonly travelDealRefill?: {
     /** Null while the item is blank; the pick then adds its chosen `value` to `command`. */
@@ -57,6 +62,11 @@ export interface HermesShrineInteraction {
   readonly rushes: readonly HermesShrineInteractionRush[];
   /** A rush made with Travel Deal has refilled its slot at the reached state. */
   readonly travelDealRefillLive: boolean;
+  /**
+   * Travel Deal is held and no rush has refilled yet: the next initial item
+   * rushed refills its slot, and that rush settles the refilled item.
+   */
+  readonly travelDealRefillsNextRush: boolean;
   /** The live refill while it is unbought, with the rewards the reached state can stock. */
   readonly travelDealRefill?: HermesShrineInteractionOffer & {
     readonly candidateRewardTypes: readonly string[];

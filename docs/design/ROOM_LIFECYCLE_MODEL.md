@@ -922,7 +922,8 @@ Two kinds of item are live at a gap, and nothing else:
   settlement spawned it) through the gap of the row that collects it. A
   pickup not yet spawned or already collected is absent. Each keeps its reward
   owner, source and participation, with its deadline when required, the gap it
-  spawned in and, while still caged, the unlock that frees it.
+  spawned in and, while still caged, the unlock that frees it; a caged pickup
+  offers nothing to do until then.
 - **Active objects**: a World Shop, the Contract pedestal, a Hermes Shrine, a
   Stygian Well, a Pool of Purging, the fountain, the keepsake rack, Eris, an
   encounter's required contact, the Gorgon, a Fields cage's completion, a Ship
@@ -934,13 +935,13 @@ there; nothing is evaluated again. They are the row standing at the gap, the
 [roster's](#roster) authorable insertion of an unplaced row (a required
 action's canonical restore marked) and authorable move of a later row to the
 gap, and an object's new purchase or a derived pickup's placement (a due
-delivery, a matured drop, Gold Gold Gold's duplicate) at an index its
-command accepts, judged by the one rule every positioned command shares. A
-command that still needs a choice, a Pom level or a blank Travel Deal item,
-says so; the indices it accepts do not depend on the value chosen. A required
-item carries its deadline: the last gap of the whole order at which it may
-stand, from the same placements its offered actions come from. An unplaced
-derived pickup also carries the last index its placement command accepts.
+delivery, a matured drop, Gold Gold Gold's duplicate) at an index its command
+accepts, judged by the one rule every positioned command shares. A command
+that still needs a choice, such as a Pom level, says so; the indices it
+accepts do not depend on the value chosen. A required item carries its
+deadline: the last gap of the whole order at which it may stand, from the same
+placements its offered actions come from. An unplaced derived pickup also
+carries the last index its placement command accepts.
 
 Each item keeps the classification its owner gives it today: a Boss's forced
 drop, a countdown delivery and Gold Gold Gold's duplicate are pickups with
@@ -964,15 +965,19 @@ finding. Verbs whose row a choice creates are offered where the engine
 already reads them: a door, cage or wheel reroll press at its surface's
 append point, and a Well or Pool reroll and an unpinned Pool slot's sale
 where the room's reached actions end. Each is offered only while a held card
-enables it and the reroll pool pays, and a sale only while its list can show
-a trait still held, which the picker lists. A picker comes **before** a verb
-whose commands it supplies (a reroll press's reward, a Pool sale's trait, a
-blank Travel Deal item) or **after** one that applies as is (a Pom's level,
-a rerolled list, the rack's keepsake, the Artificer's replacement). Each verb
-is one edit against the current plan; verbs offered at one gap are
-alternatives, never composed. A consumer that only places what a room
-requires asks for the placements alone: each row's, placement's or purchase's
-own verb, without a standing row's conversions or the verbs a picker creates.
+enables it and the reroll pool pays, and a sale only while its list can show a
+trait still held, which the picker lists. A picker comes **before** a verb
+whose commands it supplies (a reroll press's reward, a Pool sale's trait) or
+**after** one that applies as is (a Pom's level, a rerolled list, the rack's
+keepsake, the Artificer's replacement, the item Travel Deal restocks). Travel
+Deal restocks as the purchase (the World Shop's first) or rush (the Shrine's
+first initial one) that triggers it settles, so the restocked item is that
+row's outcome: a blank one stops the walk at that row, and only a stocked one
+is offered to buy. Each verb is one edit against the current plan; verbs
+offered at one gap are alternatives, never composed. A consumer that only
+places what a room requires asks for the placements alone: each row's,
+placement's or purchase's own verb, without a standing row's conversions or
+the verbs a picker creates.
 
 At the frontier the room publishes its **progression**: leaving, once the
 walk passes the room with nothing required live, or choosing the next Ship
