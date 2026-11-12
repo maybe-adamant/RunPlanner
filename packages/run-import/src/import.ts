@@ -559,6 +559,7 @@ export class RunImportWalk {
       before = this.assembly;
       this.occurrences.bindEngineOccurrences(this.assembly.project);
       this.markDirty();
+      this.collectPendingRooms();
       // A room's lock fights precede its rerolls, whose draws read the depth they raise.
       importLockedDoors(this.context);
       // A bracket's rerolls rewrite its draws before the entered room's pickup is answered.
@@ -679,6 +680,20 @@ export class RunImportWalk {
     if (outcome.kind !== 'applied') return false;
     if (outcome.fault !== undefined) this.reportFault(outcome.fault);
     return true;
+  }
+
+  /** Collects the required items of each entered room that changed since the last sweep. */
+  private collectPendingRooms(): void {
+    const project = this.assembly.project;
+    for (const biome of project.route.biomes)
+      for (const occurrence of biome.topology?.occurrences ?? [])
+        if (this.context.pending(occurrence.occurrenceId))
+          this.collectRequired(
+            createOccurrenceAddress(
+              createBiomeAddress(project.route.routeKey, biome.biomeKey),
+              occurrence.occurrenceId,
+            ),
+          );
   }
 
   private collectRequired(occurrence: OccurrenceAddress): boolean {

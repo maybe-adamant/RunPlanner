@@ -1076,32 +1076,33 @@ function importRack(
     occurrence.occurrenceId,
   );
   const selection = createPostbossKeepsakeSelectionAddress(address);
-  if (room.keepsakeSwap !== undefined) {
-    const command: ProjectCommand = {
-      kind: 'ReplacePostbossKeepsake',
-      selection,
-      keepsakeKey: room.keepsakeSwap.to,
-    };
-    if (!context.applyValid(command))
-      context.note({
-        area: 'rack',
-        reason: 'refused',
-        address: selection,
-        record: record(roomIndex),
-      });
-    return;
-  }
-  // A rack left untouched has no interaction.
-  if (
-    (room.uses['GiftRack'] ?? 0) === 0 &&
-    !removeRoomAction(context, biomeKey, occurrence.occurrenceId, { kind: 'interactKeepsakeRack' })
-  )
+  const refused = () =>
     context.note({
       area: 'rack',
       reason: 'refused',
       address: selection,
       record: record(roomIndex),
     });
+  const rack: RoomActionReference = { kind: 'interactKeepsakeRack' };
+  const present = occurrence.roomActions.order.some((entry) => entry.kind === rack.kind);
+  // A rack left untouched has no interaction; a used one is placed before its keepsake is chosen.
+  if (room.keepsakeSwap === undefined && (room.uses['GiftRack'] ?? 0) === 0) {
+    if (present && !removeRoomAction(context, biomeKey, occurrence.occurrenceId, rack)) refused();
+    return;
+  }
+  if (!insertRoomAction(context, biomeKey, occurrence.occurrenceId, rack)) {
+    refused();
+    return;
+  }
+  if (
+    room.keepsakeSwap !== undefined &&
+    !context.applyValid({
+      kind: 'ReplacePostbossKeepsake',
+      selection,
+      keepsakeKey: room.keepsakeSwap.to,
+    })
+  )
+    refused();
 }
 
 function importFountain(

@@ -1,6 +1,7 @@
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createOccurrenceAddress,
   createNemesisRandomEventAddress,
   NEMESIS_RANDOM_EVENT_FAMILIES,
   type NemesisRandomEventAddress,
@@ -41,6 +42,22 @@ export function nemesisEventOf(
       );
 }
 
+/** Selects the event's family and takes its contact, which the player meets to see the offer. */
+function selectFamily(
+  context: RunImportContext,
+  select: ProjectCommand,
+  event: NemesisRandomEventAddress,
+): boolean {
+  if (!context.apply(select)) return false;
+  context.collectRequired(
+    createOccurrenceAddress(
+      createBiomeAddress(event.routeKey, event.biomeKey),
+      event.encounter.owner.occurrenceId,
+    ),
+  );
+  return true;
+}
+
 /**
  * Nemesis's event from the room's record: a free item, a trade or a contest
  * reward is the use the room gained; a trait trade also lost that trait. A gold
@@ -65,7 +82,7 @@ export function answerNemesis(context: RunImportContext, reason: SemanticFinding
   for (const family of NEMESIS_RANDOM_EVENT_FAMILIES) {
     const select: ProjectCommand = { kind: 'SelectNemesisRandomEventFamily', event, family };
     context.transaction(() => {
-      if (!context.apply(select)) return false;
+      if (!selectFamily(context, select, event)) return false;
       const support = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
         context.assembly(),
         event,
@@ -131,7 +148,11 @@ export function answerNemesis(context: RunImportContext, reason: SemanticFinding
     });
   }
   for (const match of matches) {
-    if (!context.transaction(() => match.commands.every((command) => context.apply(command))))
+    if (
+      !context.transaction(
+        () => selectFamily(context, match.commands[0]!, event) && context.apply(match.commands[1]!),
+      )
+    )
       continue;
     // The event itself is not saved: a unique match is inferred, several leave the family open.
     context.note({
