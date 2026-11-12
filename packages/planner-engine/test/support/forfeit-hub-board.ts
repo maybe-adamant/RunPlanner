@@ -12,7 +12,7 @@ import {
   authorLegalTraitOffers,
   collectTestRequiredItems,
 } from '@run-planner/test-fixtures/shared';
-import { withArcana } from './rerolls';
+import { withArcana, withJudgment } from './rerolls';
 
 const settled = (project: ProjectDocument) =>
   collectTestRequiredItems(authorLegalTraitOffers(collectTestRequiredItems(project)));
@@ -34,7 +34,7 @@ function withIncomingReward(
  * draws while Forfeit is unspent: the opening gives a Hammer and PreHub a Hex.
  * Neither can then return, so the board's combat09 and combat03 carry Boons;
  * its first visit, combat05's Hermes, is the one Forfeit takes. DoorReroll is
- * held for board presses.
+ * held for board presses, which makes the Boss Judgment due.
  */
 export function surfaceNForfeitHubBoardProject(): ProjectDocument {
   let project = withArcana(loadSurfaceNProject(), ['DoorReroll']);
@@ -63,5 +63,11 @@ export function surfaceNForfeitHubBoardProject(): ProjectDocument {
     payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
   });
   // A picked-up Boon can reach a later visit's offer, so authoring settles twice.
-  return settled(settled(project));
+  return withJudgment(settled(settled(project)), 'N', 'surface-n-preboss:boss', [
+    'ChanneledCast',
+    'HealthRegen',
+    'LowManaDamageBonus',
+    'CastCount',
+    'SorceryRegenUpgrade',
+  ]);
 }

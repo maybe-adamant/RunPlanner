@@ -792,18 +792,28 @@ describe('Vow of Forfeit on the Hub board', () => {
   const n = createBiomeAddress('Surface', 'N');
   const hub = { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const;
   const door = (slotKey: string) => createIncomingRewardAddress(n, nOccurrenceId(slotKey));
+  const doorKeys = (...slotKeys: string[]) =>
+    slotKeys.map((slotKey) => semanticAddressKey(door(slotKey))).sort();
   const base = surfaceNForfeitHubBoardProject();
-  // DoorReroll leaves the Boss's Judgment draw unauthored, past every Hub stay.
-  const rewardsOf = (project: ProjectDocument) => {
-    const biome = simulateProject(catalog, project).route?.biomes[0];
+  // With no visit the Hub is never restored, so its first draw's previews stand.
+  const firstDraw = applyProjectCommand(base, catalog, {
+    kind: 'ReplaceHubActionOrder',
+    hub,
+    actions: [],
+  });
+  const evaluated = (project: ProjectDocument) => {
+    const evaluation = simulateProject(catalog, project);
+    const biome = evaluation.route?.biomes[0];
     if (biome === undefined || !('rewards' in biome)) throw new Error('expected an evaluated N');
-    return biome.rewards;
+    return { status: evaluation.status, rewards: biome.rewards };
   };
   const onionDoors = (project: ProjectDocument) =>
-    (rewardsOf(project).forfeitPeeks ?? []).map((peek) => semanticAddressKey(peek.origin)).sort();
+    (evaluated(project).rewards.forfeitPeeks ?? [])
+      .map((peek) => semanticAddressKey(peek.origin))
+      .sort();
   /** Presses one board door at an index of the Hub's actions, drawing the first Boon supported there. */
-  function pressBoon(hubSlotKey: string, index: number) {
-    const inserted = applyProjectCommand(base, catalog, {
+  function pressBoon(project: ProjectDocument, hubSlotKey: string, index: number) {
+    const inserted = applyProjectCommand(project, catalog, {
       kind: 'InsertHubReroll',
       hub,
       hubSlotKey,
@@ -813,47 +823,53 @@ describe('Vow of Forfeit on the Hub board', () => {
     const reroll = createHubRerollAddress(n, 'hub', 'r1');
     const [reward] = supportedRerollRewards(inserted, reroll, ['Boon']);
     if (reward === undefined) throw new Error(`no Boon is supported for ${hubSlotKey}`);
-    const project = collectTestRequiredItems(
+    const pressed = collectTestRequiredItems(
       applyProjectCommand(inserted, catalog, { kind: 'ReplaceHubRerollReward', reroll, reward }),
     );
     expect(
       rerollSettlementForProjectEvaluationAssembly(
-        simulateProjectAssembly(catalog, project),
+        simulateProjectAssembly(catalog, pressed),
         reroll,
       ),
     ).toMatchObject({ reward });
-    return project;
+    return pressed;
   }
 
-  it("previews the Onion on each Boon and Hermes door of a board drawn before Forfeit's use", () => {
-    const rewards = rewardsOf(base);
+  it('previews the Onion on each Boon and Hermes door of a board drawn while Forfeit is unspent', () => {
+    // The Hub awaits its first visit.
+    expect(evaluated(firstDraw).status).toBe('incomplete');
+    // combat01 and combat02 draw health and mana, which Forfeit never takes.
+    expect(onionDoors(firstDraw)).toEqual(
+      doorKeys(
+        'combat03',
+        'combat05',
+        'combat09',
+        'combat10',
+        'combat11',
+        'combat23',
+        'miniBoss01',
+      ),
+    );
+  });
+
+  it("previews the Onion on a door's Boon pressed while Forfeit is unspent", () => {
+    expect(onionDoors(firstDraw)).not.toContain(semanticAddressKey(door('combat01')));
+    expect(onionDoors(pressBoon(firstDraw, 'combat01', 0))).toContain(
+      semanticAddressKey(door('combat01')),
+    );
+  });
+
+  it('drops the Onion from every open door once the Hub is restored after Forfeit was used', () => {
+    const { status, rewards } = evaluated(base);
+    expect(status).toBe('valid');
     // The first visit's Hermes reward is the one Forfeit takes.
     expect(
       rewards.frontier!.events.filter((event) => event.kind === 'rewardForfeited'),
     ).toMatchObject([{ origin: door('combat05'), rewardType: 'HermesUpgrade' }]);
-    // combat01 and combat02 draw health and mana, which Forfeit never takes.
-    expect(onionDoors(base)).toEqual(
-      ['combat03', 'combat05', 'combat09', 'combat10', 'combat11', 'combat23', 'miniBoss01']
-        .map((slotKey) => semanticAddressKey(door(slotKey)))
-        .sort(),
-    );
-  });
-
-  it("previews the Onion on a door's Boon pressed before Forfeit's use", () => {
-    expect(onionDoors(base)).not.toContain(semanticAddressKey(door('combat01')));
-    expect(rewardsOf(pressBoon('combat01', 0)).forfeitPeeks).toContainEqual(
-      expect.objectContaining({
-        origin: door('combat01'),
-        offer: expect.objectContaining({ rewardType: 'Boon' }),
-      }),
-    );
-  });
-
-  it("shows no Onion on a door's Boon pressed after Forfeit was used", () => {
-    // Pressed once the first visit has taken Forfeit, combat03's new Boon replaces its preview.
-    expect(onionDoors(base)).toContain(semanticAddressKey(door('combat03')));
-    expect(onionDoors(pressBoon('combat03', 2))).not.toContain(
-      semanticAddressKey(door('combat03')),
-    );
+    // Only the entered door keeps the preview it showed; a later press shows none either.
+    expect(onionDoors(base)).toEqual(doorKeys('combat05'));
+    const pressed = pressBoon(base, 'combat03', 2);
+    expect(evaluated(pressed).status).toBe('valid');
+    expect(onionDoors(pressed)).toEqual(doorKeys('combat05'));
   });
 });

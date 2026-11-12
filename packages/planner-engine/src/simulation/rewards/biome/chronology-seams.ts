@@ -710,6 +710,21 @@ const roomRestored: ChronologySeamHandler<'roomRestored'> = (context, state, eve
   if (event.after.kind !== 'hubVisit')
     throw new BiomeRewardSimulationContractError('a Hub restore follows no Hub visit');
   const { visitIndex } = event.after;
+  // Its open doors rebuild their Onion previews from the current Forfeit state
+  // (DoUnlockRoomExits -> CreateDoorRewardPreview); entered doors stay closed.
+  const entered = new Set(
+    hub?.visits.flatMap((visit) =>
+      visit.visitIndex <= visitIndex ? [visit.target.hubSlotKey] : [],
+    ),
+  );
+  const openSpawns = (hub?.board.targets ?? []).flatMap((target) =>
+    entered.has(target.hubSlotKey)
+      ? []
+      : doorRewardSpawns(target.room).map((spawn) => ({
+          ...spawn,
+          offer: advanced.rerolledOffers.get(semanticAddressKey(spawn.origin)) ?? spawn.offer,
+        })),
+  );
   return {
     state:
       hub === undefined
@@ -727,7 +742,15 @@ const roomRestored: ChronologySeamHandler<'roomRestored'> = (context, state, eve
               assigned: advanced.rerolledOffers,
             }),
           }),
-    emissions: [],
+    emissions: [
+      {
+        kind: 'forfeitPeeks',
+        peeks:
+          advanced.branch === undefined
+            ? []
+            : forfeitPeeks(context.catalog, advanced.branch.state, openSpawns, event.sequence),
+      },
+    ],
   };
 };
 
