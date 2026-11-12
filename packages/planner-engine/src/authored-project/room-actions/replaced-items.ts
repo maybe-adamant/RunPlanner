@@ -44,11 +44,7 @@ export function roomActionsOnReplacedItems(
         (
           roomActionDomainForOccurrence(document, catalog, source.biome, occurrence.occurrenceId)
             ?.domain.contributions ?? []
-        ).flatMap((entry) =>
-          entry.kind === 'action'
-            ? [[roomActionKey(entry.reference), entry.reference] as const]
-            : [],
-        ),
+        ).map((entry) => [roomActionKey(entry.reference), entry.reference] as const),
       );
       for (const reference of candidates) {
         const item = active.get(roomActionKey(reference));

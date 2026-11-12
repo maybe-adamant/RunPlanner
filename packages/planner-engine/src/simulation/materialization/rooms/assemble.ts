@@ -476,7 +476,7 @@ export function materializeAuthoredRoom(
     retainedSourceFamilies: roomActionDomain.retainedSourceFamilies,
     eventGraph: roomActionDomain.eventGraph,
     canonicalRequiredInsertions: roomActionDomain.contributions.flatMap((entry) => {
-      if (entry.kind !== 'action' || entry.participation !== 'required') return [];
+      if (entry.participation !== 'required') return [];
       const actionKey = roomActionKey(entry.reference);
       const placedIndex = base.roomActions.order.findIndex(
         (reference) => roomActionKey(reference) === actionKey,

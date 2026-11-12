@@ -80,6 +80,7 @@ export type {
 export { assembleRoomActionDomain, type RoomActionDomain } from './room-actions/domain';
 export {
   assessRoomActionInsertion,
+  isPlacementBlocker,
   roomActionInsertionRefusal,
   roomActionOrderContext,
   type RoomActionBoundBlocker,

@@ -74,7 +74,6 @@ describe('required action scope', () => {
       eventGraph: structure,
       contributions: [
         {
-          kind: 'action',
           reference: cage.reference,
           owner: cage.owner,
           participation: cage.participation,
@@ -115,7 +114,7 @@ describe('required action scope', () => {
     const cage = row(
       { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
       {
-        dependencies: [{ kind: 'afterAction', action: athena.reference }],
+        dependencies: [{ action: athena.reference }],
       },
     );
     const reward = row({ kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' });
@@ -131,13 +130,13 @@ describe('required action scope', () => {
     const child = row(
       { kind: 'interactGorgon', phaseKey: 'Cage01' },
       {
-        dependencies: [{ kind: 'afterAction', action: source.reference }],
+        dependencies: [{ action: source.reference }],
       },
     );
     const cage = row(
       { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
       {
-        dependencies: [{ kind: 'afterAction', action: child.reference }],
+        dependencies: [{ action: child.reference }],
       },
     );
     expect(

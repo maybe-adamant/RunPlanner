@@ -203,42 +203,35 @@ function pressFight(
   press: RoomActionReference,
 ): RoomPressFight | undefined {
   const observed = occurrence.challengeSwitch;
-  const fight =
+  const [phaseKey, envelopeKey, encounterKey, completes] =
     press.kind === 'interactChallengeSwitch' && observed !== undefined
-      ? {
-          phaseKey: CHALLENGE_SWITCH_PHASE_KEY,
-          envelopeKey: CHALLENGE_SWITCH_ENVELOPE_KEY,
-          encounterKey: challengeSwitchEncounterKey(
-            catalog,
-            occurrence.gameName,
-            observed.variantKey,
-          ),
-          completes: observed.outcome !== 'left',
-        }
+      ? [
+          CHALLENGE_SWITCH_PHASE_KEY,
+          CHALLENGE_SWITCH_ENVELOPE_KEY,
+          challengeSwitchEncounterKey(catalog, occurrence.gameName, observed.variantKey),
+          observed.outcome !== 'left',
+        ]
       : press.kind === 'unlockExit' && (occurrence.lockedExits ?? []).includes(press.exitKey)
-        ? {
-            phaseKey: unlockExitPhaseKey(press.exitKey),
-            envelopeKey: UNLOCK_EXIT_ENVELOPE_KEY,
-            encounterKey: unlockExitEncounterKey(catalog, occurrence.gameName),
-            completes: true,
-          }
-        : undefined;
+        ? [
+            unlockExitPhaseKey(press.exitKey),
+            UNLOCK_EXIT_ENVELOPE_KEY,
+            unlockExitEncounterKey(catalog, occurrence.gameName),
+            true,
+          ]
+        : [];
   const definition =
-    fight?.encounterKey === undefined
-      ? undefined
-      : catalog.encounterDefinitions.byKey[fight.encounterKey];
-  if (fight === undefined || definition === undefined) return undefined;
-  if (definition.script.beginTrigger !== 'pressRow')
-    throw new Error(`${occurrence.gameName} ${definition.key} is not a press fight`);
-  return frozen({
-    phaseKey: fight.phaseKey,
-    script: definition.script,
-    envelopeKey: fight.envelopeKey,
-    encounterKey: definition.key,
-    press,
-    standsAt: DOORS_OPENED_POINT,
-    completes: fight.completes,
-  });
+    encounterKey === undefined ? undefined : catalog.encounterDefinitions.byKey[encounterKey];
+  return definition === undefined
+    ? undefined
+    : frozen({
+        phaseKey: phaseKey!,
+        script: definition.script,
+        envelopeKey: envelopeKey!,
+        encounterKey: definition.key,
+        press,
+        standsAt: DOORS_OPENED_POINT,
+        completes: completes!,
+      });
 }
 
 /**

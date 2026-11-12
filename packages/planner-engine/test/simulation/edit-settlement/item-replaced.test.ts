@@ -403,7 +403,7 @@ describe('rows on a replaced item in edit settlement', () => {
       const domain = roomActionDomainForOccurrence(project, catalog, f, target.occurrenceId)!;
       return domain.domain.contributions.reduce(
         (current, entry) =>
-          entry.kind === 'action' && entry.reference.kind === 'interactIncomingReward'
+          entry.reference.kind === 'interactIncomingReward'
             ? applyProjectCommand(current, catalog, {
                 kind: 'InsertRoomAction',
                 action: createRoomActionAddress(

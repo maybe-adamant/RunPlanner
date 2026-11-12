@@ -856,10 +856,7 @@ describe('Nemesis random events', () => {
         biome: goldenFBiome,
         topology: project.route.biomes[0]!.topology!,
         occurrence: selected,
-      }).contributions.find(
-        (entry) =>
-          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(result),
-      );
+      }).contributions.find((entry) => roomActionKey(entry.reference) === roomActionKey(result));
       return { project, selected, contribution };
     };
     const pom = contest('StackUpgrade');
@@ -936,12 +933,10 @@ describe('Nemesis random events', () => {
       occurrence: selected,
     }).contributions.find(
       (contribution) =>
-        contribution.kind === 'action' &&
         contribution.reference.kind === 'interactEncounter' &&
         contribution.reference.phaseKey === 'Passive',
     );
     expect(eventAction).toMatchObject({
-      kind: 'action',
       participation: 'required',
       bounds: expect.objectContaining({ spawn: { kind: 'encounterEnd', phaseKey: 'Passive' } }),
       dependencies: [],

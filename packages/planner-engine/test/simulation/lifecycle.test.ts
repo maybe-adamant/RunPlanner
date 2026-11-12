@@ -446,7 +446,7 @@ describe('single-room lifecycle execution', () => {
             reference: interact1,
             participation: 'required',
             placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
-            dependencies: [{ kind: 'afterAction', action: choose1 }],
+            dependencies: [{ action: choose1 }],
           },
           {
             reference: choose2,
@@ -458,7 +458,7 @@ describe('single-room lifecycle execution', () => {
             reference: interact2,
             participation: 'required',
             placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel2' },
-            dependencies: [{ kind: 'afterAction', action: choose2 }],
+            dependencies: [{ action: choose2 }],
           },
         ],
         'ShipCombatRoom',
@@ -561,7 +561,7 @@ describe('single-room lifecycle execution', () => {
                 reference: wheel,
                 participation: 'required',
                 placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
-                dependencies: [{ kind: 'afterAction', action: choose }],
+                dependencies: [{ action: choose }],
               },
               {
                 reference: delivery,
@@ -628,7 +628,7 @@ describe('single-room lifecycle execution', () => {
       reward('cage2'),
     ];
     order.splice(index, 0, delivery);
-    const after = (phaseKey: string) => [{ kind: 'afterAction' as const, action: cage(phaseKey) }];
+    const after = (phaseKey: string) => [{ action: cage(phaseKey) }];
     const roster = actionRoster(
       fieldsOrigin,
       order,
@@ -1174,7 +1174,7 @@ describe('single-room lifecycle execution', () => {
           reference: pickup1,
           participation: 'required',
           placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' },
-          dependencies: [{ kind: 'afterAction', action: choose1 }],
+          dependencies: [{ action: choose1 }],
         },
         {
           reference: choose2,
@@ -1186,7 +1186,7 @@ describe('single-room lifecycle execution', () => {
           reference: pickup2,
           participation: 'required',
           placement: { kind: 'afterWheelPhase' as const, wheelKey: 'wheel2' },
-          dependencies: [{ kind: 'afterAction', action: choose2 }],
+          dependencies: [{ action: choose2 }],
         },
       ],
     );
@@ -1246,7 +1246,7 @@ describe('single-room lifecycle execution', () => {
         reference: contact,
         participation: 'required' as const,
         placement: { kind: 'fields' as const, phaseKey: 'Cage01' },
-        dependencies: [{ kind: 'afterAction' as const, action: complete }],
+        dependencies: [{ action: complete }],
       },
     ];
     const invalid = executeRoomLifecycle(

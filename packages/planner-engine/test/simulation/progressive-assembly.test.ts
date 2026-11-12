@@ -58,7 +58,6 @@ describe('progressive assembly witness', () => {
           const authored = new Set(resolved.occurrence.roomActions.order.map(roomActionKey));
           for (const contribution of resolved.domain.contributions) {
             if (
-              contribution.kind === 'action' &&
               contribution.participation === 'required' &&
               !authored.has(roomActionKey(contribution.reference))
             ) {

@@ -189,16 +189,14 @@ export function applyAcquisitionSiteCommand(
       site.owner.occurrenceId,
     )?.domain;
     const target = domain?.contributions.find(
-      (entry) => entry.kind === 'action' && roomActionKey(entry.reference) === actionKey,
+      (entry) => roomActionKey(entry.reference) === actionKey,
     );
-    if (domain === undefined || target?.kind !== 'action')
+    if (domain === undefined || target === undefined)
       failCommand(command, 'has no active room-action placement');
     const place = roomEventPlaces(domain.eventGraph);
     const targetOpening = place(roomActionOpeningPoint(target.bounds));
     const actionsByKey = new Map(
-      domain.contributions.flatMap((entry) =>
-        entry.kind === 'action' ? [[roomActionKey(entry.reference), entry] as const] : [],
-      ),
+      domain.contributions.map((entry) => [roomActionKey(entry.reference), entry] as const),
     );
     const insertionIndex = host.roomActions.order.findIndex((candidate) => {
       const contribution = actionsByKey.get(roomActionKey(candidate));

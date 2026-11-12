@@ -385,24 +385,19 @@ describe('authored-project incoming reward commands', () => {
     });
     const source = domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
         entry.reference.kind === 'interactIncomingReward' &&
         entry.reference.acquisitionRole === 'self',
     );
     const child = domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
-        entry.reference.kind === 'interactAcquisitionEntry' &&
-        entry.reference.siteKey === siteKey,
+        entry.reference.kind === 'interactAcquisitionEntry' && entry.reference.siteKey === siteKey,
     );
     expect(child).toMatchObject({
-      kind: 'action',
-      participation: source?.kind === 'action' ? source.participation : undefined,
-      bounds: source?.kind === 'action' ? source.bounds : undefined,
+      participation: source?.participation,
+      bounds: source?.bounds,
       // A dependency names its row by key, without the item's content.
       dependencies: [
         {
-          kind: 'afterAction',
           action: {
             kind: 'interactIncomingReward',
             producerPoint: 'roomRewardPickup',
@@ -669,7 +664,6 @@ describe('authored-project incoming reward commands', () => {
     });
     const child = domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
         entry.reference.kind === 'interactAcquisitionEntry' &&
         entry.reference.siteKey === siteKey &&
         entry.reference.entryKey === SEA_STAR_DUPLICATE_ENTRY_KEY,
@@ -678,7 +672,6 @@ describe('authored-project incoming reward commands', () => {
       participation: 'required',
       dependencies: [
         {
-          kind: 'afterAction',
           action: {
             kind: 'interactIncomingReward',
             acquisitionRole: 'self',

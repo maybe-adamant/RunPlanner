@@ -2287,7 +2287,6 @@ describe('Echo Gate C Reward Reward Reward', () => {
       rank: expect.any(Number),
       dependencies: [
         {
-          kind: 'afterAction',
           action: { kind: 'interactEncounter', phaseKey: 'Encounter' },
         },
       ],
@@ -2659,7 +2658,6 @@ describe('Echo Gate C Reward Reward Reward', () => {
       label: expect.objectContaining({ kind: 'afterCombat' }),
       dependencies: [
         {
-          kind: 'afterAction',
           action: {
             kind: 'interactAcquisitionEntry',
             siteKey: 'roomExit',

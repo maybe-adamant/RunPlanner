@@ -100,14 +100,12 @@ import { roomLifecycleProfileKey } from './lifecycle-profile';
 export type RoomActionParticipation = 'required' | 'optional';
 
 export interface RoomActionDependency {
-  readonly kind: 'afterAction';
   readonly action: RoomActionReference;
   /** Constrains planner authoring without publishing an execution dependency. */
   readonly authoringOnly?: true;
 }
 
 export interface RoomActionContribution {
-  readonly kind: 'action';
   readonly reference: RoomActionReference;
   readonly owner: SemanticAddress;
   readonly participation: RoomActionParticipation;
@@ -157,7 +155,6 @@ function contribution(
   owner: SemanticAddress = actionOwner(biome, occurrence, reference),
 ): RoomActionContribution {
   return frozen({
-    kind: 'action',
     reference,
     owner,
     participation,
@@ -327,7 +324,6 @@ function hermesShrinePurchaseDependencies(
   if (source === undefined) return [];
   return [
     frozen({
-      kind: 'afterAction' as const,
       action: source,
       authoringOnly: true as const,
     }),
@@ -361,9 +357,7 @@ function rollDependencies(
       'rerollId' in candidate &&
       candidate.rerollId === roll.rollKey,
   );
-  return reroll === undefined
-    ? []
-    : [frozen({ kind: 'afterAction' as const, action: reroll, authoringOnly: true as const })];
+  return reroll === undefined ? [] : [frozen({ action: reroll, authoringOnly: true as const })];
 }
 
 /**
@@ -408,9 +402,7 @@ function purchaseSourceDependencies(
   const source =
     travelDealSourceAction(occurrence, reference) ??
     echoDuplicateSourceAction(catalog, occurrence, reference);
-  return source === undefined
-    ? []
-    : [frozen({ kind: 'afterAction' as const, action: source, authoringOnly: true as const })];
+  return source === undefined ? [] : [frozen({ action: source, authoringOnly: true as const })];
 }
 
 function baseContribution(
@@ -494,7 +486,6 @@ function baseContribution(
           ? []
           : [
               frozen({
-                kind: 'afterAction',
                 action: frozen({ kind: 'completeFieldsCage', phaseKey: attachment.key }),
               }),
             ],
@@ -519,7 +510,7 @@ function baseContribution(
             action.kind === 'reroll' &&
             action.target.kind === 'wheelOffer' &&
             action.target.wheelKey === reference.wheelKey
-              ? [frozen({ kind: 'afterAction' as const, action })]
+              ? [frozen({ action })]
               : [],
           ),
         ],
@@ -546,7 +537,6 @@ function baseContribution(
         locked
           ? [
               frozen({
-                kind: 'afterAction' as const,
                 action:
                   occurrence.roomActions.order.find(
                     (candidate) =>
@@ -582,7 +572,6 @@ function baseContribution(
         afterWheelPhase(graph, reference.wheelKey),
         [
           frozen({
-            kind: 'afterAction',
             action: frozen({ kind: 'chooseRewardWheel', wheelKey: reference.wheelKey }),
           }),
         ],
@@ -711,7 +700,7 @@ function baseContribution(
             ? fieldsBounds(reference.phaseKey)
             : afterCombat(graph);
       const dependencies: RoomActionDependency[] =
-        cage === undefined ? [] : [frozen({ kind: 'afterAction' as const, action: cage })];
+        cage === undefined ? [] : [frozen({ action: cage })];
       const phaseOwner = createEncounterPhaseAddress(
         biome,
         { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
@@ -808,9 +797,7 @@ function baseContribution(
                 : AFTER_DOORS
               : afterCombat(graph),
         [
-          ...(verbTrigger?.kind !== 'action'
-            ? []
-            : [frozen({ kind: 'afterAction' as const, action: verbTrigger.action })]),
+          ...(verbTrigger?.kind !== 'action' ? [] : [frozen({ action: verbTrigger.action })]),
           ...purchaseSourceDependencies(catalog, occurrence, reference),
           ...hermesShrinePurchaseDependencies(
             occurrence,
@@ -821,7 +808,7 @@ function baseContribution(
           ),
           ...(producer?.sourceAction === undefined
             ? []
-            : [frozen({ kind: 'afterAction' as const, action: producer.sourceAction })]),
+            : [frozen({ action: producer.sourceAction })]),
         ],
         occurrence.state.kind === 'shop' &&
           reference.siteKey === 'roomExit' &&
@@ -1046,15 +1033,10 @@ export function assembleRoomActionDomain(options: {
       )
         return [];
       const dependencies = action.dependencies.some(
-        (dependency) =>
-          dependency.kind === 'afterAction' &&
-          roomActionKey(dependency.action) === roomActionKey(source.reference),
+        (dependency) => roomActionKey(dependency.action) === roomActionKey(source.reference),
       )
         ? action.dependencies
-        : frozen([
-            ...action.dependencies,
-            frozen({ kind: 'afterAction' as const, action: source.reference }),
-          ]);
+        : frozen([...action.dependencies, frozen({ action: source.reference })]);
       return [
         frozen({
           ...action,
@@ -1124,9 +1106,7 @@ export function assembleRoomActionDomain(options: {
         ...action,
         dependencies: frozen([
           ...action.dependencies,
-          ...barriers.map((barrier) =>
-            frozen({ kind: 'afterAction' as const, action: barrier.reference }),
-          ),
+          ...barriers.map((barrier) => frozen({ action: barrier.reference })),
         ]),
       });
     });

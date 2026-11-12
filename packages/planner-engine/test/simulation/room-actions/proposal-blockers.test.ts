@@ -35,7 +35,6 @@ function action(
   placement = after,
 ): RoomActionContribution {
   return {
-    kind: 'action',
     reference,
     owner,
     participation: 'optional',
@@ -68,11 +67,7 @@ describe('room action proposal blockers', () => {
     ]);
   });
   it('retains the prefix dependency pair for an unrelated insertion or move after it, and none before it', () => {
-    const contributions = [
-      action(first),
-      action(second, [{ kind: 'afterAction', action: first }]),
-      action(other),
-    ];
+    const contributions = [action(first), action(second, [{ action: first }]), action(other)];
     const roster = assembleRoomActionRoster({
       owner,
       eventGraph: structure,
@@ -85,7 +80,7 @@ describe('room action proposal blockers', () => {
       expect.objectContaining({
         kind: 'dependency',
         reference: second,
-        dependency: { kind: 'afterAction', action: first },
+        dependency: { action: first },
       }),
     ]);
     // Before the invalid row the walk has not reached it yet.
@@ -132,10 +127,7 @@ describe('room action proposal blockers', () => {
       owner,
       eventGraph: structure,
       order: [first, second],
-      contributions: [
-        action(first, [], before),
-        action(second, [{ kind: 'afterAction', action: first }], after),
-      ],
+      contributions: [action(first, [], before), action(second, [{ action: first }], after)],
     });
     expect(roster.proposals.find((p) => p.kind === 'move' && p.fromIndex === 0)?.blockers).toEqual([
       expect.objectContaining({ kind: 'dependency', reference: second }),

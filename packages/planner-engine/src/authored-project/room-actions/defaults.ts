@@ -89,16 +89,13 @@ function sortedCohort(
 ): readonly RoomActionContribution[] {
   const pending = new Map(actions.map((action) => [roomActionKey(action.reference), action]));
   const contributionOrdinal = new Map(
-    domain.contributions.flatMap((entry, index) =>
-      entry.kind === 'action' ? [[roomActionKey(entry.reference), index] as const] : [],
-    ),
+    domain.contributions.map((entry, index) => [roomActionKey(entry.reference), index] as const),
   );
   const result: RoomActionContribution[] = [];
   while (pending.size > 0) {
     const ready = [...pending.values()].filter((action) =>
       action.dependencies.every(
         (dependency) =>
-          dependency.kind !== 'afterAction' ||
           !pending.has(roomActionKey(dependency.action)) ||
           result.some(
             (candidate) => roomActionKey(candidate.reference) === roomActionKey(dependency.action),
@@ -132,9 +129,7 @@ export function scheduleRequiredRoomActions(options: {
   readonly participation?: 'required' | 'any';
 }): readonly RoomActionReference[] {
   const authoredKeys = new Set(options.order.map(roomActionKey));
-  const activeActions = options.domain.contributions.filter(
-    (entry): entry is RoomActionContribution => entry.kind === 'action',
-  );
+  const activeActions = options.domain.contributions;
   const byKey = new Map(activeActions.map((action) => [roomActionKey(action.reference), action]));
   const contributionOrdinal = new Map(
     activeActions.map((action, index) => [roomActionKey(action.reference), index]),
@@ -151,7 +146,6 @@ export function scheduleRequiredRoomActions(options: {
     const actionScore = score(options.catalog, options.domain, result, action);
     let lowerBound = 0;
     for (const dependency of action.dependencies) {
-      if (dependency.kind !== 'afterAction') continue;
       const index = result.findIndex(
         (reference) => roomActionKey(reference) === roomActionKey(dependency.action),
       );
@@ -162,9 +156,7 @@ export function scheduleRequiredRoomActions(options: {
       const retained = byKey.get(roomActionKey(result[index]!));
       if (retained === undefined) continue;
       const retainedDependsOnAction = retained.dependencies.some(
-        (dependency) =>
-          dependency.kind === 'afterAction' &&
-          roomActionKey(dependency.action) === roomActionKey(action.reference),
+        (dependency) => roomActionKey(dependency.action) === roomActionKey(action.reference),
       );
       if (
         retainedDependsOnAction ||

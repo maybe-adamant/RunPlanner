@@ -41,46 +41,7 @@ interface ExecutionState {
   readonly blockedDeadline?: import('./model').RequiredActionDeadline;
 }
 
-interface RoomActionSchedule {
-  /** The phases the room's encounters run, in run order. */
-  readonly runPhases: readonly ResolvedEncounterPhase[];
-  /** A single-encounter room takes its due deliveries with the rows after its fight. */
-  readonly oneEncounter: boolean;
-  /**
-   * A room reward point: each pickup taken there runs with the rows before it.
-   * An unplaced pickup a fight waits on stops the walk at that fight; one
-   * nothing waits on lies on the ground, and the point passes uncollected.
-   */
-  readonly rewardPoint: (
-    point: ProducerLifecyclePointKey,
-    operationIndex: number,
-    state: ExecutionState,
-  ) => ExecutionState;
-  /** Doors open fires once the doors predicate holds. */
-  readonly doorsOpen: (operationIndex: number, state: ExecutionState) => ExecutionState;
-  /** The opened doors schedule the Shrine's deliveries. */
-  readonly doorsOpened: (operationIndex: number, state: ExecutionState) => ExecutionState;
-  /** Leaving takes every ranked row; a required row still unplaced stops the walk. */
-  readonly leave: (operationIndex: number, state: ExecutionState) => ExecutionState;
-  /** The phase's encounter begins: its wheels open and the rows its begin and gate wait on run. */
-  readonly beforeCombat: (
-    phase: ResolvedEncounterPhase,
-    operationIndex: number,
-    state: ExecutionState,
-  ) => ExecutionState;
-  /** The ready wait: the required items its end spawns are taken before its end effects. */
-  readonly readyWait: (
-    phase: ResolvedEncounterPhase,
-    operationIndex: number,
-    state: ExecutionState,
-  ) => ExecutionState;
-  /** Deliveries its end effects make due, taken before a later phase begins. */
-  readonly afterEndEffects: (
-    phase: ResolvedEncounterPhase,
-    operationIndex: number,
-    state: ExecutionState,
-  ) => ExecutionState;
-}
+type RoomActionSchedule = ReturnType<typeof createRoomActionSchedule>;
 
 type EventData<Event extends RoomLifecycleEvent = RoomLifecycleEvent> =
   Event extends RoomLifecycleEvent ? Omit<Event, 'operationIndex' | 'origin' | 'sequence'> : never;
@@ -482,7 +443,7 @@ function resolveExecutionContext(
   };
 }
 
-function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule {
+function createRoomActionSchedule(context: ExecutionContext) {
   const roster = context.input.roomActionRoster;
   if (roster === undefined) {
     throw new LifecycleExecutionContractError('room-action execution requires a roster');

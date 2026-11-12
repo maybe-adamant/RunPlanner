@@ -59,7 +59,7 @@ function activeKeysOf(raw: unknown, catalog: Catalog, routeKey: string): ActiveK
             createBiomeAddress(routeKey, biomeKey),
             occurrenceId as OccurrenceId,
           )?.domain.contributions ?? []
-        ).flatMap((entry) => (entry.kind === 'action' ? [roomActionKey(entry.reference)] : [])),
+        ).map((entry) => roomActionKey(entry.reference)),
       );
     } catch {
       // A plan that decodes but whose route the domain cannot place stamps by role.

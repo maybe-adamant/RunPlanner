@@ -52,9 +52,7 @@ export function replaceTestRoomActionOrder(
   if (structurallyActiveOccurrenceIds(topology).has(occurrenceId)) {
     const requiredKeys = new Set(
       domain.contributions.flatMap((entry) =>
-        entry.kind === 'action' && entry.participation === 'required'
-          ? [roomActionKey(entry.reference)]
-          : [],
+        entry.participation === 'required' ? [roomActionKey(entry.reference)] : [],
       ),
     );
     const omitted = [...requiredKeys].filter((key) => !requestedKeys.includes(key));
@@ -105,7 +103,6 @@ export function replaceTestRoomActionOrder(
     }
     const required = domain.contributions.some(
       (entry) =>
-        entry.kind === 'action' &&
         entry.participation === 'required' &&
         roomActionKey(entry.reference) === roomActionKey(reference),
     );
@@ -327,9 +324,7 @@ export function scheduleTestRequiredRoomActions(
     const placed = new Set(order.map(roomActionKey));
     const requiredKeys = new Set(
       located.domain.contributions.flatMap((entry) =>
-        entry.kind === 'action' && entry.participation === 'required'
-          ? [roomActionKey(entry.reference)]
-          : [],
+        entry.participation === 'required' ? [roomActionKey(entry.reference)] : [],
       ),
     );
     const scheduled = scheduleRequiredRoomActions({

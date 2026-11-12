@@ -117,20 +117,17 @@ describe('run-impacting trait checkpoint workflows', () => {
       if (sourceAction === undefined) throw new Error('Generated-pickup producer is missing');
       const child = domain.contributions.find(
         (contribution) =>
-          contribution.kind === 'action' &&
           contribution.reference.kind === 'interactAcquisitionEntry' &&
           contribution.reference.entryKey === entryKey,
       );
-      expect(child).toMatchObject({ kind: 'action', participation: 'optional' });
+      expect(child).toMatchObject({ participation: 'optional' });
       const dependency =
-        child?.kind === 'action'
+        child !== undefined
           ? child.dependencies.find(
-              (candidate) =>
-                candidate.kind === 'afterAction' &&
-                roomActionKey(candidate.action) === roomActionKey(sourceAction),
+              (candidate) => roomActionKey(candidate.action) === roomActionKey(sourceAction),
             )
           : undefined;
-      expect(dependency).toEqual({ kind: 'afterAction', action: sourceAction });
+      expect(dependency).toEqual({ action: sourceAction });
     }
   });
 
@@ -208,28 +205,25 @@ describe('run-impacting trait checkpoint workflows', () => {
     });
     const sourceAction = domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
         entry.reference.kind === 'interactAcquisitionEntry' &&
         entry.reference.siteKey === siteKey &&
         entry.reference.entryKey === 'smallGold',
     );
     const childAction = domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
         entry.reference.kind === 'interactAcquisitionEntry' &&
         entry.reference.siteKey === duplicateSite,
     );
     // The source row the duplicate follows is the small Gold taken above.
     expect(sourceAction).toBeDefined();
-    expect(sourceAction?.kind === 'action' && roomActionKey(sourceAction.reference)).toBe(
+    expect(sourceAction && roomActionKey(sourceAction.reference)).toBe(
       roomActionKey(sourceReference),
     );
     expect(childAction).toMatchObject({
-      kind: 'action',
-      participation: sourceAction?.kind === 'action' ? sourceAction.participation : undefined,
-      bounds: sourceAction?.kind === 'action' ? sourceAction.bounds : undefined,
+      participation: sourceAction?.participation,
+      bounds: sourceAction?.bounds,
       // A dependency names its row by key, without the item's content.
-      dependencies: [{ kind: 'afterAction', action: sourceReference }],
+      dependencies: [{ action: sourceReference }],
     });
   });
 

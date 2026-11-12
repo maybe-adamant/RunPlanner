@@ -13,6 +13,7 @@ import {
   sitesWithNemesisResultPickups,
   stygianWellGenerationItemKey,
   stygianWellGenerationTwistResultKey,
+  isPlacementBlocker,
   type EncounterPhaseAddress,
   type OccurrenceAddress,
   type RoomOccurrence,
@@ -325,14 +326,7 @@ function roomActionsForOccurrence(
               blocker.unavailable === true,
             ],
     );
-  const existingBlockers = new Set(
-    roster.issues
-      .filter(
-        (issue): issue is RoomActionPlacementBlocker =>
-          issue.kind !== 'stale' && issue.kind !== 'unrankedRequired',
-      )
-      .map(blockerIdentity),
-  );
+  const existingBlockers = new Set(roster.issues.filter(isPlacementBlocker).map(blockerIdentity));
   const explanationFor = (
     proposal: import('@run-planner/engine/simulation').RoomActionProposal,
   ): readonly string[] => {
@@ -530,9 +524,7 @@ function roomActionsForOccurrence(
                 (candidate) =>
                   candidate.sourceFamily?.kind === 'artificer' &&
                   candidate.dependencies.some(
-                    (dependency) =>
-                      dependency.kind === 'afterAction' &&
-                      roomActionKey(dependency.action) === row.key,
+                    (dependency) => roomActionKey(dependency.action) === row.key,
                   ),
               );
               if (replacementRow === undefined) return undefined;

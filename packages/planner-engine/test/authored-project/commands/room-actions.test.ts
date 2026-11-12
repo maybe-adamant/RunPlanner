@@ -343,7 +343,6 @@ describe('room-action commands', () => {
     });
     expect(domain.contributions).toContainEqual(
       expect.objectContaining({
-        kind: 'action',
         reference: withItemContent(
           project,
           createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
@@ -1024,10 +1023,9 @@ describe('room-action commands', () => {
     });
     expect(domain.contributions).toContainEqual(
       expect.objectContaining({
-        kind: 'action',
         reference: replacement,
         participation: 'required',
-        dependencies: [{ kind: 'afterAction', action: sourceReference }],
+        dependencies: [{ action: sourceReference }],
       }),
     );
     const withReplacement = applyProjectCommand(dormant, catalog, {
@@ -1061,7 +1059,7 @@ describe('room-action commands', () => {
         topology: deactivated.route.biomes.find((plan) => plan.biomeKey === 'H')!.topology!,
         occurrence: fields(deactivated),
       }).contributions,
-    ).not.toContainEqual(expect.objectContaining({ kind: 'action', reference: replacement }));
+    ).not.toContainEqual(expect.objectContaining({ reference: replacement }));
     expect(
       fields(deactivated).acquisitionSites?.[replacement.siteKey]?.pickupEntries,
     ).toHaveProperty(replacement.entryKey, null);
@@ -1118,7 +1116,6 @@ describe('room-action commands', () => {
       }).contributions,
     ).toContainEqual(
       expect.objectContaining({
-        kind: 'action',
         reference: replacement,
         participation: 'required',
       }),
@@ -1622,14 +1619,12 @@ describe('room-action commands', () => {
       }).contributions,
     ).toContainEqual(
       expect.objectContaining({
-        kind: 'action',
         reference: withItemContent(project, well, {
           kind: 'purchaseStygianWellOffer',
           generationKey: 'travelDealRefill',
         }),
         dependencies: [
           {
-            kind: 'afterAction',
             action: withItemContent(project, well, {
               kind: 'purchaseStygianWellOffer',
               generationKey: 'initial:secondLeft',

@@ -210,10 +210,9 @@ export function applyRoomActionCommand(
         failCommand(command, 'reference does not match the addressed room action');
       }
       const contribution = domain?.contributions.find(
-        (entry) =>
-          entry.kind === 'action' && roomActionKey(entry.reference) === command.action.actionKey,
+        (entry) => roomActionKey(entry.reference) === command.action.actionKey,
       );
-      if (!occurrenceIsActive || domain === undefined || contribution?.kind !== 'action') {
+      if (!occurrenceIsActive || domain === undefined || contribution === undefined) {
         failCommand(command, 'room action is not active for this occurrence');
       }
       if (

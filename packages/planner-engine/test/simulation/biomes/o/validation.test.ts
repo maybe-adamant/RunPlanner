@@ -225,9 +225,7 @@ describe('selected O validation', () => {
             (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
           )!,
       }).contributions,
-    ).toContainEqual(
-      expect.objectContaining({ kind: 'action', participation: 'required', reference: contact }),
-    );
+    ).toContainEqual(expect.objectContaining({ participation: 'required', reference: contact }));
     expect(after.roomActionRoster.issues).toContainEqual(
       expect.objectContaining({ kind: 'pastDeadline' }),
     );
@@ -336,11 +334,9 @@ describe('selected O validation', () => {
       topology: project.route.biomes.find((plan) => plan.biomeKey === 'O')!.topology!,
       occurrence: authoredOccurrence,
     });
-    expect(
-      domain.contributions
-        .filter((entry) => entry.kind === 'action')
-        .map((entry) => roomActionKey(entry.reference)),
-    ).toEqual(room.roomActionRoster.rows.filter((row) => !row.stale).map((row) => row.key));
+    expect(domain.contributions.map((entry) => roomActionKey(entry.reference))).toEqual(
+      room.roomActionRoster.rows.filter((row) => !row.stale).map((row) => row.key),
+    );
     expect(
       room.roomActionRoster.rows
         .filter((row) => row.reference.kind === 'interactWheelReward')

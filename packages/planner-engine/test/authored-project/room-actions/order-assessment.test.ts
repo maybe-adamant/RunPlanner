@@ -77,9 +77,7 @@ function context(terminalActionKey?: string) {
       action(before, 'required', { kind: 'beforeCombat' }),
       action(prep, 'optional', { kind: 'beforeCombat' }),
       action(reward, 'required', { kind: 'afterCombat' }),
-      action(dependent, 'required', { kind: 'afterCombat' }, [
-        { kind: 'afterAction', action: reward },
-      ]),
+      action(dependent, 'required', { kind: 'afterCombat' }, [{ action: reward }]),
       action(optional, 'optional', { kind: 'afterCombat' }),
       {
         ...action(press, 'optional', { kind: 'afterDoorsOpen' }),

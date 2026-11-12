@@ -947,13 +947,12 @@ function answerTraitPickupOffer(
   );
   const contribution = host?.domain.contributions.find(
     (candidate) =>
-      candidate.kind === 'action' &&
       candidate.reference.kind === 'interactAcquisitionEntry' &&
       candidate.reference.siteKey === site.pointKey &&
       candidate.reference.entryKey === entry.entryKey,
   );
   const rewardType =
-    contribution?.kind === 'action'
+    contribution !== undefined
       ? declaredPickupType(context, contribution.sourceFamily, entry.entryKey)
       : undefined;
   const roomIndex = context.occurrences.visitsOf(occurrenceId)[0];
@@ -1020,7 +1019,6 @@ function importTraitPickups(
   const taken = new Set(host.occurrence.roomActions.order.map(roomActionKey));
   const drops = host.domain.contributions.flatMap((contribution) => {
     if (
-      contribution.kind !== 'action' ||
       contribution.participation !== 'optional' ||
       contribution.reference.kind !== 'interactAcquisitionEntry' ||
       !contribution.reference.siteKey.startsWith('traitGenerated:')
@@ -1123,7 +1121,7 @@ function importFountain(
     occurrence.occurrenceId,
   );
   const offered = host?.domain.contributions.some(
-    (entry) => entry.kind === 'action' && entry.reference.kind === 'useFountain',
+    (entry) => entry.reference.kind === 'useFountain',
   );
   if (offered !== true) return;
   context.used.add(used);

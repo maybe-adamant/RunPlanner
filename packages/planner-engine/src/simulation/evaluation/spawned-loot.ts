@@ -892,10 +892,8 @@ export function spawnedLootForProjectEvaluationAssembly(
       case 'artificer':
       case 'seaStar': {
         if (family.kind === 'echo' && family.effect !== 'lastReward') break;
-        const source = row.dependencies.find(
-          (dependency) => dependency.kind === 'afterAction' && dependency.authoringOnly !== true,
-        );
-        if (source?.kind !== 'afterAction' || !rowByKey.has(roomActionKey(source.action))) break;
+        const source = row.dependencies.find((dependency) => dependency.authoringOnly !== true);
+        if (source === undefined || !rowByKey.has(roomActionKey(source.action))) break;
         // A Nemesis trade's or contest's result is decided as her talk row settles.
         addActionSpawn(source.action, fromRow(row, { kind: 'generated', family }));
         break;
@@ -911,10 +909,9 @@ export function spawnedLootForProjectEvaluationAssembly(
         )
           break;
         const rush = row.dependencies.find(
-          (dependency) =>
-            dependency.kind === 'afterAction' && dependency.action.kind === 'rushHermesShrineOffer',
+          (dependency) => dependency.action.kind === 'rushHermesShrineOffer',
         );
-        if (rush?.kind === 'afterAction' && rowByKey.has(roomActionKey(rush.action)))
+        if (rush !== undefined && rowByKey.has(roomActionKey(rush.action)))
           addActionSpawn(rush.action, fromRow(row, { kind: 'generated', family }));
         break;
       }

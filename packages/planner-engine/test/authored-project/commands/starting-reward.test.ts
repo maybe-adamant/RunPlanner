@@ -121,7 +121,6 @@ describe('starting reward ownership', () => {
       roomActionDomainForOccurrence(project, catalog, biome, occurrenceId)?.domain.contributions,
     ).toContainEqual(
       expect.objectContaining({
-        kind: 'action',
         participation: 'required',
         reference: withItemContent(project, createOccurrenceAddress(biome, occurrenceId), {
           kind: 'interactIncomingReward',
@@ -164,7 +163,6 @@ describe('starting reward ownership', () => {
       roomActionDomainForOccurrence(project, catalog, biome, occurrenceId)?.domain.contributions,
     ).toContainEqual(
       expect.objectContaining({
-        kind: 'action',
         participation: 'required',
         reference: withItemContent(project, createOccurrenceAddress(biome, occurrenceId), {
           kind: 'interactIncomingReward',

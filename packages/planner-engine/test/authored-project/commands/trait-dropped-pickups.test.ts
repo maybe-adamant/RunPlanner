@@ -87,9 +87,7 @@ function offeredDrops(
   return (
     roomActionDomainForOccurrence(project, catalog, biome, occurrenceId)?.domain.contributions ?? []
   ).flatMap((entry) =>
-    entry.kind === 'action' &&
-    entry.reference.kind === 'interactAcquisitionEntry' &&
-    entry.reference.siteKey === siteKey
+    entry.reference.kind === 'interactAcquisitionEntry' && entry.reference.siteKey === siteKey
       ? [{ reference: entry.reference, participation: entry.participation }]
       : [],
   );
@@ -125,8 +123,8 @@ function takeSource(
     catalog,
     biome,
     occurrenceId,
-  )?.domain.contributions.find((entry) => entry.kind === 'action' && matches(entry.reference));
-  if (source?.kind !== 'action') throw new Error('the drops have no active source');
+  )?.domain.contributions.find((entry) => matches(entry.reference));
+  if (source === undefined) throw new Error('the drops have no active source');
   return takeDrops(project, biome, occurrenceId, [source.reference]);
 }
 

@@ -52,7 +52,7 @@ function stampedPlan(
         (
           roomActionDomainForOccurrence(document, catalog, source.biome, occurrence.occurrenceId)
             ?.domain.contributions ?? []
-        ).flatMap((entry) => (entry.kind === 'action' ? [roomActionKey(entry.reference)] : [])),
+        ).map((entry) => roomActionKey(entry.reference)),
       ));
     const stamped = withStampedRoomActionContent(source, occurrence, activeKeys);
     if (stamped !== occurrence) changed = true;

@@ -1087,9 +1087,9 @@ describe('Hermes Shrine delivery source participation', () => {
         biome,
         host.occurrenceId,
       )?.domain;
-      const contributionKeys = domain?.contributions.flatMap((entry) =>
-        entry.kind === 'action' ? [roomActionKey(entry.reference)] : [],
-      );
+      const contributionKeys = domain?.contributions.flatMap((entry) => [
+        roomActionKey(entry.reference),
+      ]);
       for (const entryKey of entryKeys) {
         expect(contributionKeys).toContain(roomActionKey(deliveryAction(entryKey)));
         // A required row may be removed: the delivery lies live again.
@@ -1171,9 +1171,7 @@ describe('Hermes Shrine delivery source participation', () => {
     for (const entryKey of entryKeys) {
       const key = roomActionKey(deliveryAction(entryKey));
       expect(
-        domain?.contributions.find(
-          (entry) => entry.kind === 'action' && roomActionKey(entry.reference) === key,
-        ),
+        domain?.contributions.find((entry) => roomActionKey(entry.reference) === key),
       ).toMatchObject({
         participation: 'required',
         owner: { kind: 'acquisitionEntry', entryKey },
@@ -1317,8 +1315,7 @@ describe('Hermes Shrine delivery source participation', () => {
         oBiome,
         source.occurrenceId,
       )?.domain.contributions.find(
-        (entry) =>
-          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(rushed!),
+        (entry) => roomActionKey(entry.reference) === roomActionKey(rushed!),
       );
     expect(contribution(project)).toMatchObject({ participation: 'optional' });
 
@@ -1580,7 +1577,6 @@ describe('flush-host admission after source retraction', () => {
       host.occurrenceId,
     )?.domain.contributions.find(
       (entry) =>
-        entry.kind === 'action' &&
         entry.reference.kind === 'interactAcquisitionEntry' &&
         entry.reference.entryKey === entryKey,
     );
@@ -1854,15 +1850,11 @@ describe('Hermes Shrine purchase actions', () => {
       surfaceNBiome,
       shrine.occurrenceId,
     )?.domain.contributions.find(
-      (entry) =>
-        entry.kind === 'action' &&
-        roomActionKey(entry.reference) === roomActionKey(pickup('initial:secondLeft')),
+      (entry) => roomActionKey(entry.reference) === roomActionKey(pickup('initial:secondLeft')),
     );
     expect(pickupContribution).toMatchObject({
       participation: 'optional',
-      dependencies: [
-        { kind: 'afterAction', action: rushOf('initial:secondLeft'), authoringOnly: true },
-      ],
+      dependencies: [{ action: rushOf('initial:secondLeft'), authoringOnly: true }],
     });
     expect(rush(rushed, 'initial:secondLeft', true)).toBe(rushed);
     // The rush itself follows its purchase.
@@ -1873,16 +1865,12 @@ describe('Hermes Shrine purchase actions', () => {
         surfaceNBiome,
         shrine.occurrenceId,
       )?.domain.contributions.find(
-        (entry) =>
-          entry.kind === 'action' &&
-          roomActionKey(entry.reference) === roomActionKey(rushOf('initial:secondLeft')),
+        (entry) => roomActionKey(entry.reference) === roomActionKey(rushOf('initial:secondLeft')),
       ),
     ).toMatchObject({
       participation: 'optional',
       bounds: expect.objectContaining({ enabler: { kind: 'doorsOpened' } }),
-      dependencies: [
-        { kind: 'afterAction', action: purchase('initial:secondLeft'), authoringOnly: true },
-      ],
+      dependencies: [{ action: purchase('initial:secondLeft'), authoringOnly: true }],
     });
 
     const unrushed = rush(rushed, 'initial:secondLeft', false);
@@ -2205,16 +2193,12 @@ describe('Hermes Shrine purchase actions', () => {
         surfaceNBiome,
         shrine.occurrenceId,
       )?.domain.contributions.find(
-        (entry) =>
-          entry.kind === 'action' &&
-          roomActionKey(entry.reference) === roomActionKey(purchase('travelDealRefill')),
+        (entry) => roomActionKey(entry.reference) === roomActionKey(purchase('travelDealRefill')),
       ),
     ).toMatchObject({
       participation: 'optional',
       bounds: expect.objectContaining({ enabler: { kind: 'doorsOpened' } }),
-      dependencies: [
-        { kind: 'afterAction', action: rushOf('initial:secondLeft'), authoringOnly: true },
-      ],
+      dependencies: [{ action: rushOf('initial:secondLeft'), authoringOnly: true }],
     });
     expect(() =>
       applyProjectCommand(project, catalog, {

@@ -1351,12 +1351,9 @@ describe('H Fields materialization', () => {
         reference.groupKey === 'cages' &&
         context.domain.contributions.some(
           (entry) =>
-            entry.kind === 'action' &&
             roomActionKey(entry.reference) === roomActionKey(reference) &&
             entry.dependencies.some(
-              (dependency) =>
-                dependency.kind === 'afterAction' &&
-                roomActionKey(dependency.action) === roomActionKey(first),
+              (dependency) => roomActionKey(dependency.action) === roomActionKey(first),
             ),
         ),
     )!;
@@ -1374,15 +1371,14 @@ describe('H Fields materialization', () => {
     });
     const withDelivery = fieldsDomainWithPlacedEntries(occurrenceId, [delivery]);
     const contribution = withDelivery.domain.contributions.find(
-      (entry) =>
-        entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(delivery),
+      (entry) => roomActionKey(entry.reference) === roomActionKey(delivery),
     );
     expect(contribution).toMatchObject({
       participation: 'required',
       bounds: expect.objectContaining({
         spawn: { kind: 'endEffects', phaseKey: first.phaseKey },
       }),
-      dependencies: [{ kind: 'afterAction', action: first }],
+      dependencies: [{ action: first }],
     });
     const order = base.filter(
       (reference) =>
@@ -1413,7 +1409,7 @@ describe('H Fields materialization', () => {
       expect(deliveryIssues).toContainEqual(
         expect.objectContaining({
           kind: 'dependency',
-          dependency: { kind: 'afterAction', action: first },
+          dependency: { action: first },
         }),
       );
   });
@@ -1456,7 +1452,6 @@ describe('H Fields materialization', () => {
       contributions: [
         ...domain.contributions,
         {
-          kind: 'action',
           reference: unlock,
           owner: createOccurrenceAddress(biome, occurrenceId),
           participation: 'optional',
@@ -1518,8 +1513,7 @@ describe('H Fields materialization', () => {
       const contribution = fieldsDomainWithPlacedEntries(occurrenceId, [
         placed,
       ]).domain.contributions.find(
-        (entry) =>
-          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(placed),
+        (entry) => roomActionKey(entry.reference) === roomActionKey(placed),
       );
       expect(contribution).toMatchObject({
         bounds: expect.objectContaining({ spawn: { kind: 'endEffects', phaseKey: 'Passive' } }),
@@ -1538,14 +1532,13 @@ describe('H Fields materialization', () => {
       const contribution = fieldsDomainWithPlacedEntries(occurrenceId, [
         drop,
       ]).domain.contributions.find(
-        (entry) =>
-          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(drop),
+        (entry) => roomActionKey(entry.reference) === roomActionKey(drop),
       );
       expect(contribution).toMatchObject({
         bounds: expect.objectContaining({
           spawn: { kind: 'endEffects', phaseKey: cage.phaseKey },
         }),
-        dependencies: [{ kind: 'afterAction', action: cage }],
+        dependencies: [{ action: cage }],
       });
     });
   });
@@ -1802,7 +1795,7 @@ describe('H Fields materialization', () => {
     expect(replacementRow).toMatchObject({
       participation: 'required',
       rank: expect.any(Number),
-      dependencies: [{ kind: 'afterAction', action: sourceReference }],
+      dependencies: [{ action: sourceReference }],
     });
     expect(simulateProject(catalog, project).findings).toContainEqual(
       expect.objectContaining({
@@ -1842,7 +1835,6 @@ describe('H Fields materialization', () => {
     ).toMatchObject({
       dependencies: expect.arrayContaining([
         {
-          kind: 'afterAction',
           action: { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
         },
       ]),

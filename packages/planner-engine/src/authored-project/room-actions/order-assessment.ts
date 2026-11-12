@@ -57,6 +57,13 @@ export type RoomActionOrderIssue =
   | { readonly kind: 'unrankedRequired'; readonly reference: RoomActionReference }
   | RoomActionPlacementBlocker;
 
+/** Whether an order issue blocks a placement: every issue but a stale or unranked row. */
+export function isPlacementBlocker(
+  issue: RoomActionOrderIssue,
+): issue is RoomActionPlacementBlocker {
+  return issue.kind !== 'stale' && issue.kind !== 'unrankedRequired';
+}
+
 /** The structural facts one occurrence's action order is judged against. */
 export interface RoomActionOrderContext {
   readonly active: ReadonlyMap<string, RoomActionContribution>;
@@ -339,10 +346,7 @@ export function assessRoomActionPlacement(
 ): RoomActionPlacementAssessment {
   const { rows, crossings } = rowAndBoundIssues(order, context, lastIndex);
   const blockers: readonly RoomActionPlacementBlocker[] = frozen([
-    ...[...rows, ...crossings].filter(
-      (issue): issue is RoomActionPlacementBlocker =>
-        issue.kind !== 'stale' && issue.kind !== 'unrankedRequired',
-    ),
+    ...[...rows, ...crossings].filter(isPlacementBlocker),
     ...requiredFirstBlockers(order, lastIndex, context),
   ]);
   const terminalIndex =

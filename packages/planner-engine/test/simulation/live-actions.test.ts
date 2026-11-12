@@ -515,10 +515,7 @@ describe('live actions at a gap', () => {
           room.roomActionRoster.rows.some(
             (other) =>
               other.rank !== null &&
-              other.dependencies.some(
-                (dependency) =>
-                  dependency.kind === 'afterAction' && roomActionKey(dependency.action) === row.key,
-              ),
+              other.dependencies.some((dependency) => roomActionKey(dependency.action) === row.key),
           )
         )
           continue;
