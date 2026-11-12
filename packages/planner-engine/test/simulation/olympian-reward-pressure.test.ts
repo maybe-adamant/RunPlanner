@@ -22,14 +22,12 @@ import {
   createKeepsakeState,
 } from '../../src/simulation/keepsakes/state';
 import {
-  consumeOlympianProviderForReachedOffer,
   processOfferGenerationCohort,
   processRewardOffer,
 } from '../../src/simulation/rewards/offer-generation';
 import { applyOlympianRewardPressureEquip } from '../../src/simulation/keepsakes/branch-transitions';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import { initializeTestRewardBranchForRoute } from '../support/arcana-fear';
-import { appendRewardEvent } from '../../src/simulation/rewards/branch-primitives';
 import {
   settleOwnedAcquisitionSite,
   settlePickupAcquisitionSite,
@@ -388,45 +386,6 @@ describe('Olympian reward pressure', () => {
     expect(reached).toBeDefined();
     expect([...findings.values()]).toEqual([]);
     expect(reached?.state.keepsakes.olympianSources[0]?.remainingForceUses).toBe(1);
-  });
-
-  it('spends only matching free Boon and Devotion loot from the reached generated-event ledger', () => {
-    const initial = initializeTestRewardBranchForRoute(
-      undefined,
-      createTestArcanaFearState(),
-      catalog,
-      'ForceZeusBoonKeepsake',
-    );
-    const boon = appendRewardEvent(initial, 1, {
-      kind: 'rewardOffered',
-      origin,
-      offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
-    });
-    expect(
-      consumeOlympianProviderForReachedOffer(catalog, boon, origin, 'paid').state.keepsakes
-        .olympianSources[0]?.remainingForceUses,
-    ).toBe(1);
-    expect(
-      consumeOlympianProviderForReachedOffer(catalog, boon, origin, 'free').state.keepsakes
-        .olympianSources[0]?.remainingForceUses,
-    ).toBe(0);
-
-    const devotion = appendRewardEvent(initial, 1, {
-      kind: 'rewardOffered',
-      origin,
-      offer: {
-        rewardType: 'Devotion',
-        payload: {
-          kind: 'DevotionPair',
-          chosenSource: 'ApolloUpgrade',
-          spurnedSource: 'ZeusUpgrade',
-        },
-      },
-    });
-    expect(
-      consumeOlympianProviderForReachedOffer(catalog, devotion, origin, 'free').state.keepsakes
-        .olympianSources[0]?.remainingForceUses,
-    ).toBe(0);
   });
 
   it('spends matching force when a Narcissus Blind Box creates its hidden god loot', () => {

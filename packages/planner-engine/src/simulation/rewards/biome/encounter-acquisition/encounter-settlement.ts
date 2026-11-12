@@ -1,4 +1,3 @@
-import { roomRunsCages } from '../../../encounters/model';
 import { routeRoomDeclaration } from '../../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
@@ -46,22 +45,16 @@ import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../../
 import { createBiomeRewardFacts } from '../../facts';
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
-import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { GorgonPhaseCandidateSupport, NemesisRandomEventCandidateSupport } from '../../model';
 import { mapReached, type RewardBranchState } from '../../branch-primitives';
 import { advanceReachedBranch, advanceRewardBranch } from '../../branch-lifecycle';
-import { consumeOlympianProviderForReachedOffer } from '../../offer-generation';
-import {
-  settleOwnedAcquisitionSite,
-  withRoomStoredSourceProducts,
-} from '../../acquisition/site-settlement';
 import type { AcquisitionRoleFrontier } from '../../acquisition/contracts';
 import {
   settleEncounterTraitOffer,
   type ReachedTraitChildCheckpoint,
   type ReachedTraitOfferCandidateContact,
 } from '../../trait-settlement/coordinator';
-import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
+import { addRewardFinding, rewardFinding } from '../../findings';
 import type { BossArcanaOutcome } from '../../model';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 import { nemesisGeneratedPickupSiteKey } from '../../../../authored-project/acquisition/pickup-producers';
@@ -647,72 +640,10 @@ export function applyEncounterSettlementTransition(inputs: {
         event.sequence,
       ),
     );
-    const rewards =
-      room.localRewards?.filter((reward) => reward.encounterPhaseKey === event.phaseKey) ?? [];
-    if (roomRunsCages(room) || rewards.length === 0)
-      return Object.freeze({
-        branch: advanceReachedBranch(reached, event.sequence),
-        findings: Object.freeze([...findings.values()]),
-        roleFrontiers: Object.freeze(roleFrontiers),
-        traitChildSettlements: Object.freeze(traitChildSettlements),
-        traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts),
-        gorgonEvaluationBlocked,
-        ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
-      });
-    if (rewards.length !== 1 || rewards[0] === undefined)
-      throw new BiomeRewardSimulationContractError(
-        `${room.gameName}.${event.phaseKey} does not own exactly one local reward`,
-      );
-    const timelineOwner = room.roomActionRoster.rows.find(
-      (candidate) =>
-        !candidate.stale &&
-        candidate.rank !== null &&
-        candidate.reference.kind === 'interactLocalReward' &&
-        candidate.reference.groupKey === 'cages' &&
-        candidate.reference.slotKey === rewards[0]!.slotKey,
-    )?.owner;
-    const materialized = mapReached(reached, (branch) =>
-      consumeOlympianProviderForReachedOffer(catalog, branch, rewards[0]!.origin, 'free'),
-    );
-    const settlement = settleOwnedAcquisitionSite(
-      catalog,
-      materialized,
-      {
-        siteOwner: rewards[0].origin,
-        pointKey: event.phaseKey,
-        entryKey: rewards[0].slotKey,
-        source: withRoomStoredSourceProducts(
-          catalog,
-          room,
-          Object.freeze({
-            ...rewards[0],
-            instanceProvenance: 'free',
-            presentsMaterializedScreen: true,
-          }),
-        ),
-        ...(timelineOwner === undefined ? {} : { timelineOwner }),
-        historySequence: event.sequence,
-        authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
-      },
-      (state) =>
-        createBiomeRewardFacts({
-          catalog,
-          state,
-          source: room,
-          currentRoom: room,
-          sourceDeclaration: declaration,
-          view: view.preOutgoing ?? view.entry,
-          hubBoardLookups: 'notConsulted',
-        }),
-      undefined,
-      chronology(snapshot, room, event),
-    );
-    mergeRewardFindingEmissions(findings, settlement.findingEmissions);
-    roleFrontiers.push(...(settlement.roleFrontiers ?? []));
-    for (const checkpoint of settlement.traitChildSettlements ?? [])
-      recordChild(checkpoint, room.origin);
+    // Fields cages spawn and settle their own contacts at room entry and their
+    // pickups, so a cage encounter's completion spawns nothing here.
     return Object.freeze({
-      branch: settlement.branch,
+      branch: advanceReachedBranch(reached, event.sequence),
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),

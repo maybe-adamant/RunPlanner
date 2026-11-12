@@ -26,10 +26,7 @@ import { evaluateRequirement } from '../../requirements/evaluator';
 import type { CanonicalResolvedIncomingReward } from '../materialization';
 import type { FindingEvidence, RewardGenerationFindingCode } from '../model';
 import { ownerRegion, type FindingChronology, type FindingRegionEntry } from '../finding-regions';
-import {
-  olympianProviderForOffer,
-  consumeOlympianProviderMaterialized,
-} from '../keepsakes/reward-effects';
+import { olympianProviderForOffer } from '../keepsakes/reward-effects';
 import {
   appendRewardEvent,
   freezeRecord,
@@ -919,49 +916,4 @@ export function reachedOfferForOrigin(
       return event.offer;
   }
   return undefined;
-}
-
-/** Exact normalized provider lookup for a concrete god-loot game name. */
-export function traitProviderForLootSource(catalog: Catalog, source: string): string | undefined {
-  return catalog.traitGiverByAcquisitionGameName[source];
-}
-
-/** Spend matching force only when this exact reached offer materializes as free loot. */
-export function consumeOlympianProviderForReachedOffer(
-  catalog: Catalog,
-  branch: RewardBranchState,
-  origin: SemanticAddress,
-  provenance: 'free' | 'paid',
-): RewardBranchState {
-  if (
-    provenance === 'paid' ||
-    !branch.state.keepsakes.olympianSources.some((source) => source.remainingForceUses === 1)
-  )
-    return branch;
-  const offer = reachedOfferForOrigin(branch, origin);
-  const sources =
-    offer?.payload?.kind === 'BoonSource'
-      ? [offer.payload.source]
-      : offer?.payload?.kind === 'DevotionPair'
-        ? [offer.payload.chosenSource, offer.payload.spurnedSource]
-        : [];
-  const providers = sources.flatMap((source) => {
-    const provider = traitProviderForLootSource(catalog, source);
-    return provider === undefined ? [] : [provider];
-  });
-  return providers.reduce(
-    (current, provider) =>
-      Object.freeze({
-        ...current,
-        state: Object.freeze({
-          ...current.state,
-          keepsakes: consumeOlympianProviderMaterialized(
-            current.state.keepsakes,
-            provider,
-            provenance,
-          ),
-        }),
-      }),
-    branch,
-  );
 }
