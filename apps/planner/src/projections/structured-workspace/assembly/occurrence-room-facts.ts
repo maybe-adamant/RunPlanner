@@ -440,6 +440,7 @@ function roomLocalForOccurrence(
           `${room.gameName} Fields state has no bounded cage declaration`,
         );
       }
+      const cageEnvelope = requireEncounterEnvelope(input.catalog, room);
       const cages = group.slotKeys
         .slice(0, fieldsFacts?.doorCageRewardCount ?? 0)
         .map((slotKey, index) => {
@@ -449,9 +450,20 @@ function roomLocalForOccurrence(
             group.key,
             slotKey,
           );
+          const phase = cageEnvelope.slots.find(
+            (slot) =>
+              slot.rewardAttachment?.kind === 'localReward' &&
+              slot.rewardAttachment.slotKey === slotKey,
+          );
+          if (phase === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${slotKey} has no Fields cage encounter slot`,
+            );
+          }
           return Object.freeze({
             control: requireProjectedRewardControl(controls, address, 'countedReward'),
             key: slotKey,
+            phaseKey: phase.key,
             label: `Cage ${index + 1}`,
             badge: `C${index + 1}`,
             summary: (() => {

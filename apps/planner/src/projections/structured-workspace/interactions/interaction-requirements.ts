@@ -231,7 +231,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly kind: 'roomActions';
       readonly owner: OccurrenceAddress;
       readonly proposals: readonly WorkspaceRoomActionProposal[];
-      readonly fieldsCageOrder?: true;
     }
   | {
       /** A hidden door's pickers: engine placeholder candidates and the pinned room's rewards. */

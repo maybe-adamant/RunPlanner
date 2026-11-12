@@ -35,7 +35,6 @@ import {
   createRewardWheelOfferAddress,
   createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
-  decodeProjectDocument,
   echoLastRewardPickupEntryKey,
   goldenFBiome,
   goldenFStartId,
@@ -1097,16 +1096,24 @@ describe('structured workspace actions assembly', () => {
     ).toEqual(['optional1', 'optional2']);
     expect(roomActions.repairRows).toEqual([]);
     expect(roomActions.proposals.length).toBeGreaterThan(0);
-    expect(
-      roomActions.timeline.entries.flatMap((entry) =>
-        entry.kind === 'action' && entry.presentation === 'fieldsCageAnchor'
-          ? [entry.actionKey]
-          : [],
-      ),
-    ).toEqual([
+    // Each cage's Unlock row is an ordinary row naming its locked reward.
+    const unlockKeys = [
       roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage02' }),
       roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage01' }),
-    ]);
+    ];
+    expect(
+      roomActions.timeline.entries.flatMap((entry) =>
+        entry.kind === 'action' && unlockKeys.includes(entry.actionKey)
+          ? [[entry.actionKey, entry.presentation]]
+          : [],
+      ),
+    ).toEqual(unlockKeys.map((key) => [key, 'row']));
+    expect(unlockKeys.map((key) => roomActions.rows.find((row) => row.key === key)?.label)).toEqual(
+      [
+        expect.stringMatching(/^Unlock .+ · Cage 2$/),
+        expect.stringMatching(/^Unlock .+ · Cage 1$/),
+      ],
+    );
     expect(
       roomActions.timeline.entries.flatMap((entry) =>
         entry.kind === 'boundary' && entry.fieldsCage !== undefined
@@ -1125,26 +1132,6 @@ describe('structured workspace actions assembly', () => {
       { kind: 'encounterStarted', phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
       { kind: 'encounterEnd', phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
     ]);
-    expect(roomActions.timeline.fieldsCageOrder).toEqual({
-      phaseKeys: ['Cage02', 'Cage01'],
-      choices: [
-        // The combat order names its cages; each keeps its reward for the banner.
-        {
-          phaseKey: 'Cage01',
-          label: 'Cage 1',
-          slot: 1,
-          fullLabel: expect.stringMatching(/^Cage 1 \(/),
-          offer: expect.objectContaining({ rewardType: expect.any(String) }),
-        },
-        {
-          phaseKey: 'Cage02',
-          label: 'Cage 2',
-          slot: 2,
-          fullLabel: expect.stringMatching(/^Cage 2 \(/),
-          offer: expect.objectContaining({ rewardType: expect.any(String) }),
-        },
-      ],
-    });
     expect(fields.node.room.localDetailMarkers).toContain(roomActions.rows[0]?.marker);
     const fieldsEntry = roomActions.timeline.entries.find(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'roomEntered',
@@ -1295,67 +1282,6 @@ describe('structured workspace actions assembly', () => {
           launcher.owner.checkpoint.kind === 'roomEntered',
       ),
     ).toBe(false);
-  });
-
-  it('reads the Fields cage order and its blocked state from the engine product', () => {
-    const occurrenceId = createOccurrenceId('golden-h-combat02');
-    const authored = createGoldenFGHIProject();
-    const missing = decodeProjectDocument(
-      {
-        ...authored,
-        route: {
-          ...authored.route,
-          biomes: authored.route.biomes.map((biome) =>
-            biome.biomeKey !== 'H' || biome.topology === null
-              ? biome
-              : {
-                  ...biome,
-                  topology: {
-                    ...biome.topology,
-                    occurrences: biome.topology.occurrences.map((occurrence) =>
-                      occurrence.occurrenceId !== occurrenceId
-                        ? occurrence
-                        : {
-                            ...occurrence,
-                            roomActions: {
-                              order: occurrence.roomActions.order.filter(
-                                (reference) =>
-                                  reference.kind !== 'completeFieldsCage' ||
-                                  reference.phaseKey !== 'Cage02',
-                              ),
-                            },
-                          },
-                    ),
-                  },
-                },
-          ),
-        },
-      },
-      catalog,
-    );
-    const roomActions = assemble(missing, 'Underworld', 'H', occurrenceId).assembly.node.room
-      .roomActions;
-    expect(roomActions?.timeline.fieldsCageOrder).toEqual({
-      phaseKeys: ['Cage01'],
-      choices: [
-        // The combat order names its cages; each keeps its reward for the banner.
-        {
-          phaseKey: 'Cage01',
-          label: 'Cage 1',
-          slot: 1,
-          fullLabel: expect.stringMatching(/^Cage 1 \(/),
-          offer: expect.objectContaining({ rewardType: expect.any(String) }),
-        },
-        {
-          phaseKey: 'Cage02',
-          label: 'Cage 2',
-          slot: 2,
-          fullLabel: expect.stringMatching(/^Cage 2 \(/),
-          offer: expect.objectContaining({ rewardType: expect.any(String) }),
-        },
-      ],
-      unavailableReason: 'Restore missing cage actions before changing their order.',
-    });
   });
 
   it('projects a Gold duplicate ordered after its Travel refill source', () => {

@@ -117,7 +117,6 @@ export type {
   WorkspaceShipStructurePhase,
   WorkspaceRoomActions,
   WorkspaceFieldsCageLabel,
-  WorkspaceFieldsCageOrderControl,
   WorkspaceFieldsSpatialControl,
   WorkspaceFieldsSpatialPointInteraction,
   WorkspaceRoomLifecycleTimeline,

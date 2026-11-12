@@ -346,7 +346,6 @@ input[type='checkbox']:checked:disabled {
 :is(
   .timeline-chip-group,
   .spawned-loot-group,
-  .fields-cage-order-chips,
   .icon-toggle-row,
   .trait-option-level-sources,
   .draft-toggle-row
@@ -363,7 +362,6 @@ input[type='checkbox']:checked:disabled {
     :is(
         .timeline-chip-group,
         .spawned-loot-group,
-        .fields-cage-order-chips,
         .icon-toggle-row,
         .trait-option-level-sources,
         .draft-toggle-row

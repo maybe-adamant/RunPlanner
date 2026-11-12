@@ -1035,13 +1035,12 @@ owns cage completion and pickup chronology.
 [H rules](../biomes/H_GAME_RULES.md#authored-shape) own participation and
 default ordering.
 
-`ReplaceFieldsCageOrder` accepts an exact permutation of the active cage
-identities. It resolves that permutation left-to-right with insertion-style
-moves of the existing completion references, retaining all other actions'
-relative sequence and each cage's leaves, and reconciles the complete order
-once. Context-invalid retained interactions remain repairable through findings.
-Commands and decoding use stable phase, slot, and acquisition-role identities,
-never rendered ordinals.
+Cage order is the order of the cage Unlock rows: each Unlock row triggers its
+cage's encounter, whose end releases the cage's reward, so the walk takes the
+cages in row order and an ordinary room-action move of an Unlock row reorders
+them. No separate cage-order state or command exists. Context-invalid retained
+interactions remain repairable through findings. Commands and decoding use
+stable phase, slot, and acquisition-role identities, never rendered ordinals.
 
 ### Rerolls
 

@@ -239,7 +239,6 @@ function applyUnchecked(
     case 'UnplaceGeneratedDelivery':
     case 'RemoveRoomAction':
     case 'MoveRoomAction':
-    case 'ReplaceFieldsCageOrder':
     case 'ReplaceShopPurchaseParticipation':
     case 'PurchaseShopTravelDealRefill':
       return applyRoomActionCommand(

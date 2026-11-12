@@ -340,6 +340,19 @@ Step 3a, one lifecycle per room (no schema change):
   state. It compiles unchanged; the consumer pass reads the room's
   `forcedRewardType` instead.
 
+Shed the Fields Combat Order picker (no schema change):
+
+- `ReplaceFieldsCageOrder` is gone, with the room-action domain's and the
+  canonical room's `fieldsCageOrder`. Cage order is the order of the
+  cage-unlock rows; reorder cages with ordinary `MoveRoomAction`s of their
+  `completeFieldsCage` rows.
+- Run import: `packages/run-import/src/fields.ts` (`moveCagesInto`) now moves
+  the cage rows into the recorded opening order, in one transaction, with the
+  insertion moves the command made. One difference: a room whose rows are
+  already in the recorded order is no longer noted `refused`. The run-import
+  lane's results match the commit before.
+- Draft: no use; no change.
+
 ## Inventory (summary of existence-vs-interaction)
 
 Item identity today is (reward owner address, acquisition role); every

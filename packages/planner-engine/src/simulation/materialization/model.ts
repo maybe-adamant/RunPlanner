@@ -295,8 +295,6 @@ export interface CanonicalAuthoredRoom {
     string,
     import('../../authored-project/rerolls').ResolvedRerollPress
   >;
-  /** Fields combat rooms only: the room-action domain's cage order state. */
-  readonly fieldsCageOrder?: import('../../authored-project/room-actions/domain').FieldsCageOrderState;
   readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   /**

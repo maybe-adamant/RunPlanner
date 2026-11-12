@@ -25,7 +25,7 @@ import {
 } from '@run-planner/engine/simulation';
 import type { RunRecordFields, RunRecordRoom } from './run-record/model';
 import type { RunImportContext } from './import';
-import { insertRoomAction } from './actions';
+import { insertRoomAction, roomActionAddress } from './actions';
 import {
   ARTIFICER_STORE,
   convertAcquisition,
@@ -1421,13 +1421,14 @@ export function importFieldsRooms(context: RunImportContext): void {
       if (
         visit.fields.cageOrder === 'opening' &&
         slotsOfCages.some((cage, slot) => cage !== slot) &&
-        !context.applyValid({
-          kind: 'ReplaceFieldsCageOrder',
-          occurrence: address,
-          phaseKeys: visit.fields.cages.map(
+        !moveCagesInto(
+          context,
+          biome.biomeKey,
+          occurrence.occurrenceId,
+          visit.fields.cages.map(
             (_cage, cage) => `Cage${String(slotsOfCages.indexOf(cage) + 1).padStart(2, '0')}`,
           ),
-        })
+        )
       )
         context.note({
           area: 'fields',
@@ -1444,6 +1445,43 @@ export function importFieldsRooms(context: RunImportContext): void {
           record: record(visit.roomIndex),
         });
     }
+}
+
+/**
+ * Moves the room's cage rows into `phaseKeys` order, as one edit: each cage row
+ * begins its fight, so the rows' order is the cages' order.
+ */
+function moveCagesInto(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrenceId: string,
+  phaseKeys: readonly string[],
+): boolean {
+  const cages = new Set(phaseKeys);
+  return context.transaction(() => {
+    for (let slot = 0; slot < phaseKeys.length - 1; slot += 1) {
+      const order = authoredOccurrence(context.assembly().project, biomeKey, occurrenceId)!
+        .roomActions.order;
+      const positions = order.flatMap((reference, index) =>
+        reference.kind === 'completeFieldsCage' && cages.has(reference.phaseKey)
+          ? [{ index, phaseKey: reference.phaseKey }]
+          : [],
+      );
+      const target = positions[slot];
+      const source = positions.find((position) => position.phaseKey === phaseKeys[slot]);
+      if (target === undefined || source === undefined) return false;
+      if (source.index === target.index) continue;
+      if (
+        !context.apply({
+          kind: 'MoveRoomAction',
+          action: roomActionAddress(context, biomeKey, occurrenceId, order[source.index]!),
+          toIndex: target.index,
+        })
+      )
+        return false;
+    }
+    return true;
+  });
 }
 
 /**

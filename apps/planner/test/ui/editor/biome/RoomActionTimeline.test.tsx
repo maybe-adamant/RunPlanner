@@ -605,7 +605,7 @@ describe('OccurrenceRoomActions', () => {
     expect(fieldsActions).toBeTruthy();
   });
 
-  it('projects three fixed Fields cycles with read-only cage labels and movable pickups', async () => {
+  it('projects three Fields cycles with movable Unlock rows, cage-named markers and movable pickups', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const view = renderOccurrenceWorkbench(
       threeCageFieldsProject(),
@@ -638,9 +638,12 @@ describe('OccurrenceRoomActions', () => {
         within(start).getByRole('button', { name: new RegExp(`Cage ${index + 1}`) }),
       ).toBeTruthy();
     }
-    const cageOrder = within(actions).getByRole('group', { name: 'Combat order' });
-    expectBefore(cageOrder, within(timeline).getByLabelText('Room entered'));
-    expect(within(timeline).queryByText(/^Clear Cage\d+/)).toBeNull();
+    // Each cage's Unlock row is an ordinary movable row, ahead of the encounter it starts.
+    for (const [index, start] of starts.entries()) {
+      const unlock = actionRow(timeline, new RegExp(`^Unlock .+ · Cage ${index + 1}$`));
+      expect(within(unlock).getByRole('button', { name: /^Reorder Unlock / })).toBeTruthy();
+      expectBefore(unlock, start);
+    }
     for (const row of timeline.querySelectorAll('[data-in-order="true"]')) {
       expect(within(row as HTMLElement).getByRole('button', { name: /^Reorder / })).toBeTruthy();
     }
@@ -700,12 +703,53 @@ describe('OccurrenceRoomActions', () => {
       occurrenceId,
       roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage01' }),
     );
-    expect(within(starts[0]!).getByRole('img', { name: 'Cage 1' }).id).toBe(
+    expect(actionRow(timeline, /^Unlock .+ · Cage 1$/).id).toBe(
       semanticOwnerControlElementId(cageOneAction),
     );
   });
 
-  it('authors every cage encounter in Overview and keeps cage order and read-only cages in Timeline', () => {
+  it('reorders cages by moving their Unlock rows, each encounter following its row', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const view = renderOccurrenceWorkbench(
+      threeCageFieldsProject(),
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const timeline = () =>
+      within(screen.getByRole('region', { name: 'Room Timeline' })).getByRole('list', {
+        name: 'Room timeline',
+      });
+    const cageOrder = () =>
+      occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history!.present,
+        'Underworld',
+        'H',
+        occurrenceId,
+      )?.flatMap((reference) =>
+        reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
+      );
+    const startedCages = () =>
+      Array.from(
+        timeline().querySelectorAll<HTMLElement>('[data-lifecycle-boundary^="encounterStarted:"]'),
+        (start) => start.getAttribute('aria-label'),
+      );
+    expect(cageOrder()).toEqual(['Cage01', 'Cage02', 'Cage03']);
+    const unlockThree = within(actionRow(timeline(), /^Unlock .+ · Cage 3$/)).getByRole('button', {
+      name: /^Reorder Unlock /,
+    });
+    reorderByKeyboard(unlockThree, /^After Room entered$/);
+    await waitFor(() => expect(cageOrder()).toEqual(['Cage03', 'Cage01', 'Cage02']));
+    // Moving the trigger moves its encounter: Cage 3 is now fought first.
+    expect(startedCages()).toEqual(['Encounter, Cage 3', 'Encounter, Cage 1', 'Encounter, Cage 2']);
+    expectBefore(
+      actionRow(timeline(), /^Unlock .+ · Cage 3$/),
+      within(timeline()).getByLabelText('Encounter, Cage 3'),
+    );
+  });
+
+  it('authors every cage encounter in Overview and keeps read-only cages in Timeline', () => {
     renderOccurrenceWorkbench(
       threeCageFieldsProject(),
       'Underworld',
@@ -717,9 +761,7 @@ describe('OccurrenceRoomActions', () => {
       const phase = within(structure).getByLabelText(`${cage} encounter phase`);
       expect(within(phase).getByRole('button', { name: cage })).toBeTruthy();
     }
-    expect(screen.queryByRole('group', { name: 'Combat order' })).toBeNull();
     openRoomTab('Room Timeline');
-    expect(screen.getByRole('group', { name: 'Combat order' })).toBeTruthy();
     // Each cage start banner names its encounter read-only; identity stays in Overview.
     for (const slot of [1, 2, 3]) {
       const start = screen.getByLabelText(`Encounter, Cage ${slot}`);
@@ -730,60 +772,7 @@ describe('OccurrenceRoomActions', () => {
     expect(screen.queryByLabelText('Cage 1 encounter phase')).toBeNull();
   });
 
-  it('swaps the cage of one clear with the clear that had it in one undo step', async () => {
-    const occurrenceId = createOccurrenceId('golden-h-combat02');
-    const view = renderOccurrenceWorkbench(
-      threeCageFieldsProject(),
-      'Underworld',
-      'H',
-      occurrenceById(occurrenceId),
-    );
-    openRoomTab('Room Timeline');
-    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    const order = () => screen.getByRole('group', { name: 'Combat order' });
-    await view.user.click(within(order()).getByRole('button', { name: /^Cleared 1st: Cage 1 \(/ }));
-    expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(3);
-    await view.user.click(
-      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 3 \(/ }),
-    );
-
-    const cagePermutation = () =>
-      occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history!.present,
-        'Underworld',
-        'H',
-        occurrenceId,
-      )?.flatMap((reference) =>
-        reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
-      );
-    await waitFor(() => expect(cagePermutation()).toEqual(['Cage03', 'Cage02', 'Cage01']));
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historyBefore + 1,
-    );
-    // The start banners, in clear order, carry their cages' slots.
-    const cageStartSlots = () =>
-      Array.from(
-        document.querySelectorAll(
-          '[data-lifecycle-boundary^="encounterStarted:"] [role="img"], [data-lifecycle-boundary^="encounterBegun:"] [role="img"]',
-        ),
-        (slot) => slot.getAttribute('aria-label'),
-      ).filter((name) => name?.startsWith('Cage '));
-    expect(cageStartSlots()).toEqual(['Cage 3', 'Cage 2', 'Cage 1']);
-    // The order shows the cages in clear order, each named with its reward.
-    expect(
-      within(order())
-        .getAllByRole('button')
-        .map((chip) => chip.getAttribute('aria-label')?.replace(/ \(.+\)$/, '')),
-    ).toEqual(['Cleared 1st: Cage 3', 'Cleared 2nd: Cage 2', 'Cleared 3rd: Cage 1']);
-
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    await waitFor(() => expect(cagePermutation()).toEqual(['Cage01', 'Cage02', 'Cage03']));
-    expect(cageStartSlots()).toEqual(['Cage 1', 'Cage 2', 'Cage 3']);
-    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
-    await waitFor(() => expect(cagePermutation()).toEqual(['Cage03', 'Cage02', 'Cage01']));
-  });
-
-  it('keeps a cage selectable across a retained cage-local Gorgon barrier', async () => {
+  it('explains blocked moves across a retained cage-local Gorgon barrier', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const view = renderOccurrenceWorkbench(
       fieldsGorgonBarrierProject(),
@@ -792,16 +781,6 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
-    await view.user.click(
-      within(screen.getByRole('group', { name: 'Combat order' })).getByRole('button', {
-        name: /^Cleared 1st/,
-      }),
-    );
-    const cageTwoOption = within(screen.getByRole('listbox')).getByRole('option', {
-      name: /^Cage 2 \(/,
-    });
-    expect(cageTwoOption.getAttribute('aria-disabled')).not.toBe('true');
-    await view.user.keyboard('{Escape}');
 
     const projected = workspaceProjection(view.application)
       .route?.biomes.find((biome) => biome.biomeKey === 'H')
@@ -823,7 +802,7 @@ describe('OccurrenceRoomActions', () => {
         proposal.toIndex === firstCage!.rank! - 1,
     );
     expect(genericProposal).toMatchObject({ kind: 'move', structurallyAuthorable: false });
-    expect(genericProposal?.explanations).toEqual(['Talk to Athena before clearing Cage02.']);
+    expect(genericProposal?.explanations).toEqual(['Talk to Athena before unlocking Cage 2.']);
 
     const athena = roomActions?.rows.find((row) => row.reference.kind === 'interactGorgon');
     const blockedMove = roomActions?.proposals.find(
@@ -832,7 +811,7 @@ describe('OccurrenceRoomActions', () => {
         proposal.toIndex === 0 &&
         athena?.proposalKeys.includes(proposal.key),
     );
-    expect(blockedMove?.explanations).toEqual(['Clear Cage 1 to make Athena available.']);
+    expect(blockedMove?.explanations).toEqual(['Unlock Cage 1 to make Athena available.']);
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const handle = within(actions).getByRole('button', { name: 'Reorder Talk to Athena' });
     const orderBefore = occurrenceRoomActionOrder(
@@ -867,46 +846,6 @@ describe('OccurrenceRoomActions', () => {
         occurrenceId,
       ),
     ).toEqual(orderBefore);
-    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    // Cage 2 cleared first swaps it with the clear that had it.
-    await view.user.click(
-      within(screen.getByRole('group', { name: 'Combat order' })).getByRole('button', {
-        name: /^Cleared 1st/,
-      }),
-    );
-    await view.user.click(
-      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 2 \(/ }),
-    );
-    await waitFor(() => {
-      const order = occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history!.present,
-        'Underworld',
-        'H',
-        occurrenceId,
-      );
-      expect(
-        order?.flatMap((reference) =>
-          reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
-        ),
-      ).toEqual(['Cage02', 'Cage01']);
-      expect(order).toContainEqual({ kind: 'interactGorgon', phaseKey: 'Cage01' });
-    });
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historyBefore + 1,
-    );
-
-    const edited = workspaceProjection(view.application)
-      .route?.biomes.find((biome) => biome.biomeKey === 'H')
-      ?.nodes.find(
-        (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
-      );
-    if (edited?.kind !== 'occurrenceWorkbench') {
-      throw new Error('Edited Fields Gorgon occurrence workbench is missing');
-    }
-    const gorgon = edited.room.roomActions?.rows.find(
-      (row) => row.reference.kind === 'interactGorgon' && row.reference.phaseKey === 'Cage01',
-    );
-    expect(gorgon).toMatchObject({ executable: true, stale: false });
   });
 
   it('distinguishes a retained blocker from new placement dependencies', () => {
@@ -938,7 +877,7 @@ describe('OccurrenceRoomActions', () => {
         proposal.reference.slotKey === 'optional1',
     );
     expect(unrelated?.explanations).toEqual([
-      'Existing timeline issue: Clear Cage 1 to make Athena available.',
+      'Existing timeline issue: Unlock Cage 1 to make Athena available.',
     ]);
     const newConflict = actions.proposals.find(
       (proposal) =>
@@ -947,7 +886,7 @@ describe('OccurrenceRoomActions', () => {
         proposal.reference.kind === 'completeFieldsCage' &&
         proposal.reference.phaseKey === 'Cage02',
     );
-    expect(newConflict?.explanations).toEqual(['Talk to Athena before clearing Cage02.']);
+    expect(newConflict?.explanations).toEqual(['Talk to Athena before unlocking Cage 2.']);
     const cageReward = actions.proposals.find(
       (proposal) =>
         proposal.kind === 'move' &&
@@ -955,7 +894,7 @@ describe('OccurrenceRoomActions', () => {
         proposal.reference.kind === 'interactLocalReward' &&
         proposal.reference.slotKey === 'cage1',
     );
-    expect(cageReward?.explanations).toEqual(['Clear Cage 1 to unlock this reward.']);
+    expect(cageReward?.explanations).toEqual(['Unlock Cage 1 to release this reward.']);
   });
 
   // This three-cage route is repairable-invalid under the run-scoped ledger,
@@ -1002,17 +941,9 @@ describe('OccurrenceRoomActions', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
     const repairs = within(actions).getByRole('region', { name: 'Timeline repairs' });
-    expect(within(timeline).queryByText('Clear Cage 3')).toBeNull();
-    expect(within(repairs).getByText('Clear Cage 3')).toBeTruthy();
+    expect(() => actionRow(timeline, /^Unlock .+ · Cage 3$/)).toThrow();
+    expect(actionRow(repairs, /^Unlock .+ · Cage 3 required$/)).toBeTruthy();
     expect(within(repairs).queryByText('This required action has not been placed.')).toBeNull();
-    const clears = within(
-      within(actions).getByRole('group', { name: 'Combat order' }),
-    ).getAllByRole('button') as HTMLButtonElement[];
-    expect(clears[0]?.getAttribute('aria-label')).toMatch(/^Cleared 1st: Cage \d \(/);
-    for (const clear of clears) {
-      expect(clear.disabled).toBe(true);
-      expect(hintOf(clear)).toBeTruthy();
-    }
   });
 
   it('accepts a Fields optional reward directly on the Room entered checkpoint', async () => {

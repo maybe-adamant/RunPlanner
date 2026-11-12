@@ -5,7 +5,6 @@ import type {
   JudgmentArcanaAddress,
   OccurrenceAddress,
   ProjectCommand,
-  RoomActionAddress,
   RoomActionReference,
   SteadyGrowthOutcomeAddress,
   TranscendentEmbryoOutcomeAddress,
@@ -390,7 +389,7 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly actionKey: string;
       readonly rank: number;
       /** Closed application presentation for rows represented by a lifecycle-boundary control. */
-      readonly presentation: 'row' | 'fieldsCageAnchor' | 'rewardWheelAnchor';
+      readonly presentation: 'row' | 'rewardWheelAnchor';
       /** Engine-owned phase grouping for multi-encounter room workbenches. */
       readonly phaseKey?: string;
       /** Exact family-specific Nemesis interaction placed on its required action row. */
@@ -541,25 +540,6 @@ export interface WorkspaceFieldsCageLabel {
   readonly cage: string;
   /** The cage's slot, subscripted on its encounter's name. */
   readonly slot: number;
-  /** The cage's reward. */
-  readonly offer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
-  /** The cage action the label stands for; absent while that action is its own row. */
-  readonly owner?: RoomActionAddress;
-}
-
-export interface WorkspaceFieldsCageOrderControl {
-  readonly choices: readonly {
-    readonly phaseKey: string;
-    /** The cage's name ("Cage 1"). */
-    readonly label: string;
-    /** The cage's slot, matching its rewards' `C1` mark. */
-    readonly slot: number;
-    /** The cage with its reward named, for the accessible name. */
-    readonly fullLabel: string;
-    readonly offer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
-  }[];
-  readonly phaseKeys: readonly string[];
-  readonly unavailableReason?: string;
 }
 
 /** Where the walk stops before a Timeline starts: its room's Overview, or an earlier phase. */
@@ -567,7 +547,6 @@ export type WorkspaceTimelineWait =
   { readonly kind: 'overview' } | { readonly kind: 'phase'; readonly phaseLabel: string };
 
 export interface WorkspaceRoomLifecycleTimeline {
-  readonly fieldsCageOrder?: WorkspaceFieldsCageOrderControl;
   /** Up to the room's stop when the walk stops here: its doors and exit are then unreached. */
   readonly entries: readonly WorkspaceRoomLifecycleTimelineEntry[];
   /**
@@ -588,9 +567,6 @@ export interface WorkspaceRoomLifecycleTimeline {
 }
 
 export interface WorkspaceRoomActionInteraction {
-  readonly fieldsCageOrderIntentFor?: (
-    phaseKeys: readonly string[],
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsCageOrder' }>>;
   readonly intentFor: (proposalKey: string) => WorkspaceCommandIntent<
     Extract<
       ProjectCommand,

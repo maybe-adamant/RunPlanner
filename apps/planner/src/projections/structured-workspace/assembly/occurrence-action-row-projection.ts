@@ -402,18 +402,21 @@ function roomActionsForOccurrence(
       const wheelReward =
         blocker.reference.kind === 'interactWheelReward' &&
         prerequisite.kind === 'chooseRewardWheel';
+      // A cage's own explanations name it by its cage, not its Unlock row's reward.
+      const cageName = (phaseKey: string) =>
+        encounterPhases.find((phase) => phase.address.phaseKey === phaseKey)?.label ?? phaseKey;
       if (artificer)
         // The source reads as the transformation its verb now names.
         explanation = `${artificerSource?.labelParts === undefined ? actionLabel(prerequisite) : `Transform ${artificerSource.labelParts.name}`} first to create ${movingDependent ? 'this reward' : label}.`;
       else if (cageReward)
-        explanation = `${actionLabel(prerequisite)} to unlock ${movingDependent ? 'this reward' : label}.`;
+        explanation = `Unlock ${cageName(prerequisite.phaseKey)} to release ${movingDependent ? 'this reward' : label}.`;
       else if (cageInteraction)
         explanation =
           blocker.reference.kind === 'interactGorgon'
-            ? `${actionLabel(prerequisite)} to make Athena available.`
-            : `${actionLabel(prerequisite)}, then ${label}.`;
+            ? `Unlock ${cageName(prerequisite.phaseKey)} to make Athena available.`
+            : `Unlock ${cageName(prerequisite.phaseKey)}, then ${label}.`;
       else if (nextCage)
-        explanation = `${actionLabel(prerequisite)} before clearing ${blocker.reference.phaseKey}.`;
+        explanation = `${actionLabel(prerequisite)} before unlocking ${cageName(blocker.reference.phaseKey)}.`;
       else if (wheelReward)
         explanation = `${actionLabel(prerequisite)} before collecting its reward.`;
       else if (movingDependent) explanation = `Requires: ${actionLabel(prerequisite)}.`;

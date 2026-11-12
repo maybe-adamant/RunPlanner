@@ -147,7 +147,6 @@ function commandContractAddress(
     case 'ReplaceRoomObjectAnchor':
       return command.occurrence;
     case 'ReplaceOccurrenceRoom':
-    case 'ReplaceFieldsCageOrder':
     case 'ReplaceShipEncounterCount':
     case 'ReplaceFieldsOptionalRewardCount':
     case 'InsertPurgingPoolReroll':

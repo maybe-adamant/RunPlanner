@@ -6,7 +6,6 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { hintProps } from '@planner/ui/controls/hint';
 import { TimelineRow } from './TimelineRow';
 import { BannerTitle } from './TimelineDoors';
@@ -41,7 +40,6 @@ export function LifecycleBoundaryRow({
   /** The title shows or hides the editor under the banner, such as the doors'. */
   readonly toggle?: BannerToggle | undefined;
 }) {
-  const findingAnchor = useFindingAnchor();
   const dispatch = useAppDispatch();
   const accessibleLabel = boundarySpokenLabel(label, fieldsCage);
   // One hint tells the whole title: its cage, then its encounter's identity.
@@ -51,14 +49,7 @@ export function LifecycleBoundaryRow({
   // A Fields cage is known by its slot, subscripted on its encounter's name as its rewards mark it.
   const cageSlot =
     fieldsCage === undefined ? null : (
-      <span
-        aria-label={fieldsCage.cage}
-        className="fields-cage-slot"
-        {...(fieldsCage.owner === undefined
-          ? {}
-          : { ...findingAnchor(fieldsCage.owner), tabIndex: -1 })}
-        role="img"
-      >
+      <span aria-label={fieldsCage.cage} className="fields-cage-slot" role="img">
         C{fieldsCage.slot}
       </span>
     );

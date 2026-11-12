@@ -34,7 +34,6 @@ import { TimelineMapStageContext, type TimelineMapStage } from './timelineMapSta
 import { RowRewardName } from './RowRewardName';
 import { RowNpcName } from './RowNpcName';
 import { npcPortrait } from '@planner/ui/artwork/npcs/npcArtwork';
-import { FieldsCageOrderControl } from './FieldsCageOrderControl';
 import { RoomActionAcquisitionRow } from './RoomActionAcquisitionRow';
 import {
   RoomActionArtificerOutput,
@@ -1434,13 +1433,6 @@ export function RoomActionsWorkbench({
         <p aria-live="polite" className="visually-hidden">
           {announcement}
         </p>
-        {actions.timeline.fieldsCageOrder === undefined || interaction === undefined ? null : (
-          <FieldsCageOrderControl
-            control={actions.timeline.fieldsCageOrder}
-            id={`${idPrefix ?? 'room-actions'}-cage-order`}
-            interaction={interaction}
-          />
-        )}
         {actions.timeline.waitsOn === undefined ? (
           <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
             {timelineRows}

@@ -393,6 +393,8 @@ export interface WorkspaceGorgonConditionInteraction {
 export interface WorkspaceFieldsCageDescriptor {
   readonly control: WorkspaceCountedRewardControl;
   readonly key: string;
+  /** The encounter phase its Unlock row starts. */
+  readonly phaseKey: string;
   readonly label: string;
   /** The slot's short mark on its reward chip ("C1", "O3"); `label` names it in full. */
   readonly badge: string;

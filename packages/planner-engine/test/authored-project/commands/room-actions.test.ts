@@ -61,6 +61,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 
 import { createCompleteNProject } from '../support/complete-n-project';
+import { canonicalRoom } from '../../support/live-actions';
 import { gBiome, gProject } from '../support/configured-projects';
 import {
   replaceTestRoomActionOrder,
@@ -229,7 +230,7 @@ function parallelTarget(document: ProjectDocument) {
 }
 
 describe('room-action commands', () => {
-  it('replaces every Fields cage permutation atomically while retaining mixed actions and cage leaves', () => {
+  it('reorders Fields cages by moving their cage rows, and the walk takes that order', () => {
     const fieldsId = createOccurrenceId('golden-h-combat02');
     const owner = createOccurrenceAddress(goldenHBiome, fieldsId);
     const expanded = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -261,131 +262,34 @@ describe('room-action commands', () => {
       document.route.biomes
         .find((plan) => plan.biomeKey === 'H')!
         .topology!.occurrences.find((candidate) => candidate.occurrenceId === fieldsId)!;
-    const cases = [
-      {
-        permutation: [1, 2, 3],
-        order: [cage(1), pickup(1), cage(2), pickup(2), cage(3), pickup(3)],
-      },
-      {
-        permutation: [1, 3, 2],
-        order: [cage(1), pickup(1), cage(3), cage(2), pickup(2), pickup(3)],
-      },
-      {
-        permutation: [2, 1, 3],
-        order: [cage(2), cage(1), pickup(1), pickup(2), cage(3), pickup(3)],
-      },
-      {
-        permutation: [2, 3, 1],
-        order: [cage(2), cage(3), cage(1), pickup(1), pickup(2), pickup(3)],
-      },
-      {
-        permutation: [3, 1, 2],
-        order: [cage(3), cage(1), pickup(1), cage(2), pickup(2), pickup(3)],
-      },
-      {
-        permutation: [3, 2, 1],
-        order: [cage(3), cage(2), cage(1), pickup(1), pickup(2), pickup(3)],
-      },
-    ];
-    for (const scenario of cases) {
-      const history = applyProjectHistoryCommand(createProjectHistory(initial), catalog, {
-        kind: 'ReplaceFieldsCageOrder',
-        occurrence: owner,
-        phaseKeys: scenario.permutation.map((number) => `Cage0${number}`),
-      });
-      expect(room(history.present).roomActions.order).toEqual(
-        withItemContents(history.present, owner, scenario.order),
-      );
-      expect(room(history.present).encounters).toEqual(room(initial).encounters);
-      expect(room(history.present).state).toEqual(room(initial).state);
-      if (scenario.permutation.join('') === '123') {
-        expect(history.present).toBe(initial);
-        expect(history.past).toHaveLength(0);
-      } else {
-        expect(history.past).toHaveLength(1);
-        expect(undoProjectHistory(history).present).toBe(initial);
-        expect(redoProjectHistory(undoProjectHistory(history)).present).toBe(history.present);
-      }
-    }
-  });
-
-  it('requires an exact active cage permutation and preserves a missing-action repair', () => {
-    const initial = createGoldenFGHProject();
-    const fieldsId = createOccurrenceId('golden-h-combat02');
-    const owner = createOccurrenceAddress(goldenHBiome, fieldsId);
-    for (const phaseKeys of [[], ['Cage01'], ['Cage01', 'Cage01'], ['Cage01', 'Cage03']]) {
-      expect(() =>
-        applyProjectCommand(initial, catalog, {
-          kind: 'ReplaceFieldsCageOrder',
-          occurrence: owner,
-          phaseKeys,
-        }),
-      ).toThrow('each active Fields cage exactly once');
-    }
-    const missing = decodeProjectDocument(
-      {
-        ...initial,
-        route: {
-          ...initial.route,
-          biomes: initial.route.biomes.map((plan) =>
-            plan.biomeKey !== 'H'
-              ? plan
-              : {
-                  ...plan,
-                  topology: {
-                    ...plan.topology!,
-                    occurrences: plan.topology!.occurrences.map((room) =>
-                      room.occurrenceId !== fieldsId
-                        ? room
-                        : {
-                            ...room,
-                            roomActions: {
-                              order: room.roomActions.order.filter(
-                                (reference) =>
-                                  reference.kind !== 'completeFieldsCage' ||
-                                  reference.phaseKey !== 'Cage02',
-                              ),
-                            },
-                          },
-                    ),
-                  },
-                },
-          ),
-        },
-      },
-      catalog,
+    const history = applyProjectHistoryCommand(createProjectHistory(initial), catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(goldenHBiome, fieldsId, roomActionKey(cage(3))),
+      toIndex: 0,
+    });
+    expect(room(history.present).roomActions.order).toEqual(
+      withItemContents(history.present, owner, [
+        cage(3),
+        cage(1),
+        pickup(1),
+        cage(2),
+        pickup(2),
+        pickup(3),
+      ]),
     );
-    const cageOrder = (document: ProjectDocument) =>
-      roomActionDomainForOccurrence(document, catalog, goldenHBiome, fieldsId)?.domain
-        .fieldsCageOrder;
-    expect(cageOrder(initial)).toEqual({
-      activePhaseKeys: ['Cage01', 'Cage02'],
-      phaseKeys: ['Cage02', 'Cage01'],
-      available: true,
-    });
-    expect(cageOrder(missing)).toEqual({
-      activePhaseKeys: ['Cage01', 'Cage02'],
-      phaseKeys: ['Cage01'],
-      available: false,
-    });
-    expect(
-      roomActionDomainForOccurrence(project(), catalog, biome, occurrenceId)?.domain
-        .fieldsCageOrder,
-    ).toBeUndefined();
-    expect(() =>
-      applyProjectCommand(missing, catalog, {
-        kind: 'ReplaceFieldsCageOrder',
-        occurrence: owner,
-        phaseKeys: ['Cage02', 'Cage01'],
-      }),
-    ).toThrow('restore missing cage actions');
-    expect(() =>
-      applyProjectCommand(project(), catalog, {
-        kind: 'ReplaceFieldsCageOrder',
-        occurrence: createOccurrenceAddress(biome, occurrenceId),
-        phaseKeys: ['Cage01'],
-      }),
-    ).toThrow('does not own Fields cage order');
+    expect(room(history.present).encounters).toEqual(room(initial).encounters);
+    expect(room(history.present).state).toEqual(room(initial).state);
+    // Each cage row begins its own fight, so the encounters follow the rows.
+    const begun = (document: ProjectDocument) =>
+      canonicalRoom(
+        simulateProjectAssembly(catalog, document),
+        owner,
+      )!.roomLifecycleTimeline.boundaries.flatMap((boundary) =>
+        boundary.kind === 'encounterBegun' ? [boundary.phaseKey] : [],
+      );
+    expect(begun(initial)).toEqual(['Cage01', 'Cage02', 'Cage03']);
+    expect(begun(history.present)).toEqual(['Cage03', 'Cage01', 'Cage02']);
+    expect(undoProjectHistory(history).present).toBe(initial);
   });
 
   it('projects a concrete Nemesis result as an ordinary acquisition entry with its exact action owner', () => {

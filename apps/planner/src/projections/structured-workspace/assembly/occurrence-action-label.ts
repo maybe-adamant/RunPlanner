@@ -274,7 +274,7 @@ export function occurrenceActionLabelParts(
   const plain = (label: string): OccurrenceActionLabelParts => Object.freeze({ label });
   const actionLabel = (
     subject: string | undefined,
-    verb: 'Collect' | 'Buy' = 'Collect',
+    verb: 'Collect' | 'Buy' | 'Unlock' = 'Collect',
     includeOfferSummary = true,
     control = rewardControl,
     fallbackSummary?: string,
@@ -329,8 +329,23 @@ export function occurrenceActionLabelParts(
         }),
       });
     }
-    case 'completeFieldsCage':
-      return plain(`Clear ${phase?.label ?? reference.phaseKey}`);
+    case 'completeFieldsCage': {
+      // Unlocking a cage's locked reward starts its encounter; the row names that reward.
+      const cage =
+        roomLocal.kind === 'fields'
+          ? roomLocal.cages.find((candidate) => candidate.phaseKey === reference.phaseKey)
+          : undefined;
+      if (cage === undefined) return plain(`Unlock ${phase?.label ?? reference.phaseKey}`);
+      const parts = actionLabel(cage.label, 'Unlock', true, cage.control);
+      if (parts.suffix !== cage.label) return parts;
+      return Object.freeze({
+        label: parts.label,
+        ...(parts.verb === undefined ? {} : { verb: parts.verb }),
+        ...(parts.name === undefined ? {} : { name: parts.name }),
+        ...(parts.reward === undefined ? {} : { reward: parts.reward }),
+        place: Object.freeze({ badge: cage.badge, label: cage.label }),
+      });
+    }
     case 'interactIncomingReward': {
       const role = reference.acquisitionRole;
       if (role === 'chosenSource' || role === 'spurnedSource') {

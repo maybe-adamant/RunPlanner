@@ -534,8 +534,8 @@ export const galleryCases: readonly GalleryCase[] = [
   {
     id: 'fields-cages',
     overview: true,
-    label: 'Fields room: cage clears, cage order and cage rewards',
-    shows: ['Fields cage clear', 'Fields cage order', 'local reward per cage'],
+    label: 'Fields room: cage Unlock rows, their encounters and released rewards',
+    shows: ['Fields cage Unlock row', 'cage-named encounter markers', 'local reward per cage'],
     project: loadUnderworldFGHICheckpoint,
     target: room('H', 'golden-h-combat09'),
   },

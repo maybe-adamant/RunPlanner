@@ -798,10 +798,10 @@ offer or phase count hides dormant editors without deleting retained values.
 
 A Fields occurrence workbench projects one optional-count control, one active
 inventory row per spawned optional, and one engine-owned mixed chronology.
-One staged Combat Order picker above Room entered displays cage identities and
-rewards. Only the final selection commits the complete permutation as one
-semantic edit; closing an unfinished picker leaves the chronology unchanged.
-Encounter-cycle headings show their assigned cage as a read-only label.
+Each cage's locked reward has an Unlock row, an ordinary movable row naming
+that reward and its cage. The row is the trigger of the cage's encounter, so
+the cages are reordered by moving their Unlock rows. The encounter's markers
+name their cage, and its end releases the reward, whose Collect row follows.
 Inventory rows own reward payload and acquisition disposition. An optional
 pickup joins the chronology from its chip on the room-entry spawn row and leaves
 it by its row's removal; the

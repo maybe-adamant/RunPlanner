@@ -94,7 +94,6 @@ export type {
 } from './contracts/structure';
 export type {
   WorkspaceFieldsCageLabel,
-  WorkspaceFieldsCageOrderControl,
   WorkspaceFigurineArcanaInteraction,
   WorkspaceFountainRarityControl,
   WorkspaceFountainRarityDomain,

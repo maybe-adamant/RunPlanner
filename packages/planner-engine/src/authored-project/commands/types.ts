@@ -309,11 +309,6 @@ export type RoomReplacementCommand = {
 export type RoomActionCommand =
   | { readonly kind: 'UnplaceGeneratedDelivery'; readonly action: RoomActionSemanticAddress }
   | {
-      readonly kind: 'ReplaceFieldsCageOrder';
-      readonly occurrence: OccurrenceAddress;
-      readonly phaseKeys: readonly string[];
-    }
-  | {
       readonly kind: 'InsertRoomAction';
       readonly action: RoomActionSemanticAddress;
       readonly reference: RoomActionReference;

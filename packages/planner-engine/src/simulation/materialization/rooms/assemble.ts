@@ -517,9 +517,6 @@ export function materializeAuthoredRoom(
       : { structuralEncounterIdentities: Object.freeze(structuralEncounterIdentities) }),
     roomActionRoster,
     ...(rerollPresses === undefined ? {} : { rerollPresses }),
-    ...(roomActionDomain.fieldsCageOrder === undefined
-      ? {}
-      : { fieldsCageOrder: roomActionDomain.fieldsCageOrder }),
     roomLifecycleTimeline,
   });
 }
