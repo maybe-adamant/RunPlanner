@@ -22,6 +22,7 @@ import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { timedPickupDueContact } from '../../../room-actions';
 import { ownerRegion } from '../../../finding-regions';
+import { endEffectsAdvanceDeliveries, roomTraitClocks } from './end-effect-clocks';
 import {
   advanceChaosClock,
   advancePickupProducerProgress,
@@ -388,18 +389,11 @@ export function applyEncounterEndEffectsTransition(
     }),
   );
   const pickupOwner = event.origin.kind === 'occurrence' ? event.origin : undefined;
+  const clocks = roomTraitClocks(declaration, event.origin.routeKey);
   const pickupAdvance =
-    pickupOwner === undefined || declaration?.skipRoomsPerUpgrade === true || next === undefined
+    pickupOwner === undefined || !clocks.advance || next === undefined
       ? undefined
-      : advancePickupProducersAt(
-          catalog,
-          next,
-          pickupOwner,
-          event.sequence,
-          declaration?.skipTimedDropResources === true ||
-            (event.origin.routeKey === 'Dream' &&
-              declaration?.skipTimedDropResourcesInDream === true),
-        );
+      : advancePickupProducersAt(catalog, next, pickupOwner, event.sequence, clocks.deferMaturity);
   if (pickupAdvance !== undefined) {
     next = pickupAdvance.branch;
   }
@@ -411,16 +405,12 @@ export function applyEncounterEndEffectsTransition(
       : projectRoomEncounterRecords(next.state.reached.historyView, event.origin).find(
           (phase) => phase.slotKey === event.phaseKey,
         );
-  const encounterPhase =
-    recordedPhase === undefined
-      ? undefined
-      : catalog.encounterDefinitions.byKey[recordedPhase.encounterKey];
-  if (
-    event.origin.kind === 'occurrence' &&
-    declaration?.advancesHermesShrineDeliveryUses === true &&
-    declaration.ignoreEncounterUses !== true &&
-    encounterPhase?.advancesHermesShrineDeliveryUses === true
-  ) {
+  const advancesDeliveries = endEffectsAdvanceDeliveries(
+    catalog,
+    declaration,
+    recordedPhase?.encounterKey,
+  );
+  if (event.origin.kind === 'occurrence' && advancesDeliveries) {
     const deliveryHost = event.origin;
     next = mapReached(next, (branch) => {
       const pending = branch.state.pendingHermesShrineDeliveries;
@@ -542,12 +532,7 @@ export function applyEncounterEndEffectsTransition(
       }
     }
   }
-  if (
-    event.origin.kind === 'occurrence' &&
-    declaration?.advancesHermesShrineDeliveryUses === true &&
-    declaration.ignoreEncounterUses !== true &&
-    encounterPhase?.advancesHermesShrineDeliveryUses === true
-  ) {
+  if (event.origin.kind === 'occurrence' && advancesDeliveries) {
     const due = dueHermesShrineDeliveryFrontier(
       catalog,
       room,

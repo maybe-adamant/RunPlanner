@@ -576,7 +576,6 @@ describe('Hermes Shrine workbench', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      encounterPhaseKey: 'Encounter',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
@@ -694,7 +693,6 @@ describe('Hermes Shrine workbench', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey,
-        encounterPhaseKey: 'Encounter',
       }),
     );
   });

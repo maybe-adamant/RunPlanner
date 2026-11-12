@@ -2,6 +2,7 @@ import { roomOpensRewardWheels } from '../../encounters/model';
 import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
+  createRoomActionAddress,
   createEncounterPhaseAddress,
   createHubRunStateCheckpointAddress,
   createRoomRunStateCheckpointAddress,
@@ -17,11 +18,13 @@ import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../../authored-project/shop';
 import {
   roomActionOpeningPoint,
   roomEventPlaces,
-  roomFightsEnd,
   type RoomEventGraph,
-  type RoomEventPoint,
 } from '../../../authored-project/room-actions/event-graph';
+import { requiredObjectDeadline } from '../../../authored-project/room-actions/required-object-gate';
+import type { RoomActionRow } from '../../room-actions';
 import type { HistoryEvent } from '../../history';
+import { HERMES_SHRINE_DELIVERY_SITE_KEY } from '../../../authored-project/hermes-shrine-delivery';
+import { parseClockedTraitGeneratedPickupEntryKey } from '../../../authored-project/acquisition/pickup-producers';
 import { projectRoomEncounterRecords } from '../../history/facts';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
 import { forGeneration } from '../../materialization';
@@ -32,7 +35,11 @@ import {
   publishOfferedRewardTypes,
 } from '../../state/offered-rewards';
 import { reachSimulationHistory } from '../../state/transitions';
-import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
+import {
+  attestDerivedAcquisitionEntryCandidateCapability,
+  timedPickupReference,
+} from '../acquisition/artifacts';
+import type { DerivedAcquisitionEntryFrontier } from '../acquisition/contracts';
 import { advanceRewardBranch } from '../branch-lifecycle';
 import { mapReached, type RewardBranchState } from '../branch-primitives';
 import type { MidBiomeStartPoint } from '../model';
@@ -152,16 +159,16 @@ function authoredRoom(
 }
 
 /**
- * Where a required item spawned at a sequence with no placement falls due: before the room's
- * first later event it must precede, a reached row of a later window, its doors opening or its
- * commit. Undefined while the walk does not reach that point.
+ * Where an item spawned at a sequence falls due: before the room's first later reached row
+ * `due` picks, else before its doors opening or its commit. Undefined while the walk does not
+ * reach that point.
  */
 function placementDeadline(
   context: ChronologyWalkContext,
   origin: SemanticAddress,
   sequence: number,
-  /** Where the item opens: rows that open later close it. */
-  opening: (graph: RoomEventGraph) => RoomEventPoint,
+  /** The index of the deadline among the room's later reached rows, in walk order. */
+  due: (graph: RoomEventGraph, rows: readonly RoomActionRow[]) => number | undefined,
 ): { readonly sequence: number; readonly deadline: Readonly<Record<string, string>> } | undefined {
   const roomKey = semanticAddressKey(origin);
   const room = authoredRoom(context, origin);
@@ -181,23 +188,21 @@ function placementDeadline(
           }),
         };
   if (room === undefined) return closing;
-  const structure = room.roomActionRoster.eventGraph;
-  const place = roomEventPlaces(structure);
-  const ordinal = place(opening(structure));
   const rows = new Map(room.roomActionRoster.rows.map((row) => [row.key, row]));
   const last = context.history.events.at(-1)?.sequence ?? 0;
-  const later = context.reachedActions.find((action) => {
-    const row = rows.get(action.actionKey);
-    return (
+  const reached = context.reachedActions.filter(
+    (action) =>
       semanticAddressKey(action.room) === roomKey &&
       action.sequence > sequence &&
       action.sequence <= last &&
-      row !== undefined &&
-      !row.stale &&
-      place(roomActionOpeningPoint(row.bounds)) > ordinal &&
-      (closing === undefined || action.sequence < closing.sequence)
-    );
-  });
+      rows.has(action.actionKey) &&
+      (closing === undefined || action.sequence < closing.sequence),
+  );
+  const index = due(
+    room.roomActionRoster.eventGraph,
+    reached.map((action) => rows.get(action.actionKey)!),
+  );
+  const later = index === undefined ? undefined : reached[index];
   return later === undefined
     ? closing
     : {
@@ -219,42 +224,94 @@ function haltingBefore(
 }
 
 /**
- * A due delivery left unplaced lies where it spawned; its placement finding stands at its
- * deadline, where the walk stops, and is withheld while the walk does not reach it.
+ * A required item the walk spawns lies on the ground until its pickup row; the room's next row
+ * that waits for required objects (`requiredObjectDeadline`), or else the doors, is its
+ * deadline, and the walk stops there. Left unplaced, its placement finding stands at that
+ * deadline; placed after it, the waiting row's order finding names it as the action to take
+ * first. Both are withheld while the walk does not reach the deadline.
  */
 function deliveryPlacementAtDeadline(
   context: ChronologyWalkContext,
   origin: SemanticAddress,
   sequence: number,
-  opening: (graph: RoomEventGraph) => RoomEventPoint,
   findings: readonly LifecycleFinding[],
+  frontiers: readonly DerivedAcquisitionEntryFrontier[],
 ): { readonly findings: readonly LifecycleFinding[]; readonly haltBefore?: number } {
   const placement = (entry: LifecycleFinding) =>
     entry.finding.code === 'hermesShrineDeliveryPlacementRequired';
-  if (!findings.some(placement)) return { findings };
-  const due = placementDeadline(context, origin, sequence, opening);
-  return {
-    findings: findings.flatMap((entry) =>
-      !placement(entry)
-        ? [entry]
-        : due === undefined
-          ? []
-          : [
-              Object.freeze({
-                ...entry,
-                finding: Object.freeze({
-                  ...entry.finding,
-                  evidence: Object.freeze({ ...entry.finding.evidence, ...due.deadline }),
-                }),
-                chronology: Object.freeze({
-                  kind: 'history' as const,
-                  sequence: due.sequence,
-                  boundary: 'before' as const,
-                }),
+  const room = authoredRoom(context, origin);
+  // A placed required item the walk has not reached by `before`.
+  const late = (frontier: DerivedAcquisitionEntryFrontier, before: number) => {
+    const key = roomActionKey(timedPickupReference(frontier.address));
+    return (
+      room?.roomActionRoster.rows.some(
+        (row) => row.key === key && row.rank !== null && row.participation === 'required',
+      ) === true &&
+      !context.reachedActions.some(
+        (action) =>
+          action.actionKey === key &&
+          semanticAddressKey(action.room) === semanticAddressKey(origin) &&
+          action.sequence < before,
+      )
+    );
+  };
+  if (!findings.some(placement) && !frontiers.some((frontier) => late(frontier, sequence)))
+    return { findings };
+  const due = placementDeadline(context, origin, sequence, (graph, rows) =>
+    requiredObjectDeadline(graph, rows),
+  );
+  if (due === undefined) return { findings: findings.filter((entry) => !placement(entry)) };
+  const chronology = Object.freeze({
+    kind: 'history' as const,
+    sequence: due.sequence,
+    boundary: 'before' as const,
+  });
+  const gated = room?.roomActionRoster.rows.find((row) => row.key === due.deadline.deadlineAction);
+  const gate =
+    gated === undefined || room?.origin.kind !== 'occurrence'
+      ? undefined
+      : createRoomActionAddress(
+          createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+          room.origin.occurrenceId,
+          gated.key,
+        );
+  const lateFindings = frontiers.flatMap((frontier) =>
+    gate === undefined || !late(frontier, due.sequence)
+      ? []
+      : [
+          Object.freeze({
+            finding: Object.freeze({
+              code: 'roomActionOrderUnavailable' as const,
+              phase: 'encounterResolution' as const,
+              origin: gate,
+              evidence: Object.freeze({
+                reason: 'beforeEnabler',
+                point: roomActionOpeningPoint(gated!.bounds),
+                requiredAction: roomActionKey(timedPickupReference(frontier.address)),
               }),
-            ],
-    ),
-    ...(due === undefined ? {} : { haltBefore: due.sequence }),
+            }),
+            region: ownerRegion(gate),
+            chronology,
+          }),
+        ],
+  );
+  return {
+    findings: [
+      ...findings.map((entry) =>
+        !placement(entry)
+          ? entry
+          : Object.freeze({
+              ...entry,
+              finding: Object.freeze({
+                ...entry.finding,
+                evidence: Object.freeze({ ...entry.finding.evidence, ...due.deadline }),
+              }),
+              chronology,
+            }),
+      ),
+      ...lateFindings,
+    ],
+    ...(findings.some(placement) || lateFindings.length > 0 ? { haltBefore: due.sequence } : {}),
   };
 }
 
@@ -701,8 +758,8 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
     context,
     event.origin,
     event.sequence,
-    () => Object.freeze({ kind: 'endEffects' as const, phaseKey: event.phaseKey }),
     transition.findings,
+    transition.derivedAcquisitionEntryFrontiers,
   );
   return {
     state: Object.freeze({
@@ -967,6 +1024,18 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     sourceBranch: reachedBranch(state),
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
     ...(derivedFrontier === undefined ? {} : { derivedAcquisitionEntryFrontier: derivedFrontier }),
+    // A delivery or clocked drop is timed against its room's walk.
+    ...(event.siteKey === HERMES_SHRINE_DELIVERY_SITE_KEY ||
+    (event.entryKey !== undefined &&
+      parseClockedTraitGeneratedPickupEntryKey(event.entryKey) !== undefined)
+      ? {
+          roomEvents: context.history.events.filter(
+            (candidate) =>
+              'origin' in candidate &&
+              semanticAddressKey(candidate.origin) === semanticAddressKey(event.origin),
+          ),
+        }
+      : {}),
     ...(derivedCapability === undefined
       ? {}
       : { derivedAcquisitionEntryCapability: derivedCapability }),
@@ -1023,9 +1092,15 @@ function echoDuplicateAtDeadline(
     )
   )
     return { emissions };
-  const due = placementDeadline(context, room.origin, sequence, () =>
-    roomActionOpeningPoint(purchase.bounds),
-  );
+  const due = placementDeadline(context, room.origin, sequence, (graph, rows) => {
+    // Rows opening later than the purchase close the pickup.
+    const place = roomEventPlaces(graph);
+    const opening = place(roomActionOpeningPoint(purchase.bounds));
+    const index = rows.findIndex(
+      (row) => !row.stale && place(roomActionOpeningPoint(row.bounds)) > opening,
+    );
+    return index < 0 ? undefined : index;
+  });
   return {
     emissions: emissions.map((emission) =>
       emission.kind !== 'findings' || emission.rule !== 'add'
@@ -1617,8 +1692,8 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     context,
     event.origin,
     event.sequence,
-    roomFightsEnd,
     entered.findings,
+    entered.derivedAcquisitionEntryFrontiers,
   );
   const shrine = entered.hermesShrineAssessment;
   const well = entered.stygianWellAssessment;

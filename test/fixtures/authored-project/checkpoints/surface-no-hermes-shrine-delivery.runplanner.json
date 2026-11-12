@@ -2179,7 +2179,6 @@
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "hermesShrineDelivery",
                     "entryKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-combat07%22%2C%22initial%3AsecondLeft%22%5D",
-                    "encounterPhaseKey": "Encounter",
                     "content": [
                       "MaxHealthDrop"
                     ]

@@ -386,21 +386,7 @@ describe('Hermes Shrine delivery placement', () => {
     );
     expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
 
-    const wrongPhase = applyProjectCommand(project, catalog, {
-      ...placement,
-      encounterPhaseKey: 'Encounter',
-    });
-    const wrongPhaseAssembly = simulateProjectAssembly(catalog, wrongPhase);
-    expect(wrongPhaseAssembly.evaluation.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'hermesShrineDeliveryPlacementRequired',
-        origin: placement.entry,
-      }),
-    );
-    const repair = duePlacement(wrongPhaseAssembly, source, 'initial:secondRight');
-    expect(repair).toEqual(placement);
-    const repaired = applyProjectCommand(wrongPhase, catalog, repair!);
-    const roundTrip = decodeProjectDocument(JSON.parse(encodeProjectDocument(repaired)), catalog);
+    const roundTrip = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
     expect(simulateProjectAssembly(catalog, roundTrip).evaluation.status).toBe('valid');
   });
 
@@ -414,7 +400,6 @@ describe('Hermes Shrine delivery placement', () => {
     const placed = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      encounterPhaseKey: 'Encounter',
     });
     const placedHost = placed.route.biomes
       .find((candidate) => candidate.biomeKey === biome.biomeKey)
@@ -423,7 +408,6 @@ describe('Hermes Shrine delivery placement', () => {
       kind: 'interactAcquisitionEntry',
       siteKey: 'hermesShrineDelivery',
       entryKey,
-      encounterPhaseKey: 'Encounter',
     });
     expect(placedHost?.roomActions.order).toContainEqual(placedDelivery);
     expect(
@@ -706,7 +690,7 @@ describe('Hermes Shrine delivery placement', () => {
     );
   });
 
-  it('requires the exact due-phase action even when the retained delivery entry exists', () => {
+  it('requires a placed delivery action even when the retained delivery entry exists', () => {
     const source = createOccurrenceAddress(
       createBiomeAddress('Surface', 'N'),
       createOccurrenceId('retained-source'),
@@ -749,7 +733,10 @@ describe('Hermes Shrine delivery placement', () => {
           },
         },
       },
-      roomActionRoster: { rows: [] },
+      roomActionRoster: {
+        rows: [],
+        eventGraph: { phases: [], pressFights: [], events: [], activeEncounterSlotKeys: [] },
+      },
     } as unknown as CanonicalAuthoredRoom;
     const transition = applyEncounterEndEffectsTransition(
       catalog,
@@ -772,7 +759,7 @@ describe('Hermes Shrine delivery placement', () => {
     );
   });
 
-  it('repairs a stale due phase in place without duplicating the delivery action', () => {
+  it('places an already placed delivery again without duplicating its action', () => {
     const { project, biome, source, host } = projectWithUnrankedDeliveryHost();
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
     const entry = createAcquisitionEntryAddress(
@@ -782,12 +769,10 @@ describe('Hermes Shrine delivery placement', () => {
     const placed = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      encounterPhaseKey: 'Encounter',
     });
     const repaired = applyProjectCommand(placed, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      encounterPhaseKey: 'LaterEncounter',
     });
     const repairedHost = repaired.route.biomes
       .find((candidate) => candidate.biomeKey === biome.biomeKey)
@@ -801,7 +786,6 @@ describe('Hermes Shrine delivery placement', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey,
-        encounterPhaseKey: 'LaterEncounter',
       }),
     ]);
   });
@@ -865,12 +849,11 @@ function staleDeliveryFindings(project: ProjectDocument) {
   );
 }
 
-function deliveryAction(entryKey: string, encounterPhaseKey = 'Encounter'): RoomActionReference {
+function deliveryAction(entryKey: string): RoomActionReference {
   return {
     kind: 'interactAcquisitionEntry',
     siteKey: 'hermesShrineDelivery',
     entryKey,
-    encounterPhaseKey,
   };
 }
 
@@ -942,7 +925,6 @@ function projectWithTwoSideRoomDeliveries() {
         createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
         entryKey,
       ),
-      encounterPhaseKey: 'Encounter',
     });
   }
   return Object.freeze({
@@ -1227,7 +1209,6 @@ describe('Hermes Shrine delivery source participation', () => {
         createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
         entryKey,
       ),
-      encounterPhaseKey: 'Encounter',
     });
     expect(orderedDeliveryKeys(project, oBiome.biomeKey, host.occurrenceId)).toEqual([entryKey]);
     expect(
@@ -1403,7 +1384,6 @@ describe('explicit generated delivery unplacement', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      encounterPhaseKey: 'Encounter',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',

@@ -1,6 +1,7 @@
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  type AcquisitionEntryAddress,
   createGorgonPhaseAddress,
   createInfernalContractPedestalAddress,
   createRewardWheelAddress,
@@ -22,6 +23,10 @@ import {
 } from '../../authored-project/feature-rolls';
 import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
+import {
+  requiredObjectDeadline,
+  waitsForRequiredObjects,
+} from '../../authored-project/room-actions/required-object-gate';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../authored-project/shop';
 import type { Catalog } from '../../catalog-schema';
 import type { CanonicalAuthoredRoom } from '../materialization';
@@ -31,6 +36,7 @@ import {
   type RoomActionRow,
 } from '../room-actions';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
+import { timedPickupReference } from '../rewards/acquisition/artifacts';
 import { roomObjectInteractionsForProjectEvaluationAssembly } from './project-evaluation-assembly';
 import {
   authoredRoom,
@@ -268,9 +274,6 @@ function purchaseReference(command: PositionedCommand): RoomActionReference {
         kind: 'interactAcquisitionEntry',
         siteKey: command.entry.site.pointKey,
         entryKey: command.entry.entryKey,
-        ...(command.encounterPhaseKey === undefined
-          ? {}
-          : { encounterPhaseKey: command.encounterPhaseKey }),
       });
     case 'PlaceEchoGoldPickup':
       return frozen({
@@ -440,6 +443,17 @@ export function liveActionsForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   occurrence: OccurrenceAddress,
 ): RoomLiveActions | undefined {
+  return liveRoom(catalog, assembly, occurrence)?.live;
+}
+
+/** The live product, with every index each derived pickup's command accepts. */
+function liveRoom(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  occurrence: OccurrenceAddress,
+):
+  | { readonly live: RoomLiveActions; readonly derivedIndexes: Map<string, ReadonlySet<number>> }
+  | undefined {
   const room = authoredRoom(assembly, occurrence);
   if (room === undefined || !room.entered) return undefined;
   const walk = roomWalk(assembly, occurrence);
@@ -530,11 +544,12 @@ export function liveActionsForProjectEvaluationAssembly(
   const rowAction = (row: RoomActionRow, gap: number): LiveAction | undefined =>
     row.rank !== null && row.rank - 1 < gap ? undefined : rowGaps.get(row.key)?.get(gap);
   /** For a required row, the last gap of the whole order at which it may stand. */
-  const rowDeadline = (row: RoomActionRow): number | undefined => {
-    const gaps = rowGaps.get(row.key);
-    return row.participation !== 'required' || gaps === undefined
-      ? undefined
-      : Math.max(...gaps.keys());
+  const rowDeadline = (
+    row: RoomActionRow,
+    legal: (gap: number) => boolean = () => true,
+  ): number | undefined => {
+    const gaps = [...(rowGaps.get(row.key)?.keys() ?? [])].filter(legal);
+    return row.participation !== 'required' || gaps.length === 0 ? undefined : Math.max(...gaps);
   };
 
   // Pickups, from the spawned loot, each with the gap it spawned at.
@@ -574,6 +589,27 @@ export function liveActionsForProjectEvaluationAssembly(
       gapOfEntry(spawnMomentEntryIndex(entries, 'encounterEnd', unlock.phaseKey)),
     ]),
   );
+  // A required object on the ground holds back every row that waits for it.
+  const ordered = roster.rows
+    .filter((row) => row.rank !== null)
+    .sort((left, right) => left.rank! - right.rank!);
+  const waits = waitsForRequiredObjects(roster.eventGraph);
+  const required = ({ item }: PickupSpawn) => item.participation === 'required';
+  /** Whether a required pickup at this gap stands past its deadline. */
+  const gatedPast = (spawn: PickupSpawn, gap: number) => {
+    const deadline = required(spawn)
+      ? requiredObjectDeadline(roster.eventGraph, ordered, spawn.gap)
+      : undefined;
+    return deadline !== undefined && gap > deadline;
+  };
+  /** Whether a required pickup lies on the ground at this gap. */
+  const onGround = (gap: number) =>
+    spawns.some(
+      (spawn) =>
+        required(spawn) &&
+        spawn.gap <= gap &&
+        (spawn.item.placement.kind !== 'placed' || spawn.item.placement.rank - 1 >= gap),
+    );
   const derivedIndexes = new Map<string, ReadonlySet<number>>();
   const pickupAt = (spawn: PickupSpawn, gap: number): LivePickup | undefined => {
     const { item } = spawn;
@@ -585,20 +621,24 @@ export function liveActionsForProjectEvaluationAssembly(
     const actions: LiveAction[] = [];
     let deadline: number | undefined;
     if (row !== undefined && (row.rank !== null || item.placement.kind === 'unplaced')) {
-      const action = rowAction(row, gap);
+      const action = gatedPast(spawn, gap) ? undefined : rowAction(row, gap);
       if (action !== undefined)
         actions.push(
           action.kind === 'place' && item.needsChoice !== undefined
             ? frozen({ ...action, needsChoice: item.needsChoice })
             : action,
         );
-      deadline = rowDeadline(row);
+      deadline = rowDeadline(row, (at) => !gatedPast(spawn, at));
     } else if (item.placement.kind === 'unplaced' && item.placement.command !== undefined) {
       const command = item.placement.command;
       const indexes =
         derivedIndexes.get(key) ??
         (isPositioned(command)
-          ? new Set(positionedCommandInsertionIndexes(assembly.project, catalog, command))
+          ? new Set(
+              positionedCommandInsertionIndexes(assembly.project, catalog, command).filter(
+                (index) => index >= spawn.gap && !gatedPast(spawn, index),
+              ),
+            )
           : new Set<number>());
       derivedIndexes.set(key, indexes);
       if (indexes.has(gap))
@@ -661,6 +701,7 @@ export function liveActionsForProjectEvaluationAssembly(
     for (const { row, object, owner } of objectRows) {
       const action = rowAction(row, gap);
       if (action === undefined) continue;
+      if (action.kind !== 'placed' && waits(row) && onGround(gap)) continue;
       const deadline = rowDeadline(row);
       add(
         object,
@@ -721,5 +762,41 @@ export function liveActionsForProjectEvaluationAssembly(
       }),
     );
   }
-  return frozen({ owner: room.origin, frontier, gaps: frozen(gaps) });
+  return { live: frozen({ owner: room.origin, frontier, gaps: frozen(gaps) }), derivedIndexes };
+}
+
+/** The command placing a due delivery or a matured clocked drop. */
+export type TimedPickupPlacementCommand = Extract<
+  ProjectCommand,
+  { readonly kind: 'PlaceHermesShrineDelivery' | 'PlaceClockedTraitPickup' }
+>;
+
+/**
+ * The command placing one due delivery or matured clocked drop at the last
+ * index it may take (after its due spawn, before the next row waiting for
+ * required objects); absent when it is not live in its room.
+ */
+export function timedPickupPlacementForProjectEvaluationAssembly(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  entry: AcquisitionEntryAddress,
+): TimedPickupPlacementCommand | undefined {
+  const owner = entry.site.owner;
+  const live = owner.kind === 'occurrence' ? liveRoom(catalog, assembly, owner) : undefined;
+  const key = roomActionKey(timedPickupReference(entry));
+  const indexes = [...(live?.derivedIndexes.get(key) ?? [])];
+  const command = live?.live.gaps
+    .flatMap((gap) => gap.items)
+    .flatMap((item) => (item.kind === 'pickup' ? item.actions : []))
+    .flatMap((action) =>
+      action.kind === 'place' &&
+      roomActionKey(action.reference) === key &&
+      (action.command.kind === 'PlaceHermesShrineDelivery' ||
+        action.command.kind === 'PlaceClockedTraitPickup')
+        ? [action.command]
+        : [],
+    )[0];
+  return command === undefined || indexes.length === 0
+    ? undefined
+    : (atIndex(command, Math.max(...indexes)) as TimedPickupPlacementCommand);
 }

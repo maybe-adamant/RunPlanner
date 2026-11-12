@@ -370,6 +370,8 @@ export {
 } from './evaluation/spawned-loot';
 export {
   liveActionsForProjectEvaluationAssembly,
+  timedPickupPlacementForProjectEvaluationAssembly,
+  type TimedPickupPlacementCommand,
   type LiveAction,
   type RoomLiveActions,
 } from './evaluation/live-actions';

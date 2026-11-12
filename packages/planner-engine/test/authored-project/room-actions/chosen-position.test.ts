@@ -219,7 +219,6 @@ describe('placing actions at a chosen index', () => {
             createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery'),
             hermesShrineDeliveryEntryKey(shrine, 'initial:secondLeft'),
           ),
-          encounterPhaseKey: 'Encounter',
         },
       ],
       [

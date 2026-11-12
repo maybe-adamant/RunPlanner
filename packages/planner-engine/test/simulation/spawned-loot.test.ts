@@ -21,6 +21,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
+  timedPickupPlacementForProjectEvaluationAssembly,
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
@@ -186,11 +187,12 @@ describe('spawned loot', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
     const { assembly, spawned } = loot(project, 'P', pCombat03);
     const drop = spawned.moments[0]!.items.at(-1)!;
-    if (drop.placement.kind !== 'unplaced') throw new Error('the second drop is placed');
+    if (drop.placement.kind !== 'unplaced' || drop.owner.kind !== 'acquisitionEntry')
+      throw new Error('the second drop is placed');
     const placed = settleProjectEdit({
       catalog,
       before: assembly,
-      command: drop.placement.command!,
+      command: timedPickupPlacementForProjectEvaluationAssembly(catalog, assembly, drop.owner)!,
       evaluate,
     }).assembly;
     const room = createOccurrenceAddress(
@@ -236,10 +238,11 @@ describe('spawned loot', () => {
       ...items.slice(0, -1).map(() => undefined),
       'levelResolution',
     ]);
+    // The placement query places it at its last index; the bare command has no due spawn.
     const placed = settleProjectEdit({
       catalog,
       before: assembly,
-      command: drop.placement.command!,
+      command: timedPickupPlacementForProjectEvaluationAssembly(catalog, assembly, drop.owner)!,
       evaluate,
     }).assembly;
     const after = spawnedLootForProjectEvaluationAssembly(

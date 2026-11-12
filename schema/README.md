@@ -45,7 +45,9 @@ fight customization moves from its `unlockExit` press to the door, in the
 room's `encounters.customizationByLockedExit` keyed by exit key; the press
 keeps only its `exitKey`. A Shrine rush is its own room action: a stored
 `rushed: true` purchase becomes the purchase directly followed by its
-`rushHermesShrineOffer` action, and every purchase loses the flag. A door,
+`rushHermesShrineOffer` action, and every purchase loses the flag. A Hermes
+delivery's or clocked drop's pickup row loses its `encounterPhaseKey`: the
+walk names the phase it falls due at. A door,
 cage, wheel or Hub reroll press keeps its `rerollId` and target, and a cage
 press loses its `slotKey`: each press's reward moves to the rerolled owner's
 `results` under its id (`rerolledIncomingReward`, `rerolledCages[slot]` or

@@ -24,7 +24,6 @@ import {
   hermesShrineDeliverySourceAddress,
   hermesShrinePurchaseAction,
   hermesShrineRushAction,
-  isDeliveryFlushHost,
   isSameRoomDelivery,
   parseHermesShrineDeliveryEntryKey,
 } from '../hermes-shrine-delivery';
@@ -456,18 +455,9 @@ export function activeRoomActionReferences(
           hermesShrineDeliverySourceAddress(shrineDelivery),
           createOccurrenceAddress(biome, occurrence.occurrenceId),
         );
-        const flushHost = isDeliveryFlushHost(room, routePosition);
-        // A retained cross-occurrence entry is not a timeline action until
-        // settlement ranks it at its reached delivery contact; dormant payload
-        // alone never re-admits a retracted delivery. The fourth-biome Preboss
-        // flush is the sole phase-less cross-occurrence contact and uses
-        // post-outgoing.
-        if (
-          !sourceIsCurrent &&
-          (existingReference === undefined ||
-            (reference.encounterPhaseKey === undefined && !flushHost))
-        )
-          continue;
+        // A retained cross-occurrence entry is not a timeline action until it is
+        // placed; dormant payload alone never re-admits a retracted delivery.
+        if (!sourceIsCurrent && existingReference === undefined) continue;
         if (sourceIsCurrent) {
           const order = occurrence.roomActions.order;
           if (hermesShrineRushAction(order, shrineDelivery.generationKey) === undefined) continue;

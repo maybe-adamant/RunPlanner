@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { Catalog, TraitDeclaration } from '@run-planner/engine/catalog-schema';
 import {
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -13,6 +14,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { createAuthoringSession } from '@run-planner/engine/authoring';
 import {
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
@@ -48,9 +50,9 @@ vi.mock('../../src/simulation/lifecycle', async (importOriginal) => {
 });
 
 /**
- * Witness for judging a delivery or clocked-drop row by position instead of by
- * its stored encounter phase, while the phase still exists. Each placed row's
- * stored phase must be the arrival the walk derives at room entry; the row
+ * Witness for judging a delivery or clocked-drop row by position. Each placed
+ * row's due phase, which the walk publishes, must be the arrival its pending
+ * countdowns and clocks name at room entry; the row
  * must stand after its due spawn (that phase's end effects, room entry for a
  * flush host, its rush for a rushed item) and before its deadline (the next
  * wheel's choice after a non-final Ship phase; otherwise Doors open for a
@@ -70,7 +72,8 @@ interface RowWitness {
   readonly entryKey: string;
   readonly kind: Kind;
   readonly family: Family;
-  readonly stored: string | undefined;
+  /** The phase whose end effects the walk makes it due at; absent for a flush or rush. */
+  readonly phase: string | undefined;
   /** The arrival the walk's pending countdowns and clocks name at room entry. */
   readonly derived: Arrival;
   /** Placed and reached by the walk; any other row has no position to judge. */
@@ -225,10 +228,13 @@ function witnessRoom(
       ? 'rush'
       : delivery === undefined
         ? 'clocked'
-        : reference.encounterPhaseKey === undefined &&
-            isDeliveryFlushHost(declaration, { ordinal: routeOrdinal })
+        : isDeliveryFlushHost(declaration, { ordinal: routeOrdinal })
           ? 'flush'
           : 'delivery';
+    const phase = derivedAcquisitionEntriesForProjectEvaluationAssembly(
+      assembly,
+      createAcquisitionSiteAddress(room.origin, reference.siteKey),
+    ).find((entry) => entry.address.entryKey === reference.entryKey)?.encounterPhaseKey;
     const placement = placements.find(
       (candidate) =>
         candidate.address.kind === 'acquisitionEntry' &&
@@ -242,7 +248,7 @@ function witnessRoom(
       entryKey: reference.entryKey,
       kind,
       family,
-      stored: reference.encounterPhaseKey,
+      phase,
       derived: derivedArrival(
         catalog,
         assembly,
@@ -278,11 +284,9 @@ function witnessRoom(
         : kind === 'flush'
           ? roomEntered
           : seqOf(
-              (event) =>
-                event.kind === 'encounterEndEffectsApplied' &&
-                event.phaseKey === reference.encounterPhaseKey,
+              (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === phase,
             );
-    const phaseIndex = phases.findIndex((phase) => phase.phaseKey === reference.encounterPhaseKey);
+    const phaseIndex = phases.findIndex((candidate) => candidate.phaseKey === phase);
     const nextWheelKey = phaseIndex < 0 ? undefined : phases[phaseIndex + 1]?.rewardWheelKey;
     const wheelKey =
       nextWheelKey === undefined
@@ -476,7 +480,7 @@ function authoredWitnesses(): RowWitness[] {
 }
 
 const rowLabel = (witness: RowWitness) =>
-  `${witness.project} ${witness.room} due ${witness.stored ?? witness.kind}`;
+  `${witness.project} ${witness.room} due ${witness.phase ?? witness.kind}`;
 
 describe('delivery and clocked-drop position under the due-spawn judgment', () => {
   const corpus = equivalenceCorpus().flatMap((entry) =>
@@ -498,7 +502,7 @@ describe('delivery and clocked-drop position under the due-spawn judgment', () =
       'P P delivery': 2,
       'Q single flush': 3,
     });
-    expect(authored.map((witness) => [witness.project, witness.room, witness.stored])).toEqual([
+    expect(authored.map((witness) => [witness.project, witness.room, witness.phase])).toEqual([
       ['fields/first-cage-drop-after-later-cage', 'H/golden-h-combat09 H_Combat09', 'Cage02'],
       ['fields/first-cage-drop-between-cages', 'H/golden-h-combat09 H_Combat09', 'Cage02'],
       ['clocked/trait-lost-mid-room', 'H/golden-h-miniboss01 H_MiniBoss01', 'Encounter'],
@@ -507,12 +511,12 @@ describe('delivery and clocked-drop position under the due-spawn judgment', () =
     expect(authored.every((witness) => witness.placement === 'reached')).toBe(true);
   });
 
-  it('derives each stored arrival from the walk at room entry', () => {
+  it("derives each walk's due phase from the pending state at room entry", () => {
     const disagreements = all.filter(
       (witness) =>
         // A trait gained inside the room has no clock to count down at its entry.
         !(witness.project === 'clocked/trait-gained-mid-room') &&
-        (witness.stored ?? (witness.derived === 'rush' ? 'rush' : 'flush')) !== witness.derived,
+        (witness.phase ?? (witness.derived === 'rush' ? 'rush' : 'flush')) !== witness.derived,
     );
     expect(disagreements).toEqual([]);
   });

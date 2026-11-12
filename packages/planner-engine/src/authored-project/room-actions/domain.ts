@@ -78,6 +78,7 @@ import {
 import { unlockExitAction } from '../locked-exits';
 import {
   parseClockedTraitGeneratedPickupEntryKey,
+  parseHeraclesBountySiteKey,
   selectedPickupProducerForEntry,
 } from '../acquisition/pickup-producers';
 import {
@@ -217,6 +218,22 @@ function afterEndEffects(graph: RoomEventGraph, phaseKey: string): RoomActionBou
 }
 
 /**
+ * A delivery or clocked drop arrives at the end effects of a phase the walk
+ * names, so structurally it stands after any end effects of the room and,
+ * required, before its doors open; optional, before it is left.
+ */
+function afterAnyEndEffects(
+  graph: RoomEventGraph,
+  participation: RoomActionParticipation,
+): RoomActionBounds {
+  const first = graph.phases[0]?.phaseKey;
+  return bounds(
+    first === undefined ? ROOM_ENTERED : frozen({ kind: 'endEffects' as const, phaseKey: first }),
+    participation === 'required' ? DOORS_OPENED : LEAVE,
+  );
+}
+
+/**
  * Where a delivery or clocked drop stands once its due spawn is known: after
  * the end effects of the phase it arrived at, or after the room's fights for
  * a Preboss flush (no phase).
@@ -256,7 +273,7 @@ function afterWheelPhase(graph: RoomEventGraph, wheelKey: string): RoomActionBou
  * unlock. Where the room opens no outgoing doors (Preboss) they span the room;
  * elsewhere purchases follow outgoing generation.
  */
-function shopPurchaseBounds(graph: RoomEventGraph): RoomActionBounds {
+export function shopPurchaseBounds(graph: RoomEventGraph): RoomActionBounds {
   return graph.events.some((event) => event.kind === 'doorsOpened' && event.generatesOutgoing)
     ? AFTER_DOORS
     : afterCombat(graph);
@@ -738,6 +755,7 @@ function baseContribution(
     }
     case 'interactAcquisitionEntry': {
       const clockedTraitPickup = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey);
+      const bountyPhase = parseHeraclesBountySiteKey(reference.siteKey);
       const hermesDelivery =
         reference.siteKey === 'hermesShrineDelivery'
           ? parseHermesShrineDeliveryEntryKey(reference.entryKey)
@@ -780,33 +798,20 @@ function baseContribution(
         reference.entryKey,
         producer,
       );
-      // A fight the player's verb starts (a Fields cage) spawns its due pickups only
-      // after that verb's row; like its reward, they are taken any time after it.
-      const verbTrigger =
-        reference.encounterPhaseKey === undefined ||
-        (clockedTraitPickup === undefined &&
-          (hermesDelivery === undefined || sameRoomShrineDelivery))
-          ? undefined
-          : graph.events.find(
-              (event) =>
-                event.kind === 'encounterBegun' &&
-                event.phaseKey === reference.encounterPhaseKey &&
-                event.trigger.kind === 'action',
-            )?.trigger;
       const action = contribution(
         biome,
         occurrence,
         reference,
         required ? 'required' : 'optional',
-        clockedTraitPickup !== undefined && reference.encounterPhaseKey !== undefined
-          ? afterEndEffects(graph, reference.encounterPhaseKey)
+        clockedTraitPickup !== undefined
+          ? afterAnyEndEffects(graph, 'optional')
           : hermesDelivery !== undefined
             ? sameRoomShrineDelivery
               ? AFTER_DOORS
-              : reference.encounterPhaseKey === undefined && finalPrebossHost
+              : finalPrebossHost
                 ? // A flushed delivery is a required object that gates the exit.
                   afterCombat(graph)
-                : afterEndEffects(graph, reference.encounterPhaseKey!)
+                : afterAnyEndEffects(graph, 'required')
             : producer?.placement === 'roomExit' ||
                 producer?.sourceAction?.kind === 'interactChallengeSwitch' ||
                 (producer?.source.kind === 'traitOffer' &&
@@ -815,9 +820,14 @@ function baseContribution(
               ? occurrence.state.kind === 'shop'
                 ? shopPurchaseBounds(graph)
                 : AFTER_DOORS
-              : afterCombat(graph),
+              : bountyPhase !== undefined
+                ? // Heracles drops it as his own encounter ends (`HeraclesPostCombat`).
+                  spawnedAtEnd(
+                    graph,
+                    frozen({ kind: 'encounterEnd' as const, phaseKey: bountyPhase }),
+                  )
+                : afterCombat(graph),
         [
-          ...(verbTrigger?.kind !== 'action' ? [] : [frozen({ action: verbTrigger.action })]),
           ...purchaseSourceDependencies(catalog, occurrence, reference),
           ...hermesShrinePurchaseDependencies(
             occurrence,

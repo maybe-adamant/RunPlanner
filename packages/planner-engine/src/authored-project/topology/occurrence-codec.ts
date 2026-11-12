@@ -59,7 +59,6 @@ import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import {
   hermesShrinePurchaseAction,
   hermesShrineRushAction,
-  isDeliveryFlushHost,
   offerFor,
   parseHermesShrineDeliveryEntryKey,
 } from '../hermes-shrine-delivery';
@@ -375,7 +374,6 @@ function assertHermesShrineDeliveryActionClosure(
       hermesShrinePurchaseAction(roomActions.order, reference.generationKey) === undefined
     )
       failProjectDocument(path, 'Shrine rush actions require their purchase');
-  const finalPrebossHost = isDeliveryFlushHost(catalog.rooms.byKey[source.gameName], routePosition);
   for (const reference of roomActions.order) {
     if (
       reference.kind !== 'interactAcquisitionEntry' ||
@@ -388,16 +386,6 @@ function assertHermesShrineDeliveryActionClosure(
       parsed.routeKey === source.routeKey &&
       parsed.biomeKey === source.biomeKey &&
       parsed.sourceOccurrenceId === source.occurrenceId;
-    if (sourceIsCurrent && reference.encounterPhaseKey !== undefined)
-      failProjectDocument(
-        path,
-        'same-room Shrine deliveries must use the post-outgoing window without an encounter phase',
-      );
-    if (!sourceIsCurrent && reference.encounterPhaseKey === undefined && !finalPrebossHost)
-      failProjectDocument(
-        path,
-        'cross-occurrence Shrine deliveries must preserve their due encounter phase',
-      );
     // A rushed item is optional loot: its rush may have no ranked pickup,
     // but a same-room pickup always belongs to one rush action.
     if (

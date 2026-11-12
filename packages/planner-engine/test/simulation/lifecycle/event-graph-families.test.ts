@@ -473,18 +473,27 @@ describe('Ship phase', () => {
       new RegExp(`^wheelsOpen:Intro: ${shrineDelivery}:.* ${delivery}$`),
     );
 
-    // Placed after the click, it keeps the walk from taking the click.
+    // Placed after the click, it lies on the ground as the wheel is chosen: the walk stops at
+    // the click (`HasRoomRequiredObject`), naming the delivery to take first.
     const reference = room.reference(shrineDelivery);
     const moved = editTestRoomActionOrder(run.project, catalog, oShipDelivery, (order) => {
       const rest = order.filter((entry) => roomActionKey(entry) !== roomActionKey(reference));
       const click = rest.findIndex((entry) => entry.kind === 'chooseRewardWheel');
       return [...rest.slice(0, click + 1), reference, ...rest.slice(click + 1)];
     });
-    const late = observe(simulate(moved), oShipDelivery);
-    expect(late.fragment.blockedAt).toMatchObject({
-      actionKey: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
-    });
-    expect(late.walk).not.toContain('encounterStarted(Combat1)');
+    expect(simulate(moved).assembly.evaluation.issue?.reasons).toEqual([
+      expect.objectContaining({
+        code: 'roomActionOrderUnavailable',
+        origin: expect.objectContaining({
+          actionKey: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
+        }),
+        evidence: {
+          reason: 'beforeEnabler',
+          point: { kind: 'gate', phaseKey: 'Combat1' },
+          requiredAction: roomActionKey(reference),
+        },
+      }),
+    ]);
   });
 
   it('opens the wheels in the walk before the reroll and the choice', () => {

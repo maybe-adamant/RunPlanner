@@ -378,8 +378,6 @@ export type RoomActionReference =
       readonly kind: 'interactAcquisitionEntry';
       readonly siteKey: string;
       readonly entryKey: string;
-      /** Exact encounter end at which a cross-occurrence Shrine delivery matured. */
-      readonly encounterPhaseKey?: string;
       readonly content?: RoomActionContent;
     }
   | { readonly kind: 'useFountain' }

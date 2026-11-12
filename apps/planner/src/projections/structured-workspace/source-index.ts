@@ -1,5 +1,10 @@
 import { generatedPickupPlacementRepairLabel } from './assembly/occurrence-action-label';
-import { assessRoomActionPlacements } from '@run-planner/engine/simulation';
+import {
+  assessRoomActionPlacements,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  timedPickupPlacementForProjectEvaluationAssembly,
+  type ProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 import {
   structurallyInvalidGeneratedPickupPlacements,
   roomActionKey,
@@ -85,6 +90,23 @@ import {
 } from '@run-planner/engine/simulation';
 
 import { StructuredWorkspaceProjectionContractError } from './contract';
+
+/** A site's derived entries, each due delivery or clocked drop with the engine's placement command. */
+export function workspaceDerivedAcquisitionEntries(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  site: AcquisitionSiteAddress,
+) {
+  return derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, site).map((entry) => {
+    if (entry.reference === undefined) return entry;
+    const placement = timedPickupPlacementForProjectEvaluationAssembly(
+      catalog,
+      assembly,
+      entry.address,
+    );
+    return placement === undefined ? entry : Object.freeze({ ...entry, placement });
+  });
+}
 import { compareAuthoredTargetsInPhysicalOrder, compareCodeUnitStrings } from './assembly/ordering';
 
 export interface WorkspaceEvaluatedBatchOverlay {
@@ -269,7 +291,11 @@ export interface WorkspaceBiomeSource {
     readonly rewardTypes?: readonly string[];
     readonly fixedReward?: import('@run-planner/engine/authored-project').AuthoredRewardState;
     readonly producerLifecycleKey?: string;
-    readonly encounterPhaseKey?: string;
+    /** The row that places a due delivery or clocked drop, and how the editor names its timing. */
+    readonly reference?: import('@run-planner/engine/authored-project').RoomActionReference;
+    readonly label?: import('@run-planner/engine/simulation').RoomActionRowLabel;
+    /** The command placing a due delivery or clocked drop where it is live. */
+    readonly placement?: import('@run-planner/engine/simulation').TimedPickupPlacementCommand;
     readonly participation?: 'required' | 'optional';
     readonly retainedSourceMismatch?: boolean;
     readonly eligibleSourceOfferKeys?: readonly string[];

@@ -295,7 +295,6 @@ describe('room action insertion legality', () => {
       kind: 'interactAcquisitionEntry',
       siteKey: 'hermesShrineDelivery',
       entryKey: 'delivery',
-      encounterPhaseKey: 'Gone',
     };
     const retained = roomActionOrderContext({
       eventGraph: structure,
@@ -339,7 +338,6 @@ describe('deadlines', () => {
     kind: 'interactAcquisitionEntry',
     siteKey: 'hermesShrineDelivery',
     entryKey: 'delivery',
-    encounterPhaseKey: 'First',
   };
   const twoFightContext = roomActionOrderContext({
     eventGraph: twoFights,

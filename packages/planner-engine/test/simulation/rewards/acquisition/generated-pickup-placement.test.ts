@@ -23,7 +23,6 @@ const reference = {
   kind: 'interactAcquisitionEntry' as const,
   siteKey: 'hermesShrineDelivery',
   entryKey: hermesShrineDeliveryEntryKey(source, 'initial:first'),
-  encounterPhaseKey: 'combat1',
 };
 const seed = initializeTestRewardBranch();
 function delivery(
@@ -53,13 +52,15 @@ function delivery(
     },
   };
 }
-it('judges the reached state and distinguishes exact Hermes host and phase from payload', () => {
+it('judges the reached state and distinguishes the exact Hermes host from payload', () => {
   const assess = (branch: RewardBranchState | undefined) =>
-    assessReachedHermesDeliveryPlacement(host, reference, branch, 9).assessment.kind;
+    assessReachedHermesDeliveryPlacement(host, reference, branch, 9, undefined).placement.assessment
+      .kind;
   expect(assess(undefined)).toBe('unassessed');
   expect(assess(delivery())).toBe('valid');
   expect(assess(delivery(source))).toBe('invalid');
-  expect(assess(delivery(host, 'combat2'))).toBe('invalid');
+  // The walk, not a stored phase, times the row: any phase of its due host holds it.
+  expect(assess(delivery(host, 'combat2'))).toBe('valid');
   expect(assess(seed)).toBe('invalid');
   expect(
     assessReachedHermesDeliveryPlacement(
@@ -67,7 +68,8 @@ it('judges the reached state and distinguishes exact Hermes host and phase from 
       { kind: reference.kind, siteKey: reference.siteKey, entryKey: reference.entryKey },
       delivery(host, null),
       9,
-    ).assessment.kind,
+      undefined,
+    ).placement.assessment.kind,
   ).toBe('valid');
 });
 it('matches clocked evidence to the reached maturity instead of temporally accumulated cohort sizes', () => {
@@ -75,7 +77,6 @@ it('matches clocked evidence to the reached maturity instead of temporally accum
     kind: 'interactAcquisitionEntry' as const,
     siteKey: 'roomExit',
     entryKey: clockedTraitGeneratedPickupEntryKey('sourceIdentity', 'pomSlice1'),
-    encounterPhaseKey: 'combat1',
   };
   const event = {
     kind: 'pickupProducerProgress' as const,
@@ -114,11 +115,13 @@ it('matches clocked evidence to the reached maturity instead of temporally accum
   const assess = (
     reached: RewardBranchState | undefined,
     contact: DerivedAcquisitionEntryFrontier | undefined,
-  ) => assessReachedClockedPickupPlacement(host, clocked, reached, contact, 9).assessment.kind;
+  ) =>
+    assessReachedClockedPickupPlacement(host, clocked, reached, contact, 9, undefined).placement
+      .assessment.kind;
   expect(assess(undefined, undefined)).toBe('unassessed');
   expect(assess(branch, undefined)).toBe('unassessed');
   expect(assess(branch, frontier)).toBe('valid');
-  expect(assess(branch, { ...frontier, encounterPhaseKey: 'combat2' })).toBe('invalid');
+  expect(assess(branch, { ...frontier, encounterPhaseKey: 'combat2' })).toBe('valid');
   expect(assess(branch, { ...frontier, historySequence: 6 })).toBe('unassessed');
   expect(assess(seed, frontier)).toBe('invalid');
 });
@@ -127,7 +130,6 @@ it('tells a clocked drop whose producer is gone from one whose held producer mat
     kind: 'interactAcquisitionEntry' as const,
     siteKey: 'roomExit',
     entryKey: clockedTraitGeneratedPickupEntryKey('sourceIdentity', 'pom1'),
-    encounterPhaseKey: 'combat1',
   };
   const holding = (traits: RewardBranchState['state']['traitHistory']['equippedTraits']) => ({
     ...seed,
@@ -145,7 +147,14 @@ it('tells a clocked drop whose producer is gone from one whose held producer mat
     pickupProducerInterval: 7,
   };
   const reason = (branch: RewardBranchState) => {
-    const { assessment } = assessReachedClockedPickupPlacement(host, clocked, branch, undefined, 9);
+    const { assessment } = assessReachedClockedPickupPlacement(
+      host,
+      clocked,
+      branch,
+      undefined,
+      9,
+      undefined,
+    ).placement;
     return assessment.kind === 'invalid' ? assessment.reason : assessment.kind;
   };
   // Held but not maturing here: the drop belongs elsewhere.

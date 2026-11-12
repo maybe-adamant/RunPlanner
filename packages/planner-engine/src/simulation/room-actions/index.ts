@@ -4,6 +4,7 @@ export {
   asUnplacedWhenReplaced,
   doorsReadyAfterRank,
   performedRoomActions,
+  rowDueContact,
   scopeRoomActionRoster,
 } from './assemble';
 export { roomActionRowContact, timedPickupDueContact } from './required-scope';

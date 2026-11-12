@@ -165,70 +165,6 @@ describe('timed-effect edit settlement', () => {
       ),
     ).toEqual([]);
   });
-  it('keeps an invalid inherited clocked pickup reached again, with its finding', () => {
-    const id = 'surface-p-1-1-p_combat03';
-    const checkpoint = loadSurfaceScheduledLifecycleCheckpoint();
-    // The Supply Chain pickup matures at Combat; placing it at Intro's end makes it stale.
-    const project: ProjectDocument = {
-      ...checkpoint,
-      route: {
-        ...checkpoint.route,
-        biomes: checkpoint.route.biomes.map((biome) => ({
-          ...biome,
-          ...(biome.topology == null
-            ? {}
-            : {
-                topology: {
-                  ...biome.topology,
-                  occurrences: biome.topology.occurrences.map((room) =>
-                    room.occurrenceId !== id
-                      ? room
-                      : {
-                          ...room,
-                          roomActions: {
-                            ...room.roomActions,
-                            order: room.roomActions.order.map((reference) =>
-                              reference.kind === 'interactAcquisitionEntry' &&
-                              reference.entryKey.startsWith('clockedTraitGenerated:')
-                                ? { ...reference, encounterPhaseKey: 'Intro' }
-                                : reference,
-                            ),
-                          },
-                        },
-                  ),
-                },
-              }),
-        })),
-      },
-    };
-    const stale = (assembly: ReturnType<typeof evaluate>) =>
-      assembly.evaluation.findings.filter(
-        (finding) =>
-          finding.code === 'rewardSourceUnavailable' &&
-          finding.origin.kind === 'acquisitionEntry' &&
-          finding.origin.entryKey.startsWith('clockedTraitGenerated:'),
-      );
-    expect(stale(evaluate(project))).toHaveLength(1);
-    const trait = createTraitOfferAddress(
-      createIncomingRewardAddress(
-        createBiomeAddress('Surface', 'N'),
-        createOccurrenceId('surface-n-combat11'),
-      ),
-      'source',
-    );
-    const unreached = settle(project, {
-      kind: 'ReplaceTraitSelection',
-      trait,
-      selectedOptionKey: 'option2',
-    });
-    const reached = settle(unreached.project, {
-      kind: 'ReplaceTraitSelection',
-      trait,
-      selectedOptionKey: 'option1',
-    });
-    expect(reached.project).toEqual(project);
-    expect(stale(reached)).toHaveLength(1);
-  });
   it('retains an active downstream Embryo outcome through Shadow activation and removal', () => {
     const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
     const value = { blessingKey: 'ChaosElementalBlessing', blessingValues: {} } as const;
@@ -559,7 +495,6 @@ describe('timed-effect edit settlement', () => {
       project = applyProjectCommand(project, catalog, {
         kind: 'PlaceHermesShrineDelivery',
         entry,
-        encounterPhaseKey: 'Encounter',
       });
       const apollo = {
         rewardType: 'BlindBoxLoot',
@@ -602,7 +537,7 @@ describe('timed-effect edit settlement', () => {
               generationKey: 'initial:secondLeft',
               delay: 4,
             }
-          : { kind: 'PlaceHermesShrineDelivery', entry, encounterPhaseKey: 'Encounter' },
+          : { kind: 'PlaceHermesShrineDelivery', entry },
       );
       // Rescheduled, the old delivery item goes with its host's entry: nothing is left behind.
       if (operation === 'reschedule')

@@ -182,30 +182,11 @@ function decodeRoomActionReference(
     });
   }
   if (kind === 'interactAcquisitionEntry') {
-    const hasEncounterPhaseKey = Object.hasOwn(reference, 'encounterPhaseKey');
-    expectExactKeys(
-      reference,
-      [
-        'kind',
-        'siteKey',
-        'entryKey',
-        ...(hasEncounterPhaseKey ? ['encounterPhaseKey'] : []),
-        ...content.keys,
-      ],
-      path,
-    );
+    expectExactKeys(reference, ['kind', 'siteKey', 'entryKey', ...content.keys], path);
     return Object.freeze({
       kind,
       siteKey: expectNonBlankString(reference.siteKey, `${path}.siteKey`),
       entryKey: expectNonBlankString(reference.entryKey, `${path}.entryKey`),
-      ...(hasEncounterPhaseKey
-        ? {
-            encounterPhaseKey: expectNonBlankString(
-              reference.encounterPhaseKey,
-              `${path}.encounterPhaseKey`,
-            ),
-          }
-        : {}),
       ...content.value,
     });
   }

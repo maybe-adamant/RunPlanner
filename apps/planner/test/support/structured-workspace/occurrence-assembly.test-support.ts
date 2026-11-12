@@ -30,7 +30,6 @@ import {
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
-  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   encounterOutcomesForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
@@ -75,7 +74,10 @@ import {
 import { assembleWorkspaceOccurrence } from '@planner/projections/structured-workspace/assembly/occurrence-assembly';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from '@planner/projections/structured-workspace/assembly/occurrence-facts';
 import { createWorkspaceBiomeMarkerDestinationBuilder } from '@planner/projections/structured-workspace/navigation/marker-builder';
-import { createWorkspaceProjectSourceIndex } from '@planner/projections/structured-workspace/source-index';
+import {
+  createWorkspaceProjectSourceIndex,
+  workspaceDerivedAcquisitionEntries,
+} from '@planner/projections/structured-workspace/source-index';
 /* eslint-enable no-restricted-imports */
 
 function biomeSource(
@@ -95,7 +97,7 @@ function biomeSource(
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
     undefined,
     gorgonSupport,
-    (site) => derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, site),
+    (site) => workspaceDerivedAcquisitionEntries(sourceCatalog, assembly, site),
     (address) => traitOfferCandidateForProjectEvaluationAssembly(assembly, address) !== undefined,
     (occurrence) => blockedOccurrenceRoomForProjectEvaluationAssembly(assembly, occurrence),
     undefined,

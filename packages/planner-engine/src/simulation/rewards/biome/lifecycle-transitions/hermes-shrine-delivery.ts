@@ -7,8 +7,8 @@ import {
 } from '../../../../authored-project/addresses';
 import {
   defaultHermesShrineDeliveryReward,
-  dueContactMatches,
   hermesShrineDeliveryEntryKey,
+  isSameRoomDelivery,
 } from '../../../../authored-project/hermes-shrine-delivery';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { timedPickupDueContact } from '../../../room-actions';
@@ -45,8 +45,9 @@ export function dueHermesShrineDeliveryFrontier(
       generatedPickupPlacements: Object.freeze([]),
     });
   for (const delivery of Object.values(branch.state.pendingHermesShrineDeliveries)) {
-    // The frontier covers every phase of the host; the exact phase is checked per retained action.
-    if (!dueContactMatches(delivery, deliveryHost)) continue;
+    // Only what fell due at this host arrives here; a placed row is timed by the walk.
+    if (delivery.due === undefined || !isSameRoomDelivery(delivery.due.host, deliveryHost))
+      continue;
     const entryKey = hermesShrineDeliveryEntryKey(delivery.source, delivery.generationKey);
     const retained =
       room?.kind === 'authored'
@@ -62,7 +63,21 @@ export function dueHermesShrineDeliveryFrontier(
     if (retainedReference?.kind === 'interactAcquisitionEntry')
       placements.set(
         entryKey,
-        assessReachedHermesDeliveryPlacement(deliveryHost, retainedReference, branch, sequence),
+        assessReachedHermesDeliveryPlacement(
+          deliveryHost,
+          retainedReference,
+          branch,
+          sequence,
+          // It falls due at this contact, so the walk's later events take no part.
+          room === undefined
+            ? undefined
+            : {
+                catalog,
+                declaration: catalog.rooms.byKey[room.gameName],
+                graph: room.roomActionRoster.eventGraph,
+                events: [],
+              },
+        ).placement,
       );
     const fixedReward = defaultHermesShrineDeliveryReward(
       catalog,
@@ -75,8 +90,7 @@ export function dueHermesShrineDeliveryFrontier(
         (row) =>
           row.reference.kind === 'interactAcquisitionEntry' &&
           row.reference.siteKey === 'hermesShrineDelivery' &&
-          row.reference.entryKey === entryKey &&
-          row.reference.encounterPhaseKey === encounterPhaseKey,
+          row.reference.entryKey === entryKey,
       );
     if (retained === undefined || !hasExactDeliveryAction) {
       findings.push(

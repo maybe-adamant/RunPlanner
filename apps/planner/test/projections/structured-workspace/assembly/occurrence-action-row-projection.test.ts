@@ -530,17 +530,31 @@ describe('structured workspace actions assembly', () => {
   it('projects two matured clocked trait pickups through the existing optional-action surface', () => {
     const owner = createOccurrenceAddress(goldenFBiome, goldenFStartId);
     const site = createAcquisitionSiteAddress(owner, 'roomExit');
-    const entries = ['pom1', 'pom2'].map((pickupKey) => ({
-      address: createAcquisitionEntryAddress(
+    const entries = ['pom1', 'pom2'].map((pickupKey) => {
+      const address = createAcquisitionEntryAddress(
         site,
         clockedTraitGeneratedPickupEntryKey('icarus-supply', pickupKey),
-      ),
-      kind: 'clockedTraitPickup' as const,
-      rewardTypes: ['StoreRewardRandomStack'],
-      producerLifecycleKey: 'GeneratedTraitPickup',
-      encounterPhaseKey: 'Encounter',
-      participation: 'optional' as const,
-    }));
+      );
+      return {
+        address,
+        kind: 'clockedTraitPickup' as const,
+        rewardTypes: ['StoreRewardRandomStack'],
+        producerLifecycleKey: 'GeneratedTraitPickup',
+        reference: {
+          kind: 'interactAcquisitionEntry' as const,
+          siteKey: 'roomExit',
+          entryKey: address.entryKey,
+        },
+        label: { kind: 'afterEncounterEnd' as const, phaseKey: 'Encounter' },
+        placement: {
+          kind: 'PlaceClockedTraitPickup' as const,
+          entry: address,
+          producerLifecycleKey: 'GeneratedTraitPickup',
+          rewardType: 'StoreRewardRandomStack',
+        },
+        participation: 'optional' as const,
+      };
+    });
     const { assembly } = assemble(
       createGoldenFGHIProject(),
       'Underworld',
@@ -587,7 +601,6 @@ describe('structured workspace actions assembly', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'roomExit',
         entryKey: entry.entryKey,
-        encounterPhaseKey: 'Encounter',
       },
       { kind: 'none' },
       [],
@@ -768,7 +781,6 @@ describe('structured workspace actions assembly', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey,
-        encounterPhaseKey: 'Encounter',
       },
       { kind: 'none' },
       [],
@@ -788,7 +800,6 @@ describe('structured workspace actions assembly', () => {
           kind: 'interactAcquisitionEntry',
           siteKey: 'hermesShrineDelivery',
           entryKey,
-          encounterPhaseKey: 'Encounter',
         },
         { kind: 'none' },
         [],
@@ -966,12 +977,11 @@ describe('structured workspace actions assembly', () => {
       label: 'Collect Max Health',
       participation: 'required',
       rank: null,
-      reference: { encounterPhaseKey: 'Encounter' },
+      reference: { kind: 'interactAcquisitionEntry', siteKey: 'hermesShrineDelivery', entryKey },
       timing: { kind: 'afterEncounterEnd', phaseKey: 'Encounter' },
     });
-    expect(dueRow?.placement?.command).toEqual({
+    expect(dueRow?.placement?.command).toMatchObject({
       kind: 'PlaceHermesShrineDelivery',
-      encounterPhaseKey: 'Encounter',
       entry,
     });
     expect(dueRow?.proposalKeys).toEqual([]);

@@ -2,7 +2,14 @@ import { roomRunsCages } from '../../../encounters/model';
 import {
   assessReachedHermesDeliveryPlacement,
   assessReachedClockedPickupPlacement,
+  type TimedPickupJudgment,
+  type TimedPickupRoomWalk,
 } from '../../acquisition/generated-pickup-placement';
+import {
+  createRoomActionAddress,
+  createBiomeAddress,
+} from '../../../../authored-project/addresses';
+import { roomActionKey } from '../../../../authored-project/room-actions/state';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import {
@@ -16,8 +23,8 @@ import {
   parseArtificerReplacementEntryKey,
 } from '../../../../authored-project/acquisition/artificer';
 import {
-  dueContactMatches,
   hermesShrineDeliveryEntryKey,
+  isSameRoomDelivery,
   parseHermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../../../../authored-project/acquisition/pickup-producers';
@@ -86,6 +93,8 @@ export interface AcquisitionPointReachedInputs {
     readonly owner: import('../../../../authored-project/addresses').RoomActionAddress;
   };
   readonly derivedAcquisitionEntryFrontier?: DerivedAcquisitionEntryFrontier;
+  /** The room's history events, which time a delivery or clocked-drop row. */
+  readonly roomEvents?: readonly HistoryEvent[];
   readonly derivedAcquisitionEntryCapability?: import('../../acquisition/artifacts').DerivedAcquisitionEntryCandidateCapability;
 }
 
@@ -381,9 +390,40 @@ export function applyAcquisitionPointReachedTransition(
     )?.reference;
     const pickupReference =
       retainedReference?.kind === 'interactAcquisitionEntry' ? retainedReference : undefined;
+    const walk: TimedPickupRoomWalk | undefined =
+      inputs.roomEvents === undefined
+        ? undefined
+        : Object.freeze({
+            catalog,
+            declaration,
+            graph: room.roomActionRoster.eventGraph,
+            events: inputs.roomEvents,
+          });
+    // A row before its due spawn acquires nothing and carries the order finding.
+    const misordered = (judgment: TimedPickupJudgment | undefined) => {
+      const point = judgment?.beforeSpawn;
+      if (pickupReference === undefined || point === undefined) return false;
+      const origin = createRoomActionAddress(
+        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+        room.origin.occurrenceId,
+        roomActionKey(pickupReference),
+      );
+      addRewardFinding(
+        findings,
+        Object.freeze({
+          code: 'roomActionOrderUnavailable' as const,
+          phase: 'encounterResolution' as const,
+          origin,
+          evidence: Object.freeze({ reason: 'beforeSpawn' as const, point }),
+        }),
+        ownerRegion(origin),
+        chronology,
+      );
+      return true;
+    };
     const clockedTraitPickup = parseClockedTraitGeneratedPickupEntryKey(event.entryKey);
     if (site !== undefined && clockedTraitPickup !== undefined) {
-      const placement =
+      const judgment =
         pickupReference === undefined
           ? undefined
           : assessReachedClockedPickupPlacement(
@@ -392,8 +432,11 @@ export function applyAcquisitionPointReachedTransition(
               inputs.sourceBranch,
               inputs.derivedAcquisitionEntryFrontier,
               event.sequence,
+              walk,
             );
+      const placement = judgment?.placement;
       if (placement !== undefined) generatedPickupPlacements.push(placement);
+      if (misordered(judgment)) return publish({ branch: inputs.sourceBranch, findings });
       const capability = inputs.derivedAcquisitionEntryCapability;
       const retained = site.entries[event.entryKey];
       const entry = createAcquisitionEntryAddress(site.address, event.entryKey);
@@ -456,7 +499,7 @@ export function applyAcquisitionPointReachedTransition(
         ? parseHermesShrineDeliveryEntryKey(event.entryKey)
         : undefined;
     if (site !== undefined && shrineDelivery !== undefined) {
-      const placement =
+      const judgment =
         pickupReference === undefined
           ? undefined
           : assessReachedHermesDeliveryPlacement(
@@ -464,8 +507,11 @@ export function applyAcquisitionPointReachedTransition(
               pickupReference,
               inputs.sourceBranch,
               event.sequence,
+              walk,
             );
+      const placement = judgment?.placement;
       if (placement !== undefined) generatedPickupPlacements.push(placement);
+      if (misordered(judgment)) return publish({ branch: inputs.sourceBranch, findings });
       const sourceOrigin = {
         kind: 'occurrence' as const,
         routeKey: shrineDelivery.routeKey,
@@ -474,11 +520,11 @@ export function applyAcquisitionPointReachedTransition(
       };
       const sourceKey = hermesShrineDeliveryEntryKey(sourceOrigin, shrineDelivery.generationKey);
       const due = inputs.sourceBranch.state.pendingHermesShrineDeliveries[sourceKey];
-      // The host is checked here; the placement assessment above already proved the exact phase.
+      // The placement above found it due here and the row after its due spawn.
       const agreedDue =
         placement?.assessment.kind === 'valid' &&
-        due !== undefined &&
-        dueContactMatches(due, room.origin)
+        due?.due !== undefined &&
+        isSameRoomDelivery(due.due.host, room.origin)
           ? due
           : undefined;
       const retained = site.entries[event.entryKey];

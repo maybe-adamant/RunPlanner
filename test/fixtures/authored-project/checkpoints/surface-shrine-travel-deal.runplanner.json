@@ -1900,7 +1900,6 @@
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "hermesShrineDelivery",
                     "entryKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22N%22%2C%22surface-n-preboss%3Apostboss%22%2C%22travelDealRefill%22%5D",
-                    "encounterPhaseKey": "Combat1",
                     "content": [
                       "ArmorBoost"
                     ]

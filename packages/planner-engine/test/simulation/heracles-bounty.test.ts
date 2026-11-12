@@ -11,6 +11,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRoomActionAddress,
   createTraitOfferAddress,
   HERACLES_BOUNTY_ENTRY_KEY,
   heraclesBountySiteKey,
@@ -30,9 +31,16 @@ import {
   loadSurfaceNCheckpoint,
   loadSurfaceNQuickBuckCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
-import { nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOPQProject,
+  nBiome,
+  nOccurrenceId,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import {
   authorTestTraitsAndRequiredItems,
+  collectTestRequiredItems,
   editTestRoomActionOrder,
   procTestSeaStar,
   replaceTestPlacedItem,
@@ -49,6 +57,7 @@ import { settlePickupAcquisitionSite } from '../../src/simulation/rewards/acquis
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
 import { factsWithHistory } from '@run-planner/engine/reward-kernel';
 import { initializeTestRewardBranch } from '../support/arcana-fear';
+import { canonicalRoom } from '../support/live-actions';
 import { baseFacts } from './shop-trait-purchase-support';
 
 const combat05 = nOccurrenceId('combat05');
@@ -209,6 +218,57 @@ describe('Heracles’s bounty', () => {
       .find((biome) => biome.biomeKey === 'N')!
       .topology!.occurrences.find((candidate) => candidate.occurrenceId === combat05)!;
     expect(remaining.acquisitionSites?.[bountySite.pointKey]).toBeUndefined();
+  });
+
+  it('is due before his own phase ends in a Ship room, so before the next wheel’s choice', () => {
+    const shipId = oOccurrenceIds.combat01;
+    const ship = createOccurrenceAddress(oBiome, shipId);
+    const shipBiome = createBiomeAddress(ship.routeKey, ship.biomeKey);
+    const intro = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: shipId },
+      'Intro',
+    );
+    const bounty: RoomActionReference = Object.freeze({
+      kind: 'interactAcquisitionEntry',
+      siteKey: heraclesBountySiteKey('Intro'),
+      entryKey: HERACLES_BOUNTY_ENTRY_KEY,
+    });
+    const choice: RoomActionReference = Object.freeze({
+      kind: 'chooseRewardWheel',
+      wheelKey: 'wheel1',
+    });
+    const project = collectTestRequiredItems(
+      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase: intro,
+        encounterKey: 'HeraclesCombatO',
+      }),
+    );
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.findings).toEqual([]);
+    const rows = canonicalRoom(assembly, ship)!.roomActionRoster.rows;
+    // Heracles waits for the room to be ready before his encounter ends.
+    expect(rows.find((row) => row.key === roomActionKey(bounty))?.bounds).toEqual({
+      spawn: { kind: 'encounterEnd', phaseKey: 'Intro' },
+      deadline: { kind: 'endEffects', phaseKey: 'Intro' },
+    });
+    expect(rows.map((row) => row.key).slice(0, 2)).toEqual([
+      roomActionKey(bounty),
+      roomActionKey(choice),
+    ]);
+    // Taken after the wheel's choice, it leaves the choice waiting on it.
+    const late = editTestRoomActionOrder(project, catalog, ship, (current) => [
+      ...current.filter((action) => roomActionKey(action) !== roomActionKey(bounty)),
+      ...current.filter((action) => roomActionKey(action) === roomActionKey(bounty)),
+    ]);
+    expect(simulateProjectAssembly(catalog, late).evaluation.issue?.reasons).toEqual([
+      expect.objectContaining({
+        code: 'roomActionOrderUnavailable',
+        origin: createRoomActionAddress(shipBiome, shipId, roomActionKey(choice)),
+        evidence: expect.objectContaining({ requiredAction: roomActionKey(bounty) }),
+      }),
+    ]);
   });
 
   it('pays its base unmultiplied, re-multiplied only by a money multiplier taken while it lies', () => {

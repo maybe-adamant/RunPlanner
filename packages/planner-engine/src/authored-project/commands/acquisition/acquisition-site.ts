@@ -28,7 +28,6 @@ import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import {
   defaultHermesShrineDeliveryReward,
   hermesShrineDeliverySourceAddress,
-  isDeliveryFlushHost,
   isSameRoomDelivery,
   parseHermesShrineDeliveryEntryKey,
   purchasedOfferFor,
@@ -45,7 +44,6 @@ import {
 import { roomActionKey } from '../../room-actions/state';
 import { withChosenIndex } from '../chosen-index';
 import { roomActionOpeningPoint, roomEventPlaces } from '../../room-actions/event-graph';
-import { resolveRoutePosition } from '../../route-context';
 
 function refuseIndexWhenPlaced(command: AcquisitionSiteCommand & { readonly index?: number }) {
   if (command.index !== undefined)
@@ -117,8 +115,6 @@ export function applyAcquisitionSiteCommand(
       failCommand(command, 'is not a room-local clocked pickup site');
     if (parseClockedTraitGeneratedPickupEntryKey(command.entry.entryKey) === undefined)
       failCommand(command, 'does not name a clocked trait pickup');
-    if (command.encounterPhaseKey.trim().length === 0)
-      failCommand(command, 'has no maturity encounter phase');
     const lifecycle = catalog.rewards.producerLifecycles.byKey[command.producerLifecycleKey];
     if (lifecycle?.rewardTypes.byKey[command.rewardType] === undefined)
       failCommand(command, 'has no declared producer lifecycle reward binding');
@@ -128,7 +124,6 @@ export function applyAcquisitionSiteCommand(
       kind: 'interactAcquisitionEntry' as const,
       siteKey: 'roomExit',
       entryKey: command.entry.entryKey,
-      encounterPhaseKey: command.encounterPhaseKey,
     });
     const actionKey = roomActionKey(reference);
     const existingIndex = host.roomActions.order.findIndex(
@@ -247,35 +242,20 @@ export function applyAcquisitionSiteCommand(
     );
     if (sourceOffer === undefined)
       failCommand(command, 'does not name a purchased Shrine delivery');
-    const finalPrebossHost = isDeliveryFlushHost(
-      catalog.rooms.byKey[host.gameName],
-      resolveRoutePosition(catalog, document.route, site.biomeKey),
-    );
-    if (command.encounterPhaseKey !== undefined && command.encounterPhaseKey.trim().length === 0)
-      failCommand(command, 'has an empty due encounter phase');
     if (isSameRoomDelivery(hermesShrineDeliverySourceAddress(parsed), site.owner))
       failCommand(command, 'same-room Shrine deliveries use the post-outgoing window');
-    if (command.encounterPhaseKey === undefined && !finalPrebossHost)
-      failCommand(command, 'has no due encounter phase');
     const deliveryReference = Object.freeze({
       kind: 'interactAcquisitionEntry' as const,
       siteKey: 'hermesShrineDelivery',
       entryKey: command.entry.entryKey,
-      ...(command.encounterPhaseKey === undefined
-        ? {}
-        : { encounterPhaseKey: command.encounterPhaseKey }),
     });
     const actionIndex = host.roomActions.order.findIndex(
       (reference) => roomActionKey(reference) === roomActionKey(deliveryReference),
     );
     const actionAlreadyOrdered = actionIndex >= 0;
     const existingEntries = host.acquisitionSites?.hermesShrineDelivery?.pickupEntries ?? {};
-    const existingAction = actionAlreadyOrdered ? host.roomActions.order[actionIndex] : undefined;
-    const phaseAlreadyPersisted =
-      existingAction?.kind === 'interactAcquisitionEntry' &&
-      existingAction.encounterPhaseKey === command.encounterPhaseKey;
     if (actionAlreadyOrdered) refuseIndexWhenPlaced(command);
-    if (phaseAlreadyPersisted && existingEntries[command.entry.entryKey] !== undefined)
+    if (actionAlreadyOrdered && existingEntries[command.entry.entryKey] !== undefined)
       return removeHermesShrineDeliveryFromOtherHosts(document, command.entry.entryKey, site.owner);
     // A payload kept at this host is the same delivery; one kept at another host belonged to a
     // delivery due elsewhere, so this one arrives new, with none of its choices.

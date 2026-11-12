@@ -8,8 +8,8 @@ import {
 import type { Catalog } from '../../../../catalog-schema';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import {
-  dueContactMatches,
   hermesShrineDeliveryEntryKey,
+  isSameRoomDelivery,
 } from '../../../../authored-project/hermes-shrine-delivery';
 import {
   applyTraitOfferContextTransition,
@@ -213,7 +213,10 @@ export function spawnDueHermesDeliveries(
 ): RewardBranchState {
   if (room === undefined) return branch;
   const entryKeys = Object.values(branch.state.pendingHermesShrineDeliveries).flatMap((delivery) =>
-    dueContactMatches(delivery, room.origin) && delivery.due?.historySequence === sequence
+    // It spawns at the contact where it fell due here.
+    delivery.due !== undefined &&
+    isSameRoomDelivery(delivery.due.host, room.origin) &&
+    delivery.due.historySequence === sequence
       ? [hermesShrineDeliveryEntryKey(delivery.source, delivery.generationKey)]
       : [],
   );

@@ -30,6 +30,7 @@ import {
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, completeFrontier, executionRoomOwnerKey } from './support';
 import { wireWindow } from './lifecycle';
+import { rowDueContact } from '../../simulation/room-actions';
 import {
   executionKeepsakeEquipResults,
   executionRewardFromOffer,
@@ -462,7 +463,11 @@ export function executionTimelineTransactions(
         'executionCoverageMissing',
         `${room.gameName} has a transaction without an active roster owner ${transactionOwner}`,
       );
-    return wireWindow(row.contact);
+    return wireWindow(
+      room.origin.kind === 'occurrence'
+        ? rowDueContact(room.origin, row, biome.rewards.generatedPickupPlacements ?? [])
+        : row.contact,
+    );
   };
   const add = (transaction: ExecutionTimelineTransaction): void => {
     if (transactions.some((candidate) => candidate.owner === transaction.owner))

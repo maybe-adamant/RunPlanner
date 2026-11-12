@@ -36,10 +36,10 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  clockedTraitPickupPlacementForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
+  timedPickupPlacementForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 
@@ -159,13 +159,13 @@ function placeDelayedShrineDeliveries(project: ProjectDocument): ProjectDocument
           })),
         )}`,
       );
-    next = applyProjectCommand(next, catalog, {
-      kind: 'PlaceHermesShrineDelivery',
-      entry: contact.address,
-      ...(contact.encounterPhaseKey === undefined
-        ? {}
-        : { encounterPhaseKey: contact.encounterPhaseKey }),
-    });
+    const placement = timedPickupPlacementForProjectEvaluationAssembly(
+      catalog,
+      assembly,
+      contact.address,
+    );
+    // Collecting the reached route already placed it after its due spawn.
+    if (placement !== undefined) next = applyProjectCommand(next, catalog, placement);
     next = settleReachedAutomaticOutcomes(next);
   }
   return next;
@@ -194,7 +194,8 @@ function acceptOneSupplyChainSlice(project: ProjectDocument): ProjectDocument {
   const entry = entries[0];
   if (entry === undefined)
     throw new Error('scheduled lifecycle fixture never matured Supply Chain');
-  const placement = clockedTraitPickupPlacementForProjectEvaluationAssembly(
+  const placement = timedPickupPlacementForProjectEvaluationAssembly(
+    catalog,
     assembly,
     entry.address,
   );
@@ -222,7 +223,7 @@ function acceptSupplyChainSliceAtAddress(
   entry: AcquisitionEntryAddress,
 ): ProjectDocument {
   const assembly = simulateProjectAssembly(catalog, project);
-  const placement = clockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, entry);
+  const placement = timedPickupPlacementForProjectEvaluationAssembly(catalog, assembly, entry);
   if (placement === undefined)
     throw new Error(
       `scheduled lifecycle fixture lacks an attested Supply Chain placement for ${entry.entryKey}`,

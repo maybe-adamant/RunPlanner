@@ -27,7 +27,6 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
-  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
   hermesShrineCandidateForProjectEvaluationAssembly,
@@ -69,7 +68,11 @@ import {
   indexFindingsByRepairTarget,
   indexTraitDialogFindings,
 } from './navigation/finding-highlights';
-import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
+import {
+  createWorkspaceProjectSourceIndex,
+  workspaceDerivedAcquisitionEntries,
+  type WorkspaceBiomeSource,
+} from './source-index';
 import { bindRunModifiers } from './interactions/run-modifiers';
 import { bindWorkspaceInteractions } from './interactions/interaction-binding';
 import {
@@ -282,7 +285,7 @@ export function createStructuredWorkspaceProjection(
         },
         (site) => {
           try {
-            return derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, site);
+            return workspaceDerivedAcquisitionEntries(catalog, assembly, site);
           } catch (error) {
             if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
               return Object.freeze([]);

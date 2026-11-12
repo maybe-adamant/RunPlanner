@@ -32,6 +32,7 @@ import {
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  timedPickupPlacementForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import {
@@ -239,7 +240,6 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(options?: {
       createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery'),
       hermesShrineDeliveryEntryKey(shrine, 'initial:secondLeft'),
     ),
-    encounterPhaseKey: 'Encounter',
   });
 }
 
@@ -271,9 +271,9 @@ export function createSurfaceOSameRoomHermesDeliveriesCheckpoint(): {
     hermesShrineDeliveryEntryKey(combatSource, 'initial:secondLeft'),
   );
   let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
-  for (const [occurrence, delay, entry, encounterPhaseKey, source] of [
-    [introSource, 5, introEntry, 'Intro', 'ApolloUpgrade'],
-    [combatSource, 2, combatEntry, 'Combat1', 'HeraUpgrade'],
+  for (const [occurrence, delay, entry, source] of [
+    [introSource, 5, introEntry, 'ApolloUpgrade'],
+    [combatSource, 2, combatEntry, 'HeraUpgrade'],
   ] as const) {
     // Another item in the slot: its earlier purchase goes, and it is bought again.
     project = settleTestEdit(project, {
@@ -286,11 +286,13 @@ export function createSurfaceOSameRoomHermesDeliveriesCheckpoint(): {
       delay,
       rushed: false,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'PlaceHermesShrineDelivery',
+    const placement = timedPickupPlacementForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
       entry,
-      encounterPhaseKey,
-    });
+    );
+    if (placement === undefined) throw new Error(`${entry.entryKey} is not live`);
+    project = applyProjectCommand(project, catalog, placement);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry,
@@ -383,7 +385,6 @@ export function surfaceShrineTravelDealProject(): ProjectDocument {
         ),
         hermesShrineDeliveryEntryKey(shrine, 'travelDealRefill'),
       ),
-      encounterPhaseKey: 'Combat1',
     }),
   );
 }
@@ -440,13 +441,13 @@ export function placeDueHermesShrineDeliveries(project: ProjectDocument): Projec
     );
     if (contact === undefined || contact.kind !== 'hermesShrineDelivery')
       throw new Error(`Shrine delivery ${origin.entryKey} has no derived due contact`);
-    next = applyProjectCommand(next, catalog, {
-      kind: 'PlaceHermesShrineDelivery',
-      entry: contact.address,
-      ...(contact.encounterPhaseKey === undefined
-        ? {}
-        : { encounterPhaseKey: contact.encounterPhaseKey }),
-    });
+    const placement = timedPickupPlacementForProjectEvaluationAssembly(
+      catalog,
+      assembly,
+      contact.address,
+    );
+    if (placement === undefined) throw new Error(`cannot place ${origin.entryKey}`);
+    next = applyProjectCommand(next, catalog, placement);
   }
   throw new Error('Shrine delivery placement exceeded its bound');
 }
@@ -596,7 +597,6 @@ export function createSurfaceNUnresolvedBossHermesDeliveryCheckpoint(): ProjectD
       createAcquisitionSiteAddress(boss, 'hermesShrineDelivery'),
       hermesShrineDeliveryEntryKey(source, 'initial:secondRight'),
     ),
-    encounterPhaseKey: 'Encounter',
   });
 }
 
@@ -1004,7 +1004,6 @@ export function createStaleSurfaceHermesDeliveryPlacement() {
       createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
       entryKey,
     ),
-    encounterPhaseKey: 'Encounter',
   });
   const placedHost = project.route.biomes
     .find((plan) => plan.biomeKey === host.biomeKey)
@@ -1064,7 +1063,6 @@ export function createTwoStaleSurfaceHermesDeliveryPlacements() {
       createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
       secondEntryKey,
     ),
-    encounterPhaseKey: 'Encounter',
   });
   // Retain both production-built placements to represent a loaded snapshot.
   const loaded = {

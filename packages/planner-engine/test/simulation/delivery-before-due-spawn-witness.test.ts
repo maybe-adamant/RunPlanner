@@ -12,6 +12,7 @@ import {
 import { createAuthoringSession } from '@run-planner/engine/authoring';
 import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  liveActionsForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -73,7 +74,7 @@ describe('a Ship delivery ranked between the wheel choice and its phase pickup',
       pickup,
       delivery.key,
     ]);
-    expect(delivery.reference).toMatchObject({ encounterPhaseKey: 'Combat1' });
+    expect(delivery.reference).not.toHaveProperty('encounterPhaseKey');
     expect(outcome.kind).toBe('applied');
     expect(
       shipRoom(moved)
@@ -99,24 +100,41 @@ describe('a Ship delivery ranked between the wheel choice and its phase pickup',
     const capability = derivedAcquisitionEntriesForProjectEvaluationAssembly(start, site).find(
       (entry) => entry.address.entryKey === (delivery.reference as { entryKey: string }).entryKey,
     );
-    const placed = shipRoom(start).roomActionRoster.rows.find((row) => row.key === delivery.key)!;
+    const evaluated = start.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O');
+    const placed = (
+      evaluated !== undefined && 'rewards' in evaluated
+        ? (evaluated.rewards.generatedPickupPlacements ?? [])
+        : []
+    ).find(
+      (candidate) =>
+        candidate.address.entryKey === (delivery.reference as { entryKey: string }).entryKey,
+    );
     expect(capability).toMatchObject({
       phaseKey: 'Combat1',
       contact: { kind: 'afterEncounterEnd', endedPhaseKey: 'Combat1', phaseKey: 'Combat1' },
       label: { kind: 'afterEncounterEnd', phaseKey: 'Combat1' },
     });
-    expect([capability?.contact, capability?.label]).toEqual([placed.contact, placed.label]);
+    // The walk names the placed row's contact where it fell due; no phase is stored.
+    expect([capability?.contact, capability?.label]).toEqual([
+      placed?.dueContact?.contact,
+      placed?.dueContact?.label,
+    ]);
   });
 
-  it('is flagged by its stored phase today, and Combat1 never ends', () => {
+  it('the walk flags it before its due spawn, Combat1 end effects, and Combat1 never ends', () => {
     expect(
       moved.evaluation.findings
         .filter(
           (finding) =>
             finding.origin.kind === 'roomAction' && finding.origin.actionKey === delivery.key,
         )
-        .map((finding) => finding.code),
-    ).toEqual(['roomActionOrderUnavailable']);
+        .map((finding) => [finding.code, finding.evidence]),
+    ).toEqual([
+      [
+        'roomActionOrderUnavailable',
+        { reason: 'beforeSpawn', point: { kind: 'endEffects', phaseKey: 'Combat1' } },
+      ],
+    ]);
     expect(
       shipEvents(moved).some(
         (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === 'Combat1',
@@ -124,8 +142,23 @@ describe('a Ship delivery ranked between the wheel choice and its phase pickup',
     ).toBe(false);
   });
 
-  // Step 3b: the walk judges position, not the stored phase.
-  it.todo(
-    'the walk flags it before its due spawn (Combat1 end effects), and the live product does not offer that position',
-  );
+  it('is not offered by the live product before its due spawn', () => {
+    const live = liveActionsForProjectEvaluationAssembly(
+      catalog,
+      start,
+      createOccurrenceAddress(biome, shipId),
+    );
+    const offered = (live?.gaps ?? []).flatMap((gap) =>
+      gap.items.some(
+        (item) =>
+          item.kind === 'pickup' &&
+          roomActionKey(item.reference) === delivery.key &&
+          item.actions.some((action) => action.kind !== 'placed'),
+      )
+        ? [gap.index]
+        : [],
+    );
+    expect(offered).not.toContain(1);
+    expect(offered.every((index) => index >= 2)).toBe(true);
+  });
 });

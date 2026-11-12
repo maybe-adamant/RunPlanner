@@ -665,7 +665,6 @@ describe('stale room actions in edit settlement', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey: hermesShrineDeliveryEntryKey(shrine, 'initial:secondLeft'),
-        encounterPhaseKey: 'Encounter',
       });
       expect(order(project, host)).toContain(delivery);
       const unbought = settle(project, {

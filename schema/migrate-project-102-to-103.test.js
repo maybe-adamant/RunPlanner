@@ -331,6 +331,21 @@ describe('schema 102 to 103 migration', () => {
     assert.deepEqual(migrate(stored), current);
   });
 
+  it('strips the due phase a delivery row stored, silently', () => {
+    const current = checkpoint('surface-no-hermes-shrine-delivery');
+    // Schema 102 stored the phase a delivery fell due at on its pickup row.
+    const stored = JSON.parse(JSON.stringify(at102(current)));
+    for (const occurrence of occurrencesOf(stored))
+      occurrence.roomActions.order = occurrence.roomActions.order.map((action) =>
+        action.kind === 'interactAcquisitionEntry' && action.siteKey === 'hermesShrineDelivery'
+          ? { ...action, encounterPhaseKey: 'Encounter' }
+          : action,
+      );
+    assert.ok(JSON.stringify(stored).includes('"encounterPhaseKey":"Encounter"'));
+    assert.deepEqual(step.liftProjectDocument(stored, engine.catalog), current);
+    assert.deepEqual(migrate(stored), current);
+  });
+
   it('moves Well rolls, a locked-door fight and a Shrine rush through one lift, losslessly', () => {
     // No route holds all three (the Well and locked doors are Underworld's, the
     // Shrine the Surface's); the raw moves read no route, so one document

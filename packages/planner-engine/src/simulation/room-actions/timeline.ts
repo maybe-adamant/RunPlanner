@@ -270,8 +270,10 @@ export function assembleRoomLifecycleTimeline(
     contact.kind === 'afterWheelPhase'
       ? contact.wheelKey
       : undefined;
+  // Only a delivery or clocked drop spawns at end effects; the walk names which, so its
+  // row stands with the room's last phase and never places a Wheels open.
   const endEffectsRow = (row: RoomActionRow, phaseKey: string): boolean =>
-    row.bounds.spawn.kind === 'endEffects' && row.bounds.spawn.phaseKey === phaseKey;
+    row.bounds.spawn.kind === 'endEffects' && phaseKey === finalPhaseKey;
 
   const rowsForPhase = (phase: RoomEventGraphPhase): readonly RoomActionRow[] =>
     rankedRows.filter((row) => {
@@ -435,7 +437,10 @@ export function assembleRoomLifecycleTimeline(
           point,
           lastRank(
             rankedRows,
-            (row) => row.participation === 'required' && opening(row) < openedOrdinal,
+            (row) =>
+              row.participation === 'required' &&
+              row.bounds.spawn.kind !== 'endEffects' &&
+              opening(row) < openedOrdinal,
           ) ?? 0,
           'after',
         );

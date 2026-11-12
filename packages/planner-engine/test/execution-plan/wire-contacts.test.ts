@@ -4,6 +4,7 @@ import { describe, it } from 'vitest';
 
 import { wireWindow } from '../../src/execution-plan/assembly/lifecycle';
 import type { ExecutionLifecycleWindow } from '../../src/execution-plan/model';
+import { rowDueContact } from '../../src/simulation/room-actions';
 import type { RoomActionRow } from '../../src/simulation/room-actions/model';
 import {
   assertLifecycleSnapshot,
@@ -38,8 +39,8 @@ function contactText(window: ExecutionLifecycleWindow): string {
 }
 
 /** The execution contact a row publishes, or the refusal it raises. */
-function rowContact(row: RoomActionRow): string {
-  return contactText(wireWindow(row.contact));
+function rowContact(contact: RoomActionRow['contact']): string {
+  return contactText(wireWindow(contact));
 }
 
 describe('published lifecycle contacts', () => {
@@ -48,10 +49,26 @@ describe('published lifecycle contacts', () => {
     for (const { entry, assembly } of corpusAssemblies()) {
       for (const room of corpusRooms(assembly)) {
         if (!room.entered) continue;
+        const biome = assembly.evaluation.route.biomes.find(
+          (candidate) => candidate.biomeKey === room.origin.biomeKey,
+        );
+        // A delivery or clocked drop meets its room where the walk had it fall due.
+        const placements =
+          biome !== undefined && 'rewards' in biome
+            ? (biome.rewards.generatedPickupPlacements ?? [])
+            : [];
         const rows: Record<string, string> = {};
         for (const row of room.roomActionRoster.rows)
           if (!row.stale && row.rank !== null)
-            setUnique(rows, `#${row.rank} ${compactActionKey(row.key)}`, rowContact(row));
+            setUnique(
+              rows,
+              `#${row.rank} ${compactActionKey(row.key)}`,
+              rowContact(
+                room.origin.kind === 'occurrence'
+                  ? rowDueContact(room.origin, row, placements)
+                  : row.contact,
+              ),
+            );
         if (Object.keys(rows).length > 0)
           witnesses.push({
             entry: entry.name,

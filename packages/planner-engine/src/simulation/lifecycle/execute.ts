@@ -19,7 +19,6 @@ import {
   roomEventPlaces,
   roomEventPointPasses,
   type RoomEventPoint,
-  nextWheelsOpen,
   pressFightOf,
 } from '../../authored-project/room-actions/event-graph';
 import { ROOM_WALK_STAGES } from './overview';
@@ -950,45 +949,6 @@ function createRoomActionSchedule(context: ExecutionContext) {
       : blockAt(next, unranked, { kind: 'endEffects', phaseKey: phase.slotKey });
   };
 
-  const afterEndEffects = (
-    phase: ResolvedEncounterPhase,
-    operationIndex: number,
-    state: ExecutionState,
-  ): ExecutionState => {
-    let next = state;
-    // Only end effects spawn deliveries; what they spawn waits for the next wheels to open.
-    if (
-      !state.events.some(
-        (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === phase.slotKey,
-      ) ||
-      nextWheelsOpen(eventGraph, phase.slotKey) !== undefined
-    )
-      return next;
-    const deliveries = roster.rows
-      .filter(
-        (row) =>
-          row.reference.kind === 'interactAcquisitionEntry' &&
-          row.reference.siteKey === 'hermesShrineDelivery' &&
-          row.reference.encounterPhaseKey === phase.slotKey,
-      )
-      .sort(
-        (left, right) =>
-          (left.rank ?? Number.POSITIVE_INFINITY) - (right.rank ?? Number.POSITIVE_INFINITY),
-      );
-    // An unplaced delivery lies where it spawned; its deadline stops the walk.
-    for (const delivery of deliveries) {
-      if (delivery.rank === null) continue;
-      // Encounter end makes the delivery available; it does not let the
-      // delivery leapfrog a peer post-encounter action authored before it.
-      const current = rankedRows[cursor];
-      if (current !== undefined && current.rank! < delivery.rank) break;
-      if (current === undefined || current.rank! > delivery.rank) continue;
-      next = advance({ kind: 'trigger', row: delivery, emit: true }, operationIndex, next);
-      if (next.blockedAt !== undefined) return next;
-    }
-    return next;
-  };
-
   return Object.freeze({
     runPhases,
     gatePoints: new Set(gatePickups.map((pickup) => pickup.producerPoint)),
@@ -998,15 +958,13 @@ function createRoomActionSchedule(context: ExecutionContext) {
     leave,
     beforeCombat,
     readyWait,
-    afterEndEffects,
   });
 }
 
 /**
  * The room's encounters, each run by its graph's events: it begins (its
  * wheels open), the rows its begin and gate wait on run, combat starts, it
- * ends, any ready wait holds its end effects, and the deliveries those
- * effects make due are taken before the next phase begins.
+ * ends, and any ready wait holds its end effects. Rows run at their rank.
  */
 function runEncounters(
   context: ExecutionContext,
@@ -1032,8 +990,6 @@ function runEncounters(
     state = schedule.readyWait(phase, operationIndex, state);
     if (state.blockedAt !== undefined) return state;
     if (waitsForReady(context, phase)) state = appendEncounterEndEffects(fight, state);
-    state = schedule.afterEndEffects(phase, operationIndex, state);
-    if (state.blockedAt !== undefined) return state;
   }
   return state;
 }

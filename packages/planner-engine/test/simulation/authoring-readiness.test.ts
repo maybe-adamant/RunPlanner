@@ -497,7 +497,6 @@ describe('chronological authoring horizon', () => {
     const placed = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry: finding.origin,
-      encounterPhaseKey,
     });
     const reference = {
       kind: 'interactAcquisitionEntry' as const,

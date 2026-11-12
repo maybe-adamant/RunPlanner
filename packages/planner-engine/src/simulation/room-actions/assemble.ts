@@ -12,8 +12,10 @@ import {
 import type { RoomActionReference } from '../../authored-project/model';
 import type { AcquisitionEntrySourceFamily } from '../../authored-project/acquisition/entry-source-family';
 import {
+  roomFightsEnd,
   scopeRoomEventGraph,
   type RoomEventGraph,
+  type RoomEventPoint,
 } from '../../authored-project/room-actions/event-graph';
 import {
   assessRoomActionInsertion,
@@ -356,6 +358,12 @@ export function scopeRoomActionRoster(
   const eventGraph = scopeRoomEventGraph(roster.eventGraph, activePhaseKeys);
   if (eventGraph === roster.eventGraph) return roster;
   const active = new Set(activePhaseKeys);
+  // What follows a fight the room does not play follows its last played fight.
+  const fightsEnd = roomFightsEnd(eventGraph);
+  const played = (point: RoomEventPoint) =>
+    (point.kind === 'encounterEnd' || point.kind === 'endEffects') && !active.has(point.phaseKey)
+      ? fightsEnd
+      : point;
   return frozen({
     ...roster,
     eventGraph,
@@ -363,11 +371,47 @@ export function scopeRoomActionRoster(
       roster.rows.map((row) =>
         'phaseKey' in row.reference && !active.has(row.reference.phaseKey)
           ? frozen({ ...row, stale: true, executable: false })
-          : row,
+          : played(row.bounds.spawn) === row.bounds.spawn
+            ? row
+            : frozen({
+                ...row,
+                bounds: frozen({ ...row.bounds, spawn: played(row.bounds.spawn) }),
+              }),
       ),
       eventGraph,
     ),
   });
+}
+
+/** The walk's placement of a row's generated pickup at this room. */
+function reachedPlacement(
+  owner: OccurrenceAddress,
+  row: Pick<RoomActionRow, 'reference'>,
+  placements: readonly import('../rewards/acquisition/contracts').GeneratedPickupPlacement[],
+) {
+  const reference = row.reference;
+  return reference.kind !== 'interactAcquisitionEntry'
+    ? undefined
+    : placements.find(
+        (placement) =>
+          placement.address.site.owner.kind === 'occurrence' &&
+          placement.address.site.owner.occurrenceId === owner.occurrenceId &&
+          placement.address.site.biomeKey === owner.biomeKey &&
+          placement.address.entryKey === reference.entryKey &&
+          placement.address.site.pointKey === reference.siteKey,
+      );
+}
+
+/**
+ * A row's contact: for a placed delivery or clocked drop, where the walk had
+ * it fall due; otherwise its own.
+ */
+export function rowDueContact(
+  owner: OccurrenceAddress,
+  row: RoomActionRow,
+  placements: readonly import('../rewards/acquisition/contracts').GeneratedPickupPlacement[],
+): RoomActionRow['contact'] {
+  return reachedPlacement(owner, row, placements)?.dueContact?.contact ?? row.contact;
 }
 
 /** Authoring repair assessment does not change the evaluated roster's execution facts. */
@@ -379,21 +423,15 @@ export function assessRoomActionPlacements(
 ): RoomActionRoster {
   const rows = roster.rows.map((row) => {
     const structural = assessGeneratedPickupPlacement(route, owner, row.reference);
-    const reference = row.reference;
-    const reached =
-      reference.kind !== 'interactAcquisitionEntry'
-        ? undefined
-        : reachedPlacements.find(
-            (placement) =>
-              placement.address.site.owner.kind === 'occurrence' &&
-              placement.address.site.owner.occurrenceId === owner.occurrenceId &&
-              placement.address.site.biomeKey === owner.biomeKey &&
-              placement.address.entryKey === reference.entryKey &&
-              placement.address.site.pointKey === reference.siteKey,
-          )?.assessment;
+    const placement = reachedPlacement(owner, row, reachedPlacements);
+    const reached = placement?.assessment;
     const placementAssessment =
       structural?.kind === 'invalid' ? structural : (reached ?? structural);
-    return placementAssessment === undefined ? row : frozen({ ...row, placementAssessment });
+    // A placed delivery or clocked drop meets its room where the walk had it fall due.
+    const due = placement?.dueContact;
+    const timed =
+      due === undefined ? row : frozen({ ...row, contact: due.contact, label: due.label });
+    return placementAssessment === undefined ? timed : frozen({ ...timed, placementAssessment });
   });
   const invalidKeys = new Set(
     rows

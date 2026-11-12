@@ -155,8 +155,10 @@ export function withRequiredScopes(
       contact.kind === 'beforeWheelPhase' ||
       contact.kind === 'beforeWheelChoice' ||
       contact.kind === 'afterWheelPhase' ||
+      // A delivery or clocked drop waits on the room's next gated interaction, which the walk names.
       (!fields &&
         contact.kind !== 'afterDoorsOpen' &&
+        row.bounds.spawn.kind !== 'endEffects' &&
         structure.phases.length > 0 &&
         place(roomActionOpeningPoint(row.bounds)) < roomEnd)
     )

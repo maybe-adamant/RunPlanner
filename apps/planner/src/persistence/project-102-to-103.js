@@ -6,6 +6,7 @@ import {
   settleProjectUpgrade,
   splitShrineRush,
   stampRoomActionItemContent,
+  stripEncounterPhaseKey,
 } from '@run-planner/engine/project-migration';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 
@@ -38,6 +39,8 @@ const ITEM_MODEL_TRANSFORMS = Object.freeze([
   splitShrineRush,
   // Door, cage, wheel and Hub press results move onto the rerolled item.
   moveRerollResultsOntoItems,
+  // A delivery or clocked drop no longer stores the phase it fell due at.
+  stripEncounterPhaseKey,
   // Each pickup, purchase and sale row records the content of the item it acts on.
   stampRoomActionItemContent,
 ]);

@@ -46,7 +46,7 @@ export interface HermesDeliveryObligation {
 
 export interface HermesDeliveryDueContact {
   readonly host: OccurrenceAddress;
-  /** Absent for a rush at the Shrine and for the fourth-biome Preboss flush. */
+  /** The phase whose end effects it fell due at; absent for a rush and the Preboss flush. */
   readonly encounterPhaseKey?: string;
   readonly cause: 'rush' | 'countdown' | 'flush';
   readonly historySequence: number;
@@ -139,21 +139,6 @@ export function purchasedOfferFor(
 ): HermesShrineInventoryOffer | undefined {
   if (hermesShrinePurchaseAction(order, generationKey) === undefined) return undefined;
   return offerFor(shrine, generationKey) ?? undefined;
-}
-
-/**
- * Whether the obligation is due at `host`. Without `contact` any phase matches;
- * with it the due phase must equal `contact.encounterPhaseKey`, where an absent
- * key means a phase-less rush or flush contact.
- */
-export function dueContactMatches(
-  obligation: HermesDeliveryObligation,
-  host: OccurrenceAddress,
-  contact?: { readonly encounterPhaseKey?: string | undefined },
-): boolean {
-  const due = obligation.due;
-  if (due === undefined || !isSameRoomDelivery(due.host, host)) return false;
-  return contact === undefined || due.encounterPhaseKey === contact.encounterPhaseKey;
 }
 
 /**

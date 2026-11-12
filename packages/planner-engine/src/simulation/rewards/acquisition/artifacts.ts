@@ -4,7 +4,7 @@ import {
   type AcquisitionRoleAddress,
   type AcquisitionSiteAddress,
 } from '../../../authored-project/addresses';
-import type { AuthoredRewardState } from '../../../authored-project/model';
+import type { AuthoredRewardState, RoomActionReference } from '../../../authored-project/model';
 import { shopOfferGeneration, type ShopOfferGeneration } from '../../../authored-project/shop';
 import type { AcquisitionEntrySourceFamily } from '../../../authored-project/acquisition/entry-source-family';
 import type { Catalog } from '../../../catalog-schema';
@@ -26,6 +26,15 @@ import {
   type HexActivationContext,
 } from '../../hex-activation';
 
+/** The row that places a delivery or clocked drop. */
+export function timedPickupReference(entry: AcquisitionEntryAddress): RoomActionReference {
+  return Object.freeze({
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: entry.site.pointKey,
+    entryKey: entry.entryKey,
+  });
+}
+
 export interface DerivedAcquisitionEntryCandidateCapability {
   readonly kind: DerivedAcquisitionEntryFrontier['kind'];
   readonly sourceOfferKey?: string;
@@ -42,6 +51,8 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   /** Where a due delivery or clocked drop meets its room, and how the editor names it. */
   readonly contact?: import('../../room-actions').RoomActionContact;
   readonly label?: import('../../room-actions').RoomActionRowLabel;
+  /** The row that places a due delivery or clocked drop, which a placed row matches. */
+  readonly reference?: RoomActionReference;
   readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
@@ -111,6 +122,9 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
           contact: first.dueContact.contact,
           label: first.dueContact.label,
         }),
+    ...(first.kind === 'hermesShrineDelivery' || first.kind === 'clockedTraitPickup'
+      ? { reference: timedPickupReference(first.address) }
+      : {}),
     ...(first.participation === undefined ? {} : { participation: first.participation }),
     ...(first.retainedSourceMismatch === undefined
       ? {}

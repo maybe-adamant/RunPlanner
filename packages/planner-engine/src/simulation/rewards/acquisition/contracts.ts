@@ -69,6 +69,8 @@ export interface GeneratedPickupPlacement {
   readonly address: AcquisitionEntryAddress;
   readonly assessment: import('../../../authored-project/generated-pickup-placement').GeneratedPickupPlacementAssessment;
   readonly contact: { readonly owner: SemanticAddress; readonly sequence: number };
+  /** Where the row meets its room at its due spawn, when the walk names it there. */
+  readonly dueContact?: import('../../room-actions').TimedPickupDueContact;
 }
 
 export interface DerivedAcquisitionEntryFrontier {

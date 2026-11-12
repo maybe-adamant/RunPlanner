@@ -327,7 +327,6 @@ describe('room lifecycle timeline', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey: 'hermesShrineDelivery:test',
-        encounterPhaseKey: 'Encounter',
       },
       { kind: 'afterEncounterEnd' as const, phaseKey: 'Encounter' },
       2,

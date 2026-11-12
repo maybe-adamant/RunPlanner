@@ -172,7 +172,8 @@ describe('required action scope', () => {
     [{ kind: 'afterCombat' as const }, 'room'],
     [{ kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' }, 'phase'],
     [{ kind: 'afterWheelPhase' as const, wheelKey: 'wheel1' }, 'phase'],
-    [{ kind: 'afterEncounterEnd' as const, phaseKey: 'Cage01' }, 'phase'],
+    // Only a delivery or clocked drop spawns at end effects; the walk names its gated deadline.
+    [{ kind: 'afterEncounterEnd' as const, phaseKey: 'Cage01' }, 'room'],
     [{ kind: 'afterEncounterEnd' as const, phaseKey: 'Cage02' }, 'room'],
     [{ kind: 'afterDoorsOpen' as const }, 'room'],
   ] as const)('uses the fixed placement %j', (placement, expected) => {

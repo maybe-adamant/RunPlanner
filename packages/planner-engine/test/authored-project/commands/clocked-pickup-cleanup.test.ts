@@ -61,7 +61,6 @@ describe('clocked pickup placement cleanup', () => {
     const stale = applyProjectCommand(project, catalog, {
       kind: 'PlaceClockedTraitPickup',
       entry: createAcquisitionEntryAddress(site, reference.entryKey),
-      encounterPhaseKey: 'Encounter',
       rewardType: 'StoreRewardRandomStack',
       producerLifecycleKey: 'GeneratedTraitPickup',
     });

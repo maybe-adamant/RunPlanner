@@ -786,11 +786,10 @@ export type AcquisitionSiteCommand =
       /** Atomically materializes and ranks one due Shrine delivery entry. */
       readonly kind: 'PlaceHermesShrineDelivery';
       readonly entry: AcquisitionEntryAddress;
-      /** Exact encounter end that made this delivery due; the fourth-biome Preboss flush is phase-less. */
-      readonly encounterPhaseKey?: string;
       /**
        * Where a newly placed delivery enters the host's actions: any structurally
-       * legal index; absent, its canonical one.
+       * legal index; absent, its canonical one. The live product names the
+       * indexes after its due spawn.
        */
       readonly index?: number;
     }
@@ -798,7 +797,6 @@ export type AcquisitionSiteCommand =
       /** Accepts one simulator-attested optional pickup at its maturity checkpoint. */
       readonly kind: 'PlaceClockedTraitPickup';
       readonly entry: AcquisitionEntryAddress;
-      readonly encounterPhaseKey: string;
       readonly producerLifecycleKey: string;
       readonly rewardType: string;
       /**

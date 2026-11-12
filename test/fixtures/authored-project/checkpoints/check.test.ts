@@ -232,7 +232,6 @@ describe('authored-project checkpoint integrity', () => {
     if (delivery === undefined) throw new Error('the O Shrine delivery is not placed');
     expect(delivery).toMatchObject({
       entryKey: expect.stringContaining('initial%3AsecondLeft'),
-      encounterPhaseKey: 'Encounter',
       content: expect.any(Array),
     });
     expect(delivery).toEqual(

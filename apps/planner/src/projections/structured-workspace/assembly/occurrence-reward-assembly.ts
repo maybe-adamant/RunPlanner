@@ -134,7 +134,11 @@ export type WorkspaceDerivedAcquisitionEntry = {
   readonly rewardTypes?: readonly string[];
   readonly fixedReward?: AuthoredRewardState;
   readonly producerLifecycleKey?: string;
-  readonly encounterPhaseKey?: string;
+  /** The row that places a due delivery or clocked drop, and how the editor names its timing. */
+  readonly reference?: import('@run-planner/engine/authored-project').RoomActionReference;
+  readonly label?: import('@run-planner/engine/simulation').RoomActionRowLabel;
+  /** The command placing a due delivery or clocked drop where it is live. */
+  readonly placement?: import('@run-planner/engine/simulation').TimedPickupPlacementCommand;
   readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];

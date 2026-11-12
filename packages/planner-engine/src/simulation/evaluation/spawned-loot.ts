@@ -47,6 +47,7 @@ import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
 } from './project-evaluation-assembly';
+import { timedPickupReference } from '../rewards/acquisition/artifacts';
 
 /**
  * When the game spawns loot on its own: on entry (an Opening or Devotion
@@ -799,27 +800,14 @@ export function spawnedLootForProjectEvaluationAssembly(
     .sort((left, right) => compareOrder(left.order, right.order))
     .map(({ entry }) => entry);
   for (const entry of deliveries) {
-    const reference = frozen({
-      kind: 'interactAcquisitionEntry' as const,
-      siteKey: HERMES_SHRINE_DELIVERY_SITE_KEY,
-      entryKey: entry.address.entryKey,
-      ...(entry.encounterPhaseKey === undefined
-        ? {}
-        : { encounterPhaseKey: entry.encounterPhaseKey }),
-    });
+    const reference = timedPickupReference(entry.address);
     const item = fromDerived(
       entry.address,
       reference,
       entry.sourceFamily ?? frozen({ kind: 'hermesShrineDelivery' as const }),
       // A due delivery is the required obligation edit settlement places.
       'required',
-      frozen({
-        kind: 'PlaceHermesShrineDelivery',
-        entry: entry.address,
-        ...(entry.encounterPhaseKey === undefined
-          ? {}
-          : { encounterPhaseKey: entry.encounterPhaseKey }),
-      }),
+      frozen({ kind: 'PlaceHermesShrineDelivery', entry: entry.address }),
       entry,
     );
     if (entry.encounterPhaseKey === undefined) add('deliveryFlush', undefined, item);
@@ -836,12 +824,7 @@ export function spawnedLootForProjectEvaluationAssembly(
       entry.sourceFamily === undefined
     )
       continue;
-    const reference = frozen({
-      kind: 'interactAcquisitionEntry' as const,
-      siteKey: 'roomExit',
-      entryKey: entry.address.entryKey,
-      encounterPhaseKey: entry.encounterPhaseKey,
-    });
+    const reference = timedPickupReference(entry.address);
     add(
       endEffectsMoment(entry.encounterPhaseKey),
       entry.encounterPhaseKey,

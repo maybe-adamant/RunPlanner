@@ -690,26 +690,13 @@ function roomActionsForOccurrence(
         createAcquisitionSiteAddress(owner, 'hermesShrineDelivery'),
       ) ?? Object.freeze([])
     ).flatMap((capability) => {
+      const reference = capability.reference;
       if (
         capability.kind !== 'hermesShrineDelivery' ||
-        projectedRows.some(
-          (row) =>
-            row.reference.kind === 'interactAcquisitionEntry' &&
-            row.reference.siteKey === 'hermesShrineDelivery' &&
-            row.reference.entryKey === capability.address.entryKey &&
-            (row.reference.encounterPhaseKey === capability.encounterPhaseKey ||
-              row.placementAssessment?.kind === 'invalid'),
-        )
+        reference === undefined ||
+        projectedRows.some((row) => roomActionKey(row.reference) === roomActionKey(reference))
       )
         return [];
-      const reference = Object.freeze({
-        kind: 'interactAcquisitionEntry' as const,
-        siteKey: 'hermesShrineDelivery' as const,
-        entryKey: capability.address.entryKey,
-        ...(capability.encounterPhaseKey === undefined
-          ? {}
-          : { encounterPhaseKey: capability.encounterPhaseKey }),
-      });
       const control = controlAt(capability.address);
       const actionAddress = createRoomActionAddress(
         input.biome,
@@ -744,26 +731,17 @@ function roomActionsForOccurrence(
           ...(capability.sourceFamily === undefined
             ? {}
             : { sourceFamily: capability.sourceFamily }),
-          placement: Object.freeze({
-            command: Object.freeze({
-              kind: 'PlaceHermesShrineDelivery' as const,
-              entry: capability.address,
-              ...(capability.encounterPhaseKey === undefined
-                ? {}
-                : { encounterPhaseKey: capability.encounterPhaseKey }),
-            }),
-            focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
-          }),
+          ...(capability.placement === undefined
+            ? {}
+            : {
+                placement: Object.freeze({
+                  command: capability.placement,
+                  focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
+                }),
+              }),
           rank: null,
           stale: false,
-          // Delivered as its phase's encounter ends, or else once the doors open.
-          timing:
-            capability.encounterPhaseKey === undefined
-              ? Object.freeze({ kind: 'afterDoorsOpen' as const })
-              : Object.freeze({
-                  kind: 'afterEncounterEnd' as const,
-                  phaseKey: capability.encounterPhaseKey,
-                }),
+          timing: capability.label ?? Object.freeze({ kind: 'afterDoorsOpen' as const }),
           executable: false,
         }),
       ];
@@ -775,26 +753,17 @@ function roomActionsForOccurrence(
       Object.freeze([])
     ).flatMap((capability) => {
       const rewardType = capability.rewardTypes?.[0];
+      const reference = capability.reference;
       if (
         capability.kind !== 'clockedTraitPickup' ||
-        capability.encounterPhaseKey === undefined ||
-        capability.producerLifecycleKey === undefined ||
+        reference === undefined ||
+        capability.label === undefined ||
+        capability.placement === undefined ||
         capability.rewardTypes?.length !== 1 ||
         rewardType === undefined ||
-        projectedRows.some(
-          (row) =>
-            row.reference.kind === 'interactAcquisitionEntry' &&
-            row.reference.siteKey === 'roomExit' &&
-            row.reference.entryKey === capability.address.entryKey,
-        )
+        projectedRows.some((row) => roomActionKey(row.reference) === roomActionKey(reference))
       )
         return [];
-      const reference = Object.freeze({
-        kind: 'interactAcquisitionEntry' as const,
-        siteKey: 'roomExit',
-        entryKey: capability.address.entryKey,
-        encounterPhaseKey: capability.encounterPhaseKey,
-      });
       const control = controlAt(capability.address);
       const actionAddress = createRoomActionAddress(
         input.biome,
@@ -845,21 +814,12 @@ function roomActionsForOccurrence(
             ? {}
             : { sourceFamily: capability.sourceFamily }),
           placement: Object.freeze({
-            command: Object.freeze({
-              kind: 'PlaceClockedTraitPickup' as const,
-              entry: capability.address,
-              encounterPhaseKey: capability.encounterPhaseKey,
-              producerLifecycleKey: capability.producerLifecycleKey,
-              rewardType,
-            }),
+            command: capability.placement,
             focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
           }),
           rank: null,
           stale: false,
-          timing: Object.freeze({
-            kind: 'afterEncounterEnd' as const,
-            phaseKey: capability.encounterPhaseKey,
-          }),
+          timing: capability.label,
           executable: false,
         }),
       ];

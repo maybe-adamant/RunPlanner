@@ -116,7 +116,6 @@ describe('project workspace application state', () => {
           createAcquisitionSiteAddress(occurrence, 'roomExit'),
           clockedTraitGeneratedPickupEntryKey('fabricated', 'pom1'),
         ),
-        encounterPhaseKey: 'Encounter',
         producerLifecycleKey: 'GeneratedTraitPickup',
         rewardType: 'StoreRewardRandomStack',
       }),
@@ -451,7 +450,6 @@ describe('project workspace application state', () => {
       authoredProjectCommandDispatched({
         kind: 'PlaceHermesShrineDelivery',
         entry: dueAtTwo.origin,
-        encounterPhaseKey: 'Encounter',
       }),
     );
     const delayTwo = presentProject(store.getState());
@@ -496,7 +494,6 @@ describe('project workspace application state', () => {
       authoredProjectCommandDispatched({
         kind: 'PlaceHermesShrineDelivery',
         entry: dueAtThree.origin,
-        encounterPhaseKey: 'Encounter',
       }),
     );
     const placed = presentProject(store.getState());
@@ -509,7 +506,6 @@ describe('project workspace application state', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey,
-        encounterPhaseKey: 'Encounter',
       }),
     );
     expect(dueFinding()).toBeUndefined();

@@ -162,9 +162,6 @@ function commandKey(command: ProjectCommand): string {
         kind: 'interactAcquisitionEntry',
         siteKey: command.entry.site.pointKey,
         entryKey: command.entry.entryKey,
-        ...(command.encounterPhaseKey === undefined
-          ? {}
-          : { encounterPhaseKey: command.encounterPhaseKey }),
       });
     case 'PlaceEchoGoldPickup':
       return roomActionKey({

@@ -343,7 +343,6 @@ describe('upgrade settlement of a plan saved under earlier rules', () => {
         kind: 'interactAcquisitionEntry',
         siteKey: 'hermesShrineDelivery',
         entryKey: hermesShrineDeliveryEntryKey(shrine, 'initial:secondLeft'),
-        encounterPhaseKey: 'Encounter',
       });
       // An earlier build left the delivery when its purchase was undone.
       const document = raw(createSurfaceNOHermesShrineDeliveryCheckpoint());

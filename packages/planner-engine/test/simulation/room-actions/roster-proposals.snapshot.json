@@ -5692,9 +5692,9 @@
         "checkpoint/surface-scheduled-lifecycle"
       ],
       "rows": {
-        "chooseRewardWheel:wheel1": "#1 required | scope phase | move - | move blocked 1: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | move blocked 2: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft] | remove",
-        "interactWheelReward:wheel1": "#2 required | scope phase | move - | move blocked 0: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | move blocked 2: window after interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft] | remove",
-        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft]": "#3 required | scope room | move - | move blocked 0: requiredFirst chooseRewardWheel:wheel1 | move blocked 1: requiredFirst interactWheelReward:wheel1 | unplace"
+        "chooseRewardWheel:wheel1": "#1 required | scope phase | move - | move blocked 1,2: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | remove",
+        "interactWheelReward:wheel1": "#2 required | scope phase | move 2 | move blocked 0: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | remove",
+        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft]": "#3 required | scope room | move 0,1 | unplace"
       }
     },
     {
@@ -5704,9 +5704,9 @@
         "execution/surface-start-q-opening"
       ],
       "rows": {
-        "chooseRewardWheel:wheel1": "#1 required | scope phase | move - | move blocked 1: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | move blocked 2: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondLeft] | remove",
-        "interactWheelReward:wheel1": "#2 required | scope phase | move - | move blocked 0: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | move blocked 2: window after interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondLeft] | remove",
-        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondLeft]": "#3 required | scope room | move - | move blocked 0: requiredFirst chooseRewardWheel:wheel1 | move blocked 1: requiredFirst interactWheelReward:wheel1 | unplace"
+        "chooseRewardWheel:wheel1": "#1 required | scope phase | move - | move blocked 1,2: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | remove",
+        "interactWheelReward:wheel1": "#2 required | scope phase | move 2 | move blocked 0: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | remove",
+        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondLeft]": "#3 required | scope room | move 0,1 | unplace"
       }
     },
     {
@@ -5723,9 +5723,9 @@
         "surface/surfaceShrineTravelDealProject"
       ],
       "rows": {
-        "chooseRewardWheel:wheel1": "#1 required | scope phase | move - | move blocked 1: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | move blocked 2: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill] | remove",
-        "interactWheelReward:wheel1": "#2 required | scope phase | move - | move blocked 0: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | move blocked 2: window after interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill] | remove",
-        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill]": "#3 required | scope room | move - | move blocked 0: requiredFirst chooseRewardWheel:wheel1 | move blocked 1: requiredFirst interactWheelReward:wheel1 | unplace"
+        "chooseRewardWheel:wheel1": "#1 required | scope phase | move - | move blocked 1,2: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | remove",
+        "interactWheelReward:wheel1": "#2 required | scope phase | move 2 | move blocked 0: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | remove",
+        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill]": "#3 required | scope room | move 0,1 | unplace"
       }
     }
   ],
@@ -5862,10 +5862,10 @@
         "execution/surface-start-q-opening"
       ],
       "rows": {
-        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondRight]": "#1 required | scope phase | move - | move blocked 1: window after chooseRewardWheel:wheel1 | move blocked 2: window after interactWheelReward:wheel1 | move blocked 3: window after interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,travelDealRefill] | unplace",
-        "chooseRewardWheel:wheel1": "#2 required | scope phase | move - | move blocked 0: requiredFirst interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondRight] | move blocked 2: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | move blocked 3: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,travelDealRefill] | remove",
-        "interactWheelReward:wheel1": "#3 required | scope phase | move - | move blocked 0: afterAction chooseRewardWheel:wheel1, requiredFirst interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondRight] | move blocked 1: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | move blocked 3: window after interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,travelDealRefill] | remove",
-        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,travelDealRefill]": "#4 required | scope room | move - | move blocked 0: requiredFirst interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondRight] | move blocked 1: requiredFirst chooseRewardWheel:wheel1 | move blocked 2: requiredFirst interactWheelReward:wheel1 | unplace"
+        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-combat11-sideDoor1,initial:secondRight]": "#1 required | scope room | move 1,2,3 | unplace",
+        "chooseRewardWheel:wheel1": "#2 required | scope phase | move 0 | move blocked 2,3: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | remove",
+        "interactWheelReward:wheel1": "#3 required | scope phase | move 3 | move blocked 0,1: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | remove",
+        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,travelDealRefill]": "#4 required | scope room | move 0,1,2 | unplace"
       }
     }
   ],

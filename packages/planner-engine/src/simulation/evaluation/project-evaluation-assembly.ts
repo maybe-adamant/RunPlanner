@@ -18,7 +18,13 @@ import {
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { CountedRewardBinding, ShopSlotAssessment } from '../../reward-kernel';
 import type { ProjectDocument } from '../../authored-project/model';
-import { prefixAuthoredRooms } from '../candidates/evaluated-biome';
+import {
+  candidateBiome,
+  candidateBiomeRooms,
+  prefixAuthoredRooms,
+} from '../candidates/evaluated-biome';
+import { shopPurchaseBounds } from '../../authored-project/room-actions/domain';
+import { roomActionRowContact } from '../room-actions';
 import type { ProjectCandidateArtifacts } from './candidate-artifacts';
 import type {
   EncounterPhaseCandidateSupport,
@@ -491,7 +497,25 @@ export function derivedAcquisitionEntriesForProjectEvaluationAssembly(
     candidateArtifactsForProjectEvaluationAssembly(assembly)
       .biomeAt(createBiomeAddress(site.routeKey, site.biomeKey))
       ?.derivedAcquisitionEntries.entriesAt(site) ?? Object.freeze([])
-  ).map(({ address, capability }) => Object.freeze({ address, ...capability }));
+  ).map(({ address, capability }) => {
+    if (capability.kind !== 'echoDoubleShopReward')
+      return Object.freeze({ address, ...capability });
+    // Gold Gold Gold's duplicate stands with the Shop's purchases.
+    const biome = candidateBiome(assembly.evaluation, site.routeKey, site.biomeKey);
+    const key = semanticAddressKey(site.owner);
+    const room =
+      biome === undefined
+        ? undefined
+        : candidateBiomeRooms(biome).find(
+            (candidate) => semanticAddressKey(candidate.origin) === key,
+          );
+    const graph = room?.roomActionRoster.eventGraph;
+    return Object.freeze({
+      address,
+      ...capability,
+      ...(graph === undefined ? {} : roomActionRowContact(shopPurchaseBounds(graph), graph)),
+    });
+  });
 }
 
 /** Exact placement intent for one optional clocked pickup exposed at this assembly. */
@@ -515,7 +539,6 @@ export function clockedTraitPickupPlacementForProjectEvaluationAssembly(
   return Object.freeze({
     kind: 'PlaceClockedTraitPickup',
     entry,
-    encounterPhaseKey: capability.encounterPhaseKey,
     producerLifecycleKey: capability.producerLifecycleKey,
     rewardType,
   });
@@ -526,7 +549,9 @@ export function attestClockedTraitPickupPlacementForProjectEvaluationAssembly(
   command: Extract<ProjectCommand, { readonly kind: 'PlaceClockedTraitPickup' }>,
 ): boolean {
   const attested = clockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, command.entry);
-  return attested !== undefined && JSON.stringify(attested) === JSON.stringify(command);
+  const { index: _index, ...placement } = command;
+  void _index;
+  return attested !== undefined && JSON.stringify(attested) === JSON.stringify(placement);
 }
 
 /**
