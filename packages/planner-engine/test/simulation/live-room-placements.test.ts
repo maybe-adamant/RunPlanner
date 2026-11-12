@@ -147,7 +147,7 @@ function boundaryGaps(offered: ReadonlySet<number>, frontier: number): readonly 
 }
 
 /**
- * One room's live actions against the walk: every offered placement or move
+ * One room's live placements against the walk: every offered placement or move
  * is taken, and no row, purchase or derived placement is taken at the gaps
  * bounding where it is offered. A purchase or placement reaches a gap by its
  * default placement and a move.

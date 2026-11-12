@@ -60,7 +60,7 @@ export function canonicalRoom(assembly: ProjectEvaluationAssembly, address: Occu
       );
 }
 
-/** Every entered room the walk reaches, with its live actions. */
+/** Every entered room the walk reaches, with its live placements. */
 export function reachedRooms(project: ProjectDocument, assembly: ProjectEvaluationAssembly) {
   return project.route.biomes.flatMap((biome) =>
     (biome.topology?.occurrences ?? []).flatMap((occurrence) => {
