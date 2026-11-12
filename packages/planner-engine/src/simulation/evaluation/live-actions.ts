@@ -38,9 +38,8 @@ import {
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import { timedPickupReference } from '../rewards/acquisition/artifacts';
 import { roomObjectInteractionsForProjectEvaluationAssembly } from './project-evaluation-assembly';
+import { authoredRoom, roomWalk } from './evaluated-room';
 import {
-  authoredRoom,
-  roomWalk,
   spawnedLootForProjectEvaluationAssembly,
   spawnMomentEntryIndex,
   type SpawnedLootItem,

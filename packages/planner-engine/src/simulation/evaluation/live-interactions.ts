@@ -52,7 +52,7 @@ import {
   rerollSpendAllowanceForProjectEvaluationAssembly,
   rerollSurfaceForProjectEvaluationAssembly,
 } from './reroll-authoring';
-import { authoredRoom, roomWalk } from './spawned-loot';
+import { authoredRoom, roomWalk } from './evaluated-room';
 
 function frozen<T>(value: T): T {
   return Object.freeze(value);

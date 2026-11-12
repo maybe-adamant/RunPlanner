@@ -21,7 +21,7 @@ import {
   type LiveAction,
   type RoomLiveActions,
 } from './evaluation/live-actions';
-import { roomWalk } from './evaluation/spawned-loot';
+import { roomWalk } from './evaluation/evaluated-room';
 
 type LivePlacement = Extract<LiveAction, { readonly kind: 'place' }>;
 
