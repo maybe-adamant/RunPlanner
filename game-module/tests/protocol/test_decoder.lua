@@ -647,7 +647,7 @@ local function minimalPlan(transactions)
                 biomeKey = "F",
                 gameName = "F_Opening01",
                 kind = "opening",
-                overview = { encounterPhases = {}, requiredObjects = {} },
+                overview = { encounterPhases = {}, requiredObjects = {}, layout = tagged({ flipped = false }) },
                 timeline = { transactions = transactions, dependencies = {}, obligations = obligations },
                 roomGuide = {},
                 doors = { kind = "terminal", owner = "doors-owner" },
@@ -818,6 +818,33 @@ function TestProtocol.testHermesShrinePurchaseRequiresDeliverySourcePair()
         refreshFingerprint(plan)
         lu.assertNil(protocol.decode(plan))
     end
+end
+
+-- An entered room publishes its flip, its entry unless it has none, and the values its arrival door derives.
+function TestProtocol.testLayoutRequiresItsFlipAndNamesOnlyPublishedDerivedValues()
+    local function decoded(layout)
+        return overview.decode(assert(json.decode('{"encounterPhases":[],"requiredObjects":[],"layout":'
+            .. layout .. '}')), "overview")
+    end
+    local entry = '"entry":{"startPointId":7,"endPointId":8}'
+    lu.assertNotNil(decoded('{"flipped":false}'))
+    lu.assertNotNil(decoded('{"flipped":true,' .. entry .. ',"derived":["flipped","entry"]}'))
+    lu.assertNotNil(decoded('{"flipped":true,"derived":["flipped"]}'))
+    for _, layout in ipairs({
+        '{' .. entry .. '}',
+        '{"flipped":true,' .. entry .. ',"derived":[]}',
+        '{"flipped":true,' .. entry .. ',"derived":["entry","entry"]}',
+        '{"flipped":true,' .. entry .. ',"derived":["exit"]}',
+        '{"flipped":true,"derived":["entry"]}',
+    }) do
+        lu.assertNil(decoded(layout), layout)
+    end
+    local plan = minimalPlan({})
+    plan.occurrences[1].overview.layout = nil
+    refreshFingerprint(plan)
+    local missing, reason = protocol.decode(plan)
+    lu.assertNil(missing)
+    lu.assertStrContains(reason, "overview.layout must be published exactly for a selected occurrence")
 end
 
 function TestProtocol.testWellOverviewCannotRetainTheMovedTravelDealRefill()

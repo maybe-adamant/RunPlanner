@@ -3226,10 +3226,14 @@ describe('execution-plan compiler and codec', () => {
     )
       throw new Error('fixture lacks an obligated transaction occurrence to clone');
     const unselectedOwner = 'unselected-occurrence-owner';
+    // An unselected room is never entered, so it publishes no layout.
+    const unenteredOverview = { ...sourceForUnselected.overview };
+    delete unenteredOverview.layout;
     const unselected = Object.freeze({
       ...sourceForUnselected,
       id: 'unselected-occurrence',
       owner: unselectedOwner,
+      overview: Object.freeze(unenteredOverview),
       roomGuide: Object.freeze(
         sourceForUnselected.roomGuide.map((row) => {
           if (row.transactionOwner === sourceTransaction.owner)

@@ -807,9 +807,10 @@ function executionFieldsLayout(
 }
 
 /**
- * The entered room's flip and entry the runtime steers: fixed by the room or
- * its arrival door, or authored or drawn where the game rolls or chooses.
- * A value derived from the previous exit stays native.
+ * The entered room's flip and its entry, unless the room has no entry points:
+ * fixed by the room, authored or drawn where the game rolls or chooses, or
+ * derived from the arrival door, which `derived` names so the runtime checks
+ * rather than steers it.
  */
 function executionRoomLayout(
   room: CanonicalAuthoredRoom,
@@ -822,19 +823,19 @@ function executionRoomLayout(
   );
   if (settlement === undefined)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks its layout`);
-  const flipped = settlement.flip.kind === 'derived' ? undefined : settlement.flip.value;
-  const entry =
-    settlement.entry.kind === 'fixed' || settlement.entry.kind === 'choice'
-      ? settlement.entry.point
-      : undefined;
-  if (flipped === undefined && entry === undefined) return undefined;
+  const entry = settlement.entry.kind === 'unknown' ? undefined : settlement.entry.point;
+  const derived = [
+    ...(settlement.flip.kind === 'derived' ? (['flipped'] as const) : []),
+    ...(settlement.entry.kind === 'derived' ? (['entry'] as const) : []),
+  ];
   return Object.freeze({
-    ...(flipped === undefined ? {} : { flipped }),
+    flipped: settlement.flip.value,
     ...(entry === undefined
       ? {}
       : {
           entry: Object.freeze({ startPointId: entry.startPointId, endPointId: entry.endPointId }),
         }),
+    ...(derived.length === 0 ? {} : { derived: Object.freeze(derived) }),
   });
 }
 

@@ -98,15 +98,23 @@ function anchorId(record: Readonly<Record<string, unknown>>, label: string) {
 /** The room's flip and entry where they are determined. */
 function roomLayout(value: unknown, label: string): import('../model').ExecutionRoomLayout {
   const record = object(value, label);
-  exact(record, [], ['flipped', 'entry'], label);
-  if (record.flipped === undefined && record.entry === undefined)
-    fail(`${label} must be non-empty when present`);
+  exact(record, ['flipped'], ['entry', 'derived'], label);
   const entry = record.entry === undefined ? undefined : object(record.entry, `${label}.entry`);
   if (entry !== undefined) exact(entry, ['startPointId', 'endPointId'], [], `${label}.entry`);
+  const derived =
+    record.derived === undefined
+      ? undefined
+      : array(record.derived, `${label}.derived`).map((value, index) =>
+          oneOf<'flipped' | 'entry'>(value, ['flipped', 'entry'], `${label}.derived[${index}]`),
+        );
+  if (derived !== undefined) {
+    if (derived.length === 0) fail(`${label}.derived must not be empty`);
+    if (new Set(derived).size !== derived.length) fail(`${label}.derived has duplicate values`);
+    if (derived.includes('entry') && entry === undefined)
+      fail(`${label}.derived names an entry it does not publish`);
+  }
   return Object.freeze({
-    ...(record.flipped === undefined
-      ? {}
-      : { flipped: booleanValue(record.flipped, `${label}.flipped`) }),
+    flipped: booleanValue(record.flipped, `${label}.flipped`),
     ...(entry === undefined
       ? {}
       : {
@@ -115,6 +123,7 @@ function roomLayout(value: unknown, label: string): import('../model').Execution
             endPointId: integer(entry.endPointId, `${label}.entry.endPointId`, 1),
           }),
         }),
+    ...(derived === undefined ? {} : { derived: Object.freeze(derived) }),
   });
 }
 

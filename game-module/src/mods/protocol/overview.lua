@@ -274,14 +274,14 @@ local function anchorId(record, label)
     return true
 end
 
--- The room's flip and entry wherever they are determined; absent ones stay native.
+local LAYOUT_FIELDS = { flipped = true, entry = true }
+
+-- An entered room's flip and, unless it has no entry points, its entry;
+-- `derived` names those its arrival door decides, which are checked, not steered.
 local function roomLayout(value, label)
-    local record, errorMessage = p.exact(value, {}, { "flipped", "entry" }, label)
+    local record, errorMessage = p.exact(value, { "flipped" }, { "entry", "derived" }, label)
     if not record then return nil, errorMessage end
-    if record.flipped == nil and record.entry == nil then
-        return p.fail(label .. " must be non-empty when present")
-    end
-    if record.flipped ~= nil and not p.bool(record.flipped, label .. ".flipped") then
+    if not p.bool(record.flipped, label .. ".flipped") then
         return p.fail(label .. " has invalid flip")
     end
     if record.entry ~= nil then
@@ -290,6 +290,21 @@ local function roomLayout(value, label)
         if not p.int(entry.startPointId, label .. ".entry.startPointId", 1)
             or not p.int(entry.endPointId, label .. ".entry.endPointId", 1) then
             return p.fail(label .. " has invalid entry")
+        end
+    end
+    if record.derived ~= nil then
+        local derived, derivedError = p.arr(record.derived, label .. ".derived", 2)
+        if not derived then return nil, derivedError end
+        if #derived == 0 then return p.fail(label .. ".derived must not be empty") end
+        local seen = {}
+        for index, field in ipairs(derived) do
+            if not p.one(field, LAYOUT_FIELDS, label .. ".derived[" .. index .. "]") or seen[field] then
+                return p.fail(label .. " has invalid derived value")
+            end
+            seen[field] = true
+        end
+        if seen.entry and record.entry == nil then
+            return p.fail(label .. ".derived names an entry it does not publish")
         end
     end
     return record

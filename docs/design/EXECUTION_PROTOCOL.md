@@ -92,12 +92,15 @@ information the runtime consumes:
 
 ### Room content
 
-Every entered room publishes the layout the runtime steers: the flip and the
-entry (start and end point) where the room or its arrival door fixes them, or
-the stored value where the game rolls or picks among eligible entries
-([positions filled on first reach](SIMULATION_AND_VALIDATION.md#positions-filled-on-first-reach)).
-A value the game derives from the previous room's exit is absent and stays
-native. Object positions and stock are required, since publication accepts
+Every entered room, and no other, publishes its layout: the flip, and the
+entry (start and end point) unless the room has no entry points. Each is the
+value the room fixes, the stored one where the game rolls or picks among
+eligible entries
+([positions filled on first reach](SIMULATION_AND_VALIDATION.md#positions-filled-on-first-reach)),
+or the one the game derives from the previous room's exit, which the layout
+lists as `derived`. The module steers every value except a derived one, which
+it leaves native and compares with the result, raising the same positional
+diagnostic as a steered value it could not hold. Object positions and stock are required, since publication accepts
 only plans whose reached positions and slots are filled: every Pool, Shrine,
 challenge switch and Well publishes its `anchorId`, its stored anchor or, for
 a Well, its room's pin, which the module verifies after spawning rather than

@@ -711,6 +711,10 @@ function occurrences.decode(value, selected, label)
         selectedSeen[id] = true
     end
     for _, row in ipairs(result) do
+        -- Every entered room, and only one, publishes its layout.
+        if (row.overview.layout ~= nil) ~= (selectedSeen[row.id] == true) then
+            return p.fail(label .. "[" .. row.id .. "].overview.layout must be published exactly for a selected occurrence")
+        end
         -- Only a selected Ship room is entered, so only it spins its wheels.
         if row.kind == "ShipEncounter"
             and #(row.overview.rewardWheels or {}) ~= (selectedSeen[row.id] and shipCombatPhaseCount(row) or 0) then

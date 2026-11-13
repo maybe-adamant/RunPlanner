@@ -1,6 +1,7 @@
 -- Room layout steering: the published flip and entry are preset on the created
--- room, a published entry wins over an arrival door's forced entry once per
--- entered occurrence, and the observed layout is checked as a diagnostic.
+-- room unless derived from the arrival door, a steered entry wins over an
+-- arrival door's forced entry once per entered occurrence, and the observed
+-- layout, steered or derived, is checked as a diagnostic.
 -- luacheck: globals TestRoomLayout
 local lu = require("luaunit")
 local layout = require("mods.room.features.layout")
@@ -49,26 +50,31 @@ function TestRoomLayout.testCreatedRoomTakesThePublishedFlipAndEntry()
     lu.assertEquals({ nativeRoom.Flipped, nativeRoom.HeroStartPoint, nativeRoom.HeroEndPoint }, { true, 565481, 565479 })
 
     -- A run start publishes its fixed unflipped layout; native's own flip computation never sees it unset.
+    -- Its sole entry is derived, so native places it.
     local opening = occurrenceOf("underworld-fgh.execution.json", "golden-f-start")
-    lu.assertEquals(opening.overview.layout, { flipped = false })
+    lu.assertEquals(opening.overview.layout,
+        { flipped = false, entry = { startPointId = 50065, endPointId = 50059 }, derived = { "entry" } })
     local openingRoom = coordinator.realizeFeatures(nil, opening, { Name = "F_Opening01" })
     lu.assertEquals(openingRoom.Flipped, false)
     lu.assertNil(openingRoom.HeroStartPoint)
 end
 
-function TestRoomLayout.testUnpublishedLayoutStaysNative()
-    local nativeRoom = coordinator.realizeFeatures(nil, { overview = {} }, { Name = "F_Combat01" })
+function TestRoomLayout.testDerivedValuesStayNative()
+    local entry = { startPointId = 7, endPointId = 8 }
+    local nativeRoom = coordinator.realizeFeatures(nil, {
+        overview = { layout = { flipped = true, entry = entry, derived = { "flipped", "entry" } } },
+    }, { Name = "F_Combat01" })
     lu.assertNil(nativeRoom.Flipped)
     lu.assertNil(nativeRoom.HeroStartPoint)
-    local entryOnly = coordinator.realizeFeatures(nil, {
-        overview = { layout = { entry = { startPointId = 7, endPointId = 8 } } },
+    local flipDerived = coordinator.realizeFeatures(nil, {
+        overview = { layout = { flipped = true, entry = entry, derived = { "flipped" } } },
     }, { Name = "F_Combat02" })
-    lu.assertNil(entryOnly.Flipped)
-    lu.assertEquals({ entryOnly.HeroStartPoint, entryOnly.HeroEndPoint }, { 7, 8 })
+    lu.assertNil(flipDerived.Flipped)
+    lu.assertEquals({ flipDerived.HeroStartPoint, flipDerived.HeroEndPoint }, { 7, 8 })
 end
 
 function TestRoomLayout.testPublishedEntryWinsOverAForcedArrivalOnceThenStaysNative()
-    local occurrence = { id = "room", overview = { layout = { entry = { startPointId = 7, endPointId = 8 } } } }
+    local occurrence = { id = "room", overview = { layout = { flipped = false, entry = { startPointId = 7, endPointId = 8 } } } }
     local callbacks, _, diagnostics, reports = harness(occurrence)
     local nativeRoom = { __runPlannerExecutionRoomId = "room", HeroStartPoint = 7, HeroEndPoint = 8 }
     local currentRun = { NextHeroStartPoint = 5, NextHeroEndPoint = 6 }
@@ -81,12 +87,14 @@ function TestRoomLayout.testPublishedEntryWinsOverAForcedArrivalOnceThenStaysNat
     lu.assertEquals(#diagnostics, 1)
 end
 
-function TestRoomLayout.testUnpublishedEntryKeepsTheForcedArrival()
-    local callbacks, _, diagnostics = harness({ id = "room", overview = { layout = { flipped = true } } })
+function TestRoomLayout.testDerivedEntryKeepsTheForcedArrival()
+    local callbacks, _, diagnostics = harness({ id = "room", overview = { layout = {
+        flipped = true, entry = { startPointId = 5, endPointId = 6 }, derived = { "entry" },
+    } } })
     local currentRun = { NextHeroStartPoint = 5, NextHeroEndPoint = 6 }
     lu.assertEquals(gather(callbacks, currentRun, { __runPlannerExecutionRoomId = "room" }), { 5, 6 })
     -- Another occurrence's room is never steered.
-    local other = harness({ id = "other", overview = { layout = { entry = { startPointId = 7, endPointId = 8 } } } })
+    local other = harness({ id = "other", overview = { layout = { flipped = false, entry = { startPointId = 7, endPointId = 8 } } } })
     currentRun.NextHeroStartPoint, currentRun.NextHeroEndPoint = 5, 6
     lu.assertEquals(gather(other, currentRun, { __runPlannerExecutionRoomId = "room" }), { 5, 6 })
     lu.assertEquals(diagnostics, {})
@@ -111,4 +119,16 @@ function TestRoomLayout.testObservedEntryAndFlipAreDiagnosedOnceWithoutMismatch(
     })
     lu.assertEquals(reports(), 1)
     lu.assertEquals(state.state, "synchronized")
+end
+
+function TestRoomLayout.testDerivedEntryAndFlipAreStillDiagnosed()
+    local callbacks, _, diagnostics = harness({ id = "room", overview = { layout = {
+        flipped = false, entry = { startPointId = 7, endPointId = 8 }, derived = { "flipped", "entry" },
+    } } })
+    callbacks.StartRoomPresentation(nil, {}, function() end, {},
+        { __runPlannerExecutionRoomId = "room", HeroStartPoint = 9, Flipped = true })
+    lu.assertEquals(diagnostics, {
+        { kind = "room-entry", observed = { expected = 7, observed = 9 } },
+        { kind = "room-flip", observed = { expected = false, observed = true } },
+    })
 end

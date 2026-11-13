@@ -273,12 +273,18 @@ export interface ExecutionReroll {
  * A room's horizontal flip and entry as derived from the previous room's exit
  * or authored where the game rolls; each is absent while the game decides it.
  */
+/**
+ * An entered room's flip and entry; the entry is absent only for a room
+ * without entry points. `derived` names the values the arrival door decides,
+ * which the runtime checks instead of steering.
+ */
 export interface ExecutionRoomLayout {
-  readonly flipped?: boolean;
+  readonly flipped: boolean;
   readonly entry?: {
     readonly startPointId: number;
     readonly endPointId: number;
   };
+  readonly derived?: readonly ('flipped' | 'entry')[];
 }
 
 /**

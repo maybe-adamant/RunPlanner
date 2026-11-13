@@ -16,6 +16,9 @@ synchronized either way. The owner confirms or waives each check.
 - [ ] Each such room is entered at the entry its Layout shows and flipped as
       shown, filled or chosen; no `room-entry` or `room-flip` diagnostic. A
       door-decided entry raises at most `room-entry-forced`.
+- [ ] A room whose entry or flip its arrival door decides is entered and
+      flipped as its Layout shows; a `room-entry` or `room-flip` diagnostic
+      there means the planner's door rule differs from the game's.
 - [ ] Replaying the unchanged plan enters each room the same way again.
 
 ## Object anchors (rooms with a Well, Pool, Shrine or challenge switch)
@@ -24,7 +27,7 @@ synchronized either way. The owner confirms or waives each check.
       no `room-anchor` or `room-anchor-unavailable` diagnostic.
 - [ ] A room with two or more objects puts each on its own shown anchor; a
       Meta Reward Stand, when one spawns, takes a remaining anchor.
-- [ ] A Well on its room's pin stands there.
+- [ ] A Well on its room's pin stands there; no `room-anchor` diagnostic.
 
 ## Fields points (Mourning Fields H combat rooms)
 
