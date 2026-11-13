@@ -417,11 +417,9 @@ export interface WorkspaceFieldsSpatialControl {
   readonly interactionKey: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
-  /** The stored point; null while the slot stands on its default. */
+  /** The stored point; null until the walk reaches the room. */
   readonly pointId: number | null;
-  /** The point the slot stands on by default while none is stored. */
-  readonly defaultPointId?: number;
-  /** Each point, null returning the slot to its default. */
+  /** Each point the slot can take. */
   readonly pointChoices: readonly { readonly label: string; readonly value: number | null }[];
 }
 

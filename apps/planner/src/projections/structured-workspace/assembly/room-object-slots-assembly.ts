@@ -190,22 +190,13 @@ export function assembleRoomObjectSlots(input: {
               anchor: Object.freeze({
                 ...(object.anchorId === undefined ? {} : { anchorId: object.anchorId }),
                 ...(pinned === undefined ? {} : { pinned }),
-                ...(object.defaultAnchorId === undefined
-                  ? {}
-                  : { defaultAnchorId: object.defaultAnchorId }),
                 choices: Object.freeze(
                   (object.anchorChoices ?? [])
-                    // The anchor it stands on is not offered; null returns a chosen anchor to its default.
-                    .filter((choice) =>
-                      choice.anchorId === null
-                        ? object.anchorId !== undefined
-                        : choice.anchorId !== (object.anchorId ?? object.defaultAnchorId),
-                    )
+                    // The anchor it stands on is not offered.
+                    .filter((choice) => choice.anchorId !== object.anchorId)
                     .map((choice) =>
                       Object.freeze({
-                        key: bind(`anchor:${object.kind}@${choice.anchorId ?? 'default'}`, [
-                          choice.command,
-                        ]),
+                        key: bind(`anchor:${object.kind}@${choice.anchorId}`, [choice.command]),
                         anchorId: choice.anchorId,
                       }),
                     ),
@@ -225,7 +216,6 @@ export function assembleRoomObjectSlots(input: {
         ...(anchor.occupant === undefined
           ? {}
           : { occupant: Object.freeze({ object: anchor.occupant, ...kindOf(anchor.occupant) }) }),
-        ...(anchor.default === true ? { default: true as const } : {}),
       }),
     );
   return Object.freeze({

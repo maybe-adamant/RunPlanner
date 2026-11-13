@@ -76,6 +76,7 @@ import {
 } from './evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from './evaluation/evaluation-products';
 import { candidateBiome, candidateBiomeRooms } from './candidates/evaluated-biome';
+import { positionFills } from './position-fill';
 import { currentPoolListValues, stockFills, type PoolValuesBefore } from './stock-fill';
 
 function occurrences(project: ProjectDocument) {
@@ -198,19 +199,22 @@ function withoutRecordedContent(occurrence: RoomOccurrence | undefined): string 
 /** Whether the edit changed the room's authored occurrence; stamping content alone does not. */
 type RoomEdited = (after: ProjectDocument, owner: OccurrenceAddress) => boolean;
 
-/** Judges rooms against the plan before the edit, reading each occurrence once per settlement. */
-function roomEditedSince(before: ProjectDocument): RoomEdited {
-  const previous = new Map<string, string | undefined>();
-  const next = new WeakMap<RoomOccurrence, string | undefined>();
+/**
+ * Judges rooms against the plan before the edit, with the positions the
+ * settlement filled since: filling a blank position is not an edit of its
+ * room. Each occurrence is read once per settlement.
+ */
+function roomEditedSince(baseline: () => ProjectDocument): RoomEdited {
+  const read = new WeakMap<RoomOccurrence, string | undefined>();
+  const text = (occurrence: RoomOccurrence | undefined) => {
+    if (occurrence === undefined) return undefined;
+    if (!read.has(occurrence)) read.set(occurrence, withoutRecordedContent(occurrence));
+    return read.get(occurrence);
+  };
   return (after, owner) => {
-    const old = occurrenceAt(before, owner);
+    const old = occurrenceAt(baseline(), owner);
     const now = occurrenceAt(after, owner);
-    if (old === now) return false;
-    const key = semanticAddressKey(owner);
-    if (!previous.has(key)) previous.set(key, withoutRecordedContent(old));
-    if (now === undefined) return previous.get(key) !== undefined;
-    if (!next.has(now)) next.set(now, withoutRecordedContent(now));
-    return previous.get(key) !== next.get(now);
+    return old !== now && text(old) !== text(now);
   };
 }
 
@@ -1129,14 +1133,31 @@ export function settleProjectUpgrade(
 }
 
 /**
- * Stock every blank slot a saved plan's walk reaches, as the edit that first
- * reached it would have, and nothing else. A schema transform for plans saved
- * while a blank stock slot meant the game's own roll: a stale Pool list keeps
- * its values and findings, unless the plan was built by commands that would
- * each have settled it. Total like an edit's settlement: a slot stocked twice
- * is a fault beside the last assembly.
+ * Every blank the evaluated walk reached, with the command filling it: each
+ * position the walk drew, then each stock slot by its stable legal draw.
  */
-export function settleProjectStock(
+function reachedFills(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  artifacts: CandidateArtifacts,
+  poolValuesBefore: PoolValuesBefore,
+) {
+  const positions = positionFills(catalog, assembly);
+  return {
+    positions,
+    fills: [...positions, ...stockFills(catalog, assembly.project, artifacts, poolValuesBefore)],
+  };
+}
+
+/**
+ * Fill every blank position and stock slot a saved plan's walk reaches, as
+ * the edit that first reached it would have, and nothing else. A schema
+ * transform for plans saved while a blank position or stock slot meant the
+ * game's own roll: a stale Pool list keeps its values and findings, unless the
+ * plan was built by commands that would each have settled it. Total like an
+ * edit's settlement: a blank filled twice is a fault beside the last assembly.
+ */
+export function settleProjectFills(
   options: ProjectUpgradeSettlementOptions & { readonly redrawStalePoolLists?: boolean },
 ): ProjectEditSettlement {
   const evaluate = exactEvaluation(options.evaluate);
@@ -1144,9 +1165,9 @@ export function settleProjectStock(
   const poolValuesBefore: PoolValuesBefore = () => options.redrawStalePoolLists === true;
   const stocked = new Set<string>();
   for (;;) {
-    const fills = stockFills(
+    const { fills } = reachedFills(
       options.catalog,
-      assembly.project,
+      assembly,
       candidateArtifactsForProjectEvaluationAssembly(assembly),
       poolValuesBefore,
     );
@@ -1186,7 +1207,9 @@ function settleProject(options: {
     ? () => false
     : currentPoolListValues(before.project, beforeArtifacts);
   const beforeRosters = enteredRosters(before);
-  const edited = roomEditedSince(before.project);
+  // The plan before the edit with each position the settlement filled.
+  let filledBefore = before.project;
+  const edited = roomEditedSince(() => filledBefore);
   const replacedNow = replacedSince(catalog, upgrade ? undefined : before.project, edited);
   // A removal in the room the edit addresses shows on the Timeline being edited; any other is announced.
   const room = command === undefined ? undefined : addressedRoom(projectCommandAddress(command));
@@ -1463,8 +1486,8 @@ function settleProject(options: {
             ...(upgrade ? sourceGonePickups(catalog, assembly, evaluate) : []).map(fated('taken')),
           ];
     if (items.length === 0 && removals.length === 0) {
-      // Once nothing else is repaired, the edit stocks every blank slot the walk reached.
-      const fills = stockFills(catalog, assembly.project, artifacts, poolValuesBefore);
+      // Once nothing else is repaired, the edit fills every blank the walk reached.
+      const { positions, fills } = reachedFills(catalog, assembly, artifacts, poolValuesBefore);
       if (fills.length === 0) return settled(assembly);
       for (const fill of fills) {
         const fault = repair(`fill:${fill.key}`, fill.owner, (plan) =>
@@ -1472,6 +1495,13 @@ function settleProject(options: {
         );
         if (fault !== undefined) return settled(assembly, fault);
       }
+      for (const fill of positions)
+        try {
+          filledBefore = applyProjectCommand(filledBefore, catalog, fill.command);
+        } catch (error) {
+          // A room the plan before the edit held otherwise is edited either way.
+          if (!(error instanceof ProjectCommandContractError)) throw error;
+        }
       continue;
     }
     // Last first, each through its owning removal, as a reset removes rows.

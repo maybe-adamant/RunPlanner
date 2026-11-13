@@ -46,10 +46,10 @@ describe('challenge switch rows on the room Overview', () => {
     openHost(application);
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
 
-    // A kind's toggle adds that kind, which the game places.
+    // A kind's toggle adds that kind on an anchor the edit stores.
     await user.click(screen.getByRole('button', { name: 'Infernal Trove' }));
     expect(hostRoom(application).challengeSwitch?.variantKey).toBe('TimeChallengeSwitch_Money');
-    expect(hostRoom(application).challengeSwitch?.anchorId).toBeUndefined();
+    expect(hostRoom(application).challengeSwitch?.anchorId).toBeDefined();
 
     // Another kind's toggle replaces it.
     await user.click(screen.getByRole('button', { name: 'Unseen Sigil' }));
@@ -57,7 +57,7 @@ describe('challenge switch rows on the room Overview', () => {
       'PerfectClearChallengeSwitch_Pom',
     );
 
-    // It stands on its default; another free anchor is picked in its place.
+    // Another free anchor is picked in place of the stored one.
     await user.click(screen.getByRole('button', { name: 'Switch spot' }));
     await user.click(
       screen

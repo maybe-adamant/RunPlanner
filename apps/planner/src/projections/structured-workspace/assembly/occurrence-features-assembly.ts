@@ -180,13 +180,14 @@ function roomFeatures(
   const authoredChaos = input.occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
   const gatePosition = authoredChaos === undefined ? undefined : input.chaosGatePosition;
   const invalidPosition =
-    gatePosition !== undefined &&
+    gatePosition?.spawnPointIndex !== undefined &&
     !gatePosition.spawnPointIndices.includes(gatePosition.spawnPointIndex);
   const position =
     gatePosition !== undefined && (gatePosition.spawnPointIndices.length > 1 || invalidPosition)
       ? Object.freeze({
-          value: gatePosition.spawnPointIndex,
-          ...(gatePosition.source === 'default' ? { default: true as const } : {}),
+          ...(gatePosition.spawnPointIndex === undefined
+            ? {}
+            : { value: gatePosition.spawnPointIndex }),
           choices: gatePosition.spawnPointIndices,
           invalid: invalidPosition,
         })

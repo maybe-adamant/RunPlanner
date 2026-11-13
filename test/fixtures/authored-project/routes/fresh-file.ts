@@ -402,6 +402,20 @@ function withoutNectarLevels(value: unknown): void {
   Object.values(record).forEach(withoutNectarLevels);
 }
 
+/**
+ * A mature document's rooms without their stored positions: a room the fixture
+ * recasts or reaches by another door takes the positions its new walk draws.
+ */
+function withoutStoredPositions(document: RawJson): void {
+  for (const biome of document.route.biomes)
+    for (const occurrence of biome.topology?.occurrences ?? []) {
+      delete occurrence.layout;
+      for (const object of ['stygianWell', 'purgingPool', 'hermesShrine', 'challengeSwitch'])
+        delete occurrence[object]?.anchorId;
+      for (const exit of occurrence.additionalExits ?? []) delete exit.spawnPointIndex;
+    }
+}
+
 /** Fresh File has no F, G or H Postboss rack, so a carried mature room drops it. */
 function withoutKeepsakeRack(occurrence: RawJson): void {
   delete occurrence.keepsakeRack;
@@ -423,6 +437,7 @@ export function createFreshFileGeneratedComposition(): ProjectDocument {
       .replaceAll('"Hera', '"Demeter'),
   );
   withoutNectarLevels(mature);
+  withoutStoredPositions(mature);
   const fresh = JSON.parse(encodeProjectDocument(createFreshFileFirstSequence()));
   const [matureF] = mature.route.biomes;
   const [freshF] = fresh.route.biomes;
@@ -527,6 +542,7 @@ function freshFileRouteFrontierStart(): ProjectDocument {
   const mature = JSON.parse(
     encodeProjectDocument(loadUnderworldFGHICheckpoint()).replaceAll('Underworld', 'FreshFile'),
   );
+  withoutStoredPositions(mature);
   const biomes: RawJson[] = mature.route.biomes.slice(1);
   const [g, h] = biomes;
   const occurrence = (id: string): RawJson =>

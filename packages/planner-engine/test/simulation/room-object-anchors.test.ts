@@ -11,9 +11,12 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   roomObjectAnchorSlotsForProjectEvaluationAssembly,
+  settleProjectEdit,
   simulateProjectAssembly,
   type RoomAnchorSlots,
 } from '@run-planner/engine/simulation';
+import { settleProjectFills } from '@run-planner/engine/project-migration';
+import { roomObjectAnchorPositions } from '../../src/simulation/room-layout/object-anchor-positions';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
@@ -56,6 +59,22 @@ function occurrenceGameName(project: ProjectDocument, biomeKey: string, occurren
 
 function apply(project: ProjectDocument, commands: readonly ProjectCommand[]): ProjectDocument {
   return commands.reduce((next, command) => applyProjectCommand(next, catalog, command), project);
+}
+
+const evaluate = (document: ProjectDocument) => simulateProjectAssembly(catalog, document);
+
+/** The plan with every blank its walk reaches filled. */
+function filled(project: ProjectDocument): ProjectDocument {
+  return settleProjectFills({ catalog, project, evaluate }).assembly.project;
+}
+
+/** Each command as one settled edit. */
+function settled(project: ProjectDocument, commands: readonly ProjectCommand[]): ProjectDocument {
+  return commands.reduce(
+    (next, command) =>
+      settleProjectEdit({ catalog, before: evaluate(next), command, evaluate }).assembly.project,
+    project,
+  );
 }
 
 /** Each slot's occupant and its choices as kind[:switch kind]@landing slot. */
@@ -393,38 +412,37 @@ describe('default object anchors', () => {
   const anchorIdsOf = (gameName: string) =>
     catalog.rooms.byKey[gameName]!.mapPoints!.challengeSwitchAnchors.map((anchor) => anchor.id);
 
-  it('defaults the Pool onto the anchor the Postboss Well pin leaves free', () => {
+  it('fills the Pool onto the anchor the Postboss Well pin leaves free', () => {
+    const project = filled(underworld());
     for (const [biomeKey, gameName] of [
       ['F', 'F_PostBoss01'],
       ['G', 'G_PostBoss01'],
       ['H', 'H_PostBoss01'],
     ] as const) {
       const occurrenceId = `golden-${biomeKey.toLowerCase()}-preboss-shop:postboss`;
-      const slots = slotsOf(underworld(), biomeKey, occurrenceId);
+      const slots = slotsOf(project, biomeKey, occurrenceId);
       const pin = catalog.rooms.byKey[gameName]!.mapPoints!.wellAnchorId!;
       const free = anchorIdsOf(gameName).find((id) => id !== pin)!;
-      expect(object(slots, 'purgingPool')).toMatchObject({ defaultAnchorId: free });
+      expect(object(slots, 'purgingPool').anchorId).toBe(free);
       expect(object(slots, 'purgingPool').anchorChoices?.map((choice) => choice.anchorId)).toEqual([
-        null,
         free,
       ]);
-      expect(object(slots, 'purgingPool').anchorId).toBeUndefined();
-      expect(object(slots, 'stygianWell').defaultAnchorId).toBeUndefined();
+      expect(object(slots, 'stygianWell').anchorId).toBeUndefined();
       expect(slots.anchors).toEqual(
         expect.arrayContaining([
           { anchorId: pin, pinned: true, occupant: 'stygianWell' },
-          { anchorId: free, pinned: false, occupant: 'purgingPool', default: true },
+          { anchorId: free, pinned: false, occupant: 'purgingPool' },
         ]),
       );
     }
   });
 
-  it('gives each unplaced object its own default, moved only when a choice takes it', () => {
+  it('stores each new object its own anchor, which a choice for another object never moves', () => {
     const project = underworld();
     const owner = address(project, 'F', 'golden-f-b5-e1');
     const anchorIds = anchorIdsOf(occurrenceGameName(project, 'F', 'golden-f-b5-e1'));
     expect(anchorIds).toHaveLength(2);
-    const both = apply(project, [
+    const both = settled(project, [
       {
         kind: 'ReplaceChallengeSwitch',
         occurrence: owner,
@@ -432,42 +450,31 @@ describe('default object anchors', () => {
       },
       { kind: 'AddStygianWell', occurrence: owner },
     ]);
-    const defaulted = slotsOf(both, 'F', 'golden-f-b5-e1');
-    const wellDefault = object(defaulted, 'stygianWell').defaultAnchorId!;
-    const switchDefault = object(defaulted, 'challengeSwitch').defaultAnchorId!;
-    expect(new Set([wellDefault, switchDefault])).toEqual(new Set(anchorIds));
-    expect(defaulted.anchors.every((anchor) => anchor.default === true)).toBe(true);
-    expect(object(defaulted, 'challengeSwitch').anchorChoices?.length).toBe(3);
-    // Re-evaluation derives the same defaults.
-    expect(slotsOf(both, 'F', 'golden-f-b5-e1').objects).toEqual(defaulted.objects);
+    const stored = slotsOf(both, 'F', 'golden-f-b5-e1');
+    const wellAnchor = object(stored, 'stygianWell').anchorId!;
+    const switchAnchor = object(stored, 'challengeSwitch').anchorId!;
+    expect(new Set([wellAnchor, switchAnchor])).toEqual(new Set(anchorIds));
+    expect(
+      object(stored, 'challengeSwitch').anchorChoices?.map((choice) => choice.anchorId),
+    ).toEqual([switchAnchor]);
 
-    const place = (anchorId: number) =>
-      slotsOf(
-        apply(both, [
-          {
-            kind: 'ReplaceRoomObjectAnchor',
-            occurrence: owner,
-            object: 'challengeSwitch',
-            anchorId,
-          },
-        ]),
-        'F',
-        'golden-f-b5-e1',
-      );
-    // Choosing the switch's own default leaves the Well's default alone.
-    const kept = place(switchDefault);
-    expect(object(kept, 'challengeSwitch')).toMatchObject({ anchorId: switchDefault });
-    expect(object(kept, 'challengeSwitch').defaultAnchorId).toBeUndefined();
-    expect(object(kept, 'stygianWell').defaultAnchorId).toBe(wellDefault);
-    // Choosing the Well's default moves the Well to the anchor left free.
-    const moved = place(wellDefault);
-    expect(object(moved, 'stygianWell').defaultAnchorId).toBe(switchDefault);
-    expect(moved.anchors).toEqual(
-      expect.arrayContaining([
-        { anchorId: wellDefault, pinned: false, occupant: 'challengeSwitch' },
-        { anchorId: switchDefault, pinned: false, occupant: 'stygianWell', default: true },
-      ]),
-    );
+    // Choosing the Well's anchor for the switch keeps the Well where it stands.
+    const moved = settled(both, [
+      {
+        kind: 'ReplaceRoomObjectAnchor',
+        occurrence: owner,
+        object: 'challengeSwitch',
+        anchorId: wellAnchor,
+      },
+    ]);
+    const after = slotsOf(moved, 'F', 'golden-f-b5-e1');
+    expect(object(after, 'stygianWell').anchorId).toBe(wellAnchor);
+    expect(object(after, 'challengeSwitch').anchorId).toBe(wellAnchor);
+    expect(
+      simulateProjectAssembly(catalog, moved).evaluation.findings.some(
+        (finding) => finding.code === 'roomObjectAnchorDuplicate',
+      ),
+    ).toBe(true);
   });
 
   it('never overrides an authored anchor', () => {
@@ -477,25 +484,23 @@ describe('default object anchors', () => {
     const free = anchorIdsOf('F_PostBoss01').find((id) => id !== pin)!;
     for (const anchorId of [free, pin]) {
       const slots = slotsOf(
-        apply(project, [
-          { kind: 'ReplaceRoomObjectAnchor', occurrence: owner, object: 'purgingPool', anchorId },
-        ]),
+        filled(
+          apply(project, [
+            { kind: 'ReplaceRoomObjectAnchor', occurrence: owner, object: 'purgingPool', anchorId },
+          ]),
+        ),
         'F',
         'golden-f-preboss-shop:postboss',
       );
-      const pool = object(slots, 'purgingPool');
-      expect(pool.anchorId).toBe(anchorId);
-      expect(pool.defaultAnchorId).toBeUndefined();
-      expect(slots.anchors.some((anchor) => anchor.default === true)).toBe(false);
+      expect(object(slots, 'purgingPool').anchorId).toBe(anchorId);
     }
   });
 
-  it('keeps the Well pin out of the Pool default in a pinned room whose Well is absent', () => {
+  it('keeps the Well pin out of the Pool draw in a pinned room whose Well is absent', () => {
     const project = withRetainedFreshFilePostboss(createFreshFileFProject(), {
       well: false,
       poolSaleTraitKey: 'ApolloWeaponBoon',
     });
-    const owner = address(project, project.route.biomes[0]!.biomeKey, freshFileFPostbossId);
     const room = catalog.rooms.byKey.F_PostBoss01!;
     const pin = room.mapPoints!.wellAnchorId!;
     const free = anchorIdsOf('F_PostBoss01').find((id) => id !== pin)!;
@@ -510,16 +515,15 @@ describe('default object anchors', () => {
         },
       },
     } as typeof catalog;
-    const slots = roomObjectAnchorSlotsForProjectEvaluationAssembly(
-      hosting,
-      simulateProjectAssembly(catalog, project),
-      owner,
+    const occurrence = project.route.biomes[0]!.topology!.occurrences.find(
+      (entry) => entry.occurrenceId === freshFileFPostbossId,
     )!;
-    expect(slots.objects.map((entry) => [entry.kind, entry.hosted, entry.present])).toEqual([
-      ['purgingPool', true, true],
-    ]);
-    expect(object(slots, 'purgingPool').slotIndex).toBe(0);
-    expect(object(slots, 'purgingPool').defaultAnchorId).toBe(free);
-    expect(slots.anchors.find((anchor) => anchor.anchorId === pin)?.occupant).toBeUndefined();
+    const positions = roomObjectAnchorPositions(
+      hosting,
+      { ...occurrence, purgingPool: { ...occurrence.purgingPool! } },
+      project.route.routeKey,
+      'postboss',
+    );
+    expect([...positions]).toEqual([['purgingPool', { anchorId: free, source: 'drawn' }]]);
   });
 });

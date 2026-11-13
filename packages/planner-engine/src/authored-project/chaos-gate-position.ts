@@ -11,19 +11,15 @@ export function chaosGateSpawnPointIndices(room: RoomDeclaration): readonly numb
 }
 
 /**
- * Where a Chaos gate spawns in its source room: its stored point (the owner's
- * choice, kept even where it is invalid), else its stable default among the
- * room's points; undefined for a room with none.
+ * Where a Chaos gate spawns in its source room: its stored point (kept even
+ * where it is invalid), else its stable draw among the room's points, which
+ * settlement stores once the walk reaches the room; undefined for a room with none.
  */
 export function chaosGateSpawnPoint(
   room: RoomDeclaration,
-  /** The gate's semantic key, which seeds its default. */
+  /** The gate's semantic key, which seeds its draw. */
   gateKey: string,
   stored: number | undefined,
-): { readonly spawnPointIndex: number; readonly source: 'chosen' | 'default' } | undefined {
-  if (stored !== undefined) return Object.freeze({ spawnPointIndex: stored, source: 'chosen' });
-  const spawnPointIndex = stableChoice(gateKey, chaosGateSpawnPointIndices(room));
-  return spawnPointIndex === undefined
-    ? undefined
-    : Object.freeze({ spawnPointIndex, source: 'default' });
+): number | undefined {
+  return stored ?? stableChoice(gateKey, chaosGateSpawnPointIndices(room));
 }

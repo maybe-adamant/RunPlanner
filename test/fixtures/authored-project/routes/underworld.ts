@@ -316,6 +316,12 @@ export function createCompleteFGAnomalyProject(success = true): ProjectDocument 
     kind: 'SwitchTargetToAnomaly',
     target: createTargetAddress(goldenGBiome, source, 'exit2'),
   });
+  // The room after the Anomaly is entered by another door: its stored entry no longer applies.
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceRoomLayout',
+    occurrence: createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(4, 1)),
+    layout: {},
+  });
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceAnomalySuccess',
     occurrence: createOccurrenceAddress(goldenGBiome, anomalyOccurrenceId),

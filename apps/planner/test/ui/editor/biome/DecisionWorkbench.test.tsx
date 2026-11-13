@@ -177,11 +177,14 @@ async function openPositionOptions(user: { click: (element: Element) => Promise<
 
 const positionOption = (point: number) =>
   within(screen.getByRole('listbox')).getByRole('option', {
-    name: new RegExp(`P${point}( · Default)?$`),
+    name: new RegExp(`P${point}$`),
   });
 
-const positionDefault = () =>
-  within(screen.getByRole('listbox')).getByRole('option', { name: /^Default$/ });
+/** The first point the gate can take. */
+const positionAvailable = () =>
+  within(screen.getByRole('listbox'))
+    .getAllByRole('option')
+    .find((option) => option.getAttribute('aria-disabled') !== 'true')!;
 
 function authoredNaturalChaosFixture(pointCount?: 'single' | 'multiple') {
   const base = createGoldenFGHIProject();
@@ -459,7 +462,7 @@ describe('DecisionWorkbench', () => {
     ).toBe(false);
   });
 
-  it('edits a multi-point Chaos position, returns it to its default, and restores it with Undo', async () => {
+  it('edits a multi-point Chaos position and restores it with Undo', async () => {
     const { located, project, source } = authoredNaturalChaosFixture('multiple');
     const view = renderOccurrenceWorkbench(
       project,
@@ -472,22 +475,20 @@ describe('DecisionWorkbench', () => {
       chaosExitOf(view.application.store.getState().projectWorkspace.history!.present)
         ?.spawnPointIndex;
     const options = await openPositionOptions(view.user);
-    // Each spawn point, the gate's default among them.
+    // Each spawn point, and no choice returning the gate to the game.
     expect(options).toHaveLength(points.length);
-    const chosen = points.find((point) => !positionOption(point).textContent!.includes('Default'))!;
+    const stored = spawnPoint();
+    const chosen = points.find((point) => point !== stored)!;
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(positionOption(chosen));
     expect(spawnPoint()).toBe(chosen);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
-    await openPositionOptions(view.user);
-    await view.user.click(positionDefault());
-    expect(spawnPoint()).toBeUndefined();
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
-    expect(spawnPoint()).toBe(chosen);
+    expect(spawnPoint()).toBe(stored);
     await view.user.click(screen.getByRole('button', { name: 'Chaos Gate' }));
     expect(positionPicker()).toBeNull();
 
@@ -564,7 +565,7 @@ describe('DecisionWorkbench', () => {
     await openPositionOptions(view.user);
     // The retained point is listed but cannot be picked again.
     expect(positionOption(4).getAttribute('aria-disabled')).toBe('true');
-    await view.user.click(positionDefault());
+    await view.user.click(positionAvailable());
     expect(positionPicker()).toBeNull();
   });
 
@@ -662,7 +663,7 @@ describe('DecisionWorkbench', () => {
     expect(within(overviewPanel).getByRole('img', { name: 'Chaos Gate' })).toBeTruthy();
     expect(positionPicker()).toHaveProperty('disabled', false);
     await openPositionOptions(view.user);
-    await view.user.click(positionDefault());
+    await view.user.click(positionAvailable());
     expect(positionPicker()).toBeNull();
     expect(within(overviewPanel).getByRole('img', { name: 'Chaos Gate' })).toBeTruthy();
     expect(within(overviewPanel).queryByRole('button', { name: 'Chaos Gate' })).toBeNull();

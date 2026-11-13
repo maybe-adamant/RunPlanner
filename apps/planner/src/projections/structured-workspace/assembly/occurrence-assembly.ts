@@ -338,9 +338,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly roomLayout?: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomLayoutAuthoring | undefined;
-  /** Where each active Fields slot of the room stands, chosen or default. */
-  readonly fieldsSpatialPositions?: import('../source-index').WorkspaceBiomeSource['fieldsSpatialPositions'];
-  /** Where the room's authored Chaos gate spawns, chosen or default. */
+  /** Where the room's authored Chaos gate spawns as stored. */
   readonly chaosGatePosition?: import('../source-index').WorkspaceBiomeSource['chaosGatePosition'];
   /** The loot the room spawns on its own; undefined while unentered. */
   readonly spawnedLoot?: import('../source-index').WorkspaceBiomeSource['spawnedLoot'];
@@ -437,7 +435,6 @@ export function assembleWorkspaceOccurrence(
   );
   const address = createOccurrenceAddress(input.biome, occurrence.occurrenceId);
   const entered = input.evaluatedRoom?.entered ?? false;
-  const fieldsSpatialPositions = input.fieldsSpatialPositions?.(address);
   const authoredChaosGate = occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
   const chaosGatePosition =
     authoredChaosGate === undefined
@@ -483,7 +480,6 @@ export function assembleWorkspaceOccurrence(
       markerDestinations: input.markerDestinations,
       occurrence: input.occurrence,
       ...(input.startingReward === undefined ? {} : { startingReward: input.startingReward }),
-      ...(fieldsSpatialPositions === undefined ? {} : { fieldsSpatialPositions }),
     },
     room,
   );

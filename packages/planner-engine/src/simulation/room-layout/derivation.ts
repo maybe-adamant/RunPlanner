@@ -52,14 +52,9 @@ export type RoomLayoutFlip =
   | { readonly kind: 'fixed' | 'derived'; readonly value: boolean }
   /**
    * A roll: the authored value, else the one the authored entry needs, else
-   * the room's stable default, marked `default`.
+   * the room's stable draw, which settlement stores on first reach.
    */
-  | {
-      readonly kind: 'roll';
-      readonly chance: number;
-      readonly value: boolean;
-      readonly default?: true;
-    };
+  | { readonly kind: 'roll'; readonly chance: number; readonly value: boolean };
 
 export type RoomLayoutEntry =
   | { readonly kind: 'fixed' | 'derived'; readonly point: RoomEntryPoint }
@@ -69,10 +64,10 @@ export type RoomLayoutEntry =
       readonly eligible: readonly RoomEntryOption[];
       /**
        * The authored entry when it is eligible, even where it alone remains;
-       * otherwise the stable default among those the flip allows, marked `default`.
+       * otherwise the stable draw among those the flip allows, which
+       * settlement stores on first reach.
        */
       readonly point: RoomEntryPoint;
-      readonly default?: true;
     }
   /** The room has no entry points on record. */
   | { readonly kind: 'unknown' };
@@ -234,13 +229,13 @@ function compatible(option: RoomEntryOption, flipped: boolean | undefined): bool
  * The one derivation rule for a room's flip and entry as it is entered, from
  * the previous room's exit and the room's own authored layout. An unauthored
  * rolled flip, then an unauthored entry among those it allows, takes the
- * occurrence's stable default.
+ * occurrence's stable draw; settlement stores both once the walk reaches the room.
  */
 export function deriveRoomLayout(
   room: RoomDeclaration,
   arrival: RoomArrival,
   authored: RoomLayout | undefined,
-  /** The entered room's semantic key, which seeds its defaults. */
+  /** The entered room's semantic key, which seeds its draws. */
   ownerKey: string,
 ): RoomLayoutDerivation {
   const native = nativeFlip(room, arrival);
@@ -288,7 +283,7 @@ export function deriveRoomLayout(
               option.startPointId === authoredEntry &&
               compatible(option, native.kind === 'roll' ? authoredFlip : native.value),
           );
-  // The authored flip, else the one the chosen entry needs; a default never narrows the choice.
+  // The authored flip, else the one the chosen entry needs; a draw never narrows the choice.
   const heldFlip =
     native.kind === 'roll'
       ? (authoredFlip ?? (chosen as RoomEntryOption | undefined)?.flipped)
@@ -298,15 +293,11 @@ export function deriveRoomLayout(
       ? native
       : heldFlip !== undefined
         ? Object.freeze({ ...native, value: heldFlip })
-        : Object.freeze({
-            ...native,
-            value: stableChoice(`${ownerKey}|flip`, [false, true])!,
-            default: true as const,
-          });
+        : Object.freeze({ ...native, value: stableChoice(`${ownerKey}|flip`, [false, true])! });
   const open = options.filter((option) => compatible(option, heldFlip));
   const point = (option: RoomEntryPoint): RoomEntryPoint =>
     Object.freeze({ startPointId: option.startPointId, endPointId: option.endPointId });
-  const defaultEntry = (): RoomEntryOption => {
+  const drawnEntry = (): RoomEntryOption => {
     const allowed = options.filter((option) => compatible(option, flip.value));
     const startPointId = stableChoice(
       `${ownerKey}|entry`,
@@ -319,14 +310,13 @@ export function deriveRoomLayout(
       ? Object.freeze({ kind: 'fixed', point: point(forced) })
       : options.length === 0
         ? Object.freeze({ kind: 'unknown' })
-        : open.length === 1 && chosen === undefined
+        : // A roll's entries stay a choice across both flips, a stored flip included.
+          (native.kind === 'roll' ? options : open).length === 1 && chosen === undefined
           ? Object.freeze({ kind: 'derived', point: point(open[0]!) })
           : Object.freeze({
               kind: 'choice',
               eligible: Object.freeze(options),
-              ...(chosen === undefined
-                ? { point: point(defaultEntry()), default: true as const }
-                : { point: point(chosen) }),
+              point: point(chosen ?? drawnEntry()),
             });
   const entryUnavailable =
     authoredEntry !== undefined && chosen === undefined

@@ -279,7 +279,7 @@ describe('room object anchors', () => {
     );
     const pool = slots.objects.find((object) => object.kind === 'purgingPool')!;
     expect(pool.anchorId).toBe(free);
-    expect(pool.anchorChoices?.map((choice) => choice.anchorId)).toEqual([null, free]);
+    expect(pool.anchorChoices?.map((choice) => choice.anchorId)).toEqual([free]);
     const plan = compileExecutionPlan({
       product: assembleExecutionProduct({ assembly, catalog }),
     });

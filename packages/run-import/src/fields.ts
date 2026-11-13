@@ -8,12 +8,14 @@ import {
   createFieldsSpatialAddress,
   type FieldsCombatState,
   type FieldsSpatialAddress,
+  type FieldsSpatialTarget,
   type OccurrenceId,
   type ProjectCommand,
   type RoomOccurrence,
   type SemanticAddress,
   exitDecisionForSource,
   normalDecisionProgressionForLayout,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
   locallyValidRewardOffers,
@@ -129,8 +131,8 @@ export function answerFields(context: RunImportContext, reason: SemanticFinding)
 
 /**
  * The record's Fields points, which the plan never asks for: each recorded
- * cage's and optional reward's point on a slot still unset, and the room's
- * entry where the game picks it.
+ * cage's and optional reward's point over the one the plan stored when the
+ * room was reached, and the room's entry where the game picks it.
  */
 export function importFieldsPoints(context: RunImportContext): void {
   const project = context.assembly().project;
@@ -162,16 +164,104 @@ export function importFieldsPoints(context: RunImportContext): void {
           slotKey: `optional${index + 1}`,
         })),
       ];
-      for (const target of targets) {
-        const state = fieldsState(context, biome.biomeKey, occurrence.occurrenceId);
-        const current =
-          target.kind === 'cage'
-            ? state?.spatial.cagePointIdBySlot[target.slotKey]
-            : state?.spatial.optionalPointIdBySlot[target.slotKey];
-        if (current !== null) continue;
-        answerSpatialPoint(context, createFieldsSpatialAddress(address, target));
-      }
+      answerSpatialPoints(
+        context,
+        address,
+        targets.map((target) => createFieldsSpatialAddress(address, target)),
+      );
     }
+}
+
+/** A slot's stored point, null while it has none. */
+function storedPoint(state: FieldsCombatState, target: FieldsSpatialTarget): number | null {
+  return target.kind === 'cage'
+    ? (state.spatial.cagePointIdBySlot[target.slotKey] ?? null)
+    : target.kind === 'optional'
+      ? (state.spatial.optionalPointIdBySlot[target.slotKey] ?? null)
+      : state.spatial.nemesisPointId;
+}
+
+/**
+ * Writes the room's recorded points in one edit. A slot the record does not
+ * place keeps the point the plan stored for it unless a recorded slot of its
+ * family takes that point: cleared, it takes a free one as the room is filled.
+ */
+function answerSpatialPoints(
+  context: RunImportContext,
+  room: Origin<'occurrence'>,
+  spatials: readonly FieldsSpatialAddress[],
+): void {
+  const answers = spatials.flatMap((spatial) => {
+    const answer = recordedSpatialPoint(context, spatial);
+    return answer === undefined ? [] : [{ spatial, answer }];
+  });
+  if (answers.length === 0) return;
+  const recorded = answers.flatMap(({ spatial, answer }) =>
+    answer.assumed === true ? [] : [{ spatial, pointId: answer.pointId }],
+  );
+  const family = (target: FieldsSpatialTarget) => (target.kind === 'cage' ? 'cage' : 'optional');
+  const taken = (target: FieldsSpatialTarget, pointId: number) =>
+    recorded.some(
+      (answer) =>
+        family(answer.spatial.target) === family(target) &&
+        answer.pointId === pointId &&
+        semanticAddressKey(answer.spatial) !==
+          semanticAddressKey(createFieldsSpatialAddress(room, target)),
+    );
+  const applied = context.transaction(() => {
+    for (const { spatial, pointId } of recorded) {
+      const state = fieldsState(context, spatial.biomeKey, spatial.occurrenceId);
+      if (state === undefined) return false;
+      if (storedPoint(state, spatial.target) === pointId) continue;
+      if (!context.apply({ kind: 'ReplaceFieldsSpatialPoint', spatial, pointId })) return false;
+    }
+    const state = fieldsState(context, room.biomeKey, room.occurrenceId);
+    if (state === undefined) return false;
+    const unplaced: FieldsSpatialTarget[] = [
+      ...Object.keys(state.spatial.cagePointIdBySlot).map((slotKey) => ({
+        kind: 'cage' as const,
+        slotKey,
+      })),
+      ...Object.keys(state.spatial.optionalPointIdBySlot).map((slotKey) => ({
+        kind: 'optional' as const,
+        slotKey,
+      })),
+      { kind: 'nemesis' as const },
+    ].filter(
+      (target) =>
+        !recorded.some(
+          (answer) =>
+            semanticAddressKey(answer.spatial) ===
+            semanticAddressKey(createFieldsSpatialAddress(room, target)),
+        ),
+    );
+    for (const target of unplaced) {
+      const pointId = storedPoint(state, target);
+      if (pointId === null || !taken(target, pointId)) continue;
+      const spatial = createFieldsSpatialAddress(room, target);
+      if (!context.apply({ kind: 'ReplaceFieldsSpatialPoint', spatial, pointId: null }))
+        return false;
+    }
+    return true;
+  });
+  if (!applied) {
+    context.refuse();
+    return;
+  }
+  const visit = fieldsVisit(context, room.occurrenceId);
+  const state = fieldsState(context, room.biomeKey, room.occurrenceId);
+  for (const { spatial, answer } of answers) {
+    if (answer.assumed !== true || state === undefined || visit === undefined) continue;
+    const pointId = storedPoint(state, spatial.target);
+    if (pointId === null) continue;
+    context.note({
+      area: 'fields',
+      reason: 'assumption',
+      address: spatial,
+      applied: { kind: 'ReplaceFieldsSpatialPoint', spatial, pointId },
+      record: record(visit.roomIndex),
+    });
+  }
 }
 
 /** The recorded entry, where the room's settled layout leaves the game to pick it. */
@@ -186,9 +276,15 @@ function importFieldsEntry(
   // The entry is settled once the room's entry is reached.
   if (layout === undefined) return;
   context.used.add(used);
-  if (layout.authored?.entryStartPointId !== undefined) return;
   const recorded = visit.fields.entryPoint;
   if (recorded === undefined) return;
+  // The plan stored an entry when the room was reached; the record's replaces it.
+  const settledEntry = layout.settlement.entry;
+  if (
+    settledEntry.kind !== 'unknown' &&
+    (settledEntry.point.startPointId === recorded || settledEntry.point.endPointId === recorded)
+  )
+    return;
   // A save may name the entry by its end point.
   const choice = layout.entries.find(
     (entry) => entry.option.startPointId === recorded || entry.option.endPointId === recorded,
@@ -1486,10 +1582,14 @@ function moveCagesInto(
 
 /**
  * A Fields point from the record: a cage's point by its spawn group's
- * representative or by elimination, an optional reward's listed point or else
- * the first free one. Nemesis's point is never saved.
+ * representative or by elimination, an optional reward's listed point. An
+ * optional reward collected in combat has no saved point: it is assumed where
+ * the plan stored it. Nemesis's point is never saved.
  */
-function answerSpatialPoint(context: RunImportContext, spatial: FieldsSpatialAddress): boolean {
+function recordedSpatialPoint(
+  context: RunImportContext,
+  spatial: FieldsSpatialAddress,
+): { readonly pointId: number; readonly assumed?: never } | { readonly assumed: true } | undefined {
   const visit = fieldsVisit(context, spatial.occurrenceId);
   const occurrence = authoredOccurrence(
     context.assembly().project,
@@ -1500,14 +1600,7 @@ function answerSpatialPoint(context: RunImportContext, spatial: FieldsSpatialAdd
     occurrence === undefined
       ? undefined
       : context.catalog.rooms.byKey[occurrence.gameName]?.fieldsSpatial;
-  const state = fieldsState(context, spatial.biomeKey, spatial.occurrenceId);
-  if (visit === undefined || declaration === undefined || state === undefined) return false;
-  const evaluation = context
-    .candidates()
-    .evaluate({ kind: 'fieldsSpatialPoint', spatial, pointId: null });
-  const support = evaluation.kind === 'fieldsSpatialPoint' ? evaluation.result.supportPointIds : [];
-  let pointId: number | undefined;
-  let assumed = false;
+  if (visit === undefined || declaration === undefined) return undefined;
   const target = spatial.target;
   if (target.kind === 'cage') {
     const pointOf = (cageIndex: number) => {
@@ -1518,58 +1611,32 @@ function answerSpatialPoint(context: RunImportContext, spatial: FieldsSpatialAdd
     const index = recordCageOfSlots(context, spatial.biomeKey, spatial.occurrenceId, visit.fields)[
       cageIndexOfSlot(target.slotKey)
     ]!;
-    pointId = pointOf(index);
-    if (pointId === undefined) {
-      // The one cage point no other cage's spawn group names.
-      const named = new Set(
-        visit.fields.cages.flatMap((_cage, other) => {
-          const point = other === index ? undefined : pointOf(other);
-          return point === undefined ? [] : [point];
-        }),
-      );
-      const unmatched = visit.fields.cages.filter((_cage, other) => pointOf(other) === undefined);
-      const left = declaration.cagePointIds.filter(
-        (point) =>
-          !named.has(point) &&
-          !declaration.cageSpawnRepresentatives.some((entry) => entry.cagePointId === point),
-      );
-      if (unmatched.length === 1 && left.length === 1) pointId = left[0];
-    }
-  } else if (target.kind === 'optional') {
-    const entries = optionalRewards(
-      context,
-      visit,
-      optionalRewardTypes(context, occurrence!.gameName),
+    const pointId = pointOf(index);
+    if (pointId !== undefined) return { pointId };
+    // The one cage point no other cage's spawn group names.
+    const named = new Set(
+      visit.fields.cages.flatMap((_cage, other) => {
+        const point = other === index ? undefined : pointOf(other);
+        return point === undefined ? [] : [point];
+      }),
     );
-    const entry = entries[Number(/^optional(\d+)$/.exec(target.slotKey)?.[1]) - 1];
-    pointId = entry?.point;
-    if (entry !== undefined && pointId === undefined) {
-      // A reward collected in combat has no saved point: the first free optional point.
-      const taken = new Set([
-        ...entries.flatMap((other) => (other.point === undefined ? [] : [other.point])),
-        ...Object.values(state.spatial.optionalPointIdBySlot).flatMap((point) =>
-          point === null ? [] : [point],
-        ),
-      ]);
-      pointId = support.find((point) => !taken.has(point));
-      assumed = true;
-    }
+    const unmatched = visit.fields.cages.filter((_cage, other) => pointOf(other) === undefined);
+    const left = declaration.cagePointIds.filter(
+      (point) =>
+        !named.has(point) &&
+        !declaration.cageSpawnRepresentatives.some((entry) => entry.cagePointId === point),
+    );
+    return unmatched.length === 1 && left.length === 1 ? { pointId: left[0]! } : undefined;
   }
-  if (pointId === undefined) return false;
-  const command: ProjectCommand = { kind: 'ReplaceFieldsSpatialPoint', spatial, pointId };
-  if (!context.applyValid(command)) {
-    context.refuse();
-    return false;
-  }
-  if (assumed)
-    context.note({
-      area: 'fields',
-      reason: 'assumption',
-      address: spatial,
-      applied: command,
-      record: record(visit.roomIndex),
-    });
-  return true;
+  if (target.kind !== 'optional') return undefined;
+  const entries = optionalRewards(
+    context,
+    visit,
+    optionalRewardTypes(context, occurrence!.gameName),
+  );
+  const entry = entries[Number(/^optional(\d+)$/.exec(target.slotKey)?.[1]) - 1];
+  if (entry === undefined) return undefined;
+  return entry.point === undefined ? { assumed: true } : { pointId: entry.point };
 }
 
 /** The Fields occurrence a phase belongs to, for the encounter importer. */

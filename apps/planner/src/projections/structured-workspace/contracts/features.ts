@@ -41,10 +41,8 @@ export type WorkspaceRoomFeature =
       readonly action: 'remove';
       readonly marker: WorkspaceMarker;
       readonly position?: {
-        /** The stored point, else the gate's default. */
-        readonly value: number;
-        /** The gate stands on its default, not a chosen point. */
-        readonly default?: true;
+        /** The stored point; absent until the walk reaches the room. */
+        readonly value?: number;
         readonly choices: readonly number[];
         readonly invalid: boolean;
       };
@@ -319,16 +317,14 @@ export type WorkspaceAnchorObjectLock =
   /** The rules refusing it here, each as one sentence. */
   | { readonly reason: 'refused'; readonly sentences: readonly string[] };
 
-/** A present object's anchor: chosen, pinned, or its default, and where it can move. */
+/** A present object's anchor: stored or pinned, and where it can move. */
 export interface WorkspaceRoomObjectAnchor {
-  /** The chosen anchor; absent stands it on its default. */
+  /** The stored anchor; absent until the walk reaches the room. */
   readonly anchorId?: number;
   /** The Well always stands on the room's pin; nothing moves it. */
   readonly pinned?: number;
-  /** The anchor it stands on by default while none is authored. */
-  readonly defaultAnchorId?: number;
-  /** Each free anchor it can move to, or null to return a chosen anchor to its default. */
-  readonly choices: readonly { readonly key: string; readonly anchorId: number | null }[];
+  /** Each free anchor it can move to. */
+  readonly choices: readonly { readonly key: string; readonly anchorId: number }[];
 }
 
 /** One object a room can hold on its anchors: whether it stands here, and where. */
@@ -402,8 +398,6 @@ export interface WorkspaceRoomObjectSlots {
       readonly object: WorkspaceAnchorObject;
       readonly switchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
     };
-    /** The occupant stands here by default, not authored. */
-    readonly default?: true;
   }[];
   /** Each object present, or one the room can hold on its route, in native spawn order. */
   readonly objects: readonly WorkspaceRoomAnchorObject[];
@@ -442,16 +436,13 @@ export type WorkspaceRoomEntryState =
     }
   | {
       readonly kind: 'choice';
-      /** The settled pair, chosen or default; absent while part of it is unknown. */
+      /** The settled pair; absent while part of it is unknown. */
       readonly value?: WorkspaceRoomEntryPair;
-      /** Every open part of the pair stands on its default. */
-      readonly default?: true;
       /** A held entry or flip outside the choices. */
       readonly stale?: { readonly pointId?: number; readonly flipped?: boolean };
       readonly choices: readonly {
         readonly key: string;
-        /** Null returns the entry and flip to their defaults. */
-        readonly pair: WorkspaceRoomEntryPair | null;
+        readonly pair: WorkspaceRoomEntryPair;
       }[];
     };
 

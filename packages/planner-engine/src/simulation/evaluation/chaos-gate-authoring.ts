@@ -1,16 +1,12 @@
-import { semanticAddressKey, type AdditionalExitAddress } from '../../authored-project/addresses';
-import {
-  chaosGateSpawnPoint,
-  chaosGateSpawnPointIndices,
-} from '../../authored-project/chaos-gate-position';
+import type { AdditionalExitAddress } from '../../authored-project/addresses';
+import { chaosGateSpawnPointIndices } from '../../authored-project/chaos-gate-position';
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 
 /** An authored Chaos gate's spawn point in its source room, with the points it can take. */
 export interface ChaosGatePositionAuthoring {
-  /** One-based `SecretPoint` index: the stored one, else the gate's stable default. */
-  readonly spawnPointIndex: number;
-  readonly source: 'chosen' | 'default';
+  /** The stored one-based `SecretPoint` index; settlement stores one once the room is reached. */
+  readonly spawnPointIndex?: number;
   /** Every point the source room offers a gate. */
   readonly spawnPointIndices: readonly number[];
 }
@@ -35,8 +31,12 @@ export function chaosGatePositionForProjectEvaluationAssembly(
   );
   const room = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
   if (authored?.kind !== 'chaos' || room === undefined) return undefined;
-  const position = chaosGateSpawnPoint(room, semanticAddressKey(gate), authored.spawnPointIndex);
-  return position === undefined
-    ? undefined
-    : Object.freeze({ ...position, spawnPointIndices: chaosGateSpawnPointIndices(room) });
+  const spawnPointIndices = chaosGateSpawnPointIndices(room);
+  if (spawnPointIndices.length === 0) return undefined;
+  return Object.freeze({
+    ...(authored.spawnPointIndex === undefined
+      ? {}
+      : { spawnPointIndex: authored.spawnPointIndex }),
+    spawnPointIndices,
+  });
 }

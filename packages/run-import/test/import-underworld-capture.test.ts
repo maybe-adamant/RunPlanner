@@ -104,6 +104,7 @@ describe('run import of the Underworld capture', () => {
     ]);
     const pool = occurrence(imported.project, 'F-r11:postboss');
     expect(pool.purgingPool).toEqual({
+      anchorId: expect.any(Number),
       traitKeyBySlot: {
         left: 'BoonDecayBoon',
         middle: 'AphroditeManaBoon',

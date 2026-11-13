@@ -27,8 +27,8 @@ export function roomMapPlacements(room: WorkspaceRoomSummary): Omit<RoomMapPlace
     anchorNumbers: new Map(anchors.map((anchor) => [anchor.anchorId, anchor.number])),
     fieldsPoints: new Map(
       (fields?.spatial ?? []).flatMap((control) => {
-        const pointId = control.pointId ?? control.defaultPointId;
-        return pointId === undefined || fields === undefined
+        const pointId = control.pointId;
+        return pointId === null || fields === undefined
           ? []
           : [
               [

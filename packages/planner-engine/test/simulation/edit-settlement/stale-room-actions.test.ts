@@ -122,6 +122,13 @@ describe('stale room actions in edit settlement', () => {
     expect(order(three, ship)).toEqual(expect.arrayContaining(wheel2));
   });
 
+  /** The G opening's stored flip, which an edit of the room changes. */
+  const gOpeningFlipped = (project: ProjectDocument) =>
+    project.route.biomes
+      .find((plan) => plan.biomeKey === gOpening.biomeKey)!
+      .topology!.occurrences.find((room) => room.occurrenceId === gOpening.occurrenceId)!.layout
+      ?.flipped === true;
+
   it('removes a room’s retained stale rows at the first edit of that room only', () => {
     const project = createGoldenFGHProject();
     expect(order(project, gOpening)).toContain(roomActionKey(retainedPickup));
@@ -136,7 +143,7 @@ describe('stale room actions in edit settlement', () => {
     const edited = settle(project, {
       kind: 'ReplaceRoomLayout',
       occurrence: gOpening,
-      layout: { flipped: true },
+      layout: { flipped: !gOpeningFlipped(project) },
     });
     expect(edited.fault).toBeUndefined();
     expect(order(edited.assembly.project, gOpening)).not.toContain(roomActionKey(retainedPickup));
@@ -149,7 +156,7 @@ describe('stale room actions in edit settlement', () => {
     const outcome = session.apply({
       kind: 'ReplaceRoomLayout',
       occurrence: gOpening,
-      layout: { flipped: true },
+      layout: { flipped: !gOpeningFlipped(start.project) },
     });
     expect(outcome).toMatchObject({ kind: 'applied' });
     expect(order(session.current().project, gOpening)).not.toContain(roomActionKey(retainedPickup));

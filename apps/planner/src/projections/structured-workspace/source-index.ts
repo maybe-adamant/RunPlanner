@@ -229,11 +229,7 @@ export interface WorkspaceBiomeSource {
   readonly roomLayout: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomLayoutAuthoring | undefined;
-  /** Where each active Fields slot of a room stands, chosen or default; undefined while unevaluated. */
-  readonly fieldsSpatialPositions: (
-    occurrence: OccurrenceAddress,
-  ) => readonly import('@run-planner/engine/simulation').FieldsSpatialPosition[] | undefined;
-  /** Where an authored Chaos gate spawns, chosen or default, with the points it can take. */
+  /** Where an authored Chaos gate spawns as stored, with the points it can take. */
   readonly chaosGatePosition: (
     gate: import('@run-planner/engine/authored-project').AdditionalExitAddress,
   ) => import('@run-planner/engine/simulation').ChaosGatePositionAuthoring | undefined;
@@ -861,7 +857,6 @@ function createWorkspaceBiomeSource(
   roomLayout: WorkspaceBiomeSource['roomLayout'],
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'],
   encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'],
-  fieldsSpatialPositions: WorkspaceBiomeSource['fieldsSpatialPositions'],
   chaosGatePosition: WorkspaceBiomeSource['chaosGatePosition'],
   roomLive: WorkspaceBiomeSource['roomLive'],
   roomActionResets: WorkspaceBiomeSource['roomActionResets'],
@@ -1190,7 +1185,6 @@ function createWorkspaceBiomeSource(
     roomLayout,
     spawnedLoot,
     encounterOutcomes,
-    fieldsSpatialPositions,
     chaosGatePosition,
     roomLive,
     roomActionResets,
@@ -1293,7 +1287,6 @@ export function createWorkspaceProjectSourceIndex(
   roomLayout: WorkspaceBiomeSource['roomLayout'] = () => undefined,
   spawnedLoot: WorkspaceBiomeSource['spawnedLoot'] = () => undefined,
   encounterOutcomes: WorkspaceBiomeSource['encounterOutcomes'] = () => undefined,
-  fieldsSpatialPositions: WorkspaceBiomeSource['fieldsSpatialPositions'] = () => undefined,
   chaosGatePosition: WorkspaceBiomeSource['chaosGatePosition'] = () => undefined,
   roomLive: WorkspaceBiomeSource['roomLive'] = () => undefined,
   roomActionResets: WorkspaceBiomeSource['roomActionResets'] = () => undefined,
@@ -1388,7 +1381,6 @@ export function createWorkspaceProjectSourceIndex(
             roomLayout,
             spawnedLoot,
             encounterOutcomes,
-            fieldsSpatialPositions,
             chaosGatePosition,
             roomLive,
             roomActionResets,

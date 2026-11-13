@@ -410,13 +410,12 @@ a generic room-details disclosure. Standard, Fields, and Shop occurrences
 render Room Overview and Room Timeline. Overview's Layout section shows the
 room's entry with its orientation as one choice of the (entry, flip) pairs the
 engine leaves open, shown where the door or the room settles it, and chip rows
-of positions: Anchors (one chip per present object showing its authored or
-default anchor, the Well's pin shown, not picked), and the Fields Cages and
+of positions: Anchors (one chip per present object showing its stored
+anchor, the Well's pin shown, not picked), and the Fields Cages and
 Rewards (optional and Nemesis slots, each its reward's icon numbered by slot,
-then its point), and the Chaos Gate's point. Every position shows where its
-item stands, chosen or the engine's default, marked as the engine marks it; a
-chosen position can return to its default, and the point an item stands on or
-another occupant holds is not offered. While a Fields chip is hovered or its
+then its point), and the Chaos Gate's point. Every position shows the point
+its item stands on as stored, and the point an item stands on or another
+occupant holds is not offered. While a Fields chip is hovered or its
 list is open, the map numbers the free points of that slot's family. The link runs both ways:
 hovering a control previews its point, and pointing at a map point marks the control that owns
 it (an anchor's or Fields point's chip, Entry, the Chaos Gate, a door's chips and rows). Overview contains read-only

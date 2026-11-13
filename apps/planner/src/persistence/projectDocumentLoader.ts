@@ -6,7 +6,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { PROJECT_TRANSITION_STEPS } from './project-transitions.js';
-import { stockRevision0Project } from './project-102-to-103.js';
+import { fillReachedBlanksProject } from './project-102-to-103.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
 
@@ -166,8 +166,8 @@ export function applyProjectDocumentTransitions(options: {
   );
 }
 
-// From this revision a reached stock slot is stored; earlier, a blank one meant the game's roll.
-const STOCK_STORED_REVISION = 1;
+// From this revision every reached stock slot and position is stored; earlier, a blank one meant the game's roll.
+const BLANKS_FILLED_REVISION = 2;
 
 function currentProject(
   json: string,
@@ -177,7 +177,8 @@ function currentProject(
   const project = parseProjectDocument(json, catalog);
   return Object.freeze({
     migrationProvenance: noMigrations,
-    project: revision < STOCK_STORED_REVISION ? stockRevision0Project(project, catalog) : project,
+    project:
+      revision < BLANKS_FILLED_REVISION ? fillReachedBlanksProject(project, catalog) : project,
   });
 }
 

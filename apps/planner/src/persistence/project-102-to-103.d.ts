@@ -10,4 +10,7 @@ export function migrateProjectDocument(
   context: { readonly catalog: Catalog },
 ): unknown;
 
-export function stockRevision0Project(project: ProjectDocument, catalog: Catalog): ProjectDocument;
+export function fillReachedBlanksProject(
+  project: ProjectDocument,
+  catalog: Catalog,
+): ProjectDocument;

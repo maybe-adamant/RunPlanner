@@ -295,12 +295,11 @@ function executionAdditionalExits(
   const declaration = catalog.rooms.byKey[room.gameName];
   return Object.freeze(
     batch.additional.map((exit) => {
-      // A Chaos gate spawns at its stored point, else its default.
+      // A Chaos gate spawns at its stored point, else its draw.
       const spawnPointIndex =
         exit.key !== 'chaos' || declaration === undefined
           ? exit.spawnPointIndex
-          : chaosGateSpawnPoint(declaration, semanticAddressKey(exit.origin), exit.spawnPointIndex)
-              ?.spawnPointIndex;
+          : chaosGateSpawnPoint(declaration, semanticAddressKey(exit.origin), exit.spawnPointIndex);
       return Object.freeze({
         kind: exit.key,
         ...(spawnPointIndex === undefined ? {} : { spawnPointIndex }),
@@ -701,7 +700,7 @@ function executionFieldsLayout(
   if (!room.entered || room.encounterEnvelopeKey !== 'FieldsEncounter') return undefined;
   if (room.fieldsSpatial === undefined)
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Fields layout`);
-  // Each active slot stands on its stored point, else its default.
+  // Each active slot stands on its stored point, else its draw.
   const positions = fieldsSpatialPositions(catalog, room);
   const pointOf = (kind: 'cage' | 'optional' | 'nemesis', slotKey?: string) =>
     positions.find(
@@ -739,7 +738,7 @@ function executionFieldsLayout(
 
 /**
  * The entered room's flip and entry the runtime steers: fixed by the room or
- * its arrival door, or authored or defaulted where the game rolls or chooses.
+ * its arrival door, or authored or drawn where the game rolls or chooses.
  * A value derived from the previous exit stays native.
  */
 function executionRoomLayout(
@@ -770,7 +769,7 @@ function executionRoomLayout(
 }
 
 /**
- * An object's publication with the anchor it stands on, stored or defaulted;
+ * An object's publication with the anchor it stands on, stored or drawn;
  * the Well on its room's pin stays native.
  */
 function anchored<T extends object>(

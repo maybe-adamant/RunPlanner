@@ -27,7 +27,7 @@ import {
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { settleProjectStock } from '@run-planner/engine/project-migration';
+import { settleProjectFills } from '@run-planner/engine/project-migration';
 import { authorLegalTraitOffers } from './trait-offers';
 
 const evaluate = (document: ProjectDocument) => simulateProjectAssembly(catalog, document);
@@ -38,9 +38,9 @@ export function settleTestEdit(project: ProjectDocument, command: ProjectCommand
     .project;
 }
 
-/** The plan with every blank stock slot its walk reaches stocked, as an edit would leave it. */
+/** The plan with every blank position and stock slot its walk reaches filled, as an edit would leave it. */
 export function stockTestProject(project: ProjectDocument): ProjectDocument {
-  const settled = settleProjectStock({ catalog, project, evaluate, redrawStalePoolLists: true });
+  const settled = settleProjectFills({ catalog, project, evaluate, redrawStalePoolLists: true });
   if (settled.fault !== undefined)
     throw new Error(`stock settlement faulted at ${settled.fault.key}`);
   return settled.assembly.project;

@@ -129,6 +129,7 @@ describe('run import of used challenge switches', () => {
 
   it('chooses an unclaimed press by its next entry save and names the fits it cannot tell apart', () => {
     expect(occurrence(imported.project, 'F-r8').challengeSwitch).toEqual({
+      anchorId: expect.any(Number),
       variantKey: 'TimeChallengeSwitch_Money',
       outcome: 'left',
       nectarDropped: false,
@@ -146,6 +147,7 @@ describe('run import of used challenge switches', () => {
 
   it("claims a hitless Perfect Clear's Pom on the trait the record levelled", () => {
     expect(occurrence(imported.project, 'G-r21').challengeSwitch).toEqual({
+      anchorId: expect.any(Number),
       variantKey: 'PerfectClearChallengeSwitch_Pom',
       outcome: 'hitless',
       nectarDropped: false,
@@ -164,6 +166,7 @@ describe('run import of used challenge switches', () => {
 
   it("claims a finished Elite's Max Magick from its leftover pickup", () => {
     expect(occurrence(imported.project, 'I-r37').challengeSwitch).toEqual({
+      anchorId: expect.any(Number),
       variantKey: 'EliteChallengeSwitch_MaxMana',
       outcome: 'finished',
       nectarDropped: false,
@@ -197,6 +200,7 @@ describe('run import of a claimed Time switch and a hit Perfect Clear', () => {
 
   it("claims a finished Time switch, whose gold the plan leaves to the engine's estimate", () => {
     expect(occurrence(imported.project, 'F-r10').challengeSwitch).toEqual({
+      anchorId: expect.any(Number),
       variantKey: 'TimeChallengeSwitch_Money',
       outcome: 'finished',
       nectarDropped: true,
@@ -212,6 +216,7 @@ describe('run import of a claimed Time switch and a hit Perfect Clear', () => {
 
   it('claims the Onion of a hit Perfect Clear', () => {
     expect(occurrence(imported.project, 'G-r21').challengeSwitch).toEqual({
+      anchorId: expect.any(Number),
       variantKey: 'PerfectClearChallengeSwitch_MaxHealth',
       outcome: 'failed',
       nectarDropped: false,

@@ -1003,9 +1003,9 @@ recorded content; a row whose item holds other content is
 ### Room layout and positions
 
 Whether something exists is never optional; where an existing thing stands is
-optional when the game is free to place it, and an unset position takes the
-engine's stable default, derived on every evaluation and never stored
-([position defaults](SIMULATION_AND_VALIDATION.md#position-defaults)). Each thing owns its own position: the room its layout, an
+optional when the game is free to place it; the edit that first reaches its
+room stores a stable draw for it
+([positions filled on first reach](SIMULATION_AND_VALIDATION.md#positions-filled-on-first-reach)). Each thing owns its own position: the room its layout, an
 anchor object its anchor, a Fields slot its point, a Chaos gate its spawn
 point.
 

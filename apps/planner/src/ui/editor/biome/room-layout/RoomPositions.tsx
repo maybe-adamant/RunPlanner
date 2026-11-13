@@ -30,13 +30,6 @@ import { fieldsSlotBadge, fieldsSlotIcon } from './fieldsSlotFace';
 /** No position known yet. */
 const unknown = '—';
 
-/** The choice returning a chosen position to its default. */
-const backToDefault = 'Default';
-
-/** A position as the open list spells it, marked where it stands by default. */
-const spelled = (name: string, byDefault: boolean): string =>
-  byDefault ? `${name} · Default` : name;
-
 /** Marks an entry whose pair mirrors the room. */
 const mirrored = '⇋';
 
@@ -335,16 +328,12 @@ function EntryRow({
           ariaLabel="Entry"
           choices={state.choices.map((choice) => ({
             key: choice.key,
-            label: choice.pair === null ? backToDefault : entryOption(layout, choice.pair),
+            label: entryOption(layout, choice.pair),
             value: choice.key,
-            preview: choice.pair === null ? picking : pairPreview(choice.pair),
+            preview: pairPreview(choice.pair),
           }))}
           current={shown === undefined ? unknown : entryName(layout, shown)}
-          currentOption={
-            shown === undefined
-              ? unknown
-              : spelled(entryOption(layout, shown), stale === undefined && state.default === true)
-          }
+          currentOption={shown === undefined ? unknown : entryOption(layout, shown)}
           findingTarget={target}
           id={id}
           invalid={stale !== undefined}
@@ -373,9 +362,8 @@ function LayoutChip({
 }
 
 /**
- * A present object's anchor chip: its chosen or default anchor, picked among
- * the free anchors; a chosen anchor can return to its default. The Well's pin
- * is shown, not picked.
+ * A present object's anchor chip: its stored anchor, picked among the free
+ * anchors. The Well's pin is shown, not picked.
  */
 function ObjectAnchorChip({
   interactions,
@@ -394,13 +382,12 @@ function ObjectAnchorChip({
   );
   const anchor = object.anchor;
   if (anchor === undefined) return null;
-  const nameOf = (anchorId: number | null | undefined): string => {
-    if (anchorId === null) return backToDefault;
+  const nameOf = (anchorId: number | undefined): string => {
     if (anchorId === undefined) return unknown;
     const number = objectSlots.anchors.find((candidate) => candidate.anchorId === anchorId)?.number;
     return number === undefined ? unknown : `A${number}`;
   };
-  const at = anchor.pinned ?? anchor.anchorId ?? anchor.defaultAnchorId;
+  const at = anchor.pinned ?? anchor.anchorId;
   const label = heldObjectShortName(object.object);
   const id = semanticOwnerControlElementId(object.anchorAddress);
   const target = findingTarget(object.anchorAddress, id);
@@ -418,16 +405,10 @@ function ObjectAnchorChip({
                 key: choice.key,
                 label: nameOf(choice.anchorId),
                 value: choice.key,
-                ...(choice.anchorId === null
-                  ? {}
-                  : { preview: { kind: 'anchor' as const, anchorId: choice.anchorId } }),
+                preview: { kind: 'anchor' as const, anchorId: choice.anchorId },
               }))
         }
         current={nameOf(at)}
-        currentOption={spelled(
-          nameOf(at),
-          anchor.pinned === undefined && anchor.anchorId === undefined && at !== undefined,
-        )}
         disabledHint={shownHint}
         findingTarget={target}
         id={id}
@@ -441,10 +422,9 @@ function ObjectAnchorChip({
 
 /**
  * A Fields slot's point chip: its reward's icon wearing the slot's number,
- * then its chosen or default point, picked among the points the engine leaves
- * it; a chosen point can return to its default. A point a sibling holds is not
- * offered. While the chip is hovered or its list is open, the map numbers the
- * free points of its family.
+ * then its stored point, picked among the points the engine leaves it. A point
+ * a sibling holds is not offered. While the chip is hovered or its list is
+ * open, the map numbers the free points of its family.
  */
 function FieldsSlotChip({
   control,
@@ -466,7 +446,7 @@ function FieldsSlotChip({
   const id = semanticOwnerControlElementId(control.address);
   const nameOf = (pointId: number | undefined): string =>
     interaction.choices.find((choice) => choice.value === pointId)?.label ?? unknown;
-  const at = control.pointId ?? control.defaultPointId;
+  const at = control.pointId ?? undefined;
   // Points the slot's siblings stand on; the map shows their occupants instead.
   const held = new Set(
     fields.spatial.flatMap((sibling) =>
@@ -526,7 +506,7 @@ function FieldsSlotChip({
         choiceLabel={`${control.label} point`}
         choices={choices.map((choice) => ({ ...choice, preview: preview(choice.value) }))}
         current={icon === undefined ? `${control.label} ${point}` : point}
-        currentOption={spelled(point, control.pointId === null && at !== undefined)}
+        currentOption={point}
         {...(interaction.contextReached ? {} : { disabledHint: candidateWaitingHint })}
         findingTarget={findingTarget(control.address, id)}
         id={id}

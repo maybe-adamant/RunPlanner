@@ -31,6 +31,16 @@ npm run test:schema:migrate
 
 ## History
 
+Revision 103.2 stores every position the game would place at random once the
+walk reaches its room: a rolled flip, an entry the game picks among several,
+an anchor object's anchor, a Fields cage, optional reward or Nemesis point and
+a Chaos gate's spawn point. The edit that first reaches the room stores the
+stable draw the engine used to derive on every evaluation; after that a
+position changes only when the owner changes it. A revision changes no saved
+shape: a plan saved under 103.0 or 103.1 has its reached blank stock and
+positions filled once when it opens, and plans sent under 103.1 read as
+outdated.
+
 Schema 103 marks the plans saved after the settlement rules for
 [rows whose context or source is gone](../docs/design/ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone)
 and [exit capacity](../docs/design/AUTHORED_PROJECT_MODEL.md#exit-capacity)

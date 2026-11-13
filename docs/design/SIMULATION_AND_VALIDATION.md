@@ -546,27 +546,34 @@ entry with the whole-layout edit that picks it, and the layout query adds
 both rolled flips, so no offered edit reaches a combination the rule rules
 out.
 
-### Position defaults
+### Positions filled on first reach
 
-Every positioned item the game would place at random has a position: its
-stored one, the owner's choice, or a stable default derived on every
-evaluation and never stored. The items are a rolled flip and an entry the
-game picks among ties, each anchor object, each active Fields cage, optional
-reward and Nemesis slot, and a Chaos gate's spawn point; whatever the room or
-its arrival door decides stays derived. Each item scores every eligible point
-by a stable hash of its semantic identity and the point, and takes its best
-point that no stored position or earlier claim holds. Items of one room
-claim in the game's spawn order: anchor objects in native order (the Well's
-pin is its own, never a default), Fields cages, then optional rewards, then
-Nemesis off its excluded points. Choosing one item's position therefore moves
-only the defaults it displaces, directly or in turn. A rolled flip defaults first and
-the entry among those the flip allows, without narrowing the entries offered.
-A stored position is kept when it becomes invalid and raises its finding; a
-default re-derives and raises none. An item left no free point has no
-position, which only an invalid or over-capacity room can reach. Authoring
-products, the Chaos gate's included, mark each position chosen or default; execution publishes both
-alike, so the runtime steers every one. Draft and the run import leave
-positions unset and take the defaults.
+Every positioned item the game would place at random has a stored position,
+filled once like [stock](#stock-filled-on-first-reach): the edit whose
+settlement first reaches a room stores, as part of that edit, a position for
+each such item it holds without one, so one Undo reverts both. The items are a
+rolled flip, an entry the game picks among several the flip allows, each
+anchor object, each active Fields cage, optional reward and Nemesis slot, and a
+Chaos gate's spawn point; whatever the room or its arrival door decides stays
+derived and unstored. Each blank item scores every eligible point by a stable
+hash of its semantic identity and the point, and takes its best point that no
+stored position or earlier claim holds. Items of one room claim in the game's
+spawn order: anchor objects in native order (the Well's pin is its own, never
+stored), Fields cages, then optional rewards, then Nemesis off its excluded
+points; a rolled flip draws first and the entry among those the flip allows.
+The walk reads the same draw for an item still blank, so storing it leaves the
+walk unchanged and the fill is collision-free.
+
+After that a stored position changes only when the owner changes it. Two items
+on one point, or a point an upstream edit makes ineligible, keep their values
+and raise their findings; nothing is re-claimed or displaced. Filling a
+position is not an edit of its room: it removes no retained stale row there.
+An item left no free point stays blank, which only an invalid or
+over-capacity room can reach. Authoring products show stored positions only;
+execution publishes every reached position. Draft and the run import take the
+filled positions; the import writes the record's points over them. Loading a
+plan saved before positions were stored fills its reached blanks once, the
+same way.
 
 ### Stock filled on first reach
 

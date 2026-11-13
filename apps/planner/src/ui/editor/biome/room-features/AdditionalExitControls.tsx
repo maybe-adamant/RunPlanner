@@ -106,7 +106,7 @@ export function ChaosSpawnWorkbench({
   );
 }
 
-/** The Chaos gate's chosen or default point among the room's SecretPoints. */
+/** The Chaos gate's stored point among the room's SecretPoints. */
 export function ChaosGatePosition({
   feature,
   interactions,
@@ -122,6 +122,7 @@ export function ChaosGatePosition({
   if (feature.action !== 'remove' || feature.position === undefined) return null;
   const owner = feature.owner;
   const position = feature.position;
+  const shown = position.value === undefined ? '—' : `P${position.value}`;
   return (
     <div className="room-layout-row" {...mapLinks({ kind: 'chaosGate' })}>
       <span className="room-layout-label">Chaos Gate</span>
@@ -134,11 +135,7 @@ export function ChaosGatePosition({
         layout="inline"
         model={declaredChoicesPicker(
           [
-            // A chosen point can return to the gate's default.
-            ...(position.default === true
-              ? []
-              : [{ key: 'default', value: null, label: 'Default' }]),
-            ...(position.invalid
+            ...(position.invalid && position.value !== undefined
               ? [
                   {
                     key: String(position.value),
@@ -148,16 +145,9 @@ export function ChaosGatePosition({
                   },
                 ]
               : []),
-            ...position.choices.map((value) => ({
-              key: String(value),
-              value,
-              label:
-                position.default === true && value === position.value
-                  ? `P${value} · Default`
-                  : `P${value}`,
-            })),
+            ...position.choices.map((value) => ({ key: String(value), value, label: `P${value}` })),
           ],
-          position.value,
+          position.value ?? null,
           'Gate position',
         )}
         onActiveChange={(item) =>
@@ -177,12 +167,12 @@ export function ChaosGatePosition({
             ).positionIntent(value),
           );
         }}
-        placeholder={`P${position.value}`}
+        placeholder={shown}
         searchable={false}
         {...(position.invalid
           ? { triggerHint: `P${position.value} isn’t available in this room` }
           : {})}
-        triggerLabel={`P${position.value}`}
+        triggerLabel={shown}
         triggerSize="content"
       />
     </div>

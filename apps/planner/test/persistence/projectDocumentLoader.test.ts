@@ -73,10 +73,24 @@ function currentRevisionText(checkpoint: unknown): string {
   );
 }
 
+/**
+ * The plan without its stored positions, as a legacy save lacks them: its
+ * migration stores only those of the rooms its walk reaches.
+ */
+function withoutPositions(document: unknown): unknown {
+  return JSON.parse(JSON.stringify(document), (key, value: unknown) =>
+    key === 'layout' || key === 'anchorId' || key === 'spawnPointIndex' ? undefined : value,
+  );
+}
+
 /** The plan as opening it saved at schema 102 leaves it: settled once by its migration. */
 const openedAt102 = (document: ProjectDocument) =>
   loadProjectDocument(
-    JSON.stringify({ ...JSON.parse(encodeProjectDocument(document)), schemaVersion: 102 }),
+    JSON.stringify({
+      ...JSON.parse(encodeProjectDocument(document)),
+      schemaVersion: 102,
+      schemaRevision: 1,
+    }),
     catalog,
   ).project;
 
@@ -135,6 +149,27 @@ describe('project document loader', () => {
     );
   });
 
+  it('fills the blank positions a schema 103.1 plan reaches, once, at load', () => {
+    const saved = JSON.parse(
+      encodeProjectDocument(loadUnderworldFPoolCheckpoint()),
+    ) as ProjectDocument;
+    const layouts = (document: ProjectDocument) =>
+      document.route.biomes.flatMap((biome) =>
+        (biome.topology?.occurrences ?? []).map((occurrence) => occurrence.layout),
+      );
+    expect(layouts(saved).some((layout) => layout !== undefined)).toBe(true);
+    for (const biome of saved.route.biomes)
+      for (const occurrence of biome.topology?.occurrences ?? [])
+        delete (occurrence as { layout?: unknown }).layout;
+    const loaded = (revision: number) =>
+      loadProjectDocument(JSON.stringify({ ...saved, schemaRevision: revision }), catalog).project;
+    expect(layouts(loaded(1))).toEqual(layouts(loadUnderworldFPoolCheckpoint()));
+    // A plan saved at the current revision loads as is.
+    expect(
+      layouts(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION)).every((layout) => layout === undefined),
+    ).toBe(true);
+  });
+
   describe('a plan saved before schema 103', () => {
     // The G opening keeps a pickup of a role its reward no longer has.
     const stale = createGoldenFGHIProject();
@@ -170,7 +205,11 @@ describe('project document loader', () => {
     });
 
     it('opens as saved when settling changes nothing', () => {
-      const clean = { ...JSON.parse(encodeProjectDocument(project)), schemaVersion: 102 };
+      const clean = {
+        ...JSON.parse(encodeProjectDocument(project)),
+        schemaVersion: 102,
+        schemaRevision: 1,
+      };
       expect(loadProjectDocument(JSON.stringify(clean), catalog)).toEqual({
         migrationProvenance: [
           {
@@ -222,7 +261,7 @@ describe('project document loader', () => {
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
       101, 102, 103,
     ]);
-    expect(loaded.project).toEqual(current);
+    expect(withoutPositions(loaded.project)).toEqual(withoutPositions(current));
 
     const won = applyProjectCommand(current, catalog, {
       kind: 'ReplaceNemesisBetOutcome',
@@ -237,7 +276,7 @@ describe('project document loader', () => {
     legacy.schemaVersion = 99;
     const migrated = loadProjectDocument(JSON.stringify(legacy), catalog);
     expect(migrated.migrationProvenance).toHaveLength(4);
-    expect(migrated.project).toEqual(won);
+    expect(withoutPositions(migrated.project)).toEqual(withoutPositions(won));
   });
 
   it('loads one plan saved at schema 98, 99 or 100 as the same current project', () => {
@@ -479,7 +518,9 @@ describe('project document loader', () => {
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
       94, 95, 96, 97, 98, 99, 100, 101, 102, 103,
     ]);
-    expect(encodeProjectDocument(loaded.project)).toBe(JSON.stringify(unresolved, null, 2) + '\n');
+    expect(withoutPositions(JSON.parse(encodeProjectDocument(loaded.project)))).toEqual(
+      withoutPositions(unresolved),
+    );
   });
 
   it('loads schema-94 Path screens unresolved, leaving each reached screen to its author', () => {
@@ -495,8 +536,12 @@ describe('project document loader', () => {
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
       95, 96, 97, 98, 99, 100, 101, 102, 103,
     ]);
-    expect(encodeProjectDocument(loaded.project)).toBe(
-      JSON.stringify({ ...legacy, schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION }, null, 2) + '\n',
+    expect(withoutPositions(JSON.parse(encodeProjectDocument(loaded.project)))).toEqual(
+      withoutPositions(
+        JSON.parse(
+          currentRevisionText({ ...legacy, schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION }),
+        ),
+      ),
     );
   });
 
@@ -920,7 +965,7 @@ describe('project document loader', () => {
           targetSchemaVersion: 103,
         },
       ],
-      project: expected,
+      project: withoutPositions(expected),
     });
   });
 

@@ -1,7 +1,6 @@
 import {
   createBiomeAddress,
   createOccurrenceAddress,
-  semanticAddressKey,
   type OccurrenceAddress,
   type RoomAnchorObjectKind,
 } from '../../authored-project/addresses';
@@ -11,7 +10,6 @@ import { roomObjectAnchorIds } from '../../authored-project/room-layout';
 import {
   ROOM_ANCHOR_OBJECT_ORDER,
   roomAnchorObjectHosted,
-  roomObjectAnchorPositions,
 } from '../room-layout/object-anchor-positions';
 import type { Catalog, ChallengeSwitchKind } from '../../catalog-schema';
 import {
@@ -78,20 +76,17 @@ interface RoomAnchorObjectFacts<
   readonly remove?: Remove;
   /** The object's existing entry-frontier product; undefined while unreached. */
   readonly candidate?: Candidate;
-  /** The physical anchor it is authored on, the owner's choice. */
+  /**
+   * The physical anchor it stands on as stored; settlement stores one once
+   * the walk reaches the room.
+   */
   readonly anchorId?: number;
   /**
-   * The anchor an unauthored hosted object stands on by its stable default:
-   * its best anchor left free by stored anchors, the pin and the defaults of
-   * the objects native places before it. Absent past the room's anchors.
-   */
-  readonly defaultAnchorId?: number;
-  /**
-   * For a present object: each anchor it can be placed on (null returns it to
-   * its default), with the command. A pinned Well has none.
+   * For a present object: each anchor no other object stands on, with the
+   * command placing it there. A pinned Well has none.
    */
   readonly anchorChoices?: readonly {
-    readonly anchorId: number | null;
+    readonly anchorId: number;
     readonly command: CommandOf<'ReplaceRoomObjectAnchor'>;
   }[];
 }
@@ -165,16 +160,13 @@ export interface RoomAnchorSlot {
 export interface RoomAnchorSlots {
   readonly anchorCount: number;
   /**
-   * The room's physical anchors by id, each with the present object authored
-   * on it, the Well on its pin or the object defaulted onto it; the Well pin
-   * takes only the Well.
+   * The room's physical anchors by id, each with the present object stored
+   * on it or the Well on its pin; the Well pin takes only the Well.
    */
   readonly anchors: readonly {
     readonly anchorId: number;
     readonly pinned: boolean;
     readonly occupant?: RoomAnchorObjectKind;
-    /** The occupant stands here by its `defaultAnchorId`, not authored. */
-    readonly default?: true;
   }[];
   readonly objects: readonly RoomAnchorObject[];
   readonly slots: readonly RoomAnchorSlot[];
@@ -529,20 +521,10 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
   const occupantOf = (anchorId: number) =>
     ROOM_ANCHOR_OBJECT_ORDER.find((kind) => authoredAnchor(kind) === anchorId);
   const wellPinned = pin !== undefined && authored.stygianWell !== undefined;
-  const positions = roomObjectAnchorPositions(
-    catalog,
-    authored,
-    origin.routeKey,
-    semanticAddressKey(origin),
-  );
-  const defaultOf = (kind: RoomAnchorObjectKind) => {
-    const position = positions.get(kind);
-    return position?.source === 'default' ? position.anchorId : undefined;
-  };
   const placed = objects.map((object) => {
     const anchorId = authoredAnchor(object.kind);
     if (!object.present) return object;
-    const choose = (target: number | null) =>
+    const choose = (target: number) =>
       Object.freeze({
         anchorId: target,
         command: Object.freeze({
@@ -552,21 +534,16 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
           anchorId: target,
         }),
       });
-    const defaultAnchorId = defaultOf(object.kind);
     // A pinned Well always stands on its pin; no other object takes it.
     const anchorChoices =
       object.kind === 'stygianWell' && pin !== undefined
         ? []
-        : [
-            choose(null),
-            ...anchorIds
-              .filter((id) => id !== pin && (occupantOf(id) ?? object.kind) === object.kind)
-              .map(choose),
-          ];
+        : anchorIds
+            .filter((id) => id !== pin && (occupantOf(id) ?? object.kind) === object.kind)
+            .map(choose);
     return Object.freeze({
       ...object,
       ...(anchorId === undefined ? {} : { anchorId }),
-      ...(defaultAnchorId === undefined ? {} : { defaultAnchorId }),
       anchorChoices: Object.freeze(anchorChoices),
     }) as RoomAnchorObject;
   });
@@ -574,16 +551,12 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
     anchorCount,
     anchors: Object.freeze(
       anchorIds.map((anchorId) => {
-        const defaulted = ROOM_ANCHOR_OBJECT_ORDER.find((kind) => defaultOf(kind) === anchorId);
         const occupant =
-          occupantOf(anchorId) ??
-          (anchorId === pin && wellPinned ? 'stygianWell' : undefined) ??
-          defaulted;
+          occupantOf(anchorId) ?? (anchorId === pin && wellPinned ? 'stygianWell' : undefined);
         return Object.freeze({
           anchorId,
           pinned: anchorId === pin,
           ...(occupant === undefined ? {} : { occupant }),
-          ...(occupant !== undefined && occupant === defaulted ? { default: true as const } : {}),
         });
       }),
     ),

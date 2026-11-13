@@ -51,7 +51,6 @@ import {
   liveRoomForProjectEvaluationAssembly,
   roomActionResetsForProjectEvaluationAssembly,
   encounterOutcomesForProjectEvaluationAssembly,
-  fieldsSpatialPositionsForProjectEvaluationAssembly,
   chaosGatePositionForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
@@ -420,8 +419,6 @@ export function createStructuredWorkspaceProjection(
             throw error;
           }
         },
-        (occurrence) =>
-          fieldsSpatialPositionsForProjectEvaluationAssembly(catalog, assembly, occurrence),
         (gate) => chaosGatePositionForProjectEvaluationAssembly(catalog, assembly, gate),
         (occurrence) => {
           try {

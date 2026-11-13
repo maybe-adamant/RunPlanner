@@ -8,4 +8,4 @@ export { moveWellPoolRollsOntoObjects } from './well-pool-rolls';
 export { moveRerollResultsOntoItems } from './reroll-results';
 export { stampRoomActionItemContent } from './room-action-content';
 export { stripEncounterPhaseKey } from './strip-encounter-phase-key';
-export { settleProjectStock, settleProjectUpgrade } from '../simulation/edit-settlement';
+export { settleProjectFills, settleProjectUpgrade } from '../simulation/edit-settlement';

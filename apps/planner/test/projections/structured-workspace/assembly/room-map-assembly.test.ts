@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  applyProjectCommand,
   createAdditionalExitAddress,
   createBiomeAddress,
   createOccurrenceId,
 } from '@run-planner/engine/authored-project';
 import {
   chaosGatePositionForProjectEvaluationAssembly,
+  settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
@@ -18,12 +18,19 @@ const host = createOccurrenceId('golden-f-b2-e1');
 const gate = createAdditionalExitAddress(createBiomeAddress('Underworld', 'F'), host, 'chaos');
 
 describe('room map assembly', () => {
-  it('places a Chaos gate left unchosen on its default point', () => {
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      kind: 'AddChaos',
-      additional: gate,
-      occurrenceId: createOccurrenceId('map-chaos'),
-    });
+  it('places a Chaos gate on the point stored when it was added', () => {
+    const evaluate = (document: Parameters<typeof simulateProjectAssembly>[1]) =>
+      simulateProjectAssembly(catalog, document);
+    const project = settleProjectEdit({
+      catalog,
+      before: evaluate(createGoldenFGHIProject()),
+      command: {
+        kind: 'AddChaos',
+        additional: gate,
+        occurrenceId: createOccurrenceId('map-chaos'),
+      },
+      evaluate,
+    }).assembly.project;
     const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'F')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === host);
@@ -34,8 +41,8 @@ describe('room map assembly', () => {
       simulateProjectAssembly(catalog, project),
       gate,
     );
-    expect(position?.source).toBe('default');
-    const at = room.mapPoints!.secretPoints[position!.spawnPointIndex - 1]!;
+    expect(position?.spawnPointIndex).toBeDefined();
+    const at = room.mapPoints!.secretPoints[position!.spawnPointIndex! - 1]!;
 
     const map = assembleRoomMap(catalog, room, position?.spawnPointIndex);
 

@@ -14,9 +14,10 @@ import {
 import {
   authoringReadinessAt,
   createPreparedProjectCandidateSession,
-  fieldsSpatialPositionsForProjectEvaluationAssembly,
+  settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { settleProjectFills } from '@run-planner/engine/project-migration';
 import { assembleExecutionProduct, compileExecutionPlan } from '@run-planner/engine/execution-plan';
 import type { FieldsSpatialTarget } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
@@ -337,7 +338,7 @@ describe('Fields spatial candidates', () => {
     expect(excluded.result.supportPointIds).not.toContain(572886);
   });
 
-  it('defaults every unset slot to its own free point, claimed cages then optionals then Nemesis', () => {
+  it('fills every blank slot once on first reach, collision-free, and keeps a chosen collision', () => {
     const targets = [
       { kind: 'cage', slotKey: 'cage1' },
       { kind: 'cage', slotKey: 'cage2' },
@@ -347,68 +348,72 @@ describe('Fields spatial candidates', () => {
       { kind: 'optional', slotKey: 'optional3' },
       { kind: 'nemesis' },
     ] as const satisfies readonly FieldsSpatialTarget[];
-    let project = loadNemesisFieldsCheckpoint();
+    let blank = loadNemesisFieldsCheckpoint();
     for (const target of targets)
-      project = applyProjectCommand(project, catalog, {
+      blank = applyProjectCommand(blank, catalog, {
         kind: 'ReplaceFieldsSpatialPoint',
         spatial: createFieldsSpatialAddress(occurrence, target),
         pointId: null,
       });
-    const defaults = (current: typeof project) =>
-      targets.map((target) => {
-        const result = evaluate(current, target, null);
-        if (result.kind !== 'fieldsSpatialPoint') throw new Error('missing spatial candidate');
-        return result.result.defaultPointId;
-      });
-    const before = defaults(project);
-    expect(before.every((pointId) => pointId !== undefined)).toBe(true);
-    const declaration = catalog.rooms.byKey.H_Combat05!.fieldsSpatial!;
-    expect(declaration.cagePointIds).toEqual(expect.arrayContaining(before.slice(0, 3)));
-    expect(declaration.optionalPointIds).toEqual(expect.arrayContaining(before.slice(3)));
-    expect(new Set(before.slice(0, 3)).size).toBe(3);
-    expect(new Set(before.slice(3)).size).toBe(4);
-    // A default raises nothing; re-evaluation derives the same points.
-    const assembly = simulateProjectAssembly(catalog, project);
-    expect(
-      assembly.evaluation.findings.filter((finding) => finding.origin.kind === 'fieldsSpatial'),
-    ).toEqual([]);
-    expect(defaults(project)).toEqual(before);
-    // The room's authoring product shows the same points, each marked default.
-    expect(
-      fieldsSpatialPositionsForProjectEvaluationAssembly(catalog, assembly, occurrence)?.map(
-        (position) => [position.pointId, position.source],
-      ),
-    ).toEqual(before.map((pointId) => [pointId, 'default']));
-
-    // Choosing cage2 on cage1's default moves only cage1's default.
-    const chosen = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceFieldsSpatialPoint',
-      spatial: createFieldsSpatialAddress(occurrence, targets[1]),
-      pointId: before[0]!,
-    });
-    const after = defaults(chosen);
-    expect(
-      fieldsSpatialPositionsForProjectEvaluationAssembly(
-        catalog,
-        simulateProjectAssembly(catalog, chosen),
-        occurrence,
-      )?.find((position) => position.target.kind === 'cage' && position.target.slotKey === 'cage2'),
-    ).toMatchObject({ pointId: before[0], source: 'chosen' });
-    expect(after[1]).toBeUndefined();
-    expect(after[0]).not.toBe(before[0]);
-    expect(after.slice(3)).toEqual(before.slice(3));
-
-    // The plan publishes the defaults where the game would otherwise draw.
-    if (assembly.evaluation.status === 'valid') {
-      const plan = compileExecutionPlan({
-        product: assembleExecutionProduct({ catalog, assembly }),
-      });
-      const fields = plan.occurrences.find((room) => room.id === occurrenceId)?.overview.fields;
-      expect(fields?.cagePoints.map((cage) => cage.pointId)).toEqual(before.slice(0, 3));
-      expect(fields?.optionalRewards.map((optional) => optional.pointId)).toEqual(
-        before.slice(3, 6),
+    const stored = (current: typeof blank) => {
+      const spatial = current.route.biomes
+        .find((plan) => plan.biomeKey === occurrence.biomeKey)!
+        .topology!.occurrences.find((room) => room.occurrenceId === occurrenceId)!.state;
+      if (spatial.kind !== 'fieldsCombat') throw new Error('not a Fields room');
+      return targets.map((target) =>
+        target.kind === 'cage'
+          ? spatial.spatial.cagePointIdBySlot[target.slotKey]
+          : target.kind === 'optional'
+            ? spatial.spatial.optionalPointIdBySlot[target.slotKey]
+            : spatial.spatial.nemesisPointId,
       );
-      expect(fields?.nemesisPointId).toBe(before[6]);
-    } else throw new Error(`the Nemesis Fields checkpoint is ${assembly.evaluation.status}`);
+    };
+    expect(stored(blank).every((pointId) => pointId === null)).toBe(true);
+    const settled = settleProjectFills({
+      catalog,
+      project: blank,
+      evaluate: (document) => simulateProjectAssembly(catalog, document),
+    });
+    expect(settled.fault).toBeUndefined();
+    const project = settled.assembly.project;
+    const filled = stored(project);
+    const declaration = catalog.rooms.byKey.H_Combat05!.fieldsSpatial!;
+    expect(declaration.cagePointIds).toEqual(expect.arrayContaining(filled.slice(0, 3)));
+    expect(declaration.optionalPointIds).toEqual(expect.arrayContaining(filled.slice(3)));
+    expect(new Set(filled.slice(0, 3)).size).toBe(3);
+    expect(new Set(filled.slice(3)).size).toBe(4);
+    expect(
+      settled.assembly.evaluation.findings.filter(
+        (finding) => finding.origin.kind === 'fieldsSpatial',
+      ),
+    ).toEqual([]);
+    // The plan publishes the stored points.
+    const assembly = settled.assembly;
+    if (assembly.evaluation.status !== 'valid')
+      throw new Error(`the Nemesis Fields checkpoint is ${assembly.evaluation.status}`);
+    const fields = compileExecutionPlan({
+      product: assembleExecutionProduct({ catalog, assembly }),
+    }).occurrences.find((room) => room.id === occurrenceId)?.overview.fields;
+    expect(fields?.cagePoints.map((cage) => cage.pointId)).toEqual(filled.slice(0, 3));
+    expect(fields?.optionalRewards.map((optional) => optional.pointId)).toEqual(filled.slice(3, 6));
+    expect(fields?.nemesisPointId).toBe(filled[6]);
+
+    // Choosing cage2 on cage1's point moves nothing else and raises the collision.
+    const chosen = settleProjectEdit({
+      catalog,
+      before: assembly,
+      command: {
+        kind: 'ReplaceFieldsSpatialPoint',
+        spatial: createFieldsSpatialAddress(occurrence, targets[1]),
+        pointId: filled[0]!,
+      },
+      evaluate: (document) => simulateProjectAssembly(catalog, document),
+    }).assembly;
+    expect(stored(chosen.project)).toEqual([filled[0], filled[0], ...filled.slice(2)]);
+    expect(
+      chosen.evaluation.findings
+        .filter((finding) => finding.origin.kind === 'fieldsSpatial')
+        .map((finding) => finding.code),
+    ).toContain('fieldsSpatialPointDuplicate');
   });
 });

@@ -241,7 +241,6 @@ describe('structured workspace composer assembly', () => {
     const nemesis = activeFields.spatial.find((control) => control.target.kind === 'nemesis');
     expect(nemesis).toBeDefined();
     expect(nemesis?.pointChoices.map((choice) => choice.value)).toEqual([
-      null,
       ...(catalog.rooms.byKey[active.assembly.node.room.gameName]?.fieldsSpatial
         ?.optionalPointIds ?? []),
     ]);

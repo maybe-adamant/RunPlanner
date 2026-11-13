@@ -53,14 +53,13 @@ describe('Chaos position publication', () => {
         .additional![0]!;
       expect(gate.kind).toBe('chaos');
       const room = catalog.rooms.byKey.F_Opening01!;
-      const fallback = chaosGateSpawnPoint(room, semanticAddressKey(additional), undefined);
-      expect(fallback?.source).toBe('default');
-      expect(chaosGateSpawnPointIndices(room)).toContain(fallback?.spawnPointIndex);
-      expect(gate.spawnPointIndex).toBe(spawnPointIndex ?? fallback?.spawnPointIndex);
-      // The authoring product marks the same point chosen or default.
+      // An unstored point publishes the gate's draw, which settlement stores on first reach.
+      const drawn = chaosGateSpawnPoint(room, semanticAddressKey(additional), undefined);
+      expect(chaosGateSpawnPointIndices(room)).toContain(drawn);
+      expect(gate.spawnPointIndex).toBe(spawnPointIndex ?? drawn);
+      // The authoring product shows the stored point only.
       expect(chaosGatePositionForProjectEvaluationAssembly(catalog, assembly, additional)).toEqual({
-        spawnPointIndex: gate.spawnPointIndex,
-        source: spawnPointIndex === null ? 'default' : 'chosen',
+        ...(spawnPointIndex === null ? {} : { spawnPointIndex }),
         spawnPointIndices: chaosGateSpawnPointIndices(room),
       });
       expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
