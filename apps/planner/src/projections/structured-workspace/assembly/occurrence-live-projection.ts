@@ -291,7 +291,7 @@ export function projectRoomLive(input: {
   // A walk stopped by anything but an unplaced required item has no live row: the frontier is
   // only the gap above the stopped row, offering what stands before it.
   const stopped = live.blocked?.kind === 'stop';
-  const stoppedRowKey = stopped
+  const nextRowKey = stopped
     ? input.rows.find((row) => row.rank === live.frontier + 1)?.key
     : undefined;
   const gaps = live.gaps
@@ -301,13 +301,14 @@ export function projectRoomLive(input: {
       const reset = input.resets
         .slice(Math.max(gap.entries.from - 1, 0), gap.entries.to)
         .find((command) => command !== undefined);
-      // The stopped row's own pickup stands below it, not in the gap above it.
+      // The frontier gap is the next row's own place, whether the stop is that row or a boundary
+      // above it (Doors open): its pickup stands with its row below the stop, not in the gap.
       const shown =
-        gap.index === live.frontier && stoppedRowKey !== undefined
+        gap.index === live.frontier && nextRowKey !== undefined
           ? {
               ...gap,
               items: gap.items.filter(
-                (item) => item.kind !== 'pickup' || roomActionKey(item.reference) !== stoppedRowKey,
+                (item) => item.kind !== 'pickup' || roomActionKey(item.reference) !== nextRowKey,
               ),
             }
           : gap;
