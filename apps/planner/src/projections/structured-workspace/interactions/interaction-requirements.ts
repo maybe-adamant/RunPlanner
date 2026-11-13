@@ -83,7 +83,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
-      /** The restocked slots of one Well or Pool reroll, each pinned or native. */
+      /** The restocked slots of one Well or Pool reroll. */
       readonly kind: 'featureRollSlots';
       readonly owner: OccurrenceAddress;
       readonly interactionKey: string;
@@ -244,6 +244,8 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly assessment: WorkspaceFeatureAssessment;
       readonly kind: 'purgingPoolSlots';
       readonly owner: OccurrenceAddress;
+      /** The list the Pool regenerates after its fountain use; the entry list when absent. */
+      readonly list?: 'refresh';
       readonly slots: readonly {
         readonly interactionKey: string;
         readonly slotKey: 'left' | 'middle' | 'right';
@@ -430,6 +432,9 @@ function occurrenceInteractionRequirementKey(
     return `${requirement.kind}:${requirement.interactionKey}`;
   if (requirement.kind === 'unlockExitEncounter')
     return `${requirement.kind}:${requirement.encounter.interactionKey}`;
+  // A Pool holds its entry list and the list its fountain use regenerates.
+  if (requirement.kind === 'purgingPoolSlots' && requirement.list !== undefined)
+    return `${requirement.kind}:${requirement.list}:${semanticAddressKey(requirement.owner)}`;
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
 

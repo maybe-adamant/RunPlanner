@@ -274,6 +274,30 @@ export function occurrenceInteractionRequirements(
     );
   }
 
+  // The fountain use that makes the Pool's entry list stale hosts the list it regenerates.
+  for (const row of room.roomActions?.rows ?? []) {
+    if (row.purgingPoolRefresh === undefined) continue;
+    requirements.push(
+      Object.freeze({
+        assessment: 'assessed' as const,
+        kind: 'purgingPoolSlots' as const,
+        owner: room.address,
+        list: 'refresh' as const,
+        slots: Object.freeze(
+          row.purgingPoolRefresh.slots.map((slot) =>
+            Object.freeze({
+              interactionKey: slot.interactionKey,
+              slotKey: slot.key,
+              traitKey: slot.traitKey,
+              ...(slot.traitLabel === undefined ? {} : { traitLabel: slot.traitLabel }),
+              candidateTraits: slot.candidateTraits,
+            }),
+          ),
+        ),
+      }),
+    );
+  }
+
   // Each Well or Pool reroll pins its restocked slots on its Timeline row.
   for (const row of room.roomActions?.rows ?? []) {
     if (row.featureRoll === undefined) continue;

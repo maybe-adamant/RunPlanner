@@ -46,7 +46,6 @@ function travelDealLineEditor(
     case 'hermesShrine':
       return (
         <HermesShrineSlotEditor
-          placeholder="Pick"
           label="Travel Deal"
           marker={line.refill.marker}
           rewardType={line.refill.rewardType}

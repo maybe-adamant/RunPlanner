@@ -24,6 +24,7 @@ import {
 } from '@planner/state/projectWorkspaceSlice';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected } from '@planner/state/editorSessionSlice';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import {
   liveRoomForProjectEvaluationAssembly,
   simulateProject,
@@ -628,7 +629,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(reward()?.offer.rewardType).toBe('MaxHealthDrop');
   });
 
-  it('keeps an unreached Well domain visible as unassessed', async () => {
+  it('keeps an unreached Well slot read-only until the walk stocks it', () => {
     const occurrenceId = createOccurrenceId('golden-f-b2-e2');
     const owner = createOccurrenceAddress(goldenFBiome, occurrenceId);
     let project = loadUnderworldFGProject();
@@ -644,7 +645,7 @@ describe('OccurrenceRoomFeatures', () => {
     });
 
     const application = createApplication();
-    const view = renderOccurrenceWorkbench(
+    renderOccurrenceWorkbench(
       project,
       'Underworld',
       'F',
@@ -664,12 +665,11 @@ describe('OccurrenceRoomFeatures', () => {
     expect(well).toMatchObject({ assessment: 'unassessed' });
 
     openRoomTab('Room Overview');
-    const picker = screen.getByRole('button', { name: 'Stygian Well Offer 1 Item' });
-    await view.user.click(picker);
-    const choice = await screen.findByRole('option', { name: 'Splintered Shield' });
-    expect(picker.getAttribute('data-candidate-state')).toBe('unassessed');
-    expect(choice.getAttribute('data-candidate-state')).toBe('unassessed');
-    expect(choice.getAttribute('aria-disabled')).not.toBe('true');
+    const picker = screen.getByRole<HTMLButtonElement>('button', {
+      name: 'Stygian Well Offer 1 Item',
+    });
+    expect(picker.disabled).toBe(true);
+    expect(picker.getAttribute('data-hint')).toBe(candidateWaitingHint);
   });
 
   it('shows the entry flip the plan holds where the door settles another, and clears it', async () => {

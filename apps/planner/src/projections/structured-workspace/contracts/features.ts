@@ -59,17 +59,8 @@ export type WorkspaceRoomFeature =
       readonly assessment: WorkspaceFeatureAssessment;
       readonly inventoryAddress: RoomFeatureAddress;
       readonly inventoryMarker: WorkspaceMarker;
-      readonly slots: readonly {
-        readonly candidateTraitKeys: readonly string[];
-        readonly candidateTraits: readonly { readonly key: string; readonly label: string }[];
-        readonly interactionKey: string;
-        readonly key: 'left' | 'middle' | 'right';
-        readonly label: string;
-        readonly address: RoomFeatureAddress;
-        readonly marker: WorkspaceMarker;
-        readonly traitLabel?: string;
-        readonly traitKey: string | null;
-      }[];
+      /** The list the Pool shows on entry. */
+      readonly slots: readonly WorkspacePurgingPoolSlot[];
     }
   | {
       /** Shrine inventory is always visible and authored once present. */
@@ -142,6 +133,19 @@ export type WorkspaceRoomFeature =
       };
     };
 
+/** One slot of a Pool of Purging list: its entry list or the list it regenerates. */
+export interface WorkspacePurgingPoolSlot {
+  readonly candidateTraitKeys: readonly string[];
+  readonly candidateTraits: readonly { readonly key: string; readonly label: string }[];
+  readonly interactionKey: string;
+  readonly key: 'left' | 'middle' | 'right';
+  readonly label: string;
+  readonly address: RoomFeatureAddress;
+  readonly marker: WorkspaceMarker;
+  readonly traitLabel?: string;
+  readonly traitKey: string | null;
+}
+
 export interface WorkspaceStygianWellSlot {
   readonly key: import('@run-planner/engine/authored-project').StygianWellSlotKey;
   readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
@@ -176,9 +180,11 @@ export interface WorkspaceFeatureRollSlotInteraction {
   readonly key: string;
   /** The reroll whose slot this pins. */
   readonly owner: import('@run-planner/engine/authored-project').RoomActionAddress;
-  readonly load: () => ContextualPickerModel<string | null>;
+  /** The walk reached the roll: its slots are stocked and can be overridden. */
+  readonly contextReached: boolean;
+  readonly load: () => ContextualPickerModel<string>;
   readonly intentFor: (
-    value: string | null,
+    value: string,
   ) => WorkspaceCommandIntent<
     Extract<
       ProjectCommand,

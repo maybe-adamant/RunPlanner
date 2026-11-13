@@ -938,40 +938,15 @@ describe('OccurrenceRoomActions', () => {
       'F',
       completionOccurrenceById(postbossId),
     );
-    openRoomTab('Room Overview');
-    const left = screen.getByRole('button', { name: 'Pool of Purging Offer 1 Item' });
-    await view.user.click(left);
-    // Blank slots are native: the selected option is Unresolved.
-    const firstTrait = within(screen.getByRole('listbox'))
-      .getAllByRole('option')
-      .find((option) => option.getAttribute('aria-selected') !== 'true');
-    if (firstTrait === undefined) throw new Error('F Pool has no eligible trait candidate');
-    const leftTraitLabel =
-      firstTrait.querySelector('.contextual-picker-item-label')?.textContent ??
-      firstTrait.textContent;
-    await view.user.click(firstTrait);
-    for (const label of ['Middle slot', 'Right slot'] as const) {
-      const slotNumber = label === 'Middle slot' ? 2 : 3;
-      const slot = screen.getByRole('button', {
-        name: `Pool of Purging Offer ${slotNumber} Item`,
-      });
-      await view.user.click(slot);
-      const trait = within(screen.getByRole('listbox'))
-        .getAllByRole('option')
-        .find((option) => option.getAttribute('aria-selected') !== 'true');
-      if (trait === undefined) throw new Error(`F Pool ${label} has no eligible trait candidate`);
-      await view.user.click(trait);
-    }
-    await waitFor(() =>
-      expect(
-        view.application.store
-          .getState()
-          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
-          ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
-          ?.traitKeyBySlot.left,
-      ).not.toBeNull(),
-    );
-
+    // The walk stocked the Pool's list when it reached the room.
+    const leftTraitKey = view.application.store
+      .getState()
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
+      ?.traitKeyBySlot.left;
+    if (leftTraitKey === undefined || leftTraitKey === null)
+      throw new Error('F Pool left slot is not stocked');
+    const leftTraitLabel = catalog.traits.byKey[leftTraitKey]!.label;
     openRoomTab('Room Timeline');
     expect(screen.queryByText(`Sell ${leftTraitLabel}`)).toBeNull();
     openRoomTab('Room Overview');
@@ -990,7 +965,6 @@ describe('OccurrenceRoomActions', () => {
         .getState()
         .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions.order;
-    const poolActionKeys = () => poolActionOrder()?.map(roomActionKey);
     const sold = recordedIn(view, goldenFBiome, postbossId, [
       { kind: 'useFountain' },
       { kind: 'interactKeepsakeRack' },
@@ -1018,36 +992,6 @@ describe('OccurrenceRoomActions', () => {
     await waitFor(() => expect(poolActionOrder()).toEqual(sold));
     view.application.store.dispatch(authoredProjectRedoRequested());
     await waitFor(() => expect(poolActionOrder()).toEqual(moved));
-
-    openRoomTab('Room Overview');
-    await view.user.click(screen.getByRole('button', { name: 'Pool of Purging Offer 1 Item' }));
-    await view.user.click(screen.getByRole('option', { name: 'Unresolved' }));
-    // Unpinning the slot refines nothing away: the sale keeps the trait it was placed for.
-    await waitFor(() => expect(poolActionOrder()).toContainEqual(leftSaleRow));
-
-    const leftSale = createRoomActionAddress(
-      goldenFBiome,
-      postbossId,
-      roomActionKey({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
-    );
-    act(() => view.application.store.dispatch(semanticOwnerNavigated(leftSale)));
-    openRoomTab('Room Timeline');
-    // A sale whose slot lost its pin stays on the timeline with its finding.
-    const stale = (await screen.findByText('Sell left Pool trait')).closest('li');
-    if (stale === null) throw new Error('Retained Pool sale is missing');
-    expect(document.getElementById(semanticOwnerControlElementId(leftSale))).toBe(stale);
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(leftSale);
-    await view.user.click(
-      within(stale).getByRole('button', { name: 'Remove Sell left Pool trait from timeline' }),
-    );
-    await waitFor(() => expect(poolActionKeys()).not.toContain(roomActionKey(leftSaleRow)));
-    expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
-        ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
-        ?.traitKeyBySlot.middle,
-    ).not.toBeNull();
   });
 
   it('orders the pickup outcome before the editing it enables on one pickup line', async () => {

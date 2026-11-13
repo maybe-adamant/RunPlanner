@@ -23,6 +23,7 @@ import { hintProps } from '@planner/ui/controls/hint';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 
 const wellIcon = (itemKey: string | null): string | undefined =>
@@ -34,14 +35,19 @@ const shrineDelayChoices = Object.freeze(
   ),
 );
 
-const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
-  sections: Object.freeze([]),
-});
 const emptyStringPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
 
 type StygianWellFeature = Extract<WorkspaceRoomFeature, { readonly kind: 'stygianWell' }>;
+type PurgingPoolSlot = Extract<
+  WorkspaceRoomFeature,
+  { readonly kind: 'purgingPool' }
+>['slots'][number];
+
+/** An unreached slot stays blank and read-only until the walk stocks it. */
+const waiting = (contextReached: boolean) =>
+  contextReached ? {} : { disabledHint: candidateWaitingHint };
 
 type InventoryFeature = Extract<
   WorkspaceRoomFeature,
@@ -56,7 +62,6 @@ export function RoomInventoryPanel({
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const findingAnchor = useFindingAnchor();
-  const executeIntent = useCommandIntent();
   switch (feature.kind) {
     case 'stygianWell':
       return (() => {
@@ -80,26 +85,7 @@ export function RoomInventoryPanel({
         return (
           <fieldset className="room-object-settings" key="purging-pool">
             <legend className="visually-hidden">Pool of Purging configuration</legend>
-            <NumberedSlots label="Pool of Purging slots">
-              {feature.slots.map((slot, index) => {
-                const interaction = requireWorkspaceInteraction(
-                  interactions.purgingPoolSlots,
-                  slot.interactionKey,
-                );
-                return (
-                  <NumberedSlot key={slot.key} number={index + 1}>
-                    <PurgingPoolTraitPicker
-                      address={slot.address}
-                      interaction={interaction}
-                      label={slot.label}
-                      traitKey={slot.traitKey}
-                      {...(slot.traitLabel === undefined ? {} : { selectedLabel: slot.traitLabel })}
-                      onSelect={(traitKey) => executeIntent(interaction.intentFor(traitKey))}
-                    />
-                  </NumberedSlot>
-                );
-              })}
-            </NumberedSlots>
+            <PurgingPoolSlots interactions={interactions} slots={feature.slots} />
           </fieldset>
         );
       })();
@@ -171,42 +157,67 @@ export function FixedObjectChip({
   );
 }
 
+/** One Pool list's slots as trait chips: the entry list on the Overview, or the regenerated one. */
+export function PurgingPoolSlots({
+  interactions,
+  label = 'Pool of Purging',
+  slots,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  /** Names the list's slots; the Overview's entry list is the Pool's own. */
+  readonly label?: string;
+  readonly slots: readonly PurgingPoolSlot[];
+}) {
+  return (
+    <NumberedSlots label={`${label} slots`}>
+      {slots.map((slot, index) => (
+        <NumberedSlot key={slot.key} number={index + 1}>
+          <PurgingPoolTraitPicker
+            interaction={requireWorkspaceInteraction(
+              interactions.purgingPoolSlots,
+              slot.interactionKey,
+            )}
+            label={label}
+            slot={slot}
+          />
+        </NumberedSlot>
+      ))}
+    </NumberedSlots>
+  );
+}
+
 function PurgingPoolTraitPicker({
-  address,
   interaction,
   label,
-  onSelect,
-  selectedLabel,
-  traitKey,
+  slot,
 }: {
-  readonly address: import('@run-planner/engine/authored-project').SemanticAddress;
   readonly interaction: WorkspacePurgingPoolSlotInteraction;
   readonly label: string;
-  readonly traitKey: string | null;
-  readonly onSelect: (traitKey: string | null) => void;
-  readonly selectedLabel?: string;
+  readonly slot: PurgingPoolSlot;
 }) {
   const findingTarget = useFindingTarget();
+  const executeIntent = useCommandIntent();
   const picker = useWorkspaceInteraction(interaction);
   return (
     <ContextualPicker
-      findingTarget={findingTarget(address)}
-      ariaLabel={`Pool of Purging ${label} Item`}
+      findingTarget={findingTarget(slot.address)}
+      ariaLabel={`${label} ${slot.label} Item`}
       id={`${interaction.key}-picker`}
       label=""
       layout="inline"
       loading={picker.pending}
-      model={picker.result ?? emptyNullablePicker}
+      model={picker.result ?? emptyStringPicker}
       onOpenChange={(open) => {
         if (open) picker.activate();
       }}
-      onSelect={onSelect}
-      placeholder="Unresolved"
-      itemIcon={(item) => (item.value === null ? undefined : traitIcon(item.value))}
-      triggerIcon={traitKey === null ? undefined : traitIcon(traitKey)}
+      onSelect={(traitKey) => executeIntent(interaction.intentFor(traitKey))}
+      placeholder={slot.label}
+      itemIcon={(item) => traitIcon(item.value)}
+      triggerIcon={slot.traitKey === null ? undefined : traitIcon(slot.traitKey)}
       triggerSize="icon"
       triggerUnknown
-      {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
+      {...waiting(interaction.contextReached)}
+      {...(slot.traitLabel === undefined ? {} : { triggerLabel: slot.traitLabel })}
     />
   );
 }
@@ -227,7 +238,6 @@ export function StygianWellSlotEditor({
       <StygianWellSlotPicker
         {...(fieldLabel === undefined ? {} : { fieldLabel })}
         interactions={interactions}
-        required
         slot={slot}
       />
     </div>
@@ -237,13 +247,10 @@ export function StygianWellSlotEditor({
 /** One Well inventory slot's item as its icon chip, which opens the slot's item list. */
 export function StygianWellSlotPicker({
   fieldLabel,
-  required = false,
   slot,
   interactions,
 }: {
   readonly fieldLabel?: string;
-  /** A slot this line needs chosen; otherwise its unrevealed item may stay unknown. */
-  readonly required?: boolean;
   readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
@@ -262,16 +269,17 @@ export function StygianWellSlotPicker({
       label={fieldLabel ?? slot.label}
       layout="inline"
       loading={offerPicker.pending}
-      model={offerPicker.result ?? emptyNullablePicker}
+      model={offerPicker.result ?? emptyStringPicker}
       onOpenChange={(open) => {
         if (open) offerPicker.activate();
       }}
       onSelect={(itemKey) => executeIntent(offer.intentFor(itemKey))}
-      placeholder={required ? 'Pick' : 'Unresolved'}
+      placeholder={slot.label}
       itemIcon={(item) => wellIcon(item.value)}
       triggerIcon={wellIcon(slot.itemKey)}
       triggerSize="icon"
-      triggerUnknown={!required}
+      triggerUnknown
+      {...waiting(offer.contextReached)}
       {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
     />
   );
@@ -279,15 +287,12 @@ export function StygianWellSlotPicker({
 
 /** One Shrine slot on a Timeline line: its item and the delay rolled with it. */
 export function HermesShrineSlotEditor({
-  placeholder = 'Unresolved',
   label,
   marker,
   rewardLabel,
   rewardType,
   offer,
 }: {
-  /** The empty slot's text; a timeline row asks to pick its item. */
-  readonly placeholder?: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly rewardLabel?: string;
@@ -300,7 +305,6 @@ export function HermesShrineSlotEditor({
         label={label}
         marker={marker}
         offer={offer}
-        placeholder={placeholder}
         rewardType={rewardType}
         {...(rewardLabel === undefined ? {} : { rewardLabel })}
       />
@@ -311,14 +315,12 @@ export function HermesShrineSlotEditor({
 
 /** A Shrine slot's item as its icon chip. */
 function HermesShrineItemPicker({
-  placeholder = 'Unresolved',
   label,
   marker,
   rewardLabel,
   rewardType,
   offer,
 }: {
-  readonly placeholder?: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly rewardLabel?: string;
@@ -341,7 +343,8 @@ function HermesShrineItemPicker({
         if (open) offerPicker.activate();
       }}
       onSelect={(selected) => executeIntent(offer.intentFor(selected))}
-      placeholder={placeholder}
+      placeholder={label}
+      {...waiting(offer.contextReached)}
       itemIcon={(item) => rewardIcon(item.value)}
       triggerIcon={rewardType === null ? undefined : rewardIcon(rewardType)}
       triggerSize="icon"

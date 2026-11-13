@@ -185,6 +185,13 @@ export interface WorkspaceRoomActionRow {
     readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
     readonly interactionKey: string;
   };
+  /**
+   * The list the Pool regenerates as this fountain use makes its entry list stale, shown
+   * on its own row right after it.
+   */
+  readonly purgingPoolRefresh?: {
+    readonly slots: readonly import('./features').WorkspacePurgingPoolSlot[];
+  };
   /** The restocked slots of this Well or Pool reroll. */
   readonly featureRoll?: {
     readonly feature: import('@run-planner/engine/authored-project').RollFeature;

@@ -1280,6 +1280,7 @@ export function assembleWorkspaceOccurrence(
         ...objectPurchaseMarkers,
         ...(row.stygianWellTwist === undefined ? [] : [row.stygianWellTwist.marker]),
         ...(row.featureRoll?.slots.map((slot) => slot.marker) ?? []),
+        ...(row.purgingPoolRefresh?.slots.map((slot) => slot.marker) ?? []),
         ...(invalidPlacementEntry === undefined ? [] : [invalidPlacementEntry]),
         ...supplementalPurchaseMarkers,
         ...(row.traitOffer === undefined ? [] : traitOfferMarkers(row.traitOffer)),
@@ -1319,7 +1320,10 @@ export function assembleWorkspaceOccurrence(
         rowControlMarks.set(row.stygianWellTwist.marker.focusKey, {
           mark: row.stygianWellTwist.marker,
         });
-      for (const slot of row.featureRoll?.slots ?? [])
+      for (const slot of [
+        ...(row.featureRoll?.slots ?? []),
+        ...(row.purgingPoolRefresh?.slots ?? []),
+      ])
         rowControlMarks.set(slot.marker.focusKey, { mark: slot.marker });
       for (const conversion of row.rewardPayload?.control.conversions ?? [])
         rowControlMarks.set(conversion.marker.focusKey, {

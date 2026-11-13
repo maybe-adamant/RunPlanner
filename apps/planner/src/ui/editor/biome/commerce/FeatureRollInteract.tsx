@@ -11,9 +11,10 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 
-const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
+const emptyPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
 
@@ -21,7 +22,7 @@ function rollIcon(feature: RollFeature, key: string) {
   return feature === 'stygianWell' ? (wellArtwork[key] ?? undefined) : traitIcon(key);
 }
 
-/** The restocked slots of a Well or Pool reroll on its Timeline row: each pinned or native. */
+/** The restocked slots of a Well or Pool reroll on its Timeline row. */
 export function FeatureRollSlots({
   feature,
   interactions,
@@ -68,25 +69,25 @@ function FeatureRollSlotPicker({
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   return (
-    <ContextualPicker<string | null>
+    <ContextualPicker<string>
       ariaLabel={`${rowLabel} ${slot.label}`}
       findingTarget={findingTarget(slot.address)}
       id={`${interaction.key}-picker`}
-      itemIcon={(item) => (item.value === null ? undefined : rollIcon(feature, item.value))}
+      itemIcon={(item) => rollIcon(feature, item.value)}
       label=""
       layout="inline"
       loading={picker.pending}
-      model={picker.result ?? emptyNullablePicker}
+      model={picker.result ?? emptyPicker}
       onOpenChange={(open) => {
         if (open) picker.activate();
       }}
       onSelect={(value) => executeIntent(interaction.intentFor(value))}
-      placeholder="Any"
+      placeholder={slot.label}
       triggerIcon={slot.value === null ? undefined : rollIcon(feature, slot.value)}
       {...(slot.valueLabel === undefined ? {} : { triggerLabel: slot.valueLabel })}
       triggerSize="icon"
-      // An unpinned slot restocks whatever the roll gives.
       triggerUnknown
+      {...(interaction.contextReached ? {} : { disabledHint: candidateWaitingHint })}
     />
   );
 }
