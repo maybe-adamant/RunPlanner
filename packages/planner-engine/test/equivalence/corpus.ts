@@ -39,9 +39,13 @@ import {
   withRetainedFreshFileIntroCustomization,
   withRetainedFreshFilePostboss,
 } from '@run-planner/test-fixtures/fresh-file';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, stockTestProject } from '@run-planner/test-fixtures/shared';
 
 import { executionFixtures } from '../execution-plan/support/execution-fixtures';
+import {
+  surfaceNORerollsProject,
+  underworldFRerollsProject,
+} from '../execution-plan/support/rerolls-fixture';
 import {
   createEchoHammerReplayMissingProject,
   createEchoReplayUnresolvedHammerProject,
@@ -119,6 +123,9 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
     entry('underworld/fPoolSaleCleared', createFPoolSaleClearedProject),
     entry('underworld/echoReplayUnresolvedHammer', createEchoReplayUnresolvedHammerProject),
     entry('underworld/fWellDuplicateRefill', createFWellDuplicateRefillProject),
+    entry('underworld/underworldFRerollsProject', () =>
+      stockTestProject(underworldFRerollsProject()),
+    ),
     entry('surface/loadSurfaceNOPQProject', loadSurfaceNOPQProject),
     entry('surface/surfaceAnvilProject', surfaceAnvilProject),
     entry('surface/createSurfaceNOHermesShrineDeliveryCheckpoint', () =>
@@ -140,6 +147,7 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
     ),
     entry('surface/surfaceOrdinaryHexPathProject', surfaceOrdinaryHexPathProject),
     entry('surface/surfaceSeleneHexPathProject', surfaceSeleneHexPathProject),
+    entry('surface/surfaceNORerollsProject', surfaceNORerollsProject),
     entry(
       'surface/oShipWheelPickupBeforeDeferredEndEffects',
       createOShipWheelPickupBeforeDeferredEndEffectsProject,

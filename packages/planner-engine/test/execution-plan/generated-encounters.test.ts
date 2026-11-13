@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -35,10 +34,9 @@ import {
   surfaceNOpeningCompositionProject,
 } from '@run-planner/test-fixtures/surface';
 import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
+import { createFreshFileFNativeProject } from '@run-planner/test-fixtures/fresh-file';
 import { generatedEncounter } from '../../src/execution-plan/codec/generated-encounter';
 import { targetRewardGenerationCheckpoint } from '../../src/simulation/encounters/generation-preparation';
-import { executionFixturePath } from './support/execution-fixtures';
-import { currentSchemaWire } from './support/current-schema-wire';
 
 const phase = createEncounterPhaseAddress(
   goldenFBiome,
@@ -519,12 +517,18 @@ describe('generated execution decoding', () => {
 });
 
 describe('native-roll exclusion decoding', () => {
-  const wire = () =>
-    currentSchemaWire(
-      JSON.parse(readFileSync(executionFixturePath('fresh-file-f-native'), 'utf8')) as {
-        occurrences: { overview: { encounterPhases: Record<string, unknown>[] } }[];
-      },
-    );
+  let encoded: string | undefined;
+  const wire = () => {
+    if (encoded === undefined) {
+      const assembly = simulateProjectAssembly(catalog, createFreshFileFNativeProject());
+      encoded = encodeExecutionPlan(
+        compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) }),
+      );
+    }
+    return JSON.parse(encoded) as {
+      occurrences: { overview: { encounterPhases: Record<string, unknown>[] } }[];
+    };
+  };
   const excludedPhase = (plan: ReturnType<typeof wire>) =>
     plan.occurrences
       .flatMap((room) => room.overview.encounterPhases)

@@ -26,7 +26,7 @@ import {
   loadUnderworldFStygianWellCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
-import { settleTestEdit } from '@run-planner/test-fixtures/shared';
+import { settleTestEdit, stockTestProject } from '@run-planner/test-fixtures/shared';
 import {
   firstSupportedReroll,
   withArcana,
@@ -38,12 +38,10 @@ import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   surfaceNORerollsProject,
   underworldFRarifiedScreenRerollProject,
+  underworldFRerollsProject,
 } from './support/rerolls-fixture';
 import { currentSchemaWire } from './support/current-schema-wire';
-import doorRerollsFixture from './fixtures/underworld-f-rerolls.execution.json';
 import fieldsFixture from './fixtures/underworld-fghi.execution.json';
-import surfaceRerollsFixture from './fixtures/surface-no-rerolls.execution.json';
-import rarifiedScreenFixture from './fixtures/underworld-f-rarified-screen-reroll.execution.json';
 
 const g = createBiomeAddress('Underworld', 'G');
 const gSource = 'golden-g-b1-e1';
@@ -59,6 +57,11 @@ function planOf(project: ProjectDocument): ExecutionPlan {
   const assembly = simulateProjectAssembly(catalog, project);
   expect(assembly.evaluation.status).toBe('valid');
   return compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
+}
+
+/** A project's published plan as its wire JSON. */
+function wireOf(project: ProjectDocument): unknown {
+  return JSON.parse(encodeExecutionPlan(planOf(project))) as unknown;
 }
 
 /** The golden route with one G door press; holding the card makes both Judgments due. */
@@ -259,6 +262,11 @@ describe('reroll publication', () => {
 describe('reroll target decoding', () => {
   type WireRoom = Record<string, unknown> & { readonly id: string };
   /** Decodes a fixture after editing one room, re-stamped so only the edit can fail. */
+  let doorRerolls: unknown;
+  let surfaceRerolls: unknown;
+  const doorRerollsWire = () =>
+    (doorRerolls ??= wireOf(stockTestProject(underworldFRerollsProject())));
+  const surfaceRerollsWire = () => (surfaceRerolls ??= wireOf(surfaceNORerollsProject()));
   function decodeEdited(fixture: unknown, roomId: string, edit: (room: WireRoom) => void) {
     const copy = structuredClone(fixture) as { occurrences: WireRoom[] };
     edit(copy.occurrences.find((room) => room.id === roomId)!);
@@ -269,9 +277,9 @@ describe('reroll target decoding', () => {
 
   it('rejects a door press whose exit is not a published door of its room', () => {
     const roomId = 'golden-f-b2-e1';
-    expect(decodeEdited(doorRerollsFixture, roomId, () => undefined)).not.toThrow();
+    expect(decodeEdited(doorRerollsWire(), roomId, () => undefined)).not.toThrow();
     expect(
-      decodeEdited(doorRerollsFixture, roomId, (room) => {
+      decodeEdited(doorRerollsWire(), roomId, (room) => {
         press(room).target = { kind: 'door', exitKey: 'exit9' };
       }),
     ).toThrow(unpublished);
@@ -295,7 +303,7 @@ describe('reroll target decoding', () => {
     expect(decodeEdited(fieldsFixture, 'golden-h-combat02', cage(1, 'exit9'))).toThrow(unpublished);
     // A door without cage rewards publishes no cage to press.
     expect(
-      decodeEdited(doorRerollsFixture, 'golden-f-b2-e1', (room) => {
+      decodeEdited(doorRerollsWire(), 'golden-f-b2-e1', (room) => {
         press(room).target = { kind: 'cage', exitKey: 'exit2', cageIndex: 1 };
       }),
     ).toThrow(unpublished);
@@ -303,14 +311,14 @@ describe('reroll target decoding', () => {
 
   it('rejects a wheel press that names no published offer of its wheel', () => {
     const roomId = 'surface-o-combat04';
-    expect(decodeEdited(surfaceRerollsFixture, roomId, () => undefined)).not.toThrow();
+    expect(decodeEdited(surfaceRerollsWire(), roomId, () => undefined)).not.toThrow();
     expect(
-      decodeEdited(surfaceRerollsFixture, roomId, (room) => {
+      decodeEdited(surfaceRerollsWire(), roomId, (room) => {
         press(room).target = { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer9' };
       }),
     ).toThrow(unpublished);
     expect(
-      decodeEdited(surfaceRerollsFixture, roomId, (room) => {
+      decodeEdited(surfaceRerollsWire(), roomId, (room) => {
         press(room).target = { kind: 'wheelOffer', wheelKey: 'wheel9', offerKey: 'offer1' };
       }),
     ).toThrow(unpublished);
@@ -318,7 +326,7 @@ describe('reroll target decoding', () => {
 
   it('rejects a Hub press whose slot is not a Hub slot', () => {
     expect(
-      decodeEdited(surfaceRerollsFixture, 'surface-n-prehub', (room) => {
+      decodeEdited(surfaceRerollsWire(), 'surface-n-prehub', (room) => {
         const hub = (room.overview as { hub: { rerolls: Record<string, unknown>[] } }).hub;
         hub.rerolls[0]!.slotKey = 'combat99';
       }),
@@ -533,7 +541,7 @@ describe('rerolled screen publication', () => {
     ]);
     // The menu reads the keepsake's use when the screen opens, before any screen's click.
     expect(offer!.expectation).toMatchObject({ rarifyUses: 1 });
-    expect(screenOwners(rarifiedScreenFixture)).toHaveLength(1);
+    expect(screenOwners(wireOf(underworldFRarifiedScreenRerollProject()))).toHaveLength(1);
   });
 
   it('decodes a rerolled row rarity strictly', () => {

@@ -64,15 +64,12 @@ local CORPUS = {
     ["fg-npc-shopping-protection.execution.json"] = "405ec525",
     ["fg.execution.json"] = "0155a8f8",
     ["fingerprint-vectors.json"] = "1f83acce",
-    ["fresh-file-f-native.execution.json"] = "ca6cb4cf",
     ["fresh-file-fghi.execution.json"] = "25dee9e1",
     ["run-modifiers.execution.json"] = "c15e9704",
     ["surface-generated-precombat.execution.json"] = "1b289fd4",
-    ["surface-n-opening-composition.execution.json"] = "b4e3b08d",
     ["surface-n-partial-hub.execution.json"] = "aacdacf8",
     ["surface-n-phial-intermediate-fountain.execution.json"] = "b640a5fd",
     ["surface-n.execution.json"] = "6d90f2db",
-    ["surface-no-rerolls.execution.json"] = "2d29a95c",
     ["surface-nopq.execution.json"] = "4e827f79",
     ["surface-p-elite-switch.execution.json"] = "4a9cd0c2",
     ["surface-q-shop-correlation.execution.json"] = "9828782b",
@@ -87,15 +84,12 @@ local CORPUS = {
     ["underworld-echo-gold-anvil-duplicate.execution.json"] = "58ee85df",
     ["underworld-f-cut-end.execution.json"] = "2700ec07",
     ["underworld-f-cut-end-rerolls.execution.json"] = "7e0aeb80",
-    ["underworld-f-rarified-screen-reroll.execution.json"] = "f8a58b66",
-    ["underworld-f-rerolls.execution.json"] = "22f95a72",
     ["underworld-f-switches-failed-left.execution.json"] = "e4f2305a",
     ["underworld-f-switches.execution.json"] = "8680c41c",
     ["underworld-g-locked-doors.execution.json"] = "585f2432",
     ["underworld-fgh.execution.json"] = "8fc1fab1",
     ["underworld-fghi-empty-shop-group.execution.json"] = "01268494",
     ["underworld-fghi.execution.json"] = "4e5bee39",
-    ["underworld-fog-emitter-reservation.execution.json"] = "54204900",
     ["underworld-generated-composition.execution.json"] = "5950dbcb",
     ["underworld-start-g-rivals-boss.execution.json"] = "9c8fb15b",
     ["underworld-start-i-preboss.execution.json"] = "ac1b3f86",
@@ -109,7 +103,7 @@ function TestFingerprint.testEveryExecutionFixtureKeepsItsFingerprint()
         lu.assertEquals(p.fingerprint(assert(p.json.decode(source))), expected, name)
         count = count + 1
     end
-    lu.assertEquals(count, 47)
+    lu.assertEquals(count, 41)
 end
 
 function TestFingerprint.testAsciiAndMultibyteStringsHashTheirBytes()

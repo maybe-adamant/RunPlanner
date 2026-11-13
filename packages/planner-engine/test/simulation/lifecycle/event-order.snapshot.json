@@ -9,7 +9,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -17,78 +16,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
-        "execution/underworld-start-i-preboss",
-        "execution/underworld-start-g-rivals-boss",
-        "execution/underworld-f-cut-end",
-        "execution/underworld-f-cut-end-rerolls",
-        "execution/underworld-f-switches",
-        "execution/underworld-f-switches-failed-left",
-        "execution/underworld-g-locked-doors",
-        "checkpoint/underworld-fg",
-        "checkpoint/underworld-automatic-boss",
-        "checkpoint/underworld-fig-leaf",
-        "checkpoint/underworld-gorgon-athena",
-        "checkpoint/underworld-ixion-chaos",
-        "checkpoint/underworld-g-anomaly-roster",
-        "checkpoint/underworld-arachne-cocoons",
-        "checkpoint/underworld-twist-scylla",
-        "checkpoint/underworld-zagreus-contract",
-        "checkpoint/underworld-world-shop-travel-deal",
-        "checkpoint/underworld-generated-composition",
-        "checkpoint/underworld-f-pool",
-        "checkpoint/underworld-f-stygian-well",
-        "checkpoint/underworld-fgh",
-        "checkpoint/underworld-fghi",
-        "checkpoint/nemesis-f-trait-trade",
-        "checkpoint/nemesis-h-fields",
-        "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
-        "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
-        "underworld/createFConversionFrontierProject(GiftDrop)",
-        "underworld/createFConversionFrontierProject(MetaCurrencyDrop)",
-        "underworld/createFConversionFrontierProject(MetaCardPointsCommonDrop)",
-        "underworld/createFInvalidLaterConversionProject",
-        "underworld/createGContractAvailabilityProject(true)",
-        "underworld/createGContractAvailabilityProject(false)",
-        "underworld/echoHammerReplayMissing",
-        "underworld/hammerBridgeRoute",
-        "underworld/fPoolSaleCleared",
-        "underworld/echoReplayUnresolvedHammer",
-        "underworld/fWellDuplicateRefill"
-      ],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Encounter | #1 | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
-      "loot": ["roomEntered: interactIncomingReward:roomRewardPickup:source required #1"]
-    }
-  ],
-  "F/golden-f-b1-e1 F_Combat02": [
-    {
-      "entries": [
-        "execution/run-modifiers",
-        "execution/f-opening",
-        "execution/fg",
-        "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
-        "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
-        "execution/fg-ixion-chaos",
-        "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
-        "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -133,6 +60,75 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
+      ],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
+      "timeline": "roomEntered | encounterBegun Encounter | #1 | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
+      "loot": ["roomEntered: interactIncomingReward:roomRewardPickup:source required #1"]
+    }
+  ],
+  "F/golden-f-b1-e1 F_Combat02": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fgh",
+        "execution/underworld-fghi",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fg-ixion-chaos",
+        "execution/fg-anomaly",
+        "execution/fg-anomaly-roster",
+        "execution/automatic-boss",
+        "execution/underworld-generated-composition",
+        "execution/underworld-arachne-cocoons",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-cut-end",
+        "execution/underworld-f-cut-end-rerolls",
+        "execution/underworld-f-switches",
+        "execution/underworld-f-switches-failed-left",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createGoldenFGHProject",
+        "underworld/createGoldenFGHIProject",
+        "underworld/createCompleteFGProject",
+        "underworld/createCompleteFGAnomalyProject(true)",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createCompleteFGIxionChaosProject",
+        "underworld/createUnderworldFWellCheckpoint",
+        "underworld/createUnderworldFPoolCheckpoint",
+        "underworld/createFConversionFrontierProject(GiftDrop)",
+        "underworld/createFConversionFrontierProject(MetaCurrencyDrop)",
+        "underworld/createFConversionFrontierProject(MetaCardPointsCommonDrop)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
@@ -150,7 +146,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -158,7 +153,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -204,7 +198,7 @@
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:source required #1"]
     },
     {
-      "entries": ["execution/underworld-f-rerolls", "execution/underworld-f-cut-end-rerolls"],
+      "entries": ["execution/underworld-f-cut-end-rerolls", "underworld/underworldFRerollsProject"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > outgoingGenerationCheckpoint > #2 > rewardRerolled({kind:door,exitKey:exit2,occurrenceId:golden-f-b3-e2}) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened | #2",
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:source required #1"]
@@ -232,7 +226,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -240,8 +233,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -281,6 +272,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
@@ -303,7 +295,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -311,8 +302,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -351,7 +340,8 @@
         "underworld/hammerBridgeRoute",
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
-        "underworld/fWellDuplicateRefill"
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
@@ -374,15 +364,12 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -416,7 +403,8 @@
         "underworld/hammerBridgeRoute",
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
-        "underworld/fWellDuplicateRefill"
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
@@ -479,7 +467,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -487,8 +474,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-switches",
@@ -525,7 +510,8 @@
         "underworld/hammerBridgeRoute",
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
-        "underworld/fWellDuplicateRefill"
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
@@ -556,7 +542,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -564,8 +549,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-switches",
@@ -602,7 +585,8 @@
         "underworld/hammerBridgeRoute",
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
-        "underworld/fWellDuplicateRefill"
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
@@ -628,7 +612,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -636,8 +619,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-g-locked-doors",
@@ -672,7 +653,8 @@
         "underworld/hammerBridgeRoute",
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
-        "underworld/fWellDuplicateRefill"
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
@@ -713,7 +695,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -721,8 +702,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-switches",
@@ -759,7 +738,8 @@
         "underworld/hammerBridgeRoute",
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
-        "underworld/fWellDuplicateRefill"
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
@@ -785,7 +765,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -793,8 +772,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-g-locked-doors",
@@ -829,7 +806,8 @@
         "underworld/hammerBridgeRoute",
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
-        "underworld/fWellDuplicateRefill"
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
@@ -860,7 +838,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -868,8 +845,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-g-locked-doors",
@@ -905,6 +880,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
@@ -928,7 +904,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -936,8 +911,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -970,7 +943,8 @@
         "underworld/hammerBridgeRoute",
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
-        "underworld/fWellDuplicateRefill"
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > bossDefeated(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > #1 > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | bossDefeated Encounter | encounterEnd Encounter | #1 | doorsOpened",
@@ -996,14 +970,12 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -1045,12 +1017,6 @@
       "loot": []
     },
     {
-      "entries": ["execution/underworld-f-rerolls"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > fountainUsed > #2 > #3 > wellPurchase(initial:secondLeft) > #4 > wellPurchase(initial:secondRight) > #5 > wellPurchase(travelDealRefill) > #6 > featureRerolled(stygianWell r1) > #7 > wellPurchase(r1:healing) > #8 > featureRerolled(purgingPool r1) > #9 > acquisitionPointReached(purgingPool:middle:r1) > roomCommitted > roomCountersAdvanced > roomExited",
-      "timeline": "roomEntered | #1 | doorsOpened | #2 | #3 | #4 | #5 | #6 | #7 | #8 | #9",
-      "loot": []
-    },
-    {
       "entries": ["execution/underworld-start-g-rivals-boss", "checkpoint/underworld-twist-scylla"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > fountainUsed > #2 > #3 > wellPurchase(initial:secondLeft) > #4 > wellPurchase(initial:secondRight) > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | #1 | doorsOpened | #2 | #3 | #4",
@@ -1078,6 +1044,12 @@
       "loot": []
     },
     {
+      "entries": ["underworld/underworldFRerollsProject"],
+      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > fountainUsed > #2 > #3 > wellPurchase(initial:secondLeft) > #4 > wellPurchase(initial:secondRight) > #5 > wellPurchase(travelDealRefill) > #6 > featureRerolled(stygianWell r1) > #7 > wellPurchase(r1:healing) > #8 > featureRerolled(purgingPool r1) > #9 > acquisitionPointReached(purgingPool:middle:r1) > roomCommitted > roomCountersAdvanced > roomExited",
+      "timeline": "roomEntered | #1 | doorsOpened | #2 | #3 | #4 | #5 | #6 | #7 | #8 | #9",
+      "loot": []
+    },
+    {
       "entries": ["fresh-file/createFreshFileGeneratedComposition"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > fountainUsed > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | #1 | doorsOpened",
@@ -1092,7 +1064,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1100,7 +1071,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-g-locked-doors",
@@ -1172,14 +1142,12 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -1258,7 +1226,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1266,7 +1233,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-g-locked-doors",
@@ -1330,12 +1296,10 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -1375,13 +1339,11 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -1453,7 +1415,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1461,7 +1422,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "checkpoint/underworld-fg",
@@ -1530,7 +1490,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1538,7 +1497,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "checkpoint/underworld-fg",
@@ -1599,14 +1557,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -1682,14 +1638,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -1746,14 +1700,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -1816,14 +1768,12 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -1886,7 +1836,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -1928,7 +1877,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -1974,7 +1922,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2022,7 +1969,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-generated-composition",
@@ -2047,7 +1993,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-generated-composition",
@@ -2092,7 +2037,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2127,7 +2071,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2166,7 +2109,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2450,7 +2392,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/createFreshFileFirstSequence",
@@ -2501,7 +2442,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2556,7 +2496,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2614,7 +2553,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2658,7 +2596,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2702,7 +2639,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2755,7 +2691,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2794,7 +2729,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2833,7 +2767,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2872,7 +2805,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2911,7 +2843,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2963,7 +2894,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -2996,7 +2926,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3029,7 +2958,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3281,7 +3209,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -3290,7 +3217,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -3327,6 +3253,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
@@ -3355,7 +3282,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -3364,7 +3290,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -3401,6 +3326,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
@@ -3418,7 +3344,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -3428,7 +3353,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -3468,6 +3392,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > roomEntered > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited"
@@ -3477,7 +3402,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -3486,7 +3410,6 @@
         "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -3520,6 +3443,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > requiredObjectSpawned(SoulPylon) > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > requiredObjectCompleted(SoulPylon) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
@@ -3548,7 +3472,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -3557,7 +3480,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -3592,6 +3514,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > roomCommitted > roomCountersAdvanced > roomExited",
@@ -3609,7 +3532,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -3618,7 +3540,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -3653,6 +3574,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > roomCommitted > roomCountersAdvanced > roomExited",
@@ -3670,7 +3592,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -3680,7 +3601,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -3716,6 +3636,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > requiredObjectSpawned(SoulPylon) > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > requiredObjectCompleted(SoulPylon) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
@@ -3738,7 +3659,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -3748,7 +3668,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -3783,6 +3702,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > requiredObjectSpawned(SoulPylon) > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > requiredObjectCompleted(SoulPylon) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
@@ -3809,7 +3729,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -3818,7 +3737,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -3851,6 +3769,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > roomCommitted > roomCountersAdvanced > roomExited",
@@ -3872,7 +3791,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -3882,7 +3800,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -3916,6 +3833,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > requiredObjectSpawned(SoulPylon) > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > requiredObjectCompleted(SoulPylon) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
@@ -3942,14 +3860,12 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-p-elite-switch",
@@ -3977,6 +3893,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > roomCommitted > roomCountersAdvanced > roomExited",
@@ -4023,7 +3940,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -4033,7 +3949,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4067,6 +3982,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > requiredObjectSpawned(SoulPylon) > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > requiredObjectCompleted(SoulPylon) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
@@ -4093,7 +4009,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-generated-precombat",
@@ -4101,7 +4016,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4128,6 +4042,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > requiredObjectSpawned(SoulPylon) > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > requiredObjectCompleted(SoulPylon) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
@@ -4171,7 +4086,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -4180,7 +4094,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4214,6 +4127,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > roomExited",
@@ -4225,7 +4139,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -4234,7 +4147,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4262,6 +4174,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > bossDefeated(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > #1 > roomCommitted > roomCountersAdvanced > roomExited",
@@ -4293,7 +4206,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-generated-precombat",
@@ -4301,7 +4213,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4332,6 +4243,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > fountainUsed > #2 > roomCommitted > roomCountersAdvanced > roomExited",
@@ -4371,7 +4283,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4394,6 +4305,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > roomEntered > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
@@ -4458,12 +4370,6 @@
       ]
     },
     {
-      "entries": ["execution/surface-no-rerolls"],
-      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > rewardRerolled({kind:wheelOffer,wheelKey:wheel1,offerKey:offer1}) > #2 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #3 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
-      "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | #2 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #3 Combat1 | doorsOpened",
-      "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #3"]
-    },
-    {
       "entries": [
         "checkpoint/surface-shrine-travel-deal",
         "surface/surfaceShrineTravelDealProject"
@@ -4474,6 +4380,12 @@
         "encounterEnd:Combat1: interactWheelReward:wheel1 required #2",
         "afterEncounterReward:Combat1: interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill] required #3"
       ]
+    },
+    {
+      "entries": ["surface/surfaceNORerollsProject"],
+      "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > rewardRerolled({kind:wheelOffer,wheelKey:wheel1,offerKey:offer1}) > #2 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #3 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
+      "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | #2 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #3 Combat1 | doorsOpened",
+      "loot": ["encounterEnd:Combat1: interactWheelReward:wheel1 required #3"]
     }
   ],
   "O/surface-o-combat07 O_Combat07": [
@@ -4484,7 +4396,6 @@
         "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-p-elite-switch",
@@ -4503,7 +4414,8 @@
         "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
@@ -4556,7 +4468,6 @@
         "execution/surface-q-shop-correlation",
         "execution/surface-generated-precombat",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-p-elite-switch",
@@ -4576,7 +4487,8 @@
         "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
@@ -4622,7 +4534,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
@@ -4641,7 +4552,8 @@
         "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > #1 > producerPointReached(beforeCombat) > producerRoleAdvanced(beforeCombat chosenSource) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > #2 > producerPointReached(afterCombat) > producerRoleAdvanced(afterCombat spurnedSource) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter | #1 | encounterStarted Encounter | encounterEnd Encounter | #2 | doorsOpened",
@@ -4679,7 +4591,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4702,6 +4613,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter none) > producerPointReached(afterCombat) > producerPointReached(roomRewardPickup) > #1 > encounterInteractionReached(Encounter encounter) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
@@ -4719,7 +4631,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4741,7 +4652,8 @@
         "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Intro) > encounterRecorded(Combat1) > roomEntered > encounterStarted(Intro) > encounterCompleted(Intro deferred) > encounterEndEffectsApplied(Intro) > offerPointMaterialized(wheel1) > #1 > encounterStarted(Combat1) > encounterDepthAdvanced(Combat1) > encounterCompleted(Combat1 deferred) > #2 > offerPointAcquired(wheel1) > encounterEndEffectsApplied(Combat1) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Intro merged | encounterStarted Intro | encounterEnd Intro | wheelsOpen wheel1 | encounterBegun Combat1 | #1 Combat1 | encounterStarted Combat1 | encounterEnd Combat1 | #2 Combat1 | doorsOpened",
@@ -4764,7 +4676,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4787,6 +4698,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
@@ -4804,7 +4716,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4826,7 +4737,8 @@
         "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > bossDefeated(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > #1 > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | bossDefeated Encounter | encounterEnd Encounter | #1 | doorsOpened",
@@ -4848,7 +4760,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
@@ -4869,6 +4780,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > fountainUsed > #2 > roomCommitted > roomCountersAdvanced > roomExited",

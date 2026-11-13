@@ -421,7 +421,7 @@ describe('Ship phase', () => {
   });
 
   it('stands a wheel reroll and the choice under Wheels open, before Combat', () => {
-    const room = observe(corpusRun('execution/surface-no-rerolls'), oShipRerolls);
+    const room = observe(corpusRun('surface/surfaceNORerollsProject'), oShipRerolls);
     const choose = room.rank('chooseRewardWheel:wheel1');
     const reroll = room.rank('reroll');
 
@@ -498,7 +498,7 @@ describe('Ship phase', () => {
 
   it('opens the wheels in the walk before the reroll and the choice', () => {
     // The walk opens a wheel as its offer point; its Encounter begins there on the Timeline.
-    const room = observe(corpusRun('execution/surface-no-rerolls'), oShipRerolls);
+    const room = observe(corpusRun('surface/surfaceNORerollsProject'), oShipRerolls);
     expectInOrder(room.walk, [
       'encounterEndEffectsApplied(Intro)',
       'offerPointMaterialized(wheel1)',

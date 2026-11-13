@@ -61,6 +61,7 @@ import {
   authorTestTraitsAndRequiredItems,
   editTestRoomActionOrder,
   placeTestLivePickup,
+  stockTestProject,
 } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGIxionChaosProject,
@@ -70,6 +71,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 import { executionFixtures } from '../execution-plan/support/execution-fixtures';
+import { underworldFRerollsProject } from '../execution-plan/support/rerolls-fixture';
 import { checkedGoldFights, checkedGoldRows } from '../support/gold-fights';
 
 const f = createBiomeAddress('Underworld', 'F');
@@ -242,7 +244,7 @@ describe('gold ledger walk', () => {
   });
 
   it('pays a Boatman Arcana activated after the boss', () => {
-    const gold = ledger(fixture('underworld-f-rerolls'));
+    const gold = ledger(stockTestProject(underworldFRerollsProject()));
     expect(
       gains(gold, createOccurrenceAddress(f, 'golden-f-preboss-shop:boss' as never)),
     ).toContainEqual(['arcanaGold', 300]);

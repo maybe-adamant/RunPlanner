@@ -9,7 +9,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -17,78 +16,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
-        "execution/underworld-start-i-preboss",
-        "execution/underworld-start-g-rivals-boss",
-        "execution/underworld-f-cut-end",
-        "execution/underworld-f-cut-end-rerolls",
-        "execution/underworld-f-switches",
-        "execution/underworld-f-switches-failed-left",
-        "execution/underworld-g-locked-doors",
-        "checkpoint/underworld-fg",
-        "checkpoint/underworld-automatic-boss",
-        "checkpoint/underworld-fig-leaf",
-        "checkpoint/underworld-gorgon-athena",
-        "checkpoint/underworld-ixion-chaos",
-        "checkpoint/underworld-g-anomaly-roster",
-        "checkpoint/underworld-arachne-cocoons",
-        "checkpoint/underworld-twist-scylla",
-        "checkpoint/underworld-zagreus-contract",
-        "checkpoint/underworld-world-shop-travel-deal",
-        "checkpoint/underworld-generated-composition",
-        "checkpoint/underworld-f-pool",
-        "checkpoint/underworld-f-stygian-well",
-        "checkpoint/underworld-fgh",
-        "checkpoint/underworld-fghi",
-        "checkpoint/nemesis-f-trait-trade",
-        "checkpoint/nemesis-h-fields",
-        "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
-        "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
-        "underworld/createFConversionFrontierProject(GiftDrop)",
-        "underworld/createFConversionFrontierProject(MetaCurrencyDrop)",
-        "underworld/createFConversionFrontierProject(MetaCardPointsCommonDrop)",
-        "underworld/createFInvalidLaterConversionProject",
-        "underworld/createGContractAvailabilityProject(true)",
-        "underworld/createGContractAvailabilityProject(false)",
-        "underworld/echoHammerReplayMissing",
-        "underworld/hammerBridgeRoute",
-        "underworld/fPoolSaleCleared",
-        "underworld/echoReplayUnresolvedHammer",
-        "underworld/fWellDuplicateRefill"
-      ],
-      "rows": {
-        "interactIncomingReward:roomRewardPickup:source": "#1 required | scope phase | remove"
-      }
-    }
-  ],
-  "F/golden-f-b1-e1 F_Combat02": [
-    {
-      "entries": [
-        "execution/run-modifiers",
-        "execution/f-opening",
-        "execution/fg",
-        "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
-        "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
-        "execution/fg-ixion-chaos",
-        "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
-        "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -133,6 +60,75 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
+      ],
+      "rows": {
+        "interactIncomingReward:roomRewardPickup:source": "#1 required | scope phase | remove"
+      }
+    }
+  ],
+  "F/golden-f-b1-e1 F_Combat02": [
+    {
+      "entries": [
+        "execution/run-modifiers",
+        "execution/f-opening",
+        "execution/fg",
+        "execution/fg-npc-shopping-protection",
+        "execution/underworld-fgh",
+        "execution/underworld-fghi",
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fg-ixion-chaos",
+        "execution/fg-anomaly",
+        "execution/fg-anomaly-roster",
+        "execution/automatic-boss",
+        "execution/underworld-generated-composition",
+        "execution/underworld-arachne-cocoons",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "execution/underworld-start-g-rivals-boss",
+        "execution/underworld-f-cut-end",
+        "execution/underworld-f-cut-end-rerolls",
+        "execution/underworld-f-switches",
+        "execution/underworld-f-switches-failed-left",
+        "execution/underworld-g-locked-doors",
+        "checkpoint/underworld-fg",
+        "checkpoint/underworld-automatic-boss",
+        "checkpoint/underworld-fig-leaf",
+        "checkpoint/underworld-gorgon-athena",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-g-anomaly-roster",
+        "checkpoint/underworld-arachne-cocoons",
+        "checkpoint/underworld-twist-scylla",
+        "checkpoint/underworld-zagreus-contract",
+        "checkpoint/underworld-world-shop-travel-deal",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-f-pool",
+        "checkpoint/underworld-f-stygian-well",
+        "checkpoint/underworld-fgh",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "checkpoint/nemesis-h-fields",
+        "checkpoint/nemesis-f-pom-sea-star",
+        "underworld/createGoldenFGHProject",
+        "underworld/createGoldenFGHIProject",
+        "underworld/createCompleteFGProject",
+        "underworld/createCompleteFGAnomalyProject(true)",
+        "underworld/createCompleteFGAnomalyProject(false)",
+        "underworld/createCompleteFGIxionChaosProject",
+        "underworld/createUnderworldFWellCheckpoint",
+        "underworld/createUnderworldFPoolCheckpoint",
+        "underworld/createFConversionFrontierProject(GiftDrop)",
+        "underworld/createFConversionFrontierProject(MetaCurrencyDrop)",
+        "underworld/createFConversionFrontierProject(MetaCardPointsCommonDrop)",
+        "underworld/createFInvalidLaterConversionProject",
+        "underworld/createGContractAvailabilityProject(true)",
+        "underworld/createGContractAvailabilityProject(false)",
+        "underworld/echoHammerReplayMissing",
+        "underworld/hammerBridgeRoute",
+        "underworld/fPoolSaleCleared",
+        "underworld/echoReplayUnresolvedHammer",
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -150,7 +146,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -158,7 +153,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -205,7 +199,7 @@
       }
     },
     {
-      "entries": ["execution/underworld-f-rerolls", "execution/underworld-f-cut-end-rerolls"],
+      "entries": ["execution/underworld-f-cut-end-rerolls", "underworld/underworldFRerollsProject"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:source": "#1 required | scope room | move - | move blocked 1: window after reroll:r1 | remove",
         "reroll:r1": "#2 optional | move - | move blocked 0: requiredFirst interactIncomingReward:roomRewardPickup:source | remove"
@@ -228,7 +222,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -236,8 +229,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -279,6 +270,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -296,7 +288,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -304,8 +295,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -347,6 +336,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -364,7 +354,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -372,7 +361,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -420,7 +408,7 @@
       }
     },
     {
-      "entries": ["execution/underworld-f-rerolls", "execution/underworld-f-cut-end-rerolls"],
+      "entries": ["execution/underworld-f-cut-end-rerolls", "underworld/underworldFRerollsProject"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
       }
@@ -436,7 +424,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -444,8 +431,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -486,6 +471,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -503,7 +489,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -511,8 +496,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -553,6 +536,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -570,7 +554,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -578,8 +561,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -616,6 +597,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -665,7 +647,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -673,8 +654,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -715,6 +694,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -732,7 +712,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -740,8 +719,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -782,6 +759,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -799,7 +777,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -807,8 +784,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-cut-end",
@@ -849,6 +824,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -866,7 +842,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -874,8 +849,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-switches",
@@ -915,6 +888,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -932,7 +906,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -940,8 +913,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-g-locked-doors",
@@ -979,6 +950,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -1011,14 +983,12 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-f-switches",
         "execution/underworld-f-switches-failed-left",
@@ -1059,7 +1029,6 @@
     {
       "entries": [
         "execution/fg-ixion-chaos",
-        "execution/underworld-f-rerolls",
         "execution/underworld-start-g-rivals-boss",
         "checkpoint/underworld-ixion-chaos",
         "checkpoint/underworld-twist-scylla",
@@ -1067,7 +1036,8 @@
         "checkpoint/underworld-f-stygian-well",
         "underworld/createCompleteFGIxionChaosProject",
         "underworld/createUnderworldFWellCheckpoint",
-        "underworld/fWellDuplicateRefill"
+        "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject"
       ],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
@@ -1084,7 +1054,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1092,8 +1061,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-switches",
@@ -1133,6 +1100,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -1150,7 +1118,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1158,8 +1125,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-switches",
@@ -1199,6 +1164,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -1216,7 +1182,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1224,8 +1189,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-switches",
@@ -1265,6 +1228,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -1282,7 +1246,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1290,8 +1253,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-f-switches",
@@ -1331,6 +1292,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -1348,7 +1310,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1356,8 +1317,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "execution/underworld-g-locked-doors",
@@ -1395,6 +1354,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": {
@@ -1412,7 +1372,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1420,8 +1379,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rerolls",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -1457,6 +1414,7 @@
         "underworld/fPoolSaleCleared",
         "underworld/echoReplayUnresolvedHammer",
         "underworld/fWellDuplicateRefill",
+        "underworld/underworldFRerollsProject",
         "fresh-file/createFreshFileGeneratedComposition"
       ],
       "rows": { "collectRequiredReward": "#1 required | scope room | remove" }
@@ -1472,14 +1430,12 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -1527,25 +1483,6 @@
         "sellPurgingPoolTrait:left": "#- optional | insert 1,2,3 | insert blocked 0: requiredFirst useFountain",
         "sellPurgingPoolTrait:middle": "#- optional | insert 1,2,3 | insert blocked 0: requiredFirst useFountain",
         "sellPurgingPoolTrait:right": "#- optional | insert 1,2,3 | insert blocked 0: requiredFirst useFountain"
-      }
-    },
-    {
-      "entries": ["execution/underworld-f-rerolls"],
-      "rows": {
-        "useFountain": "#1 required | scope room | move 1 | move blocked 2: window after purchaseStygianWellOffer:initial:secondLeft | move blocked 3: window after purchaseStygianWellOffer:initial:secondRight | move blocked 4: window after purchaseStygianWellOffer:travelDealRefill | move blocked 5: window after rerollStygianWell:r1 | move blocked 6: window after purchaseStygianWellOffer:r1:healing | move blocked 7: window after rerollPurgingPool:r1 | move blocked 8: window after sellPurgingPoolTrait:middle:r1 | remove",
-        "interactKeepsakeRack": "#2 optional | move 0,2,3,4,5,6,7,8 | remove",
-        "purchaseStygianWellOffer:initial:secondLeft": "#3 optional | move 1,3 | move blocked 0: requiredFirst useFountain | move blocked 4,5,6,7,8: purchaseStygianWellOffer:travelDealRefill afterAction purchaseStygianWellOffer:initial:secondLeft",
-        "purchaseStygianWellOffer:initial:secondRight": "#4 optional | move 1,2,4,5,6,7,8 | move blocked 0: requiredFirst useFountain",
-        "purchaseStygianWellOffer:travelDealRefill": "#5 optional | move 3,5,6,7,8 | move blocked 0: afterAction purchaseStygianWellOffer:initial:secondLeft, requiredFirst useFountain | move blocked 1,2: afterAction purchaseStygianWellOffer:initial:secondLeft",
-        "rerollStygianWell:r1": "#6 optional | move 1,2,3,4 | move blocked 0: requiredFirst useFountain | move blocked 6,7,8: purchaseStygianWellOffer:r1:healing afterAction rerollStygianWell:r1 | remove",
-        "purchaseStygianWellOffer:r1:healing": "#7 optional | move 7,8 | move blocked 0: afterAction rerollStygianWell:r1, requiredFirst useFountain | move blocked 1,2,3,4,5: afterAction rerollStygianWell:r1",
-        "rerollPurgingPool:r1": "#8 optional | move 1,2,3,4,5,6 | move blocked 0: requiredFirst useFountain | move blocked 8: sellPurgingPoolTrait:middle:r1 afterAction rerollPurgingPool:r1 | remove",
-        "sellPurgingPoolTrait:middle:r1": "#9 optional | move - | move blocked 0: afterAction rerollPurgingPool:r1, requiredFirst useFountain | move blocked 1,2,3,4,5,6,7: afterAction rerollPurgingPool:r1 | remove",
-        "sellPurgingPoolTrait:left": "#- optional | insert 1,2,3,4,5,6,7,8,9 | insert blocked 0: requiredFirst useFountain",
-        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2,3,4,5,6,7,8,9 | insert blocked 0: requiredFirst useFountain",
-        "sellPurgingPoolTrait:right": "#- optional | insert 1,2,3,4,5,6,7,8,9 | insert blocked 0: requiredFirst useFountain",
-        "sellPurgingPoolTrait:left:r1": "#- optional | insert 8,9 | insert blocked 0: afterAction rerollPurgingPool:r1, requiredFirst useFountain | insert blocked 1,2,3,4,5,6,7: afterAction rerollPurgingPool:r1",
-        "sellPurgingPoolTrait:right:r1": "#- optional | insert 8,9 | insert blocked 0: afterAction rerollPurgingPool:r1, requiredFirst useFountain | insert blocked 1,2,3,4,5,6,7: afterAction rerollPurgingPool:r1"
       }
     },
     {
@@ -1602,6 +1539,25 @@
       }
     },
     {
+      "entries": ["underworld/underworldFRerollsProject"],
+      "rows": {
+        "useFountain": "#1 required | scope room | move 1 | move blocked 2: window after purchaseStygianWellOffer:initial:secondLeft | move blocked 3: window after purchaseStygianWellOffer:initial:secondRight | move blocked 4: window after purchaseStygianWellOffer:travelDealRefill | move blocked 5: window after rerollStygianWell:r1 | move blocked 6: window after purchaseStygianWellOffer:r1:healing | move blocked 7: window after rerollPurgingPool:r1 | move blocked 8: window after sellPurgingPoolTrait:middle:r1 | remove",
+        "interactKeepsakeRack": "#2 optional | move 0,2,3,4,5,6,7,8 | remove",
+        "purchaseStygianWellOffer:initial:secondLeft": "#3 optional | move 1,3 | move blocked 0: requiredFirst useFountain | move blocked 4,5,6,7,8: purchaseStygianWellOffer:travelDealRefill afterAction purchaseStygianWellOffer:initial:secondLeft",
+        "purchaseStygianWellOffer:initial:secondRight": "#4 optional | move 1,2,4,5,6,7,8 | move blocked 0: requiredFirst useFountain",
+        "purchaseStygianWellOffer:travelDealRefill": "#5 optional | move 3,5,6,7,8 | move blocked 0: afterAction purchaseStygianWellOffer:initial:secondLeft, requiredFirst useFountain | move blocked 1,2: afterAction purchaseStygianWellOffer:initial:secondLeft",
+        "rerollStygianWell:r1": "#6 optional | move 1,2,3,4 | move blocked 0: requiredFirst useFountain | move blocked 6,7,8: purchaseStygianWellOffer:r1:healing afterAction rerollStygianWell:r1 | remove",
+        "purchaseStygianWellOffer:r1:healing": "#7 optional | move 7,8 | move blocked 0: afterAction rerollStygianWell:r1, requiredFirst useFountain | move blocked 1,2,3,4,5: afterAction rerollStygianWell:r1",
+        "rerollPurgingPool:r1": "#8 optional | move 1,2,3,4,5,6 | move blocked 0: requiredFirst useFountain | move blocked 8: sellPurgingPoolTrait:middle:r1 afterAction rerollPurgingPool:r1 | remove",
+        "sellPurgingPoolTrait:middle:r1": "#9 optional | move - | move blocked 0: afterAction rerollPurgingPool:r1, requiredFirst useFountain | move blocked 1,2,3,4,5,6,7: afterAction rerollPurgingPool:r1 | remove",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1,2,3,4,5,6,7,8,9 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2,3,4,5,6,7,8,9 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1,2,3,4,5,6,7,8,9 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:left:r1": "#- optional | insert 8,9 | insert blocked 0: afterAction rerollPurgingPool:r1, requiredFirst useFountain | insert blocked 1,2,3,4,5,6,7: afterAction rerollPurgingPool:r1",
+        "sellPurgingPoolTrait:right:r1": "#- optional | insert 8,9 | insert blocked 0: afterAction rerollPurgingPool:r1, requiredFirst useFountain | insert blocked 1,2,3,4,5,6,7: afterAction rerollPurgingPool:r1"
+      }
+    },
+    {
       "entries": ["fresh-file/createFreshFileGeneratedComposition"],
       "rows": {
         "useFountain": "#1 required | scope room | remove",
@@ -1620,14 +1576,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -1714,7 +1668,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -1722,7 +1675,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "checkpoint/underworld-fg",
@@ -1794,14 +1746,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -1861,14 +1811,12 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -1910,12 +1858,10 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -1953,14 +1899,12 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -2002,14 +1946,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -2070,14 +2012,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
         "checkpoint/underworld-fg",
@@ -2138,7 +2078,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
@@ -2146,7 +2085,6 @@
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
         "checkpoint/underworld-fg",
@@ -2207,14 +2145,12 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -2265,14 +2201,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -2341,14 +2275,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -2417,14 +2349,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -2481,14 +2411,12 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -2542,14 +2470,12 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/fg-anomaly",
         "execution/fg-anomaly-roster",
         "execution/automatic-boss",
         "execution/underworld-generated-composition",
         "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-f-rarified-screen-reroll",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
         "checkpoint/underworld-automatic-boss",
@@ -2614,7 +2540,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2661,7 +2586,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2712,7 +2636,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2753,7 +2676,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2788,7 +2710,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2818,7 +2739,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-generated-composition",
@@ -2864,7 +2784,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2906,7 +2825,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-generated-composition",
@@ -2930,7 +2848,6 @@
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -2963,7 +2880,6 @@
         "execution/underworld-fgh",
         "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-fog-emitter-reservation",
         "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
@@ -3121,7 +3037,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3174,7 +3089,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3229,7 +3143,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3284,7 +3197,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3332,7 +3244,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3387,7 +3298,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3442,7 +3352,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3490,7 +3399,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3538,7 +3446,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3593,7 +3500,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3641,7 +3547,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3696,7 +3601,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3744,7 +3648,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3799,7 +3702,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3847,7 +3749,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3902,7 +3803,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3950,7 +3850,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -3998,7 +3897,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -4049,7 +3947,6 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fresh-file-f-native",
         "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
@@ -4485,7 +4382,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -4494,7 +4390,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4531,6 +4426,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -4555,7 +4451,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -4564,7 +4459,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4601,6 +4495,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -4630,7 +4525,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -4639,7 +4533,6 @@
         "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4675,6 +4568,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -4698,7 +4592,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -4708,7 +4601,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4747,6 +4639,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -4758,7 +4651,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -4810,9 +4702,9 @@
     {
       "entries": [
         "execution/dream-mixed-prefix",
-        "execution/surface-no-rerolls",
         "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
+        "checkpoint/dream-mixed-handoff",
+        "surface/surfaceNORerollsProject"
       ],
       "rows": {
         "interactIncomingReward:roomRewardPickup:source": "#- required | scope room | insert 0 | canonical 0"
@@ -4830,7 +4722,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -4839,7 +4730,6 @@
         "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4875,6 +4765,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -4897,7 +4788,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -4906,7 +4796,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -4942,6 +4831,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -4969,14 +4859,12 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-generated-precombat",
         "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5008,6 +4896,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5044,7 +4933,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -5054,7 +4942,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5093,6 +4980,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5104,7 +4992,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -5114,7 +5001,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5153,6 +5039,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5164,7 +5051,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/dream-mixed-prefix",
@@ -5174,7 +5060,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5213,6 +5098,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5224,7 +5110,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -5233,7 +5118,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5270,6 +5154,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5281,7 +5166,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -5290,7 +5174,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5327,6 +5210,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5338,7 +5222,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -5347,7 +5230,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5383,6 +5265,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5394,14 +5277,12 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-p-elite-switch",
@@ -5432,6 +5313,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5472,7 +5354,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-scheduled-lifecycle",
@@ -5481,7 +5362,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5514,6 +5394,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": { "collectRequiredReward": "#1 required | scope room | remove" }
@@ -5530,7 +5411,6 @@
     {
       "entries": [
         "execution/surface-n",
-        "execution/surface-n-opening-composition",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-generated-precombat",
@@ -5538,7 +5418,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5569,6 +5448,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5661,14 +5541,6 @@
       }
     },
     {
-      "entries": ["execution/surface-no-rerolls"],
-      "rows": {
-        "reroll:r1": "#1 optional | move - | move blocked 1: chooseRewardWheel:wheel1 afterAction reroll:r1, window after chooseRewardWheel:wheel1 | move blocked 2: chooseRewardWheel:wheel1 afterAction reroll:r1, window after interactWheelReward:wheel1 | remove",
-        "chooseRewardWheel:wheel1": "#2 required | scope phase | move - | move blocked 0: afterAction reroll:r1 | move blocked 2: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | remove",
-        "interactWheelReward:wheel1": "#3 required | scope phase | move - | move blocked 0,1: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | remove"
-      }
-    },
-    {
       "entries": [
         "checkpoint/surface-shrine-travel-deal",
         "surface/surfaceShrineTravelDealProject"
@@ -5677,6 +5549,14 @@
         "chooseRewardWheel:wheel1": "#1 required | scope phase | move - | move blocked 1,2: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | remove",
         "interactWheelReward:wheel1": "#2 required | scope phase | move 2 | move blocked 0: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | remove",
         "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill]": "#3 required | scope room | move 0,1 | unplace"
+      }
+    },
+    {
+      "entries": ["surface/surfaceNORerollsProject"],
+      "rows": {
+        "reroll:r1": "#1 optional | move - | move blocked 1: chooseRewardWheel:wheel1 afterAction reroll:r1, window after chooseRewardWheel:wheel1 | move blocked 2: chooseRewardWheel:wheel1 afterAction reroll:r1, window after interactWheelReward:wheel1 | remove",
+        "chooseRewardWheel:wheel1": "#2 required | scope phase | move - | move blocked 0: afterAction reroll:r1 | move blocked 2: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | remove",
+        "interactWheelReward:wheel1": "#3 required | scope phase | move - | move blocked 0,1: afterAction chooseRewardWheel:wheel1, requiredFirst chooseRewardWheel:wheel1 | remove"
       }
     }
   ],
@@ -5688,7 +5568,6 @@
         "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-p-elite-switch",
@@ -5707,7 +5586,8 @@
         "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject"
       ],
       "rows": {
         "chooseRewardWheel:wheel1": "#1 required | scope phase | move - | move blocked 1: interactWheelReward:wheel1 afterAction chooseRewardWheel:wheel1, window after interactWheelReward:wheel1 | remove",
@@ -5767,7 +5647,6 @@
         "execution/surface-q-shop-correlation",
         "execution/surface-generated-precombat",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-p-elite-switch",
@@ -5788,6 +5667,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5830,7 +5710,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
@@ -5850,6 +5729,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5879,7 +5759,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5902,6 +5781,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": { "interactEncounter:Encounter": "#1 required | scope room | remove" }
@@ -5917,7 +5797,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5940,6 +5819,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
@@ -5958,7 +5838,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-trait-fences",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
@@ -5981,6 +5860,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": { "collectRequiredReward": "#1 required | scope room | remove" }
@@ -5995,7 +5875,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-no-rerolls",
         "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
@@ -6016,6 +5895,7 @@
         "surface/createRepresentativeNOPQShopTraitProject",
         "surface/surfaceOrdinaryHexPathProject",
         "surface/surfaceSeleneHexPathProject",
+        "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
