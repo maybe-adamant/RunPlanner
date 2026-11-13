@@ -176,15 +176,17 @@ describe('execution assembly refuses a published blank', () => {
     );
   });
 
-  it('refuses an anchor object without an anchor, except a Well on its pin', () => {
+  it('publishes a Well on its pin and refuses an anchor object without an anchor', () => {
     const f = completeBiome(stockTestProject(loadUnderworldFStygianWellCheckpoint()), 'F');
     const room = roomWhere(f, (candidate) => candidate.stygianWell !== undefined);
     const declared = catalog.rooms.byKey[room.gameName]!;
     expect(declared.mapPoints?.wellAnchorId).toBeDefined();
     expect(room.stygianWell).not.toHaveProperty('anchorId');
-    // Past the room's anchors the pinned Well still stands native on its pin.
+    const pin = declared.mapPoints!.wellAnchorId;
+    expect(overview(room, f, catalog).stygianWell).toHaveProperty('anchorId', pin);
+    // Past the room's anchors the pinned Well still stands on its pin.
     const full = withRoom(room.gameName, () => ({ challengeSwitchAnchorCount: 0 }));
-    expect(overview(room, f, full).stygianWell).not.toHaveProperty('anchorId');
+    expect(overview(room, f, full).stygianWell).toHaveProperty('anchorId', pin);
     // Unpinned, it has none to stand on.
     const unpinned = withRoom(room.gameName, () => ({
       challengeSwitchAnchorCount: 0,

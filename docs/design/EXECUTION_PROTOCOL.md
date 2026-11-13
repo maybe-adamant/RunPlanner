@@ -98,9 +98,10 @@ the stored value where the game rolls or picks among eligible entries
 ([positions filled on first reach](SIMULATION_AND_VALIDATION.md#positions-filled-on-first-reach)).
 A value the game derives from the previous room's exit is absent and stays
 native. Object positions and stock are required, since publication accepts
-only plans whose reached positions and slots are filled: a Pool, Shrine or
-challenge switch always publishes its stored `anchorId`, and a Well publishes
-one except on its room's pin; an object native never spawns on the route, kept
+only plans whose reached positions and slots are filled: every Pool, Shrine,
+challenge switch and Well publishes its `anchorId`, its stored anchor or, for
+a Well, its room's pin, which the module verifies after spawning rather than
+steering; an object native never spawns on the route, kept
 unused from an older save, is not published. A Chaos gate always publishes its
 stored `spawnPointIndex`; a Zagreus Contract exit has none. Publication refuses
 an object or gate left without one, which only a room carrying a finding can

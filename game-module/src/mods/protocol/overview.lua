@@ -256,9 +256,8 @@ local function featureRerolls(value, label, decodeRoll)
     return rows
 end
 
--- An object's chosen or default ChallengeSwitchBase anchor; only a Well may omit it, on its room's pin.
-local function anchorId(record, label, optional)
-    if record.anchorId == nil and optional then return true end
+-- An object's ChallengeSwitchBase anchor: stored, drawn or the Well's pin.
+local function anchorId(record, label)
     if record.anchorId == nil then return p.fail(label .. ".anchorId is required") end
     if not p.int(record.anchorId, label .. ".anchorId", 1) then
         return p.fail(label .. " has invalid anchor")
@@ -289,9 +288,9 @@ end
 
 -- A present Well: its initial roll's three slots, then its rerolls'.
 local function stygianWell(value, label)
-    local record, errorMessage = p.exact(value, { "offers" }, { "rerolls", "anchorId" }, label)
+    local record, errorMessage = p.exact(value, { "offers", "anchorId" }, { "rerolls" }, label)
     if not record then return nil, errorMessage end
-    local _, anchorError = anchorId(record, label, true)
+    local _, anchorError = anchorId(record, label)
     if anchorError then return nil, anchorError end
     local _, offersError = wellOffers(record.offers, "initial", label .. ".offers")
     if offersError then return nil, offersError end

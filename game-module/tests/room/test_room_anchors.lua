@@ -10,7 +10,7 @@ TestRoomAnchors = {}
 
 local ANCHORS = { 1, 2, 3, 4, 5 }
 
--- Strict published objects; only a Well on its room's pin omits its anchor.
+-- Strict published objects, each on its anchor; a pinned Well's is its pin.
 local function well(anchorId)
     return { anchorId = anchorId, offers = {
         { generationKey = "initial:healing", offerKey = "HealDropRange" },
@@ -131,21 +131,6 @@ function TestRoomAnchors.testEveryPublishedAnchorIsTakenAndTheMetaRewardStandDra
     lu.assertEquals(diagnostics, {})
 end
 
-function TestRoomAnchors.testAWellWithoutItsAnchorDrawsNatively()
-    local callbacks, diagnostics = harness({
-        stygianWell = well(nil),
-        purgingPool = pool(1),
-    })
-    local room = spawn(callbacks, { IsSellTraitShopEligible = true },
-        { Name = "F_Combat01", __runPlannerExecutionRoomId = "room", ForceWellShop = true })
-    -- The Well's native draw takes 1, so the Pool's anchor is unavailable.
-    lu.assertEquals(objects(room), { 1, 2, false, false, false })
-    lu.assertEquals(diagnostics, {
-        { kind = "room-anchor-unavailable", observed = { object = "purgingPool", anchorId = 1 } },
-        { kind = "room-anchor", observed = { object = "purgingPool", expected = 1, observed = 2 } },
-    })
-end
-
 function TestRoomAnchors.testAnObjectThePlanDoesNotHoldDrawsNatively()
     local callbacks, diagnostics = harness({ hermesShrine = shrine(4) })
     local room = spawn(callbacks, { IsSurfaceShopEligible = true, IsMetaRewardStandEligible = true, switch = true },
@@ -157,13 +142,24 @@ end
 function TestRoomAnchors.testPinnedWellKeepsItsPinAndTheSwitchStillTakesItsAnchor()
     _G.RoomData.F_PostBoss01 = { WellShopChallengeBaseId = 5 }
     local callbacks, diagnostics = harness({
-        stygianWell = well(nil),
+        stygianWell = well(5),
         challengeSwitch = switch(3),
     })
     local room = spawn(callbacks, { switch = true },
         { Name = "F_PostBoss01", __runPlannerExecutionRoomId = "room", ForceWellShop = true })
     lu.assertEquals(objects(room), { 5, false, false, 3, false })
     lu.assertEquals(diagnostics, {})
+end
+
+function TestRoomAnchors.testAPinnedWellOffItsPublishedPinDiagnoses()
+    _G.RoomData.F_PostBoss01 = { WellShopChallengeBaseId = 4 }
+    local callbacks, diagnostics = harness({ stygianWell = well(5) })
+    local room = spawn(callbacks, {},
+        { Name = "F_PostBoss01", __runPlannerExecutionRoomId = "room", ForceWellShop = true })
+    lu.assertEquals(objects(room), { 4, false, false, false, false })
+    lu.assertEquals(diagnostics, {
+        { kind = "room-anchor", observed = { object = "stygianWell", expected = 5, observed = 4 } },
+    })
 end
 
 function TestRoomAnchors.testUnavailableAnchorDiagnosesAndFallsBackToNative()

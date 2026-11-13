@@ -2530,10 +2530,10 @@ function TestProtocol.testWellAndPoolRerollsNameTheirRollsAndPinnedSlots()
     local initial = '"offers":[{"generationKey":"initial:healing","offerKey":"HealDropRange"},'
         .. '{"generationKey":"initial:secondLeft","offerKey":"LastStandShopItem"},'
         .. '{"generationKey":"initial:secondRight","offerKey":"RandomStoreItem"}]'
-    lu.assertNotNil(decoded('"stygianWell":{' .. initial .. ',"rerolls":['
+    lu.assertNotNil(decoded('"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":['
         .. '{"rollKey":"r1","offers":[{"generationKey":"r1:secondRight","offerKey":"LastStandShopItem"}]},'
         .. '{"rollKey":"r2","offers":[]}]}'))
-    lu.assertNotNil(decoded('"stygianWell":{' .. initial .. '}'))
+    lu.assertNotNil(decoded('"stygianWell":{"anchorId":1,' .. initial .. '}'))
     lu.assertNotNil(decoded('"purgingPool":{"anchorId":1,"traits":[{"slotKey":"right","traitKey":"A"}]}'))
     lu.assertNotNil(decoded('"purgingPool":{"anchorId":1,"traits":[],"rerolls":['
         .. '{"rollKey":"r1","traits":[{"slotKey":"middle","traitKey":"A"}]},{"rollKey":"r3","traits":[]}]}'))
@@ -2545,11 +2545,11 @@ function TestProtocol.testWellAndPoolRerollsNameTheirRollsAndPinnedSlots()
         '"purgingPool":{"anchorId":1,"rerolls":[{"rollKey":"r1","traits":[]}]}',
         '"purgingPool":{"anchorId":1,"traits":[{"slotKey":"left","traitKey":null}]}',
         '"purgingPool":{"anchorId":1,"traits":[{"traitKey":"A"}]}',
-        '"stygianWell":{' .. initial .. ',"rerolls":[]}',
-        '"stygianWell":{' .. initial .. ',"rerolls":[{"rollKey":"initial","offers":[]}]}',
-        '"stygianWell":{' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[]},'
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"initial","offers":[]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[]},'
             .. '{"rollKey":"r1","offers":[]}]}',
-        '"stygianWell":{' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":['
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":['
             .. '{"generationKey":"r2:healing","offerKey":"HealDropRange"}]}]}',
         '"stygianWell":{"offers":[{"generationKey":"r1:healing","offerKey":"HealDropRange"}]}',
         '"purgingPool":{"anchorId":1,"rerollCount":1,"traits":[]}',
@@ -2580,10 +2580,11 @@ function TestProtocol.testRequiredPositionsAndStockRefuseByField()
     lu.assertNil(decodedShrine)
     lu.assertStrContains(shrineReason, "hermesShrine.anchorId is required")
 
-    refused('"stygianWell":{"offers":[{"generationKey":"initial:healing","offerKey":"HealDropRange"},'
+    refused('"stygianWell":{"offers":[]}', nil, "overview.stygianWell is missing anchorId")
+    refused('"stygianWell":{"anchorId":1,"offers":[{"generationKey":"initial:healing","offerKey":"HealDropRange"},'
         .. '{"generationKey":"initial:secondLeft","offerKey":"LastStandShopItem"}]}', nil,
         "overview.stygianWell.offers must stock the healing, secondLeft and secondRight slots")
-    refused('"stygianWell":{"offers":[]}', nil,
+    refused('"stygianWell":{"anchorId":1,"offers":[]}', nil,
         "overview.stygianWell.offers must stock the healing, secondLeft and secondRight slots")
 
     local optional = '{"slotKey":"optional1","reward":{"rewardType":"MaxManaDropSmall",'

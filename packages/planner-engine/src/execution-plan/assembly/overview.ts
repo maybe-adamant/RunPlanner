@@ -833,11 +833,10 @@ function executionRoomLayout(
 }
 
 /**
- * An object's publication with the anchor it stands on, stored or drawn;
- * the Well on its room's pin stays native. One native never spawns on this
- * route, kept from an older save, is not published. A published object always
- * stands on an anchor: only an over-capacity room leaves it none, which a
- * finding blocks.
+ * An object's publication with the anchor it stands on: stored, drawn or the
+ * Well's pin. One native never spawns on this route, kept from an older save,
+ * is not published. A published object always stands on an anchor: only an
+ * over-capacity room leaves it none, which a finding blocks.
  */
 function anchored<T extends object>(
   catalog: Catalog,
@@ -851,20 +850,18 @@ function anchored<T extends object>(
     !roomAnchorObjectHosted(catalog, room.gameName, room.origin.routeKey, object)
   )
     return undefined;
-  const position = anchors.get(object);
-  if (position?.source === 'pinned') return published;
-  if (position === undefined) {
-    if (
-      object === 'stygianWell' &&
-      catalog.rooms.byKey[room.gameName]?.mapPoints?.wellAnchorId !== undefined
-    )
-      return published;
+  // A Well past the room's anchors still stands on its room's pin.
+  const pin =
+    object === 'stygianWell'
+      ? catalog.rooms.byKey[room.gameName]?.mapPoints?.wellAnchorId
+      : undefined;
+  const anchorId = anchors.get(object)?.anchorId ?? pin;
+  if (anchorId === undefined)
     throw new CompilerError(
       'executionCoverageMissing',
       `${room.gameName} publishes its ${object} without an anchor`,
     );
-  }
-  return Object.freeze({ ...published, anchorId: position.anchorId });
+  return Object.freeze({ ...published, anchorId });
 }
 
 type ResolvedEncounterCustomization = NonNullable<
