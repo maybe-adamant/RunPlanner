@@ -3,6 +3,7 @@ import {
   moveLockedDoorFightOntoDoor,
   moveRerollResultsOntoItems,
   moveWellPoolRollsOntoObjects,
+  settleProjectStock,
   settleProjectUpgrade,
   splitShrineRush,
   stampRoomActionItemContent,
@@ -87,5 +88,23 @@ export function migrateProjectDocument(value, { catalog }) {
     return JSON.parse(encodeProjectDocument(settled.assembly.project));
   } catch {
     return lifted;
+  }
+}
+
+/**
+ * Schema 103 revision 1 stores reached stock that revision 0 left blank for the
+ * game to roll: a 103.0 plan is stocked once on load. A plan whose stocking
+ * throws or faults keeps its blanks.
+ */
+export function stockRevision0Project(project, catalog) {
+  try {
+    const settled = settleProjectStock({
+      catalog,
+      project,
+      evaluate: (document) => simulateProjectAssembly(catalog, document),
+    });
+    return settled.fault === undefined ? settled.assembly.project : project;
+  } catch {
+    return project;
   }
 }
