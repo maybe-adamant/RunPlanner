@@ -6,7 +6,8 @@ import {
   semanticAddressKey,
 } from '../authored-project/addresses';
 import { chaosGateSpawnPoint } from '../authored-project/chaos-gate-position';
-import type { RoomLayout } from '../authored-project/model';
+import type { ProjectCommand } from '../authored-project/commands/types';
+import type { ProjectDocument, RoomLayout } from '../authored-project/model';
 import type { Catalog } from '../catalog-schema';
 import { candidateBiome, candidateBiomeRooms } from './candidates/evaluated-biome';
 import type { ProjectEvaluationAssembly } from './evaluation/evaluation-products';
@@ -15,9 +16,14 @@ import { roomObjectAnchorPositions } from './room-layout/object-anchor-positions
 import type { RoomLayoutSettlement } from './room-layout/settlement';
 import type { StockFill } from './stock-fill';
 
+/** A position fill; a layout fill also names only the blanks it stores. */
+export interface PositionFill extends StockFill {
+  readonly filledLayout?: RoomLayout;
+}
+
 /**
- * The layout a reached room stores in place of its blanks: a rolled flip, and
- * an entry the game picks among several the flip allows, each as the walk
+ * The positions a reached room stores in its layout's blanks: a rolled flip,
+ * and an entry the game picks among several the flip allows, each as the walk
  * drew it. What the room or its arrival door decides stays unstored.
  */
 function filledLayout(
@@ -34,7 +40,6 @@ function filledLayout(
     tied && authored?.entryStartPointId === undefined ? entry.point.startPointId : undefined;
   if (flipped === undefined && entryStartPointId === undefined) return undefined;
   return Object.freeze({
-    ...authored,
     ...(flipped === undefined ? {} : { flipped }),
     ...(entryStartPointId === undefined ? {} : { entryStartPointId }),
   });
@@ -51,10 +56,10 @@ function filledLayout(
 export function positionFills(
   catalog: Catalog,
   assembly: ProjectEvaluationAssembly,
-): readonly StockFill[] {
+): readonly PositionFill[] {
   const { project, evaluation } = assembly;
   const routeKey = project.route.routeKey;
-  const fills: StockFill[] = [];
+  const fills: PositionFill[] = [];
   for (const biome of evaluation.route.biomes) {
     if (!('rewards' in biome)) continue;
     const plan = project.route.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
@@ -72,15 +77,20 @@ export function positionFills(
         (candidate) => candidate.occurrenceId === owner.occurrenceId,
       );
       if (occurrence === undefined) continue;
-      const layout = filledLayout(settlement, occurrence.layout);
-      if (layout !== undefined)
+      const filled = filledLayout(settlement, occurrence.layout);
+      if (filled !== undefined)
         fills.push(
-          Object.freeze<StockFill>({
+          Object.freeze<PositionFill>({
             key: `layout:${ownerKey}`,
             owner: createRoomFeatureAddress(owner, {
-              kind: layout.entryStartPointId === undefined ? 'roomLayoutFlip' : 'roomLayoutEntry',
+              kind: filled.entryStartPointId === undefined ? 'roomLayoutFlip' : 'roomLayoutEntry',
             }),
-            command: { kind: 'ReplaceRoomLayout', occurrence: owner, layout },
+            command: {
+              kind: 'ReplaceRoomLayout',
+              occurrence: owner,
+              layout: Object.freeze({ ...occurrence.layout, ...filled }),
+            },
+            filledLayout: filled,
           }),
         );
       for (const [object, position] of roomObjectAnchorPositions(
@@ -147,4 +157,20 @@ export function positionFills(
     }
   }
   return Object.freeze(fills);
+}
+
+/**
+ * A position fill as it lands on another plan, such as the plan before an
+ * edit: a layout fill stores only its blanks that plan also left blank,
+ * beside that plan's own layout.
+ */
+export function positionFillOn(project: ProjectDocument, fill: PositionFill): ProjectCommand {
+  const { command, filledLayout: filled } = fill;
+  if (filled === undefined || command.kind !== 'ReplaceRoomLayout') return command;
+  const layout = project.route.biomes
+    .find((plan) => plan.biomeKey === command.occurrence.biomeKey)
+    ?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === command.occurrence.occurrenceId,
+    )?.layout;
+  return Object.freeze({ ...command, layout: Object.freeze({ ...filled, ...layout }) });
 }

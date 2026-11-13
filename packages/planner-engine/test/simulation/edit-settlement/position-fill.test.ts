@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
   createProjectAddress,
   semanticAddressKey,
   type ProjectCommand,
@@ -17,6 +18,9 @@ import {
 } from '@run-planner/engine/simulation';
 import { settleProjectFills } from '@run-planner/engine/project-migration';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { createGoldenFGHProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
+
+import { positionFillOn, positionFills } from '../../../src/simulation/position-fill';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
 const rename: ProjectCommand = {
@@ -143,5 +147,27 @@ describe('positions filled on first reach', () => {
       return;
     }
     throw new Error('the FG checkpoint has no rolled flip');
+  });
+
+  it('lands a layout fill on the plan before an edit with only the blanks it stores', () => {
+    // G_Combat01 rolls its flip; the edit authors its only entry.
+    const room = createOccurrenceAddress(goldenGBiome, createOccurrenceId('golden-g-b1-e1'));
+    const layout = (entry?: number) =>
+      applyProjectCommand(createGoldenFGHProject(), catalog, {
+        kind: 'ReplaceRoomLayout',
+        occurrence: room,
+        layout: entry === undefined ? {} : { entryStartPointId: entry },
+      });
+    const fill = positionFills(catalog, evaluate(layout(50065))).find(
+      ({ key }) => key === `layout:${semanticAddressKey(room)}`,
+    )!;
+    expect(fill.command).toMatchObject({
+      layout: { flipped: expect.any(Boolean), entryStartPointId: 50065 },
+    });
+    // Before the edit the room had no entry: filling its flip does not author one.
+    expect(positionFillOn(layout(), fill)).toEqual({
+      ...fill.command,
+      layout: { flipped: fill.filledLayout!.flipped },
+    });
   });
 });

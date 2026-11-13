@@ -76,7 +76,7 @@ import {
 } from './evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from './evaluation/evaluation-products';
 import { candidateBiome, candidateBiomeRooms } from './candidates/evaluated-biome';
-import { positionFills } from './position-fill';
+import { positionFillOn, positionFills } from './position-fill';
 import { currentPoolListValues, stockFills, type PoolValuesBefore } from './stock-fill';
 
 function occurrences(project: ProjectDocument) {
@@ -1497,7 +1497,11 @@ function settleProject(options: {
       }
       for (const fill of positions)
         try {
-          filledBefore = applyProjectCommand(filledBefore, catalog, fill.command);
+          filledBefore = applyProjectCommand(
+            filledBefore,
+            catalog,
+            positionFillOn(filledBefore, fill),
+          );
         } catch (error) {
           // A room the plan before the edit held otherwise is edited either way.
           if (!(error instanceof ProjectCommandContractError)) throw error;
