@@ -333,7 +333,7 @@ interface LivePress {
   readonly target: string;
 }
 
-/** The live things of one point, by group: Required, Optional, then Objects. */
+/** The live things of one point, by group: Required, Optional, then Objects, named but unlabelled. */
 function LiveGroups({
   announce,
   biomeKey,
@@ -364,9 +364,6 @@ function LiveGroups({
           key={group}
           role="group"
         >
-          <span aria-hidden="true" className="live-row-group-label">
-            {groupNames[group]}
-          </span>
           {grouped.map((item) => (
             <LiveItemChip
               announce={announce}

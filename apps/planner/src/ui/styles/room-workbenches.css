@@ -3449,7 +3449,7 @@ span.hub-board-status-line {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 14px;
+  gap: 6px 10px;
 }
 
 .live-row-group {
@@ -3460,24 +3460,37 @@ span.hub-board-status-line {
 }
 
 .live-row-group + .live-row-group {
-  padding-inline-start: 14px;
+  padding-inline-start: 10px;
   border-inline-start: 1px solid var(--border);
 }
 
-.live-row-group-label {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+/*
+ * A required or optional thing carries its Timeline row colour as an underline in its
+ * border band, below a finding ring; it replaces the picker's own accent underline.
+ */
+.timeline-chip.live-chip[data-live-group='required'] {
+  --live-group-colour: var(--timeline-before-leaving);
 }
 
 .timeline-chip.live-chip[data-live-group='optional'] {
-  border: 1px dashed var(--border);
+  --live-group-colour: var(--timeline-optional);
 }
 
-.timeline-chip.live-chip[data-live-group='required'] {
-  border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
+.timeline-chip.live-chip:is([data-live-group='required'], [data-live-group='optional'])::after {
+  position: absolute;
+  inset: auto 3px -2px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--live-group-colour);
+  content: '';
+  pointer-events: none;
+}
+
+.contextual-picker-trigger.timeline-chip.live-chip:is(
+    [data-live-group='required'],
+    [data-live-group='optional']
+  ):not([data-has-findings='true']) {
+  box-shadow: none;
 }
 
 .timeline-chip.live-chip[aria-disabled='true'] {
