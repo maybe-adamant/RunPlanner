@@ -46,12 +46,11 @@ import {
   purchaseTestHermesShrineOffer,
   replaceTestPlacedItem,
   settleTestEdit,
+  stockTestProject,
 } from '../shared';
 import {
   loadSurfaceNCheckpoint,
   loadSurfaceNNaturalSelectionFrontierCheckpoint,
-  loadSurfaceNQueensRansomCheckpoint,
-  loadSurfaceNSteadyGrowthFrontierCheckpoint,
   loadSurfaceNCompleteHubFrontierCheckpoint,
   loadSurfaceNEntryFrontierCheckpoint,
   loadSurfaceNEntryFrontierResolvedCheckpoint,
@@ -63,6 +62,11 @@ import {
   loadSurfaceNOPCheckpoint,
   loadSurfaceNOPQCheckpoint,
 } from '../checkpoints/surface';
+import {
+  createSurfaceNNaturalSelectionCheckpoint,
+  createSurfaceNQueensRansomCheckpoint,
+  createSurfaceNSteadyGrowthFrontier,
+} from './run-impacting-traits';
 
 export const nBiome = createBiomeAddress('Surface', 'N');
 export const oBiome = createBiomeAddress('Surface', 'O');
@@ -604,12 +608,16 @@ export function loadSurfaceNNaturalSelectionFrontierProject(): ProjectDocument {
   return loadSurfaceNNaturalSelectionFrontierCheckpoint();
 }
 
-export function loadSurfaceNQueensRansomProject(): ProjectDocument {
-  return loadSurfaceNQueensRansomCheckpoint();
+export function surfaceNNaturalSelectionProject(): ProjectDocument {
+  return stockTestProject(createSurfaceNNaturalSelectionCheckpoint());
 }
 
-export function loadSurfaceNSteadyGrowthFrontierProject(): ProjectDocument {
-  return loadSurfaceNSteadyGrowthFrontierCheckpoint();
+export function surfaceNQueensRansomProject(): ProjectDocument {
+  return stockTestProject(createSurfaceNQueensRansomCheckpoint());
+}
+
+export function surfaceNSteadyGrowthFrontierProject(): ProjectDocument {
+  return stockTestProject(createSurfaceNSteadyGrowthFrontier());
 }
 
 export function loadSurfaceNResourcesProject(): ProjectDocument {

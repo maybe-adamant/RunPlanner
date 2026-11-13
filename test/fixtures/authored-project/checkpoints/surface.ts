@@ -11,9 +11,6 @@ import surfaceShrineTravelDealRaw from './surface-shrine-travel-deal.runplanner.
 import surfaceScheduledLifecycleRaw from './surface-scheduled-lifecycle.runplanner.json';
 import surfaceNPhialIntermediateFountainRaw from './surface-n-phial-intermediate-fountain.runplanner.json';
 import surfaceNNaturalSelectionRaw from './surface-n-natural-selection-frontier.runplanner.json';
-import surfaceNNaturalSelectionCompleteRaw from './surface-n-natural-selection.runplanner.json';
-import surfaceNQueensRansomRaw from './surface-n-queens-ransom.runplanner.json';
-import surfaceNSteadyGrowthRaw from './surface-n-steady-growth-frontier.runplanner.json';
 import surfaceNQuickBuckRaw from './surface-n-quick-buck.runplanner.json';
 import surfaceNBuriedTreasureRaw from './surface-n-buried-treasure.runplanner.json';
 import surfaceNResourcesRaw from './surface-n-resources.runplanner.json';
@@ -42,9 +39,6 @@ export const surfaceCheckpointArtifacts = Object.freeze({
   'surface-scheduled-lifecycle': checkpointArtifact(surfaceScheduledLifecycleRaw),
   'surface-n-phial-intermediate-fountain': checkpointArtifact(surfaceNPhialIntermediateFountainRaw),
   'surface-n-natural-selection-frontier': checkpointArtifact(surfaceNNaturalSelectionRaw),
-  'surface-n-natural-selection': checkpointArtifact(surfaceNNaturalSelectionCompleteRaw),
-  'surface-n-queens-ransom': checkpointArtifact(surfaceNQueensRansomRaw),
-  'surface-n-steady-growth-frontier': checkpointArtifact(surfaceNSteadyGrowthRaw),
   'surface-n-quick-buck': checkpointArtifact(surfaceNQuickBuckRaw),
   'surface-n-buried-treasure': checkpointArtifact(surfaceNBuriedTreasureRaw),
   'surface-n-resources': checkpointArtifact(surfaceNResourcesRaw),
@@ -98,18 +92,6 @@ export function loadSurfaceNPhialIntermediateFountainCheckpoint(): ProjectDocume
 
 export function loadSurfaceNNaturalSelectionFrontierCheckpoint(): ProjectDocument {
   return surfaceCheckpointArtifacts['surface-n-natural-selection-frontier'].load();
-}
-
-export function loadSurfaceNNaturalSelectionCheckpoint(): ProjectDocument {
-  return surfaceCheckpointArtifacts['surface-n-natural-selection'].load();
-}
-
-export function loadSurfaceNQueensRansomCheckpoint(): ProjectDocument {
-  return surfaceCheckpointArtifacts['surface-n-queens-ransom'].load();
-}
-
-export function loadSurfaceNSteadyGrowthFrontierCheckpoint(): ProjectDocument {
-  return surfaceCheckpointArtifacts['surface-n-steady-growth-frontier'].load();
 }
 
 export function loadSurfaceNQuickBuckCheckpoint(): ProjectDocument {

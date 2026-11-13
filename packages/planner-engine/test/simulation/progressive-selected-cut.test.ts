@@ -52,6 +52,7 @@ import {
   pOccurrenceId,
   pOccurrenceIds,
   surfaceEncounterShowcaseProject,
+  surfaceNSteadyGrowthFrontierProject,
   surfaceTravelDealRefillAnvilProject,
   surfaceTravelDealRefillAnvilResult,
 } from '@run-planner/test-fixtures/surface';
@@ -80,7 +81,6 @@ import {
 import {
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNOPQCheckpoint,
-  loadSurfaceNSteadyGrowthFrontierCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 
 import * as fixture from './support/progressive-biome-fixtures';
@@ -1680,7 +1680,7 @@ describe('room stop', () => {
     ],
     [
       "an encounter end's due outcome: that end, reached (Steady Growth, Hub main room)",
-      loadSurfaceNSteadyGrowthFrontierCheckpoint,
+      surfaceNSteadyGrowthFrontierProject,
       'N',
       {
         room: 'surface-n-combat11',

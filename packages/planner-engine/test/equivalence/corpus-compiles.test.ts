@@ -19,7 +19,6 @@ import { equivalenceCorpus } from './corpus';
 const notCompiling: Readonly<Record<string, 'incomplete' | 'invalid'>> = {
   'checkpoint/underworld-f-midshop-pom-frontier': 'incomplete',
   'checkpoint/surface-n-natural-selection-frontier': 'incomplete',
-  'checkpoint/surface-n-steady-growth-frontier': 'incomplete',
   'checkpoint/surface-n-buried-treasure': 'invalid',
   'checkpoint/surface-n-shrine-side-room-delivery': 'incomplete',
   'checkpoint/surface-p-steady-growth-shrine-frontier': 'incomplete',

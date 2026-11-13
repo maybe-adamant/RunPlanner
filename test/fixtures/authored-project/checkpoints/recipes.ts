@@ -9,11 +9,8 @@ import {
 } from '../routes/nemesis-random-events';
 import {
   createSurfaceNBuriedTreasureCheckpoint,
-  createSurfaceNNaturalSelectionCheckpoint,
   createSurfaceNNaturalSelectionFrontier,
-  createSurfaceNQueensRansomCheckpoint,
   createSurfaceNQuickBuckCheckpoint,
-  createSurfaceNSteadyGrowthFrontier,
 } from '../routes/run-impacting-traits';
 import { surfaceScheduledLifecycleProject } from '../routes/scheduled-lifecycle';
 import {
@@ -36,7 +33,6 @@ import {
   underworldFigLeafSkipProject,
   underworldGeneratedCompositionProject,
   underworldGorgonAthenaProject,
-  underworldPersephoneCallingCardProject,
   underworldTwistScyllaProject,
   underworldWorldShopTravelDealProject,
   underworldZagreusContractProject,
@@ -63,7 +59,6 @@ const recipes = [
   { id: 'underworld-automatic-boss', create: underworldAutomaticBossProject },
   { id: 'underworld-fig-leaf', create: underworldFigLeafSkipProject },
   { id: 'underworld-gorgon-athena', create: underworldGorgonAthenaProject },
-  { id: 'underworld-persephone-calling-card', create: underworldPersephoneCallingCardProject },
   { id: 'underworld-twist-scylla', create: underworldTwistScyllaProject },
   { id: 'underworld-world-shop-travel-deal', create: underworldWorldShopTravelDealProject },
   { id: 'underworld-zagreus-contract', create: underworldZagreusContractProject },
@@ -83,11 +78,8 @@ const recipes = [
     create: createSurfaceNOHermesShrineDeliveryCheckpoint,
   },
   { id: 'surface-n-natural-selection-frontier', create: createSurfaceNNaturalSelectionFrontier },
-  { id: 'surface-n-natural-selection', create: createSurfaceNNaturalSelectionCheckpoint },
   { id: 'surface-n-quick-buck', create: createSurfaceNQuickBuckCheckpoint },
   { id: 'surface-n-buried-treasure', create: createSurfaceNBuriedTreasureCheckpoint },
-  { id: 'surface-n-queens-ransom', create: createSurfaceNQueensRansomCheckpoint },
-  { id: 'surface-n-steady-growth-frontier', create: createSurfaceNSteadyGrowthFrontier },
   { id: 'nemesis-f-trait-trade', create: createNemesisTraitTradeCheckpoint },
   { id: 'nemesis-h-fields', create: createNemesisFieldsCheckpoint },
   { id: 'nemesis-f-pom-sea-star', create: createNemesisPomSeaStarCheckpoint },

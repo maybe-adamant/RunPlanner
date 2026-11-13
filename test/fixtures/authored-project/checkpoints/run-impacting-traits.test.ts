@@ -31,7 +31,6 @@ import {
 import { describe, expect, it } from 'vitest';
 import { withItemContent } from '../item-content';
 
-import { loadSurfaceNNaturalSelectionCheckpoint } from './surface';
 import {
   createSurfaceNNaturalSelectionFrontier,
   createSurfaceNBuriedTreasureCheckpoint,
@@ -39,7 +38,7 @@ import {
   createSurfaceNQueensRansomCheckpoint,
   createSurfaceNSteadyGrowthFrontier,
 } from '../routes/run-impacting-traits';
-import { nBiome, nOccurrenceId } from '../routes/surface';
+import { nBiome, nOccurrenceId, surfaceNNaturalSelectionProject } from '../routes/surface';
 import { nOccurrenceIds } from '../routes/surface';
 
 describe('run-impacting trait checkpoint workflows', () => {
@@ -240,7 +239,7 @@ describe('run-impacting trait checkpoint workflows', () => {
   });
 
   it('settles the selected Natural Selection result from its reached candidate domain', () => {
-    const saved = loadSurfaceNNaturalSelectionCheckpoint();
+    const saved = surfaceNNaturalSelectionProject();
     const assembly = simulateProjectAssembly(catalog, saved);
     expect(assembly.evaluation.findings).toEqual([]);
     expect(assembly.evaluation.route.summary.eligibleForExecutionPlan).toBe(true);

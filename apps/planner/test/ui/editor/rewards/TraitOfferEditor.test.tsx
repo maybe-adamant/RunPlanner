@@ -57,7 +57,7 @@ import {
 import { createFreshFileFProject, freshFileFBiome } from '@run-planner/test-fixtures/fresh-file';
 import {
   loadSurfaceNOPProject,
-  loadSurfaceNQueensRansomProject,
+  surfaceNQueensRansomProject,
   nBiome,
   nOccurrenceIds,
   pBiome,
@@ -777,7 +777,7 @@ describe('trait offer editor entry and dialog', () => {
       createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub),
       'source',
     );
-    const baseline = loadSurfaceNQueensRansomProject();
+    const baseline = surfaceNQueensRansomProject();
     application.store.dispatch(authoredProjectReplaced(baseline));
     const baselineInteraction = application
       .selectStructuredWorkspace(application.store.getState())!
