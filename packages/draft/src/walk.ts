@@ -1235,7 +1235,8 @@ export class DraftWalk {
    * Steers each Shop the biome's walk has entered once, as it would a blank one: settlement
    * stocks a Shop on first reach, so its slots are replaced in slot order with steered picks,
    * then its wanted items and filler are bought. A Travel Deal item, stocked once a purchase
-   * restocks it, is steered and bought the same way.
+   * restocks it, and a Contract pedestal's item, stocked once the Contract spawns it, are
+   * steered and bought the same way.
    */
   private steerShops(biomeIndex: number): void {
     const biomeKey = this.project.route.itineraryBiomeKeys[biomeIndex];
