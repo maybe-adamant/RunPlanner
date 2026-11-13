@@ -18,7 +18,7 @@ describe('room feature refusal copy', () => {
       ]),
     ).toEqual([
       'Wells need biome depth 3; this room is at 2.',
-      'Wells need 4 rooms between them; this one is 2 after the last.',
+      'Wells need to be 4 rooms apart; this one is 2 after the last.',
     ]);
     expect(
       sentences('hermesShrine', [
@@ -27,7 +27,7 @@ describe('room feature refusal copy', () => {
       ]),
     ).toEqual([
       'Shrines need biome depth 3; this room is at 1.',
-      'Shrines need 3 rooms between them; this one is 1 after the last.',
+      'Shrines need to be 3 rooms apart; this one is 1 after the last.',
     ]);
   });
 
@@ -36,12 +36,12 @@ describe('room feature refusal copy', () => {
       sentences('chaosGate', [
         { reason: 'routeExcluded' },
         { reason: 'biomeDepthCeiling', biomeDepthCache: 6, maximumBiomeDepth: 5 },
-        { reason: 'offerSpacing', rooms: 10 },
+        { reason: 'offerSpacing', rooms: 9 },
       ]),
     ).toEqual([
       'This room holds no Chaos Gate on this route.',
       'Chaos Gates need biome depth 5 or less; this room is at 6.',
-      'Chaos Gates need more than 10 rooms after the last Chaos Gate.',
+      'Chaos Gates need 10 rooms after the last Chaos Gate.',
     ]);
     expect(
       sentences('zagreusContract', [{ reason: 'capReached', per: 'route', count: 1, maximum: 1 }]),

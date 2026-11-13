@@ -42,7 +42,7 @@ export type BiomeDepthCeilingRefusal = {
 
 /**
  * The feature was offered too recently: no offer within `rooms` rooms after
- * the last one (`NoRecentChaosEncounter`).
+ * the last one (`NoRecentChaosEncounter`, whose `SumPrevRooms` counts the host).
  */
 export type OfferSpacingRefusal = {
   readonly reason: 'offerSpacing';

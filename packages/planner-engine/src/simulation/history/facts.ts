@@ -82,6 +82,19 @@ export function projectBiomeEncounterKeyCounts(
 }
 
 /**
+ * A native `SumPrevRooms = n` window read at a host's entry (StartRoom). The
+ * host is not yet in RoomHistory, so the window is its n - 1 predecessors,
+ * oldest first; the entry ledger's last appearance is the host itself.
+ */
+export function priorHostEntryRooms<T>(
+  appearances: readonly T[],
+  nativeSumPrevRooms: number,
+): readonly T[] {
+  const predecessors = nativeSumPrevRooms - 1;
+  return Object.freeze(predecessors <= 0 ? [] : appearances.slice(0, -1).slice(-predecessors));
+}
+
+/**
  * Native encounter-preparation room window, oldest first. LeaveRoom has already
  * appended the departing CurrentRoom to RoomHistory, so SumPrevRooms counts it
  * twice. Preserve appearances (including restores) and identity until consumers

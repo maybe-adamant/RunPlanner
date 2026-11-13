@@ -802,7 +802,7 @@ describe('route-detour simulation', () => {
     });
   });
 
-  it('consumes a skipped Chaos offer for the preceding-ten-room spacing rule', () => {
+  it('consumes a skipped Chaos offer for the preceding-nine-room spacing rule', () => {
     const opening = createOccurrenceId('natural-chaos-spacing-opening');
     const firstCombat = createOccurrenceId('natural-chaos-spacing-first-combat');
     const secondCombat = createOccurrenceId('natural-chaos-spacing-second-combat');
@@ -862,8 +862,8 @@ describe('route-detour simulation', () => {
   });
 
   it.each([
-    { blocked: true, fBatchIndex: 4, position: 'tenth' },
-    { blocked: false, fBatchIndex: 3, position: 'eleventh' },
+    { blocked: true, fBatchIndex: 5, position: 'ninth' },
+    { blocked: false, fBatchIndex: 4, position: 'tenth' },
   ] as const)(
     'treats a skipped cross-biome Chaos offer at the $position predecessor as blocked=$blocked',
     ({ blocked, fBatchIndex }) => {
@@ -903,7 +903,7 @@ describe('route-detour simulation', () => {
   );
 
   it('validates a same-host natural gate as forced while a pending Spark overrides spacing', () => {
-    const priorSource = goldenFOccurrenceId(4, 1);
+    const priorSource = goldenFOccurrenceId(5, 1);
     const priorAdditional = createAdditionalExitAddress(goldenFBiome, priorSource, 'chaos');
     const forcedAdditional = createAdditionalExitAddress(goldenGBiome, goldenGStartId, 'chaos');
     const well = createOccurrenceAddress(

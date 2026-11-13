@@ -1,5 +1,6 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { Catalog } from '../../catalog-schema';
+import { priorHostEntryRooms } from '../history/facts';
 import { hermesShrineInitialSlotKey, type HermesShrineState } from '../../authored-project/model';
 import type { HermesDeliveryObligation } from '../../authored-project/hermes-shrine-delivery';
 import {
@@ -166,10 +167,9 @@ export function priorTwoSurfaceShopPresence(
   appearances: readonly { readonly surfaceShopPresent?: boolean; readonly origin?: unknown }[],
 ): readonly boolean[] {
   return Object.freeze(
-    appearances
-      .slice(0, -1)
-      .slice(-(SHRINE_MINIMUM_ROOMS_SINCE_LAST - 1))
-      .map((appearance) => appearance.surfaceShopPresent === true),
+    priorHostEntryRooms(appearances, SHRINE_MINIMUM_ROOMS_SINCE_LAST).map(
+      (appearance) => appearance.surfaceShopPresent === true,
+    ),
   );
 }
 

@@ -49,7 +49,7 @@ export function challengeSwitchRuleSentence(rule: ChallengeSwitchRule): string {
     case 'biomeDepth':
       return `Switches need biome depth ${rule.minimumBiomeDepth}; this room is at ${rule.biomeDepthCache}.`;
     case 'recentSwitch':
-      return `Switches need ${rule.minimumRoomsSinceLast} rooms between them; this one is ${rule.roomsSinceLast} after the last.`;
+      return `Switches need to be ${rule.minimumRoomsSinceLast} rooms apart; this one is ${rule.roomsSinceLast} after the last.`;
     case 'noFreeAnchor': {
       const names = rule.occupants.map((occupant) => occupantNames[occupant]);
       return names.length > 1

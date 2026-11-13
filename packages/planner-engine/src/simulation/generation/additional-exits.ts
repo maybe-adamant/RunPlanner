@@ -15,6 +15,7 @@ import {
 import type { RequirementExpression } from '../../requirements/model';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { ProgressiveRoomHistoryViews } from '../history';
+import { priorHostEntryRooms } from '../history/facts';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type { CanonicalAdditionalContinuation } from '../materialization';
 import type { FindingRegionEntry } from '../finding-regions';
@@ -180,11 +181,9 @@ export function assessChaosPlacement(
   }
   const window = layout.chaos?.offerSpacingWindow;
   if (window !== undefined) {
+    const barred = priorHostEntryRooms(parentHistory.entry.ledgers.roomAppearances, window);
     const recentOrigins = new Set(
-      parentHistory.entry.ledgers.roomAppearances
-        .slice(0, -1)
-        .slice(-window)
-        .map((appearance) => semanticAddressKey(appearance.origin)),
+      barred.map((appearance) => semanticAddressKey(appearance.origin)),
     );
     const recentOffer = parentHistory.entry.ledgers.roomCreations.find(
       (creation) =>
@@ -193,7 +192,7 @@ export function assessChaosPlacement(
         recentOrigins.has(semanticAddressKey(creation.parentOrigin)),
     );
     if (recentOffer !== undefined)
-      refusals.push(Object.freeze({ reason: 'offerSpacing' as const, rooms: window }));
+      refusals.push(Object.freeze({ reason: 'offerSpacing' as const, rooms: window - 1 }));
   }
   return Object.freeze({
     placementEligible: refusals.length === 0,

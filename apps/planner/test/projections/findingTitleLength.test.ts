@@ -324,7 +324,7 @@ describe('challenge switch finding copy', () => {
       expect(title.length, title).toBeLessThanOrEqual(findingTitleLimit);
     expect(copy.map((entry) => entry.description)).toEqual([
       'Switches need biome depth 5; this room is at 1.',
-      'Switches need 3 rooms between them; this one is 2 after the last.',
+      'Switches need to be 3 rooms apart; this one is 2 after the last.',
       'The Stygian Well and Hermes Shrine take every spot.',
       "Needs a Hex whose Path of Stars isn't complete.",
       'Moon Monuments need biome depth 3; this room is at 2.',

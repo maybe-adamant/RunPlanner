@@ -8,6 +8,7 @@ import type {
 import { STYGIAN_WELL_SLOT_KEYS } from '../../authored-project/feature-rolls';
 import type { FeatureRerollOption } from './feature-rolls';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import { priorHostEntryRooms } from '../history/facts';
 import type { StygianWellGrant } from '../../reward-kernel';
 import type { StygianWellClock } from '../../reward-kernel/model';
 
@@ -196,10 +197,9 @@ export function priorThreeRoomShopPresence(
   appearances: readonly { readonly roomShopPresent?: boolean }[],
 ): readonly boolean[] {
   return Object.freeze(
-    appearances
-      .slice(0, -1)
-      .slice(-(WELL_MINIMUM_ROOMS_SINCE_LAST - 1))
-      .map((appearance) => appearance.roomShopPresent === true),
+    priorHostEntryRooms(appearances, WELL_MINIMUM_ROOMS_SINCE_LAST).map(
+      (appearance) => appearance.roomShopPresent === true,
+    ),
   );
 }
 

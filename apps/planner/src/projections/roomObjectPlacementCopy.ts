@@ -50,7 +50,7 @@ export function roomFeatureRefusalSentence(
     case 'recentWell':
     case 'recentShrine':
     case 'recentSwitch':
-      return `${many} need ${refusal.minimumRoomsSinceLast} rooms between them; this one is ${refusal.roomsSinceLast} after the last.`;
+      return `${many} need to be ${refusal.minimumRoomsSinceLast} rooms apart; this one is ${refusal.roomsSinceLast} after the last.`;
     case 'kindUnavailable':
     case 'variantUnavailable':
     case 'lockedDoors':
@@ -60,7 +60,8 @@ export function roomFeatureRefusalSentence(
     case 'requirementUnmet':
       return `The game’s requirements for a ${one} aren’t met here.`;
     case 'offerSpacing':
-      return `${many} need more than ${refusal.rooms} rooms after the last ${one}.`;
+      // `rooms` counts the barred predecessors; the next allowed room is one further.
+      return `${many} need ${refusal.rooms + 1} rooms after the last ${one}.`;
     case 'capReached':
       return refusal.per === 'biome'
         ? `Only one ${one} per biome.`
