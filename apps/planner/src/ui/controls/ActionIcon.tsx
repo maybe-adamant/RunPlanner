@@ -11,6 +11,7 @@ export type ActionIconName =
   | 'redo'
   | 'rename'
   | 'reset'
+  | 'resetAfter'
   | 'shuffle'
   | 'trash'
   | 'undo'
@@ -45,6 +46,15 @@ export function ActionIcon({ name }: { readonly name: ActionIconName }) {
           <>
             <path d="M12.5 8a4.5 4.5 0 1 1-1.3-3.2" />
             <path d="M12 2.5v2.8H9.2" />
+          </>
+        );
+      // Rows kept above, the dashed rows after them taken back.
+      case 'resetAfter':
+        return (
+          <>
+            <path d="M2.5 3.5h11M2.5 6.5h11" />
+            <path d="M2.5 10h6M2.5 13h6" strokeDasharray="1.6 1.9" />
+            <path d="m11 9.5 3 3m0-3-3 3" />
           </>
         );
       case 'shuffle':

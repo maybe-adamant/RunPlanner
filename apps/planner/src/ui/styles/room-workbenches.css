@@ -3551,14 +3551,14 @@ span.hub-board-status-line {
 }
 
 .timeline-gap-reset {
+  display: flex;
+  align-items: center;
   justify-self: stretch;
   padding: 4px 6px;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--text);
-  font-size: 0.82rem;
-  text-align: start;
   cursor: pointer;
 }
 

@@ -25,6 +25,7 @@ import {
 } from '@planner/ui/artwork/roomArtwork';
 import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { ContextualPickerPopover } from '@planner/ui/controls/ContextualPicker';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggleLock } from '@planner/ui/controls/IconToggle';
@@ -536,6 +537,7 @@ export function TimelineGapControl({
           />
           {reset === undefined ? null : (
             <button
+              aria-label="Reset from here"
               className="timeline-gap-reset"
               onClick={() => {
                 setOpen(false);
@@ -544,7 +546,7 @@ export function TimelineGapControl({
               }}
               type="button"
             >
-              Reset from here
+              <ActionIcon name="resetAfter" />
             </button>
           )}
         </Popover.Content>
