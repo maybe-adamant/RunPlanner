@@ -1357,9 +1357,9 @@
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "ApolloWeaponBoon",
+                  "middle": "ZeusSpecialBoon",
+                  "right": "HeraCastBoon"
                 }
               },
               "keepsakeRack": {

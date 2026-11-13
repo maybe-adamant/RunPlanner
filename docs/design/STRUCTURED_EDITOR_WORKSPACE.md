@@ -426,8 +426,14 @@ hold only their fixed slots (a Shrine slot shows its item and the delay rolled
 with it) and whose Pedestal holds the Contract pedestal's item. Overview
 authors content only: buying, rushing, collecting and every Travel Deal refill
 are authored on the Room Timeline. A Stygian Well or Pool of Purging Overview
-shows only its presence and initial stock, whose slots are always editable and
-optional; using it starts on the Timeline. An Ephyra parent with declared
+shows only its presence and initial stock; using it starts on the Timeline.
+Every stock slot the walk reached holds its
+[stocked draw](SIMULATION_AND_VALIDATION.md#stock-filled-on-first-reach), which
+its picker can replace but not empty, except a World Shop item nothing can
+replace, which leaves its slot empty as the game does; a slot not reached yet
+is blank and waits on an earlier choice. The list a Pool regenerates after its fountain use stands
+on its own automatic row right after that use, edited like the Overview's list
+and moving only with the fountain. An Ephyra parent with declared
 side-room groups lists its side doors among its Spawns: a row per side-room
 door in generation priority (open, priority, room by its short number such as
 SR 10, reward and map), the header opening the illustrative parent map. A
@@ -539,8 +545,7 @@ family, each group opening its short list; the optional pickups a room object
 produces sit beside that object. Loot the game spawns is not listed there: it
 is placed from its spawn row. A finding on an action marks its object or
 group entry, and navigating to the action opens its list. A Well
-or Pool offers buy or sell for each offered slot (a blank initial slot takes
-its item or trait in the same pick) and Reroll with its cost, disabled with a
+or Pool offers buy or sell for each offered slot and Reroll with its cost, disabled with a
 hint when screen rerolls are not enabled, nothing is left to reroll or the
 pool cannot pay. A World Shop offers each unbought item; a Shrine offers Buy
 for each unbought item and Rush for each bought one not yet rushed, one pick

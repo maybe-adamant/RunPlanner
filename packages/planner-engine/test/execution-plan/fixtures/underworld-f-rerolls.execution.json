@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -2797,9 +2797,20 @@
           ]
         },
         "purgingPool": {
-          "traits": [],
+          "traits": [
+            { "slotKey": "left", "traitKey": "ApolloWeaponBoon" },
+            { "slotKey": "middle", "traitKey": "ZeusSpecialBoon" },
+            { "slotKey": "right", "traitKey": "HeraCastBoon" }
+          ],
           "rerolls": [
-            { "rollKey": "r1", "traits": [{ "slotKey": "middle", "traitKey": "HeraCastBoon" }] }
+            {
+              "rollKey": "r1",
+              "traits": [
+                { "slotKey": "left", "traitKey": "RestockBoon" },
+                { "slotKey": "middle", "traitKey": "HeraCastBoon" },
+                { "slotKey": "right", "traitKey": "ZeusSpecialBoon" }
+              ]
+            }
           ],
           "anchorId": 755023
         },
@@ -3048,5 +3059,5 @@
       }
     }
   ],
-  "planFingerprint": "dd66774e"
+  "planFingerprint": "63b7f472"
 }

@@ -367,6 +367,7 @@ export {
 } from './screen-rerolls';
 export {
   INITIAL_ROLL_KEY,
+  PURGING_POOL_REFRESH_ROLL_KEY,
   featureRerolls,
   parseStygianWellGenerationKey,
   purgingPoolRerollPins,

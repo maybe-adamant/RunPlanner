@@ -1311,9 +1311,9 @@
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "ApolloWeaponBoon",
+                  "middle": "ZeusSpecialBoon",
+                  "right": "HeraCastBoon"
                 }
               },
               "keepsakeRack": {
@@ -2550,16 +2550,16 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "DamageSelfDrop",
+                  "secondLeft": "TemporaryImprovedSecondaryTrait",
+                  "secondRight": "TemporaryEmptySlotDamageTrait"
                 }
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "HestiaWeaponBoon",
+                  "middle": "HeraCastBoon",
+                  "right": "ZeusSpecialBoon"
                 }
               },
               "keepsakeRack": {

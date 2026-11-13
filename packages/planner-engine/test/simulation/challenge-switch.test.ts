@@ -31,7 +31,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
-import { placeTestLivePickupsAtSite } from '@run-planner/test-fixtures/shared';
+import { placeTestLivePickupsAtSite, settleTestEdit } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 import {
@@ -765,16 +765,21 @@ describe('a left switch fight ends its room', () => {
 
   it('takes a Well purchase in before a left press, and reports a preserved one after it', () => {
     const occurrenceAddress = createOccurrenceAddress(fBiome, hostId);
-    let project = applyProjectCommand(left(), catalog, {
+    let project = settleTestEdit(left(), {
       kind: 'AddStygianWell',
       occurrence: occurrenceAddress,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: occurrenceAddress,
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    project = settleTestEdit(project, {
       kind: 'SetStygianWellPurchase',
       occurrence: occurrenceAddress,
       generationKey: 'initial:healing',
       purchased: true,
-      itemKey: 'ArmorBoostStore',
     });
     const order = occurrence(project, 'F', 'golden-f-b8-e1').roomActions.order;
     expect(order.map((reference) => reference.kind)).toEqual([

@@ -23,6 +23,7 @@ import { liftProjectDocument as migrate102To103 } from '@planner/persistence/pro
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { loadUnderworldFPoolCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   createGoldenFGHIProject,
   echoGoldIPrebossShopId,
@@ -100,6 +101,38 @@ describe('project document loader', () => {
       const json = JSON.stringify({ ...project, schemaRevision: revision });
       expect(loadProjectDocument(json, catalog)).toEqual({ migrationProvenance: [], project });
     }
+  });
+
+  it('stocks the blank Well and Pool a schema 103.0 plan reaches, once, at load', () => {
+    const saved = JSON.parse(
+      encodeProjectDocument(loadUnderworldFPoolCheckpoint()),
+    ) as ProjectDocument;
+    const gPostboss = (document: ProjectDocument) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'G')!
+        .topology!.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === 'golden-g-preboss-shop:postboss',
+        )!;
+    const blank = gPostboss(saved) as unknown as {
+      stygianWell: { offerKeyBySlot: Record<string, string | null> };
+      purgingPool: { traitKeyBySlot: Record<string, string | null> };
+    };
+    blank.stygianWell.offerKeyBySlot = { healing: null, secondLeft: null, secondRight: null };
+    blank.purgingPool.traitKeyBySlot = { left: null, middle: null, right: null };
+    const loaded = (revision: number) =>
+      loadProjectDocument(JSON.stringify({ ...saved, schemaRevision: revision }), catalog).project;
+
+    const opened = loaded(0);
+    const { stygianWell, purgingPool } = gPostboss(opened);
+    expect(Object.values(stygianWell!.offerKeyBySlot)).not.toContain(null);
+    expect(Object.values(purgingPool!.traitKeyBySlot)).not.toContain(null);
+    expect(simulateProject(catalog, opened).findings.map((finding) => finding.code)).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/Missing$/)]),
+    );
+    // A plan saved at the current revision loads as is.
+    expect(gPostboss(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION)).stygianWell!.offerKeyBySlot).toEqual(
+      blank.stygianWell.offerKeyBySlot,
+    );
   });
 
   describe('a plan saved before schema 103', () => {

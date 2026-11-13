@@ -47,6 +47,7 @@ import {
 } from '@planner/state/projectWorkspaceSlice';
 import {
   authorLegalTraitOffers,
+  stockTestProject,
   authorTestTraitsAndRequiredItems,
   requireTraits,
 } from '@run-planner/test-fixtures/shared';
@@ -1310,7 +1311,8 @@ describe('DecisionWorkbench', () => {
       vowKey: 'BoonSkipShrineUpgrade',
       rank: 1,
     });
-    project = authorLegalTraitOffers(project);
+    // The vow changes the F boons, so the Postboss Pool list is redrawn as an edit would.
+    project = authorLegalTraitOffers(stockTestProject(authorLegalTraitOffers(project)));
     renderDecisionWorkbench(
       project,
       'Underworld',

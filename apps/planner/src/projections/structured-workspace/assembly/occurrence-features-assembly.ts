@@ -27,6 +27,7 @@ import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/l
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceExplicitRewardControl, WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
+import { assemblePurgingPoolSlots } from './feature-roll-assembly';
 
 export interface WorkspaceOccurrenceFeaturesInput {
   readonly biome: BiomeAddress;
@@ -218,8 +219,6 @@ function roomFeatures(
   const declaredPoolTraitKeys = declaredPurgingPoolTraitKeys(input.catalog);
   const declaredWellAllItemKeys = declaredRoomShopAllItemKeys(input.catalog);
   const declaredShrineAllRewardTypes = declaredSurfaceShopAllRewardTypes(input.catalog);
-  const poolSlotLabel = (slotKey: 'left' | 'middle' | 'right'): string =>
-    slotKey === 'left' ? 'Offer 1' : slotKey === 'middle' ? 'Offer 2' : 'Offer 3';
   return Object.freeze([
     ...(routeRoomShop(room, input.biome.routeKey) === undefined &&
     well === undefined &&
@@ -479,36 +478,15 @@ function roomFeatures(
               kind: 'purgingPool' as const,
               inventoryAddress,
               inventoryMarker: input.markerDestinations.marker(inventoryAddress),
-              slots: Object.freeze(
-                (['left', 'middle', 'right'] as const).map((slotKey) =>
-                  (() => {
-                    const candidateTraitKeys =
-                      poolAssessment?.candidateTraitKeysBySlot[slotKey] ?? declaredPoolTraitKeys;
-                    const traitKey = pool.traitKeyBySlot[slotKey];
-                    const address = featureAddress({ kind: 'purgingPoolOffer', slotKey });
-                    return Object.freeze({
-                      address,
-                      marker: input.markerDestinations.marker(address),
-                      candidateTraitKeys,
-                      candidateTraits: Object.freeze(
-                        candidateTraitKeys.map((key) =>
-                          Object.freeze({
-                            key,
-                            label: input.catalog.traits.byKey[key]?.label ?? key,
-                          }),
-                        ),
-                      ),
-                      interactionKey: `purgingPool:${semanticAddressKey(poolOwner)}:${slotKey}`,
-                      key: slotKey,
-                      label: poolSlotLabel(slotKey),
-                      traitKey,
-                      ...(traitKey === null
-                        ? {}
-                        : { traitLabel: input.catalog.traits.byKey[traitKey]?.label ?? traitKey }),
-                    });
-                  })(),
-                ),
-              ),
+              slots: assemblePurgingPoolSlots({
+                catalog: input.catalog,
+                markerDestinations: input.markerDestinations,
+                owner: poolOwner,
+                list: 'entry',
+                stored: pool.traitKeyBySlot,
+                candidatesBySlot: poolAssessment?.candidateTraitKeysBySlot,
+                declaredTraitKeys: declaredPoolTraitKeys,
+              }),
             });
           })(),
         ]),

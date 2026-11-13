@@ -6,6 +6,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { PROJECT_TRANSITION_STEPS } from './project-transitions.js';
+import { stockRevision0Project } from './project-102-to-103.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
 
@@ -88,7 +89,7 @@ export function loadProjectDocument(
         `Project schema ${envelope.schemaVersion}.${revision} is newer than supported schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}.${PROJECT_DOCUMENT_SCHEMA_REVISION}.`,
       );
     }
-    return currentProject(json, catalog);
+    return currentProject(json, catalog, typeof revision === 'number' ? revision : 0);
   }
 
   if (envelope.schemaVersion < PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR) {
@@ -165,10 +166,18 @@ export function applyProjectDocumentTransitions(options: {
   );
 }
 
-function currentProject(json: string, catalog: Catalog): LoadedProjectDocument {
+// From this revision a reached stock slot is stored; earlier, a blank one meant the game's roll.
+const STOCK_STORED_REVISION = 1;
+
+function currentProject(
+  json: string,
+  catalog: Catalog,
+  revision = PROJECT_DOCUMENT_SCHEMA_REVISION,
+): LoadedProjectDocument {
+  const project = parseProjectDocument(json, catalog);
   return Object.freeze({
     migrationProvenance: noMigrations,
-    project: parseProjectDocument(json, catalog),
+    project: revision < STOCK_STORED_REVISION ? stockRevision0Project(project, catalog) : project,
   });
 }
 

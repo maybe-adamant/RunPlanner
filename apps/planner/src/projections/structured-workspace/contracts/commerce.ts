@@ -66,7 +66,9 @@ export interface WorkspaceShopOfferInteraction {
   readonly key: string;
   readonly owner: ShopOfferAddress | InfernalContractPedestalAddress;
   readonly selected: import('@run-planner/engine/reward-kernel').ShopOptionSelection | null;
-  /** A null value clears a slot whose current item is no longer possible. */
+  /** A reached item is stocked; a blank one without a finding waits on an earlier choice. */
+  readonly contextReached: boolean;
+  /** A null value clears a Shop slot whose current item nothing can replace. */
   readonly load: () => Promise<
     ContextualPickerModel<import('@run-planner/engine/reward-kernel').ShopOptionSelection | null>
   >;
@@ -78,10 +80,7 @@ export interface WorkspaceShopOfferInteraction {
       ProjectCommand,
       {
         readonly kind:
-          | 'ReplaceShopOfferOption'
-          | 'ClearShopOffer'
-          | 'ReplaceInfernalContractPedestalOption'
-          | 'ClearInfernalContractPedestal';
+          'ReplaceShopOfferOption' | 'ClearShopOffer' | 'ReplaceInfernalContractPedestalOption';
       }
     >
   >;
@@ -93,9 +92,11 @@ export interface WorkspacePurgingPoolSlotInteraction {
   readonly owner: OccurrenceAddress;
   readonly slotKey: 'left' | 'middle' | 'right';
   readonly traitKey: string | null;
-  readonly load: () => ContextualPickerModel<string | null>;
+  /** The walk reached the list: its slots are stocked and can be overridden. */
+  readonly contextReached: boolean;
+  readonly load: () => ContextualPickerModel<string>;
   readonly intentFor: (
-    traitKey: string | null,
+    traitKey: string,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePurgingPoolSlot' }>>;
 }
 
@@ -108,6 +109,8 @@ export interface WorkspaceHermesShrineOfferInteraction {
   readonly candidateRewardTypes: readonly string[];
   /** The delay rolled with the stocked item; null while unstocked. */
   readonly delay: import('@run-planner/engine/authored-project').HermesShrineDelay | null;
+  /** The walk reached the Shrine: its items are stocked and can be overridden. */
+  readonly contextReached: boolean;
   readonly load: () => ContextualPickerModel<string>;
   readonly intentFor: (
     rewardType: string,
@@ -129,9 +132,11 @@ export interface WorkspaceStygianWellOfferInteraction {
   readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
   readonly itemKey: string | null;
   readonly candidateItemKeys: readonly string[];
-  readonly load: () => ContextualPickerModel<string | null>;
+  /** The walk reached the Well: its items are stocked and can be overridden. */
+  readonly contextReached: boolean;
+  readonly load: () => ContextualPickerModel<string>;
   readonly intentFor: (
-    itemKey: string | null,
+    itemKey: string,
   ) => WorkspaceCommandIntent<
     | Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellOffer' }>
     | Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellTravelDealRefill' }>
@@ -144,9 +149,11 @@ export interface WorkspaceStygianWellTwistResultInteraction {
   readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
   readonly itemKey: string | null;
   readonly candidateItemKeys: readonly string[];
-  readonly load: () => ContextualPickerModel<string | null>;
+  /** The walk reached the Well: the result is stocked and can be overridden. */
+  readonly contextReached: boolean;
+  readonly load: () => ContextualPickerModel<string>;
   readonly intentFor: (
-    itemKey: string | null,
+    itemKey: string,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellTwistResult' }>
   >;

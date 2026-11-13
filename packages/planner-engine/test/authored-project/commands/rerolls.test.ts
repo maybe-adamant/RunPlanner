@@ -647,21 +647,36 @@ describe('Well and Pool rerolls', () => {
         kind: 'RemoveRoomAction',
         action: createRoomActionAddress(f, room.occurrenceId, roomActionKey(reference)),
       });
-    const bought = applyProjectCommand(rerolled, catalog, {
+    const action = (reference: RoomActionReference) =>
+      createRoomActionAddress(f, room.occurrenceId, roomActionKey(reference));
+    const pinned = applyProjectCommand(rerolled, catalog, {
+      kind: 'ReplaceStygianWellRollOffer',
+      action: action({ kind: 'rerollStygianWell', rerollId: 'r1' }),
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    const bought = applyProjectCommand(pinned, catalog, {
       kind: 'SetStygianWellPurchase',
       occurrence: room,
       generationKey: 'r1:healing',
       purchased: true,
-      itemKey: 'ArmorBoostStore',
     });
-    const sold = applyProjectCommand(bought, catalog, {
-      kind: 'SellPurgingPoolRollSlot',
-      occurrence: room,
-      rollKey: 'r1',
-      slotKey: 'left',
-      traitKey: Object.keys(catalog.traits.byKey)[0]!,
-      index: occurrence(bought, room.occurrenceId).roomActions.order.length,
-    });
+    const sale = { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' } as const;
+    const sold = applyProjectCommand(
+      applyProjectCommand(bought, catalog, {
+        kind: 'ReplacePurgingPoolRollSlot',
+        action: action({ kind: 'rerollPurgingPool', rerollId: 'r1' }),
+        slotKey: 'left',
+        traitKey: Object.keys(catalog.traits.byKey)[0]!,
+      }),
+      catalog,
+      {
+        kind: 'InsertRoomAction',
+        action: action(sale),
+        reference: sale,
+        index: occurrence(bought, room.occurrenceId).roomActions.order.length,
+      },
+    );
     const removed = remove(remove(sold, { kind: 'rerollStygianWell', rerollId: 'r1' }), {
       kind: 'rerollPurgingPool',
       rerollId: 'r1',

@@ -12,7 +12,10 @@ import {
   createHubDecisionAddress,
   createHubRerollAddress,
   createRoomActionAddress,
+  createRoomFeatureAddress,
+  createShopOfferAddress,
   semanticAddressKey,
+  type BiomeAddress,
   type HubDecisionAddress,
   type OccurrenceAddress,
   type SemanticAddress,
@@ -73,6 +76,7 @@ import {
 } from './evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from './evaluation/evaluation-products';
 import { candidateBiome, candidateBiomeRooms } from './candidates/evaluated-biome';
+import { currentPoolListValues, stockFills, type PoolValuesBefore } from './stock-fill';
 
 function occurrences(project: ProjectDocument) {
   return project.route.biomes.flatMap((biome) =>
@@ -289,11 +293,28 @@ type ReplacedItem =
       readonly kind: 'rerolledReward';
       readonly room: OccurrenceAddress;
       readonly owner: RerolledRewardOwner;
+    }
+  | {
+      /** A Travel Deal restock whose triggering purchase changed: a new item. */
+      readonly kind: 'travelDealRefill';
+      readonly room: OccurrenceAddress;
+      readonly stock: 'stygianWell' | 'hermesShrine' | 'worldShop';
     };
 
 /** The replaced item's own address: its pickup entry or its rerolled owner. */
 function replacedItemAddress(item: ReplacedItem): SemanticAddress {
   if (item.kind === 'rerolledReward') return item.owner;
+  if (item.kind === 'travelDealRefill' && item.stock === 'worldShop')
+    return createShopOfferAddress(
+      createBiomeAddress(item.room.routeKey, item.room.biomeKey),
+      item.room.occurrenceId,
+      TRAVEL_DEAL_REFILL_ENTRY_KEY,
+    );
+  if (item.kind === 'travelDealRefill')
+    return createRoomFeatureAddress(item.room, {
+      kind: item.stock === 'stygianWell' ? 'stygianWellOffer' : 'hermesShrineOffer',
+      generationKey: 'travelDealRefill',
+    });
   const siteKey = item.kind === 'delivery' ? HERMES_SHRINE_DELIVERY_SITE_KEY : 'roomExit';
   return createAcquisitionEntryAddress(
     createAcquisitionSiteAddress(item.room, siteKey),
@@ -708,7 +729,114 @@ function withoutReplacedItem(
     }
     case 'rerolledReward':
       return resetRerolledRewardOffItsPress(project, catalog, item.owner);
+    case 'travelDealRefill': {
+      if (item.stock === 'worldShop') {
+        const reference = placedEntry(
+          occurrenceAt(project, item.room),
+          'roomExit',
+          TRAVEL_DEAL_REFILL_ENTRY_KEY,
+        );
+        const removed =
+          reference === undefined
+            ? project
+            : withoutRow(catalog, project, { owner: item.room, reference, payload: 'taken' });
+        const occurrence = occurrenceAt(removed, item.room);
+        if (occurrence?.state.kind !== 'shop' || occurrence.state.shop == null) return removed;
+        const { travelDealRefill: _replaced, ...shop } = occurrence.state.shop;
+        void _replaced;
+        return withOccurrence(
+          removed,
+          item.room,
+          Object.freeze({
+            ...occurrence,
+            state: Object.freeze({ ...occurrence.state, shop: Object.freeze(shop) }),
+          }),
+        );
+      }
+      const purchase =
+        item.stock === 'stygianWell' ? 'purchaseStygianWellOffer' : 'purchaseHermesShrineOffer';
+      const reference = occurrenceAt(project, item.room)?.roomActions.order.find(
+        (candidate) =>
+          candidate.kind === purchase && candidate.generationKey === 'travelDealRefill',
+      );
+      const removed =
+        reference === undefined
+          ? project
+          : withoutRow(catalog, project, { owner: item.room, reference, payload: 'taken' });
+      if (item.stock === 'stygianWell')
+        return applyProjectCommand(removed, catalog, {
+          kind: 'ReplaceStygianWellTravelDealRefill',
+          occurrence: item.room,
+          itemKey: null,
+        });
+      const occurrence = occurrenceAt(removed, item.room);
+      if (occurrence?.hermesShrine === undefined) return removed;
+      const { travelDealRefill: _replaced, ...shrine } = occurrence.hermesShrine;
+      void _replaced;
+      return withOccurrence(
+        removed,
+        item.room,
+        Object.freeze({ ...occurrence, hermesShrine: Object.freeze(shrine) }),
+      );
+    }
   }
+}
+
+/**
+ * Travel Deal restocks whose triggering purchase the edit changed: the walk
+ * before the edit restocked after one purchase and now restocks after
+ * another, while the stored item is the one the plan held before. The old
+ * item and its purchase go, and the new one is stocked on first reach.
+ */
+function replacedTravelDealRefills(
+  before: ProjectEvaluationAssembly,
+  beforeArtifacts: CandidateArtifacts,
+  assembly: ProjectEvaluationAssembly,
+  artifacts: CandidateArtifacts,
+): ReplacedItem[] {
+  const replaced: ReplacedItem[] = [];
+  const stocks = {
+    stygianWell: {
+      stored: (occurrence: RoomOccurrence | undefined) =>
+        occurrence?.stygianWell?.travelDealRefillKey ?? undefined,
+      source: (candidates: CandidateArtifacts, biome: BiomeAddress, owner: OccurrenceAddress) =>
+        candidates.biomeAt(biome)?.stygianWells.at(owner)?.travelDealRefill?.sourceGenerationKey,
+    },
+    hermesShrine: {
+      stored: (occurrence: RoomOccurrence | undefined) =>
+        occurrence?.hermesShrine?.travelDealRefill?.offer?.rewardType,
+      source: (candidates: CandidateArtifacts, biome: BiomeAddress, owner: OccurrenceAddress) =>
+        candidates.biomeAt(biome)?.hermesShrines.at(owner)?.travelDealRefill?.sourceGenerationKey,
+    },
+    worldShop: {
+      stored: (occurrence: RoomOccurrence | undefined) => {
+        const reward =
+          occurrence?.state.kind === 'shop'
+            ? occurrence.state.shop?.travelDealRefill?.reward
+            : undefined;
+        return reward == null ? undefined : JSON.stringify(reward.offer);
+      },
+      source: (candidates: CandidateArtifacts, biome: BiomeAddress, owner: OccurrenceAddress) =>
+        candidates
+          .biomeAt(biome)
+          ?.derivedAcquisitionEntries.entriesAt(createAcquisitionSiteAddress(owner, 'roomExit'))
+          .find((entry) => entry.address.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)?.capability
+          .sourceOfferKey,
+    },
+  } as const;
+  for (const { owner, occurrence } of occurrences(assembly.project)) {
+    const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
+    for (const stock of ['stygianWell', 'hermesShrine', 'worldShop'] as const) {
+      const { stored, source } = stocks[stock];
+      const item = stored(occurrence);
+      if (item === undefined || stored(occurrenceAt(before.project, owner)) !== item) continue;
+      const prior = source(beforeArtifacts, biome, owner);
+      const now = source(artifacts, biome, owner);
+      if (prior !== undefined && now !== undefined && prior !== now)
+        replaced.push({ kind: 'travelDealRefill', room: owner, stock });
+    }
+  }
+  return replaced;
 }
 
 /** The plan with one room's occurrence replaced. */ /** The plan with one room's occurrence replaced. */
@@ -1001,6 +1129,43 @@ export function settleProjectUpgrade(
 }
 
 /**
+ * Stock every blank slot a saved plan's walk reaches, as the edit that first
+ * reached it would have, and nothing else. A schema transform for plans saved
+ * while a blank stock slot meant the game's own roll: a stale Pool list keeps
+ * its values and findings, unless the plan was built by commands that would
+ * each have settled it. Total like an edit's settlement: a slot stocked twice
+ * is a fault beside the last assembly.
+ */
+export function settleProjectStock(
+  options: ProjectUpgradeSettlementOptions & { readonly redrawStalePoolLists?: boolean },
+): ProjectEditSettlement {
+  const evaluate = exactEvaluation(options.evaluate);
+  let assembly = evaluate(options.project);
+  const poolValuesBefore: PoolValuesBefore = () => options.redrawStalePoolLists === true;
+  const stocked = new Set<string>();
+  for (;;) {
+    const fills = stockFills(
+      options.catalog,
+      assembly.project,
+      candidateArtifactsForProjectEvaluationAssembly(assembly),
+      poolValuesBefore,
+    );
+    if (fills.length === 0) return Object.freeze({ assembly });
+    let project = assembly.project;
+    for (const fill of fills) {
+      if (stocked.has(fill.key))
+        return Object.freeze({
+          assembly,
+          fault: Object.freeze({ key: `fill:${fill.key}`, owner: fill.owner }),
+        });
+      stocked.add(fill.key);
+      project = applyProjectCommand(project, options.catalog, fill.command);
+    }
+    assembly = evaluate(project);
+  }
+}
+
+/**
  * The settlement after an edit's structural command, or of an upgraded plan
  * when there is no command: its removals are all announced, and every row the
  * walk reaches is judged as though it had just lost what it lacks.
@@ -1016,6 +1181,10 @@ function settleProject(options: {
   const upgrade = command === undefined;
   let project = options.project;
   const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
+  // Only a Pool list value the edit made stale is redrawn; an upgrade only stocks blanks.
+  const poolValuesBefore: PoolValuesBefore = upgrade
+    ? () => false
+    : currentPoolListValues(before.project, beforeArtifacts);
   const beforeRosters = enteredRosters(before);
   const edited = roomEditedSince(before.project);
   const replacedNow = replacedSince(catalog, upgrade ? undefined : before.project, edited);
@@ -1217,6 +1386,8 @@ function settleProject(options: {
     taken.push(...rowsTaken(previous, project));
     return undefined;
   };
+  // Travel Deal restocks already replaced by this settlement.
+  const restocked = new Set<string>();
   const fated =
     (payload: RowRemoval['payload']) =>
     (row: TakenRow): RowRemoval => ({ ...row, payload });
@@ -1260,6 +1431,12 @@ function settleProject(options: {
       items = rerolledItems(rerolledRewardsOffTheirPress(catalog, assembly.project)).filter(
         (item) => replacedNow(assembly.project, item),
       );
+    // A restock is judged once: its new item may draw the old value again.
+    if (items.length === 0 && !upgrade)
+      items = replacedTravelDealRefills(before, beforeArtifacts, assembly, artifacts).filter(
+        (item) => !restocked.has(itemKey(item)),
+      );
+    for (const item of items) if (item.kind === 'travelDealRefill') restocked.add(itemKey(item));
     for (const item of items) {
       const address = replacedItemAddress(item);
       const fault = repair(itemKey(item), address, (plan) =>
@@ -1285,7 +1462,18 @@ function settleProject(options: {
             ...cageGoneRerolls(before, assembly, upgrade).map(fated('taken')),
             ...(upgrade ? sourceGonePickups(catalog, assembly, evaluate) : []).map(fated('taken')),
           ];
-    if (items.length === 0 && removals.length === 0) return settled(assembly);
+    if (items.length === 0 && removals.length === 0) {
+      // Once nothing else is repaired, the edit stocks every blank slot the walk reached.
+      const fills = stockFills(catalog, assembly.project, artifacts, poolValuesBefore);
+      if (fills.length === 0) return settled(assembly);
+      for (const fill of fills) {
+        const fault = repair(`fill:${fill.key}`, fill.owner, (plan) =>
+          applyProjectCommand(plan, catalog, fill.command),
+        );
+        if (fault !== undefined) return settled(assembly, fault);
+      }
+      continue;
+    }
     // Last first, each through its owning removal, as a reset removes rows.
     for (const removal of removals.reverse()) {
       const { owner } = removal;

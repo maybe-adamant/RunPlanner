@@ -97,6 +97,9 @@ as user findings.
 pickup reconciliation before application history publication. It consumes the
 before assembly and returns the final project and its exact assembly.
 
+- Settlement stocks every blank stock slot the walk reaches
+  ([Stock filled on first reach](#stock-filled-on-first-reach)) once nothing
+  else is repaired; it places no row.
 - Settlement places nothing the owner has not placed: a due Hermes delivery,
   Gold Gold Gold's duplicate and a matured clocked pickup arrive on their own
   and lie live until the owner places their pickup, and an unplaced required
@@ -407,11 +410,11 @@ The blocking product's rows are the row whose own contact the blocking region
 is (a Well or Pool reroll's list, a Pool sale, a wheel's choice) and every row
 that settles an owner of the region: besides a row's own acquisition or reward,
 the Keepsake Rack settles its selection and equip result, a fountain use its
-rarity outcome, a Well purchase its Fateful Twist (a Travel Deal refill's Twist
-is judged at the refill purchase, so its row) and its initial or rolled item,
-and a Shrine purchase its initial item. A Travel Deal restock is judged at the
-earlier purchase that restocks it and a Pool list as the fountain opens it, so
-neither has a row. A row is claimed only when the walk reached it at or before
+rarity outcome and the Pool list it makes the Pool regenerate, a Well purchase
+its Fateful Twist (a Travel Deal refill's Twist is judged at the refill
+purchase, so its row) and its initial or rolled item, and a Shrine purchase its
+initial item. A Travel Deal restock is judged at the earlier purchase that
+restocks it, so it has no row. A row is claimed only when the walk reached it at or before
 the blocking contact: never a later row of the same stretch of the Timeline,
 nor a wheel's choice row while its offers block at **Wheels open**, which
 settles with them. A deferred Ship wheel's post-combat rows run before its
@@ -564,6 +567,46 @@ position, which only an invalid or over-capacity room can reach. Authoring
 products, the Chaos gate's included, mark each position chosen or default; execution publishes both
 alike, so the runtime steers every one. Draft and the run import leave
 positions unset and take the defaults.
+
+### Stock filled on first reach
+
+A Stygian Well's rolls, Travel Deal restock and Fateful Twist results, a
+Hermes Shrine's items and Travel Deal refill, a Pool of Purging's lists, a
+World Shop's items and Travel Deal item and an Infernal Contract pedestal's
+item are stored, never derived. A blank
+slot the walk reaches is an incomplete finding where it is generated, and the
+edit whose settlement first reaches it stocks it as part of that edit, so one
+Undo reverts both. The stock is a stable legal draw: each slot scores its
+legal values, those the slot's generation contact admits there, by a stable
+hash of its semantic identity and the value, and takes its best value that no
+stored slot or earlier claim of the same group holds. Slots claim in slot
+order; a reroll's last drawn slot avoids repeating every item on show before
+it, which the game's ban rules out. A World Shop stocks one slot at a time,
+each from the values its joint inventory admits beside its stocked peers. A
+Travel Deal restock draws under its triggering purchase's identity, a World
+Shop's from the restocked slot's values. A Contract pedestal, spawned once the
+walk reaches its Preboss holding the Contract, draws from the options its slot
+admits after every other stock is filled, as its draw sees the Shop its room
+stocked first.
+
+A stored value an upstream edit makes illegal keeps its value and raises its
+finding, with two exceptions. A Pool list that an edit makes stale (a listed
+boon the edit leaves unchanged, which the walk did not judge stale before it,
+is no longer held or eligible where the list is judged) is redrawn in the
+same edit on its unsold slots, as the game regenerates it; sold slots keep
+their trait and a list showing fewer slots blanks the rest. A list already stale before the edit, including one
+whose value the owner set to a boon not held, keeps its values and finding
+through every later edit that does not change them. A Travel Deal restock
+(World Shop, Shrine or Well) whose triggering purchase or rush the edit
+changed is a new item: the old item and its purchase go and a new one is
+drawn.
+
+Rolls of one Well or Pool are stocked in the order they are shown, each
+after the ones before it are stored, so a reroll's ban sees what was on show.
+A slot with no legal value stays blank with its finding and does not stop
+later slots from stocking. Loading a plan only stocks its blank reached
+slots, the same way, so a loaded plan is complete; a stale Pool list it holds
+keeps its values and finding.
 
 ### Persistent and multi-phase rooms
 

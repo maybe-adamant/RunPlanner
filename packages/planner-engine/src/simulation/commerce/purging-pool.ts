@@ -12,15 +12,18 @@ import { semanticAddressKey, type OccurrenceAddress } from '../../authored-proje
 export type PurgingPoolSlotKey = AuthoredPurgingPoolSlotKey;
 
 export interface PurgingPoolAssessmentFinding {
-  readonly code: 'purgingPoolTraitUnavailable' | 'purgingPoolTraitDuplicate';
+  readonly code:
+    'purgingPoolTraitMissing' | 'purgingPoolTraitUnavailable' | 'purgingPoolTraitDuplicate';
   readonly slotKey: PurgingPoolSlotKey;
   readonly evidence: FindingEvidence;
 }
 
-/** Exact final-list authoring support at one post-encounter Pool frontier. */
+/** One generated Pool list assessed against the traits held where it is generated. */
 export interface PurgingPoolAssessment {
   readonly eligibleTraitKeys: readonly string[];
   readonly requiredTraitCount: number;
+  /** The slots the list shows: as many as there are eligible traits, up to three, stocked first. */
+  readonly offeredSlotKeys: readonly PurgingPoolSlotKey[];
   readonly candidateTraitKeysBySlot: Readonly<Record<PurgingPoolSlotKey, readonly string[]>>;
   readonly complete: boolean;
   readonly findings: readonly PurgingPoolAssessmentFinding[];
@@ -47,12 +50,23 @@ export interface PurgingPoolRollCapability {
   /** The slots the list fills: as many as there are eligible traits, up to three. */
   readonly offeredSlotKeys: readonly PurgingPoolSlotKey[];
   readonly candidateTraitKeysBySlot: Readonly<Record<PurgingPoolSlotKey, readonly string[]>>;
+  /** Every trait the list can draw where it is generated. */
+  readonly eligibleTraitKeys: readonly string[];
+  /** The traits on show just before a reroll; the game bans one when it leaves eligible ones unshown. */
+  readonly shownTraitKeys?: readonly string[];
+  /** The listed slots no longer eligible where the list is judged: the list is stale. */
+  readonly staleSlotKeys: readonly PurgingPoolSlotKey[];
 }
 
 export interface PurgingPoolCandidateCapability {
+  /** The entry list's assessment at room entry. */
   readonly assessment: PurgingPoolAssessment;
-  /** The initial list's candidates. */
+  /** The entry list's candidates. */
   readonly candidateTraitKeysBySlot: Readonly<Record<PurgingPoolSlotKey, readonly string[]>>;
+  /** The list regenerated after the fountain use made the entry list stale. */
+  readonly refresh?: PurgingPoolRollCapability;
+  /** The fountain use judged the entry list: a refresh absent then is not needed. */
+  readonly fountainJudged: boolean;
   /** Each reached Pool reroll's list, by its reroll id. */
   readonly rolls: Readonly<Record<string, PurgingPoolRollCapability>>;
   /** Undefined while the Pool's sequence is unreached. */
@@ -62,19 +76,39 @@ export interface PurgingPoolCandidateArtifacts {
   readonly at: (occurrence: OccurrenceAddress) => PurgingPoolCandidateCapability | undefined;
 }
 
-/** One Pool room's assessed lists: the initial one, then each reroll's by its id. */
+/** One Pool room's assessed lists: the entry one, its refresh, then each reroll's by its id. */
 export interface PurgingPoolRoomAssessments {
   readonly assessment: PurgingPoolAssessment;
+  readonly refresh?: PurgingPoolAssessment;
+  readonly fountainJudged?: boolean;
   readonly rolls?: Readonly<
     Record<
       string,
       {
         readonly offeredSlotKeys: readonly PurgingPoolSlotKey[];
         readonly assessment: PurgingPoolAssessment;
+        readonly shownTraitKeys?: readonly string[];
       }
     >
   >;
   readonly interaction?: PurgingPoolInteraction;
+}
+
+function rollCapability(
+  assessment: PurgingPoolAssessment,
+  shownTraitKeys?: readonly string[],
+): PurgingPoolRollCapability {
+  return Object.freeze({
+    offeredSlotKeys: assessment.offeredSlotKeys,
+    candidateTraitKeysBySlot: assessment.candidateTraitKeysBySlot,
+    eligibleTraitKeys: assessment.eligibleTraitKeys,
+    ...(shownTraitKeys === undefined ? {} : { shownTraitKeys }),
+    staleSlotKeys: Object.freeze(
+      assessment.findings.flatMap((finding) =>
+        finding.code === 'purgingPoolTraitUnavailable' ? [finding.slotKey] : [],
+      ),
+    ),
+  });
 }
 
 export function createPurgingPoolCandidateArtifacts(
@@ -88,14 +122,13 @@ export function createPurgingPoolCandidateArtifacts(
       return Object.freeze({
         assessment: room.assessment,
         candidateTraitKeysBySlot: room.assessment.candidateTraitKeysBySlot,
+        ...(room.refresh === undefined ? {} : { refresh: rollCapability(room.refresh) }),
+        fountainJudged: room.fountainJudged === true,
         rolls: Object.freeze(
           Object.fromEntries(
             Object.entries(room.rolls ?? {}).map(([rollKey, roll]) => [
               rollKey,
-              Object.freeze({
-                offeredSlotKeys: roll.offeredSlotKeys,
-                candidateTraitKeysBySlot: roll.assessment.candidateTraitKeysBySlot,
-              }),
+              rollCapability(roll.assessment, roll.shownTraitKeys),
             ]),
           ),
         ),
@@ -136,8 +169,9 @@ export function assessPurgingPool(
 }
 
 /**
- * Assesses one list against the current traits, pinned slot by slot; a blank
- * slot stays native until a sale needs it.
+ * Assesses one generated list against the traits held where it is generated:
+ * it shows as many slots as there are eligible traits, up to three, stocked
+ * slots first, and a blank shown slot is missing until an edit stocks it.
  */
 export function assessPurgingPoolList(
   catalog: Catalog,
@@ -170,11 +204,25 @@ export function assessPurgingPoolList(
       }),
     ) as Record<PurgingPoolSlotKey, readonly string[]>,
   );
+  const stocked = SLOT_KEYS.filter((slotKey) => selectedBySlot[slotKey] !== null);
+  const shown = new Set(
+    [...stocked, ...SLOT_KEYS.filter((slotKey) => selectedBySlot[slotKey] === null)].slice(
+      0,
+      requiredTraitCount,
+    ),
+  );
+  const offeredSlotKeys = Object.freeze(SLOT_KEYS.filter((slotKey) => shown.has(slotKey)));
   const findings: PurgingPoolAssessmentFinding[] = [];
   const seen = new Set<string>();
   for (const slotKey of SLOT_KEYS) {
     const traitKey = selectedBySlot[slotKey];
-    if (traitKey === null) continue;
+    if (traitKey === null) {
+      if (shown.has(slotKey))
+        findings.push(
+          Object.freeze({ code: 'purgingPoolTraitMissing', slotKey, evidence: Object.freeze({}) }),
+        );
+      continue;
+    }
     if (seen.has(traitKey)) {
       findings.push(
         Object.freeze({
@@ -202,6 +250,7 @@ export function assessPurgingPoolList(
   return Object.freeze({
     eligibleTraitKeys,
     requiredTraitCount,
+    offeredSlotKeys,
     candidateTraitKeysBySlot,
     complete: findings.length === 0,
     findings: Object.freeze(findings),

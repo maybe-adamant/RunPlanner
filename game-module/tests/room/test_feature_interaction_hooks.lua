@@ -787,22 +787,28 @@ function TestFeatureInteractionHooks.testWellPinsOnlyItsPinnedInitialSlots()
     lu.assertEquals(exclusions, { false, { "LastStandShopItem" } })
 end
 
-function TestFeatureInteractionHooks.testPoolPinsOnlyItsPinnedInitialSlots()
+function TestFeatureInteractionHooks.testPoolInstallsTheListOnShowAtItsFirstOpening()
     local module, _, callbacks = capture()
     local state = { state = "synchronized" }
-    local occurrence = { overview = { purgingPool = { traits = { { slotKey = "right", traitKey = "A" } } } } }
+    local occurrence = { overview = { purgingPool = {
+        traits = { { slotKey = "left", traitKey = "A" }, { slotKey = "middle", traitKey = "B" },
+            { slotKey = "right", traitKey = "C" } },
+        refreshTraits = { { slotKey = "left", traitKey = "C" }, { slotKey = "middle", traitKey = "D" },
+            { slotKey = "right", traitKey = "A" } },
+    } } }
     require("mods.room.features.inventory.purging_pool_hooks").attach(module,
         { diagnostic = function() error("unexpected diagnostic") end },
         function() return state end, function() end, { occurrence = function() return occurrence end })
     local native = { __runPlannerExecutionRoomId = "pool", SellTraitShop = {} }
+    -- The fountain use changed a listed boon: the regenerated list is installed.
     openPool(callbacks, native, function()
         native.SellValues = { D = { Name = "D", Value = 40 } }
         native.SellOptions = { { Name = "A", Value = 10 }, { Name = "B", Value = 20 }, { Name = "C", Value = 30 } }
     end)
     lu.assertEquals(native.SellOptions, {
-        { Name = "B", Value = 20 }, { Name = "C", Value = 30 }, { Name = "A", Value = 10 },
+        { Name = "C", Value = 30 }, { Name = "D", Value = 40 }, { Name = "A", Value = 10 },
     })
-    lu.assertEquals(native.SellValues, { D = { Name = "D", Value = 40 } })
+    lu.assertEquals(native.SellValues, { B = { Name = "B", Value = 20 } })
 end
 
 function TestFeatureInteractionHooks.testFullyPinnedWellSteersItsThreeInitialOfferSlots()
@@ -1321,7 +1327,7 @@ function TestFeatureInteractionHooks.testPoolInstallsEachRerollsPinsAndAFurtherR
     local occurrence = { overview = { purgingPool = {
         traits = { { slotKey = "left", traitKey = "B" } },
         rerolls = {
-            { rollKey = "r1", traits = { { slotKey = "middle", traitKey = "A" } } },
+            { rollKey = "r1", traits = { { slotKey = "left", traitKey = "C" }, { slotKey = "middle", traitKey = "A" } } },
             { rollKey = "r2", traits = {} },
         } } } }
     require("mods.room.features.inventory.purging_pool_hooks").attach(module, {
@@ -1353,7 +1359,7 @@ function TestFeatureInteractionHooks.testPoolInstallsEachRerollsPinsAndAFurtherR
             native.SellValues, native.SellOptions = {}, { { Name = "C", Value = 30 } }
         end)
         lu.assertEquals(native.SellOptions, { { Name = "B", Value = 20 } })
-        -- After selling B, the pinned middle slot displaces a native row.
+        -- After selling B, the reroll installs its published list.
         values.B = nil
         callbacks.SellTraitScreenReroll(nil, {}, nativeReroll({ "A", "C" }), {})
         lu.assertEquals(native.SellOptions, { { Name = "C", Value = 30 }, { Name = "A", Value = 10 } })

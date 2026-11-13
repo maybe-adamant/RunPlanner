@@ -22,19 +22,17 @@ function bindSlots(
       Object.freeze({
         key: slot.interactionKey,
         owner: requirement.action,
-        load: createMemoizedStableIdentityPickerLoad<string | null>({
+        contextReached: slot.assessed,
+        load: createMemoizedStableIdentityPickerLoad<string>({
           assessment: slot.assessed ? 'assessed' : 'unassessed',
-          choices: [
-            { label: 'Any', value: null },
-            ...slot.candidates.map((candidate) => ({
-              label: candidate.label,
-              value: candidate.key,
-            })),
-          ],
-          selected: slot.value,
+          choices: slot.candidates.map((candidate) => ({
+            label: candidate.label,
+            value: candidate.key,
+          })),
+          selected: slot.value ?? undefined,
           selectedLabel: slot.valueLabel,
         }),
-        intentFor: (value: string | null) =>
+        intentFor: (value: string) =>
           Object.freeze({
             command: Object.freeze(
               requirement.feature === 'stygianWell'

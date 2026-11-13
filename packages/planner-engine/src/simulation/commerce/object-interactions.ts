@@ -1,7 +1,6 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { HermesShrineDelay, HermesShrineGenerationKey } from '../../authored-project/model';
-import type { ShopOptionSelection } from '../../reward-kernel';
 
 type CommandOf<Kind extends ProjectCommand['kind']> = Extract<
   ProjectCommand,
@@ -26,11 +25,8 @@ export interface WorldShopInteraction {
   readonly travelDealRestocksNextPurchase: boolean;
   /** The Travel Deal item, once its first purchase made it live and while it is unbought. */
   readonly travelDealRefill?: {
-    /** Null while the item is blank; the pick then adds its chosen `value` to `command`. */
     readonly rewardType: string | null;
     readonly optionKey: string | null;
-    /** The items the reached state can stock there, each ready as the command's `value`. */
-    readonly values: readonly ShopOptionSelection[];
     readonly command: CommandOf<'PurchaseShopTravelDealRefill'>;
   };
 }
@@ -38,7 +34,6 @@ export interface WorldShopInteraction {
 /** One unbought Hermes Shrine item that can be bought there. */
 export interface HermesShrineInteractionOffer {
   readonly generationKey: HermesShrineGenerationKey;
-  /** Null only for a blank Travel Deal refill; the pick then adds its chosen `rewardType`. */
   readonly rewardType: string | null;
   readonly delay: HermesShrineDelay | null;
   readonly buy: CommandOf<'PurchaseHermesShrineOffer'>;

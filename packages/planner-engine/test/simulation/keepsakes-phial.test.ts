@@ -14,6 +14,7 @@ import {
   type RoomActionAddress,
 } from '@run-planner/engine/authored-project';
 import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
+import { stockTestProject } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -398,11 +399,14 @@ describe('Aromatic Phial fountain lifecycle', () => {
     const targetTraitKey = capability?.mutationTargetKeys[0];
     expect(targetTraitKey).toBeDefined();
 
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceFountainRarityTarget',
-      outcome,
-      targetTraitKey: targetTraitKey!,
-    });
+    // The Phial may rarify a listed Pool boon: the edit stocks the regenerated list.
+    project = stockTestProject(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFountainRarityTarget',
+        outcome,
+        targetTraitKey: targetTraitKey!,
+      }),
+    );
     const resolved = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
       (biome) => biome.biomeKey === 'F',
     );

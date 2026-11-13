@@ -328,13 +328,9 @@ export type RoomActionCommand =
       readonly index?: number;
     }
   | {
-      /**
-       * Buys the Shop's Travel Deal item at the end of the room's actions;
-       * `value` first stocks a blank one.
-       */
+      /** Buys the Shop's Travel Deal item at the end of the room's actions. */
       readonly kind: 'PurchaseShopTravelDealRefill';
       readonly occurrence: OccurrenceAddress;
-      readonly value?: ShopOptionSelection;
       /** Where the purchase enters the room's actions: any structurally legal index; absent, the end. */
       readonly index?: number;
     }
@@ -580,10 +576,12 @@ export type PhantomExitCommand = {
 };
 export type PurgingPoolCommand =
   | {
+      /** Stocks or, with null, clears one slot of the entry list or, with `refresh`, the regenerated one. */
       readonly kind: 'ReplacePurgingPoolSlot';
       readonly occurrence: OccurrenceAddress;
       readonly slotKey: 'left' | 'middle' | 'right';
       readonly traitKey: string | null;
+      readonly list?: 'refresh';
     }
   | {
       /** Inserts an unpinned Pool reroll; the engine allocates its id. */
@@ -597,19 +595,6 @@ export type PurgingPoolCommand =
       readonly action: RoomActionSemanticAddress;
       readonly slotKey: import('../model').PurgingPoolSlotKey;
       readonly traitKey: string | null;
-    }
-  | {
-      /**
-       * Pins one slot of a Pool list, the initial one or a reroll's, and
-       * inserts its sale in one edit.
-       */
-      readonly kind: 'SellPurgingPoolRollSlot';
-      readonly occurrence: OccurrenceAddress;
-      /** The sold list: `initial` or a Pool reroll's id. */
-      readonly rollKey: string;
-      readonly slotKey: import('../model').PurgingPoolSlotKey;
-      readonly traitKey: string;
-      readonly index: number;
     };
 
 /** Records or clears the observation that Eris stood in a declared host room. */
@@ -718,14 +703,10 @@ export type HermesShrineCommand =
       readonly index?: number;
     }
   | {
-      /**
-       * Buys one unbought generation at the end of the room's actions;
-       * `rewardType` first stocks a blank Travel Deal refill.
-       */
+      /** Buys one unbought generation at the end of the room's actions. */
       readonly kind: 'PurchaseHermesShrineOffer';
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').HermesShrineGenerationKey;
-      readonly rewardType?: string;
       /** Where the purchase enters instead of the end: any structurally legal index. */
       readonly index?: number;
     }
@@ -763,8 +744,6 @@ export type StygianWellCommand =
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').StygianWellGenerationKey;
       readonly purchased: boolean;
-      /** The bought slot's item, pinned in the same edit as its purchase. */
-      readonly itemKey?: string;
       /** Where a new purchase enters instead of its default: any structurally legal index. */
       readonly index?: number;
     }

@@ -26,12 +26,8 @@ import {
   type HermesShrineInventoryOffer,
   type HermesShrineSlotKey,
 } from '../../../authored-project/model';
-import {
-  shopOfferOptionValues,
-  TRAVEL_DEAL_REFILL_ENTRY_KEY,
-} from '../../../authored-project/shop';
+import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../../authored-project/shop';
 import type { Catalog } from '../../../catalog-schema';
-import type { ShopOptionSelection } from '../../../reward-kernel';
 import {
   challengeSwitchKindVariant,
   eliteChallengeAttributeOptions,
@@ -118,26 +114,6 @@ export function captureRoomActionEnd(
 
 type DerivedEntryFrontiers = ReadonlyMap<string, DerivedAcquisitionEntryFrontier>;
 
-/** The refilled slot's items the reached state can stock without a finding. */
-function travelDealRefillValues(
-  catalog: Catalog,
-  profileKey: string,
-  slotIndex: number | undefined,
-  frontier: DerivedAcquisitionEntryFrontier,
-): readonly ShopOptionSelection[] {
-  const slot =
-    slotIndex === undefined
-      ? undefined
-      : catalog.rewards.shops.byKey[profileKey]?.slots.values[slotIndex];
-  if (slot === undefined) return Object.freeze([]);
-  return Object.freeze(
-    shopOfferOptionValues(catalog, profileKey, slot.key).filter((value) => {
-      const result = frontier.evaluateShopOption?.(value);
-      return result?.supported === true && result.findings.length === 0;
-    }),
-  );
-}
-
 function worldShopInteraction(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
@@ -202,12 +178,6 @@ function worldShopInteraction(
           travelDealRefill: Object.freeze({
             rewardType: refill?.offer.rewardType ?? null,
             optionKey: refill?.optionKey ?? null,
-            values: travelDealRefillValues(
-              catalog,
-              shop.profileKey,
-              seeded?.slotIndex,
-              refillFrontier!,
-            ),
             command: Object.freeze({
               kind: 'PurchaseShopTravelDealRefill' as const,
               occurrence: room.origin,

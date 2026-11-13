@@ -10,11 +10,12 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { StygianWellSlotPicker } from './RoomInventoryPanel';
 
 const wellIcon = (itemKey: string): string | undefined => wellArtwork[itemKey] ?? undefined;
 
-const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
+const emptyPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
 
@@ -43,12 +44,7 @@ export function StygianWellTwistChips({
       {twist.boughtSlot === undefined ? (
         bought
       ) : (
-        <StygianWellSlotPicker
-          fieldLabel=""
-          interactions={interactions}
-          required
-          slot={twist.boughtSlot}
-        />
+        <StygianWellSlotPicker fieldLabel="" interactions={interactions} slot={twist.boughtSlot} />
       )}
       <span aria-hidden="true" className="row-reward-arrow">
         →
@@ -57,20 +53,21 @@ export function StygianWellTwistChips({
         findingTarget={findingTarget(twist.address)}
         ariaLabel={`${label} Twist result`}
         id={`${interaction.key}-picker`}
-        itemIcon={(item) => (item.value === null ? undefined : wellIcon(item.value))}
+        itemIcon={(item) => wellIcon(item.value)}
         label=""
         layout="inline"
         loading={picker.pending}
-        model={picker.result ?? emptyNullablePicker}
+        model={picker.result ?? emptyPicker}
         onOpenChange={(open) => {
           if (open) picker.activate();
         }}
         onSelect={(itemKey) => executeIntent(interaction.intentFor(itemKey))}
-        placeholder="Unresolved"
+        placeholder="Twist result"
         triggerIcon={twist.itemKey === null ? undefined : wellIcon(twist.itemKey)}
         {...(twist.itemLabel === undefined ? {} : { triggerLabel: twist.itemLabel })}
         triggerSize="icon"
         triggerUnknown
+        {...(interaction.contextReached ? {} : { disabledHint: candidateWaitingHint })}
       />
     </>
   );

@@ -395,10 +395,11 @@ change: each encounter's identity and wave make-up, a boss's stage picks (a
 fixed part of its encounter script), stocks, which objects are present, and the
 room's layout. The Timeline holds what depends on in-room events or their
 order: Fig Leaf, the Gorgon condition, Aetos, purchases and interactions. The
-Postboss Purging Pool inventory is therefore a Timeline fact, assessed after
-the required fountain use: the Pool unlocks only at that use, whose rarity
-effects can change a listed boon, and nothing between that use and opening the
-Pool removes a listed boon or changes its rarity
+Postboss Purging Pool's entry list is therefore an Overview fact, generated
+from the boons held on entry. The Pool unlocks only at the required fountain
+use, whose rarity effects can change a listed boon; opening the Pool then
+regenerates its list, so a fountain use that changes a listed boon makes the
+regenerated list a Timeline fact of that use
 ([source audit](../audits/room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#source-contacts-and-realized-hosts);
 [Room features](#room-features-at-cleanup)). Plan settings shown on the entry
 room (its biome's settings, the start room's identity) are plan choices, not
@@ -963,8 +964,8 @@ That capability counts only the conversions before the contact, so taking an
 earlier row's offer can starve a later conversion, which then raises its
 finding. Verbs whose row a choice creates are offered where the engine
 already reads them: a door, cage or wheel reroll press at its surface's
-append point, and a Well or Pool reroll and an unpinned Pool slot's sale
-where the room's reached actions end. Each is offered only while a held card
+append point, and a Well or Pool reroll and a Pool slot's sale where the
+room's reached actions end. Each is offered only while a held card
 enables it and the reroll pool pays, and a sale only while its list can show a
 trait still held, which the picker lists. A picker comes **before** a verb
 whose commands it supplies (a reroll press's reward, a Pool sale's trait) or
@@ -972,8 +973,7 @@ whose commands it supplies (a reroll press's reward, a Pool sale's trait) or
 keepsake, the Artificer's replacement, the item Travel Deal restocks). Travel
 Deal restocks as the purchase (the World Shop's first) or rush (the Shrine's
 first initial one) that triggers it settles, so the restocked item is that
-row's outcome: a blank one stops the walk at that row, and only a stocked one
-is offered to buy. Each verb is one edit against the current plan; verbs
+row's outcome, stocked by the edit that first reaches it, and offered to buy. Each verb is one edit against the current plan; verbs
 offered at one gap are alternatives, never composed. A consumer that only
 places what a room requires asks for the placements alone: each row's,
 placement's or purchase's own verb, without a standing row's conversions or
@@ -1215,8 +1215,8 @@ retroactively if acquired after it.
 Purging Pool sales, Well purchases and their rerolls are ordinary ranked
 participants of their host occurrence's action order, inserted by their
 feature's commands rather than from the generic Optional actions pool. A Well
-or Pool has no interaction boundary: its initial stock is optional, a blank
-slot stays native, and use follows from the actions present. Each reroll
+or Pool has no interaction boundary: its stock is filled on first reach and
+use follows from the actions present. Each reroll
 settles in action order: a Well reroll restocks only the slots not bought
 earlier in the room (the room's first purchase under Travel Deal restocks in
 place and stays offered), a Pool reroll redraws the whole list from the traits
@@ -1240,14 +1240,15 @@ ranked reports `purgingPoolUnavailable` and is never assessed, so its sales have
 Fresh File attempt has none of these features; the H Postboss Pool object it
 shows natively is locked and is not an authorable inventory.
 
-Postboss Purging Pool inventory is assessed once immediately after the required
-fountain action and its rarity effects settle, before cleanup sales. Its
-candidates and inventory findings consume that post-fountain state, not room
-entry; an unresolved Phial outcome withholds the pool frontier. This models
-the inventory available when the fountain unlocks the facilities, including
-native regeneration caused by a changed offered rarity. Later sales consume
-the current list and the current equipped traits; only a ranked Pool reroll
-regenerates the list.
+A Postboss Purging Pool's entry list is assessed on entry against the boons
+held then, at the Overview. The required fountain use, once its rarity
+effects settle, judges that list: when a listed boon is gone or its rarity
+changed, the Pool regenerates its list at opening, a separate generation
+judged against the boons held after the use, whose findings belong to that
+use; an unresolved Phial outcome withholds the judgment. Sales and rerolls
+hang on whichever list is on show, the regenerated one when the use made
+one. Later sales consume the current list and the current equipped traits;
+only a ranked Pool reroll regenerates the list again.
 
 Well purchases settle immediately as paid effects and never invoke free-pickup
 alternatives. A purchased Shrine generation, including a purchased Travel Deal
@@ -1684,7 +1685,7 @@ state to their sequence.
 | Outgoing generation, room created, target generated     | Batch generation, the pre-outgoing Run State capture and target-slot history; the Hub board flushes once every Hub slot participates; a Postboss room's creation judges a keepsake drafted at its unchanged rack. |
 | Room exited                                             | Room exit and its Run State capture.                                                                                                                                                                              |
 | Room departed                                           | The Chaos rooms clock, Fight Fight Fight decay and room-clocked Well uses; a Hub departure first captures its Run State.                                                                                          |
-| Fountain used (Room Action)                             | Fountain rarity and the Purging Pool assessment.                                                                                                                                                                  |
+| Fountain used (Room Action)                             | Fountain rarity and the Purging Pool entry list's staleness judgment.                                                                                                                                             |
 | Keepsake rack used (Room Action)                        | Rack equip and its equip results.                                                                                                                                                                                 |
 | Eris interacted (Room Action)                           | Eris's curse.                                                                                                                                                                                                     |
 | Well purchase (Room Action)                             | Stygian Well purchase and refill realization.                                                                                                                                                                     |

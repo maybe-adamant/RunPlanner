@@ -1876,6 +1876,13 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
               semanticAddressKey(well.origin),
               Object.freeze({ ...well, actions: Object.freeze([]) }),
             ),
+      purgingPoolAssessments:
+        entered.purgingPoolAssessment === undefined
+          ? state.purgingPoolAssessments
+          : new Map(state.purgingPoolAssessments).set(
+              semanticAddressKey(entered.purgingPoolAssessment.origin),
+              entered.purgingPoolAssessment,
+            ),
     }),
     ...(checkpoint?.view === undefined
       ? {}
@@ -1967,16 +1974,28 @@ const fountainUsed: ChronologySeamHandler<'fountainUsed'> = (context, state, eve
       : room?.fountainRarityResult,
     state.branch,
     room,
+    room === undefined
+      ? undefined
+      : state.purgingPoolAssessments.get(semanticAddressKey(room.origin)),
   );
-  const pool = transition.purgingPoolAssessment;
+  const pool = transition.purgingPoolRefresh;
+  const entry = pool === undefined ? undefined : state.purgingPoolAssessments.get(pool.key);
   return {
     state: Object.freeze({
       ...state,
       branch: transition.branch,
       purgingPoolAssessments:
-        pool === undefined
+        pool === undefined || entry === undefined
           ? state.purgingPoolAssessments
-          : withKeyed(state.purgingPoolAssessments, pool.key, pool.value),
+          : withKeyed(
+              state.purgingPoolAssessments,
+              pool.key,
+              Object.freeze({
+                ...entry,
+                fountainJudged: true,
+                ...(pool.refresh === undefined ? {} : { refresh: pool.refresh }),
+              }),
+            ),
     }),
     emissions: [
       { kind: 'timelineFacts', facts: transition.timelineFacts },

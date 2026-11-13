@@ -24,7 +24,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
-  purgingPoolCandidateForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
@@ -498,7 +497,7 @@ describe('live interactions at a gap', () => {
     expect(verbAccepted(o, ship, press!.verb, press!.gap, picked)).toBe(true);
   });
 
-  it('offers Well and Pool rerolls and Pool sales with their pickers', () => {
+  it('offers Well and Pool rerolls with their pickers and each stocked Pool slot for sale', () => {
     const well = withJudgment(
       withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
       'F',
@@ -520,11 +519,8 @@ describe('live interactions at a gap', () => {
     );
     expect(choices.map(summary)).toEqual([
       [0, 'keepsakeRack', 'use', 'keepsake', ['MoveRoomAction']],
-      [last, 'stygianWell', 'reroll', 'stygianWellRoll', ['InsertStygianWellReroll']],
       [last, 'purgingPool', 'reroll', 'purgingPoolRoll', ['InsertPurgingPoolReroll']],
-      [last, 'purgingPool', 'sell', 'purgingPoolSale', undefined],
-      [last, 'purgingPool', 'sell', 'purgingPoolSale', undefined],
-      [last, 'purgingPool', 'sell', 'purgingPoolSale', undefined],
+      [last, 'stygianWell', 'reroll', 'stygianWellRoll', ['InsertStygianWellReroll']],
     ]);
     for (const { gap, verb } of choices.filter(({ verb }) => verb.verb === 'reroll'))
       expect(verbAccepted(well, fWell, verb, gap), verb.choice?.picker).toBe(true);
@@ -539,44 +535,15 @@ describe('live interactions at a gap', () => {
     expect(
       choices.filter(({ verb }) => verb.verb === 'reroll').map(({ verb }) => verb.reference),
     ).toEqual([
-      { kind: 'rerollStygianWell', rerollId: 'r1' },
       { kind: 'rerollPurgingPool', rerollId: 'r1' },
+      { kind: 'rerollStygianWell', rerollId: 'r1' },
     ]);
 
-    // Each unpinned sale lists traits to pick, and the walk takes the sale the picker makes.
-    const sales = choices.filter(({ verb }) => verb.verb === 'sell');
-    for (const { gap, verb } of sales) {
-      if (verb.choice?.picker !== 'purgingPoolSale') throw new Error('not a sale picker');
-      expect(verb.choice.traitKeys.length).toBeGreaterThan(0);
-      const sale: ProjectCommand = {
-        kind: 'SellPurgingPoolRollSlot',
-        occurrence: fWell,
-        rollKey: verb.choice.rollKey,
-        slotKey: verb.choice.slotKey,
-        traitKey: verb.choice.traitKeys[0]!,
-        index: gap,
-      };
-      expect(verbAccepted(well, fWell, verb, gap, [sale]), verb.choice.slotKey).toBe(true);
-    }
-
-    // A pinned slot's sale is a roster row, offered from the fountain on.
-    const pinned = applyProjectCommand(well, catalog, {
-      kind: 'ReplacePurgingPoolSlot',
-      occurrence: fWell,
-      slotKey: 'left',
-      traitKey: purgingPoolCandidateForProjectEvaluationAssembly(
-        simulateProjectAssembly(catalog, well),
-        fWell,
-      )!.candidateTraitKeysBySlot.left[0]!,
-    });
-    const pinnedSales = objectVerbs(pinned).filter(({ verb }) => verb.verb === 'sell');
-    expect(pinnedSales.filter(({ verb }) => verb.choice !== undefined)).toHaveLength(2);
-    // One sale verb for each slot at a gap.
-    const perGap = pinnedSales.map(({ gap, verb }) => `${gap} ${roomActionKey(verb.reference!)}`);
+    // Each stocked slot's sale is a roster row, offered from the fountain on.
+    const sales = objectVerbs(well).filter(({ verb }) => verb.verb === 'sell');
+    const perGap = sales.map(({ gap, verb }) => `${gap} ${roomActionKey(verb.reference!)}`);
     expect(new Set(perGap).size).toBe(perGap.length);
-    const sale = pinnedSales.find(
-      ({ verb }) => verb.commands !== undefined && verb.standing !== true,
-    );
+    const sale = sales.find(({ verb }) => verb.commands !== undefined && verb.standing !== true);
     expect(sale && summary(sale)).toEqual([
       1,
       'purgingPool',
@@ -584,7 +551,7 @@ describe('live interactions at a gap', () => {
       undefined,
       ['InsertRoomAction'],
     ]);
-    expect(verbAccepted(pinned, fWell, sale!.verb, sale!.gap)).toBe(true);
+    expect(verbAccepted(well, fWell, sale!.verb, sale!.gap)).toBe(true);
   });
 
   it("offers no Well reroll while a removed reroll's purchase blocks the room", () => {
@@ -601,12 +568,21 @@ describe('live interactions at a gap', () => {
       occurrence: fWell,
       index: roomOrder(well, fWell).length,
     });
-    const bought = apply(rerolled, {
+    const pinned = apply(rerolled, {
+      kind: 'ReplaceStygianWellRollOffer',
+      action: createRoomActionAddress(
+        fBiome,
+        fWell.occurrenceId,
+        roomActionKey({ kind: 'rerollStygianWell', rerollId: 'r1' }),
+      ),
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    const bought = apply(pinned, {
       kind: 'SetStygianWellPurchase',
       occurrence: fWell,
       generationKey: 'r1:healing',
       purchased: true,
-      itemKey: 'ArmorBoostStore',
     });
     // Removing the reroll takes its purchase with it; a saved plan may still hold one.
     const raw = JSON.parse(encodeProjectDocument(bought));

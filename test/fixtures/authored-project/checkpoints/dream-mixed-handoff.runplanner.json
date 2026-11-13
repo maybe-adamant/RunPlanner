@@ -641,9 +641,9 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "FirstHitHealTrait",
+                  "secondLeft": "TemporaryMoveSpeedTrait",
+                  "secondRight": "TemporaryBoonRarityTrait"
                 }
               },
               "keepsakeRack": {
@@ -1827,9 +1827,9 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "FirstHitHealTrait",
+                  "secondLeft": "RandomStoreItem",
+                  "secondRight": "MetaCurrencyRange"
                 }
               },
               "keepsakeRack": {
@@ -2373,9 +2373,9 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "FirstHitHealTrait",
+                  "secondLeft": "MemPointsCommonRange",
+                  "secondRight": "TemporaryImprovedCastTrait"
                 }
               },
               "keepsakeRack": {

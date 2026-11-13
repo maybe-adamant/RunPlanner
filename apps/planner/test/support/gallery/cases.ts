@@ -79,7 +79,6 @@ import {
   createCompleteFGProject,
   createGoldenFGHIProject,
   createUnderworldFWellCheckpoint,
-  loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOPProject,
@@ -1708,33 +1707,6 @@ export const galleryCases: readonly GalleryCase[] = [
     label: 'Stygian Well purchases with a Fateful Twist',
     shows: ['Well purchase', 'Fateful Twist', 'fountain + Phial', 'Keepsake Rack'],
     project: loadUnderworldTwistScyllaCheckpoint,
-    target: room('F', 'golden-f-preboss-shop:postboss'),
-  },
-  {
-    id: 'well-twist-unset',
-    label: 'Stygian Well Fateful Twist bought, its result not set',
-    shows: ['stop at the purchase row', 'Twist result repair', 'Not reached yet'],
-    project: loadUnderworldFGProject,
-    commands: [
-      ...(
-        [
-          ['healing', 'ArmorBoostStore'],
-          ['secondLeft', 'RandomStoreItem'],
-          ['secondRight', 'TemporaryBoonRarityTrait'],
-        ] as const
-      ).map(([slotKey, itemKey]): GalleryStep => (project) => ({
-        kind: 'ReplaceStygianWellOffer',
-        occurrence: occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
-        slotKey,
-        itemKey,
-      })),
-      (project) => ({
-        kind: 'SetStygianWellPurchase',
-        occurrence: occurrenceAddress(project, 'F', 'golden-f-preboss-shop:postboss'),
-        generationKey: 'initial:secondLeft',
-        purchased: true,
-      }),
-    ],
     target: room('F', 'golden-f-preboss-shop:postboss'),
   },
   {

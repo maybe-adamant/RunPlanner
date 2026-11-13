@@ -1315,15 +1315,15 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "FirstHitHealTrait",
+                  "secondLeft": "LimitedSwapTraitDrop",
+                  "secondRight": "MemPointsCommonRange"
                 }
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
+                  "left": "HeraCastBoon",
+                  "middle": "ZeusSpecialBoon",
                   "right": null
                 }
               },
@@ -2593,16 +2593,16 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "LastStandShopItem",
+                  "secondLeft": "TemporaryMoveSpeedTrait",
+                  "secondRight": "TemporaryImprovedExTrait"
                 }
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "HeraCastBoon",
+                  "middle": "HestiaManaBoon",
+                  "right": "HestiaWeaponBoon"
                 }
               },
               "keepsakeRack": {
@@ -4043,16 +4043,16 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "HealDropRange",
+                  "secondLeft": "ExtendedShopTrait",
+                  "secondRight": "TemporaryImprovedDefenseTrait"
                 }
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "ApolloRetaliateBoon",
+                  "middle": "HestiaSpecialBoon",
+                  "right": "HestiaManaBoon"
                 }
               },
               "keepsakeRack": {

@@ -73,7 +73,7 @@ describe('Stygian Well rerolls', () => {
     withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
   );
 
-  it('pins slots on the reroll row, and buys a rerolled slot with its item', () => {
+  it('pins slots on the reroll row, and buys a pinned rerolled slot', () => {
     const rerolled = apply(base, {
       kind: 'InsertStygianWellReroll',
       occurrence: room,
@@ -86,7 +86,6 @@ describe('Stygian Well rerolls', () => {
       occurrence: room,
       generationKey: 'r1:healing' as const,
       purchased: true,
-      itemKey: 'HealDropRange',
     };
     // The reroll's row pins what it restocks; an unpinned slot stays native.
     const row = node.room.roomActions!.rows.find(
@@ -105,7 +104,9 @@ describe('Stygian Well rerolls', () => {
       slotKey: 'healing',
       itemKey: 'HealDropRange',
     });
-    const bought = projectStructuredWorkspaceFixture(apply(rerolled, purchase));
+    const bought = projectStructuredWorkspaceFixture(
+      apply(apply(rerolled, slot.intentFor('HealDropRange').command), purchase),
+    );
     const purchased = postboss(bought).room.roomActions!.rows.find(
       (candidate) =>
         candidate.reference.kind === 'purchaseStygianWellOffer' &&

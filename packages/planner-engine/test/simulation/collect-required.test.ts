@@ -1,3 +1,4 @@
+import { stockTestProject } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -68,6 +69,9 @@ const PLACEMENT_FINDINGS: ReadonlySet<string> = new Set([
 ]);
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
+/** Legal trait offers authored, with the stock their traits leave stale redrawn as an edit would. */
+const stockAuthored = (project: ProjectDocument) =>
+  stockTestProject(authorLegalTraitOffers(project));
 
 function roomOrder(project: ProjectDocument, room: OccurrenceAddress) {
   return (
@@ -328,8 +332,8 @@ describe('Collect all required', () => {
       offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
       purchased: true,
     });
-    project = authorLegalTraitOffers(
-      applyProjectCommand(project, catalog, {
+    project = stockAuthored(
+      applyProjectCommand(stockTestProject(project), catalog, {
         kind: 'PlaceEchoGoldPickup',
         entry: createAcquisitionEntryAddress(
           createAcquisitionSiteAddress(shop, 'roomExit'),
@@ -365,12 +369,14 @@ describe('Collect all required', () => {
     const hBiome = createBiomeAddress('Underworld', 'H');
     const shop = createOccurrenceAddress(hBiome, createOccurrenceId('golden-h-preboss-shop'));
     const bought = evaluate(
-      authorLegalTraitOffers(
-        applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
-          kind: 'ReplaceShopPurchaseParticipation',
-          offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
-          purchased: true,
-        }),
+      stockAuthored(
+        stockTestProject(
+          applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
+            kind: 'ReplaceShopPurchaseParticipation',
+            offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
+            purchased: true,
+          }),
+        ),
       ),
     );
     const next = nextRequiredPlacement(catalog, bought, shop, new Set());
@@ -394,12 +400,14 @@ describe('Collect all required', () => {
     const hBiome = createBiomeAddress('Underworld', 'H');
     const shop = createOccurrenceAddress(hBiome, createOccurrenceId('golden-h-preboss-shop'));
     const bought = evaluate(
-      authorLegalTraitOffers(
-        applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
-          kind: 'ReplaceShopPurchaseParticipation',
-          offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
-          purchased: true,
-        }),
+      stockAuthored(
+        stockTestProject(
+          applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
+            kind: 'ReplaceShopPurchaseParticipation',
+            offer: createShopOfferAddress(hBiome, shop.occurrenceId, 'Boon'),
+            purchased: true,
+          }),
+        ),
       ),
     );
     expect(isRoomPlacement(bought, shop)).toBe(true);
@@ -416,9 +424,7 @@ describe('Collect all required', () => {
       'interactShopOffer',
       'interactAcquisitionEntry',
     ]);
-    expect(evaluate(authorLegalTraitOffers(collected.assembly.project)).evaluation.issue).toBe(
-      undefined,
-    );
+    expect(evaluate(stockAuthored(collected.assembly.project)).evaluation.issue).toBe(undefined);
   });
 
   it('pins the default order collected in a stripped Fields room: clear then collect, cage by cage', () => {

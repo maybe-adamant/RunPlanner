@@ -22,7 +22,6 @@ import type {
   WorkspaceRoomActionRow,
   WorkspaceRoomLive,
 } from '../contracts/timeline';
-import { featureRollCatalog } from './feature-roll-assembly';
 import type { OccurrenceActionLabelParts } from './occurrence-action-label';
 
 type EngineGap = LiveRoom['gaps'][number];
@@ -79,7 +78,7 @@ export function projectRoomLive(input: {
   /** Names a reference that is not a Timeline row yet, such as an unbought item. */
   readonly labelParts: (reference: RoomActionReference) => OccurrenceActionLabelParts;
 }): WorkspaceRoomLive | undefined {
-  const { catalog, live, owner } = input;
+  const { live, owner } = input;
   const frontier = live.gaps.find((candidate) => candidate.index === live.frontier);
   if (frontier === undefined) return undefined;
   const rowByKey = new Map(input.rows.map((row) => [row.key, row]));
@@ -111,34 +110,10 @@ export function projectRoomLive(input: {
       slot: parts.slot ?? row?.slot,
     };
   };
-  const poolLabels = featureRollCatalog(catalog, 'purgingPool');
   const verbAction = (gap: EngineGap, verb: LiveVerb): WorkspaceLiveVerbAction | undefined => {
     const choice = verb.choice;
     if (choice?.timing === 'before') {
       switch (choice.picker) {
-        case 'purgingPoolSale':
-          return Object.freeze({
-            kind: 'choose' as const,
-            choices: Object.freeze(
-              choice.traitKeys.map((traitKey) =>
-                Object.freeze({
-                  key: traitKey,
-                  label: poolLabels.itemLabel(traitKey),
-                  icon: Object.freeze({ traitKey }),
-                  intent: Object.freeze({
-                    command: Object.freeze({
-                      kind: 'SellPurgingPoolRollSlot' as const,
-                      occurrence: owner,
-                      rollKey: choice.rollKey,
-                      slotKey: choice.slotKey,
-                      traitKey,
-                      index: gap.index,
-                    }),
-                  }),
-                }),
-              ),
-            ),
-          });
         case 'rerollPress':
           return Object.freeze({
             kind: 'rerollPress' as const,

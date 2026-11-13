@@ -1,3 +1,4 @@
+import { stockTestProject } from '@run-planner/test-fixtures/shared';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { format, resolveConfig } from 'prettier';
@@ -307,7 +308,7 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
   },
   {
     name: 'underworld-f-rerolls',
-    project: underworldFRerollsProject,
+    project: () => stockTestProject(underworldFRerollsProject()),
     wire: underworldFRerollsFixture,
   },
   {
@@ -360,7 +361,9 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
   {
     name: 'underworld-start-g-rivals-boss',
     project: () =>
-      withStartPoint(loadUnderworldTwistScyllaCheckpoint(), { biomeKey: 'G', point: 'boss' }),
+      stockTestProject(
+        withStartPoint(loadUnderworldTwistScyllaCheckpoint(), { biomeKey: 'G', point: 'boss' }),
+      ),
     wire: underworldStartGRivalsBossFixture,
   },
   {

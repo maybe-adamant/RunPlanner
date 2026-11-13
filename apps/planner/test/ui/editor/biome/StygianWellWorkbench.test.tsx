@@ -289,7 +289,7 @@ describe('Stygian Well workbench', () => {
     },
   );
 
-  it('clears an incompatible retained Twist result when its parent item is replaced', async () => {
+  it('draws a new Twist result when its cleared parent item is picked again', async () => {
     const owner = createOccurrenceAddress(goldenFBiome, postbossId);
     let project = applyProjectCommand(authoredWell(), catalog, {
       kind: 'SetStygianWellPurchase',
@@ -313,18 +313,18 @@ describe('Stygian Well workbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
     openOverview();
     const offer = screen.getByRole('button', { name: 'Stygian Well Offer 2 Item' });
-    expect(hintOf(offer)).toContain('Unresolved');
     expect(screen.queryByRole('button', { name: /Twist result$/ })).toBeNull();
 
     await view.user.click(offer);
     await view.user.click(screen.getByRole('option', { name: 'Fateful Twist' }));
+    // The purchase reaches a new Twist, which its edit stocks.
     expect(
       view.application.store
         .getState()
         .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
           (room) => room.occurrenceId === postbossId,
         )?.stygianWell?.twistResultKeyByGeneration?.['initial:secondLeft'],
-    ).toBeUndefined();
+    ).toEqual(expect.any(String));
   });
 
   it("shows each Well purchase row with its item's own icon", () => {

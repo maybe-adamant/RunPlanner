@@ -57,7 +57,7 @@ import type {
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { occurrenceActionLabel, occurrenceActionLabelParts } from './occurrence-action-label';
-import { assembleFeatureRerollSlots } from './feature-roll-assembly';
+import { assembleFeatureRerollSlots, assemblePurgingPoolSlots } from './feature-roll-assembly';
 import {
   projectRoomLifecycleTimeline,
   splitAtRoomStop,
@@ -562,6 +562,28 @@ function roomActionsForOccurrence(
           interactionKey: `stygianWellTwist:${semanticAddressKey(owner)}:${generationKey}`,
         });
       })();
+      // The fountain use that makes the Pool's entry list stale hosts the list it regenerates.
+      const purgingPoolRefresh = (() => {
+        const refresh = input.purgingPoolAssessment?.(owner)?.refresh;
+        const pool = input.occurrence.purgingPool;
+        if (row.reference.kind !== 'useFountain' || refresh === undefined || pool === undefined)
+          return undefined;
+        const slots = assemblePurgingPoolSlots({
+          catalog: input.catalog,
+          markerDestinations: input.markerDestinations,
+          owner,
+          list: 'refresh',
+          stored: pool.refreshTraitKeyBySlot ?? {},
+          candidatesBySlot: refresh.candidateTraitKeysBySlot,
+          declaredTraitKeys: Object.freeze([]),
+          offeredSlotKeys: refresh.offeredSlotKeys,
+        });
+        input.markerDestinations.setRoomTab(
+          slots.map((slot) => slot.marker),
+          'actions',
+        );
+        return Object.freeze({ slots });
+      })();
       const sourceFamily = row.sourceFamily;
       const labelParts = occurrenceActionLabelParts(
         input.catalog,
@@ -656,6 +678,7 @@ function roomActionsForOccurrence(
         timing: row.label,
         ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
         ...(fountainRarity === undefined ? {} : { fountainRarity }),
+        ...(purgingPoolRefresh === undefined ? {} : { purgingPoolRefresh }),
         ...(stygianWellTwist === undefined ? {} : { stygianWellTwist }),
         ...(row.reference.kind === 'rerollStygianWell' || row.reference.kind === 'rerollPurgingPool'
           ? {

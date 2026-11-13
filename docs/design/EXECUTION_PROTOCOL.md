@@ -110,12 +110,13 @@ target, which is never entered, publishes none.
 
 A native room field locked by `BlockedByRequirements`, such as the H Postboss
 Pool on a fresh profile, is unusable natively and counts as absent. A present
-Stygian Well or Pool of Purging is emitted with its initial roll's pinned
-slots only; the native adapter realizes the object, installs each pinned slot
-and leaves the others to vanilla generation. It also lists its rerolls in
-action order with only their pinned slots: the k-th native reroll installs the k-th entry, an unpinned slot
-stays native, and a Well slot bought earlier in the room stays blank. Each
-purchase and sale names its roll.
+Stygian Well or Pool of Purging is emitted with every slot of its initial
+roll; the native adapter realizes the object and installs each slot. A Pool
+also emits the list it regenerates at its first opening when the fountain use
+changed a listed boon, which the adapter installs in place of the entry list.
+Both list their rerolls in action order, slot by slot: the k-th native reroll
+installs the k-th entry, and a Well slot bought earlier in the room is not
+restocked and stays blank. Each purchase and sale names its roll.
 
 A rerolled trait, Chaos or Pom level screen lists its earlier screens, oldest
 first, beside its final one. The adapter installs the first when the screen

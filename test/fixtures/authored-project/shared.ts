@@ -34,6 +34,7 @@ export {
   placeTestRushedShrinePickup,
   replaceTestPlacedItem,
   settleTestEdit,
+  stockTestProject,
 } from './settled-edit';
 export { catalogWithEmptyShopGroup } from './empty-shop-group';
 export { legacyRareEpicHexTrees } from './legacy-hex-trees';

@@ -792,26 +792,25 @@ export function bindOccurrenceLocalInteractions(
           purgingPoolSlots.set(
             slot.interactionKey,
             Object.freeze({
-              intentFor: (traitKey: string | null) =>
+              contextReached: requirement.assessment === 'assessed',
+              intentFor: (traitKey: string) =>
                 Object.freeze({
                   command: Object.freeze({
                     kind: 'ReplacePurgingPoolSlot' as const,
                     occurrence: requirement.owner,
                     slotKey: slot.slotKey,
                     traitKey,
+                    ...(requirement.list === undefined ? {} : { list: requirement.list }),
                   }),
                 }),
               key: slot.interactionKey,
               load: createMemoizedStableIdentityPickerLoad({
                 assessment: requirement.assessment,
-                choices: [
-                  { label: 'Unresolved', value: null },
-                  ...slot.candidateTraits.map((trait) => ({
-                    label: trait.label,
-                    value: trait.key,
-                  })),
-                ],
-                selected: slot.traitKey,
+                choices: slot.candidateTraits.map((trait) => ({
+                  label: trait.label,
+                  value: trait.key,
+                })),
+                selected: slot.traitKey ?? undefined,
                 selectedLabel: slot.traitLabel,
               }),
               owner: requirement.owner,
@@ -932,6 +931,7 @@ export function bindOccurrenceLocalInteractions(
             slot.offerInteractionKey,
             Object.freeze({
               key: slot.offerInteractionKey,
+              contextReached: requirement.assessment === 'assessed',
               load: createMemoizedStableIdentityPickerLoad({
                 assessment: requirement.assessment,
                 choices: slot.candidateRewards.map((reward) => ({
@@ -984,23 +984,21 @@ export function bindOccurrenceLocalInteractions(
             slot.offerInteractionKey,
             Object.freeze({
               key: slot.offerInteractionKey,
+              contextReached: requirement.assessment === 'assessed',
               load: createMemoizedStableIdentityPickerLoad({
                 assessment: requirement.assessment,
-                choices: [
-                  { label: 'Unresolved', value: null },
-                  ...slot.candidateItems.map((item) => ({
-                    label: item.label,
-                    value: item.key,
-                  })),
-                ],
-                selected: slot.itemKey,
+                choices: slot.candidateItems.map((item) => ({
+                  label: item.label,
+                  value: item.key,
+                })),
+                selected: slot.itemKey ?? undefined,
                 selectedLabel: slot.itemLabel,
               }),
               owner: requirement.owner,
               generationKey: slot.generationKey,
               itemKey: slot.itemKey,
               candidateItemKeys: slot.candidateItemKeys,
-              intentFor: (itemKey: string | null) =>
+              intentFor: (itemKey: string) =>
                 Object.freeze({
                   command:
                     slot.slotKey === 'travelDealRefill'
@@ -1024,19 +1022,17 @@ export function bindOccurrenceLocalInteractions(
             twist.interactionKey,
             Object.freeze({
               key: twist.interactionKey,
+              contextReached: requirement.assessment === 'assessed',
               load: createMemoizedStableIdentityPickerLoad({
                 assessment: requirement.assessment,
-                choices: [
-                  { label: 'Unresolved', value: null },
-                  ...twist.candidateItems.map((item) => ({
-                    label: item.label,
-                    value: item.key,
-                  })),
-                ],
-                selected: twist.itemKey,
+                choices: twist.candidateItems.map((item) => ({
+                  label: item.label,
+                  value: item.key,
+                })),
+                selected: twist.itemKey ?? undefined,
                 selectedLabel:
                   twist.itemKey === null
-                    ? 'Unresolved'
+                    ? undefined
                     : (catalog.rewards.shops.byKey.RoomShop?.groups.values
                         .flatMap((group) => group.options.values)
                         .find((option) => option.key === twist.itemKey)?.label ?? twist.itemKey),
@@ -1045,7 +1041,7 @@ export function bindOccurrenceLocalInteractions(
               generationKey: twist.generationKey,
               itemKey: twist.itemKey,
               candidateItemKeys: twist.candidateItemKeys,
-              intentFor: (itemKey: string | null) =>
+              intentFor: (itemKey: string) =>
                 Object.freeze({
                   command: Object.freeze({
                     kind: 'ReplaceStygianWellTwistResult' as const,

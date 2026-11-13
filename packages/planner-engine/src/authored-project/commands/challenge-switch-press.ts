@@ -10,7 +10,6 @@ const PLACING_COMMANDS = new Set<ProjectCommand['kind']>([
   'InsertReroll',
   'InsertStygianWellReroll',
   'InsertPurgingPoolReroll',
-  'SellPurgingPoolRollSlot',
 ]);
 
 function pressedLast(occurrence: RoomOccurrence): RoomOccurrence {

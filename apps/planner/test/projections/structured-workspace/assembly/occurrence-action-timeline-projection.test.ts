@@ -481,7 +481,10 @@ describe('a room whose walk stops in it', () => {
   });
 
   it('holds its doors when it stops at a row after the doors open', () => {
-    const timeline = galleryTimeline('well-twist-unset', 'golden-f-preboss-shop:postboss');
+    const timeline = galleryTimeline(
+      'postboss-rack-result-unset',
+      'golden-f-preboss-shop:postboss',
+    );
     expect(shape(timeline.entries)).toContain('doorsOpened');
     expect(shape(timeline.entries).at(-1)).toBe('action');
     expect(timeline.doorsWait).toBe(true);

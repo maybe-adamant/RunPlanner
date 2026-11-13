@@ -1,5 +1,6 @@
 import {
   INITIAL_ROLL_KEY,
+  PURGING_POOL_REFRESH_ROLL_KEY,
   createRoomFeatureAddress,
   featureRerolls,
   purgingPoolRerollPins,
@@ -10,6 +11,7 @@ import {
   stygianWellRerollPins,
   type FeatureRerollAction,
   type OccurrenceAddress,
+  type PurgingPoolSlotKey,
   type RollFeature,
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
@@ -19,7 +21,7 @@ import type {
   StygianWellCandidateCapability,
 } from '@run-planner/engine/simulation';
 
-import type { WorkspaceFeatureRollSlot } from '../contracts/features';
+import type { WorkspaceFeatureRollSlot, WorkspacePurgingPoolSlot } from '../contracts/features';
 import type {} from '../interactions/interaction-requirements';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 
@@ -138,4 +140,60 @@ export function assembleFeatureRerollSlots(input: {
     });
   });
   return Object.freeze({ feature, slots: Object.freeze(slots) });
+}
+
+const POOL_SLOT_KEYS = ['left', 'middle', 'right'] as const;
+
+/**
+ * One Pool list's slots as the Pool control shows them: the entry list's three,
+ * or the slots the regenerated list shows or still stores.
+ */
+export function assemblePurgingPoolSlots(input: {
+  readonly catalog: Catalog;
+  readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
+  readonly owner: OccurrenceAddress;
+  readonly list: 'entry' | 'refresh';
+  readonly stored: Readonly<Partial<Record<PurgingPoolSlotKey, string | null>>>;
+  /** The list's candidates where the walk reached it. */
+  readonly candidatesBySlot: Readonly<Record<PurgingPoolSlotKey, readonly string[]>> | undefined;
+  /** Every trait a Pool can list, while the list is unreached. */
+  readonly declaredTraitKeys: readonly string[];
+  readonly offeredSlotKeys?: readonly PurgingPoolSlotKey[];
+}): readonly WorkspacePurgingPoolSlot[] {
+  const labels = featureRollCatalog(input.catalog, 'purgingPool');
+  const slotKeys =
+    input.list === 'entry'
+      ? POOL_SLOT_KEYS
+      : POOL_SLOT_KEYS.filter(
+          (slotKey) =>
+            (input.offeredSlotKeys ?? []).includes(slotKey) ||
+            (input.stored[slotKey] ?? null) !== null,
+        );
+  return Object.freeze(
+    slotKeys.map((slotKey) => {
+      const candidateTraitKeys = input.candidatesBySlot?.[slotKey] ?? input.declaredTraitKeys;
+      const traitKey = input.stored[slotKey] ?? null;
+      const address = createRoomFeatureAddress(input.owner, {
+        kind: 'purgingPoolOffer',
+        slotKey,
+        ...(input.list === 'refresh' ? { rollKey: PURGING_POOL_REFRESH_ROLL_KEY } : {}),
+      });
+      return Object.freeze({
+        address,
+        marker: input.markerDestinations.marker(address),
+        candidateTraitKeys,
+        candidateTraits: Object.freeze(
+          candidateTraitKeys.map((key) => Object.freeze({ key, label: labels.itemLabel(key) })),
+        ),
+        interactionKey:
+          input.list === 'entry'
+            ? `purgingPool:${semanticAddressKey(input.owner)}:${slotKey}`
+            : `purgingPool:${semanticAddressKey(input.owner)}:refresh:${slotKey}`,
+        key: slotKey,
+        label: labels.slotLabel(slotKey),
+        traitKey,
+        ...(traitKey === null ? {} : { traitLabel: labels.itemLabel(traitKey) }),
+      });
+    }),
+  );
 }

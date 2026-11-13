@@ -78,8 +78,14 @@ export interface HermesShrineRoomAssessment {
 
 export interface PurgingPoolRoomAssessment {
   readonly origin: OccurrenceAddress;
-  /** The initial list, assessed after the fountain. */
+  /** The entry list, assessed against the traits held on entry. */
   readonly assessment: PurgingPoolAssessment;
+  /** Each listed trait's rarity on entry: a fountain use that changes one makes the list stale. */
+  readonly entryRarities: Readonly<Record<string, string | undefined>>;
+  /** The list the Pool regenerates when the fountain use made the entry list stale. */
+  readonly refresh?: PurgingPoolAssessment;
+  /** The fountain use judged the entry list, stale or not. */
+  readonly fountainJudged?: boolean;
   /** Each reached reroll's list, assessed at the reroll, by its id. */
   readonly rolls?: Readonly<
     Record<
@@ -87,6 +93,8 @@ export interface PurgingPoolRoomAssessment {
       {
         readonly offeredSlotKeys: readonly import('../../../authored-project/model').PurgingPoolSlotKey[];
         readonly assessment: PurgingPoolAssessment;
+        /** The traits on show just before the reroll when the game bans one of them. */
+        readonly shownTraitKeys?: readonly string[];
       }
     >
   >;

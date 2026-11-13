@@ -40,7 +40,6 @@
 }
 
 .room-overview-panel .room-feature-presence-row,
-.room-overview-panel > .room-contract-pedestal,
 .room-overview-panel > .encounter-phase-control {
   padding: 0;
   border: 0;
@@ -142,12 +141,6 @@
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
-}
-
-.room-contract-pedestal {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
 }
 
 .shop-family-offer-row {
@@ -1932,7 +1925,6 @@
  * Sub-rows sit under their section or object header. Their label column gives
  * up the indent, so every picker and secondary keeps the same x.
  */
-.room-overview-workbench .shop-family-offer-list > .shop-family-offer-row,
 .room-overview-workbench
   :is(.room-structure-workbench, .fields-room-editor)
   > .room-overview-panel
@@ -1965,9 +1957,7 @@
   background: none;
 }
 
-.room-overview-workbench .encounter-phase-control,
-.room-overview-workbench .room-contract-pedestal,
-.room-overview-workbench .shop-family-offer-list {
+.room-overview-workbench .encounter-phase-control {
   gap: 6px;
 }
 
@@ -3083,15 +3073,6 @@ span.hub-board-status-line {
   line-height: 1;
 }
 
-/* A room object's inventory reads as one line: the object, then its slots. */
-.room-inventory-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 6px 14px;
-  min-width: 0;
-}
-
 /* A Shrine slot's delivery delay follows its chip as a compact number on the chip's center line. */
 .hermes-shrine-delay {
   display: inline-flex;
@@ -3121,17 +3102,12 @@ span.hub-board-status-line {
 .numbered-slot-chip > .reward-value-editor,
 .room-overview-workbench .numbered-slots .field-control-inline,
 .room-overview-workbench .numbered-slots .reward-value-editor,
-.room-overview-workbench .room-inventory-line > :is(.field-control-inline, .reward-value-editor) {
+.room-object-inventory > :is(.field-control-inline, .reward-value-editor) {
   display: inline-flex;
   flex: 0 0 auto;
   width: auto;
   min-width: 0;
   max-width: none;
-}
-
-.room-overview-workbench .room-inventory-line {
-  display: flex;
-  flex-wrap: wrap;
 }
 
 /* A toggle that cannot change is gray and locked, apart from a dim off toggle. */
@@ -3184,21 +3160,11 @@ span.hub-board-status-line {
   padding-left: 0;
 }
 
-/* Each object keeps its own line: its toggle, then its slots and choices when on. */
-.room-overview-workbench .room-overview-panel .room-contract-pedestal {
-  padding-left: var(--overview-subrow-indent);
-}
-
 .room-object-fixed {
   display: inline-grid;
   width: var(--timeline-control-height, 26px);
   height: var(--timeline-control-height, 26px);
   place-items: center;
-}
-
-/* An object's toggle centers on the 30px row its slot chips and the presence rows share. */
-.room-inventory-line > :is(.icon-toggle, .icon-toggle-disabled, .room-object-fixed) {
-  margin-block: 2px;
 }
 
 .room-object-inventory {

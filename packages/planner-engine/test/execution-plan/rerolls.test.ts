@@ -26,6 +26,7 @@ import {
   loadUnderworldFStygianWellCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
+import { settleTestEdit } from '@run-planner/test-fixtures/shared';
 import {
   firstSupportedReroll,
   withArcana,
@@ -341,7 +342,7 @@ describe('Well and Pool roll publication', () => {
     );
     const end = () => occurrence(project, postboss, 0).roomActions.order.length;
     const apply = (command: Parameters<typeof applyProjectCommand>[2]) => {
-      project = applyProjectCommand(project, catalog, command);
+      project = settleTestEdit(project, command);
     };
     apply({ kind: 'InsertStygianWellReroll', occurrence: room, index: end() });
     apply({
@@ -381,7 +382,7 @@ describe('Well and Pool roll publication', () => {
       ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
     );
     const apply = (command: Parameters<typeof applyProjectCommand>[2]) => {
-      project = applyProjectCommand(project, catalog, command);
+      project = settleTestEdit(project, command);
     };
     for (const generationKey of [
       'travelDealRefill',
@@ -395,11 +396,16 @@ describe('Well and Pool roll publication', () => {
       index: occurrence(project, postboss, 0).roomActions.order.length,
     });
     apply({
+      kind: 'ReplaceStygianWellRollOffer',
+      action: action(['rerollStygianWell', 'r1']),
+      slotKey: 'secondLeft',
+      itemKey: 'TemporaryBoonRarityTrait',
+    });
+    apply({
       kind: 'SetStygianWellPurchase',
       occurrence: room,
       generationKey: 'r1:secondLeft',
       purchased: true,
-      itemKey: 'TemporaryBoonRarityTrait',
     });
     apply({
       kind: 'SetStygianWellPurchase',
@@ -423,8 +429,16 @@ describe('Well and Pool roll publication', () => {
     expect(roomPlan.overview.stygianWell?.rerolls).toEqual([
       { rollKey: 'r1', offers: [{ generationKey: 'r1:healing', offerKey: 'HealDropRange' }] },
     ]);
+    // The reroll's edit stocked its whole list.
     expect(roomPlan.overview.purgingPool?.rerolls).toEqual([
-      { rollKey: 'r1', traits: [{ slotKey: 'middle', traitKey: 'HeraCastBoon' }] },
+      {
+        rollKey: 'r1',
+        traits: [
+          expect.objectContaining({ slotKey: 'left' }),
+          { slotKey: 'middle', traitKey: 'HeraCastBoon' },
+          expect.objectContaining({ slotKey: 'right' }),
+        ],
+      },
     ]);
     const guide = roomPlan.roomGuide.map((row) => row.description);
     expect(guide).toContainEqual({ kind: 'rerollStygianWell', rollKey: 'r1' });

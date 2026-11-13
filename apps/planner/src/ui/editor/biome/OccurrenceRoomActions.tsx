@@ -28,6 +28,7 @@ import { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
 import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 import { TimelineRow } from './TimelineRow';
+import { PurgingPoolRefreshRow } from './commerce/PurgingPoolRefreshRow';
 import { LiveRow, TimelineGapControl } from './LiveActions';
 import { TimelineMapStageContext, type TimelineMapStage } from './timelineMapStage';
 import { RowRewardName } from './RowRewardName';
@@ -870,6 +871,9 @@ export function RoomActionsWorkbench({
         />
         {row.travelDealLine === undefined ? null : (
           <TravelDealLine interactions={interactions} line={row.travelDealLine} />
+        )}
+        {row.purgingPoolRefresh === undefined ? null : (
+          <PurgingPoolRefreshRow interactions={interactions} refresh={row.purgingPoolRefresh} />
         )}
         {actions.actionSpawns
           ?.filter((spawn) => spawn.sourceActionKey === row.key)

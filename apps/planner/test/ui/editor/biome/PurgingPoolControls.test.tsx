@@ -1,15 +1,6 @@
 // @vitest-environment jsdom
-import { catalog } from '@run-planner/hades2-catalog';
-import {
-  applyProjectCommand,
-  createOccurrenceAddress,
-  createOccurrenceId,
-  type ProjectDocument,
-} from '@run-planner/engine/authored-project';
-import {
-  createUnderworldFPoolCheckpoint,
-  goldenFBiome,
-} from '@run-planner/test-fixtures/underworld';
+import { createOccurrenceId, type ProjectDocument } from '@run-planner/engine/authored-project';
+import { createUnderworldFPoolCheckpoint } from '@run-planner/test-fixtures/underworld';
 import {
   createFreshFileFProject,
   freshFileFPostbossId,
@@ -29,20 +20,6 @@ import {
 afterEach(cleanup);
 
 const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
-const postboss = createOccurrenceAddress(goldenFBiome, postbossId);
-
-function withPoolSlot(
-  project: ProjectDocument,
-  slotKey: 'left' | 'middle' | 'right',
-  traitKey: string | null,
-): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplacePurgingPoolSlot',
-    occurrence: postboss,
-    slotKey,
-    traitKey,
-  });
-}
 
 function renderPostboss(project: ProjectDocument) {
   const view = renderOccurrenceWorkbench(
@@ -63,20 +40,17 @@ function saleOrder(application: PlannerApplication) {
     ?.roomActions.order.filter((reference) => reference.kind === 'sellPurgingPoolTrait');
 }
 
-it('leaves a blank Pool slot native, with no finding', () => {
-  const { pool } = renderPostboss(withPoolSlot(createUnderworldFPoolCheckpoint(), 'middle', null));
+it('shows the draw of a reached Pool slot and offers no blank', async () => {
+  const { view, pool } = renderPostboss(createUnderworldFPoolCheckpoint());
   const middle = within(pool).getByRole('button', { name: 'Pool of Purging Offer 2 Item' });
-  expect(middle.dataset.hasFindings).toBe('false');
-  expect(
-    within(pool).getByRole('button', { name: 'Pool of Purging Offer 3 Item' }).dataset.hasFindings,
-  ).toBe('false');
-  expect(pool.hasAttribute('data-has-findings')).toBe(false);
+  expect(middle.dataset.unknown).toBeUndefined();
+  await view.user.click(middle);
+  const options = within(await screen.findByRole('listbox')).getAllByRole('option');
+  expect(options.some((option) => option.textContent === 'Unresolved')).toBe(false);
 });
 
-it('sells a slot still on the list from the live row, and removes a stale sale on its row', async () => {
-  const { view, pool } = renderPostboss(
-    withPoolSlot(withPoolSlot(createUnderworldFPoolCheckpoint(), 'left', null), 'middle', null),
-  );
+it('sells a slot still on the list from the live row, and removes a sale on its row', async () => {
+  const { view, pool } = renderPostboss(createUnderworldFPoolCheckpoint());
   expect(within(pool).queryByRole('checkbox', { name: /^Sold/ })).toBeNull();
   // The Pool on the live row sells what its list can still show.
   openRoomTab('Room Timeline');
