@@ -12,7 +12,6 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { roomMapPosition } from '@planner/projections/roomMapMarkers';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -156,18 +155,10 @@ describe('room map ship wheel', () => {
       .targets(undefined)
       .sections.flatMap((section) => section.items)
       .map((item) => item.value);
-    const resolver = interaction.pendingReward(targetKey!);
-    const rewards = resolver
-      .model(await resolver.load(), 'type')
-      .sections.flatMap((section) => section.items)
-      .filter((item) => !item.disabled && item.value.payload === undefined)
-      .map((item) => item.value as ResolvedRewardOffer);
-    const first = intro.wheel!.offers[0]!.control.offer;
-    const reward = rewards.find((candidate) => candidate.rewardType !== first?.rewardType)!;
     const rerolled = applyProjectCommand(
       base,
       catalog,
-      interaction.appendIntent(targetKey!, reward).command,
+      interaction.pressIntent(targetKey!)!.command,
     );
 
     const { user } = render(rerolled);

@@ -45,9 +45,6 @@ import {
   type ShopOfferAddress,
   type InfernalContractPedestalAddress,
   type PhantomExitAddress,
-  type RerolledRewardOwner,
-  type RerollPressTarget,
-  type RerollSurface,
   type RoomActionAddress,
   type StartingRewardAddress,
   type SideRoomGeneration,
@@ -102,14 +99,7 @@ export type RewardDomainCandidateOwner =
   | RewardCandidateOwner
   | { readonly kind: 'phantomExit'; readonly address: PhantomExitAddress }
   /** An authored reroll press, redrawing its target. */
-  | { readonly kind: 'reroll'; readonly address: RoomActionAddress | HubRerollAddress }
-  /** A press not yet authored, appended to a surface; `address` is its target's reward owner. */
-  | {
-      readonly kind: 'pendingReroll';
-      readonly address: RerolledRewardOwner;
-      readonly surface: RerollSurface;
-      readonly target: RerollPressTarget;
-    };
+  | { readonly kind: 'reroll'; readonly address: RoomActionAddress | HubRerollAddress };
 
 /** An item drawn from a declared Shop-option pool: a Shop slot or the Contract pedestal. */
 export type ShopOptionCandidateOwner = ShopOfferAddress | InfernalContractPedestalAddress;

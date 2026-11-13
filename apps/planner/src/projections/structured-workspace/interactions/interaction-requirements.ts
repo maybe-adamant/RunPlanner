@@ -46,11 +46,9 @@ export type WorkspaceRerollRewardTypes =
 export interface WorkspaceRerollTargetRequirement {
   readonly key: string;
   readonly target: import('@run-planner/engine/authored-project').RerollPressTarget;
-  readonly rewardOwner: import('@run-planner/engine/authored-project').RerolledRewardOwner;
   readonly label: string;
   /** The game refuses a press of it. */
   readonly unavailable?: 'notRerollable';
-  readonly rewardTypes: WorkspaceRerollRewardTypes;
 }
 
 /** One option of a room object's entry with the command it appends. */

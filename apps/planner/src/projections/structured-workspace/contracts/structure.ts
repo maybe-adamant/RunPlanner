@@ -264,8 +264,6 @@ export interface WorkspaceRoomRerollsInteraction {
   readonly targets: (selectedKey: string | undefined) => ContextualPickerModel<string>;
   /** The reward picker of one authored press. */
   readonly rowReward: (rowKey: string) => WorkspaceRewardOfferResolver;
-  /** The reward picker of a press not yet authored, on one target. */
-  readonly pendingReward: (targetKey: string) => WorkspaceRewardOfferResolver;
   readonly replaceRewardIntent: (
     rowKey: string,
     reward: ResolvedRewardOffer,
@@ -276,12 +274,6 @@ export interface WorkspaceRoomRerollsInteraction {
     rowKey: string,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'RemoveRoomAction' | 'RemoveHubReroll' }>
-  >;
-  readonly appendIntent: (
-    targetKey: string,
-    reward: ResolvedRewardOffer,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'InsertReroll' | 'InsertHubReroll' }>
   >;
   /**
    * Appends a press of one target, its result the engine's stable legal draw,

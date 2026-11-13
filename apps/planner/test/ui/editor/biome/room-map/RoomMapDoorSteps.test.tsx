@@ -13,7 +13,6 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { createGoldenFGHIProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import type { PlannerApplication } from '@planner/composition/createApplication';
@@ -111,17 +110,10 @@ describe('room map door steps', () => {
     const door1Key = semanticAddressKey(
       createIncomingRewardAddress(f, createOccurrenceId('golden-f-b3-e1')),
     );
-    const resolver = interaction.pendingReward(door1Key);
-    const items = resolver
-      .model(await resolver.load(), 'type')
-      .sections.flatMap((section) => section.items)
-      .filter(
-        (item) => !item.disabled && (item.value as ResolvedRewardOffer).payload === undefined,
-      );
     const rerolled: ProjectDocument = applyProjectCommand(
       withCard,
       catalog,
-      interaction.appendIntent(door1Key, items[0]!.value as ResolvedRewardOffer).command,
+      interaction.pressIntent(door1Key)!.command,
     );
 
     const { application, user } = renderWorkspace(rerolled, 'Underworld', 'F');

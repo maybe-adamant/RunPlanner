@@ -11,7 +11,6 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   authorLegalTraitOffers,
@@ -28,7 +27,6 @@ import {
   projectStructuredWorkspaceFixture,
   requireWorkspaceBiome,
 } from '@planner-test/fixtures/structuredWorkspace';
-import type { WorkspaceRewardOfferResolver } from '@planner/projections/structured-workspace';
 
 const o = createBiomeAddress('Surface', 'O');
 const ship = createOccurrenceId('surface-o-combat04');
@@ -74,14 +72,6 @@ function wheelPhase(projected: Projected) {
       : undefined;
   if (phase === undefined) throw new Error('wheel1 has no phase');
   return phase;
-}
-
-async function possibleRewards(resolver: WorkspaceRewardOfferResolver) {
-  const model = resolver.model(await resolver.load(), 'type');
-  return model.sections
-    .flatMap((section) => section.items)
-    .filter((item) => !item.disabled && item.value.payload === undefined)
-    .map((item) => item.value);
 }
 
 /** A three-phase O room whose Combat 1 end matures a Hermes Shrine delivery. */
@@ -159,8 +149,8 @@ describe('ship wheels on the Timeline of the phase before their combat', () => {
       .targets(undefined)
       .sections.flatMap((section) => section.items)
       .map((item) => item.value);
-    const [reward] = await possibleRewards(interaction.pendingReward(targetKey!));
-    const intent = interaction.appendIntent(targetKey!, reward as ResolvedRewardOffer);
+    const intent = interaction.pressIntent(targetKey!)!;
+    const reward = intent.command.reward;
     const order = base.route.biomes
       .find((biome) => biome.biomeKey === 'O')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === ship)!.roomActions

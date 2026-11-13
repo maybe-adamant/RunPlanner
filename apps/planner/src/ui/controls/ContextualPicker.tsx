@@ -48,6 +48,8 @@ interface ContextualPickerProps<T> {
   readonly model: ContextualPickerModel<T>;
   /** The option under the pointer or keyboard highlight while the list is open. */
   readonly onActiveChange?: (item: ContextualPickerItem<T> | undefined) => void;
+  /** Runs once the closed list hands focus back; preventing it keeps focus where it moved. */
+  readonly onCloseAutoFocus?: (event: Event) => void;
   readonly onOpenChange?: (open: boolean) => void;
   readonly onSelect: (value: T) => void;
   readonly open?: boolean;
@@ -397,6 +399,7 @@ export function ContextualPicker<T>({
   loading = false,
   model,
   onActiveChange,
+  onCloseAutoFocus,
   onOpenChange,
   onSelect,
   open: controlledOpen,
@@ -603,6 +606,7 @@ export function ContextualPicker<T>({
             className="contextual-picker-popover"
             data-multi-stage={!closeOnSelect || undefined}
             collisionPadding={12}
+            {...(onCloseAutoFocus === undefined ? {} : { onCloseAutoFocus })}
             side={side}
             sideOffset={6}
           >

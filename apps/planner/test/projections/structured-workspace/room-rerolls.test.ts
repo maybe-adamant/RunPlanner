@@ -90,14 +90,20 @@ async function possibleRewards(resolver: WorkspaceRewardOfferResolver) {
     .map((item) => item.value);
 }
 
-/** The bound list's command appending a press, with the first reward its picker offers. */
+/**
+ * The bound list's command appending a press, its drawn result replaced by the first reward
+ * (after `skip`) that the placed row's picker offers.
+ */
 async function appendCommand(project: ProjectDocument, targetKey: string, skip = 0) {
   const { interaction } = rerollsOf(projectStructuredWorkspaceFixture(project));
-  const rewards = (await possibleRewards(interaction.pendingReward(targetKey))).filter(
-    (reward) => reward.payload === undefined,
+  const placed = interaction.pressIntent(targetKey)!.command;
+  const after = rerollsOf(
+    projectStructuredWorkspaceFixture(applyProjectCommand(project, catalog, placed)),
   );
-  const reward = rewards[skip] as ResolvedRewardOffer;
-  return interaction.appendIntent(targetKey, reward).command;
+  const rewards = (
+    await possibleRewards(after.interaction.rowReward(after.rerolls.rows.at(-1)!.key))
+  ).filter((reward) => reward.payload === undefined);
+  return { ...placed, reward: rewards[skip] as ResolvedRewardOffer };
 }
 
 /** Appends a press through the bound list, with the first reward its picker offers. */
@@ -127,21 +133,17 @@ describe('Room door rerolls', () => {
       ['Door 1', false],
       ['Door 2', false],
     ]);
-    // The pending press excludes its door's first draw.
-    const rewards = await possibleRewards(interaction.pendingReward(doorKey(doorTo)));
-    expect(rewards.length).toBeGreaterThan(0);
-    expect(rewards).not.toContainEqual({ rewardType: 'MaxHealthDrop' });
-    expect(interaction.appendIntent(doorKey(doorTo), { rewardType: 'RoomMoneyDrop' })).toEqual({
-      command: {
-        kind: 'InsertReroll',
-        occurrence: createOccurrenceAddress(f, source),
-        target: { kind: 'door', exitKey: 'exit1', occurrenceId: doorTo },
-        reward: { rewardType: 'RoomMoneyDrop' },
-        index: base.route.biomes[0]!.topology!.occurrences.find(
-          (occurrence) => occurrence.occurrenceId === source,
-        )!.roomActions.order.length,
-      },
+    // A press is placed with a drawn reward other than its door's first draw.
+    const pressed = interaction.pressIntent(doorKey(doorTo))!.command;
+    expect(pressed).toMatchObject({
+      kind: 'InsertReroll',
+      occurrence: createOccurrenceAddress(f, source),
+      target: { kind: 'door', exitKey: 'exit1', occurrenceId: doorTo },
+      index: base.route.biomes[0]!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === source,
+      )!.roomActions.order.length,
     });
+    expect(pressed.reward).not.toEqual({ rewardType: 'MaxHealthDrop' });
   });
 
   it('is absent without the card and without presses', () => {

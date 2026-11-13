@@ -205,7 +205,6 @@ function assembleRerollList(input: {
   readonly surface: RerollSurface;
   readonly targetLabel: (target: RerollPressTarget) => string;
   readonly targetNoun: WorkspaceRoomRerolls['targetNoun'];
-  readonly rewardTypes: (owner: RerolledRewardOwner) => WorkspaceRerollRewardTypes;
 }):
   | { readonly rerolls: WorkspaceRoomRerolls; readonly requirement: RerollListRequirement }
   | undefined {
@@ -221,8 +220,6 @@ function assembleRerollList(input: {
             Object.freeze({
               key: semanticAddressKey(candidate.owner),
               label: input.targetLabel(candidate.target),
-              rewardOwner: candidate.owner,
-              rewardTypes: input.rewardTypes(candidate.owner),
               target: candidate.target,
               ...(candidate.unavailable === undefined
                 ? {}
@@ -446,7 +443,6 @@ export function assembleHubStayRerolls(input: {
       surface: { kind: 'hubStay', hub: owner, precedingVisitCount: input.precedingVisitCount },
       targetLabel,
       targetNoun: 'door',
-      rewardTypes,
     }) ?? {}
   );
 }
@@ -522,7 +518,6 @@ export function assembleRoomRerolls(input: {
             surface,
             targetLabel,
             targetNoun: 'door',
-            rewardTypes,
           });
         })();
   // A locked door stays locked until its press; a door reroll can follow only that press.
@@ -791,7 +786,6 @@ export function assembleWheelRerolls(input: {
     surface,
     targetLabel,
     targetNoun: 'offer',
-    rewardTypes,
   });
   // Each press reads as its offer, the reward it replaces, and every offer once it lands.
   const states = workspacePressSurfaceStates({

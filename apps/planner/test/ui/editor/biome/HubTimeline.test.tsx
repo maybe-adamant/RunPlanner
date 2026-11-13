@@ -182,17 +182,14 @@ describe('HubTimeline', () => {
     await view.user.click(
       within(await screen.findByRole('listbox')).getByRole('option', { name: 'Combat 03' }),
     );
-    // The reward picker opens for the press; a Boon then asks for its source.
-    while (
-      !dispatch.mock.calls.some(([action]) => authoredProjectCommandDispatched.match(action))
-    ) {
-      const listbox = await screen.findByRole('listbox');
-      const option = within(listbox)
-        .getAllByRole('option')
-        .find((candidate) => candidate.getAttribute('aria-disabled') !== 'true');
-      if (option === undefined) throw new Error('the reroll offers no reward');
-      await view.user.click(option);
-    }
+    // Choosing the door places the press with a drawn reward; its row then opens on it.
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole('region', { name: 'Entry rerolls' }))
+          .getByRole('button', { name: 'Reroll 1 reward' })
+          .getAttribute('aria-expanded'),
+      ).toBe('true'),
+    );
     const commands = dispatch.mock.calls
       .map(([action]) => action)
       .filter(authoredProjectCommandDispatched.match)
