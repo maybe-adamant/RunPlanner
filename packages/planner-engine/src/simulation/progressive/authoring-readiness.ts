@@ -7,7 +7,7 @@ import type { BiomeTopology, OccurrenceId } from '../../authored-project/model';
 import {
   authoringBoundaryReadiness,
   compareAuthoringBoundaries,
-  hubNextVisitReadiness,
+  hubFrontierReadiness,
   resolveAuthoringBoundary,
 } from './authoring-boundary';
 import type {
@@ -67,15 +67,15 @@ export function authoringReadinessAt(
     if (topology === null || topology === undefined) return 'locked';
     return endedReadiness(prefix, topology, owner, horizon.blockedAfter);
   }
-  const nextVisit = evaluation?.requiredInput;
-  const nextVisitLocation = evaluation?.requiredInputLocation;
+  const hubFrontier = evaluation?.requiredInput;
+  const hubFrontierLocation = evaluation?.requiredInputLocation;
   if (
-    nextVisit?.kind === 'hubVisit' &&
-    nextVisitLocation !== undefined &&
+    (hubFrontier?.kind === 'hubVisit' || hubFrontier?.kind === 'hubFountain') &&
+    hubFrontierLocation !== undefined &&
     horizon.blockedAfter.kind === 'hubDecision' &&
-    horizon.blockedAfter.hubKey === nextVisit.hubKey
+    horizon.blockedAfter.hubKey === hubFrontier.hubKey
   ) {
-    return hubNextVisitReadiness(prefix, owner, nextVisit, nextVisitLocation);
+    return hubFrontierReadiness(prefix, owner, hubFrontier, hubFrontierLocation);
   }
   return authoringBoundaryReadiness(
     prefix,

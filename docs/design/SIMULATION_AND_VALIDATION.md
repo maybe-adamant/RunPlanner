@@ -265,9 +265,9 @@ readiness.
 
 The same semantic chronology locates the missing owner, normalized horizon and
 queried command owners. Jointly generated products, such as a Hub board or
-side-room sibling generation set, remain atomic. A Hub's missing next visit is
-its outgoing decision: the Hub's board, stays and fountain and every settled
-visit with its side rooms stay editable, while later visits, the interiors of
+side-room sibling generation set, remain atomic. A Hub's missing next visit or
+fountain use is its outgoing decision: the Hub's board, stays and fountain and
+every visit settled before it with its side rooms stay editable, while later visits, the interiors of
 board rooms no settled visit entered and the Hub's exit are locked. The
 application applies this product; it does not infer chronology from tabs, rail
 order, a target index or the component containing the finding.

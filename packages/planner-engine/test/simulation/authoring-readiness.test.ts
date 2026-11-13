@@ -794,6 +794,56 @@ describe('chronological authoring horizon', () => {
     }
   });
 
+  it('keeps every settled visit editable while the unused fountain is the Hub frontier', () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const fountain = createHubFountainAddress(nBiome, 'hub');
+    const room = (slot: string) => createOccurrenceAddress(nBiome, nOccurrenceId(slot));
+    const ordered = (slots: readonly string[], fountainAfterVisits: number | null) =>
+      simulateProjectAssembly(
+        catalog,
+        applyProjectCommand(loadSurfaceNProject(), catalog, {
+          kind: 'ReplaceHubActionOrder',
+          hub,
+          actions: hubVisitActions(slots, fountainAfterVisits),
+        }),
+      );
+
+    const unused = ordered(nVisitSlotKeys, null);
+    expect(
+      unused.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N')?.requiredInput,
+    ).toEqual(fountain);
+    for (const owner of [
+      hub,
+      fountain,
+      ...nVisitSlotKeys.flatMap((slot, index) => [
+        createHubVisitAddress(nBiome, 'hub', index + 1),
+        room(slot),
+      ]),
+      createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat05', 'sideDoor1')),
+    ]) {
+      expect(authoringReadinessAt(unused, owner), JSON.stringify(owner)).toBe('editable');
+    }
+    for (const owner of [
+      createHubVisitAddress(nBiome, 'hub', nVisitSlotKeys.length + 1),
+      room('combat12'),
+      createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
+      createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
+    ]) {
+      expect(authoringReadinessAt(unused, owner), JSON.stringify(owner)).toBe('locked');
+    }
+
+    // A fountain used mid-order leaves the next visit as the frontier.
+    const midOrder = ordered(nVisitSlotKeys.slice(0, 3), 2);
+    expect(
+      midOrder.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N')?.requiredInput,
+    ).toEqual(createHubVisitAddress(nBiome, 'hub', 4));
+    expect(authoringReadinessAt(midOrder, fountain)).toBe('editable');
+    expect(authoringReadinessAt(midOrder, room(nVisitSlotKeys[2]))).toBe('editable');
+    expect(authoringReadinessAt(midOrder, createHubVisitAddress(nBiome, 'hub', 5))).toBe('locked');
+    expect(authoringReadinessAt(midOrder, room(nVisitSlotKeys[3]))).toBe('locked');
+  });
+
   it('keeps a blocking main Hub room repairable while locking side generation', () => {
     const original = loadSurfaceNProject();
     const occurrenceId = nOccurrenceId('combat05');
