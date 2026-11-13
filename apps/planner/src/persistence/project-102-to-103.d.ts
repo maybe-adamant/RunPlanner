@@ -14,3 +14,5 @@ export function fillReachedBlanksProject(
   project: ProjectDocument,
   catalog: Catalog,
 ): ProjectDocument;
+
+export function dropRouteExcludedObjects(document: unknown, catalog: Catalog): unknown;

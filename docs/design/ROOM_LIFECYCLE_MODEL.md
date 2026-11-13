@@ -625,6 +625,11 @@ walk does not reach and rows of rooms the run does not enter stay untouched;
 a stale row a plan still holds, such as one in a room the walk did not reach,
 goes at the next edit of its room.
 
+Loading a plan saved before schema 103.3 silently removes a Stygian Well or
+Pool of Purging its route never spawns in that room, kept from before the
+route excluded it (a Fresh File Postboss's), with its purchase, sale and
+reroll rows.
+
 A batch's door is classified the same way: its context is its source room's
 declared exit, and the rooms behind a removed door go with it
 ([exit capacity](AUTHORED_PROJECT_MODEL.md#exit-capacity)).

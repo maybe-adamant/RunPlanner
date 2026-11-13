@@ -32,7 +32,6 @@ import { chaosGateSpawnPoint } from '../../authored-project/chaos-gate-position'
 import { fieldsSpatialPositions } from '../../simulation/fields/spatial';
 import { performedRoomActions } from '../../simulation/room-actions';
 import {
-  roomAnchorObjectHosted,
   roomObjectAnchorPositions,
   type RoomObjectAnchorPosition,
 } from '../../simulation/room-layout/object-anchor-positions';
@@ -841,28 +840,17 @@ function executionRoomLayout(
 
 /**
  * An object's publication with the anchor it stands on: stored, drawn or the
- * Well's pin. One native never spawns on this route, kept from an older save,
- * is not published. A published object always stands on an anchor: only an
- * over-capacity room leaves it none, which a finding blocks.
+ * Well's pin. Only an over-capacity room leaves a published object no anchor,
+ * which a finding blocks.
  */
 function anchored<T extends object>(
-  catalog: Catalog,
   room: CanonicalAuthoredRoom,
   object: RoomAnchorObjectKind,
   published: T | undefined,
   anchors: ReadonlyMap<RoomAnchorObjectKind, RoomObjectAnchorPosition>,
 ): T | undefined {
-  if (
-    published === undefined ||
-    !roomAnchorObjectHosted(catalog, room.gameName, room.origin.routeKey, object)
-  )
-    return undefined;
-  // A Well past the room's anchors still stands on its room's pin.
-  const pin =
-    object === 'stygianWell'
-      ? catalog.rooms.byKey[room.gameName]?.mapPoints?.wellAnchorId
-      : undefined;
-  const anchorId = anchors.get(object)?.anchorId ?? pin;
+  if (published === undefined) return undefined;
+  const anchorId = anchors.get(object)?.anchorId;
   if (anchorId === undefined)
     throw new CompilerError(
       'executionCoverageMissing',
@@ -1252,10 +1240,10 @@ export function assembleExecutionOverview(
   );
   const challengeSwitch = executionChallengeSwitch(catalog, room, biome);
   const anchoredObjects = {
-    hermesShrine: anchored(catalog, room, 'hermesShrine', hermesShrine, anchors),
-    stygianWell: anchored(catalog, room, 'stygianWell', stygianWell, anchors),
-    purgingPool: anchored(catalog, room, 'purgingPool', purgingPool, anchors),
-    challengeSwitch: anchored(catalog, room, 'challengeSwitch', challengeSwitch, anchors),
+    hermesShrine: anchored(room, 'hermesShrine', hermesShrine, anchors),
+    stygianWell: anchored(room, 'stygianWell', stygianWell, anchors),
+    purgingPool: anchored(room, 'purgingPool', purgingPool, anchors),
+    challengeSwitch: anchored(room, 'challengeSwitch', challengeSwitch, anchors),
   };
   const lockedExits = executionLockedExits(room, biome);
   const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);

@@ -108,3 +108,10 @@ export function fillReachedBlanksProject(project, catalog) {
     return project;
   }
 }
+
+/**
+ * Schema 103 revision 3 holds no Well or Pool its route never spawns: a plan
+ * saved earlier, such as a Fresh File Postboss kept from before Fresh File
+ * excluded them, loses them with their rows on load.
+ */
+export { dropRouteExcludedObjects } from '@run-planner/engine/project-migration';

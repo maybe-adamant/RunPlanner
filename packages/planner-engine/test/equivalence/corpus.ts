@@ -143,14 +143,12 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
     entry('fresh-file/withNewHFieldsRoom(min)', () =>
       withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'min'),
     ),
+    // A Well and Pool its route never spawns, which loading a plan saved before 103.3 drops.
     entry('fresh-file/withRetainedFreshFilePostboss(all)', () =>
       withRetainedFreshFilePostboss(createFreshFileFProject(), {
         well: true,
         poolSaleTraitKey: 'ApolloWeaponBoon',
       }),
-    ),
-    entry('fresh-file/withRetainedFreshFilePostboss(emptyPool)', () =>
-      withRetainedFreshFilePostboss(createFreshFileFProject(), { poolSaleTraitKey: null }),
     ),
     entry('fresh-file/withRetainedFreshFileIntroCustomization', () =>
       withRetainedFreshFileIntroCustomization(

@@ -45,6 +45,11 @@ import {
   withFourthBoardGodBeforeCombat05,
 } from '@run-planner/test-fixtures/surface';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  createFreshFileFProject,
+  freshFileFPostbossId,
+  withRetainedFreshFilePostboss,
+} from '@run-planner/test-fixtures/fresh-file';
 
 import {
   applyProjectDocumentTransitions,
@@ -168,6 +173,35 @@ describe('project document loader', () => {
     expect(
       layouts(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION)).every((layout) => layout === undefined),
     ).toBe(true);
+  });
+
+  it('drops a Well and Pool its route never spawns, with their rows, from a plan before 103.3', () => {
+    const retained = withRetainedFreshFilePostboss(createFreshFileFProject(), {
+      well: true,
+      poolSaleTraitKey: 'ApolloWeaponBoon',
+    });
+    const postboss = (document: ProjectDocument) =>
+      document.route.biomes[0]!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === freshFileFPostbossId,
+      )!;
+    const loaded = (revision: number) =>
+      loadProjectDocument(
+        JSON.stringify({
+          ...JSON.parse(encodeProjectDocument(retained)),
+          schemaRevision: revision,
+        }),
+        catalog,
+      ).project;
+
+    const opened = postboss(loaded(2));
+    expect(opened.stygianWell).toBeUndefined();
+    expect(opened.purgingPool).toBeUndefined();
+    expect(opened.roomActions.order).not.toContainEqual(
+      expect.objectContaining({ kind: 'sellPurgingPoolTrait' }),
+    );
+    expect(simulateProject(catalog, loaded(2)).findings).toEqual([]);
+    // A plan saved at the current revision loads as is.
+    expect(postboss(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION))).toEqual(postboss(retained));
   });
 
   describe('a plan saved before schema 103', () => {

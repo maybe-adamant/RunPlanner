@@ -6,7 +6,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { PROJECT_TRANSITION_STEPS } from './project-transitions.js';
-import { fillReachedBlanksProject } from './project-102-to-103.js';
+import { dropRouteExcludedObjects, fillReachedBlanksProject } from './project-102-to-103.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
 
@@ -114,7 +114,8 @@ export function loadProjectDocument(
     transitions: productionTransitions(catalog),
     context: options.legacyName === undefined ? {} : { name: options.legacyName },
   });
-  const migratedJson = JSON.stringify(migrated.document);
+  // A migrated plan lands at the major's first revision.
+  const migratedJson = JSON.stringify(dropRouteExcludedObjects(migrated.document, catalog));
   if (migratedJson === undefined) {
     throw new Error('Project migration result must be JSON serializable.');
   }
@@ -168,13 +169,20 @@ export function applyProjectDocumentTransitions(options: {
 
 // From this revision every reached stock slot and position is stored; earlier, a blank one meant the game's roll.
 const BLANKS_FILLED_REVISION = 2;
+// From this revision a plan holds no Well or Pool its route never spawns.
+const ROUTE_EXCLUDED_OBJECTS_DROPPED_REVISION = 3;
 
 function currentProject(
   json: string,
   catalog: Catalog,
   revision = PROJECT_DOCUMENT_SCHEMA_REVISION,
 ): LoadedProjectDocument {
-  const project = parseProjectDocument(json, catalog);
+  const project = parseProjectDocument(
+    revision < ROUTE_EXCLUDED_OBJECTS_DROPPED_REVISION
+      ? JSON.stringify(dropRouteExcludedObjects(parseJson(json), catalog))
+      : json,
+    catalog,
+  );
   return Object.freeze({
     migrationProvenance: noMigrations,
     project:

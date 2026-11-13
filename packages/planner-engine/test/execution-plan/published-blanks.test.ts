@@ -5,7 +5,6 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import {
   createFreshFileFProject,
-  freshFileFPostbossId,
   withRetainedFreshFilePostboss,
 } from '@run-planner/test-fixtures/fresh-file';
 import {
@@ -35,7 +34,6 @@ import { executionRoomOwnerKey } from '../../src/execution-plan/assembly/support
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { ExecutionCompilerError } from '../../src/execution-plan/assembler-errors';
 import { assembleExecutionProduct } from '../../src/execution-plan/assembler';
-import { compileExecutionPlan } from '../../src/execution-plan/compiler';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
   mergePlannerTimelineFacts,
@@ -184,29 +182,23 @@ describe('execution assembly refuses a published blank', () => {
     expect(room.stygianWell).not.toHaveProperty('anchorId');
     const pin = declared.mapPoints!.wellAnchorId;
     expect(overview(room, f, catalog).stygianWell).toHaveProperty('anchorId', pin);
-    // Past the room's anchors the pinned Well still stands on its pin.
+    // Past the room's anchors it has none to stand on.
     const full = withRoom(room.gameName, () => ({ challengeSwitchAnchorCount: 0 }));
-    expect(overview(room, f, full).stygianWell).toHaveProperty('anchorId', pin);
-    // Unpinned, it has none to stand on.
-    const unpinned = withRoom(room.gameName, () => ({
-      challengeSwitchAnchorCount: 0,
-      mapPoints: { ...declared.mapPoints, wellAnchorId: undefined },
-    }));
-    expectCoverageMissing(() => overview(room, f, unpinned), /stygianWell without an anchor/);
+    expectCoverageMissing(() => overview(room, f, full), /stygianWell without an anchor/);
   });
 
-  it('publishes no Pool its route never spawns, kept unused from an older save', () => {
+  it('refuses a Pool its route never spawns, which loading an older save drops', () => {
     const project = withRetainedFreshFilePostboss(createFreshFileFProject(), {
       poolSaleTraitKey: null,
     });
-    const plan = compileExecutionPlan({
-      product: assembleExecutionProduct({
-        catalog,
-        assembly: simulateProjectAssembly(catalog, project),
-      }),
-    });
-    const postboss = plan.occurrences.find((room) => room.id === freshFileFPostbossId)!;
-    expect(postboss.overview).not.toHaveProperty('purgingPool');
+    expectCoverageMissing(
+      () =>
+        assembleExecutionProduct({
+          catalog,
+          assembly: simulateProjectAssembly(catalog, project),
+        }),
+      /purgingPool without an anchor/,
+    );
   });
 
   it('refuses a Chaos gate without a spawn point', () => {

@@ -104,11 +104,9 @@ diagnostic as a steered value it could not hold. Object positions and stock are 
 only plans whose reached positions and slots are filled: every Pool, Shrine,
 challenge switch and Well publishes its `anchorId`, its stored anchor or, for
 a Well, its room's pin, which the module verifies after spawning rather than
-steering; an object native never spawns on the route, kept
-unused from an older save, is not published. A Chaos gate always publishes its
-stored `spawnPointIndex`; a Zagreus Contract exit has none. Publication refuses
-an object or gate left without one, which only a room carrying a finding can
-reach.
+steering. A Chaos gate always publishes its stored `spawnPointIndex`; a
+Zagreus Contract exit has none. Publication refuses an object or gate left
+without one, which only a room carrying a finding can reach.
 
 Fields door targets carry cage rewards even when unpicked. Cage,
 optional-reward and Nemesis points are entered-room facts published only for
