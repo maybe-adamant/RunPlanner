@@ -3308,8 +3308,7 @@ span.hub-board-status-line {
 }
 
 /* The control whose map point is under the pointer, in the map preview's dashed ring. */
-[data-map-pointed]:not(.room-layout-row),
-.room-layout-row[data-map-pointed] > :not(.room-layout-label) {
+[data-map-pointed] {
   border-radius: 7px;
   outline: 2px dashed #fff4c7;
   outline-offset: 2px;
