@@ -609,30 +609,38 @@ function executionHermesShrine(
   return Object.freeze({ offers });
 }
 
+/**
+ * One Well roll's offers: every slot it stocks once the walk assessed the roll.
+ * An unassessed roll, never reached, publishes only its stored slots.
+ */
 function executionWellOffers(
   room: CanonicalAuthoredRoom,
   rollKey: string,
+  offeredSlotKeys: readonly (typeof STYGIAN_WELL_SLOT_KEYS)[number][] | undefined,
 ): readonly ExecutionWellOffer[] {
   const view = wellOccurrenceView(room);
   const purchased = stygianWellPurchasedGenerationKeys(performedRoomActions(room.roomActionRoster));
   return Object.freeze(
     STYGIAN_WELL_SLOT_KEYS.flatMap((slotKey) => {
+      // A slot bought earlier in the room is not restocked by a reroll.
+      if (offeredSlotKeys !== undefined && !offeredSlotKeys.includes(slotKey)) return [];
       const generationKey = stygianWellGenerationKey(rollKey, slotKey);
       const offerKey = stygianWellGenerationItemKey(view, generationKey);
-      if (offerKey === null || offerKey === undefined) return [];
+      if ((offerKey === null || offerKey === undefined) && offeredSlotKeys === undefined) return [];
+      if (offerKey === null || offerKey === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks Well offer ${generationKey}`,
+        );
+      if (!purchased.includes(generationKey) || offerKey !== 'RandomStoreItem')
+        return [Object.freeze({ generationKey, offerKey })];
       const twistResultKey = stygianWellGenerationTwistResultKey(view, generationKey);
-      return [
-        Object.freeze({
-          generationKey,
-          offerKey,
-          ...(!purchased.includes(generationKey) ||
-          offerKey !== 'RandomStoreItem' ||
-          twistResultKey === undefined ||
-          twistResultKey === null
-            ? {}
-            : { twistResultKey }),
-        }),
-      ];
+      if (twistResultKey === undefined || twistResultKey === null)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks Fateful Twist result for ${generationKey}`,
+        );
+      return [Object.freeze({ generationKey, offerKey, twistResultKey })];
     }),
   );
 }
@@ -647,47 +655,86 @@ function rankedFeatureRerolls(room: CanonicalAuthoredRoom, kind: FeatureRerollAc
 
 function executionStygianWell(
   room: CanonicalAuthoredRoom,
+  biome: PublishedBiomeEvaluation,
 ): ExecutionOverview['stygianWell'] | undefined {
   if (room.stygianWell === undefined) return undefined;
-  const rerolls = rankedFeatureRerolls(room, 'rerollStygianWell').map((reroll) =>
-    Object.freeze({
-      rollKey: reroll.rerollId,
-      offers: executionWellOffers(room, reroll.rerollId),
-    }),
+  const owner = executionRoomOwnerKey(room);
+  const assessed = biome.rewards.stygianWellAssessments.find(
+    (candidate) => semanticAddressKey(candidate.origin) === owner,
   );
+  const rerolls = rankedFeatureRerolls(room, 'rerollStygianWell').map((reroll) => {
+    const roll = assessed?.actions.flatMap((action) =>
+      'roll' in action && action.roll.rollKey === reroll.rerollId ? [action.roll] : [],
+    )[0];
+    return Object.freeze({
+      rollKey: reroll.rerollId,
+      offers: executionWellOffers(room, reroll.rerollId, roll?.offeredSlotKeys),
+    });
+  });
   return Object.freeze({
-    offers: executionWellOffers(room, INITIAL_ROLL_KEY),
+    offers: executionWellOffers(
+      room,
+      INITIAL_ROLL_KEY,
+      assessed === undefined ? undefined : STYGIAN_WELL_SLOT_KEYS,
+    ),
     ...(rerolls.length === 0 ? {} : { rerolls: Object.freeze(rerolls) }),
   });
 }
 
+/**
+ * One Pool list: every slot it shows once the walk assessed the list. An
+ * unassessed list, never reached or on a route without the Pool, publishes
+ * only its stored slots.
+ */
 function executionPoolTraits(
+  room: CanonicalAuthoredRoom,
   traitKeyBySlot: Readonly<Partial<Record<(typeof PURGING_POOL_SLOT_KEYS)[number], string | null>>>,
+  offeredSlotKeys: readonly (typeof PURGING_POOL_SLOT_KEYS)[number][] | undefined,
 ) {
   return Object.freeze(
     PURGING_POOL_SLOT_KEYS.flatMap((slotKey) => {
+      // The list shows as many slots as there are eligible traits, up to three.
+      if (offeredSlotKeys !== undefined && !offeredSlotKeys.includes(slotKey)) return [];
       const traitKey = traitKeyBySlot[slotKey];
-      return traitKey === undefined || traitKey === null
-        ? []
-        : [Object.freeze({ slotKey, traitKey })];
+      if ((traitKey === undefined || traitKey === null) && offeredSlotKeys === undefined) return [];
+      if (traitKey === undefined || traitKey === null)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} lacks Pool trait ${slotKey}`,
+        );
+      return [Object.freeze({ slotKey, traitKey })];
     }),
   );
 }
 
 function executionPurgingPool(
   room: CanonicalAuthoredRoom,
+  biome: PublishedBiomeEvaluation,
 ): ExecutionOverview['purgingPool'] | undefined {
-  if (room.purgingPool === undefined) return undefined;
+  const pool = room.purgingPool;
+  if (pool === undefined) return undefined;
+  const owner = executionRoomOwnerKey(room);
+  const assessed = biome.rewards.purgingPoolAssessments.find(
+    (candidate) => semanticAddressKey(candidate.origin) === owner,
+  );
   const rerolls = rankedFeatureRerolls(room, 'rerollPurgingPool').map((reroll) =>
     Object.freeze({
       rollKey: reroll.rerollId,
-      traits: executionPoolTraits(purgingPoolRerollPins(room.purgingPool, reroll.rerollId)),
+      traits: executionPoolTraits(
+        room,
+        purgingPoolRerollPins(pool, reroll.rerollId),
+        assessed?.rolls?.[reroll.rerollId]?.offeredSlotKeys,
+      ),
     }),
   );
-  const refresh = room.purgingPool.refreshTraitKeyBySlot;
+  const refresh = pool.refreshTraitKeyBySlot;
   return Object.freeze({
-    traits: executionPoolTraits(room.purgingPool.traitKeyBySlot),
-    ...(refresh === undefined ? {} : { refreshTraits: executionPoolTraits(refresh) }),
+    traits: executionPoolTraits(room, pool.traitKeyBySlot, assessed?.assessment.offeredSlotKeys),
+    ...(refresh === undefined
+      ? {}
+      : {
+          refreshTraits: executionPoolTraits(room, refresh, assessed?.refresh?.offeredSlotKeys),
+        }),
     ...(rerolls.length === 0 ? {} : { rerolls: Object.freeze(rerolls) }),
   });
 }
@@ -702,23 +749,30 @@ function executionFieldsLayout(
     throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Fields layout`);
   // Each active slot stands on its stored point, else its draw.
   const positions = fieldsSpatialPositions(catalog, room);
-  const pointOf = (kind: 'cage' | 'optional' | 'nemesis', slotKey?: string) =>
-    positions.find(
+  const pointOf = (kind: 'cage' | 'optional' | 'nemesis', slotKey?: string) => {
+    const pointId = positions.find(
       (position) =>
         position.target.kind === kind &&
         (position.target.kind === 'nemesis' || position.target.slotKey === slotKey),
     )?.pointId;
+    if (pointId === undefined)
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName} lacks Fields ${kind} point${slotKey === undefined ? '' : ` ${slotKey}`}`,
+      );
+    return pointId;
+  };
   const cagePoints = room.encounterPhases.flatMap((phase) => {
     const attachment = phase.rewardAttachment;
     if (attachment?.kind !== 'localReward' || attachment.groupKey !== 'cages') return [];
-    const pointId = pointOf('cage', attachment.slotKey);
-    return pointId === undefined ? [] : [Object.freeze({ slotKey: attachment.slotKey, pointId })];
+    return [
+      Object.freeze({ slotKey: attachment.slotKey, pointId: pointOf('cage', attachment.slotKey) }),
+    ];
   });
   const optionalRewards = (room.fieldsOptionalRewards ?? []).map((optional) => {
-    const pointId = pointOf('optional', optional.slotKey);
     return Object.freeze({
       slotKey: optional.slotKey,
-      ...(pointId === undefined ? {} : { pointId }),
+      pointId: pointOf('optional', optional.slotKey),
       reward: executionRewardFromOffer(
         optional.offer,
         optional.producerLifecycleKey,
@@ -1151,8 +1205,8 @@ export function assembleExecutionOverview(
   const phantomExit = executionPhantomExit(room, biome);
   const hermesShrine = executionHermesShrine(room, biome);
   const rewardWheels = executionRewardWheels(room);
-  const stygianWell = executionStygianWell(room);
-  const purgingPool = executionPurgingPool(room);
+  const stygianWell = executionStygianWell(room, biome);
+  const purgingPool = executionPurgingPool(room, biome);
   const additional = executionAdditionalExits(catalog, room, batch);
   const anchors = roomObjectAnchorPositions(
     catalog,

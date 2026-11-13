@@ -282,8 +282,8 @@ export interface ExecutionRoomLayout {
 }
 
 /**
- * Inputs consumed by native Mourning Fields setup: the authored point of each
- * slot that has one; a slot without a point stays native.
+ * Inputs consumed by native Mourning Fields setup: the point of each active
+ * cage and optional reward, and of a planned Nemesis.
  */
 export interface ExecutionFieldsLayout {
   readonly cagePoints: readonly {
@@ -861,22 +861,22 @@ export interface ExecutionOverview {
         readonly rushed: boolean;
       };
     }[];
-    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+    /** The `ChallengeSwitchBase` anchor it stands on. */
     readonly anchorId?: number;
   };
   readonly stygianWell?: {
-    /** The initial roll's pinned slots; the others stay native. */
+    /** The initial roll's three slots. */
     readonly offers: readonly ExecutionWellOffer[];
     /**
      * Each Well reroll in action order: the k-th native reroll installs the
-     * k-th entry. Only pinned slots are listed; the others stay native, and
-     * slots bought earlier stay blank.
+     * k-th entry. Every restocked slot is listed; slots bought earlier stay
+     * blank.
      */
     readonly rerolls?: readonly {
       readonly rollKey: string;
       readonly offers: readonly ExecutionWellOffer[];
     }[];
-    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+    /** The `ChallengeSwitchBase` anchor it stands on; absent on its room's pin. */
     readonly anchorId?: number;
   };
   readonly purgingPool?: {
@@ -904,7 +904,7 @@ export interface ExecutionOverview {
         readonly traitKey: string;
       }[];
     }[];
-    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+    /** The `ChallengeSwitchBase` anchor it stands on. */
     readonly anchorId?: number;
   };
   readonly keepsakeRack?: { readonly keepsakeKey?: string };
@@ -921,7 +921,7 @@ export interface ExecutionOverview {
       readonly enemy: { readonly choiceKey: string; readonly nativeId: string };
       readonly attributeKeys: readonly string[];
     };
-    /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+    /** The `ChallengeSwitchBase` anchor it stands on. */
     readonly anchorId?: number;
   };
   /**

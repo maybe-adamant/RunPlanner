@@ -801,11 +801,12 @@ export function executionTimelineTransactions(
         generationKey,
       );
       const wellOwner = semanticAddressKey(timeline.action.owner);
-      if (
-        offerKey === 'RandomStoreItem' &&
-        twistResultKey !== undefined &&
-        twistResultKey !== null
-      ) {
+      if (offerKey === 'RandomStoreItem') {
+        if (twistResultKey === undefined || twistResultKey === null)
+          throw new CompilerError(
+            'executionCoverageMissing',
+            `${room.gameName} lacks Fateful Twist result for ${generationKey}`,
+          );
         add({
           kind: 'transformation',
           owner: wellOwner,

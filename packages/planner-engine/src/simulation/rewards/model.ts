@@ -375,10 +375,19 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly customization?: import('../encounters/model').ResolvedEncounterPhase['customization'];
     readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
   }[];
-  /** Exact room-entry Pool generation assessments, before any sale action. */
+  /** Exact room-entry Pool generation assessments, before any sale action, then its refresh's and each reroll's. */
   readonly purgingPoolAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
     readonly assessment: import('../commerce/purging-pool').PurgingPoolAssessment;
+    readonly refresh?: import('../commerce/purging-pool').PurgingPoolAssessment;
+    readonly rolls?: Readonly<
+      Record<
+        string,
+        {
+          readonly offeredSlotKeys: readonly import('../../authored-project/model').PurgingPoolSlotKey[];
+        }
+      >
+    >;
   }[];
   /** Exact room-entry Shrine placement and inventory assessments. */
   readonly hermesShrineAssessments: readonly {
