@@ -733,14 +733,13 @@ export function RoomActionsWorkbench({
                     row.stygianWellTwist === undefined ? (
                       rowName
                     ) : (
-                      <RowChoice choice="stygianWellTwist" rowKey={row.key}>
-                        <StygianWellTwistChips
-                          bought={rowName}
-                          interactions={interactions}
-                          label={row.label}
-                          twist={row.stygianWellTwist}
-                        />
-                      </RowChoice>
+                      <StygianWellTwistChips
+                        bought={rowName}
+                        interactions={interactions}
+                        label={row.label}
+                        rowKey={row.key}
+                        twist={row.stygianWellTwist}
+                      />
                     )
                   ) : (
                     <>

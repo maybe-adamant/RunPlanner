@@ -11,6 +11,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
+import { RowChoice } from '../RowChoice';
 import { StygianWellSlotPicker } from './RoomInventoryPanel';
 
 const wellIcon = (itemKey: string): string | undefined => wellArtwork[itemKey] ?? undefined;
@@ -24,12 +25,15 @@ export function StygianWellTwistChips({
   bought,
   interactions,
   label,
+  rowKey,
   twist,
 }: {
   /** The bought item shown where its Well stock cannot be edited here. */
   readonly bought: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
+  /** The purchase row, whose placement opens the result. */
+  readonly rowKey: string;
   readonly twist: NonNullable<WorkspaceRoomActionRow['stygianWellTwist']>;
 }) {
   const interaction = requireWorkspaceInteraction(
@@ -49,26 +53,28 @@ export function StygianWellTwistChips({
       <span aria-hidden="true" className="row-reward-arrow">
         →
       </span>
-      <ContextualPicker
-        findingTarget={findingTarget(twist.address)}
-        ariaLabel={`${label} Twist result`}
-        id={`${interaction.key}-picker`}
-        itemIcon={(item) => wellIcon(item.value)}
-        label=""
-        layout="inline"
-        loading={picker.pending}
-        model={picker.result ?? emptyPicker}
-        onOpenChange={(open) => {
-          if (open) picker.activate();
-        }}
-        onSelect={(itemKey) => executeIntent(interaction.intentFor(itemKey))}
-        placeholder="Twist result"
-        triggerIcon={twist.itemKey === null ? undefined : wellIcon(twist.itemKey)}
-        {...(twist.itemLabel === undefined ? {} : { triggerLabel: twist.itemLabel })}
-        triggerSize="icon"
-        triggerUnknown
-        {...(interaction.contextReached ? {} : { disabledHint: candidateWaitingHint })}
-      />
+      <RowChoice choice="stygianWellTwist" rowKey={rowKey}>
+        <ContextualPicker
+          findingTarget={findingTarget(twist.address)}
+          ariaLabel={`${label} Twist result`}
+          id={`${interaction.key}-picker`}
+          itemIcon={(item) => wellIcon(item.value)}
+          label=""
+          layout="inline"
+          loading={picker.pending}
+          model={picker.result ?? emptyPicker}
+          onOpenChange={(open) => {
+            if (open) picker.activate();
+          }}
+          onSelect={(itemKey) => executeIntent(interaction.intentFor(itemKey))}
+          placeholder="Twist result"
+          triggerIcon={twist.itemKey === null ? undefined : wellIcon(twist.itemKey)}
+          {...(twist.itemLabel === undefined ? {} : { triggerLabel: twist.itemLabel })}
+          triggerSize="icon"
+          triggerUnknown
+          {...(interaction.contextReached ? {} : { disabledHint: candidateWaitingHint })}
+        />
+      </RowChoice>
     </>
   );
 }
