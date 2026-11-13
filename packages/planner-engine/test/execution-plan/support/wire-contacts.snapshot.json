@@ -4,17 +4,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -41,14 +33,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFConversionFrontierProject(GiftDrop)",
         "underworld/createFConversionFrontierProject(MetaCurrencyDrop)",
         "underworld/createFConversionFrontierProject(MetaCardPointsCommonDrop)",
@@ -70,17 +55,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -107,14 +84,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFConversionFrontierProject(GiftDrop)",
         "underworld/createFConversionFrontierProject(MetaCurrencyDrop)",
         "underworld/createFConversionFrontierProject(MetaCardPointsCommonDrop)",
@@ -137,17 +107,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -173,14 +135,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
         "underworld/echoHammerReplayMissing",
@@ -205,17 +160,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -241,14 +188,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFInvalidLaterConversionProject",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
@@ -268,17 +208,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -304,14 +236,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFInvalidLaterConversionProject",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
@@ -331,17 +256,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -363,14 +280,7 @@
         "checkpoint/underworld-fgh",
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFInvalidLaterConversionProject",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
@@ -422,17 +332,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -457,14 +359,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFInvalidLaterConversionProject",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
@@ -484,17 +379,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -519,14 +406,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFInvalidLaterConversionProject",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
@@ -546,17 +426,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -579,14 +451,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFInvalidLaterConversionProject",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
@@ -621,17 +486,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -656,14 +513,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFInvalidLaterConversionProject",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
@@ -683,17 +533,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -716,14 +558,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFInvalidLaterConversionProject",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
@@ -743,17 +578,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
@@ -774,14 +601,7 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFWellCheckpoint",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createFInvalidLaterConversionProject",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
@@ -801,16 +621,9 @@
       "entries": [
         "execution/run-modifiers",
         "execution/f-opening",
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
@@ -827,10 +640,6 @@
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
         "underworld/createFInvalidLaterConversionProject",
         "underworld/createGContractAvailabilityProject(true)",
@@ -845,18 +654,6 @@
       }
     },
     {
-      "entries": [
-        "execution/fg-ixion-chaos",
-        "checkpoint/underworld-ixion-chaos",
-        "underworld/createCompleteFGIxionChaosProject"
-      ],
-      "rows": {
-        "#1 useFountain": "standard afterCombat",
-        "#2 interactKeepsakeRack": "postOutgoing",
-        "#3 purchaseStygianWellOffer:initial:secondLeft": "postOutgoing"
-      }
-    },
-    {
       "entries": ["execution/underworld-start-g-rivals-boss", "checkpoint/underworld-twist-scylla"],
       "rows": {
         "#1 useFountain": "standard afterCombat",
@@ -866,10 +663,17 @@
       }
     },
     {
+      "entries": ["checkpoint/underworld-ixion-chaos"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseStygianWellOffer:initial:secondLeft": "postOutgoing"
+      }
+    },
+    {
       "entries": [
         "checkpoint/underworld-world-shop-travel-deal",
         "checkpoint/underworld-f-stygian-well",
-        "underworld/createUnderworldFWellCheckpoint",
         "underworld/fWellDuplicateRefill"
       ],
       "rows": {
@@ -881,11 +685,7 @@
       }
     },
     {
-      "entries": [
-        "checkpoint/underworld-f-pool",
-        "underworld/createUnderworldFPoolCheckpoint",
-        "underworld/fPoolSaleCleared"
-      ],
+      "entries": ["checkpoint/underworld-f-pool", "underworld/fPoolSaleCleared"],
       "rows": {
         "#1 useFountain": "standard afterCombat",
         "#2 sellPurgingPoolTrait:left": "postOutgoing",
@@ -914,17 +714,10 @@
   "G/golden-g-b1-e1 G_Combat01": [
     {
       "entries": [
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
@@ -939,20 +732,13 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
         "underworld/echoReplayUnresolvedHammer",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -967,8 +753,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#2 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     },
@@ -990,18 +775,10 @@
   "G/golden-g-b2-e1 G_Combat02": [
     {
       "entries": [
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -1021,21 +798,13 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
         "underworld/echoReplayUnresolvedHammer",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1050,8 +819,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -1059,14 +827,8 @@
   "G/golden-g-b3-e1 G_Story01": [
     {
       "entries": [
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
@@ -1082,10 +844,6 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
         "underworld/echoHammerReplayMissing",
@@ -1098,17 +856,10 @@
   "G/golden-g-b4-e1 G_Combat10": [
     {
       "entries": [
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-g-locked-doors",
@@ -1125,20 +876,13 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/createGContractAvailabilityProject(true)",
         "underworld/createGContractAvailabilityProject(false)",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
         "underworld/echoReplayUnresolvedHammer",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1153,8 +897,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -1162,18 +905,10 @@
   "G/golden-g-b6-e1 G_MiniBoss01": [
     {
       "entries": [
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/fg-ixion-chaos",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "execution/underworld-start-g-rivals-boss",
@@ -1191,19 +926,11 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createCompleteFGIxionChaosProject",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
         "underworld/echoReplayUnresolvedHammer",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1218,8 +945,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
@@ -1227,17 +953,10 @@
   "G/golden-g-b7-e1 G_Combat12": [
     {
       "entries": [
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
@@ -1252,18 +971,11 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
         "underworld/echoReplayUnresolvedHammer",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1278,18 +990,15 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     },
     {
       "entries": [
-        "execution/fg-ixion-chaos",
         "execution/underworld-start-g-rivals-boss",
         "checkpoint/underworld-ixion-chaos",
-        "checkpoint/underworld-twist-scylla",
-        "underworld/createCompleteFGIxionChaosProject"
+        "checkpoint/underworld-twist-scylla"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -1297,17 +1006,10 @@
   "G/golden-g-preboss-shop:boss G_Boss01": [
     {
       "entries": [
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
@@ -1322,18 +1024,11 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
         "underworld/echoReplayUnresolvedHammer",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1348,8 +1043,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
@@ -1357,16 +1051,9 @@
   "G/golden-g-preboss-shop:postboss G_PostBoss01": [
     {
       "entries": [
-        "execution/fg",
         "execution/fg-npc-shopping-protection",
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "execution/automatic-boss",
-        "execution/underworld-generated-composition",
-        "execution/underworld-arachne-cocoons",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-fg",
@@ -1381,12 +1068,7 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
-        "underworld/createCompleteFGProject",
-        "underworld/createCompleteFGAnomalyProject(true)",
         "underworld/createCompleteFGAnomalyProject(false)",
-        "underworld/createUnderworldFPoolCheckpoint",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
         "underworld/echoReplayUnresolvedHammer"
@@ -1399,9 +1081,7 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1416,8 +1096,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 useFountain": "standard afterCombat" }
     }
@@ -1425,11 +1104,8 @@
   "H/golden-h-combat02 H_Combat02": [
     {
       "entries": [
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-generated-composition",
@@ -1437,14 +1113,10 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
         "underworld/echoReplayUnresolvedHammer",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1455,8 +1127,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": {
         "#1 completeFieldsCage:Cage02": "standard afterCombat",
@@ -1469,11 +1140,8 @@
   "H/golden-h-combat09 H_Combat09": [
     {
       "entries": [
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-generated-composition",
@@ -1481,19 +1149,15 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/frontier/19",
         "fresh-file/frontier/20",
         "fresh-file/frontier/21",
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": {
         "#1 completeFieldsCage:Cage02": "standard afterCombat",
@@ -1515,18 +1179,13 @@
   "H/golden-h-miniboss01 H_MiniBoss01": [
     {
       "entries": [
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-generated-composition",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-generated-composition",
         "checkpoint/underworld-fgh",
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
-        "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject"
+        "checkpoint/nemesis-h-fields"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
@@ -1534,17 +1193,12 @@
   "H/golden-h-combat05 H_Combat05": [
     {
       "entries": [
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-generated-composition",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-generated-composition",
         "checkpoint/underworld-fgh",
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
         "underworld/hammerBridgeRoute"
       ],
       "rows": {
@@ -1573,11 +1227,8 @@
   "H/golden-h-preboss-shop:boss H_Boss01": [
     {
       "entries": [
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
         "execution/fresh-file-fghi",
-        "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-generated-composition",
@@ -1585,20 +1236,16 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
         "underworld/echoReplayUnresolvedHammer",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/frontier/19",
         "fresh-file/frontier/20",
         "fresh-file/frontier/21",
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
@@ -1606,10 +1253,7 @@
   "H/golden-h-preboss-shop:postboss H_PostBoss01": [
     {
       "entries": [
-        "execution/underworld-fgh",
-        "execution/underworld-fghi",
         "execution/underworld-fghi-empty-shop-group",
-        "execution/underworld-generated-composition",
         "execution/underworld-echo-gold-anvil-duplicate",
         "execution/underworld-start-i-preboss",
         "checkpoint/underworld-generated-composition",
@@ -1617,8 +1261,6 @@
         "checkpoint/underworld-fghi",
         "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
-        "underworld/createGoldenFGHProject",
-        "underworld/createGoldenFGHIProject",
         "underworld/echoHammerReplayMissing",
         "underworld/hammerBridgeRoute",
         "underworld/echoReplayUnresolvedHammer"
@@ -1631,44 +1273,15 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/frontier/19",
         "fresh-file/frontier/20",
         "fresh-file/frontier/21",
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 useFountain": "standard afterCombat" }
-    }
-  ],
-  "I/golden-i-preboss:boss I_Boss01": [
-    {
-      "entries": [
-        "execution/underworld-fghi",
-        "execution/underworld-fghi-empty-shop-group",
-        "execution/fresh-file-fghi",
-        "execution/underworld-generated-composition",
-        "execution/underworld-echo-gold-anvil-duplicate",
-        "execution/underworld-start-i-preboss",
-        "checkpoint/underworld-generated-composition",
-        "checkpoint/underworld-fghi",
-        "checkpoint/nemesis-f-trait-trade",
-        "underworld/createGoldenFGHIProject",
-        "underworld/echoHammerReplayMissing",
-        "fresh-file/createFreshFileRouteProject",
-        "fresh-file/frontier/19",
-        "fresh-file/frontier/20",
-        "fresh-file/frontier/21",
-        "fresh-file/frontier/22",
-        "fresh-file/frontier/23",
-        "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
-      ],
-      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
   ],
   "I/golden-i-preboss I_PreBoss02": [
@@ -1684,14 +1297,34 @@
       }
     }
   ],
+  "I/golden-i-preboss:boss I_Boss01": [
+    {
+      "entries": [
+        "execution/underworld-fghi-empty-shop-group",
+        "execution/fresh-file-fghi",
+        "execution/underworld-echo-gold-anvil-duplicate",
+        "execution/underworld-start-i-preboss",
+        "checkpoint/underworld-generated-composition",
+        "checkpoint/underworld-fghi",
+        "checkpoint/nemesis-f-trait-trade",
+        "underworld/echoHammerReplayMissing",
+        "fresh-file/frontier/19",
+        "fresh-file/frontier/20",
+        "fresh-file/frontier/21",
+        "fresh-file/frontier/22",
+        "fresh-file/frontier/23",
+        "fresh-file/frontier/24",
+        "fresh-file/frontier/25"
+      ],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
   "F/fresh-0-0 F_Combat01": [
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
@@ -1722,8 +1355,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
@@ -1732,10 +1364,8 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
@@ -1763,8 +1393,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -1773,10 +1402,8 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
@@ -1804,8 +1431,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -1814,10 +1440,8 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
@@ -1845,8 +1469,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
@@ -1855,10 +1478,8 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
@@ -1881,8 +1502,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -1891,10 +1511,8 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
@@ -1917,8 +1535,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -1927,10 +1544,8 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
@@ -1953,8 +1568,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -1963,10 +1577,8 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
@@ -1989,8 +1601,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -1999,10 +1610,8 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
@@ -2019,8 +1628,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -2029,10 +1637,8 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
@@ -2049,8 +1655,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
@@ -2059,10 +1664,8 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
@@ -2078,8 +1681,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 useFountain": "standard afterCombat" }
     },
@@ -2095,9 +1697,7 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -2112,8 +1712,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": {
         "#1 interactEris": "standard afterCombat",
@@ -2125,14 +1724,10 @@
     {
       "entries": [
         "execution/fresh-file-fghi",
-        "execution/fg-ixion-chaos",
         "execution/underworld-start-g-rivals-boss",
         "checkpoint/underworld-ixion-chaos",
         "checkpoint/underworld-twist-scylla",
-        "underworld/createCompleteFGIxionChaosProject",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -2147,8 +1742,7 @@
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -2159,90 +1753,33 @@
         "execution/fresh-file-fghi",
         "execution/underworld-echo-gold-anvil-duplicate",
         "underworld/echoHammerReplayMissing",
-        "fresh-file/createFreshFileRouteProject",
         "fresh-file/frontier/19",
         "fresh-file/frontier/20",
         "fresh-file/frontier/21",
         "fresh-file/frontier/22",
         "fresh-file/frontier/23",
         "fresh-file/frontier/24",
-        "fresh-file/frontier/25",
-        "fresh-file/frontier/26"
+        "fresh-file/frontier/25"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
   ],
-  "G/golden-g-intro:chaos Chaos_01": [
-    {
-      "entries": [
-        "execution/fg-ixion-chaos",
-        "execution/underworld-start-g-rivals-boss",
-        "checkpoint/underworld-ixion-chaos",
-        "checkpoint/underworld-twist-scylla",
-        "underworld/createCompleteFGIxionChaosProject"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "G/golden-g-b4-e1 G_Combat06": [
-    {
-      "entries": [
-        "execution/fg-ixion-chaos",
-        "execution/underworld-start-g-rivals-boss",
-        "checkpoint/underworld-ixion-chaos",
-        "checkpoint/underworld-twist-scylla",
-        "underworld/createCompleteFGIxionChaosProject"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "G/ixion-chaos-g-preboss-shop:boss G_Boss01": [
-    {
-      "entries": [
-        "execution/fg-ixion-chaos",
-        "checkpoint/underworld-ixion-chaos",
-        "underworld/createCompleteFGIxionChaosProject"
-      ],
-      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
-    }
-  ],
-  "G/ixion-chaos-g-preboss-shop:postboss G_PostBoss01": [
-    {
-      "entries": [
-        "execution/fg-ixion-chaos",
-        "execution/underworld-start-g-rivals-boss",
-        "checkpoint/underworld-ixion-chaos",
-        "checkpoint/underworld-twist-scylla",
-        "underworld/createCompleteFGIxionChaosProject"
-      ],
-      "rows": { "#1 useFountain": "standard afterCombat" }
-    }
-  ],
   "G/golden-g-b3-e2 B_Combat01": [
     {
-      "entries": [
-        "execution/fg-anomaly",
-        "execution/fg-anomaly-roster",
-        "checkpoint/underworld-g-anomaly-roster",
-        "underworld/createCompleteFGAnomalyProject(true)"
-      ],
+      "entries": ["execution/fg-anomaly", "checkpoint/underworld-g-anomaly-roster"],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
   ],
   "N/surface-n-opening N_Opening01": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-n-partial-hub",
         "execution/surface-p-elite-switch",
@@ -2267,16 +1804,9 @@
         "checkpoint/surface-n-partial-hub",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2293,17 +1823,13 @@
   "N/surface-n-prehub N_PreHub01": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-n-partial-hub",
         "execution/surface-p-elite-switch",
@@ -2328,16 +1854,9 @@
         "checkpoint/surface-n-partial-hub",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2359,18 +1878,13 @@
   "N/surface-n-combat02 N_Combat02": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/dream-mixed-prefix",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/dream-start-n-opening",
         "execution/surface-p-elite-switch",
@@ -2396,16 +1910,9 @@
         "checkpoint/surface-n-partial-hub",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2415,17 +1922,12 @@
   "N/surface-n-combat05 N_Combat05": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/dream-mixed-prefix",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/dream-start-n-opening",
         "execution/surface-n-partial-hub",
@@ -2450,15 +1952,9 @@
         "checkpoint/surface-n-partial-hub",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2468,8 +1964,7 @@
       "entries": [
         "execution/surface-travel-deal-refill-anvil",
         "checkpoint/surface-shrine-travel-deal",
-        "checkpoint/surface-n-natural-selection-frontier",
-        "surface/surfaceShrineTravelDealProject"
+        "checkpoint/surface-n-natural-selection-frontier"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
@@ -2477,16 +1972,13 @@
   "N/surface-n-combat09 N_Combat09": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-n",
@@ -2506,16 +1998,9 @@
         "checkpoint/surface-nopq",
         "checkpoint/surface-n-complete-hub-frontier",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2529,18 +2014,13 @@
   "N/surface-n-combat11 N_Combat11": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/dream-mixed-prefix",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/dream-start-n-opening",
         "execution/surface-p-elite-switch",
@@ -2565,16 +2045,9 @@
         "checkpoint/surface-n-complete-hub-frontier",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2584,18 +2057,13 @@
   "N/surface-n-combat23 N_Combat23": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/dream-mixed-prefix",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/dream-start-n-opening",
         "execution/surface-p-elite-switch",
@@ -2620,16 +2088,9 @@
         "checkpoint/surface-n-complete-hub-frontier",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2639,18 +2100,13 @@
   "N/surface-n-miniBoss01 N_MiniBoss01": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/dream-mixed-prefix",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/dream-start-n-opening",
         "execution/surface-p-elite-switch",
@@ -2676,16 +2132,9 @@
         "checkpoint/surface-n-partial-hub",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2695,17 +2144,13 @@
   "N/surface-n-combat05-sideDoor2 N_Sub07": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-n-partial-hub",
         "execution/surface-p-elite-switch",
@@ -2730,16 +2175,9 @@
         "checkpoint/surface-n-partial-hub",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2749,17 +2187,13 @@
   "N/surface-n-combat05-sideDoor1 N_Sub02": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-n-partial-hub",
         "execution/surface-p-elite-switch",
@@ -2784,16 +2218,9 @@
         "checkpoint/surface-n-partial-hub",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2803,17 +2230,13 @@
   "N/surface-n-combat02-sideDoor1 N_Sub01": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-n",
@@ -2837,16 +2260,9 @@
         "checkpoint/surface-n-partial-hub",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2856,15 +2272,11 @@
   "N/surface-n-combat11-sideDoor1 N_Sub01": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-n",
         "checkpoint/surface-encounter-showcase",
@@ -2885,14 +2297,7 @@
         "checkpoint/surface-n-complete-hub-frontier",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2931,17 +2336,13 @@
   "N/surface-n-preboss:boss N_Boss01": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-n",
@@ -2963,15 +2364,8 @@
         "checkpoint/surface-nopq",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -2988,16 +2382,13 @@
   "N/surface-n-preboss:postboss N_PostBoss01": [
     {
       "entries": [
-        "execution/surface-n",
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
         "execution/surface-generated-precombat",
-        "execution/surface-n-phial-intermediate-fountain",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-n",
@@ -3017,15 +2408,9 @@
         "checkpoint/surface-nopq",
         "checkpoint/surface-n-story-board",
         "checkpoint/surface-n-ten-open-invalid",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
         "surface/createSurfaceNShrineSideRoomDeliveryCheckpoint",
         "surface/createSurfaceNUnresolvedBossHermesDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -3035,30 +2420,24 @@
       }
     },
     {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
-      "rows": {
-        "#1 useFountain": "standard afterCombat",
-        "#2 interactKeepsakeRack": "postOutgoing",
-        "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
-        "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
-        "#5 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing",
-        "#6 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:first]": "postOutgoing"
-      }
-    },
-    {
-      "entries": [
-        "checkpoint/surface-shrine-travel-deal",
-        "surface/surfaceShrineTravelDealProject"
-      ],
+      "entries": ["checkpoint/surface-shrine-travel-deal"],
       "rows": {
         "#1 useFountain": "standard afterCombat",
         "#2 interactKeepsakeRack": "postOutgoing",
         "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
         "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
         "#5 purchaseHermesShrineOffer:travelDealRefill": "postOutgoing",
+        "#6 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:first]": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
+        "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
+        "#5 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing",
         "#6 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:first]": "postOutgoing"
       }
     }
@@ -3071,7 +2450,6 @@
         "execution/surface-generated-precombat",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
         "checkpoint/surface-anvil",
@@ -3081,29 +2459,12 @@
         "checkpoint/surface-no-hermes-shrine-delivery",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
         "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
         "#2 interactWheelReward:wheel1": "shipPostCombat wheel1"
-      }
-    },
-    {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
-      "rows": {
-        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
-        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
-        "#3 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft]": "encounterEnd Combat1"
       }
     },
     {
@@ -3119,14 +2480,19 @@
       }
     },
     {
-      "entries": [
-        "checkpoint/surface-shrine-travel-deal",
-        "surface/surfaceShrineTravelDealProject"
-      ],
+      "entries": ["checkpoint/surface-shrine-travel-deal"],
       "rows": {
         "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
         "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
         "#3 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill]": "encounterEnd Combat1"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft]": "encounterEnd Combat1"
       }
     },
     {
@@ -3143,11 +2509,9 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
         "checkpoint/surface-anvil",
@@ -3158,13 +2522,7 @@
         "checkpoint/surface-no",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceShrineTravelDealProject",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject"
       ],
       "rows": {
@@ -3194,10 +2552,7 @@
       }
     },
     {
-      "entries": [
-        "checkpoint/surface-no-hermes-shrine-delivery",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint"
-      ],
+      "entries": ["checkpoint/surface-no-hermes-shrine-delivery"],
       "rows": {
         "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
         "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
@@ -3225,7 +2580,6 @@
         "execution/surface-generated-precombat",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
         "checkpoint/surface-anvil",
@@ -3236,31 +2590,13 @@
         "checkpoint/surface-no-hermes-shrine-delivery",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
         "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
         "#2 interactWheelReward:wheel1": "shipPostCombat wheel1"
-      }
-    },
-    {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
-      "rows": {
-        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
-        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
-        "#3 interactEncounter:Combat1": "shipPostCombat wheel1"
       }
     },
     {
@@ -3275,6 +2611,14 @@
         "#3 interactWheelReward:wheel1": "shipPostCombat wheel1",
         "#4 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,travelDealRefill]": "encounterEnd Combat1"
       }
+    },
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": {
+        "#1 chooseRewardWheel:wheel1": "shipPreCombat wheel1",
+        "#2 interactWheelReward:wheel1": "shipPostCombat wheel1",
+        "#3 interactEncounter:Combat1": "shipPostCombat wheel1"
+      }
     }
   ],
   "O/surface-o-devotion O_Devotion01": [
@@ -3282,12 +2626,10 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
@@ -3299,13 +2641,7 @@
         "checkpoint/surface-no",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceShrineTravelDealProject",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -3315,10 +2651,7 @@
       }
     },
     {
-      "entries": [
-        "checkpoint/surface-no-hermes-shrine-delivery",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint"
-      ],
+      "entries": ["checkpoint/surface-no-hermes-shrine-delivery"],
       "rows": {
         "#1 interactIncomingReward:beforeCombat:chosenSource": "standard beforeCombat",
         "#2 interactIncomingReward:afterCombat:spurnedSource": "standard afterCombat",
@@ -3331,13 +2664,11 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
@@ -3350,14 +2681,7 @@
         "checkpoint/surface-no-hermes-shrine-delivery",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -3369,13 +2693,11 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
@@ -3388,14 +2710,7 @@
         "checkpoint/surface-no-hermes-shrine-delivery",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -3410,13 +2725,11 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
         "execution/surface-trait-fences",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
@@ -3429,14 +2742,7 @@
         "checkpoint/surface-no-hermes-shrine-delivery",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
@@ -3452,7 +2758,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
@@ -3464,34 +2769,13 @@
         "checkpoint/surface-no-hermes-shrine-delivery",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint",
-        "surface/surfaceShrineTravelDealProject",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject",
         "surface/surfaceNORerollsProject",
         "surface/oShipWheelPickupBeforeDeferredEndEffects"
       ],
       "rows": {
         "#1 useFountain": "standard afterCombat",
         "#2 interactKeepsakeRack": "postOutgoing"
-      }
-    },
-    {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
-      "rows": {
-        "#1 useFountain": "standard afterCombat",
-        "#2 interactKeepsakeRack": "postOutgoing",
-        "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
-        "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
-        "#5 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing",
-        "#6 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:first]": "postOutgoing"
       }
     },
     {
@@ -3502,6 +2786,17 @@
         "#3 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing",
         "#4 rushHermesShrineOffer:initial:secondLeft": "postOutgoing",
         "#5 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:secondLeft]": "postOutgoing"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": {
+        "#1 useFountain": "standard afterCombat",
+        "#2 interactKeepsakeRack": "postOutgoing",
+        "#3 purchaseHermesShrineOffer:initial:first": "postOutgoing",
+        "#4 rushHermesShrineOffer:initial:first": "postOutgoing",
+        "#5 purchaseHermesShrineOffer:initial:secondLeft": "postOutgoing",
+        "#6 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:first]": "postOutgoing"
       }
     }
   ],
@@ -3514,7 +2809,6 @@
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
@@ -3523,20 +2817,12 @@
         "checkpoint/surface-selene-hex-path",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     },
     {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
       "rows": {
         "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
         "#2 interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:secondLeft]": "encounterEnd Combat",
@@ -3549,12 +2835,10 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
@@ -3564,12 +2848,7 @@
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -3579,12 +2858,10 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
@@ -3594,12 +2871,7 @@
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -3609,7 +2881,6 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
@@ -3621,9 +2892,6 @@
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
         "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
@@ -3634,12 +2902,10 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
@@ -3649,12 +2915,7 @@
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
@@ -3664,12 +2925,10 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "checkpoint/surface-encounter-showcase",
         "checkpoint/surface-anvil",
@@ -3678,12 +2937,7 @@
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     },
@@ -3701,12 +2955,10 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "execution/surface-p-elite-switch",
         "checkpoint/surface-encounter-showcase",
@@ -3716,12 +2968,7 @@
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 interactEncounter:Encounter": "standard afterCombat" }
     }
@@ -3731,12 +2978,10 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "checkpoint/surface-encounter-showcase",
         "checkpoint/surface-anvil",
@@ -3745,12 +2990,7 @@
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -3760,12 +3000,10 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "checkpoint/surface-encounter-showcase",
         "checkpoint/surface-anvil",
@@ -3774,12 +3012,7 @@
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
@@ -3789,10 +3022,8 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-generated-precombat",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "checkpoint/surface-encounter-showcase",
         "checkpoint/surface-anvil",
         "checkpoint/surface-ordinary-hex-path",
@@ -3800,12 +3031,7 @@
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nop",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": {
         "#1 useFountain": "standard afterCombat",
@@ -3830,11 +3056,9 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "checkpoint/surface-encounter-showcase",
         "checkpoint/surface-anvil",
@@ -3842,12 +3066,7 @@
         "checkpoint/surface-selene-hex-path",
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
@@ -3857,11 +3076,9 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "checkpoint/surface-encounter-showcase",
         "checkpoint/surface-anvil",
@@ -3869,12 +3086,7 @@
         "checkpoint/surface-selene-hex-path",
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -3884,11 +3096,9 @@
       "entries": [
         "execution/surface-nopq",
         "execution/surface-q-shop-correlation",
-        "execution/surface-scheduled-lifecycle",
         "execution/surface-shrine-deliveries",
         "execution/surface-shrine-rushed-unranked",
         "execution/surface-travel-deal-refill-anvil",
-        "execution/surface-selene-hex-path",
         "execution/surface-start-q-opening",
         "checkpoint/surface-encounter-showcase",
         "checkpoint/surface-anvil",
@@ -3896,12 +3106,7 @@
         "checkpoint/surface-selene-hex-path",
         "checkpoint/surface-scheduled-lifecycle",
         "checkpoint/surface-nopq",
-        "surface/loadSurfaceNOPQProject",
-        "surface/surfaceAnvilProject",
-        "surface/surfaceEncounterShowcaseProject",
-        "surface/createRepresentativeNOPQShopTraitProject",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
+        "surface/createRepresentativeNOPQShopTraitProject"
       ],
       "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
@@ -3932,14 +3137,13 @@
       }
     },
     {
-      "entries": ["checkpoint/surface-anvil", "surface/surfaceAnvilProject"],
+      "entries": ["checkpoint/surface-anvil"],
       "rows": { "#1 interactShopOffer:PremiumProgress": "standard afterCombat" }
     }
   ],
   "Q/Q:start Q_Intro": [
     {
       "entries": [
-        "execution/dream-mixed-prefix",
         "execution/dream-shrine-pending",
         "execution/dream-start-n-opening",
         "checkpoint/dream-mixed-handoff"
@@ -3950,7 +3154,6 @@
   "Q/dream-q-first-miniboss Q_MiniBoss02": [
     {
       "entries": [
-        "execution/dream-mixed-prefix",
         "execution/dream-shrine-pending",
         "execution/dream-start-n-opening",
         "checkpoint/dream-mixed-handoff"
@@ -3958,10 +3161,15 @@
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
   ],
+  "Q/dream-q-ordinary Q_Combat01": [
+    {
+      "entries": ["execution/dream-shrine-pending"],
+      "rows": { "#1 purchaseHermesShrineOffer:initial:first": "postOutgoing" }
+    }
+  ],
   "Q/dream-q-second-miniboss Q_MiniBoss03": [
     {
       "entries": [
-        "execution/dream-mixed-prefix",
         "execution/dream-shrine-pending",
         "execution/dream-start-n-opening",
         "checkpoint/dream-mixed-handoff"
@@ -3972,207 +3180,11 @@
   "Q/dream-q-preboss:boss Q_Boss01": [
     {
       "entries": [
-        "execution/dream-mixed-prefix",
         "execution/dream-shrine-pending",
         "execution/dream-start-n-opening",
         "checkpoint/dream-mixed-handoff"
       ],
       "rows": { "#1 collectRequiredReward": "standard afterCombat" }
-    }
-  ],
-  "Q/dream-q-preboss:postboss Dream_PostBoss01": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 useFountain": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-1-1 F_Combat02": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-2-1 F_Combat03": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-3-1 F_Combat04": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-4-1 F_Combat07": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-5-1 F_MiniBoss01": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-6-1 F_Combat06": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-7-2 F_Combat11": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-8-1 F_Combat12": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-9-1 F_Combat14": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-10-1 F_Combat13": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-free F_PreBoss01": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-free:boss F_Boss01": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
-    }
-  ],
-  "F/dream-f-free:postboss Dream_PostBoss02": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 useFountain": "standard afterCombat" }
-    }
-  ],
-  "N/dream-n-prehub N_PreHub01": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "N/surface-n-combat01 N_Combat01": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "N/dream-n-preboss:boss N_Boss01": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
-    }
-  ],
-  "N/dream-n-preboss:postboss Dream_PostBoss03": [
-    {
-      "entries": [
-        "execution/dream-mixed-prefix",
-        "execution/dream-start-n-opening",
-        "checkpoint/dream-mixed-handoff"
-      ],
-      "rows": { "#1 useFountain": "standard afterCombat" }
-    }
-  ],
-  "N/surface-n-combat03 N_Combat03": [
-    {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
-      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
-    }
-  ],
-  "Q/dream-q-ordinary Q_Combat01": [
-    {
-      "entries": ["execution/dream-shrine-pending"],
-      "rows": { "#1 purchaseHermesShrineOffer:initial:first": "postOutgoing" }
     }
   ],
   "H/golden-h-bridge01 H_Bridge01": [
@@ -4255,16 +3267,112 @@
       "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
   ],
-  "P/surface-p-4-1-p_combat07 P_Combat11": [
+  "Q/dream-q-preboss:postboss Dream_PostBoss01": [
     {
-      "entries": [
-        "execution/surface-selene-hex-path",
-        "checkpoint/surface-ordinary-hex-path",
-        "checkpoint/surface-selene-hex-path",
-        "surface/surfaceOrdinaryHexPathProject",
-        "surface/surfaceSeleneHexPathProject"
-      ],
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-1-1 F_Combat02": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-2-1 F_Combat03": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-3-1 F_Combat04": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-4-1 F_Combat07": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-5-1 F_MiniBoss01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-6-1 F_Combat06": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-7-2 F_Combat11": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-8-1 F_Combat12": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-9-1 F_Combat14": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-10-1 F_Combat13": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-free F_PreBoss01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-free:boss F_Boss01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "F/dream-f-free:postboss Dream_PostBoss02": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 useFountain": "standard afterCombat" }
+    }
+  ],
+  "N/dream-n-prehub N_PreHub01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat01 N_Combat01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/dream-n-preboss:boss N_Boss01": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "N/dream-n-preboss:postboss Dream_PostBoss03": [
+    {
+      "entries": ["execution/dream-start-n-opening", "checkpoint/dream-mixed-handoff"],
+      "rows": { "#1 useFountain": "standard afterCombat" }
     }
   ],
   "F/golden-f-preboss-shop:boss F_Boss02": [
@@ -4273,10 +3381,40 @@
       "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
   ],
+  "G/golden-g-intro:chaos Chaos_01": [
+    {
+      "entries": [
+        "execution/underworld-start-g-rivals-boss",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-twist-scylla"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "G/golden-g-b4-e1 G_Combat06": [
+    {
+      "entries": [
+        "execution/underworld-start-g-rivals-boss",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-twist-scylla"
+      ],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
   "G/ixion-chaos-g-preboss-shop:boss G_Boss02": [
     {
       "entries": ["execution/underworld-start-g-rivals-boss", "checkpoint/underworld-twist-scylla"],
       "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
+  "G/ixion-chaos-g-preboss-shop:postboss G_PostBoss01": [
+    {
+      "entries": [
+        "execution/underworld-start-g-rivals-boss",
+        "checkpoint/underworld-ixion-chaos",
+        "checkpoint/underworld-twist-scylla"
+      ],
+      "rows": { "#1 useFountain": "standard afterCombat" }
     }
   ],
   "H/H:start H_Intro": [
@@ -4351,6 +3489,12 @@
       }
     }
   ],
+  "G/ixion-chaos-g-preboss-shop:boss G_Boss01": [
+    {
+      "entries": ["checkpoint/underworld-ixion-chaos"],
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
+    }
+  ],
   "G/zagreus-contract-showcase C_Boss01": [
     {
       "entries": ["checkpoint/underworld-zagreus-contract"],
@@ -4397,8 +3541,7 @@
     {
       "entries": [
         "checkpoint/underworld-f-midshop-pom-frontier",
-        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject",
-        "underworld/loadUnderworldFMidshopPomFrontierProject"
+        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard beforeCombat" }
     }
@@ -4407,8 +3550,7 @@
     {
       "entries": [
         "checkpoint/underworld-f-midshop-pom-frontier",
-        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject",
-        "underworld/loadUnderworldFMidshopPomFrontierProject"
+        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -4417,8 +3559,7 @@
     {
       "entries": [
         "checkpoint/underworld-f-midshop-pom-frontier",
-        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject",
-        "underworld/loadUnderworldFMidshopPomFrontierProject"
+        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
@@ -4427,8 +3568,7 @@
     {
       "entries": [
         "checkpoint/underworld-f-midshop-pom-frontier",
-        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject",
-        "underworld/loadUnderworldFMidshopPomFrontierProject"
+        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
@@ -4437,18 +3577,14 @@
     {
       "entries": [
         "checkpoint/underworld-f-midshop-pom-frontier",
-        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject",
-        "underworld/loadUnderworldFMidshopPomFrontierProject"
+        "underworld/createFMidshopUnresolvedBlindBoxBeforePomProject"
       ],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
   ],
   "F/midshop-pom-b5-e1 F_Shop01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-midshop-pom-frontier",
-        "underworld/loadUnderworldFMidshopPomFrontierProject"
-      ],
+      "entries": ["checkpoint/underworld-f-midshop-pom-frontier"],
       "rows": { "#1 interactShopOffer:Minor": "postOutgoing" }
     },
     {
@@ -4616,6 +3752,18 @@
         "#1 useFountain": "standard afterCombat",
         "#2 interactKeepsakeRack": "postOutgoing"
       }
+    }
+  ],
+  "P/surface-p-4-1-p_combat07 P_Combat11": [
+    {
+      "entries": ["checkpoint/surface-ordinary-hex-path", "checkpoint/surface-selene-hex-path"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
+    }
+  ],
+  "N/surface-n-combat03 N_Combat03": [
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
   ],
   "N/256b5530-90c0-4d46-8591-e1a3ba51a32c N_Opening01": [
@@ -4851,7 +3999,6 @@
     },
     {
       "entries": [
-        "fresh-file/withNewHFieldsRoom(max)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",

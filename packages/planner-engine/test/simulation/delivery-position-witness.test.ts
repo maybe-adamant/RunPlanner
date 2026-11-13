@@ -492,14 +492,14 @@ describe('delivery and clocked-drop position under the due-spawn judgment', () =
   it('covers every timed pickup kind, with Fields and mid-room clocks authored', () => {
     expect(counts(corpus)).toEqual({
       'N single delivery': 1,
-      'N single rush': 4,
-      'O Ship delivery': 13,
-      'O Ship rush': 4,
+      'N single rush': 2,
+      'O Ship delivery': 11,
+      'O Ship rush': 3,
       'O Ship rush (unplaced)': 1,
-      'O single delivery': 2,
-      'O single rush': 3,
-      'P P clocked': 2,
-      'P P delivery': 2,
+      'O single delivery': 1,
+      'O single rush': 2,
+      'P P clocked': 1,
+      'P P delivery': 1,
       'Q single flush': 3,
     });
     expect(authored.map((witness) => [witness.project, witness.room, witness.phase])).toEqual([

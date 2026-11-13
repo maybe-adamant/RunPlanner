@@ -655,7 +655,9 @@ describe('Anomaly', () => {
     'observes capture %s at Combat and spawns the reward only on success',
     (success, loot) => {
       const room = observe(
-        corpusRun(`underworld/createCompleteFGAnomalyProject(${success})`),
+        corpusRun(
+          success ? 'execution/fg-anomaly' : 'underworld/createCompleteFGAnomalyProject(false)',
+        ),
         gAnomaly,
       );
 
@@ -776,7 +778,7 @@ describe('Postboss', () => {
 
 describe('Fields', () => {
   it.each([
-    ['execution/underworld-fgh', hFields, ['Cage03', 'Cage02', 'Cage01']],
+    ['checkpoint/underworld-fgh', hFields, ['Cage03', 'Cage02', 'Cage01']],
     ['checkpoint/dream-h-artificer-echo', hDreamFields, ['Cage01', 'Cage02', 'Cage03']],
   ] as const)('runs the %s cages in their activation order', (entry, origin, cages) => {
     const room = observe(corpusRun(entry), origin);
@@ -801,7 +803,7 @@ describe('Fields', () => {
   });
 
   it('requires each cage’s reward, spawned locked at entry, before Doors open', () => {
-    const run = corpusRun('execution/underworld-fgh');
+    const run = corpusRun('checkpoint/underworld-fgh');
     const room = observe(run, hFields);
     const last = room.rank('interactLocalReward:cages:cage1');
 
@@ -837,7 +839,7 @@ describe('Fields', () => {
   });
 
   it('draws the doors in the walk once the last cage reward is taken', () => {
-    const room = observe(corpusRun('execution/underworld-fgh'), hFields);
+    const room = observe(corpusRun('checkpoint/underworld-fgh'), hFields);
     const last = position(room.walk, room.rank('interactLocalReward:cages:cage1'));
     expect(room.walk.slice(last + 1, last + 3)).toEqual([
       'acquisitionPointReached',
@@ -876,7 +878,7 @@ describe('the rest', () => {
     ['main', nMain, true],
     ['side', nSide, false],
   ] as const)('opens an Ephyra %s room’s doors after its reward', (_, origin, generates) => {
-    const room = observe(corpusRun('execution/surface-n'), origin);
+    const room = observe(corpusRun('checkpoint/surface-n'), origin);
 
     expect(room.timeline).toEqual([
       'roomEntered',
@@ -893,7 +895,7 @@ describe('the rest', () => {
   });
 
   it('opens the Ephyra hub’s doors at entry, with no encounter', () => {
-    const hub = corpusRun('execution/surface-n').fragments.findLast(
+    const hub = corpusRun('checkpoint/surface-n').fragments.findLast(
       (fragment) => fragment.origin.kind === 'hubRoom',
     );
     if (hub === undefined) throw new Error('the hub was not walked');

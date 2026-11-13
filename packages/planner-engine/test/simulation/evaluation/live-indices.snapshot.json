@@ -1,27 +1,5 @@
 {
-  "N/surface-n-preboss:postboss N_PostBoss01": [
-    {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-shrine-travel-deal",
-        "checkpoint/surface-scheduled-lifecycle",
-        "surface/surfaceShrineTravelDealProject"
-      ],
-      "items": {
-        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:first]": "spawn 4 after rushHermesShrineOffer:initial:first | placed 5 | move 4"
-      }
-    }
-  ],
   "O/surface-o-combat04 O_Combat04": [
-    {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
-      "items": {
-        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft]": "spawn 2 afterEncounterReward:Combat1 | placed 2 | deadline 2"
-      }
-    },
     {
       "entries": [
         "execution/surface-shrine-deliveries",
@@ -33,66 +11,15 @@
       }
     },
     {
-      "entries": [
-        "checkpoint/surface-shrine-travel-deal",
-        "surface/surfaceShrineTravelDealProject"
-      ],
+      "entries": ["checkpoint/surface-shrine-travel-deal"],
       "items": {
         "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,travelDealRefill]": "spawn 2 afterEncounterReward:Combat1 | placed 2 | deadline 2"
       }
-    }
-  ],
-  "O/surface-o-preboss:postboss O_PostBoss01": [
-    {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
-      "items": {
-        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:first]": "spawn 4 after rushHermesShrineOffer:initial:first | placed 5 | move 4"
-      }
     },
     {
-      "entries": ["execution/surface-trait-fences"],
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
       "items": {
-        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:secondLeft]": "spawn 4 after rushHermesShrineOffer:initial:secondLeft | placed 4"
-      }
-    }
-  ],
-  "P/surface-p-1-1-p_combat03 P_Combat03": [
-    {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
-      "items": {
-        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:secondLeft]": "spawn 0 encounterEnd:Combat | placed 1 | move 0 | deadline 3",
-        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom1": "spawn 0 encounterEnd:Combat | placed 2 | move 0,1",
-        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom2": "spawn 0 encounterEnd:Combat | place 0,1,2,3"
-      }
-    }
-  ],
-  "P/surface-p-preboss-shop:boss P_Boss01": [
-    {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
-      "items": {
-        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom1": "spawn 0 encounterEnd:Encounter | place 0,1",
-        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom2": "spawn 0 encounterEnd:Encounter | place 0,1"
-      }
-    }
-  ],
-  "Q/surface-q-preboss:boss Q_Boss01": [
-    {
-      "entries": [
-        "execution/surface-scheduled-lifecycle",
-        "checkpoint/surface-scheduled-lifecycle"
-      ],
-      "items": {
-        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom1": "spawn 0 encounterEnd:Encounter | place 0,1",
-        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom2": "spawn 0 encounterEnd:Encounter | place 0,1"
+        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:secondLeft]": "spawn 2 afterEncounterReward:Combat1 | placed 2 | deadline 2"
       }
     }
   ],
@@ -101,8 +28,7 @@
       "entries": [
         "execution/surface-shrine-deliveries",
         "execution/surface-start-q-opening",
-        "checkpoint/surface-no-hermes-shrine-delivery",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint"
+        "checkpoint/surface-no-hermes-shrine-delivery"
       ],
       "items": {
         "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,initial:first]": "spawn 4 after rushHermesShrineOffer:initial:first | placed 5 | move 4"
@@ -140,6 +66,59 @@
       }
     }
   ],
+  "O/surface-o-preboss:postboss O_PostBoss01": [
+    {
+      "entries": ["execution/surface-trait-fences"],
+      "items": {
+        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:secondLeft]": "spawn 4 after rushHermesShrineOffer:initial:secondLeft | placed 4"
+      }
+    },
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "items": {
+        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:first]": "spawn 4 after rushHermesShrineOffer:initial:first | placed 5 | move 4"
+      }
+    }
+  ],
+  "N/surface-n-preboss:postboss N_PostBoss01": [
+    {
+      "entries": [
+        "checkpoint/surface-shrine-travel-deal",
+        "checkpoint/surface-scheduled-lifecycle"
+      ],
+      "items": {
+        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,N,surface-n-preboss:postboss,initial:first]": "spawn 4 after rushHermesShrineOffer:initial:first | placed 5 | move 4"
+      }
+    }
+  ],
+  "P/surface-p-1-1-p_combat03 P_Combat03": [
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "items": {
+        "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-preboss:postboss,initial:secondLeft]": "spawn 0 encounterEnd:Combat | placed 1 | move 0 | deadline 3",
+        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom1": "spawn 0 encounterEnd:Combat | placed 2 | move 0,1",
+        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom2": "spawn 0 encounterEnd:Combat | place 0,1,2,3"
+      }
+    }
+  ],
+  "P/surface-p-preboss-shop:boss P_Boss01": [
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "items": {
+        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom1": "spawn 0 encounterEnd:Encounter | place 0,1",
+        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom2": "spawn 0 encounterEnd:Encounter | place 0,1"
+      }
+    }
+  ],
+  "Q/surface-q-preboss:boss Q_Boss01": [
+    {
+      "entries": ["checkpoint/surface-scheduled-lifecycle"],
+      "items": {
+        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom1": "spawn 0 encounterEnd:Encounter | place 0,1",
+        "interactAcquisitionEntry:roomExit:clockedTraitGenerated:[traitOffer,Surface,O,[encounterPhase,Surface,O,{kind:occurrence,occurrenceId:surface-o-combat01},Combat1],selection]:pom2": "spawn 0 encounterEnd:Encounter | place 0,1"
+      }
+    }
+  ],
   "N/surface-n-combat09 N_Combat09": [
     {
       "entries": [
@@ -153,10 +132,7 @@
   ],
   "O/surface-o-devotion O_Devotion01": [
     {
-      "entries": [
-        "checkpoint/surface-no-hermes-shrine-delivery",
-        "surface/createSurfaceNOHermesShrineDeliveryCheckpoint"
-      ],
+      "entries": ["checkpoint/surface-no-hermes-shrine-delivery"],
       "items": {
         "interactAcquisitionEntry:hermesShrineDelivery:hermesShrineDelivery:[Surface,O,surface-o-combat07,initial:secondLeft]": "spawn 1 encounterEnd:Encounter | placed 2 | move 1 | deadline 2"
       }
