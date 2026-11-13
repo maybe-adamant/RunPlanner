@@ -18,7 +18,17 @@ import {
 } from '@run-planner/engine/simulation';
 import { settleProjectFills } from '@run-planner/engine/project-migration';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { createGoldenFGHProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
+import {
+  assembleExecutionProduct,
+  compileExecutionPlan,
+  encodeExecutionPlan,
+} from '@run-planner/engine/execution-plan';
+import {
+  createCompleteFGIxionChaosProject,
+  createGoldenFGHProject,
+  goldenGBiome,
+  loadUnderworldFMidshopPomFrontierProject,
+} from '@run-planner/test-fixtures/underworld';
 
 import { positionFillOn, positionFills } from '../../../src/simulation/position-fill';
 
@@ -122,6 +132,7 @@ function blankPositions(project: ProjectDocument): ProjectDocument {
                             optionalPointIdBySlot: blank(
                               occurrence.state.spatial.optionalPointIdBySlot,
                             ),
+                            nemesisPointId: null,
                           },
                         }
                       : occurrence.state;
@@ -252,5 +263,40 @@ describe('positions filled on first reach', () => {
       const stored = applyProjectCommand(project, catalog, fill.command);
       expect(positionFillOn(stored, fill), fill.key).toBeUndefined();
     }
+  });
+
+  it.each([
+    ['Fields points, object anchors, flips and entries', createGoldenFGHProject],
+    ['a Chaos gate spawn point', createCompleteFGIxionChaosProject],
+    ['an incomplete biome prefix', loadUnderworldFMidshopPomFrontierProject],
+  ])('publishes the walk it drew %s on, without walking again', (_label, fixture) => {
+    const unfilled = blankPositions(withoutLayouts(fixture()));
+    const before = evaluate(unfilled);
+    const kinds = new Set(positionFills(catalog, before).map(({ command }) => command.kind));
+    let walks = 0;
+    const settled = settleProjectEdit({
+      catalog,
+      before,
+      command: rename,
+      evaluate: (project) => {
+        walks += 1;
+        return evaluate(project);
+      },
+    });
+    expect(settled.fault).toBeUndefined();
+    expect(walks).toBe(1);
+    const filled = settled.assembly.project;
+    expect(kinds.size).toBeGreaterThan(0);
+    expect(filled).not.toBe(unfilled);
+    // A fresh walk of a copy shares no cached biome with the published evaluation.
+    const fresh = evaluate(structuredClone(filled));
+    expect(settled.assembly.evaluation).toEqual(fresh.evaluation);
+    const wire = (assembly: typeof fresh) =>
+      encodeExecutionPlan(
+        compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) }),
+      );
+    if (settled.assembly.evaluation.status === 'valid')
+      expect(wire(settled.assembly)).toBe(wire(fresh));
+    expect(positionFills(catalog, settled.assembly)).toEqual([]);
   });
 });

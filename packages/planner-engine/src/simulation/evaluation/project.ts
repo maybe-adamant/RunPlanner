@@ -52,9 +52,11 @@ import {
   resourcePlacementFindings,
 } from '../resources';
 import {
+  candidateArtifactsForProjectEvaluationAssembly,
   createExactProjectEvaluationAssembly,
   ProjectSimulationContractError,
 } from './project-evaluation-assembly';
+import { withStoredPositions } from '../materialization/stored-positions';
 import { evaluateBiomeAssembly } from './biome-evaluation';
 import { resolveBiomePlanEnd, roomsBehindEndDoors } from '../plan-end';
 import {
@@ -130,6 +132,31 @@ function landedOutcomeOccurrence(evaluation: ProjectBiomeEvaluation): SemanticAd
 
 type BiomeAssembly = ReturnType<typeof evaluateBiomeAssembly>;
 
+/**
+ * A biome's assembly before its plan stored the positions its walk drew: the
+ * walk stands, and only the materialized copies of those positions change.
+ */
+function withBiomeStoredPositions(earlier: BiomeAssembly, plan: AuthoredBiomePlan): BiomeAssembly {
+  const evaluation = earlier.evaluation;
+  const stored = {
+    ...('snapshot' in evaluation
+      ? { snapshot: withStoredPositions(evaluation.snapshot, plan) }
+      : {}),
+    ...('materializedPrefix' in evaluation
+      ? { materializedPrefix: withStoredPositions(evaluation.materializedPrefix, plan) }
+      : {}),
+    ...('assessmentPrefix' in evaluation && evaluation.assessmentPrefix !== undefined
+      ? { assessmentPrefix: withStoredPositions(evaluation.assessmentPrefix, plan) }
+      : {}),
+  } as Partial<ProjectBiomeEvaluation>;
+  const keys = Object.keys(stored) as (keyof ProjectBiomeEvaluation)[];
+  if (keys.every((key) => stored[key] === evaluation[key])) return earlier;
+  return Object.freeze({
+    evaluation: Object.freeze({ ...evaluation, ...stored }) as ProjectBiomeEvaluation,
+    candidateArtifacts: earlier.candidateArtifacts,
+  });
+}
+
 // Completed biomes by predecessor evaluation (the catalog for the first biome),
 // then plan, loadout and the route-wide inputs this biome reads.
 const biomeAssemblies = new WeakMap<
@@ -143,7 +170,9 @@ function evaluateCachedBiomeAssembly(
   plan: AuthoredBiomePlan,
   predecessor: ProjectBiomeEvaluation | undefined,
   context: Parameters<typeof evaluateBiomeAssembly>[3],
-  end?: OccurrenceId,
+  end: OccurrenceId | undefined,
+  /** This biome's assembly before only its drawn positions were stored. */
+  unstored: BiomeAssembly | undefined,
 ): BiomeAssembly {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const forcedChaos = (plan.topology?.occurrences ?? [])
@@ -174,7 +203,10 @@ function evaluateCachedBiomeAssembly(
   if (byInputs === undefined) byLoadout.set(context.loadout, (byInputs = new Map()));
   const cached = byInputs.get(key);
   if (cached !== undefined) return cached;
-  const assembled = evaluateBiomeAssembly(catalog, routeKey, plan, context, end);
+  const assembled =
+    unstored === undefined
+      ? evaluateBiomeAssembly(catalog, routeKey, plan, context, end)
+      : withBiomeStoredPositions(unstored, plan);
   byInputs.set(key, assembled);
   return assembled;
 }
@@ -197,7 +229,21 @@ function withoutPlacementsBehindEndDoors<
 function evaluateRouteAssembly(
   catalog: Catalog,
   route: AuthoredRoutePlan,
+  unstored?: ProjectEvaluationAssembly,
 ): RouteProjectEvaluationAssembly {
+  const unstoredArtifacts =
+    unstored === undefined ? undefined : candidateArtifactsForProjectEvaluationAssembly(unstored);
+  const unstoredBiome = (index: number, plan: AuthoredBiomePlan): BiomeAssembly | undefined => {
+    if (unstored === undefined || unstoredArtifacts === undefined) return undefined;
+    const evaluation = unstored.evaluation.route.biomes[index];
+    const candidateArtifacts =
+      evaluation === undefined ? undefined : unstoredArtifacts.biomeAt(evaluation.origin);
+    if (evaluation?.biomeKey !== plan.biomeKey || candidateArtifacts === undefined)
+      throw new ProjectSimulationContractError(
+        `${plan.biomeKey} was not walked before its positions were stored`,
+      );
+    return { evaluation, candidateArtifacts };
+  };
   const forcedChaos = forcedChaosOccurrenceKeysForRoute(route, catalog);
   const evaluations: ProjectBiomeEvaluation[] = [];
   const candidateArtifacts: BiomeCandidateArtifacts[] = [];
@@ -412,8 +458,17 @@ function evaluateRouteAssembly(
             previous,
             withoutPlacementsBehindEndDoors(context, biomeEnd.plan, biomeEnd.occurrenceId),
             biomeEnd.occurrenceId,
+            unstoredBiome(index, plan),
           )
-        : evaluateCachedBiomeAssembly(catalog, route.routeKey, plan, previous, context);
+        : evaluateCachedBiomeAssembly(
+            catalog,
+            route.routeKey,
+            plan,
+            previous,
+            context,
+            undefined,
+            unstoredBiome(index, plan),
+          );
     const evaluation = assembled.evaluation;
     evaluations.push(evaluation);
     candidateArtifacts.push(assembled.candidateArtifacts);
@@ -521,8 +576,32 @@ export function simulateProjectAssembly(
   catalog: Catalog,
   project: ProjectDocument,
 ): ProjectEvaluationAssembly {
+  return assembleProject(catalog, project, undefined);
+}
+
+/**
+ * The evaluation of `project`, the plan `unstored` evaluated with only the
+ * blank positions its walk drew now stored. Storing a drawn position leaves
+ * the walk unchanged, so every walked product is reused and only the
+ * materialized copies of the stored positions are re-read.
+ */
+export function simulateStoredPositionsAssembly(
+  catalog: Catalog,
+  unstored: ProjectEvaluationAssembly,
+  project: ProjectDocument,
+): ProjectEvaluationAssembly {
+  if (project.route.loadout !== unstored.project.route.loadout)
+    throw new ProjectSimulationContractError('storing positions changed the route loadout');
+  return assembleProject(catalog, project, unstored);
+}
+
+function assembleProject(
+  catalog: Catalog,
+  project: ProjectDocument,
+  unstored: ProjectEvaluationAssembly | undefined,
+): ProjectEvaluationAssembly {
   assertProjectMatchesCatalog(catalog, project);
-  const assembledRoute = evaluateRouteAssembly(catalog, project.route);
+  const assembledRoute = evaluateRouteAssembly(catalog, project.route, unstored);
   const route = assembledRoute.evaluation;
   const evaluation = Object.freeze({
     status: route.status,

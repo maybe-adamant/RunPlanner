@@ -75,6 +75,7 @@ import {
   rerollSettlementForProjectEvaluationAssembly,
 } from './evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from './evaluation/evaluation-products';
+import { simulateStoredPositionsAssembly } from './evaluation/project';
 import { candidateBiome, candidateBiomeRooms } from './candidates/evaluated-biome';
 import { positionFillOn, positionFills } from './position-fill';
 import { currentPoolListValues, stockFills, type PoolValuesBefore } from './stock-fill';
@@ -1165,7 +1166,7 @@ export function settleProjectFills(
   const poolValuesBefore: PoolValuesBefore = () => options.redrawStalePoolLists === true;
   const stocked = new Set<string>();
   for (;;) {
-    const { fills } = reachedFills(
+    const { positions, fills } = reachedFills(
       options.catalog,
       assembly,
       candidateArtifactsForProjectEvaluationAssembly(assembly),
@@ -1182,7 +1183,10 @@ export function settleProjectFills(
       stocked.add(fill.key);
       project = applyProjectCommand(project, options.catalog, fill.command);
     }
-    assembly = evaluate(project);
+    assembly =
+      fills.length === positions.length
+        ? simulateStoredPositionsAssembly(options.catalog, assembly, project)
+        : evaluate(project);
   }
 }
 
@@ -1414,7 +1418,14 @@ function settleProject(options: {
   const fated =
     (payload: RowRemoval['payload']) =>
     (row: TakenRow): RowRemoval => ({ ...row, payload });
-  for (; ; assembly = evaluate(project)) {
+  // The next evaluation, when the last pass only stored positions its walk drew.
+  let stored: ProjectEvaluationAssembly | undefined;
+  const reevaluate = () => {
+    const next = stored ?? evaluate(project);
+    stored = undefined;
+    return next;
+  };
+  for (; ; assembly = reevaluate()) {
     taken = [];
     const discarded: { owner: OccurrenceAddress; item: SemanticAddress }[] = [];
     const displaced = placements(assembly).find(
@@ -1504,6 +1515,9 @@ function settleProject(options: {
           // A room the plan before the edit held otherwise is edited either way.
           if (!(error instanceof ProjectCommandContractError)) throw error;
         }
+      // A stored drawn position leaves the walk standing; a stocked slot changes what it judges.
+      if (fills.length === positions.length)
+        stored = simulateStoredPositionsAssembly(catalog, assembly, project);
       continue;
     }
     // Last first, each through its owning removal, as a reset removes rows.

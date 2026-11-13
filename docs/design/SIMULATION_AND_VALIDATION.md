@@ -562,7 +562,9 @@ spawn order: anchor objects in native order (the Well's pin is its own, never
 stored), Fields cages, then optional rewards, then Nemesis off its excluded
 points; a rolled flip draws first and the entry among those the flip allows.
 The walk reads the same draw for an item still blank, so storing it leaves the
-walk unchanged and the fill is collision-free.
+walk unchanged and the fill is collision-free: an edit whose only fills are
+positions publishes the walk that drew them, with no second walk, while a
+stocked slot changes what the walk judges and is walked again.
 
 After that a stored position changes only when the owner changes it. Two items
 on one point, or a point an upstream edit makes ineligible, keep their values
