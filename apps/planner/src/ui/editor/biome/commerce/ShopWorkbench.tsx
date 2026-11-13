@@ -2,8 +2,10 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
+import { OverviewRow } from '../RoomOverviewSections';
 
 /** The Shop's stock; purchases are timeline actions, and Travel Deal is authored under its purchase. */
 export function ShopWorkbench({
@@ -22,7 +24,7 @@ export function ShopWorkbench({
   }
   return (
     <section aria-label="Shop inventory" className="shop-editor">
-      <div className="shop-family-offer-list">
+      <OverviewRow icon={rewardIcon('Shop')} label="Shop">
         <NumberedSlots label="Shop slots">
           {room.offers.map((offer, index) => (
             <NumberedSlot key={offer.key} number={index + 1}>
@@ -37,7 +39,7 @@ export function ShopWorkbench({
             </NumberedSlot>
           ))}
         </NumberedSlots>
-      </div>
+      </OverviewRow>
     </section>
   );
 }

@@ -8,7 +8,7 @@ import { hintProps } from '@planner/ui/controls/hint';
 import { TimelineRow } from '../TimelineRow';
 import { PurgingPoolSlots } from './RoomInventoryPanel';
 
-/** The row's name and the one hint saying why it follows the fountain use. */
+/** The row's accessible name and its hover hint saying why it follows the fountain use. */
 const purgingPoolRefreshCopy = Object.freeze({
   label: 'Pool restocked',
   hint: 'Phial changed the list · Pool restocked',
@@ -27,20 +27,13 @@ export function PurgingPoolRefreshRow({
 }) {
   return (
     <TimelineRow
+      {...hintProps(purgingPoolRefreshCopy.hint, undefined, purgingPoolRefreshCopy.label)}
+      aria-label={purgingPoolRefreshCopy.label}
       data-pool-refresh=""
       kind="action"
       label={
-        <span
-          {...hintProps(purgingPoolRefreshCopy.hint)}
-          aria-label={purgingPoolRefreshCopy.label}
-          className="timeline-row-origin"
-          role="group"
-          tabIndex={0}
-        >
-          <span className="timeline-row-icon">
-            <ArtworkIcon className="artwork-label-icon" source={roomObjectIcon('purgingPool')} />
-          </span>
-          <strong>{purgingPoolRefreshCopy.label}</strong>
+        <span aria-hidden="true" className="timeline-row-icon">
+          <ArtworkIcon className="artwork-label-icon" source={roomObjectIcon('purgingPool')} />
         </span>
       }
       editors={
