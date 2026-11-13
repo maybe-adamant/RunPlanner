@@ -180,6 +180,42 @@ describe('challenge switch in the structured workspace', () => {
     });
   });
 
+  it("keeps a Ship room's phase tabs and stands a pressed switch's fight on its press row's tab", () => {
+    const surface = loadSurfaceNOPQProject();
+    let placed = 0;
+    for (const occurrenceId of ['surface-o-combat04', 'surface-o-combat02']) {
+      const plain = room(projectStructuredWorkspaceFixture(surface).workspace, 'O', occurrenceId);
+      if (plain.workbench.kind !== 'ship') throw new Error(`${occurrenceId} is no Ship room`);
+      const tabs = plain.workbench.phases.map((phase) => phase.tab);
+      for (const variant of catalog.challengeSwitches.variants.values) {
+        const summary = room(
+          projectStructuredWorkspaceFixture(observed(surface, 'O', occurrenceId, variant.key, true))
+            .workspace,
+          'O',
+          occurrenceId,
+        );
+        if (summary.workbench.kind !== 'ship') throw new Error(`${occurrenceId} is no Ship room`);
+        expect(summary.workbench.phases.map((phase) => phase.tab)).toEqual(tabs);
+        // An Elite switch's Overview choice can hold the walk at entry.
+        if (summary.roomActions?.timeline.waitsOn?.kind === 'overview') continue;
+        placed += 1;
+        const pressTab = summary.workbench.phases.find((phase) =>
+          phase.actionRows.some((row) => row.key === roomActionKey(use)),
+        );
+        expect(pressTab, `${occurrenceId} ${variant.key}`).toBeDefined();
+        const fight = pressTab!.timeline.find(
+          (entry) =>
+            entry.kind === 'boundary' &&
+            entry.boundary.kind === 'encounterStarted' &&
+            entry.boundary.phaseKey === 'challengeSwitch',
+        );
+        expect(fight, `${occurrenceId} ${variant.key}`).toMatchObject({ label: 'Encounter' });
+        expect(fight).not.toHaveProperty('runState');
+      }
+    }
+    expect(placed).toBeGreaterThanOrEqual(catalog.challengeSwitches.variants.values.length);
+  });
+
   it("narrows each Elite attribute draw by the earlier ones and binds the elite's pin", () => {
     const surface = loadSurfaceNOPQProject();
     const owner = host(surface, 'P', 'surface-p-6-1-p_combat10');

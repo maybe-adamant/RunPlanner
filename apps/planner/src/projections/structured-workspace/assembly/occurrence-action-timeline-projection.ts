@@ -194,14 +194,16 @@ function projectRoomLifecycleTimeline(
     }
     if (boundary.kind === 'encounterStarted' && roomLocal.kind === 'ship') {
       const phase = roomLocal.phases.find((candidate) => candidate.key === boundary.phaseKey);
+      // A press fight's Combat is no Ship phase and, as in other rooms, holds no Run State.
+      if (phase === undefined) return undefined;
       return runStateLauncher(
         input,
         createRoomRunStateCheckpointAddress(occurrence, {
           kind: 'beforeEncounterStart',
           phaseKey: boundary.phaseKey,
         }),
-        `${phase?.label ?? boundary.phaseKey} encounter`,
-        `Before ${phase?.label ?? boundary.phaseKey}`,
+        `${phase.label} encounter`,
+        `Before ${phase.label}`,
       );
     }
     return undefined;

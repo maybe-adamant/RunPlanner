@@ -34,15 +34,10 @@ function shipWorkbenchPresentation(
       );
     }
   }
-  const phaseIndexForKey = (phaseKey: string): number => {
-    const index = roomLocal.phases.findIndex((phase) => phase.key === phaseKey);
-    if (index < 0) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `Ship timeline references unknown phase ${phaseKey}`,
-      );
-    }
-    return index;
-  };
+  // A press fight (a challenge switch's or a locked door's) is no Ship phase: it stands on
+  // the tab its press row does.
+  const shipPhaseIndex = (phaseKey: string): number =>
+    roomLocal.phases.findIndex((phase) => phase.key === phaseKey);
   // Each tab is one fight, then the choice of what comes next: a phase's tab shows the
   // wheel the next phase's combat is chosen at, and the last its doors.
   const wheelForTab = (tabIndex: number): WorkspaceRewardWheelDescriptor | undefined => {
@@ -56,8 +51,10 @@ function shipWorkbenchPresentation(
   // A phase's tab ends at the row whose use starts the next phase's Combat (its wheel choice).
   const gatePhaseIndexByActionKey = new Map(
     (roomActions?.timeline.boundaries ?? []).flatMap((boundary) =>
-      boundary.kind === 'encounterStarted' && boundary.trigger.kind === 'action'
-        ? [[roomActionKey(boundary.trigger.action), phaseIndexForKey(boundary.phaseKey)] as const]
+      boundary.kind === 'encounterStarted' &&
+      boundary.trigger.kind === 'action' &&
+      shipPhaseIndex(boundary.phaseKey) >= 0
+        ? [[roomActionKey(boundary.trigger.action), shipPhaseIndex(boundary.phaseKey)] as const]
         : [],
     ),
   );
@@ -69,8 +66,7 @@ function shipWorkbenchPresentation(
   // A row off the Timeline sits on its engine phase's tab, but a row a wheel's choice waits
   // on stands with the fight before it, as its gate does.
   const phaseIndexOrLast = (phaseKey: string | undefined): number => {
-    const index =
-      phaseKey === undefined ? -1 : roomLocal.phases.findIndex((phase) => phase.key === phaseKey);
+    const index = phaseKey === undefined ? -1 : shipPhaseIndex(phaseKey);
     return index < 0 ? roomLocal.phases.length - 1 : index;
   };
   const tabForUnrankedRow = (row: WorkspaceRoomActionRow): number => {
@@ -104,7 +100,7 @@ function shipWorkbenchPresentation(
     for (const entry of roomActions.timeline.entries) {
       // A Combat whose gate is not on the Timeline starts its tab itself.
       if (entry.kind === 'boundary' && entry.boundary.kind === 'encounterStarted')
-        tabIndex = Math.max(tabIndex, phaseIndexForKey(entry.boundary.phaseKey));
+        tabIndex = Math.max(tabIndex, shipPhaseIndex(entry.boundary.phaseKey));
       if (entry.kind !== 'action') {
         phaseTimelineEntries[tabIndex]!.push(entry);
         continue;
@@ -118,15 +114,20 @@ function shipWorkbenchPresentation(
     }
     // Rows past the stop sit as rows off the Timeline do; a banner's events and an end effect
     // with their phase.
+    // A press fight's events stand with the press row before them.
+    let pressTab = tabIndex;
     for (const entry of roomActions.timeline.notReached ?? []) {
       const row = entry.kind === 'action' ? actionByKey.get(entry.actionKey) : undefined;
-      phaseNotReached[
+      const tab =
         entry.kind !== 'action'
-          ? phaseIndexOrLast(entry.phaseKey)
+          ? entry.phaseKey !== undefined && shipPhaseIndex(entry.phaseKey) < 0
+            ? pressTab
+            : phaseIndexOrLast(entry.phaseKey)
           : row === undefined
             ? roomLocal.phases.length - 1
-            : tabForUnrankedRow(row)
-      ]!.push(entry);
+            : tabForUnrankedRow(row);
+      if (entry.kind === 'action') pressTab = tab;
+      phaseNotReached[tab]!.push(entry);
     }
   }
   repairRows.push(...(roomActions?.repairRows ?? []));
