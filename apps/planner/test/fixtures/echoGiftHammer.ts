@@ -19,6 +19,7 @@ import {
   authorTestTraitsAndRequiredItems,
   collectTestRequiredItems,
   settleTestEdit,
+  stockTestProject,
 } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 import {
@@ -182,13 +183,16 @@ function createGoldenEchoGiftKeepsakePendingProject(
     trait: forcedTrait,
     value: traitDraft,
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplacePostbossKeepsake',
-    selection: createPostbossKeepsakeSelectionAddress(
-      createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop:postboss')),
-    ),
-    keepsakeKey: 'ManaOverTimeRefundKeepsake',
-  });
+  // The forced H boon leaves the Postboss Pool's list stale; settlement redraws it.
+  return stockTestProject(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(
+        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop:postboss')),
+      ),
+      keepsakeKey: 'ManaOverTimeRefundKeepsake',
+    }),
+  );
 }
 
 export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
