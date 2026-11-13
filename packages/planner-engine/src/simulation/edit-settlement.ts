@@ -1497,11 +1497,9 @@ function settleProject(options: {
       }
       for (const fill of positions)
         try {
-          filledBefore = applyProjectCommand(
-            filledBefore,
-            catalog,
-            positionFillOn(filledBefore, fill),
-          );
+          const onBefore = positionFillOn(filledBefore, fill);
+          if (onBefore !== undefined)
+            filledBefore = applyProjectCommand(filledBefore, catalog, onBefore);
         } catch (error) {
           // A room the plan before the edit held otherwise is edited either way.
           if (!(error instanceof ProjectCommandContractError)) throw error;

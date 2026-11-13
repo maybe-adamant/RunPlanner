@@ -6,6 +6,7 @@ import {
   semanticAddressKey,
 } from '../authored-project/addresses';
 import { chaosGateSpawnPoint } from '../authored-project/chaos-gate-position';
+import { roomAnchorObjectLeaf } from '../authored-project/room-layout';
 import type { ProjectCommand } from '../authored-project/commands/types';
 import type { ProjectDocument, RoomLayout } from '../authored-project/model';
 import type { Catalog } from '../catalog-schema';
@@ -161,16 +162,55 @@ export function positionFills(
 
 /**
  * A position fill as it lands on another plan, such as the plan before an
- * edit: a layout fill stores only its blanks that plan also left blank,
- * beside that plan's own layout.
+ * edit: it stores only the blanks that plan also left blank, beside that
+ * plan's own values; undefined when that plan holds every one already.
  */
-export function positionFillOn(project: ProjectDocument, fill: PositionFill): ProjectCommand {
-  const { command, filledLayout: filled } = fill;
-  if (filled === undefined || command.kind !== 'ReplaceRoomLayout') return command;
-  const layout = project.route.biomes
-    .find((plan) => plan.biomeKey === command.occurrence.biomeKey)
-    ?.topology?.occurrences.find(
-      (occurrence) => occurrence.occurrenceId === command.occurrence.occurrenceId,
-    )?.layout;
-  return Object.freeze({ ...command, layout: Object.freeze({ ...filled, ...layout }) });
+export function positionFillOn(
+  project: ProjectDocument,
+  fill: PositionFill,
+): ProjectCommand | undefined {
+  const { command } = fill;
+  const occurrenceOf = (occurrence: { readonly biomeKey: string; readonly occurrenceId: string }) =>
+    project.route.biomes
+      .find((plan) => plan.biomeKey === occurrence.biomeKey)
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      );
+  switch (command.kind) {
+    case 'ReplaceRoomLayout': {
+      if (fill.filledLayout === undefined) return command;
+      const layout = occurrenceOf(command.occurrence)?.layout;
+      return Object.freeze({
+        ...command,
+        layout: Object.freeze({ ...fill.filledLayout, ...layout }),
+      });
+    }
+    case 'ReplaceRoomObjectAnchor': {
+      const occurrence = occurrenceOf(command.occurrence);
+      return occurrence !== undefined &&
+        roomAnchorObjectLeaf(occurrence, command.object)?.anchorId !== undefined
+        ? undefined
+        : command;
+    }
+    case 'ReplaceFieldsSpatialPoint': {
+      const state = occurrenceOf(command.spatial)?.state;
+      const spatial = state !== undefined && 'spatial' in state ? state.spatial : undefined;
+      const target = command.spatial.target;
+      const stored =
+        target.kind === 'cage'
+          ? spatial?.cagePointIdBySlot?.[target.slotKey]
+          : target.kind === 'optional'
+            ? spatial?.optionalPointIdBySlot?.[target.slotKey]
+            : spatial?.nemesisPointId;
+      return stored === undefined || stored === null ? command : undefined;
+    }
+    case 'SetChaosSpawnPoint': {
+      const exit = occurrenceOf(command.additional)?.additionalExits?.find(
+        (candidate) => candidate.key === command.additional.additionalExitKey,
+      );
+      return exit?.kind !== 'chaos' || exit.spawnPointIndex === undefined ? command : undefined;
+    }
+    default:
+      return command;
+  }
 }

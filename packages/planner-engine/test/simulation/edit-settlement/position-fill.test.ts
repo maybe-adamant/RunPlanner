@@ -84,6 +84,70 @@ function settledLayouts(project: ProjectDocument) {
 const storedLayouts = (project: ProjectDocument) =>
   rooms(project).map(({ occurrence }) => occurrence.layout);
 
+const blank = (points: Readonly<Record<string, number | null>>) =>
+  Object.fromEntries(Object.keys(points).map((slot) => [slot, null]));
+
+/** The plan with every stored Fields point, object anchor and Chaos point cleared. */
+function blankPositions(project: ProjectDocument): ProjectDocument {
+  return {
+    ...project,
+    route: {
+      ...project.route,
+      biomes: project.route.biomes.map((biome) =>
+        biome.topology === null
+          ? biome
+          : {
+              ...biome,
+              topology: {
+                ...biome.topology,
+                occurrences: biome.topology.occurrences.map((occurrence) => {
+                  const anchored = Object.fromEntries(
+                    (['stygianWell', 'purgingPool', 'hermesShrine', 'challengeSwitch'] as const)
+                      .filter((object) => occurrence[object] !== undefined)
+                      .map((object) => {
+                        const { anchorId: _anchor, ...leaf } = occurrence[object] as {
+                          readonly anchorId?: number;
+                        };
+                        void _anchor;
+                        return [object, leaf];
+                      }),
+                  );
+                  const state =
+                    'spatial' in occurrence.state
+                      ? {
+                          ...occurrence.state,
+                          spatial: {
+                            ...occurrence.state.spatial,
+                            cagePointIdBySlot: blank(occurrence.state.spatial.cagePointIdBySlot),
+                            optionalPointIdBySlot: blank(
+                              occurrence.state.spatial.optionalPointIdBySlot,
+                            ),
+                          },
+                        }
+                      : occurrence.state;
+                  return {
+                    ...occurrence,
+                    ...anchored,
+                    state,
+                    ...(occurrence.additionalExits === undefined
+                      ? {}
+                      : {
+                          additionalExits: occurrence.additionalExits.map((exit) => {
+                            if (exit.kind !== 'chaos') return exit;
+                            const { spawnPointIndex: _point, ...rest } = exit;
+                            void _point;
+                            return rest;
+                          }),
+                        }),
+                  } as typeof occurrence;
+                }),
+              },
+            },
+      ),
+    },
+  };
+}
+
 describe('positions filled on first reach', () => {
   const blank = withoutLayouts(loadUnderworldFGCheckpoint());
 
@@ -169,5 +233,24 @@ describe('positions filled on first reach', () => {
       ...fill.command,
       layout: { flipped: fill.filledLayout!.flipped },
     });
+  });
+
+  it('lands an anchor or Fields point fill only where the plan before left it blank', () => {
+    // Blank every stored Fields point, anchor and Chaos point the walk reaches, so each fills.
+    const filled = createGoldenFGHProject();
+    const blanks = positionFills(catalog, evaluate(blankPositions(filled))).filter(
+      ({ command }) => command.kind !== 'ReplaceRoomLayout',
+    );
+    const project = blankPositions(filled);
+    const fills = blanks;
+    expect(new Set(fills.map(({ command }) => command.kind))).toEqual(
+      new Set(['ReplaceRoomObjectAnchor', 'ReplaceFieldsSpatialPoint']),
+    );
+    for (const fill of fills) {
+      expect(positionFillOn(project, fill)).toBe(fill.command);
+      // A plan already holding the position keeps its own value.
+      const stored = applyProjectCommand(project, catalog, fill.command);
+      expect(positionFillOn(stored, fill), fill.key).toBeUndefined();
+    }
   });
 });
