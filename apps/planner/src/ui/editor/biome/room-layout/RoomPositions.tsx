@@ -258,8 +258,8 @@ function EntryRow({
           ...(layout.flipped === undefined ? {} : { flipped: layout.flipped }),
         };
   const row = (content: ReactNode) => (
-    <OverviewRow label="Entry" preview={rowPreview}>
-      {content}
+    <OverviewRow label="Entry">
+      <LayoutChip preview={rowPreview}>{content}</LayoutChip>
     </OverviewRow>
   );
   switch (state.kind) {
@@ -464,9 +464,7 @@ function FieldsSlotChip({
     // A point a sibling holds stays off the list, before assessment too, as on the map; one the
     // slot cannot take is listed, disabled.
     if (
-      result === undefined
-        ? choice.value !== null && held.has(choice.value)
-        : result.assignable && !result.selectedPossible
+      result === undefined ? held.has(choice.value) : result.assignable && !result.selectedPossible
     )
       return [];
     return [
@@ -481,7 +479,7 @@ function FieldsSlotChip({
     ];
   });
   const marks: readonly RoomMapPointMark[] = choices.flatMap((choice) =>
-    choice.value === null || held.has(choice.value)
+    held.has(choice.value)
       ? []
       : [
           {
@@ -501,7 +499,7 @@ function FieldsSlotChip({
   const badge = fieldsSlotBadge(fields, control.target);
   return (
     <LayoutChip preview={preview(at ?? null)}>
-      <PositionPicker<number | null>
+      <PositionPicker<number>
         ariaLabel={`${control.label}, point ${point}`}
         choiceLabel={`${control.label} point`}
         choices={choices.map((choice) => ({ ...choice, preview: preview(choice.value) }))}

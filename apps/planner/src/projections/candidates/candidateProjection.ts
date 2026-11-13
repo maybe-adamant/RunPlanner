@@ -328,12 +328,12 @@ export interface CandidateProjectionSession {
     | import('@run-planner/engine/simulation').CandidateContextUnavailable;
   readonly fieldsSpatialPoint: (
     spatial: FieldsSpatialAddress,
-    pointId: number | null,
-  ) => CandidateOptionProjection<number | null>;
+    pointId: number,
+  ) => CandidateOptionProjection<number>;
   readonly roomLayoutEntry: (
     occurrence: import('@run-planner/engine/authored-project').OccurrenceAddress,
-    entryStartPointId: number | null,
-  ) => CandidateOptionProjection<number | null>;
+    entryStartPointId: number,
+  ) => CandidateOptionProjection<number>;
   readonly levelResolution: (
     owner: LevelResolutionAddress,
     value: AuthoredLevelResolution,
@@ -448,14 +448,14 @@ export function createCandidateSessionFactory(
       anvilResult: core.anvilResult,
       hexActivation: core.hexActivation,
       contextReached: core.contextReached,
-      fieldsSpatialPoint: (spatial: FieldsSpatialAddress, pointId: number | null) =>
+      fieldsSpatialPoint: (spatial: FieldsSpatialAddress, pointId: number) =>
         Object.freeze({
           value: pointId,
           evaluation: core.fieldsSpatialPoint(spatial, pointId),
         }),
       roomLayoutEntry: (
         occurrence: import('@run-planner/engine/authored-project').OccurrenceAddress,
-        entryStartPointId: number | null,
+        entryStartPointId: number,
       ) => {
         const evaluation = core.evaluate([
           Object.freeze({ kind: 'roomLayoutEntry' as const, occurrence, entryStartPointId }),

@@ -272,7 +272,7 @@ export interface WorkspaceChaosExitInteraction {
   readonly key: string;
   readonly owner: AdditionalExitAddress;
   readonly positionIntent: (
-    spawnPointIndex: number | null,
+    spawnPointIndex: number,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'SetChaosSpawnPoint' }>>;
   readonly mapIntent: (
     gameName: string,

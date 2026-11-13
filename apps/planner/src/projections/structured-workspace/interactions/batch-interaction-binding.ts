@@ -262,7 +262,7 @@ export function bindBatchInteractions(
                 gameName,
               }),
             }),
-          positionIntent: (spawnPointIndex: number | null) =>
+          positionIntent: (spawnPointIndex: number) =>
             Object.freeze({
               command: Object.freeze({
                 kind: 'SetChaosSpawnPoint' as const,

@@ -22,13 +22,13 @@ import { assessFieldsSpatialPoint } from '../fields/spatial';
 export interface FieldsSpatialPointCandidateQuery {
   readonly kind: 'fieldsSpatialPoint';
   readonly spatial: FieldsSpatialAddress;
-  readonly pointId: number | null;
+  readonly pointId: number;
 }
 
 export interface FieldsSpatialPointCandidateSupport {
   readonly spatial: FieldsSpatialAddress;
   readonly target: FieldsSpatialTarget;
-  readonly pointId: number | null;
+  readonly pointId: number;
   /** Legal placement domain; occupied points remain assignable for explicit repair. */
   readonly assignable: boolean;
   /** Declaration points still available after active sibling assignments. */

@@ -37,7 +37,7 @@ const occurrence = createOccurrenceAddress(goldenHBiome, occurrenceId);
 function evaluate(
   project: ReturnType<typeof loadNemesisFieldsCheckpoint>,
   target: Parameters<typeof createFieldsSpatialAddress>[1],
-  pointId: number | null,
+  pointId: number,
   owner = occurrence,
 ) {
   return createPreparedProjectCandidateSession(
@@ -139,7 +139,7 @@ describe('Fields spatial candidates', () => {
       createPreparedProjectCandidateSession(catalog, assembly).evaluate({
         kind: 'fieldsSpatialPoint',
         spatial: createFieldsSpatialAddress(combat, { kind: 'cage', slotKey: 'cage1' }),
-        pointId: null,
+        pointId: catalog.rooms.byKey.H_Combat13!.fieldsSpatial!.cagePointIds[0]!,
       }),
     ).toMatchObject({ kind: 'fieldsSpatialPoint', result: { selectedPossible: true } });
   });
@@ -213,12 +213,7 @@ describe('Fields spatial candidates', () => {
     );
   });
 
-  it('gives an unset point its default, which raises nothing, and allows dormant values', () => {
-    const unset = evaluate(loadNemesisFieldsCheckpoint(), { kind: 'cage', slotKey: 'cage1' }, null);
-    expect(unset).toMatchObject({
-      kind: 'fieldsSpatialPoint',
-      result: { selectedPossible: true, findings: [] },
-    });
+  it('raises nothing for a point not yet stored, and allows dormant values', () => {
     const unsetProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplaceFieldsSpatialPoint',
       spatial: createFieldsSpatialAddress(occurrence, { kind: 'cage', slotKey: 'cage1' }),

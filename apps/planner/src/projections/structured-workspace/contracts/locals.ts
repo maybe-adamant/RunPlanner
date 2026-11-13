@@ -420,7 +420,7 @@ export interface WorkspaceFieldsSpatialControl {
   /** The stored point; null until the walk reaches the room. */
   readonly pointId: number | null;
   /** Each point the slot can take. */
-  readonly pointChoices: readonly { readonly label: string; readonly value: number | null }[];
+  readonly pointChoices: readonly { readonly label: string; readonly value: number }[];
 }
 
 export interface WorkspaceFieldsSpatialPointInteraction {
@@ -429,10 +429,10 @@ export interface WorkspaceFieldsSpatialPointInteraction {
   readonly key: string;
   readonly owner: FieldsSpatialAddress;
   readonly selected: number | null;
-  readonly choices: readonly { readonly label: string; readonly value: number | null }[];
-  readonly load: () => readonly CandidateOptionProjection<number | null>[];
+  readonly choices: readonly { readonly label: string; readonly value: number }[];
+  readonly load: () => readonly CandidateOptionProjection<number>[];
   readonly intentFor: (
-    pointId: number | null,
+    pointId: number,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsSpatialPoint' }>
   >;

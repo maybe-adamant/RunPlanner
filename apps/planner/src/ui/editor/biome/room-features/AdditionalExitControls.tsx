@@ -137,7 +137,7 @@ export function ChaosGatePosition({
   return (
     <div className="room-layout-row" {...mapLinks({ kind: 'chaosGate' })}>
       <span className="room-layout-label">Chaos Gate</span>
-      <ContextualPicker<number | null>
+      <ContextualPicker<number>
         ariaLabel="Chaos Gate position"
         findingTarget={findingTarget(owner)}
         id={`chaos-position-${workspaceInteractionKey(owner)}`}
@@ -158,7 +158,7 @@ export function ChaosGatePosition({
               : []),
             ...position.choices.map((value) => ({ key: String(value), value, label: `P${value}` })),
           ],
-          position.value ?? null,
+          position.value,
           'Gate position',
         )}
         onActiveChange={(item) =>

@@ -103,7 +103,8 @@ its stored `spawnPointIndex`.
 
 Fields door targets carry cage rewards even when unpicked. Cage,
 optional-reward and Nemesis points are entered-room facts published only for
-selected Fields occurrences, each slot's authored or default point.
+selected Fields occurrences, each slot's stored point: drawn on first reach,
+then kept until the owner changes it.
 Reward wheels follow the same selection boundary: a selected Ship occurrence
 publishes one wheel per active combat phase, and an unselected Ship door
 target, which is never entered, publishes none.

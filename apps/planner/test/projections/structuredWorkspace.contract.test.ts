@@ -1451,11 +1451,6 @@ describe('structured workspace overlay contract', () => {
       additional,
       spawnPointIndex: 2,
     });
-    expect(interaction?.positionIntent(null).command).toEqual({
-      kind: 'SetChaosSpawnPoint',
-      additional,
-      spawnPointIndex: null,
-    });
     expect(interaction?.mapIntent(batch.chaos.door.room.gameName).command).toEqual({
       kind: 'ReplaceChaosMap',
       occurrence: createOccurrenceAddress(biome, chaosId),

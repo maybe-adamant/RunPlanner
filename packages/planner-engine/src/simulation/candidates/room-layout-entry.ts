@@ -13,16 +13,16 @@ import type { RoomLayoutSettlement } from '../room-layout/settlement';
 import type { CandidateContextUnavailable } from './availability';
 import { unreachableTarget } from './availability';
 
-/** One entry point for a reached room, or null to leave the entry to the game. */
+/** One entry point for a reached room. */
 export interface RoomLayoutEntryCandidateQuery {
   readonly kind: 'roomLayoutEntry';
   readonly occurrence: OccurrenceAddress;
-  readonly entryStartPointId: number | null;
+  readonly entryStartPointId: number;
 }
 
 export interface RoomLayoutEntryCandidateSupport {
   readonly occurrence: OccurrenceAddress;
-  readonly entryStartPointId: number | null;
+  readonly entryStartPointId: number;
   /** One of the room's `HeroStart`s; an ineligible one stays assignable for explicit repair. */
   readonly assignable: boolean;
   /** The game can enter the room here, as its settled layout derives. */
@@ -78,12 +78,8 @@ export function evaluateRoomLayoutEntryCandidate(
     result: Object.freeze({
       occurrence: query.occurrence,
       entryStartPointId: query.entryStartPointId,
-      assignable:
-        query.entryStartPointId === null ||
-        roomHeroStartIds(room).includes(query.entryStartPointId),
-      selectedPossible:
-        query.entryStartPointId === null ||
-        options.some((option) => option.startPointId === query.entryStartPointId),
+      assignable: roomHeroStartIds(room).includes(query.entryStartPointId),
+      selectedPossible: options.some((option) => option.startPointId === query.entryStartPointId),
       eligibleStartPointIds: Object.freeze(open.map((option) => option.startPointId)),
       command: Object.freeze({
         kind: 'ReplaceRoomLayout' as const,

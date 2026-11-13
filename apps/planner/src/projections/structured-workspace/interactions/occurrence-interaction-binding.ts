@@ -351,9 +351,7 @@ export function bindOccurrenceLocalInteractions(
             );
           }
           let options:
-            | readonly import('@planner/projections/candidates/candidateProjection').CandidateOptionProjection<
-                number | null
-              >[]
+            | readonly import('@planner/projections/candidates/candidateProjection').CandidateOptionProjection<number>[]
             | undefined;
           const spatial = control.address;
           fieldsSpatialPoints.set(
@@ -364,7 +362,7 @@ export function bindOccurrenceLocalInteractions(
                 kind: 'fieldsSpatialPoint',
                 spatial,
               }),
-              intentFor: (pointId: number | null) =>
+              intentFor: (pointId: number) =>
                 Object.freeze({
                   command: Object.freeze({
                     kind: 'ReplaceFieldsSpatialPoint' as const,

@@ -37,7 +37,7 @@ export interface CandidateProjectionCore {
   ) => AcquisitionConversionCandidateCapability['hexActivation'];
   readonly fieldsSpatialPoint: (
     spatial: import('@run-planner/engine/authored-project').FieldsSpatialAddress,
-    pointId: number | null,
+    pointId: number,
   ) => ProjectCandidateEvaluation;
   readonly projectOptions: <T>(
     key: string,
@@ -204,7 +204,7 @@ export function createCandidateProjectionCore(
             ?.hexActivation,
         fieldsSpatialPoint: (
           spatial: import('@run-planner/engine/authored-project').FieldsSpatialAddress,
-          pointId: number | null,
+          pointId: number,
         ) => {
           const result = evaluator.evaluate([
             Object.freeze({ kind: 'fieldsSpatialPoint' as const, spatial, pointId }),
