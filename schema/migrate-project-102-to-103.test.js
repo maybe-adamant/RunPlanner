@@ -24,6 +24,16 @@ const at102 = (current, revision = 1) => ({
   schemaRevision: revision,
 });
 
+/** Whole documents compared apart from the revision stamp, which encoding adds and a bare lift omits. */
+function assertSameDocument(actual, expected) {
+  const unstamped = (document) => {
+    const { schemaRevision, ...rest } = document;
+    void schemaRevision;
+    return rest;
+  };
+  assert.deepEqual(unstamped(actual), unstamped(expected));
+}
+
 /** The G opening's action keys; the checkpoint keeps a pickup of a role its reward lost. */
 const gOpening = (document) =>
   document.route.biomes
@@ -294,7 +304,7 @@ describe('schema 102 to 103 migration', () => {
     const fight = host.encounters.customizationByLockedExit.exit2;
     delete host.encounters.customizationByLockedExit;
     host.roomActions.order.find((row) => row.kind === 'unlockExit').customization = fight;
-    assert.deepEqual(step.liftProjectDocument(saved, engine.catalog), current);
+    assertSameDocument(step.liftProjectDocument(saved, engine.catalog), current);
     const migrated = migrate(saved);
     assert.deepEqual(gHost(migrated).encounters.customizationByLockedExit, { exit2: fight });
     assert.deepEqual(
@@ -327,8 +337,8 @@ describe('schema 102 to 103 migration', () => {
         );
       }
     assert.ok(JSON.stringify(stored).includes('"rushed":true'));
-    assert.deepEqual(step.liftProjectDocument(stored, engine.catalog), current);
-    assert.deepEqual(migrate(stored), current);
+    assertSameDocument(step.liftProjectDocument(stored, engine.catalog), current);
+    assertSameDocument(migrate(stored), current);
   });
 
   it('strips the due phase a delivery row stored, silently', () => {
@@ -342,8 +352,8 @@ describe('schema 102 to 103 migration', () => {
           : action,
       );
     assert.ok(JSON.stringify(stored).includes('"encounterPhaseKey":"Encounter"'));
-    assert.deepEqual(step.liftProjectDocument(stored, engine.catalog), current);
-    assert.deepEqual(migrate(stored), current);
+    assertSameDocument(step.liftProjectDocument(stored, engine.catalog), current);
+    assertSameDocument(migrate(stored), current);
   });
 
   it('moves Well rolls, a locked-door fight and a Shrine rush through one lift, losslessly', () => {
@@ -394,7 +404,7 @@ describe('schema 102 to 103 migration', () => {
     startOf(stored).roomActions = structuredClone(startOf(current).roomActions);
 
     const lifted = step.liftProjectDocument(stored, engine.catalog);
-    assert.deepEqual(lifted, current);
+    assertSameDocument(lifted, current);
     // Each plan alone decodes strictly and migrates, settlement included, to its 103 form.
     const split = underworld.route.biomes.length;
     const halves = (document) => [
@@ -410,7 +420,7 @@ describe('schema 102 to 103 migration', () => {
       [storedSurface, surface],
     ]) {
       const migrated = migrate(saved);
-      assert.deepEqual(migrated, { ...plan, projectId: current.projectId, name: current.name });
+      assertSameDocument(migrated, { ...plan, projectId: current.projectId, name: current.name });
       assert.doesNotThrow(() =>
         engine.parseProjectDocument(JSON.stringify(migrated), engine.catalog),
       );
@@ -522,7 +532,7 @@ describe('schema 102 to 103 migration', () => {
       const stored = at102(withEarlierRerolls(door, { pressIds }));
       assert.deepEqual(pressRows(stored)[0].reward, zeus);
       assert.equal(target(stored).rerolledIncomingReward.offer.rewardType, 'Boon');
-      assert.deepEqual(step.liftProjectDocument(stored, engine.catalog), door);
+      assertSameDocument(step.liftProjectDocument(stored, engine.catalog), door);
       assert.doesNotThrow(() =>
         engine.parseProjectDocument(JSON.stringify(migrate(stored)), engine.catalog),
       );
@@ -547,7 +557,7 @@ describe('schema 102 to 103 migration', () => {
     });
     const storedCage = at102(withEarlierRerolls(caged));
     assert.equal(pressRows(storedCage, 'golden-h-miniboss01')[0].target.slotKey, 'cage1');
-    assert.deepEqual(step.liftProjectDocument(storedCage, engine.catalog), caged);
+    assertSameDocument(step.liftProjectDocument(storedCage, engine.catalog), caged);
     assert.deepEqual(occurrenceOf(caged, 'golden-h-combat05').state.rerolledCages.cage1.results, {
       r1: { rewardType: 'MaxHealthDrop' },
     });
@@ -560,7 +570,7 @@ describe('schema 102 to 103 migration', () => {
       index: 0,
     });
     const storedBoard = at102(withEarlierRerolls(board));
-    assert.deepEqual(step.liftProjectDocument(storedBoard, engine.catalog), board);
+    assertSameDocument(step.liftProjectDocument(storedBoard, engine.catalog), board);
     assert.deepEqual(occurrenceOf(board, 'surface-n-combat05').rerolledIncomingReward.results, {
       r1: { rewardType: 'MaxHealthDrop' },
     });
@@ -570,7 +580,7 @@ describe('schema 102 to 103 migration', () => {
     const pressed = doorPress(zeus);
     const stored = at102(withEarlierRerolls(pressed));
     delete target(stored).rerolledIncomingReward;
-    assert.deepEqual(step.liftProjectDocument(stored, engine.catalog), pressed);
+    assertSameDocument(step.liftProjectDocument(stored, engine.catalog), pressed);
   });
 
   it('adopts an entered reward its press did not draw, and restamps its pickup rows', () => {
@@ -580,7 +590,7 @@ describe('schema 102 to 103 migration', () => {
     pressRows(stored)[0].reward = zeus;
     const lifted = step.liftProjectDocument(stored, engine.catalog);
     assert.deepEqual(target(lifted).rerolledIncomingReward.results, { r1: hera });
-    assert.deepEqual(lifted, entered);
+    assertSameDocument(lifted, entered);
     // A saved 103 plan's pickup rows recorded the press's own reward; the adopted one replaces it.
     const pickup = {
       kind: 'interactIncomingReward',
@@ -651,7 +661,7 @@ describe('schema 102 to 103 migration', () => {
 
   it('lifts by the version alone a plan its settlement leaves as it was', () => {
     const current = checkpoint('surface-n');
-    assert.deepEqual(migrate(at102(current)), current);
+    assertSameDocument(migrate(at102(current)), current);
   });
 
   it('keeps the bare lift when the plan does not decode or its settlement throws', () => {
