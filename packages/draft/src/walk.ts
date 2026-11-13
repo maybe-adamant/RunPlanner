@@ -14,7 +14,9 @@ import {
   ordinaryTargetGameNames,
   roomActionKey,
   semanticAddressKey,
+  applyProjectCommand,
   authoredShopOffer,
+  createShopOfferAddress,
   shopOfferOptionValues,
   infernalContractPedestalOptionValues,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
@@ -44,6 +46,7 @@ import {
   locallyValidRewardOffers,
   ORDINARY_SOURCE_CAP,
   type ResolvedRewardOffer,
+  type ShopOptionSelection,
 } from '@run-planner/engine/reward-kernel';
 import type { AuthoringSession } from '@run-planner/engine/authoring';
 import {
@@ -181,6 +184,8 @@ export class DraftWalk {
   private readonly essenceRooms = new Map<number, number>();
   /** Rooms the walk passed after their Quick Buck and Buried Treasure drops were picked up. */
   private readonly dropRoomsDone = new Set<string>();
+  /** Shops whose filled stock the walk has steered, and whose Travel Deal item it has. */
+  private readonly steeredShops = new Set<string>();
   /** Reward commands this walk applied. */
   private readonly authoredRewards = new Set<string>();
   private stepCount = 0;
@@ -261,6 +266,12 @@ export class DraftWalk {
       reauthorReward: (biomeKey, occurrenceId, excluded) =>
         this.reauthorIncomingReward(biomeKey, occurrenceId, excluded),
     };
+    // The Shops the plan already entered were stocked by whoever entered them.
+    for (const biomeKey of this.project.route.itineraryBiomeKeys)
+      for (const room of this.enteredRooms(biomeKey)) {
+        this.steeredShops.add(`${biomeKey}/${room.occurrenceId}`);
+        this.steeredShops.add(`${biomeKey}/${room.occurrenceId}/${TRAVEL_DEAL_REFILL_ENTRY_KEY}`);
+      }
   }
 
   /** Decisions taken so far, across every biome this walk ran. */
@@ -302,6 +313,7 @@ export class DraftWalk {
       // Before the biome closes, so the rooms its last step entered roll too.
       this.maybePlaceEssence(biomeIndex);
       this.pickUpTraitDrops(biomeIndex);
+      this.steerShops(biomeIndex);
       if (this.issueBiomeIndex() > biomeIndex) {
         const rack = this.equipRack(biomeIndex);
         if (rack === 'equipped') {
@@ -1214,6 +1226,88 @@ export class DraftWalk {
     return false;
   }
 
+  /**
+   * Steers each Shop the biome's walk has entered once, as it would a blank one: settlement
+   * stocks a Shop on first reach, so its slots are replaced in slot order with steered picks,
+   * then its wanted items and filler are bought. A Travel Deal item, stocked once a purchase
+   * restocks it, is steered and bought the same way.
+   */
+  private steerShops(biomeIndex: number): void {
+    const biomeKey = this.project.route.itineraryBiomeKeys[biomeIndex];
+    if (biomeKey === undefined) return;
+    const biome = createBiomeAddress(this.project.route.routeKey, biomeKey);
+    for (const room of this.enteredRooms(biomeKey)) {
+      const occurrence = this.occurrence(biomeKey, room.occurrenceId);
+      const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
+      const profile = this.catalog.rewards.shops.byKey[shop?.profileKey ?? ''];
+      if (shop === undefined || profile === undefined) continue;
+      const key = `${biomeKey}/${room.occurrenceId}`;
+      const apply = (command: ProjectCommand) => this.apply(command);
+      if (!this.steeredShops.has(key)) {
+        this.steeredShops.add(key);
+        // Each pick is judged beside its stocked peers, so it never invalidates them.
+        for (const slot of profile.slots.values) {
+          const origin = createShopOfferAddress(biome, room.occurrenceId, slot.key);
+          const value = this.steerShopOffer(origin, apply);
+          if (value !== undefined) this.buyWanted(origin, value.offer);
+        }
+        this.buyFiller(
+          createShopOfferAddress(biome, room.occurrenceId, profile.slots.values[0]!.key),
+        );
+      }
+      const refillKey = `${key}/${TRAVEL_DEAL_REFILL_ENTRY_KEY}`;
+      const stocked = this.occurrence(biomeKey, room.occurrenceId);
+      if (
+        this.steeredShops.has(refillKey) ||
+        stocked?.state.kind !== 'shop' ||
+        (stocked.state.shop?.travelDealRefill?.reward ?? null) === null
+      )
+        continue;
+      this.steeredShops.add(refillKey);
+      const origin = createShopOfferAddress(biome, room.occurrenceId, TRAVEL_DEAL_REFILL_ENTRY_KEY);
+      const value = this.steerShopOffer(origin, apply);
+      if (value === undefined) continue;
+      this.buyWanted(origin, value.offer);
+      this.buyFiller(origin);
+    }
+  }
+
+  /**
+   * Replaces one Shop slot, or its Travel Deal item, with a steered pick among the values its
+   * inventory admits beside its peers; the pick, or undefined when none applies.
+   */
+  private steerShopOffer(
+    origin: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
+    apply: (command: ProjectCommand) => boolean,
+  ): ShopOptionSelection | undefined {
+    const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
+    const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
+    if (occurrence === undefined || shop === undefined) return undefined;
+    const slotKey =
+      origin.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+        ? this.refilledSlotKey(origin.biomeKey, origin.occurrenceId, shop.profileKey)
+        : origin.offerKey;
+    if (slotKey === undefined) return undefined;
+    const values = shopOfferOptionValues(this.catalog, shop.profileKey, slotKey).filter((value) => {
+      const evaluation = this.evaluate({ kind: 'shopOfferOption', offer: origin, value });
+      return (
+        'result' in evaluation &&
+        'supported' in evaluation.result &&
+        evaluation.result.supported &&
+        evaluation.result.findings.length === 0
+      );
+    });
+    this.noteSupply(values.map((value) => value.offer));
+    const ordered = this.weighted(values, (v) => this.steering.shopWeight(v.offer));
+    for (const value of this.inPoolOrder(ordered, values, (v) => v.offer)) {
+      const command: ProjectCommand = { kind: 'ReplaceShopOfferOption', offer: origin, value };
+      // The stock already holds the pick: nothing to replace.
+      if (applyProjectCommand(this.project, this.catalog, command) === this.project) return value;
+      if (apply(command)) return value;
+    }
+    return undefined;
+  }
+
   /** The Shop slot a Travel Deal refill restocks, as settlement derived it. */
   private refilledSlotKey(
     biomeKey: string,
@@ -1254,34 +1348,11 @@ export class DraftWalk {
       );
     }
     if (origin.kind === 'shopOffer') {
-      const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
-      const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
-      if (occurrence === undefined || shop === undefined) return false;
-      const slotKey =
-        origin.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
-          ? this.refilledSlotKey(origin.biomeKey, origin.occurrenceId, shop.profileKey)
-          : origin.offerKey;
-      if (slotKey === undefined) return false;
-      const values = shopOfferOptionValues(this.catalog, shop.profileKey, slotKey).filter(
-        (value) => {
-          const evaluation = this.evaluate({ kind: 'shopOfferOption', offer: origin, value });
-          return (
-            'result' in evaluation &&
-            'supported' in evaluation.result &&
-            evaluation.result.supported &&
-            evaluation.result.findings.length === 0
-          );
-        },
-      );
-      this.noteSupply(values.map((value) => value.offer));
-      const ordered = this.weighted(values, (v) => this.steering.shopWeight(v.offer));
-      for (const value of this.inPoolOrder(ordered, values, (v) => v.offer))
-        if (apply({ kind: 'ReplaceShopOfferOption', offer: origin, value })) {
-          this.buyWanted(origin, value.offer);
-          this.buyFiller(origin);
-          return true;
-        }
-      return false;
+      const value = this.steerShopOffer(origin, apply);
+      if (value === undefined) return false;
+      this.buyWanted(origin, value.offer);
+      this.buyFiller(origin);
+      return true;
     }
     if (origin.kind === 'infernalContractPedestal') {
       const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);

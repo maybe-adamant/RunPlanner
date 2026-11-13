@@ -1,6 +1,9 @@
 import {
   createBiomeAddress,
+  createAcquisitionSiteAddress,
   createOccurrenceAddress,
+  createShopOfferAddress,
+  type ShopOfferAddress,
   createRoomActionAddress,
   createRoomFeatureAddress,
   semanticAddressKey,
@@ -20,6 +23,9 @@ import {
 } from '../authored-project/feature-rolls';
 import { roomActionKey } from '../authored-project/room-actions/state';
 import { stableChoice } from '../authored-project/stable-hash';
+import { shopOfferOptionValues, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../authored-project/shop';
+import type { ShopOptionSelection } from '../reward-kernel/model';
+import type { Catalog } from '../catalog-schema';
 import type { ProjectCommand } from '../authored-project/commands/types';
 import {
   hermesShrineInitialGenerationKey,
@@ -257,9 +263,10 @@ type PoolSlotKey = (typeof POOL_SLOT_KEYS)[number];
 
 /**
  * One Pool list's slots to stock: each blank shown slot, or, when a listed
- * boon is no longer held or eligible where the list is judged, every unsold
- * slot redrawn as the game regenerates the list. Sold slots keep their trait,
- * and the shown slots claim distinct traits in slot order.
+ * boon is no longer held or eligible where the list is judged and the list is
+ * not kept, every unsold slot redrawn as the game regenerates the list. Sold
+ * slots keep their trait, and the shown slots claim distinct traits in slot
+ * order.
  */
 function poolListDraws(
   identity: (slotKey: PoolSlotKey) => string,
@@ -271,8 +278,9 @@ function poolListDraws(
     readonly shownTraitKeys?: readonly string[];
   },
   sold: ReadonlySet<PoolSlotKey>,
+  kept: boolean,
 ): { readonly slotKey: PoolSlotKey; readonly traitKey: string | null }[] {
-  const stale = list.staleSlotKeys.some((slotKey) => !sold.has(slotKey));
+  const stale = !kept && list.staleSlotKeys.some((slotKey) => !sold.has(slotKey));
   const redrawn = list.offeredSlotKeys.filter(
     (slotKey) => !sold.has(slotKey) && (stale || (stored[slotKey] ?? null) === null),
   );
@@ -315,6 +323,7 @@ function purgingPoolFills(
   artifacts: BiomeCandidateArtifacts,
   owner: OccurrenceAddress,
   occurrence: RoomOccurrence,
+  keepsPoolList: KeptPoolLists,
 ): StockFill[] {
   const pool = occurrence.purgingPool;
   const capability = artifacts.purgingPools.at(owner);
@@ -355,6 +364,7 @@ function purgingPoolFills(
     },
     // With a refresh stored, the initial list's sales sell from it.
     refreshed ? new Set() : soldFrom(INITIAL_ROLL_KEY),
+    keepsPoolList(owner, INITIAL_ROLL_KEY),
   ))
     push(undefined, slotKey, {
       kind: 'ReplacePurgingPoolSlot',
@@ -368,6 +378,7 @@ function purgingPoolFills(
       pool.refreshTraitKeyBySlot ?? {},
       capability.refresh,
       soldFrom(INITIAL_ROLL_KEY),
+      keepsPoolList(owner, PURGING_POOL_REFRESH_ROLL_KEY),
     ))
       push(PURGING_POOL_REFRESH_ROLL_KEY, slotKey, {
         kind: 'ReplacePurgingPoolSlot',
@@ -394,6 +405,7 @@ function purgingPoolFills(
       purgingPoolRerollPins(pool, reroll.rerollId),
       roll,
       soldFrom(reroll.rerollId),
+      keepsPoolList(owner, reroll.rerollId),
     ))
       push(reroll.rerollId, slotKey, {
         kind: 'ReplacePurgingPoolRollSlot',
@@ -409,21 +421,100 @@ function purgingPoolFills(
   return fills;
 }
 
+/** A Shop item's stable identity among the values its slot can stock. */
+function shopValueKey(value: ShopOptionSelection): string {
+  return `${value.optionKey}|${JSON.stringify(value.offer)}`;
+}
+
+/**
+ * The World Shop's first blank reached slot, in slot order: each draw needs
+ * the joint inventory its stocked peers leave, so a Shop stocks one slot per
+ * pass. A validly empty slot stays empty. Then the Travel Deal restock of its
+ * triggering purchase, from the source slot's group.
+ */
+function worldShopFills(
+  catalog: Catalog,
+  artifacts: BiomeCandidateArtifacts,
+  owner: OccurrenceAddress,
+  occurrence: RoomOccurrence,
+): StockFill[] {
+  const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (shop === undefined) return [];
+  const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
+  const profile = catalog.rewards.shops.byKey[shop.profileKey];
+  const draw = (offer: ShopOfferAddress, valuesSlotKey: string): StockFill | undefined => {
+    const producer = artifacts.rewardProducers.at(offer);
+    const evaluate = producer?.evaluateShopOption;
+    if (evaluate === undefined) return undefined;
+    const legal = shopOfferOptionValues(catalog, shop.profileKey, valuesSlotKey).filter(
+      (value) => evaluate(offer, value).supported,
+    );
+    const key = stableChoice(
+      `${occurrence.occurrenceId}|worldShop|${offer.offerKey}`,
+      legal.map(shopValueKey),
+    );
+    const value = legal.find((candidate) => shopValueKey(candidate) === key);
+    if (value === undefined) return undefined;
+    return Object.freeze<StockFill>({
+      key: semanticAddressKey(offer),
+      owner: offer,
+      command: { kind: 'ReplaceShopOfferOption', offer, value },
+    });
+  };
+  for (const slot of profile?.slots.values ?? []) {
+    if ((shop.offers[slot.key]?.reward ?? null) !== null) continue;
+    const offer = createShopOfferAddress(biome, owner.occurrenceId, slot.key);
+    const standing = artifacts.rewardProducers.at(offer)?.shopSlotAssessment?.(offer);
+    if (standing !== 'incomplete') continue;
+    const fill = draw(offer, slot.key);
+    return fill === undefined ? [] : [fill];
+  }
+  const refill = artifacts.derivedAcquisitionEntries
+    .entriesAt(createAcquisitionSiteAddress(owner, 'roomExit'))
+    .find((entry) => entry.address.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)?.capability;
+  if (
+    refill?.kind !== 'travelDealRefill' ||
+    refill.sourceOfferKey === undefined ||
+    (shop.travelDealRefill?.reward ?? null) !== null
+  )
+    return [];
+  const fill = draw(
+    createShopOfferAddress(biome, owner.occurrenceId, TRAVEL_DEAL_REFILL_ENTRY_KEY),
+    refill.sourceOfferKey,
+  );
+  return fill === undefined ? [] : [fill];
+}
+
+/**
+ * Whether a stale Pool list keeps its values instead of being redrawn: a list
+ * whose own value the edit set, so it raises its finding instead.
+ */
+export type KeptPoolLists = (occurrence: OccurrenceAddress, list: string) => boolean;
+
 /**
  * Every blank stock slot the evaluated walk reached, with the command that
- * stocks it by a stable legal draw: Stygian Wells first, then Hermes Shrines
- * and Purging Pools, each room in route order.
+ * stocks it by a stable legal draw: Stygian Wells first, then Hermes Shrines,
+ * Purging Pools and World Shops, each room in route order.
  */
 export function stockFills(
+  catalog: Catalog,
   project: ProjectDocument,
   artifacts: ProjectCandidateArtifacts,
+  keepsPoolList: KeptPoolLists,
 ): readonly StockFill[] {
   const reached = rooms(project).flatMap(({ biome, owner, occurrence }) => {
     const biomeArtifacts = artifacts.biomeAt(biome);
     return biomeArtifacts === undefined ? [] : [{ artifacts: biomeArtifacts, owner, occurrence }];
   });
   return Object.freeze(
-    [stygianWellFills, hermesShrineFills, purgingPoolFills].flatMap((fillsOf) =>
+    [
+      stygianWellFills,
+      hermesShrineFills,
+      (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
+        purgingPoolFills(room, owner, occurrence, keepsPoolList),
+      (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
+        worldShopFills(catalog, room, owner, occurrence),
+    ].flatMap((fillsOf) =>
       reached.flatMap((room) => fillsOf(room.artifacts, room.owner, room.occurrence)),
     ),
   );

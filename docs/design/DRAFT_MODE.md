@@ -169,7 +169,12 @@ room as the route declares it, route overlays included.
   below move up as one finishes; a finished or unranked kind is plain filler.
   While a ranked kind is still short, a god with no basket trait left weighs
   below the top-ranked filler. Amounts are preferences, never draft targets.
-- **Spare Shop purchases.** Once every slot of a Shop holds an item, so its
+- **Shop stock.** Settlement stocks a Shop the walk enters; the draft then
+  replaces each slot, in slot order, with its steered pick among the items the
+  inventory admits beside the stocked peers, buying wanted items as it goes,
+  and steers a Travel Deal item the same way once a purchase restocks it.
+  Shops the plan entered before the draft are left as they are.
+- **Spare Shop purchases.** Once every slot of a Shop is steered, so its
   boons are bought first, the draft spends the biome's spare purchases (its
   purchases per biome less those made there) on ranked Max Health, Max Magick
   and Pom still short of their amount, each a weighted pick; Shops sell no

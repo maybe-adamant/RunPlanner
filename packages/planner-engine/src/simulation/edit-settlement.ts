@@ -43,6 +43,7 @@ import type {
   RoomOccurrence,
 } from '../authored-project/model';
 import { roomActionKey } from '../authored-project/room-actions/state';
+import { INITIAL_ROLL_KEY, PURGING_POOL_REFRESH_ROLL_KEY } from '../authored-project/feature-rolls';
 import { roomActionsOnReplacedItems } from '../authored-project/room-actions/replaced-items';
 import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import type { RerolledRewardOwner } from '../authored-project/rerolls';
@@ -76,7 +77,7 @@ import {
 } from './evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from './evaluation/evaluation-products';
 import { candidateBiome, candidateBiomeRooms } from './candidates/evaluated-biome';
-import { stockFills } from './stock-fill';
+import { stockFills, type KeptPoolLists } from './stock-fill';
 
 function occurrences(project: ProjectDocument) {
   return project.route.biomes.flatMap((biome) =>
@@ -96,6 +97,39 @@ function occurrenceAt(
   return project.route.biomes
     .find((biome) => biome.biomeKey === owner.biomeKey)
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === owner.occurrenceId);
+}
+/**
+ * The Pool list whose own value the command sets: it keeps that value with its
+ * finding, while a list another edit made stale is redrawn.
+ */
+function poolListSetBy(project: ProjectDocument, command: ProjectCommand): KeptPoolLists {
+  const list = (() => {
+    switch (command.kind) {
+      case 'ReplacePurgingPoolSlot':
+        return {
+          owner: command.occurrence,
+          key: command.list === 'refresh' ? PURGING_POOL_REFRESH_ROLL_KEY : INITIAL_ROLL_KEY,
+        };
+      case 'SellPurgingPoolRollSlot':
+        return { owner: command.occurrence, key: command.rollKey };
+      case 'ReplacePurgingPoolRollSlot': {
+        const owner = createOccurrenceAddress(
+          createBiomeAddress(command.action.routeKey, command.action.biomeKey),
+          command.action.occurrenceId,
+        );
+        const reroll = occurrenceAt(project, owner)?.roomActions.order.find(
+          (reference) => roomActionKey(reference) === command.action.actionKey,
+        );
+        return reroll?.kind === 'rerollPurgingPool' ? { owner, key: reroll.rerollId } : undefined;
+      }
+      default:
+        return undefined;
+    }
+  })();
+  return (owner, key) =>
+    list !== undefined &&
+    key === list.key &&
+    semanticAddressKey(owner) === semanticAddressKey(list.owner);
 }
 function placements(assembly: ProjectEvaluationAssembly) {
   return assembly.evaluation.route.biomes.flatMap((biome) =>
@@ -1131,19 +1165,23 @@ export function settleProjectUpgrade(
 /**
  * Stock every blank slot a saved plan's walk reaches, as the edit that first
  * reached it would have, and nothing else. A schema transform for plans saved
- * while a blank Well or Pool slot meant the game's own roll. Total like an
- * edit's settlement: a slot stocked twice is a fault beside the last assembly.
+ * while a blank stock slot meant the game's own roll: a stale Pool list keeps
+ * its values and findings, unless the plan was built by commands that would
+ * each have settled it. Total like an edit's settlement: a slot stocked twice
+ * is a fault beside the last assembly.
  */
 export function settleProjectStock(
-  options: ProjectUpgradeSettlementOptions,
+  options: ProjectUpgradeSettlementOptions & { readonly redrawStalePoolLists?: boolean },
 ): ProjectEditSettlement {
   const evaluate = exactEvaluation(options.evaluate);
   let assembly = evaluate(options.project);
   const stocked = new Set<string>();
   for (;;) {
     const fills = stockFills(
+      options.catalog,
       assembly.project,
       candidateArtifactsForProjectEvaluationAssembly(assembly),
+      () => options.redrawStalePoolLists !== true,
     );
     if (fills.length === 0) return Object.freeze({ assembly });
     let project = assembly.project;
@@ -1175,6 +1213,7 @@ function settleProject(options: {
   const { catalog, before, command, evaluate } = options;
   const upgrade = command === undefined;
   let project = options.project;
+  const keepsPoolList: KeptPoolLists = upgrade ? () => false : poolListSetBy(project, command);
   const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
   const beforeRosters = enteredRosters(before);
   const edited = roomEditedSince(before.project);
@@ -1455,7 +1494,7 @@ function settleProject(options: {
           ];
     if (items.length === 0 && removals.length === 0) {
       // Once nothing else is repaired, the edit stocks every blank slot the walk reached.
-      const fills = stockFills(assembly.project, artifacts);
+      const fills = stockFills(catalog, assembly.project, artifacts, keepsPoolList);
       if (fills.length === 0) return settled(assembly);
       for (const fill of fills) {
         const fault = repair(`fill:${fill.key}`, fill.owner, (plan) =>

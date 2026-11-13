@@ -40,7 +40,7 @@ export function settleTestEdit(project: ProjectDocument, command: ProjectCommand
 
 /** The plan with every blank stock slot its walk reaches stocked, as an edit would leave it. */
 export function stockTestProject(project: ProjectDocument): ProjectDocument {
-  const settled = settleProjectStock({ catalog, project, evaluate });
+  const settled = settleProjectStock({ catalog, project, evaluate, redrawStalePoolLists: true });
   if (settled.fault !== undefined)
     throw new Error(`stock settlement faulted at ${settled.fault.key}`);
   return settled.assembly.project;

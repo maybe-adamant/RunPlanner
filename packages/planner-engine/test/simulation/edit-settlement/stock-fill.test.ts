@@ -6,8 +6,10 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createIncomingRewardAddress,
   createRoomFeatureAddress,
   createShopOfferAddress,
+  createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   roomActionKey,
@@ -229,10 +231,40 @@ describe('stock filled on first reach', () => {
   describe('a Purging Pool', () => {
     const pool = createOccurrenceAddress(f, createOccurrenceId('golden-f-preboss-shop:postboss'));
 
-    it('redraws the unsold slots of a list an edit leaves stale, keeping the sold one', () => {
+    it('redraws the unsold slots of a list an edit elsewhere leaves stale, keeping the sold one', () => {
       const project = loadCheckpoint('underworld-f-pool');
       const before = occurrenceOf(project, pool).purgingPool!.traitKeyBySlot;
-      // A listed boon the run does not hold makes the entry list stale.
+      expect(before.middle).toBe('HeraCastBoon');
+      // Taking Hera's Sprint instead leaves the listed Cast unheld, so the entry list is stale.
+      const heraRoom = createOccurrenceId('golden-f-b6-e1');
+      const hera = createTraitOfferAddress(createIncomingRewardAddress(f, heraRoom), 'source');
+      const room = occurrenceOf(project, createOccurrenceAddress(f, heraRoom));
+      const offer =
+        room.state.kind === 'counted'
+          ? room.state.reward!.traitOffersByAcquisitionRole!.source!
+          : undefined;
+      if (offer?.kind !== 'traits') throw new Error('expected the Hera offer');
+      const settled = settle(project, {
+        kind: 'ReplaceTraitOffer',
+        trait: hera,
+        value: { ...offer, selectedOptionKey: 'option2' },
+      });
+      expect(settled.fault).toBeUndefined();
+      const after = occurrenceOf(settled.assembly.project, pool).purgingPool!.traitKeyBySlot;
+      expect(after.left).toBe(before.left);
+      expect(after.middle).not.toBe('HeraCastBoon');
+      expect(new Set(Object.values(after)).size).toBe(3);
+      expect(
+        findingCodes(settled.assembly.project).filter((finding) =>
+          finding.code.startsWith('purgingPool'),
+        ),
+      ).toEqual([]);
+    });
+
+    it('keeps a value set on the list itself, with its finding', () => {
+      const project = loadCheckpoint('underworld-f-pool');
+      const before = occurrenceOf(project, pool).purgingPool!.traitKeyBySlot;
+      // A listed boon the run does not hold is the list's own finding, not a regenerated list.
       const settled = settle(project, {
         kind: 'ReplacePurgingPoolSlot',
         occurrence: pool,
@@ -241,14 +273,12 @@ describe('stock filled on first reach', () => {
       });
       expect(settled.fault).toBeUndefined();
       const after = occurrenceOf(settled.assembly.project, pool).purgingPool!.traitKeyBySlot;
-      expect(after.left).toBe(before.left);
-      expect(after.middle).not.toBe('AphroditeWeaponBoon');
-      expect(new Set(Object.values(after)).size).toBe(3);
+      expect(after).toEqual({ ...before, middle: 'AphroditeWeaponBoon' });
       expect(
-        findingCodes(settled.assembly.project).filter((finding) =>
-          finding.code.startsWith('purgingPool'),
-        ),
-      ).toEqual([]);
+        findingCodes(settled.assembly.project)
+          .filter((finding) => finding.code.startsWith('purgingPool'))
+          .map((finding) => finding.code),
+      ).toEqual(['purgingPoolTraitUnavailable']);
     });
   });
 
@@ -277,9 +307,50 @@ describe('stock filled on first reach', () => {
       expect(occurrenceOf(project, shop).roomActions.order.map(roomActionKey)).not.toContain(
         refillRow,
       );
-      // The new item is the owner's to stock at the purchase that restocks it.
-      expect(shopState(project)?.travelDealRefill).toBeUndefined();
-      expect(findingCodes(project).map((finding) => finding.code)).toContain('rewardMissing');
+      // The new item is drawn at the purchase that restocks it, from the restocked slot's values.
+      expect(shopState(project)?.travelDealRefill?.reward).toBeDefined();
+      expect(findingCodes(project).map((finding) => finding.code)).not.toContain('rewardMissing');
+    });
+
+    it('stocks every blank slot of a reached Shop, the same way every time', () => {
+      const project = loadCheckpoint('underworld-world-shop-travel-deal');
+      const shopProfile = catalog.rewards.shops.byKey[shopState(project)!.profileKey]!;
+      const blank = shopProfile.slots.values.reduce(
+        (document, slot) =>
+          applyProjectCommand(document, catalog, {
+            kind: 'ClearShopOffer',
+            offer: createShopOfferAddress(f, shop.occurrenceId, slot.key),
+          }),
+        project,
+      );
+      // Any edit that reaches the Shop stocks it: here, buying its first slot.
+      const settled = settle(blank, {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(f, shop.occurrenceId, shopProfile.slots.values[0]!.key),
+        purchased: true,
+        index: 0,
+      });
+      expect(settled.fault).toBeUndefined();
+      const stocked = shopState(settled.assembly.project)!;
+      const filled = shopProfile.slots.values.map((slot) => stocked.offers[slot.key]?.reward);
+      expect(filled).not.toContain(undefined);
+      expect(filled).not.toContain(null);
+      expect(
+        findingCodes(settled.assembly.project).filter(
+          (finding) => finding.code === 'rewardMissing',
+        ),
+      ).toEqual([]);
+      // The same blank Shop stocks the same way every time.
+      expect(
+        shopState(
+          settle(blank, {
+            kind: 'ReplaceShopPurchaseParticipation',
+            offer: createShopOfferAddress(f, shop.occurrenceId, shopProfile.slots.values[0]!.key),
+            purchased: true,
+            index: 0,
+          }).assembly.project,
+        ),
+      ).toEqual(stocked);
     });
   });
 });

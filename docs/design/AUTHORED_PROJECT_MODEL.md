@@ -732,9 +732,9 @@ which names its roll and slot; the game rolls a Fateful Twist per bought
 generation, and its result lives on the Well under that generation. Pins and
 Twist results exist only for rolls the room holds, so removing a reroll takes
 them with it, and with them the purchases and sales of its list. Each Pool sale names its list (`rollKey`, absent for the initial
-list). Every Well, Pool and Shrine stock slot (their rolls, Travel Deal
-refills and Fateful Twist results) is stocked by the edit whose settlement
-first reaches it blank
+list). Every Well, Pool, Shrine and World Shop stock slot (their rolls,
+Travel Deal refills and Fateful Twist results) is stocked by the edit whose
+settlement first reaches it blank
 ([Stock filled on first reach](SIMULATION_AND_VALIDATION.md#stock-filled-on-first-reach)).
 Travel Deal refill state is
 occurrence-local to its Shop, Shrine, or Well carrier. Pending deliveries,

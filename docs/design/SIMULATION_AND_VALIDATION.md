@@ -571,28 +571,30 @@ positions unset and take the defaults.
 ### Stock filled on first reach
 
 A Stygian Well's rolls, Travel Deal restock and Fateful Twist results, a
-Hermes Shrine's items and Travel Deal refill and a Pool of Purging's lists are
-stored, never derived. A blank slot the walk reaches is an incomplete finding where it
-is generated, and the edit whose settlement first reaches it stocks it as part
-of that edit, so one Undo reverts both. The stock is a stable legal draw: each
-slot scores its legal values, those the slot's generation contact admits
-there, by a stable hash of its semantic identity and the value, and takes its
-best value that no stored slot or earlier claim of the same group holds.
-Slots claim in slot order; a reroll's last drawn slot avoids repeating every
-item on show before it, which the game's ban rules out. A Travel Deal restock
-draws under its triggering purchase's identity. A World Shop's items and its
-Travel Deal item stay the owner's to stock: a blank one is the Shop's
-incomplete finding.
+Hermes Shrine's items and Travel Deal refill, a Pool of Purging's lists and a
+World Shop's items and Travel Deal item are stored, never derived. A blank
+slot the walk reaches is an incomplete finding where it is generated, and the
+edit whose settlement first reaches it stocks it as part of that edit, so one
+Undo reverts both. The stock is a stable legal draw: each slot scores its
+legal values, those the slot's generation contact admits there, by a stable
+hash of its semantic identity and the value, and takes its best value that no
+stored slot or earlier claim of the same group holds. Slots claim in slot
+order; a reroll's last drawn slot avoids repeating every item on show before
+it, which the game's ban rules out. A World Shop stocks one slot at a time,
+each from the values its joint inventory admits beside its stocked peers. A
+Travel Deal restock draws under its triggering purchase's identity, a World
+Shop's from the restocked slot's values.
 
 A stored value an upstream edit makes illegal keeps its value and raises its
-finding, with two exceptions. A Pool list that turns stale (a listed boon no
-longer held or eligible where the list is judged) is redrawn in the same edit
-on its unsold slots, as the game regenerates it; sold slots keep their trait
-and a list showing fewer slots blanks the rest. A Travel Deal restock (World
-Shop, Shrine or Well) whose triggering purchase or rush the edit changed is a
-new item: the old item and its purchase go and a Well's or Shrine's new one is
-drawn. The plan upgrade and a saved plan's
-stock transform settle stock the same way.
+finding, with two exceptions. A Pool list that an edit elsewhere turns stale
+(a listed boon no longer held or eligible where the list is judged) is
+redrawn in the same edit on its unsold slots, as the game regenerates it;
+sold slots keep their trait and a list showing fewer slots blanks the rest. A
+value set on the list itself keeps its value and raises its finding. A Travel
+Deal restock (World Shop, Shrine or Well) whose triggering purchase or rush
+the edit changed is a new item: the old item and its purchase go and a new
+one is drawn. The plan upgrades stock a saved plan's blank reached slots the
+same way, so a loaded plan is complete.
 
 ### Persistent and multi-phase rooms
 

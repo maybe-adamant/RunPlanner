@@ -1,4 +1,5 @@
 import {
+  applyProjectCommand,
   createBiomeAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
@@ -52,7 +53,7 @@ import type { RunImportContext } from './import';
 import type { RunImportArea } from './report';
 import { isQuestionFinding } from './areas';
 import { authoredOccurrence, occurrenceIdOf } from './occurrences';
-import { authorAcceptedAnswer } from './open-questions';
+import { authorAcceptedAnswer, shopOfferAnswers } from './open-questions';
 import { applyFeatureRerolls } from './rerolls';
 import { pickupUseCount } from './vocabulary';
 
@@ -219,22 +220,41 @@ function answerShopOffer(
     offer.occurrenceId,
   );
   const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (occurrence === undefined || shop === undefined) return false;
   if (offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)
-    return occurrence !== undefined && shop !== undefined
-      ? answerTravelDealRefill(context, offer, occurrence, shop)
-      : false;
-  const profile =
-    shop === undefined ? undefined : context.catalog.rewards.shops.byKey[shop.profileKey];
+    return answerTravelDealRefill(context, offer, occurrence, shop);
+  if (restockShopSlot(context, offer, shop) === true) return true;
+  context.refuse();
+  return false;
+}
+
+/**
+ * Stocks a Shop slot with the record's item, over whatever the slot holds:
+ * settlement stocks a reached Shop with its own draws, and a recorded item
+ * always replaces them. Undefined when the record holds no item for the slot.
+ */
+function restockShopSlot(
+  context: RunImportContext,
+  offer: Origin<'shopOffer'>,
+  shop: ShopState,
+): boolean | undefined {
+  const profile = context.catalog.rewards.shops.byKey[shop.profileKey];
   const position = profile?.slots.values.findIndex((slot) => slot.key === offer.offerKey) ?? -1;
   const visit = storeVisit(context, offer.occurrenceId, 'worldShop');
   const stock = visit?.store.stock.find((option) => option.slot === position + 1);
-  if (occurrence === undefined || shop === undefined || stock === undefined) return false;
-  const values = shopOfferOptionValues(context.catalog, shop.profileKey, offer.offerKey).filter(
-    (value) =>
-      stockMatches(context, shop.profileKey, offer.offerKey, stock, value) &&
-      shopOptionSupported(context, offer, value),
+  if (visit === undefined || stock === undefined) return undefined;
+  const matches = shopOfferOptionValues(context.catalog, shop.profileKey, offer.offerKey).filter(
+    (value) => stockMatches(context, shop.profileKey, offer.offerKey, stock, value),
   );
-  const at = record(visit!.roomIndex);
+  const values = matches.filter((value) => shopOptionSupported(context, offer, value));
+  const at = record(visit.roomIndex);
+  const holds = (value: ShopOptionSelection) => holdsShopOption(context, offer, value);
+  // The one recorded item a peer's draw rules out: the peer's own recorded item replaces that draw.
+  if (values.length === 0 && matches.length === 1)
+    return (
+      holds(matches[0]!) ||
+      context.apply({ kind: 'ReplaceShopOfferOption', offer, value: matches[0]! })
+    );
   // A boon whose god the stock does not name is any god the room's next entry save accepts.
   const godOpen = (value: ShopOptionSelection) =>
     stock.lootName === undefined &&
@@ -248,7 +268,7 @@ function answerShopOffer(
   if (values.length > 1 && values.some(godOpen)) {
     const answer = authorAcceptedAnswer(
       context,
-      visit!.roomIndex,
+      visit.roomIndex,
       commands.map((command) => [command]),
       { area: 'shop', address: offer },
     );
@@ -266,9 +286,27 @@ function answerShopOffer(
     });
     return true;
   }
-  if (commands.some((command) => context.applyValid(command))) return true;
-  context.refuse();
-  return false;
+  return values.some(holds) || commands.some((command) => context.applyValid(command));
+}
+
+/** Whether the slot already holds the option, as settlement's draw or an earlier answer. */
+function holdsShopOption(
+  context: RunImportContext,
+  offer: Origin<'shopOffer'>,
+  value: ShopOptionSelection,
+): boolean {
+  const project = context.assembly().project;
+  try {
+    return (
+      applyProjectCommand(project, context.catalog, {
+        kind: 'ReplaceShopOfferOption',
+        offer,
+        value,
+      }) === project
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** Whether the engine supports a Shop option there, leaving at most open questions. */
@@ -369,7 +407,7 @@ function answerTravelDealRefill(
     if (
       !context.transaction(
         () =>
-          context.apply(command) &&
+          (holdsShopOption(context, offer, value) || context.apply(command)) &&
           insertRoomAction(context, biomeKey, occurrence.occurrenceId, refill),
       )
     )
@@ -884,7 +922,13 @@ function answerAnvil(context: RunImportContext, acquisition: Origin<'acquisition
  */
 export function importCommerce(context: RunImportContext): void {
   for (const { biomeKey, occurrence } of pendingOccurrences(context)) {
-    importShopPurchases(context, biomeKey, occurrence);
+    importShopStock(context, biomeKey, occurrence);
+    // Purchases and the refill read the stock the record just wrote.
+    const current = () =>
+      authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId) ??
+      occurrence;
+    importShopPurchases(context, biomeKey, current());
+    importShopRefill(context, biomeKey, current());
     importShrine(context, biomeKey, occurrence);
     pickUpRushedItems(context, biomeKey, occurrence);
     importWell(context, biomeKey, occurrence);
@@ -911,6 +955,65 @@ function noteOnce(
     ...(applied === undefined ? {} : { applied }),
     record: record(roomIndex),
   });
+}
+
+/**
+ * A reached Shop's recorded stock, once its settlement has stocked every slot:
+ * each recorded item replaces the slot's draw, and an unrecorded slot takes the
+ * value its room's next entry save accepts, its draw kept when none is.
+ */
+function importShopStock(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+): void {
+  const used = `shopStock:${occurrence.occurrenceId}`;
+  const visit = storeVisit(context, occurrence.occurrenceId, 'worldShop');
+  const initial = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  const slots = context.catalog.rewards.shops.byKey[initial?.profileKey ?? '']?.slots.values;
+  if (context.used.has(used) || initial === undefined || visit === undefined || slots === undefined)
+    return;
+  if (slots.some((slot) => (initial.offers[slot.key]?.reward ?? null) === null)) return;
+  context.used.add(used);
+  const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
+  for (const slot of slots) {
+    const current = authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrence.occurrenceId,
+    );
+    const shop = current?.state.kind === 'shop' ? current.state.shop : undefined;
+    if (shop === undefined) return;
+    const offer = createShopOfferAddress(biome, occurrence.occurrenceId, slot.key);
+    const restocked = restockShopSlot(context, offer, shop);
+    if (restocked === false)
+      context.note({
+        area: 'shop',
+        reason: 'refused',
+        address: offer,
+        record: record(visit.roomIndex),
+      });
+    if (restocked !== undefined) continue;
+    const answer = authorAcceptedAnswer(
+      context,
+      visit.roomIndex,
+      shopOfferAnswers(context, offer),
+      {
+        area: 'shop',
+        address: offer,
+      },
+    );
+    context.note({
+      area: 'shop',
+      reason: 'notInRecord',
+      address: offer,
+      ...(answer === undefined ? {} : { applied: answer.commands[0]! }),
+      ...(answer === undefined || answer.alternatives.length === 0
+        ? {}
+        : { alternatives: answer.alternatives }),
+      record: record(visit.roomIndex),
+    });
+  }
 }
 
 function importShopPurchases(
@@ -948,6 +1051,17 @@ function importShopPurchases(
   for (const [index, purchase] of purchases.entries()) {
     const bought = `${used}:${index}`;
     if (context.used.has(bought)) continue;
+    // The item a purchase restocked comes before the next purchase, which waits for what it spawns.
+    if (
+      index > 0 &&
+      importShopRefill(
+        context,
+        biomeKey,
+        authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId) ??
+          occurrence,
+      )
+    )
+      return;
     // The record's next purchase follows what the one before it spawned, so it waits until
     // the walk passes that purchase and its required items are collected.
     const previous = index === 0 ? undefined : slots[purchases[index - 1]!.slot - 1]?.key;
@@ -995,6 +1109,44 @@ function importShopPurchases(
     });
   }
   context.used.add(used);
+}
+
+/**
+ * Settlement stocks the Travel Deal item once the walk reaches the purchase
+ * that restocks it; a bought one is the record's, imported before the next
+ * recorded purchase. True when it was imported now.
+ */
+function importShopRefill(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+): boolean {
+  const used = `shopRefill:${occurrence.occurrenceId}`;
+  const shop = occurrence.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (
+    context.used.has(used) ||
+    shop === undefined ||
+    (shop.travelDealRefill?.reward ?? null) === null
+  )
+    return false;
+  context.used.add(used);
+  const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
+  const offer = createShopOfferAddress(
+    biome,
+    occurrence.occurrenceId,
+    TRAVEL_DEAL_REFILL_ENTRY_KEY,
+  );
+  // An unbought item leaves no trace: the refill keeps settlement's draw.
+  if (!answerTravelDealRefill(context, offer, occurrence, shop)) {
+    const visit = storeVisit(context, occurrence.occurrenceId, 'worldShop');
+    context.note({
+      area: 'shop',
+      reason: 'notInRecord',
+      address: offer,
+      ...(visit === undefined ? {} : { record: record(visit.roomIndex) }),
+    });
+  }
+  return true;
 }
 
 /** Each giver's stamped screen picks in a room, earliest first: an acquired trait, or the one a level-up raised. */
@@ -1704,6 +1856,25 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
       );
     return sold;
   };
+  // The record's list is the one on show at opening: the regenerated one when
+  // the fountain use made the entry list stale.
+  const list = capability.refresh === undefined ? {} : { list: 'refresh' as const };
+  const listed = (): Readonly<Partial<Record<string, string | null>>> => {
+    const stocked = authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrence.occurrenceId,
+    )?.purgingPool;
+    return capability.refresh === undefined
+      ? (stocked?.traitKeyBySlot ?? {})
+      : (stocked?.refreshTraitKeyBySlot ?? {});
+  };
+  const recorded: {
+    readonly slotKey: (typeof POOL_SLOTS)[number];
+    readonly slot: number;
+    readonly traitKey: string;
+    readonly ambiguous: boolean;
+  }[] = [];
   for (const [index, slotKey] of POOL_SLOTS.entries()) {
     const slot = index + 1;
     const feature = createRoomFeatureAddress(address, { kind: 'purgingPoolOffer', slotKey });
@@ -1730,11 +1901,32 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
       }
       claimed.add(traitKey);
     }
-    if (traitKey === undefined) continue;
-    // The record's list is the one on show at opening: the regenerated one when
-    // the fountain use made the entry list stale. The edit that reached it
-    // stocked every slot; each recorded trait replaces its slot's draw.
-    const list = capability.refresh === undefined ? {} : { list: 'refresh' as const };
+    if (traitKey !== undefined) recorded.push({ slotKey, slot, traitKey, ambiguous });
+  }
+  const replace = (slotKey: (typeof POOL_SLOTS)[number], traitKey: string | null) =>
+    context.apply({
+      kind: 'ReplacePurgingPoolSlot',
+      occurrence: address,
+      slotKey,
+      traitKey,
+      ...list,
+    });
+  // The edit that reached the list stocked every slot: the recorded traits replace their
+  // slots' draws together, then a draw repeating one of them is drawn again past them.
+  const writtenTogether = context.transaction(
+    () =>
+      recorded.every(
+        ({ slotKey, traitKey }) => listed()[slotKey] === traitKey || replace(slotKey, traitKey),
+      ) &&
+      POOL_SLOTS.every(
+        (slotKey) =>
+          recorded.some((entry) => entry.slotKey === slotKey) ||
+          !recorded.some((entry) => entry.traitKey === listed()[slotKey]) ||
+          replace(slotKey, null),
+      ),
+  );
+  for (const { slotKey, slot, traitKey, ambiguous } of recorded) {
+    const feature = createRoomFeatureAddress(address, { kind: 'purgingPoolOffer', slotKey });
     const command: ProjectCommand = {
       kind: 'ReplacePurgingPoolSlot',
       occurrence: address,
@@ -1742,35 +1934,14 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
       traitKey,
       ...list,
     };
-    const listed = () => {
-      const stocked = authoredOccurrence(
-        context.assembly().project,
-        biomeKey,
-        occurrence.occurrenceId,
-      )?.purgingPool;
-      return capability.refresh === undefined
-        ? (stocked?.traitKeyBySlot ?? {})
-        : (stocked?.refreshTraitKeyBySlot ?? {});
-    };
+    // Apart, each recorded trait still replaces its draw where the engine admits it.
     const written = (): boolean => {
-      const current: Readonly<Partial<Record<string, string | null>>> = listed();
-      // A draw elsewhere holding the recorded trait is drawn again past it.
       for (const other of POOL_SLOTS)
-        if (
-          other !== slotKey &&
-          current[other] === traitKey &&
-          !context.apply({
-            kind: 'ReplacePurgingPoolSlot',
-            occurrence: address,
-            slotKey: other,
-            traitKey: null,
-            ...list,
-          })
-        )
+        if (other !== slotKey && listed()[other] === traitKey && !replace(other, null))
           return false;
       return listed()[slotKey] === traitKey || context.apply(command);
     };
-    if (!context.transaction(written)) {
+    if (!writtenTogether && !context.transaction(written)) {
       // A refused trait leaves its slot open; a sale from it cannot be authored.
       context.note({
         area: 'pool',
