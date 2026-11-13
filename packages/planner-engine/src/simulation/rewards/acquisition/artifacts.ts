@@ -3,6 +3,7 @@ import {
   type AcquisitionEntryAddress,
   type AcquisitionRoleAddress,
   type AcquisitionSiteAddress,
+  type SemanticAddress,
 } from '../../../authored-project/addresses';
 import type { AuthoredRewardState, RoomActionReference } from '../../../authored-project/model';
 import { shopOfferGeneration, type ShopOfferGeneration } from '../../../authored-project/shop';
@@ -185,10 +186,37 @@ export interface AcquisitionConversionCandidateCapability {
   readonly anvil?: AnvilCandidateCapability;
   readonly hexActivation?: HexActivationCandidateCapability;
 }
+/** What a loose pickup's source is, read from the room that spawned it. */
+export interface UnsettledPickupSource {
+  readonly offer: import('../../../reward-kernel').ResolvedRewardOffer;
+  readonly producerLifecycleKey: string;
+  readonly instanceProvenance: 'free' | 'paid';
+  readonly dispositionByAcquisitionRole?: AuthoredRewardState['dispositionByAcquisitionRole'];
+}
+
+/** The conversions a role not yet taken could make where its room's actions end. */
+export type FrontierConversionCapability = Required<
+  Pick<
+    AcquisitionConversionCandidateCapability,
+    'timePieceAssessment' | 'artificerAssessment' | 'seaStarAssessment'
+  >
+>;
+
 export interface AcquisitionConversionCandidateArtifacts {
   readonly at: (
     address: AcquisitionRoleAddress,
   ) => AcquisitionConversionCandidateCapability | undefined;
+  /**
+   * For a role whose pickup the walk spawned and did not take: the same
+   * conversion questions its contact would ask, at the state where the
+   * room's reached actions end, where its row would append. Undefined once
+   * the role settled, or where the room's actions were not reached.
+   */
+  readonly atFrontier: (
+    room: SemanticAddress,
+    address: AcquisitionRoleAddress,
+    source: UnsettledPickupSource,
+  ) => FrontierConversionCapability | undefined;
   readonly atReplacement: (address: AcquisitionEntryAddress) =>
     | {
         readonly address: AcquisitionRoleAddress;
@@ -220,9 +248,12 @@ export function createAcquisitionConversionCandidateArtifacts(
     /** The reached state the walk published, holding each uncollected spawned object. */
     readonly frontier: SimulationState | undefined;
     readonly peeks: ReadonlyMap<string, ForfeitPeek>;
+    /** The state where each entered room's reached actions end, by room. */
+    readonly roomFrontiers?: ReadonlyMap<string, RewardBranchState>;
   } = { frontier: undefined, peeks: new Map() },
 ): AcquisitionConversionCandidateArtifacts {
   const privateContexts = new Map(contexts);
+  const roomFrontiers = new Map(spawned.roomFrontiers ?? []);
   const privatePeeks = new Map(spawned.peeks);
   // Before its pickup, a role reads what Forfeit made of its spawned object
   // or, while it has not spawned, the game's Onion preview of it.
@@ -300,8 +331,54 @@ export function createAcquisitionConversionCandidateArtifacts(
       ...(hexActivation === undefined ? {} : { hexActivation }),
     });
   };
+  const atFrontier = (
+    room: SemanticAddress,
+    address: AcquisitionRoleAddress,
+    pickup: UnsettledPickupSource,
+  ): FrontierConversionCapability | undefined => {
+    if (privateContexts.has(semanticAddressKey(address))) return undefined;
+    const branch = roomFrontiers.get(semanticAddressKey(room));
+    const binding = catalog.rewards.producerLifecycles.byKey[
+      pickup.producerLifecycleKey
+    ]?.rewardTypes.byKey[pickup.offer.rewardType]?.acquisitionLifecycle.find(
+      (candidate) => candidate.role === address.acquisitionRole,
+    );
+    if (branch === undefined || binding === undefined) return undefined;
+    const source: AcquisitionSource = Object.freeze({
+      origin: address.owner,
+      offer: pickup.offer,
+      producerLifecycleKey: pickup.producerLifecycleKey,
+      instanceProvenance: pickup.instanceProvenance,
+      // Eligibility only; it publishes no replacement screen.
+      presentsMaterializedScreen: false,
+      ...(pickup.dispositionByAcquisitionRole === undefined
+        ? {}
+        : { dispositionByAcquisitionRole: pickup.dispositionByAcquisitionRole }),
+    });
+    const role = {
+      role: address.acquisitionRole,
+      lifecyclePoint: binding.lifecyclePoint,
+      ...(binding.blocksArtificerConversion === true
+        ? { blocksArtificerConversion: true as const }
+        : {}),
+    };
+    const realized = forfeited(address);
+    return Object.freeze({
+      timePieceAssessment: assessTimePieceConversion(
+        catalog,
+        branch,
+        source,
+        role.role,
+        role.lifecyclePoint,
+        realized,
+      ),
+      artificerAssessment: assessArtificerConversion(catalog, branch, source, role),
+      seaStarAssessment: assessSeaStarDuplication(catalog, branch, source, role, realized),
+    });
+  };
   return Object.freeze({
     at,
+    atFrontier,
     atReplacement: (replacement: AcquisitionEntryAddress) => {
       const replacementKey = semanticAddressKey(replacement);
       for (const entry of privateContexts.values()) {
@@ -316,6 +393,7 @@ export function createAcquisitionConversionCandidateArtifacts(
 export function createEmptyAcquisitionConversionCandidateArtifacts(): AcquisitionConversionCandidateArtifacts {
   return Object.freeze({
     at: () => undefined,
+    atFrontier: () => undefined,
     atReplacement: () => undefined,
   });
 }

@@ -305,9 +305,9 @@ export function RoomActionInlineEditors({
           />
         ))}
       </RowChoice>
-      {payload === undefined
-        ? null
-        : conversions.map((conversion) => (
+      {payload === undefined ? null : (
+        <RowChoice choice="seaStar" rowKey={row.key}>
+          {conversions.map((conversion) => (
             <SeaStarToggle
               conversion={conversion}
               interactions={interactions}
@@ -315,6 +315,8 @@ export function RoomActionInlineEditors({
               roleNamed={conversions.length > 1}
             />
           ))}
+        </RowChoice>
+      )}
       {row.fountainRarity === undefined ? null : (
         <RowChoice choice="fountainRarity" rowKey={row.key}>
           <FountainRarityEffectRow control={row.fountainRarity} interactions={interactions} />

@@ -60,12 +60,13 @@ import {
   type RoomActionParticipation,
   type RoomActionRow,
 } from '../room-actions';
-import { timedPickupReference } from '../rewards/acquisition/artifacts';
+import { timedPickupReference, type UnsettledPickupSource } from '../rewards/acquisition/artifacts';
 import { authoredRoom, roomWalk } from './evaluated-room';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  frontierAcquisitionConversionForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
@@ -167,7 +168,8 @@ export type LiveVerbChoice =
   | { readonly picker: 'artificerReplacement'; readonly timing: 'after' }
   /**
    * The outcome the placed row settles, which its own picker shows where the
-   * reached state has one: a pickup's or contact's trait offer (a boon, the
+   * reached state has one: Sea Star's copy of a pickup, a pickup's or
+   * contact's trait offer (a boon, the
    * Gorgon's Athena), an Anvil of Fates result, a Path of Stars screen, a
    * Fateful Twist's result, a Nemesis event's reward and traded boon, the
    * Phial's target at the fountain, a challenge switch's outcome, or the
@@ -175,6 +177,7 @@ export type LiveVerbChoice =
    */
   | {
       readonly picker:
+        | 'seaStar'
         | 'traitOffer'
         | 'anvilResult'
         | 'hexActivation'
@@ -668,6 +671,144 @@ function standingDispositionVerbs(
     ];
   });
   return Object.freeze(verbs);
+}
+
+/** Where an unplaced loose pickup came from, as the room that spawned it holds it. */
+function unsettledPickupSource(
+  room: CanonicalAuthoredRoom,
+  reference: RoomActionReference,
+): UnsettledPickupSource | undefined {
+  switch (reference.kind) {
+    case 'interactIncomingReward': {
+      const reward = room.incomingReward;
+      return reward === undefined
+        ? undefined
+        : {
+            offer: reward.offer,
+            producerLifecycleKey: reward.producerLifecycleKey,
+            instanceProvenance: reward.instanceProvenance,
+          };
+    }
+    case 'interactLocalReward': {
+      const reward = [...(room.localRewards ?? []), ...(room.fieldsOptionalRewards ?? [])].find(
+        (candidate) =>
+          candidate.groupKey === reference.groupKey && candidate.slotKey === reference.slotKey,
+      );
+      return reward === undefined
+        ? undefined
+        : {
+            offer: reward.offer,
+            producerLifecycleKey: reward.producerLifecycleKey,
+            instanceProvenance: 'free',
+          };
+    }
+    case 'interactWheelReward': {
+      const wheel = room.rewardWheels?.find(
+        (candidate) => candidate.wheelKey === reference.wheelKey,
+      );
+      const offer = wheel?.offers.find((candidate) => candidate.picked)?.offer;
+      return wheel === undefined || offer === undefined
+        ? undefined
+        : { offer, producerLifecycleKey: wheel.producerLifecycleKey, instanceProvenance: 'free' };
+    }
+    case 'interactAcquisitionEntry': {
+      // A producer's generated pickup; a delivery or a Shop's own entries have none.
+      const producer = room.pickupProducers?.find(
+        (candidate) => candidate.siteKey === reference.siteKey,
+      );
+      const entry = room.acquisitionSites[reference.siteKey]?.entries[reference.entryKey];
+      return producer === undefined || entry === undefined || entry === null
+        ? undefined
+        : {
+            offer: entry.offer,
+            producerLifecycleKey: producer.producerLifecycleKey,
+            instanceProvenance: 'free',
+          };
+    }
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * The ways an unplaced loose pickup can be taken by the edit that places it
+ * at the frontier: placed as its disposition stands, or placed and converted
+ * where the state its row would append to supports that conversion, which a
+ * paid item never does. The same alternatives a standing row offers from its
+ * contact, each one edit. A plain pickup keeps its own outcome picker, else
+ * Sea Star's copy where it applies. Undefined when its owner is no single
+ * acquisition role whose source the room holds.
+ */
+function frontierDispositionVerbs(
+  assembly: ProjectEvaluationAssembly,
+  room: CanonicalAuthoredRoom,
+  occurrence: OccurrenceAddress,
+  owner: SemanticAddress,
+  reference: RoomActionReference,
+  obligation: Obligation,
+  place: Extract<GapStep, { readonly kind: 'place' }>,
+  outcome: LiveVerbChoice | undefined,
+): readonly LiveVerb[] | undefined {
+  const authored = authoredOccurrence(assembly.project, occurrence);
+  const pickup = unsettledPickupSource(room, reference);
+  if (authored === undefined || pickup === undefined) return undefined;
+  // An unplaced row's source names no action yet: its role is the pickup's owner.
+  const key = semanticAddressKey(owner);
+  const sources = authoredAcquisitionSources(
+    createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+    authored,
+    routeStartIncoming(assembly.project, occurrence, authored),
+  ).filter((source) => semanticAddressKey(source.acquisition) === key);
+  const [source] = sources;
+  if (source === undefined || sources.length > 1) return undefined;
+  const dispositions = source.reward.dispositionByAcquisitionRole;
+  const capability = frontierAcquisitionConversionForProjectEvaluationAssembly(
+    assembly,
+    occurrence,
+    source.acquisition,
+    { ...pickup, dispositionByAcquisitionRole: dispositions },
+  );
+  if (capability === undefined) return undefined;
+  const supported: Readonly<Record<AcquisitionDisposition['kind'], boolean>> = {
+    normal: true,
+    timePiece: capability.timePieceAssessment.supported,
+    artificer: capability.artificerAssessment.supported,
+  };
+  const current = dispositions[source.acquisition.acquisitionRole]?.kind ?? 'normal';
+  return frozen(
+    DISPOSITION_VERBS.flatMap(([kind, verb]): LiveVerb[] => {
+      if (kind !== current && !supported[kind]) return [];
+      const choice =
+        kind === 'artificer'
+          ? after('artificerReplacement')
+          : kind === 'normal'
+            ? (outcome ?? (capability.seaStarAssessment.supported ? after('seaStar') : undefined))
+            : undefined;
+      return [
+        frozen({
+          verb: verb ?? liveVerbKind(reference),
+          participation: obligation.participation,
+          ...(obligation.deadline === undefined ? {} : { deadline: obligation.deadline }),
+          reference,
+          acquisition: source.acquisition,
+          commands: frozen(
+            kind === current
+              ? [place.command]
+              : [
+                  place.command,
+                  frozen({
+                    kind: 'ReplaceAcquisitionDisposition' as const,
+                    acquisition: source.acquisition,
+                    value: frozen({ kind }),
+                  }),
+                ],
+          ),
+          ...(place.canonical === true ? { canonical: true as const } : {}),
+          ...(choice === undefined ? {} : { choice }),
+        }),
+      ];
+    }),
+  );
 }
 
 const after = (picker: Extract<LiveVerbChoice, { readonly timing: 'after' }>['picker']) =>
@@ -1197,14 +1338,22 @@ export function liveRoomForProjectEvaluationAssembly(
     if (row !== undefined && (row.rank !== null || item.placement.kind === 'unplaced')) {
       deadline = rowDeadline(row, (at) => !gatedPast(spawn, at));
       const step = gatedPast(spawn, gap) ? undefined : rowStep(row, gap);
+      const obligation = { participation: item.participation, deadline };
       if (step !== undefined && (!locked || step.kind === 'standing'))
         verbs.push(
-          ...rowVerbs(
-            item.reference,
-            { participation: item.participation, deadline },
-            step,
-            placeChoice,
-          ),
+          // At the frontier the edit placing it can also convert it.
+          ...((interactions && step.kind === 'place' && gap === frontier
+            ? frontierDispositionVerbs(
+                assembly,
+                room,
+                occurrence,
+                item.owner,
+                item.reference,
+                obligation,
+                step,
+                pickerOf(item.reference, placeChoice),
+              )
+            : undefined) ?? rowVerbs(item.reference, obligation, step, placeChoice)),
         );
     } else if (item.placement.kind === 'unplaced' && item.placement.command !== undefined) {
       const command = item.placement.command;

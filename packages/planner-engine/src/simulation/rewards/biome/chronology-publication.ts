@@ -354,7 +354,14 @@ export function publishChronology(
     acquisitionConversionArtifacts: createAcquisitionConversionCandidateArtifacts(
       catalog,
       accumulation.acquisitionConversionContexts,
-      { frontier: walk.branch?.state, peeks: accumulation.forfeitPeeks },
+      {
+        frontier: walk.branch?.state,
+        peeks: accumulation.forfeitPeeks,
+        // A pickup taken before its room's Timeline converts at the state the walk stopped on.
+        roomFrontiers: new Map(
+          [...walk.roomActionEnds].map(([roomKey, end]) => [roomKey, end.branch]),
+        ),
+      },
     ),
     derivedAcquisitionEntryArtifacts: createDerivedAcquisitionEntryCandidateArtifacts(
       accumulation.derivedAcquisitionEntryContexts,

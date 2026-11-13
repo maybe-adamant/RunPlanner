@@ -5,11 +5,7 @@ import {
   createShopOfferAddress,
   semanticAddressKey,
 } from '../../../authored-project/addresses';
-import {
-  extraExitLockHost,
-  lockableExitKeys,
-  unlockExitAction,
-} from '../../../authored-project/locked-exits';
+import { lockableExitKeys, unlockExitAction } from '../../../authored-project/locked-exits';
 import { roomActionKey } from '../../../authored-project/room-actions/key';
 import {
   prepareUnlockExitEncounter,
@@ -78,21 +74,10 @@ function authoredRoom(
 }
 
 /**
- * A Well, Pool, World Shop, Shrine, Contract pedestal or locked door is
- * interacted with through room actions.
+ * Records an entered room's latest reached point before its actions close,
+ * where a new action appends: its objects' interactions and a loose pickup's
+ * conversions read the state there.
  */
-function hasInteractiveObject(catalog: Catalog, room: CanonicalAuthoredRoom): boolean {
-  return (
-    extraExitLockHost(catalog, room.gameName) !== undefined ||
-    room.stygianWell !== undefined ||
-    room.purgingPool !== undefined ||
-    room.hermesShrine !== undefined ||
-    room.entryState?.kind === 'shop' ||
-    room.infernalContractPedestal !== undefined
-  );
-}
-
-/** Records an interactive object room's latest reached point before its actions close. */
 export function captureRoomActionEnd(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
@@ -102,7 +87,7 @@ export function captureRoomActionEnd(
     return state;
   const roomKey = semanticAddressKey(event.origin);
   const room = authoredRoom(context, roomKey);
-  if (room === undefined || !hasInteractiveObject(context.catalog, room)) return state;
+  if (room === undefined) return state;
   return Object.freeze({
     ...state,
     roomActionEnds: new Map(state.roomActionEnds).set(

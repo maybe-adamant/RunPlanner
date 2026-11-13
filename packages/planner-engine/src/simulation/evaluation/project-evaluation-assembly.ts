@@ -14,7 +14,9 @@ import {
   type TraitOfferAddress,
   type ShopOfferAddress,
   type InfernalContractPedestalAddress,
+  type OccurrenceAddress,
 } from '../../authored-project/addresses';
+import type { UnsettledPickupSource } from '../rewards/acquisition/artifacts';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { CountedRewardBinding, ShopSlotAssessment } from '../../reward-kernel';
 import type { ProjectDocument } from '../../authored-project/model';
@@ -191,6 +193,21 @@ export function acquisitionConversionCandidateForProjectEvaluationAssembly(
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(address.routeKey, address.biomeKey))
     ?.acquisitionConversions.at(address);
+}
+
+/**
+ * The conversions a role whose pickup the walk spawned and did not take could
+ * make where its room's reached actions end; undefined once it settled.
+ */
+export function frontierAcquisitionConversionForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  room: OccurrenceAddress,
+  address: AcquisitionRoleAddress,
+  source: UnsettledPickupSource,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(address.routeKey, address.biomeKey))
+    ?.acquisitionConversions.atFrontier(room, address, source);
 }
 
 /** Narrow reachability query for one exact immediate-keepsake child. */

@@ -22,6 +22,7 @@ import {
   type RoomOccurrence,
   type ShopState,
 } from '@run-planner/engine/authored-project';
+import { frontierAcquisitionConversionForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
@@ -369,6 +370,90 @@ describe('live interactions at a gap', () => {
     );
     expect(shopVerbs.length).toBeGreaterThan(0);
     expect(new Set(shopVerbs.map(({ verb }) => verb.verb))).toEqual(new Set(['buy']));
+  });
+
+  it("offers an unplaced pickup's conversions at the frontier, each placing it in one edit", () => {
+    const project = withTimePiece(throughBiome(loadUnderworldWorldShopTravelDealCheckpoint(), 'F'));
+    const start = fRoom('golden-f-start');
+    const reset = (document: ProjectDocument) =>
+      applyProjectCommand(document, catalog, {
+        kind: 'ResetRoomActionsAfter',
+        occurrence: start,
+        afterActionKey: null,
+      });
+    const rewardAt = (document: ProjectDocument) => {
+      const live = interactions(document, start);
+      return live.gaps[live.frontier]!.items.flatMap((item) =>
+        item.kind === 'pickup' && item.reference.kind === 'interactIncomingReward'
+          ? item.verbs
+          : [],
+      );
+    };
+    const summary = (verb: LiveVerb) => [verb.verb, verb.commands?.map((command) => command.kind)];
+    const unplaced = reset(project);
+    const offered = rewardAt(unplaced);
+    expect(offered.map(summary)).toEqual([
+      ['pickUp', ['InsertRoomAction']],
+      ['goldify', ['InsertRoomAction', 'ReplaceAcquisitionDisposition']],
+    ]);
+    const live = interactions(unplaced, start);
+    for (const verb of offered)
+      expect(verbAccepted(unplaced, start, verb, live.frontier), verb.verb).toBe(true);
+
+    // Goldified and taken back, it is placed goldified, or placed and picked up instead.
+    let goldified = unplaced;
+    for (const command of offered[1]!.commands!)
+      goldified = applyProjectCommand(goldified, catalog, command);
+    expect(rewardAt(reset(goldified)).map(summary)).toEqual([
+      ['pickUp', ['InsertRoomAction', 'ReplaceAcquisitionDisposition']],
+      ['goldify', ['InsertRoomAction']],
+    ]);
+
+    // A paid item is never converted, whatever the state its row would append to.
+    const assembly = simulateProjectAssembly(catalog, unplaced);
+    const conversion = (instanceProvenance: 'free' | 'paid') =>
+      frontierAcquisitionConversionForProjectEvaluationAssembly(
+        assembly,
+        start,
+        offered[0]!.acquisition!,
+        {
+          offer: canonicalRoom(assembly, start)!.incomingReward!.offer,
+          producerLifecycleKey: canonicalRoom(assembly, start)!.incomingReward!
+            .producerLifecycleKey,
+          instanceProvenance,
+        },
+      );
+    expect(conversion('free')?.timePieceAssessment.supported).toBe(true);
+    expect(conversion('paid')?.timePieceAssessment.supported).toBe(false);
+    // Once its row is placed it converts only from its own contact.
+    expect(
+      frontierAcquisitionConversionForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, project),
+        start,
+        offered[0]!.acquisition!,
+        {
+          offer: canonicalRoom(assembly, start)!.incomingReward!.offer,
+          producerLifecycleKey: canonicalRoom(assembly, start)!.incomingReward!
+            .producerLifecycleKey,
+          instanceProvenance: 'free',
+        },
+      ),
+    ).toBeUndefined();
+
+    // Only the frontier converts an unplaced item: an earlier gap only places it.
+    const failures: string[] = [];
+    for (const { id, project: plan, assembly: evaluatedPlan } of evaluated)
+      for (const { address, live: room } of reachedRooms(plan, evaluatedPlan))
+        for (const { gap, item, verb } of roomVerbs(room))
+          if (
+            gap !== room.frontier &&
+            item.kind === 'pickup' &&
+            verb.commands !== undefined &&
+            verb.commands.length > 1 &&
+            verb.commands.some((command) => command.kind === 'ReplaceAcquisitionDisposition')
+          )
+            failures.push(`${id} ${address.occurrenceId} @${gap} ${verb.verb}`);
+    expect(failures).toEqual([]);
   });
 
   it('withholds goldify without a Time Piece charge, and while Unfated', () => {

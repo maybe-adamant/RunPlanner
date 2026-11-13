@@ -178,9 +178,8 @@ export interface ChronologyWalkState {
   /** Each Well's and Pool's roll state as its room's actions settle, by room and feature. */
   readonly featureRolls: ReadonlyMap<string, FeatureRollWalk>;
   /**
-   * The last reached point of each interactive object room's actions (Well,
-   * Pool, World Shop, Shrine, Contract pedestal), where a new action is
-   * appended, with the state there; by room.
+   * The last reached point of each entered room's actions, where a new action
+   * is appended, with the state there; by room.
    */
   readonly roomActionEnds: ReadonlyMap<
     string,
