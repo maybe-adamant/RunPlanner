@@ -57,8 +57,15 @@ export interface BiomeRewardEvaluationAssembly {
   readonly through: (
     cut: HistoryFindingChronology,
     blockedAt?: SemanticAddress,
-    overviewStopped?: SemanticAddress,
+    overviewStopped?: OverviewStop,
   ) => BiomeRewardEvaluationAssembly;
+}
+
+/** A room whose Overview a cut stops. */
+export interface OverviewStop {
+  readonly room: SemanticAddress;
+  /** The stop is a required item left unplaced, taken where the room's Timeline starts. */
+  readonly placement: boolean;
 }
 
 /** Freezes the complete product accumulated by the chronological evaluator. */

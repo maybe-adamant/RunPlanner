@@ -5,7 +5,6 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   semanticAddressKey,
-  type SemanticAddress,
 } from '../../../authored-project/addresses';
 import type { BiomeRewardSimulation } from '../model';
 import { createAcquisitionConversionCandidateArtifacts } from '../acquisition/artifacts';
@@ -36,6 +35,7 @@ import type { ChronologyAccumulation } from './chronology-accumulator';
 import { type ChronologyWalkContext, type ChronologyWalkState } from './chronology-walk';
 import {
   publishBiomeRewardEvaluationAssembly,
+  type OverviewStop,
   type BiomeRewardEvaluationAssembly,
 } from './publication';
 
@@ -121,7 +121,7 @@ export function publishChronology(
   /** The last history sequence the published walk reached; producer acquisitions stop there. */
   reachedThrough = Number.POSITIVE_INFINITY,
   /** The room whose Overview the cut stops: its Timeline is unreached. */
-  overviewStopped?: SemanticAddress,
+  overviewStopped?: OverviewStop,
 ): BiomeRewardEvaluationAssembly {
   const { catalog, snapshot } = context;
   // Object interactions append to a Timeline, so a room stopped at its Overview offers none.
@@ -132,7 +132,7 @@ export function publishChronology(
           ...walk,
           roomActionEnds: new Map(
             [...walk.roomActionEnds].filter(
-              ([roomKey]) => roomKey !== semanticAddressKey(overviewStopped),
+              ([roomKey]) => roomKey !== semanticAddressKey(overviewStopped.room),
             ),
           ),
         });
@@ -357,9 +357,12 @@ export function publishChronology(
       {
         frontier: walk.branch?.state,
         peeks: accumulation.forfeitPeeks,
-        // A pickup taken before its room's Timeline converts at the state the walk stopped on.
+        // A pickup taken before its room's Timeline converts at the state the walk stopped on,
+        // unless the room's Overview stopped on something its placement does not answer.
         roomFrontiers: new Map(
-          [...walk.roomActionEnds].map(([roomKey, end]) => [roomKey, end.branch]),
+          [...(overviewStopped?.placement === true ? walk : interactionWalk).roomActionEnds].map(
+            ([roomKey, end]) => [roomKey, end.branch],
+          ),
         ),
       },
     ),

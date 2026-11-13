@@ -456,6 +456,48 @@ describe('live interactions at a gap', () => {
     expect(failures).toEqual([]);
   });
 
+  it('converts no unplaced pickup in a room its Overview stops on anything else', () => {
+    const start = fRoom('golden-f-start');
+    const unplaced = applyProjectCommand(
+      withTimePiece(throughBiome(loadUnderworldWorldShopTravelDealCheckpoint(), 'F')),
+      catalog,
+      { kind: 'ResetRoomActionsAfter', occurrence: start, afterActionKey: null },
+    );
+    // The run's first room never flips, so an authored flip stops it at its Overview.
+    const stopped = applyProjectCommand(unplaced, catalog, {
+      kind: 'ReplaceRoomLayout',
+      occurrence: start,
+      layout: { flipped: true },
+    });
+    const acquisition = interactions(unplaced, start)
+      .gaps[0]!.items.flatMap((item) =>
+        item.kind === 'pickup' && item.reference.kind === 'interactIncomingReward'
+          ? item.verbs
+          : [],
+      )
+      .find((verb) => verb.verb === 'goldify')!.acquisition!;
+    const conversion = (document: ProjectDocument) => {
+      const assembly = simulateProjectAssembly(catalog, document);
+      const reward = canonicalRoom(assembly, start)!.incomingReward!;
+      return frontierAcquisitionConversionForProjectEvaluationAssembly(
+        assembly,
+        start,
+        acquisition,
+        {
+          offer: reward.offer,
+          producerLifecycleKey: reward.producerLifecycleKey,
+          instanceProvenance: 'free',
+        },
+      );
+    };
+    // Left unplaced, the pickup stops the room's Overview and converts where its Timeline starts.
+    expect(conversion(unplaced)).toBeDefined();
+    expect(
+      simulateProjectAssembly(catalog, stopped).evaluation.findings.map(({ code }) => code),
+    ).toContain('roomLayoutFlipUnavailable');
+    expect(conversion(stopped)).toBeUndefined();
+  });
+
   it('withholds goldify without a Time Piece charge, and while Unfated', () => {
     // Epic Time Piece holds four charges: goldifying four later rewards, last first, leaves
     // the room after them none.

@@ -1244,7 +1244,12 @@ export function publishSelectedCut(
   const rewards = selected.rewardsThrough(
     block.cut,
     located.finding.origin,
-    block.timeline || block.owner.kind === 'start' ? undefined : block.owner.room.origin,
+    block.timeline || block.owner.kind === 'start'
+      ? undefined
+      : {
+          room: block.owner.room.origin,
+          placement: block.owner.kind !== 'hub' && unplacedRequired(block.owner.room, located),
+        },
   );
   const roomGeneration = generationThrough(
     selected.roomGeneration,

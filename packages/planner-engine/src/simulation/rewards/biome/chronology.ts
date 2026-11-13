@@ -42,7 +42,7 @@ import {
   type ChronologyWalkState,
 } from './chronology-walk';
 import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
-import { type BiomeRewardEvaluationAssembly } from './publication';
+import { type BiomeRewardEvaluationAssembly, type OverviewStop } from './publication';
 
 import { initializeRewardBranch } from '../branch-lifecycle';
 import { rewardFinding } from '../findings';
@@ -451,7 +451,7 @@ export function evaluateBiomeRewardChronology(
   const through = (
     cut: HistoryFindingChronology,
     blockedAt?: SemanticAddress,
-    overviewStopped?: SemanticAddress,
+    overviewStopped?: OverviewStop,
   ): BiomeRewardEvaluationAssembly => {
     const { received, emissionCount, settled } = walkThrough(steps, walked, cut);
     const replay = createChronologyAccumulator(prepared.rooms);
