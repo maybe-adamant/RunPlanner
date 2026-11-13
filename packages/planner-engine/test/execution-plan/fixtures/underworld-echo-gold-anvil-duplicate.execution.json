@@ -2987,7 +2987,14 @@
             { "generationKey": "initial:secondRight", "offerKey": "MemPointsCommonRange" }
           ]
         },
-        "purgingPool": { "traits": [], "anchorId": 755023 },
+        "purgingPool": {
+          "traits": [
+            { "slotKey": "left", "traitKey": "ApolloWeaponBoon" },
+            { "slotKey": "middle", "traitKey": "ZeusSpecialBoon" },
+            { "slotKey": "right", "traitKey": "HeraCastBoon" }
+          ],
+          "anchorId": 755023
+        },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -4664,7 +4671,14 @@
             { "generationKey": "initial:secondRight", "offerKey": "TemporaryImprovedExTrait" }
           ]
         },
-        "purgingPool": { "traits": [], "anchorId": 637448 },
+        "purgingPool": {
+          "traits": [
+            { "slotKey": "left", "traitKey": "HeraCastBoon" },
+            { "slotKey": "middle", "traitKey": "HestiaManaBoon" },
+            { "slotKey": "right", "traitKey": "HestiaWeaponBoon" }
+          ],
+          "anchorId": 637448
+        },
         "layout": { "flipped": false },
         "keepsakeRack": {},
         "fountain": {}
@@ -5974,7 +5988,14 @@
             { "generationKey": "initial:secondRight", "offerKey": "TemporaryImprovedDefenseTrait" }
           ]
         },
-        "purgingPool": { "traits": [], "anchorId": 755008 },
+        "purgingPool": {
+          "traits": [
+            { "slotKey": "left", "traitKey": "HeraCastBoon" },
+            { "slotKey": "middle", "traitKey": "ApolloWeaponBoon" },
+            { "slotKey": "right", "traitKey": "HestiaManaBoon" }
+          ],
+          "anchorId": 755008
+        },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -6806,5 +6827,5 @@
       }
     }
   ],
-  "planFingerprint": "15b1a9ad"
+  "planFingerprint": "edd730d6"
 }

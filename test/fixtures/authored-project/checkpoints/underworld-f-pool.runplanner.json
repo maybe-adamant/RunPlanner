@@ -2579,9 +2579,9 @@
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "HeraCastBoon",
+                  "middle": "HestiaManaBoon",
+                  "right": "HestiaWeaponBoon"
                 }
               },
               "keepsakeRack": {

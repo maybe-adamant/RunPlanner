@@ -1358,9 +1358,9 @@
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "ApolloWeaponBoon",
+                  "middle": "ZeusSpecialBoon",
+                  "right": "HeraCastBoon"
                 }
               },
               "keepsakeRack": {
@@ -2636,9 +2636,9 @@
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "HeraCastBoon",
+                  "middle": "HestiaManaBoon",
+                  "right": "HestiaWeaponBoon"
                 }
               },
               "keepsakeRack": {
@@ -4086,9 +4086,9 @@
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "ApolloRetaliateBoon",
+                  "middle": "HestiaSpecialBoon",
+                  "right": "HestiaManaBoon"
                 }
               },
               "keepsakeRack": {

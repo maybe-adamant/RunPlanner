@@ -2706,7 +2706,14 @@
             { "generationKey": "initial:secondRight", "offerKey": "MemPointsCommonRange" }
           ]
         },
-        "purgingPool": { "traits": [], "anchorId": 755023 },
+        "purgingPool": {
+          "traits": [
+            { "slotKey": "left", "traitKey": "ApolloWeaponBoon" },
+            { "slotKey": "middle", "traitKey": "ZeusSpecialBoon" },
+            { "slotKey": "right", "traitKey": "HeraCastBoon" }
+          ],
+          "anchorId": 755023
+        },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -2769,5 +2776,5 @@
       }
     }
   ],
-  "planFingerprint": "96e0b122"
+  "planFingerprint": "ff715111"
 }

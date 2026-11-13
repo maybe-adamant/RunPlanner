@@ -2797,9 +2797,20 @@
           ]
         },
         "purgingPool": {
-          "traits": [],
+          "traits": [
+            { "slotKey": "left", "traitKey": "ApolloWeaponBoon" },
+            { "slotKey": "middle", "traitKey": "ZeusSpecialBoon" },
+            { "slotKey": "right", "traitKey": "HeraCastBoon" }
+          ],
           "rerolls": [
-            { "rollKey": "r1", "traits": [{ "slotKey": "middle", "traitKey": "HeraCastBoon" }] }
+            {
+              "rollKey": "r1",
+              "traits": [
+                { "slotKey": "left", "traitKey": "RestockBoon" },
+                { "slotKey": "middle", "traitKey": "HeraCastBoon" },
+                { "slotKey": "right", "traitKey": "ZeusSpecialBoon" }
+              ]
+            }
           ],
           "anchorId": 755023
         },
@@ -3048,5 +3059,5 @@
       }
     }
   ],
-  "planFingerprint": "175a2df1"
+  "planFingerprint": "63b7f472"
 }

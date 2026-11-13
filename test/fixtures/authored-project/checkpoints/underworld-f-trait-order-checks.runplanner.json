@@ -1751,9 +1751,9 @@
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "EncounterStartOffenseBuffBoon",
+                  "middle": "ApolloBlindBoon",
+                  "right": "OmegaHeraProjectileBoon"
                 }
               },
               "keepsakeRack": {

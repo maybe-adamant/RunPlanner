@@ -1514,7 +1514,6 @@
         "checkpoint/underworld-generated-composition",
         "checkpoint/underworld-fgh",
         "checkpoint/underworld-fghi",
-        "checkpoint/nemesis-f-trait-trade",
         "checkpoint/nemesis-h-fields",
         "checkpoint/nemesis-f-pom-sea-star",
         "underworld/createGoldenFGHProject",
@@ -1531,7 +1530,10 @@
       ],
       "rows": {
         "useFountain": "#1 required | scope room | move 1 | remove",
-        "interactKeepsakeRack": "#2 optional | move 0 | remove"
+        "interactKeepsakeRack": "#2 optional | move 0 | remove",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain"
       }
     },
     {
@@ -1543,7 +1545,10 @@
       "rows": {
         "useFountain": "#1 required | scope room | move 1 | move blocked 2: window after purchaseStygianWellOffer:initial:secondLeft | remove",
         "interactKeepsakeRack": "#2 optional | move 0,2 | remove",
-        "purchaseStygianWellOffer:initial:secondLeft": "#3 optional | move 1 | move blocked 0: requiredFirst useFountain"
+        "purchaseStygianWellOffer:initial:secondLeft": "#3 optional | move 1 | move blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1,2,3 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2,3 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1,2,3 | insert blocked 0: requiredFirst useFountain"
       }
     },
     {
@@ -1557,7 +1562,12 @@
         "rerollStygianWell:r1": "#6 optional | move 1,2,3,4 | move blocked 0: requiredFirst useFountain | move blocked 6,7,8: purchaseStygianWellOffer:r1:healing afterAction rerollStygianWell:r1 | remove",
         "purchaseStygianWellOffer:r1:healing": "#7 optional | move 7,8 | move blocked 0: afterAction rerollStygianWell:r1, requiredFirst useFountain | move blocked 1,2,3,4,5: afterAction rerollStygianWell:r1",
         "rerollPurgingPool:r1": "#8 optional | move 1,2,3,4,5,6 | move blocked 0: requiredFirst useFountain | move blocked 8: sellPurgingPoolTrait:middle:r1 afterAction rerollPurgingPool:r1 | remove",
-        "sellPurgingPoolTrait:middle:r1": "#9 optional | move - | move blocked 0: afterAction rerollPurgingPool:r1, requiredFirst useFountain | move blocked 1,2,3,4,5,6,7: afterAction rerollPurgingPool:r1 | remove"
+        "sellPurgingPoolTrait:middle:r1": "#9 optional | move - | move blocked 0: afterAction rerollPurgingPool:r1, requiredFirst useFountain | move blocked 1,2,3,4,5,6,7: afterAction rerollPurgingPool:r1 | remove",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1,2,3,4,5,6,7,8,9 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2,3,4,5,6,7,8,9 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1,2,3,4,5,6,7,8,9 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:left:r1": "#- optional | insert 8,9 | insert blocked 0: afterAction rerollPurgingPool:r1, requiredFirst useFountain | insert blocked 1,2,3,4,5,6,7: afterAction rerollPurgingPool:r1",
+        "sellPurgingPoolTrait:right:r1": "#- optional | insert 8,9 | insert blocked 0: afterAction rerollPurgingPool:r1, requiredFirst useFountain | insert blocked 1,2,3,4,5,6,7: afterAction rerollPurgingPool:r1"
       }
     },
     {
@@ -1566,7 +1576,10 @@
         "useFountain": "#1 required | scope room | move 1 | move blocked 2: window after purchaseStygianWellOffer:initial:secondLeft | move blocked 3: window after purchaseStygianWellOffer:initial:secondRight | remove",
         "interactKeepsakeRack": "#2 optional | move 0,2,3 | remove",
         "purchaseStygianWellOffer:initial:secondLeft": "#3 optional | move 1,3 | move blocked 0: requiredFirst useFountain",
-        "purchaseStygianWellOffer:initial:secondRight": "#4 optional | move 1,2 | move blocked 0: requiredFirst useFountain"
+        "purchaseStygianWellOffer:initial:secondRight": "#4 optional | move 1,2 | move blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1,2,3,4 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2,3,4 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1,2,3,4 | insert blocked 0: requiredFirst useFountain"
       }
     },
     {
@@ -1581,7 +1594,10 @@
         "interactKeepsakeRack": "#2 optional | move 0,2,3,4 | remove",
         "purchaseStygianWellOffer:initial:secondLeft": "#3 optional | move 1,3 | move blocked 0: requiredFirst useFountain | move blocked 4: purchaseStygianWellOffer:travelDealRefill afterAction purchaseStygianWellOffer:initial:secondLeft",
         "purchaseStygianWellOffer:initial:secondRight": "#4 optional | move 1,2,4 | move blocked 0: requiredFirst useFountain",
-        "purchaseStygianWellOffer:travelDealRefill": "#5 optional | move 3 | move blocked 0: afterAction purchaseStygianWellOffer:initial:secondLeft, requiredFirst useFountain | move blocked 1,2: afterAction purchaseStygianWellOffer:initial:secondLeft"
+        "purchaseStygianWellOffer:travelDealRefill": "#5 optional | move 3 | move blocked 0: afterAction purchaseStygianWellOffer:initial:secondLeft, requiredFirst useFountain | move blocked 1,2: afterAction purchaseStygianWellOffer:initial:secondLeft",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1,2,3,4,5 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2,3,4,5 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1,2,3,4,5 | insert blocked 0: requiredFirst useFountain"
       }
     },
     {
@@ -1599,8 +1615,22 @@
       }
     },
     {
+      "entries": ["checkpoint/nemesis-f-trait-trade"],
+      "rows": {
+        "useFountain": "#1 required | scope room | move 1 | remove",
+        "interactKeepsakeRack": "#2 optional | move 0 | remove",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain"
+      }
+    },
+    {
       "entries": ["fresh-file/createFreshFileGeneratedComposition"],
-      "rows": { "useFountain": "#1 required | scope room | remove" }
+      "rows": {
+        "useFountain": "#1 required | scope room | remove",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1 | insert blocked 0: requiredFirst useFountain"
+      }
     }
   ],
   "G/golden-g-b1-e1 G_Combat01": [
@@ -2582,7 +2612,10 @@
       ],
       "rows": {
         "useFountain": "#1 required | scope room | move 1 | remove",
-        "interactKeepsakeRack": "#2 optional | move 0 | remove"
+        "interactKeepsakeRack": "#2 optional | move 0 | remove",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain"
       }
     },
     {
@@ -2984,7 +3017,10 @@
       ],
       "rows": {
         "useFountain": "#1 required | scope room | move 1 | remove",
-        "interactKeepsakeRack": "#2 optional | move 0 | remove"
+        "interactKeepsakeRack": "#2 optional | move 0 | remove",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain"
       }
     },
     {
@@ -4458,7 +4494,10 @@
       ],
       "rows": {
         "useFountain": "#1 required | scope room | remove",
-        "interactKeepsakeRack": "#- optional | insert 0,1"
+        "interactKeepsakeRack": "#- optional | insert 0,1",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1 | insert blocked 0: requiredFirst useFountain"
       }
     }
   ],
@@ -7544,7 +7583,10 @@
       "entries": ["checkpoint/underworld-zagreus-contract"],
       "rows": {
         "useFountain": "#1 required | scope room | remove",
-        "interactKeepsakeRack": "#- optional | insert 0,1"
+        "interactKeepsakeRack": "#- optional | insert 0,1",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1 | insert blocked 0: requiredFirst useFountain"
       }
     }
   ],
@@ -7949,7 +7991,10 @@
       ],
       "rows": {
         "useFountain": "#1 required | scope room | move 1 | remove",
-        "interactKeepsakeRack": "#2 optional | move 0 | remove"
+        "interactKeepsakeRack": "#2 optional | move 0 | remove",
+        "sellPurgingPoolTrait:left": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:middle": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain",
+        "sellPurgingPoolTrait:right": "#- optional | insert 1,2 | insert blocked 0: requiredFirst useFountain"
       }
     }
   ],
