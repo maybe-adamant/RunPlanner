@@ -2183,6 +2183,14 @@
   fill: #1b1c22;
 }
 
+.row-reward-devotion .row-reward-devotion-crack {
+  fill: none;
+  stroke: var(--finding);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .row-reward-arrow {
   color: var(--muted);
 }

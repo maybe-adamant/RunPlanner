@@ -13,8 +13,8 @@ const ROW_REWARD_NAMES: 'icon' | 'iconAndName' = 'icon';
 
 const HEART =
   'M8 14.2 2.1 8.6C.4 6.9.5 4.3 2.3 2.9 3.9 1.7 6.2 2 7.4 3.6L8 4.3l.6-.7C9.8 2 12.1 1.7 13.7 2.9c1.8 1.4 1.9 4 .2 5.7Z';
-const BROKEN_HEART =
-  'M8 14.2 2.1 8.6C.4 6.9.5 4.3 2.3 2.9 3.9 1.7 6.2 2 7.4 3.6L8 4.3 6.6 7.4l2.3 1.5-1.5 2.6 2.4-2.9-2-1.6 1.4-3.3.6-.7C9.8 2 12.1 1.7 13.7 2.9c1.8 1.4 1.9 4 .2 5.7Z';
+/** The spurned god's crack, cut through the whole heart in the badge's own colour. */
+const HEART_CRACK = 'M8.4 2.6 6.3 7l3 1.8-2.2 3.9';
 
 /** A row's reward as its icon, with the full name as tooltip and accessible name. */
 export function RowRewardName({
@@ -73,7 +73,10 @@ export function RowRewardName({
         {devotionRole === undefined ? null : (
           <span aria-hidden="true" className="corner-badge corner-badge-top row-reward-devotion">
             <svg viewBox="0 0 16 16">
-              <path d={devotionRole === 'chosen' ? HEART : BROKEN_HEART} />
+              <path d={HEART} />
+              {devotionRole === 'spurned' ? (
+                <path className="row-reward-devotion-crack" d={HEART_CRACK} />
+              ) : null}
             </svg>
           </span>
         )}
