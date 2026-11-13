@@ -58,12 +58,12 @@ export function PurgingPoolRefreshRow({
             <Popover.Content
               align="end"
               aria-label={`${purgingPoolRefreshCopy.label} info`}
-              className="trait-offer-state-popover editor-dialog-help"
+              className="hint-popover"
               collisionPadding={12}
               side="bottom"
               sideOffset={6}
             >
-              <p>{purgingPoolRefreshCopy.info}</p>
+              {purgingPoolRefreshCopy.info}
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>

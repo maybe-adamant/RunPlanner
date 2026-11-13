@@ -21,9 +21,14 @@
   display: none;
 }
 
+/* A click-opened note looks like a hover hint; only the hover card scales itself. */
 .hint-card {
-  display: block;
   zoom: var(--app-scale, 1);
+}
+
+.hint-card,
+.hint-popover {
+  display: block;
   max-width: min(24rem, calc(100 * var(--app-vw) - 28px));
   padding: 8px 10px;
   border: 1px solid var(--selection-accent);
