@@ -1297,7 +1297,8 @@ describe('progressive selected and blocked products', () => {
       vowKey: 'BoonSkipShrineUpgrade',
       rank: 1,
     });
-    project = authorLegalTraitOffers(project);
+    // The vow changes the F boons, so the Postboss Pool list is redrawn as an edit would.
+    project = authorLegalTraitOffers(stockTestProject(authorLegalTraitOffers(project)));
     // Cage2 becomes the first qualifying cage and is picked first; cage1's
     // Hammer resets to an unauthored offer, so the later cage1 pickup blocks.
     project = replaceTestPlacedItem(project, {

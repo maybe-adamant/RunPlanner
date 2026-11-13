@@ -5,6 +5,7 @@ import {
   applyProjectHistoryCommand,
   createBiomeAddress,
   createOccurrenceAddress,
+  createProjectAddress,
   createProjectHistory,
   createRoomActionAddress,
   createRoomFeatureAddress,
@@ -28,6 +29,8 @@ import {
 } from '@run-planner/engine/simulation';
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { withArcana, withJudgment } from '../support/rerolls';
+import { stockFills } from '../../src/simulation/stock-fill';
+import { candidateArtifactsForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
 import { withItemContent, withItemContents } from '@run-planner/test-fixtures/shared';
 
 const f = createBiomeAddress('Underworld', 'F');
@@ -307,6 +310,66 @@ describe('Stygian Well rolls', () => {
       itemKey: 'ArmorBoostStore',
     });
     expect(findings(partial)).toEqual([]);
+  });
+
+  it('stock a blank roll before the blank reroll after it, so the reroll sees what was on show', () => {
+    const rename: ProjectCommand = {
+      kind: 'RenameProject',
+      project: createProjectAddress(),
+      name: 'Renamed',
+    };
+    // Only the unbought healing slot is on show before the reroll, and only it restocks.
+    const blankRoll = applyProjectCommand(base(), catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: room,
+      slotKey: 'healing',
+      itemKey: null,
+    });
+    // Saved blank: the slot and the reroll's restock after it, both reached by the next edit.
+    const blankReroll = applyProjectCommand(blankRoll, catalog, {
+      kind: 'InsertStygianWellReroll',
+      occurrence: room,
+      index: order(blankRoll).length,
+    });
+    // One generation per pass: a capability that reaches the blank reroll too stocks only the slot.
+    const artifacts = candidateArtifactsForProjectEvaluationAssembly(evaluate(blankReroll));
+    const reached = artifacts.biomeAt(f)!;
+    const capability = reached.stygianWells.at(room)!;
+    const withReroll = {
+      ...artifacts,
+      biomeAt: () => ({
+        ...reached,
+        stygianWells: {
+          at: () => ({
+            ...capability,
+            rolls: {
+              r1: {
+                offeredSlotKeys: ['healing'],
+                candidateItemKeysBySlot: capability.candidateItemKeysBySlot,
+                shownItemKeys: [],
+              },
+            },
+          }),
+        },
+      }),
+    } as typeof artifacts;
+    expect(
+      stockFills(catalog, blankReroll, withReroll, () => false).map((fill) => fill.owner),
+    ).toEqual([
+      createRoomFeatureAddress(room, {
+        kind: 'stygianWellOffer',
+        generationKey: 'initial:healing',
+      }),
+    ]);
+    const once = settle(blankReroll, rename);
+    // The same as stocking the roll in one edit and appending the reroll in the next.
+    const stepwise = appendWellReroll(settle(blankRoll, rename));
+    expect(occurrenceOf(once).stygianWell).toEqual(occurrenceOf(stepwise).stygianWell);
+    // The game bans the one item on show: the restock never repeats it.
+    const stock = occurrenceOf(once).stygianWell!;
+    expect(stock.rerollOfferKeyBySlot?.['r1']?.healing).toBeDefined();
+    expect(stock.rerollOfferKeyBySlot?.['r1']?.healing).not.toBe(stock.offerKeyBySlot.healing);
+    expect(findings(once)).toEqual([]);
   });
 
   it('keep a purchase from a replaced roll with its finding, and remove one with its roll', () => {

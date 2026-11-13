@@ -7,6 +7,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createIncomingRewardAddress,
+  createProjectAddress,
   createRoomFeatureAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
@@ -25,7 +26,10 @@ import {
   simulateProjectAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
+import { settleProjectUpgrade } from '@run-planner/engine/project-migration';
 import { loadCheckpoint } from '@run-planner/test-fixtures/checkpoints/registry';
+import { stockFills } from '../../../src/simulation/stock-fill';
+import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/project-evaluation-assembly';
 
 const f = createBiomeAddress('Underworld', 'F');
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
@@ -231,11 +235,8 @@ describe('stock filled on first reach', () => {
   describe('a Purging Pool', () => {
     const pool = createOccurrenceAddress(f, createOccurrenceId('golden-f-preboss-shop:postboss'));
 
-    it('redraws the unsold slots of a list an edit elsewhere leaves stale, keeping the sold one', () => {
-      const project = loadCheckpoint('underworld-f-pool');
-      const before = occurrenceOf(project, pool).purgingPool!.traitKeyBySlot;
-      expect(before.middle).toBe('HeraCastBoon');
-      // Taking Hera's Sprint instead leaves the listed Cast unheld, so the entry list is stale.
+    // Taking Hera's Sprint instead leaves the listed Cast unheld, so the entry list is stale.
+    const takeHerasSprint = (project: ProjectDocument): ProjectCommand => {
       const heraRoom = createOccurrenceId('golden-f-b6-e1');
       const hera = createTraitOfferAddress(createIncomingRewardAddress(f, heraRoom), 'source');
       const room = occurrenceOf(project, createOccurrenceAddress(f, heraRoom));
@@ -244,11 +245,22 @@ describe('stock filled on first reach', () => {
           ? room.state.reward!.traitOffersByAcquisitionRole!.source!
           : undefined;
       if (offer?.kind !== 'traits') throw new Error('expected the Hera offer');
-      const settled = settle(project, {
+      return {
         kind: 'ReplaceTraitOffer',
         trait: hera,
         value: { ...offer, selectedOptionKey: 'option2' },
-      });
+      };
+    };
+    const poolFindings = (project: ProjectDocument) =>
+      findingCodes(project)
+        .filter((finding) => finding.code.startsWith('purgingPool'))
+        .map((finding) => finding.code);
+
+    it('redraws the unsold slots of a list an edit elsewhere leaves stale, keeping the sold one', () => {
+      const project = loadCheckpoint('underworld-f-pool');
+      const before = occurrenceOf(project, pool).purgingPool!.traitKeyBySlot;
+      expect(before.middle).toBe('HeraCastBoon');
+      const settled = settle(project, takeHerasSprint(project));
       expect(settled.fault).toBeUndefined();
       const after = occurrenceOf(settled.assembly.project, pool).purgingPool!.traitKeyBySlot;
       expect(after.left).toBe(before.left);
@@ -274,11 +286,30 @@ describe('stock filled on first reach', () => {
       expect(settled.fault).toBeUndefined();
       const after = occurrenceOf(settled.assembly.project, pool).purgingPool!.traitKeyBySlot;
       expect(after).toEqual({ ...before, middle: 'AphroditeWeaponBoon' });
-      expect(
-        findingCodes(settled.assembly.project)
-          .filter((finding) => finding.code.startsWith('purgingPool'))
-          .map((finding) => finding.code),
-      ).toEqual(['purgingPoolTraitUnavailable']);
+      expect(poolFindings(settled.assembly.project)).toEqual(['purgingPoolTraitUnavailable']);
+      // A later edit did not make it stale: the list keeps its value and finding.
+      const later = settle(settled.assembly.project, {
+        kind: 'RenameProject',
+        project: createProjectAddress(),
+        name: 'Renamed',
+      });
+      expect(later.fault).toBeUndefined();
+      expect(occurrenceOf(later.assembly.project, pool).purgingPool!.traitKeyBySlot).toEqual(after);
+      expect(poolFindings(later.assembly.project)).toEqual(['purgingPoolTraitUnavailable']);
+    });
+
+    it('keeps a stale list of a plan saved before schema 103, with its finding', () => {
+      const project = loadCheckpoint('underworld-f-pool');
+      // Saved under the earlier rules: the trait edit applied without settlement.
+      const saved = applyProjectCommand(project, catalog, takeHerasSprint(project));
+      const listed = occurrenceOf(saved, pool).purgingPool!.traitKeyBySlot;
+      expect(poolFindings(saved)).toEqual(['purgingPoolTraitUnavailable']);
+      const upgraded = settleProjectUpgrade({ catalog, project: saved, evaluate });
+      expect(upgraded.fault).toBeUndefined();
+      expect(occurrenceOf(upgraded.assembly.project, pool).purgingPool!.traitKeyBySlot).toEqual(
+        listed,
+      );
+      expect(poolFindings(upgraded.assembly.project)).toEqual(['purgingPoolTraitUnavailable']);
     });
   });
 
@@ -310,6 +341,45 @@ describe('stock filled on first reach', () => {
       // The new item is drawn at the purchase that restocks it, from the restocked slot's values.
       expect(shopState(project)?.travelDealRefill?.reward).toBeDefined();
       expect(findingCodes(project).map((finding) => finding.code)).not.toContain('rewardMissing');
+    });
+
+    it('leaves a slot with no legal value blank and stocks the slots after it', () => {
+      const project = loadCheckpoint('underworld-world-shop-travel-deal');
+      const slots = catalog.rewards.shops.byKey[shopState(project)!.profileKey]!.slots.values;
+      const blank = slots.reduce(
+        (document, slot) =>
+          applyProjectCommand(document, catalog, {
+            kind: 'ClearShopOffer',
+            offer: createShopOfferAddress(f, shop.occurrenceId, slot.key),
+          }),
+        project,
+      );
+      const artifacts = candidateArtifactsForProjectEvaluationAssembly(evaluate(blank));
+      const reached = artifacts.biomeAt(f)!;
+      const first = semanticAddressKey(createShopOfferAddress(f, shop.occurrenceId, slots[0]!.key));
+      // The first slot admits no value here.
+      const unfillable = {
+        ...artifacts,
+        biomeAt: () => ({
+          ...reached,
+          rewardProducers: {
+            ...reached.rewardProducers,
+            at: (owner: Parameters<typeof reached.rewardProducers.at>[0]) => {
+              const producer = reached.rewardProducers.at(owner);
+              if (producer === undefined || semanticAddressKey(owner) !== first) return producer;
+              return {
+                ...producer,
+                evaluateShopOption: (
+                  ...input: Parameters<NonNullable<typeof producer.evaluateShopOption>>
+                ) => ({ ...producer.evaluateShopOption!(...input), supported: false }),
+              };
+            },
+          },
+        }),
+      } as typeof artifacts;
+      expect(stockFills(catalog, blank, unfillable, () => false).map((fill) => fill.owner)).toEqual(
+        [createShopOfferAddress(f, shop.occurrenceId, slots[1]!.key)],
+      );
     });
 
     it('stocks every blank slot of a reached Shop, the same way every time', () => {

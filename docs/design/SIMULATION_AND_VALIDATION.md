@@ -586,15 +586,23 @@ Travel Deal restock draws under its triggering purchase's identity, a World
 Shop's from the restocked slot's values.
 
 A stored value an upstream edit makes illegal keeps its value and raises its
-finding, with two exceptions. A Pool list that an edit elsewhere turns stale
-(a listed boon no longer held or eligible where the list is judged) is
-redrawn in the same edit on its unsold slots, as the game regenerates it;
-sold slots keep their trait and a list showing fewer slots blanks the rest. A
-value set on the list itself keeps its value and raises its finding. A Travel
-Deal restock (World Shop, Shrine or Well) whose triggering purchase or rush
-the edit changed is a new item: the old item and its purchase go and a new
-one is drawn. The plan upgrades stock a saved plan's blank reached slots the
-same way, so a loaded plan is complete.
+finding, with two exceptions. A Pool list that an edit makes stale (a listed
+boon the edit leaves unchanged, which the walk did not judge stale before it,
+is no longer held or eligible where the list is judged) is redrawn in the
+same edit on its unsold slots, as the game regenerates it; sold slots keep
+their trait and a list showing fewer slots blanks the rest. A list already stale before the edit, including one
+whose value the owner set to a boon not held, keeps its values and finding
+through every later edit that does not change them. A Travel Deal restock
+(World Shop, Shrine or Well) whose triggering purchase or rush the edit
+changed is a new item: the old item and its purchase go and a new one is
+drawn.
+
+Rolls of one Well or Pool are stocked in the order they are shown, each
+after the ones before it are stored, so a reroll's ban sees what was on show.
+A slot with no legal value stays blank with its finding and does not stop
+later slots from stocking. Loading a plan only stocks its blank reached
+slots, the same way, so a loaded plan is complete; a stale Pool list it holds
+keeps its values and finding.
 
 ### Persistent and multi-phase rooms
 

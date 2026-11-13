@@ -74,11 +74,13 @@ function rooms(project: ProjectDocument) {
 }
 
 /**
- * The Well's blank reached slots in roll order: the initial roll, then each
- * reroll's restock, its Travel Deal restock and each bought Fateful Twist's
- * result. Slots of one roll claim in slot order, past every value the roll
- * already holds; a reroll's last drawn slot also avoids repeating everything
- * on show before it, which the game's ban rules out.
+ * The Well's blank reached slots: the first roll in roll order with any (the
+ * initial roll, then each reroll's restock), so each later roll is drawn
+ * against what the evaluation shows before it, then its Travel Deal restock
+ * and each bought Fateful Twist's result. Slots of one roll claim in slot
+ * order, past every value the roll already holds; a reroll's last drawn slot
+ * also avoids repeating everything on show before it, which the game's ban
+ * rules out.
  */
 function stygianWellFills(
   artifacts: BiomeCandidateArtifacts,
@@ -122,8 +124,9 @@ function stygianWellFills(
       itemKey,
     });
   }
-  // Each reached reroll's restock.
+  // Each reached reroll's restock, once every roll before it is stocked.
   for (const reroll of stygianWellRerolls(occurrence.roomActions.order)) {
+    if (fills.length > 0) break;
     const roll = capability.rolls[reroll.rerollId];
     if (roll === undefined) continue;
     const pins = stygianWellRerollPins(well, reroll.rerollId);
@@ -261,26 +264,139 @@ function hermesShrineFills(
 const POOL_SLOT_KEYS = ['left', 'middle', 'right'] as const;
 type PoolSlotKey = (typeof POOL_SLOT_KEYS)[number];
 
+/** One reached Pool list: its stored slots, how the walk judges them and its sold slots. */
+interface PoolList {
+  /** The entry list, the regenerated one or a reroll's id. */
+  readonly listKey: string;
+  readonly stored: Readonly<Partial<Record<PoolSlotKey, string | null>>>;
+  readonly offeredSlotKeys: readonly PoolSlotKey[];
+  readonly eligibleTraitKeys: readonly string[];
+  /** Listed boons no longer held or eligible where the list is judged. */
+  readonly staleSlotKeys: readonly PoolSlotKey[];
+  readonly shownTraitKeys?: readonly string[];
+  readonly sold: ReadonlySet<PoolSlotKey>;
+}
+
 /**
- * One Pool list's slots to stock: each blank shown slot, or, when a listed
- * boon is no longer held or eligible where the list is judged and the list is
- * not kept, every unsold slot redrawn as the game regenerates the list. Sold
- * slots keep their trait, and the shown slots claim distinct traits in slot
- * order.
+ * The Pool's reached lists in the order the game shows them: the entry list,
+ * the list the Pool regenerates when the fountain use makes the entry list
+ * stale, and each reroll's list. A list's sales name its slots as sold.
+ */
+function purgingPoolLists(
+  artifacts: BiomeCandidateArtifacts,
+  owner: OccurrenceAddress,
+  occurrence: RoomOccurrence,
+): PoolList[] {
+  const pool = occurrence.purgingPool;
+  const capability = artifacts.purgingPools.at(owner);
+  if (pool === undefined || capability === undefined) return [];
+  const soldFrom = (rollKey: string) =>
+    new Set(
+      occurrence.roomActions.order.flatMap((reference) =>
+        reference.kind === 'sellPurgingPoolTrait' &&
+        (reference.rollKey ?? INITIAL_ROLL_KEY) === rollKey
+          ? [reference.slotKey]
+          : [],
+      ),
+    );
+  const entry = capability.assessment;
+  const lists: PoolList[] = [
+    {
+      listKey: INITIAL_ROLL_KEY,
+      stored: pool.traitKeyBySlot,
+      offeredSlotKeys: entry.offeredSlotKeys,
+      eligibleTraitKeys: entry.eligibleTraitKeys,
+      staleSlotKeys: entry.findings.flatMap((finding) =>
+        finding.code === 'purgingPoolTraitUnavailable' ? [finding.slotKey] : [],
+      ),
+      // With a refresh stored, the initial list's sales sell from it.
+      sold: pool.refreshTraitKeyBySlot !== undefined ? new Set() : soldFrom(INITIAL_ROLL_KEY),
+    },
+  ];
+  if (capability.refresh !== undefined)
+    lists.push({
+      ...capability.refresh,
+      listKey: PURGING_POOL_REFRESH_ROLL_KEY,
+      stored: pool.refreshTraitKeyBySlot ?? {},
+      sold: soldFrom(INITIAL_ROLL_KEY),
+    });
+  for (const reroll of purgingPoolRerolls(occurrence.roomActions.order)) {
+    const roll = capability.rolls[reroll.rerollId];
+    if (roll === undefined) continue;
+    lists.push({
+      ...roll,
+      listKey: reroll.rerollId,
+      stored: purgingPoolRerollPins(pool, reroll.rerollId),
+      sold: soldFrom(reroll.rerollId),
+    });
+  }
+  return lists;
+}
+
+function poolValueKey(
+  owner: OccurrenceAddress,
+  listKey: string,
+  slotKey: PoolSlotKey,
+  traitKey: string,
+) {
+  return `${semanticAddressKey(owner)}|${listKey}|${slotKey}|${traitKey}`;
+}
+
+/** Whether the walk judged a Pool list value, by owner, list, slot and value, valid before the edit. */
+export type PoolValuesBefore = (value: string) => boolean;
+
+/**
+ * Every stored Pool list value the evaluated walk does not judge stale, those
+ * in lists it does not reach included: the values an edit can make stale.
+ */
+export function currentPoolListValues(
+  project: ProjectDocument,
+  artifacts: ProjectCandidateArtifacts,
+): PoolValuesBefore {
+  const values = new Set<string>();
+  const stale = new Set<string>();
+  for (const { biome, owner, occurrence } of rooms(project)) {
+    const pool = occurrence.purgingPool;
+    if (pool === undefined) continue;
+    const stored: [string, Readonly<Partial<Record<PoolSlotKey, string | null>>>][] = [
+      [INITIAL_ROLL_KEY, pool.traitKeyBySlot],
+      [PURGING_POOL_REFRESH_ROLL_KEY, pool.refreshTraitKeyBySlot ?? {}],
+      ...purgingPoolRerolls(occurrence.roomActions.order).map(
+        (reroll): [string, Readonly<Partial<Record<PoolSlotKey, string>>>] => [
+          reroll.rerollId,
+          purgingPoolRerollPins(pool, reroll.rerollId),
+        ],
+      ),
+    ];
+    for (const [listKey, slots] of stored)
+      for (const slotKey of POOL_SLOT_KEYS) {
+        const traitKey = slots[slotKey] ?? null;
+        if (traitKey !== null) values.add(poolValueKey(owner, listKey, slotKey, traitKey));
+      }
+    const biomeArtifacts = artifacts.biomeAt(biome);
+    if (biomeArtifacts === undefined) continue;
+    for (const list of purgingPoolLists(biomeArtifacts, owner, occurrence))
+      for (const slotKey of list.staleSlotKeys) {
+        const traitKey = list.stored[slotKey] ?? null;
+        if (traitKey !== null) stale.add(poolValueKey(owner, list.listKey, slotKey, traitKey));
+      }
+  }
+  return (value) => values.has(value) && !stale.has(value);
+}
+
+/**
+ * One Pool list's slots to stock: each blank shown slot, or, when the edit
+ * made an unsold listed boon stale, every unsold slot redrawn as the game
+ * regenerates the list. Sold slots keep their trait, and the shown slots claim
+ * distinct traits in slot order.
  */
 function poolListDraws(
   identity: (slotKey: PoolSlotKey) => string,
-  stored: Readonly<Partial<Record<PoolSlotKey, string | null>>>,
-  list: {
-    readonly offeredSlotKeys: readonly PoolSlotKey[];
-    readonly eligibleTraitKeys: readonly string[];
-    readonly staleSlotKeys: readonly PoolSlotKey[];
-    readonly shownTraitKeys?: readonly string[];
-  },
-  sold: ReadonlySet<PoolSlotKey>,
-  kept: boolean,
+  list: PoolList,
+  madeStale: (slotKey: PoolSlotKey) => boolean,
 ): { readonly slotKey: PoolSlotKey; readonly traitKey: string | null }[] {
-  const stale = !kept && list.staleSlotKeys.some((slotKey) => !sold.has(slotKey));
+  const { stored, sold } = list;
+  const stale = list.staleSlotKeys.some((slotKey) => !sold.has(slotKey) && madeStale(slotKey));
   const redrawn = list.offeredSlotKeys.filter(
     (slotKey) => !sold.has(slotKey) && (stale || (stored[slotKey] ?? null) === null),
   );
@@ -315,110 +431,86 @@ function poolListDraws(
 }
 
 /**
- * The Pool's lists to stock: the entry list, the list the Pool regenerates
- * when the fountain use makes the entry list stale (cleared when it no longer
- * does), and each reroll's list. A list's sales name its slots as sold.
+ * The Pool's first list in show order with slots to stock, so each later list
+ * is drawn against what the evaluation shows before it. The regenerated list
+ * is cleared when the fountain use no longer makes the entry list stale.
+ * A list value is redrawn only when the edit made it stale: one valid before
+ * the edit, unchanged and stale now.
  */
 function purgingPoolFills(
   artifacts: BiomeCandidateArtifacts,
   owner: OccurrenceAddress,
   occurrence: RoomOccurrence,
-  keepsPoolList: KeptPoolLists,
+  validBefore: PoolValuesBefore,
 ): StockFill[] {
   const pool = occurrence.purgingPool;
   const capability = artifacts.purgingPools.at(owner);
   if (pool === undefined || capability === undefined) return [];
-  const fills: StockFill[] = [];
-  const soldFrom = (rollKey: string) =>
-    new Set(
-      occurrence.roomActions.order.flatMap((reference) =>
-        reference.kind === 'sellPurgingPoolTrait' &&
-        (reference.rollKey ?? INITIAL_ROLL_KEY) === rollKey
-          ? [reference.slotKey]
-          : [],
-      ),
-    );
-  const push = (rollKey: string | undefined, slotKey: PoolSlotKey, command: ProjectCommand) => {
-    const feature = createRoomFeatureAddress(owner, {
+  const feature = (rollKey: string | undefined, slotKey: PoolSlotKey) =>
+    createRoomFeatureAddress(owner, {
       kind: 'purgingPoolOffer',
       slotKey,
       ...(rollKey === undefined ? {} : { rollKey }),
     });
-    fills.push(
-      Object.freeze<StockFill>({ key: semanticAddressKey(feature), owner: feature, command }),
-    );
-  };
-  const identity = (list: string) => (slotKey: PoolSlotKey) =>
-    `${occurrence.occurrenceId}|purgingPool|${list}:${slotKey}`;
-  const refreshed = pool.refreshTraitKeyBySlot !== undefined;
-  const entry = capability.assessment;
-  for (const { slotKey, traitKey } of poolListDraws(
-    identity(INITIAL_ROLL_KEY),
-    pool.traitKeyBySlot,
-    {
-      offeredSlotKeys: entry.offeredSlotKeys,
-      eligibleTraitKeys: entry.eligibleTraitKeys,
-      staleSlotKeys: entry.findings.flatMap((finding) =>
-        finding.code === 'purgingPoolTraitUnavailable' ? [finding.slotKey] : [],
+  const fill = (rollKey: string | undefined, slotKey: PoolSlotKey, command: ProjectCommand) =>
+    Object.freeze<StockFill>({
+      key: semanticAddressKey(feature(rollKey, slotKey)),
+      owner: feature(rollKey, slotKey),
+      command,
+    });
+  const stock = (listKey: string, slotKey: PoolSlotKey, traitKey: string | null): StockFill => {
+    if (listKey === INITIAL_ROLL_KEY)
+      return fill(undefined, slotKey, {
+        kind: 'ReplacePurgingPoolSlot',
+        occurrence: owner,
+        slotKey,
+        traitKey,
+      });
+    if (listKey === PURGING_POOL_REFRESH_ROLL_KEY)
+      return fill(listKey, slotKey, {
+        kind: 'ReplacePurgingPoolSlot',
+        occurrence: owner,
+        slotKey,
+        traitKey,
+        list: 'refresh',
+      });
+    return fill(listKey, slotKey, {
+      kind: 'ReplacePurgingPoolRollSlot',
+      action: createRoomActionAddress(
+        createBiomeAddress(owner.routeKey, owner.biomeKey),
+        owner.occurrenceId,
+        roomActionKey({ kind: 'rerollPurgingPool', rerollId: listKey }),
       ),
-    },
-    // With a refresh stored, the initial list's sales sell from it.
-    refreshed ? new Set() : soldFrom(INITIAL_ROLL_KEY),
-    keepsPoolList(owner, INITIAL_ROLL_KEY),
-  ))
-    push(undefined, slotKey, {
-      kind: 'ReplacePurgingPoolSlot',
-      occurrence: owner,
       slotKey,
       traitKey,
     });
-  if (capability.refresh !== undefined)
-    for (const { slotKey, traitKey } of poolListDraws(
-      identity(PURGING_POOL_REFRESH_ROLL_KEY),
-      pool.refreshTraitKeyBySlot ?? {},
-      capability.refresh,
-      soldFrom(INITIAL_ROLL_KEY),
-      keepsPoolList(owner, PURGING_POOL_REFRESH_ROLL_KEY),
-    ))
-      push(PURGING_POOL_REFRESH_ROLL_KEY, slotKey, {
-        kind: 'ReplacePurgingPoolSlot',
-        occurrence: owner,
-        slotKey,
-        traitKey,
-        list: 'refresh',
-      });
-  else if (capability.fountainJudged && refreshed)
+  };
+  const lists = purgingPoolLists(artifacts, owner, occurrence);
+  for (const [index, list] of lists.entries()) {
+    const draws = poolListDraws(
+      (slotKey) => `${occurrence.occurrenceId}|purgingPool|${list.listKey}:${slotKey}`,
+      list,
+      (slotKey) => {
+        const traitKey = list.stored[slotKey] ?? null;
+        return (
+          traitKey !== null && validBefore(poolValueKey(owner, list.listKey, slotKey, traitKey))
+        );
+      },
+    );
+    if (draws.length > 0)
+      return draws.map(({ slotKey, traitKey }) => stock(list.listKey, slotKey, traitKey));
     // The fountain use no longer makes the entry list stale: no list is regenerated.
-    for (const slotKey of Object.keys(pool.refreshTraitKeyBySlot!) as PoolSlotKey[])
-      push(PURGING_POOL_REFRESH_ROLL_KEY, slotKey, {
-        kind: 'ReplacePurgingPoolSlot',
-        occurrence: owner,
-        slotKey,
-        traitKey: null,
-        list: 'refresh',
-      });
-  for (const reroll of purgingPoolRerolls(occurrence.roomActions.order)) {
-    const roll = capability.rolls[reroll.rerollId];
-    if (roll === undefined) continue;
-    for (const { slotKey, traitKey } of poolListDraws(
-      identity(reroll.rerollId),
-      purgingPoolRerollPins(pool, reroll.rerollId),
-      roll,
-      soldFrom(reroll.rerollId),
-      keepsPoolList(owner, reroll.rerollId),
-    ))
-      push(reroll.rerollId, slotKey, {
-        kind: 'ReplacePurgingPoolRollSlot',
-        action: createRoomActionAddress(
-          createBiomeAddress(owner.routeKey, owner.biomeKey),
-          owner.occurrenceId,
-          roomActionKey({ kind: 'rerollPurgingPool', rerollId: reroll.rerollId }),
-        ),
-        slotKey,
-        traitKey,
-      });
+    if (
+      index === 0 &&
+      capability.refresh === undefined &&
+      capability.fountainJudged &&
+      pool.refreshTraitKeyBySlot !== undefined
+    )
+      return (Object.keys(pool.refreshTraitKeyBySlot) as PoolSlotKey[]).map((slotKey) =>
+        stock(PURGING_POOL_REFRESH_ROLL_KEY, slotKey, null),
+      );
   }
-  return fills;
+  return [];
 }
 
 /** A Shop item's stable identity among the values its slot can stock. */
@@ -427,10 +519,11 @@ function shopValueKey(value: ShopOptionSelection): string {
 }
 
 /**
- * The World Shop's first blank reached slot, in slot order: each draw needs
- * the joint inventory its stocked peers leave, so a Shop stocks one slot per
- * pass. A validly empty slot stays empty. Then the Travel Deal restock of its
- * triggering purchase, from the source slot's group.
+ * The World Shop's first blank reached slot with a legal value, in slot
+ * order: each draw needs the joint inventory its stocked peers leave, so a
+ * Shop stocks one slot per pass. A validly empty slot stays empty. Then the
+ * Travel Deal restock of its triggering purchase, from the source slot's
+ * group.
  */
 function worldShopFills(
   catalog: Catalog,
@@ -466,8 +559,9 @@ function worldShopFills(
     const offer = createShopOfferAddress(biome, owner.occurrenceId, slot.key);
     const standing = artifacts.rewardProducers.at(offer)?.shopSlotAssessment?.(offer);
     if (standing !== 'incomplete') continue;
+    // A slot with no legal value stays blank with its finding; later slots still stock.
     const fill = draw(offer, slot.key);
-    return fill === undefined ? [] : [fill];
+    if (fill !== undefined) return [fill];
   }
   const refill = artifacts.derivedAcquisitionEntries
     .entriesAt(createAcquisitionSiteAddress(owner, 'roomExit'))
@@ -486,21 +580,17 @@ function worldShopFills(
 }
 
 /**
- * Whether a stale Pool list keeps its values instead of being redrawn: a list
- * whose own value the edit set, so it raises its finding instead.
- */
-export type KeptPoolLists = (occurrence: OccurrenceAddress, list: string) => boolean;
-
-/**
  * Every blank stock slot the evaluated walk reached, with the command that
  * stocks it by a stable legal draw: Stygian Wells first, then Hermes Shrines,
- * Purging Pools and World Shops, each room in route order.
+ * Purging Pools and World Shops, each room in route order. A Pool list is
+ * also redrawn when a value the walk judged valid before the edit is now
+ * stale.
  */
 export function stockFills(
   catalog: Catalog,
   project: ProjectDocument,
   artifacts: ProjectCandidateArtifacts,
-  keepsPoolList: KeptPoolLists,
+  poolValuesBefore: PoolValuesBefore,
 ): readonly StockFill[] {
   const reached = rooms(project).flatMap(({ biome, owner, occurrence }) => {
     const biomeArtifacts = artifacts.biomeAt(biome);
@@ -511,7 +601,7 @@ export function stockFills(
       stygianWellFills,
       hermesShrineFills,
       (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
-        purgingPoolFills(room, owner, occurrence, keepsPoolList),
+        purgingPoolFills(room, owner, occurrence, poolValuesBefore),
       (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
         worldShopFills(catalog, room, owner, occurrence),
     ].flatMap((fillsOf) =>
