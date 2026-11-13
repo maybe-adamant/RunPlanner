@@ -837,6 +837,8 @@ function roomStop(
         (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'roomEntered',
       ) + 1,
       'before',
+      // A gate pickup left unplaced is due before the room's first fight begins.
+      unplacedRequired(room, located),
     );
   const position = blockPosition(located);
   const roomKey = key(room.origin);
