@@ -33,6 +33,8 @@ export type RoomActionBoundBlocker =
       readonly requiredAction?: RoomActionReference;
       /** The point never happens in this room. */
       readonly unavailable?: true;
+      /** The required action opens a gate the row waits behind and is not placed yet. */
+      readonly unplacedGate?: true;
     }
   | {
       readonly kind: 'pastDeadline';
@@ -58,6 +60,11 @@ export type RoomActionOrderIssue =
   | { readonly kind: 'stale'; readonly reference: RoomActionReference }
   | { readonly kind: 'unrankedRequired'; readonly reference: RoomActionReference }
   | RoomActionPlacementBlocker;
+
+/** Whether a placement waits behind a gate whose required action is not placed yet. */
+export function waitsOnUnplacedGate(blockers: readonly RoomActionPlacementBlocker[]): boolean {
+  return blockers.some((blocker) => 'unplacedGate' in blocker && blocker.unplacedGate === true);
+}
 
 /** Whether an order issue blocks a placement: every issue but a stale or unranked row. */
 export function isPlacementBlocker(
@@ -330,6 +337,53 @@ function requiredFirstBlockers(
   });
 }
 
+/**
+ * Each row at or before `lastIndex` that opens past a gate whose row is not
+ * placed: the phase's combat starts only once that row is used, so nothing
+ * after it can be reached first.
+ */
+function unplacedGateBlockers(
+  order: readonly RoomActionReference[],
+  lastIndex: number,
+  context: RoomActionOrderContext,
+): RoomActionPlacementBlocker[] {
+  const placed = new Set(order.map(keyOf));
+  const gates = context.eventGraph.events.flatMap((event) =>
+    event.kind === 'encounterStarted' &&
+    event.trigger.kind === 'action' &&
+    context.active.has(keyOf(event.trigger.action)) &&
+    !placed.has(keyOf(event.trigger.action))
+      ? [
+          {
+            point: frozen({ kind: 'gate' as const, phaseKey: event.phaseKey }),
+            action: event.trigger.action,
+          },
+        ]
+      : [],
+  );
+  if (gates.length === 0) return [];
+  return order.slice(0, lastIndex + 1).flatMap((reference) => {
+    const entry = context.active.get(keyOf(reference));
+    if (entry === undefined || standsAnywhere(entry)) return [];
+    const opening = roomActionOpeningPoint(entry.bounds);
+    const gate = gates.find((candidate) =>
+      roomEventPointPasses(context.place, opening, candidate.point),
+    );
+    return gate === undefined
+      ? []
+      : [
+          frozen({
+            kind: openingKind(entry),
+            reference,
+            detail: `waits on ${roomEventPointKey(gate.point)}, which ${keyOf(gate.action)} must open first`,
+            point: opening,
+            requiredAction: gate.action,
+            unplacedGate: true as const,
+          }),
+        ];
+  });
+}
+
 /** A proposed order, judged as the walk reaches its last placed action. */
 export interface RoomActionPlacementAssessment {
   readonly order: readonly RoomActionReference[];
@@ -362,6 +416,7 @@ export function assessRoomActionPlacement(
   const blockers: readonly RoomActionPlacementBlocker[] = frozen([
     ...[...rows, ...crossings].filter(isPlacementBlocker),
     ...requiredFirstBlockers(order, lastIndex, context),
+    ...unplacedGateBlockers(order, lastIndex, context),
   ]);
   const terminalIndex =
     context.terminalActionKey === undefined

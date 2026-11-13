@@ -478,7 +478,10 @@ Pool, Shrine or switch row before the fountain use that unlocks the exits is
 never reached. A required action placed at a phase the room does not play
 sets no deadline; its placement is its own finding. An unplaced required
 action does not refuse k; the walk's own deadline stop
-leaves k unreached. Every other row after k takes no part: a later row the
+leaves k unreached. A gate row is the exception: a row up to k that opens
+past a phase's gate (a Ship wheel's choice, a gate pickup) whose row is not
+placed waits behind it, since that phase's combat never starts first, so k
+is refused, even as the row's canonical restore. Every other row after k takes no part: a later row the
 edit invalidates carries its own issue when the walk reaches it. A prefix that
 is already invalid stops the walk before k, so k is refused unless the edit repairs that prefix. A
 move is judged as an insertion at its target, and a group placed together is
@@ -489,7 +492,8 @@ stays a finding.
 Insert and move proposals carry the typed dependency and bound blockers of
 that prefix, each naming its affected action: a row standing before its spawn
 or enabler can happen (naming the required action ordered after it that must
-come first, or that the point never happens in the room), or past its
+come first, the unplaced gate row it waits behind, or that the point never
+happens in the room), or past its
 deadline (naming the nearest earlier action whose opening passes it). The
 Postboss keepsake rack is not a required room object: it stands wherever it
 is placed, and no bound of its own or of another row is judged against it.

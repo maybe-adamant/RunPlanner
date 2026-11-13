@@ -33,6 +33,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { purchaseTestHermesShrineOffer } from '@run-planner/test-fixtures/shared';
 import {
+  loadSurfaceNOProject,
   oBiome,
   oOccurrenceIds,
   placeDueHermesShrineDeliveries,
@@ -675,5 +676,31 @@ describe('live placements at a gap', () => {
     expect(place).toMatchObject({ kind: 'PlaceHermesShrineDelivery', index: 0 });
     const repaired = applyProjectCommand(project, catalog, place!);
     expect(roomOrder(repaired, ship).map(roomActionKey)).toEqual(order.map(roomActionKey));
+  });
+
+  it('offers a later Ship wheel only once the earlier wheel’s choice opens its phase', () => {
+    const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
+    const three = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: ship,
+      encounterCount: 3,
+    });
+    const choose = (wheelKey: string): RoomActionReference => ({
+      kind: 'chooseRewardWheel',
+      wheelKey,
+    });
+    const chooseKeysAt = (project: ProjectDocument, gap: number) =>
+      verbsAt(placementsOf(simulateProjectAssembly(catalog, project), ship)!, gap).flatMap(
+        (verb) =>
+          verb.reference?.kind === 'chooseRewardWheel' ? [roomActionKey(verb.reference)] : [],
+      );
+
+    const empty = withRoomOrder(three, ship, []);
+    expect(placementsOf(simulateProjectAssembly(catalog, empty), ship)!.frontier).toBe(0);
+    expect(chooseKeysAt(empty, 0)).toEqual([roomActionKey(choose('wheel1'))]);
+
+    // With wheel 1 chosen, wheel 2 is offered after it, never before it.
+    const first = withRoomOrder(three, ship, [choose('wheel1')]);
+    expect(chooseKeysAt(first, 0)).not.toContain(roomActionKey(choose('wheel2')));
   });
 });

@@ -22,6 +22,7 @@ import {
   assessRoomActionMove,
   assessRoomActionOrder,
   roomActionOrderContext,
+  waitsOnUnplacedGate,
 } from '../../authored-project/room-actions/order-assessment';
 import type {
   RoomActionContribution,
@@ -188,7 +189,8 @@ export function assembleRoomActionRoster(options: {
           context,
         );
         if (assessment.followsTerminal) continue;
-        const canonical = toIndex === canonicalIndex;
+        // A canonical restore still waits behind an earlier gate nothing has opened.
+        const canonical = toIndex === canonicalIndex && !waitsOnUnplacedGate(assessment.blockers);
         proposals.push(
           frozen({
             kind: 'insert',
@@ -219,7 +221,7 @@ export function assembleRoomActionRoster(options: {
           context,
         );
         if (assessment.followsTerminal) continue;
-        if (toIndex === canonicalIndex) {
+        if (toIndex === canonicalIndex && !waitsOnUnplacedGate(assessment.blockers)) {
           proposals.push(
             frozen({
               kind: 'insert',

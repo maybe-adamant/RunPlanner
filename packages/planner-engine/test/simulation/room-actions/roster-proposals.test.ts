@@ -31,11 +31,13 @@ function blockerText(row: RoomActionRow, blocker: RoomActionPlacementBlocker): s
       return `${prefix}window after ${compactActionKey(roomActionKey(blocker.precedingAction))}`;
     case 'beforeSpawn':
     case 'beforeEnabler':
-      return blocker.requiredAction !== undefined
-        ? `${prefix}requiredFirst ${compactActionKey(roomActionKey(blocker.requiredAction))}`
-        : blocker.unavailable === true && blocker.point.kind === 'encounterEnd'
-          ? `${prefix}afterCheckpoint combat:${blocker.point.phaseKey} unavailable`
-          : `${prefix}afterCheckpoint exitUsable`;
+      return blocker.unplacedGate === true
+        ? `${prefix}afterGate ${compactActionKey(roomActionKey(blocker.requiredAction!))}`
+        : blocker.requiredAction !== undefined
+          ? `${prefix}requiredFirst ${compactActionKey(roomActionKey(blocker.requiredAction))}`
+          : blocker.unavailable === true && blocker.point.kind === 'encounterEnd'
+            ? `${prefix}afterCheckpoint combat:${blocker.point.phaseKey} unavailable`
+            : `${prefix}afterCheckpoint exitUsable`;
   }
 }
 

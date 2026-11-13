@@ -7334,7 +7334,7 @@
       "entries": ["execution/dream-o-skipped-ship"],
       "rows": {
         "chooseRewardWheel:wheel1": "#- required | scope phase | insert 0 | canonical 0",
-        "interactWheelReward:wheel1": "#- required | scope phase | insert 0 | canonical 0"
+        "interactWheelReward:wheel1": "#- required | scope phase | insert - | insert blocked 0: afterAction chooseRewardWheel:wheel1, afterGate chooseRewardWheel:wheel1"
       }
     }
   ],
