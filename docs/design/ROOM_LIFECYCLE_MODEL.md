@@ -977,7 +977,8 @@ append point, and a Well or Pool reroll and a Pool slot's sale where the
 room's reached actions end. Each is offered only while a held card
 enables it and the reroll pool pays, and a sale only while its list can show a
 trait still held, which the picker lists. A picker comes **before** a verb
-whose commands it supplies (a reroll press's reward, a Pool sale's trait) or
+whose commands it supplies (a reroll press's reward, the offer a wheel's
+choice takes, each offer placing the choice with it picked) or
 **after** one that applies as is: the outcome the placed row settles, opened
 once the row stands (a Pom's level, a pickup's, purchase's or contact's trait
 offer, an Anvil of Fates result, a Path of Stars screen, a rerolled list, the

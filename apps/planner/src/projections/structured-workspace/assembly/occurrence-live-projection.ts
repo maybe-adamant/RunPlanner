@@ -12,6 +12,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { LiveRoom, LiveVerb } from '@run-planner/engine/simulation';
 
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
+import { rewardWheelOfferLabel } from '@planner/projections/rewards/wheelOfferLabel';
 import type {
   WorkspaceLiveFace,
   WorkspaceLiveGap,
@@ -134,6 +135,25 @@ export function projectRoomLive(input: {
           return Object.freeze({
             kind: 'rerollPress' as const,
             interactionKey: `rerolls:${rerollSurfaceKey(choice.surface)}`,
+          });
+        case 'rewardWheelPick':
+          return Object.freeze({
+            kind: 'choose' as const,
+            choices: Object.freeze(
+              choice.values.map((value) => {
+                const side = rewardWheelOfferLabel(value.offerKey, choice.values.length);
+                const reward =
+                  value.offer === undefined
+                    ? undefined
+                    : input.catalog.rewards.rewardTypes.byKey[value.offer.rewardType]?.label;
+                return Object.freeze({
+                  key: value.offerKey,
+                  label: reward === undefined ? side : `${side} · ${reward}`,
+                  ...(value.offer === undefined ? {} : { offer: value.offer }),
+                  intent: Object.freeze({ commands: value.commands }),
+                });
+              }),
+            ),
           });
       }
     }

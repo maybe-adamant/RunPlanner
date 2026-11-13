@@ -53,6 +53,7 @@ import {
 import { composeStartingReward } from '../../authored-project/room-state/starting-reward';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../authored-project/shop';
 import type { Catalog } from '../../catalog-schema';
+import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import {
   asUnplacedWhenReplaced,
@@ -146,6 +147,16 @@ export type LiveVerbChoice =
    * item is that row's outcome, from the room's object interactions.
    */
   | { readonly picker: 'travelDealRefill'; readonly timing: 'after' }
+  /**
+   * Which of a Ship wheel's offers its choice takes: each offer, in side
+   * order, with the commands that place the choice with that offer picked.
+   */
+  | {
+      readonly picker: 'rewardWheelPick';
+      readonly timing: 'before';
+      readonly wheel: RewardWheelAddress;
+      readonly values: readonly LiveWheelPick[];
+    }
   /** A press's target and the reward it draws, from the reroll surface. */
   | { readonly picker: 'rerollPress'; readonly timing: 'before'; readonly surface: RerollSurface }
   /** The list a Well or Pool reroll restocks, pinned slot by slot. */
@@ -174,6 +185,16 @@ export type LiveVerbChoice =
         | 'unlockExitFight';
       readonly timing: 'after';
     };
+
+/** One offer a wheel's choice can take. */
+export interface LiveWheelPick {
+  readonly offerKey: string;
+  /** Its 1-based place among the wheel's offers. */
+  readonly pickedOfferIndex: number;
+  /** The reward it offers; absent while it is not chosen. */
+  readonly offer?: ResolvedRewardOffer;
+  readonly commands: readonly ProjectCommand[];
+}
 
 /** One interaction available on an item at a gap. */
 export interface LiveVerb {
@@ -851,6 +872,54 @@ function objectChoiceVerbs(
   return frozen(verbs);
 }
 
+/**
+ * A wheel choice's placement as a pick of each of its offers: the offer
+ * already picked places it as is; another also repicks the wheel.
+ */
+function wheelPickChoice(
+  assembly: ProjectEvaluationAssembly,
+  room: CanonicalAuthoredRoom,
+  occurrence: OccurrenceAddress,
+  wheelKey: string,
+  place: ProjectCommand,
+): LiveVerbChoice | undefined {
+  const authored = authoredOccurrence(assembly.project, occurrence);
+  const state = authored?.state.kind === 'shipCombat' ? authored.state.wheels[wheelKey] : undefined;
+  const canonical = room.rewardWheels?.find((wheel) => wheel.wheelKey === wheelKey);
+  if (state === undefined || canonical === undefined) return undefined;
+  const wheel = createRewardWheelAddress(
+    createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+    occurrence.occurrenceId,
+    wheelKey,
+  );
+  // The wheel's offers stand in their authored order; its pick is a place among them.
+  const values = Object.keys(state.offers)
+    .slice(0, state.offerCount)
+    .map((offerKey, index): LiveWheelPick => {
+      const pickedOfferIndex = index + 1;
+      const offer = canonical.offers.find((candidate) => candidate.offerKey === offerKey)?.offer;
+      return frozen({
+        offerKey,
+        pickedOfferIndex,
+        ...(offer === undefined ? {} : { offer }),
+        commands: frozen(
+          pickedOfferIndex === state.pickedOfferIndex
+            ? [place]
+            : [
+                place,
+                frozen({ kind: 'ReplaceRewardWheelPicked' as const, wheel, pickedOfferIndex }),
+              ],
+        ),
+      });
+    });
+  return frozen({
+    picker: 'rewardWheelPick' as const,
+    timing: 'before' as const,
+    wheel,
+    values: frozen(values),
+  });
+}
+
 /** Command with its index set to the gap. */
 function atIndex(command: ProjectCommand, index: number): ProjectCommand {
   return command.kind === 'SetInfernalContractPedestalCollected'
@@ -1045,7 +1114,10 @@ export function liveRoomForProjectEvaluationAssembly(
         reference,
         obligation,
         step,
-        pickerOf(reference, step.kind === 'place' ? placeChoice : undefined),
+        // A wheel's choice is placed with the offer it takes.
+        interactions && step.kind === 'place' && reference.kind === 'chooseRewardWheel'
+          ? wheelPickChoice(assembly, room, occurrence, reference.wheelKey, step.command)
+          : pickerOf(reference, step.kind === 'place' ? placeChoice : undefined),
       ),
     ];
 

@@ -299,8 +299,9 @@ export interface WorkspaceLiveFace {
 export interface WorkspaceLiveChoice {
   readonly key: string;
   readonly label: string;
-  readonly icon: { readonly rewardType: string } | { readonly traitKey: string };
-  readonly intent: WorkspaceCommandIntent;
+  /** The reward it pictures; absent while that reward is not chosen. */
+  readonly offer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+  readonly intent: import('../contract').WorkspaceCommandsIntent;
 }
 
 /** An outcome a placed row settles on its own picker, as the engine names it. */

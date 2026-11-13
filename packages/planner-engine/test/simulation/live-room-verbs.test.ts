@@ -498,6 +498,51 @@ describe('live interactions at a gap', () => {
     expect(verbAccepted(o, ship, press!.verb, press!.gap, picked)).toBe(true);
   });
 
+  it("places a wheel's choice with the offer it takes, one edit per offer", () => {
+    const o = loadSurfaceNOCheckpoint();
+    const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
+    const empty = withRoomOrder(o, ship, []);
+    const chooses = roomVerbs(interactions(empty, ship)).filter(
+      ({ verb }) => verb.verb === 'choose',
+    );
+    expect(chooses.length).toBeGreaterThan(0);
+    const { verb } = chooses[0]!;
+    expect(verb.commands).toBeUndefined();
+    const choice = verb.choice;
+    if (choice?.picker !== 'rewardWheelPick') throw new Error('the choice lists no offers');
+    const wheel = (document: ProjectDocument) => {
+      const occurrence = document.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .find((candidate) => candidate.occurrenceId === ship.occurrenceId)!;
+      return occurrence.state.kind === 'shipCombat'
+        ? occurrence.state.wheels[choice.wheel.wheelKey]!
+        : undefined;
+    };
+    expect(choice.values.map((value) => value.pickedOfferIndex)).toEqual(
+      Array.from({ length: wheel(empty)!.offerCount }, (_, index) => index + 1),
+    );
+    for (const value of choice.values) {
+      const picked = value.commands.reduce(
+        (document, command) => applyProjectCommand(document, catalog, command),
+        empty,
+      );
+      expect(roomOrder(picked, ship).map(roomActionKey)).toContain(roomActionKey(verb.reference!));
+      expect(wheel(picked)!.pickedOfferIndex).toBe(value.pickedOfferIndex);
+    }
+    // A consumer placing only what a room requires places the choice as authored.
+    const live = liveRoomForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, empty),
+      ship,
+      'placements',
+    )!;
+    const placement = live.gaps
+      .flatMap((gap) => gap.items.flatMap((item) => item.verbs))
+      .find((candidate) => candidate.verb === 'choose');
+    expect(placement?.choice).toBeUndefined();
+    expect(placement?.commands?.map((command) => command.kind)).toEqual(['InsertRoomAction']);
+  });
+
   it('offers Well and Pool rerolls with their pickers and each stocked Pool slot for sale', () => {
     const well = withJudgment(
       withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),

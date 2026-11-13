@@ -145,7 +145,6 @@ function LiveItemChip({
   /** Starts a reroll press on a target, whose reward the row then picks. */
   readonly onPress: (press: LivePress) => void;
 }) {
-  const executeIntent = useCommandIntent();
   const executeCommands = useCommandsIntent();
   const findingMark = useFindingMark();
   const findingAnchor = useFindingAnchor();
@@ -274,11 +273,7 @@ function LiveItemChip({
           if (press !== undefined) return rerollDieArtwork;
           if (choosing.action.kind !== 'choose') return undefined;
           const choice = choosing.action.choices.find((candidate) => candidate.key === entry.value);
-          return choice === undefined
-            ? undefined
-            : 'rewardType' in choice.icon
-              ? rewardIcon(choice.icon.rewardType)
-              : traitIcon(choice.icon.traitKey);
+          return choice?.offer === undefined ? undefined : offerIcon(choice.offer);
         }}
         model={model}
         onCloseAutoFocus={(event) => {
@@ -319,7 +314,7 @@ function LiveItemChip({
           if (choosing.action.kind !== 'choose') return;
           const choice = choosing.action.choices.find((candidate) => candidate.key === value);
           if (choice === undefined) return;
-          executeIntent(choice.intent);
+          executeCommands(choice.intent);
           announce(`${choosing.label} ${choice.label} added to the timeline.`);
           onApplied?.();
         }}

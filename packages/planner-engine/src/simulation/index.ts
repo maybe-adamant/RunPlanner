@@ -375,6 +375,7 @@ export {
   type LiveRoom,
   type LiveVerb,
   type LiveVerbChoice,
+  type LiveWheelPick,
 } from './evaluation/live-room';
 export { GoldLedgerContractError } from './commerce/gold/ledger';
 export type {
