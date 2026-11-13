@@ -57,16 +57,22 @@ function pressRows(): HTMLElement[] {
   return [...document.querySelectorAll<HTMLElement>('[data-door-press]')];
 }
 
-/** Appends a press: its door, then the first reward the picker that opens next offers. */
+/**
+ * Appends a press on its door: it is placed with a drawn reward, and its row's reward picker
+ * opens, which is closed here.
+ */
 async function appendPress(view: ReturnType<typeof renderWorkspace>, door: RegExp) {
+  const count = presses(view.application).length;
   await takeLive(view.user, 'Doors', 'Reroll…', door);
+  await waitFor(() => expect(presses(view.application)).toHaveLength(count + 1));
   await screen.findByRole('listbox');
-  // A staged reward (a Boon) asks for its god next; each step takes the first possible row.
-  while (screen.queryByRole('listbox') !== null) {
-    const options = await within(screen.getByRole('listbox')).findAllByRole('option');
-    const possible = options.find((option) => option.getAttribute('aria-disabled') !== 'true');
-    await view.user.click(possible!);
-  }
+  // The list open is the new row's reward picker.
+  const opened = pressRows()
+    .at(-1)!
+    .querySelector<HTMLElement>('[data-row-choice="rerollResult"] button');
+  expect(opened?.getAttribute('aria-expanded')).toBe('true');
+  await view.user.keyboard('{Escape}');
+  await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
 }
 
 describe('RoomRerolls', () => {
@@ -77,10 +83,8 @@ describe('RoomRerolls', () => {
       'F',
     );
     await openDoors(view);
-    // The reward is asked for once a door is chosen.
-    expect(screen.queryByRole('button', { name: 'New reroll reward' })).toBeNull();
+    // Choosing the door places the press with a drawn reward; its row then opens on it.
     await appendPress(view, /^Door 2/);
-    await waitFor(() => expect(presses(view.application)).toHaveLength(1));
     const [row] = pressRows();
     expect(within(row!).getByText('Reroll')).toBeTruthy();
     expect(within(row!).getByText('Door 2')).toBeTruthy();

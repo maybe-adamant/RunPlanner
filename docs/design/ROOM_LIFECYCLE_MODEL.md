@@ -980,14 +980,18 @@ or wheel reroll press at its surface's append point, and a Well or Pool
 reroll where the room's reached actions end, each only while a held card
 enables it and the reroll pool pays. Each stocked Pool slot's sale is a
 roster row. A picker comes **before** a verb
-whose commands it supplies (a reroll press's reward, the offer a wheel's
+whose commands it supplies (a reroll press's target, the offer a wheel's
 choice takes, each offer placing the choice with it picked) or
 **after** one that applies as is: the outcome the placed row settles, opened
 once the row stands (a Pom's level, Sea Star's copy of a plain pickup, a
 pickup's, purchase's or contact's trait offer, an Anvil of Fates result, a Path of Stars screen, a rerolled list, the
 rack's keepsake, the Artificer's replacement, the item Travel Deal restocks, a
 Fateful Twist's result, a Nemesis event's reward and traded boon, the Phial's
-target, a challenge switch's outcome, a locked door's fight). A moved row
+target, a challenge switch's outcome, a locked door's fight, a press's
+reward). A press takes its target first and is placed with a stable legal
+draw as its reward, the highest scoring by a stable hash of the press among
+the rewards its target's store can redraw there that the press's own
+candidate supports without a finding, so it is valid as placed. A moved row
 keeps the outcome it has, so its move opens nothing. Travel
 Deal restocks as the purchase (the World Shop's first) or rush (the Shrine's
 first initial one) that triggers it settles, so the restocked item is that

@@ -122,6 +122,8 @@ export interface WorkspaceRoomStop {
   readonly entryIndex: number;
   /** `entry`: the walk reached that entry and blocks on its own contact; `before`: it did not. */
   readonly at: 'entry' | 'before';
+  /** An Overview stop that waits only for a required pickup placed before the first fight. */
+  readonly placement?: true;
 }
 
 export interface WorkspaceBiomeSource {
@@ -1166,6 +1168,7 @@ function createWorkspaceBiomeSource(
         kind: stop.kind,
         entryIndex,
         at: stop.at,
+        ...(stop.placement === true ? { placement: true as const } : {}),
       });
     },
     walkReached,

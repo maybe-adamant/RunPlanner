@@ -283,6 +283,17 @@ export interface WorkspaceRoomRerollsInteraction {
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'InsertReroll' | 'InsertHubReroll' }>
   >;
+  /**
+   * Appends a press of one target, its result the engine's stable legal draw,
+   * which its row then lets the owner change; undefined when none is legal.
+   */
+  readonly pressIntent: (
+    targetKey: string,
+  ) =>
+    | WorkspaceCommandIntent<
+        Extract<ProjectCommand, { readonly kind: 'InsertReroll' | 'InsertHubReroll' }>
+      >
+    | undefined;
 }
 
 export type WorkspaceAuthoringFrontier =

@@ -22,6 +22,7 @@ import {
   hubStaysForProjectEvaluationAssembly,
   rerollSettlementForProjectEvaluationAssembly,
   rerollSpendAllowanceForProjectEvaluationAssembly,
+  rerollPressForProjectEvaluationAssembly,
   rerollSurfaceForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
@@ -718,6 +719,27 @@ describe('Hub stays', () => {
         value: { rewardType: 'MaxHealthDropBig' },
       }),
     ).toMatchObject({ kind: 'unavailable', reason: 'targetNotReachable' });
+  });
+
+  it('draw a placed press its result among the rewards its candidate supports', () => {
+    const pending = pendingRewards(base(), stay(3), slot('combat09'), HUB_REWARDS).map(key);
+    const drawn = rerollPressForProjectEvaluationAssembly(
+      catalog,
+      evaluate(base()),
+      stay(3),
+      slot('combat09'),
+    );
+    expect(drawn).toMatchObject({
+      kind: 'InsertHubReroll',
+      hub,
+      hubSlotKey: 'combat09',
+      index: rerollAppendIndex(base(), stay(3)),
+    });
+    expect(pending).toContain(key(drawn!.reward));
+    // A closed door draws none.
+    expect(
+      rerollPressForProjectEvaluationAssembly(catalog, evaluate(base()), stay(1), slot('combat05')),
+    ).toBeUndefined();
   });
 
   it('append a press before the next visit', () => {

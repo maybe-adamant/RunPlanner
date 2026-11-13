@@ -180,7 +180,9 @@ export function bindWorkspaceInteractions(
   });
 
   const roomRerolls = bindRoomRerollInteractions({
+    assembly,
     candidates,
+    catalog,
     project: assembly.project,
     requirements: occurrenceInteractionRequirements.values(),
     rewardPicker: services.rewardPicker,

@@ -465,6 +465,17 @@ describe('a room whose walk stops in it', () => {
     expect(timeline.notReached).toEqual([]);
   });
 
+  it('shows its Timeline with the pickup live while its Overview waits only on that placement', () => {
+    const room = roomOf(
+      buildGalleryProject(galleryCases.find((entry) => entry.id === 'live-row-opening-unplaced')!),
+      createOccurrenceId('golden-f-start'),
+    );
+    const actions = room.roomActions!;
+    expect(actions.timeline.waitsOn).toBeUndefined();
+    expect(shape(actions.timeline.entries)[0]).toBe('roomEntered');
+    expect(actions.live?.items.some((item) => item.group === 'required')).toBe(true);
+  });
+
   it('ends before the doors open while a required pickup is not placed', () => {
     const timeline = galleryTimeline('live-row-required', 'golden-f-b1-e1');
     expect(shape(timeline.entries)).toEqual(['roomEntered', 'encounterStarted', 'encounterEnd']);

@@ -137,8 +137,10 @@ export function splitAtRoomStop(
     entry.kind === 'action' && entry.presentation !== 'row'
       ? Object.freeze({ ...entry, presentation: 'row' as const })
       : entry;
-  // A room stopped in its Overview shows none of its Timeline, its saved rows included.
-  const after = roomStop.kind === 'overview' ? [] : entries.slice(cut);
+  // A room stopped in its Overview shows none of its Timeline, its saved rows included; one
+  // waiting only for a required pickup to be placed shows its Timeline with that pickup live.
+  const waitsOnOverview = roomStop.kind === 'overview' && roomStop.placement !== true;
+  const after = waitsOnOverview ? [] : entries.slice(cut);
   return Object.freeze({
     reached: Object.freeze([
       ...entries.slice(0, cut),
@@ -155,9 +157,7 @@ export function splitAtRoomStop(
       }),
     ),
     // A room stopped in its Overview has entered, but its Timeline waits on that repair.
-    ...(roomStop.kind === 'overview'
-      ? { waitsOn: Object.freeze({ kind: 'overview' as const }) }
-      : {}),
+    ...(waitsOnOverview ? { waitsOn: Object.freeze({ kind: 'overview' as const }) } : {}),
     // Only a stop at the doors opening itself keeps the doors, to repair them there.
     ...(roomStop.at === 'entry' &&
     stopEntry?.kind === 'boundary' &&

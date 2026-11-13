@@ -158,8 +158,14 @@ export type LiveVerbChoice =
       readonly wheel: RewardWheelAddress;
       readonly values: readonly LiveWheelPick[];
     }
-  /** A press's target and the reward it draws, from the reroll surface. */
+  /**
+   * A press's target, from the reroll surface. Choosing one places the press
+   * with a stable legal draw as its result, which its row's `rerollResult`
+   * picker then opens on.
+   */
   | { readonly picker: 'rerollPress'; readonly timing: 'before'; readonly surface: RerollSurface }
+  /** The reward a placed door, cage or wheel press draws. */
+  | { readonly picker: 'rerollResult'; readonly timing: 'after' }
   /** The list a Well or Pool reroll restocks, pinned slot by slot. */
   | { readonly picker: 'stygianWellRoll' | 'purgingPoolRoll'; readonly timing: 'after' }
   /** The keepsake the rack swaps in; with none chosen the held keepsake stays. */
@@ -817,8 +823,8 @@ const after = (picker: Extract<LiveVerbChoice, { readonly timing: 'after' }>['pi
 /**
  * The outcome a row of this kind settles on its own picker once it stands: the
  * rack's keepsake, a rerolled list, a contact's trait offer or Nemesis event,
- * a Fateful Twist's result, the Phial's target, a switch's outcome or a
- * locked door's fight.
+ * a Fateful Twist's result, the Phial's target, a switch's outcome, a
+ * locked door's fight or a press's drawn reward.
  */
 function rowChoice(
   catalog: Catalog,
@@ -880,6 +886,8 @@ function rowChoice(
       return after('challengeSwitchOutcome');
     case 'unlockExit':
       return after('unlockExitFight');
+    case 'reroll':
+      return after('rerollResult');
     default:
       return undefined;
   }

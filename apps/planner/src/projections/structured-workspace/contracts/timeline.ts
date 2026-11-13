@@ -320,8 +320,15 @@ export type WorkspaceLiveVerbAction =
     }
   /** Lists its values first. */
   | { readonly kind: 'choose'; readonly choices: readonly WorkspaceLiveChoice[] }
-  /** Picks a door, cage or wheel offer, then its new reward, from the surface's rerolls. */
-  | { readonly kind: 'rerollPress'; readonly interactionKey: string };
+  /**
+   * Picks a door, cage or wheel offer from the surface's rerolls; the press is placed with
+   * a drawn reward, which its row then opens on.
+   */
+  | {
+      readonly kind: 'rerollPress';
+      readonly interactionKey: string;
+      readonly opens?: { readonly rowKey: string; readonly choice: 'rerollResult' };
+    };
 
 /** One interaction with a live thing. */
 export interface WorkspaceLiveVerb extends WorkspaceLiveFace {

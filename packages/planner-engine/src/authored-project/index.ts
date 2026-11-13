@@ -507,6 +507,7 @@ export {
   hermesShrineInitialSlotKey,
 } from './model';
 export { roomActionKey } from './room-actions/state';
+export { rerollActionKey } from './room-actions/key';
 export { lockableExitKeys } from './locked-exits';
 export {
   createInitialExitDecision,

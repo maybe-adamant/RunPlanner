@@ -1550,6 +1550,13 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-b1-e1'),
   },
   {
+    id: 'live-row-opening-unplaced',
+    label: 'Live row: an opening reward not picked up before the first fight',
+    shows: ['live row', 'required pickup', 'no Overview notice'],
+    project: () => withoutRoomActionOrder(loadUnderworldFGCheckpoint(), 'F', 'golden-f-start'),
+    target: room('F', 'golden-f-start'),
+  },
+  {
     id: 'live-row-required-menu',
     label: 'Live row: a required pickup’s verbs',
     shows: ['live row', 'pickup menu'],

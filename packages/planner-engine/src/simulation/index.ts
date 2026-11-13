@@ -295,6 +295,7 @@ export {
 } from './evaluation/project-evaluation-assembly';
 export {
   hubStaysForProjectEvaluationAssembly,
+  rerollPressForProjectEvaluationAssembly,
   rerollSpendAllowanceForProjectEvaluationAssembly,
   rerollSurfaceForProjectEvaluationAssembly,
   type HubBoardPress,

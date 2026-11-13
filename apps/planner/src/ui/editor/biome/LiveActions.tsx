@@ -9,6 +9,7 @@ import {
   type WorkspaceLiveItem,
   type WorkspaceLiveVerb,
   type WorkspaceRoomLive,
+  type WorkspaceRowChoice,
 } from '@planner/projections/structured-workspace';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { foughtEncounterIcon } from '@planner/ui/artwork/encounterArtwork';
@@ -36,7 +37,6 @@ import {
   useFindingMark,
   type FindingMarkProps,
 } from '@planner/ui/feedback/useFindingTarget';
-import { RewardOfferPicker } from '../rewards/RewardEditors';
 import { actionRowElement, openPlacedRow } from './placedRow';
 import { TimelineRow } from './TimelineRow';
 
@@ -126,7 +126,7 @@ const pickerItem = (key: string, label: string) =>
 
 /**
  * One live thing: its chip opens the list of its verbs; a verb that needs a value lists its
- * values next, and a reroll press its target, then the reward it draws.
+ * values next, and a reroll press its target, placed with a drawn reward its row then opens on.
  */
 function LiveItemChip({
   announce,
@@ -134,7 +134,6 @@ function LiveItemChip({
   interactions,
   item,
   onApplied,
-  onPress,
 }: {
   readonly announce: (message: string) => void;
   readonly biomeKey: string;
@@ -142,10 +141,9 @@ function LiveItemChip({
   readonly item: WorkspaceLiveItem;
   /** Called once a verb's rows are added. */
   readonly onApplied?: () => void;
-  /** Starts a reroll press on a target, whose reward the row then picks. */
-  readonly onPress: (press: LivePress) => void;
 }) {
   const executeCommands = useCommandsIntent();
+  const executeIntent = useCommandIntent();
   const findingMark = useFindingMark();
   const findingAnchor = useFindingAnchor();
   const [open, setOpen] = useState(false);
@@ -197,21 +195,23 @@ function LiveItemChip({
               },
             ],
           };
-  const apply = (verb: WorkspaceLiveVerb) => {
-    if (verb.action.kind !== 'apply') return;
-    executeCommands(verb.action.intent);
-    announce(`${verb.label} added to the timeline.`);
-    onApplied?.();
-    const opens = verb.action.opens;
+  /** The placed row's own choice opens once the Timeline shows it. */
+  const openOnClose = (opens: { readonly rowKey: string; readonly choice: WorkspaceRowChoice }) => {
     const from = chip.current;
-    if (opens === undefined || from === null) return;
-    // The placed row's own choice opens once the Timeline shows it.
+    if (from === null) return;
     afterClose.current = () => {
       const row = actionRowElement(from, opens.rowKey);
       if (row === null) return false;
       openPlacedRow(row, opens.choice);
       return true;
     };
+  };
+  const apply = (verb: WorkspaceLiveVerb) => {
+    if (verb.action.kind !== 'apply') return;
+    executeCommands(verb.action.intent);
+    announce(`${verb.label} added to the timeline.`);
+    onApplied?.();
+    if (verb.action.opens !== undefined) openOnClose(verb.action.opens);
   };
   const face = (
     <>
@@ -304,11 +304,15 @@ function LiveItemChip({
           setOpen(false);
           setChoosing(undefined);
           if (choosing.action.kind === 'rerollPress') {
-            const press = { interactionKey: choosing.action.interactionKey, target: value };
-            afterClose.current = () => {
-              onPress(press);
-              return true;
-            };
+            const intent = press?.pressIntent(value);
+            if (intent === undefined) {
+              announce('No reward can be drawn there.');
+              return;
+            }
+            executeIntent(intent);
+            announce(`${choosing.label} added to the timeline.`);
+            onApplied?.();
+            if (choosing.action.opens !== undefined) openOnClose(choosing.action.opens);
             return;
           }
           if (choosing.action.kind !== 'choose') return;
@@ -338,12 +342,6 @@ function LiveItemChip({
   );
 }
 
-/** A reroll press started on a target, whose new reward is picked next. */
-interface LivePress {
-  readonly interactionKey: string;
-  readonly target: string;
-}
-
 /** The live things of one point, by group: Required, Optional, then Objects, named but unlabelled. */
 function LiveGroups({
   announce,
@@ -352,7 +350,6 @@ function LiveGroups({
   items,
   label,
   onApplied,
-  onPress,
 }: {
   readonly announce: (message: string) => void;
   readonly biomeKey: string;
@@ -360,7 +357,6 @@ function LiveGroups({
   readonly items: readonly WorkspaceLiveItem[];
   readonly label: string;
   readonly onApplied?: () => void;
-  readonly onPress: (press: LivePress) => void;
 }) {
   const groups = (['required', 'optional', 'object'] as const)
     .map((group) => ({ group, items: items.filter((item) => item.group === group) }))
@@ -383,45 +379,11 @@ function LiveGroups({
               item={item}
               key={item.key}
               {...(onApplied === undefined ? {} : { onApplied })}
-              onPress={onPress}
             />
           ))}
         </span>
       ))}
     </span>
-  );
-}
-
-/** A started reroll press's reward picker; picking one adds the press. */
-function LivePressPicker({
-  interactions,
-  onDone,
-  press,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly onDone: () => void;
-  readonly press: LivePress | undefined;
-}) {
-  const executeIntent = useCommandIntent();
-  const interaction =
-    press === undefined ? undefined : interactions.roomRerolls.get(press.interactionKey);
-  if (press === undefined || interaction === undefined) return null;
-  return (
-    <RewardOfferPicker
-      ariaLabel="New reroll reward"
-      defaultOpen
-      id={`live-press-${press.interactionKey}`}
-      key={`${press.interactionKey} ${press.target}`}
-      label=""
-      offer={null}
-      onDismiss={onDone}
-      onReplace={(reward) => {
-        onDone();
-        executeIntent(interaction.appendIntent(press.target, reward));
-      }}
-      resolver={interaction.pendingReward(press.target)}
-      triggerSize="icon"
-    />
   );
 }
 
@@ -440,19 +402,11 @@ export function LiveRow({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly live: WorkspaceRoomLive;
 }) {
-  const [press, setPress] = useState<LivePress>();
   if (live.items.length === 0) return null;
   return (
     <TimelineRow
       className="timeline-live-row"
       data-live-gap={live.frontier}
-      editors={
-        <LivePressPicker
-          interactions={interactions}
-          onDone={() => setPress(undefined)}
-          press={press}
-        />
-      }
       kind="insertion"
       label={
         <LiveGroups
@@ -461,7 +415,6 @@ export function LiveRow({
           interactions={interactions}
           items={live.items}
           label="Next"
-          onPress={setPress}
         />
       }
     />
@@ -485,17 +438,10 @@ export function TimelineGapControl({
 }) {
   const executeIntent = useCommandIntent();
   const [open, setOpen] = useState(false);
-  const [press, setPress] = useState<LivePress>();
   if (gap === undefined || (gap.items.length === 0 && gap.reset === undefined)) return null;
   const reset = gap.reset;
   return (
-    <Popover.Root
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setPress(undefined);
-      }}
-      open={open}
-    >
+    <Popover.Root onOpenChange={setOpen} open={open}>
       <Popover.Trigger asChild>
         <button
           aria-label="Insert here"
@@ -523,17 +469,8 @@ export function TimelineGapControl({
               items={gap.items}
               label="Insert here"
               onApplied={() => setOpen(false)}
-              onPress={setPress}
             />
           )}
-          <LivePressPicker
-            interactions={interactions}
-            onDone={() => {
-              setPress(undefined);
-              setOpen(false);
-            }}
-            press={press}
-          />
           {reset === undefined ? null : (
             <button
               aria-label="Reset from here"

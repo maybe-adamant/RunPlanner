@@ -1,6 +1,7 @@
 import {
   createRoomActionAddress,
   createBiomeAddress,
+  rerollActionKey,
   rerollSurfaceKey,
   roomActionKey,
   semanticAddressKey,
@@ -135,6 +136,14 @@ export function projectRoomLive(input: {
           return Object.freeze({
             kind: 'rerollPress' as const,
             interactionKey: `rerolls:${rerollSurfaceKey(choice.surface)}`,
+            ...(verb.rerollId === undefined
+              ? {}
+              : {
+                  opens: Object.freeze({
+                    rowKey: rerollActionKey(verb.rerollId),
+                    choice: 'rerollResult' as const,
+                  }),
+                }),
           });
         case 'rewardWheelPick':
           return Object.freeze({

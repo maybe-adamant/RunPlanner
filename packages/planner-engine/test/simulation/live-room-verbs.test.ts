@@ -25,6 +25,8 @@ import {
 import { frontierAcquisitionConversionForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
+  rerollPressForProjectEvaluationAssembly,
+  rerollSurfaceForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
@@ -63,7 +65,7 @@ import {
   walkAccepts,
   withRoomOrder,
 } from '../support/live-room';
-import { firstSupportedReroll, withArcana, withJudgment } from '../support/rerolls';
+import { supportedRerollRewards, withArcana, withJudgment } from '../support/rerolls';
 
 const fBiome = createBiomeAddress('Underworld', 'F');
 const worldShop = createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-preboss-shop'));
@@ -598,31 +600,81 @@ describe('live interactions at a gap', () => {
       choose,
       wheel,
     ]);
-    const inserted = applyProjectCommand(o, catalog, {
-      kind: 'InsertReroll',
-      occurrence: ship,
-      target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
-      reward: { rewardType: 'MaxManaDrop' },
-      index: press!.gap,
-    });
-    const reroll = roomOrder(inserted, ship)[press!.gap]!;
+    // Choosing a target places the press with its drawn result.
+    const drawn = rerollPressForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, o),
+      { kind: 'rewardWheel', wheel },
+      { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
+    );
+    expect(drawn).toMatchObject({ kind: 'InsertReroll', occurrence: ship, index: press!.gap });
+    const reroll = roomOrder(applyProjectCommand(o, catalog, drawn!), ship)[press!.gap]!;
     expect(reroll).toMatchObject({ kind: 'reroll', rerollId: press!.verb.rerollId });
-    const action = createRoomActionAddress(oBiome, oOccurrenceIds.combat04, roomActionKey(reroll));
-    const picked: ProjectCommand[] = [
-      {
-        kind: 'InsertReroll',
-        occurrence: ship,
-        target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
-        reward: { rewardType: 'MaxManaDrop' },
-        index: press!.gap,
-      },
-      {
-        kind: 'ReplaceRerollReward',
-        action,
-        reward: firstSupportedReroll(inserted, action, 'RunProgress'),
-      },
-    ];
+    const picked: ProjectCommand[] = [drawn!];
     expect(verbAccepted(o, ship, press!.verb, press!.gap, picked)).toBe(true);
+  });
+
+  it('places a press with a stable legal draw, then opens its result on the row', () => {
+    const doorRoom = fRoom('golden-f-b2-e1');
+    const held = withArcana(throughBiome(loadUnderworldFGCheckpoint(), 'F'), ['DoorReroll']);
+    const surface = { kind: 'doors' as const, occurrence: doorRoom };
+    const assembly = simulateProjectAssembly(catalog, held);
+    const target = rerollSurfaceForProjectEvaluationAssembly(assembly, surface)!.targets.find(
+      (candidate) => candidate.unavailable === undefined,
+    )!.target;
+    const drawn = rerollPressForProjectEvaluationAssembly(catalog, assembly, surface, target);
+    expect(drawn).toMatchObject({
+      kind: 'InsertReroll',
+      occurrence: doorRoom,
+      target,
+      index: roomOrder(held, doorRoom).length,
+    });
+    // The draw is the plan's own: evaluated again, it draws the same reward.
+    expect(
+      rerollPressForProjectEvaluationAssembly(
+        catalog,
+        simulateProjectAssembly(
+          catalog,
+          decodeProjectDocument(JSON.parse(encodeProjectDocument(held)), catalog),
+        ),
+        surface,
+        target,
+      ),
+    ).toEqual(drawn);
+    const [press] = roomVerbs(interactions(held, doorRoom)).filter(
+      ({ verb }) => verb.choice?.picker === 'rerollPress',
+    );
+    expect(verbAccepted(held, doorRoom, press!.verb, press!.gap, [drawn!])).toBe(true);
+
+    // Placed, the press stands with its result's picker, which overrides the draw.
+    const placed = applyProjectCommand(held, catalog, drawn!);
+    const reroll = roomOrder(placed, doorRoom)[press!.gap]!;
+    const key = roomActionKey(reroll);
+    const standing = roomVerbs(interactions(placed, doorRoom)).find(
+      ({ verb }) =>
+        verb.standing === true &&
+        verb.reference !== undefined &&
+        roomActionKey(verb.reference) === key,
+    );
+    expect(standing?.verb.choice).toEqual({ picker: 'rerollResult', timing: 'after' });
+    const action = createRoomActionAddress(fBiome, doorRoom.occurrenceId, key);
+    const other = supportedRerollRewards(placed, action, [
+      'Boon',
+      'RoomMoneyDrop',
+      'MaxHealthDrop',
+    ]).find((reward) => JSON.stringify(reward) !== JSON.stringify(drawn!.reward))!;
+    expect(other).toBeDefined();
+    const overridden = applyProjectCommand(placed, catalog, {
+      kind: 'ReplaceRerollReward',
+      action,
+      reward: other,
+    });
+    expect(placementFindings(simulateProjectAssembly(catalog, overridden), doorRoom)).toEqual(
+      placementFindings(simulateProjectAssembly(catalog, placed), doorRoom),
+    );
+    expect(rerollPressForProjectEvaluationAssembly(catalog, assembly, surface, target)).toEqual(
+      drawn,
+    );
   });
 
   it("places a wheel's choice with the offer it takes, one edit per offer", () => {

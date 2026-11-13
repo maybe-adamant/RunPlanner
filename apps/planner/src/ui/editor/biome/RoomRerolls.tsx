@@ -10,6 +10,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingMark, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { RowChoice } from './RowChoice';
 import { RewardOfferPicker } from '../rewards/RewardEditors';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -277,16 +278,18 @@ export function DoorRerollRowReward({
         <span aria-hidden="true" className="row-reward-arrow">
           →
         </span>
-        <RewardOfferPicker
-          ariaLabel={`${row.targetLabel} reroll reward`}
-          findingTarget={findingTarget(row.address)}
-          id={semanticOwnerControlElementId(row.address)}
-          label=""
-          offer={row.reward}
-          onReplace={(reward) => executeIntent(interaction.replaceRewardIntent(row.key, reward))}
-          resolver={interaction.rowReward(row.key)}
-          triggerSize="icon"
-        />
+        <RowChoice choice="rerollResult" rowKey={rowKey}>
+          <RewardOfferPicker
+            ariaLabel={`${row.targetLabel} reroll reward`}
+            findingTarget={findingTarget(row.address)}
+            id={semanticOwnerControlElementId(row.address)}
+            label=""
+            offer={row.reward}
+            onReplace={(reward) => executeIntent(interaction.replaceRewardIntent(row.key, reward))}
+            resolver={interaction.rowReward(row.key)}
+            triggerSize="icon"
+          />
+        </RowChoice>
       </span>
       {chipsAfter === undefined ? null : (
         <span className="room-reroll-row-doors">

@@ -1,5 +1,10 @@
 import { rerollAppendIndex, type ProjectDocument } from '@run-planner/engine/authored-project';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import {
+  rerollPressForProjectEvaluationAssembly,
+  type ProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 import type {
   CandidateProjectionSession,
   RewardDomainCandidateOwner,
@@ -29,7 +34,9 @@ function unavailableReason(reason: 'notRerollable'): string {
 
 function bindRoomRerolls(
   input: {
+    readonly assembly: ProjectEvaluationAssembly;
     readonly candidates: CandidateProjectionSession;
+    readonly catalog: Catalog;
     readonly project: ProjectDocument;
     readonly rewardPicker: RewardPickerProjectionService;
   },
@@ -174,12 +181,23 @@ function bindRoomRerolls(
         }),
       });
     },
+    pressIntent: (targetKey: string) => {
+      const command = rerollPressForProjectEvaluationAssembly(
+        input.catalog,
+        input.assembly,
+        requirement.surface,
+        requireTarget(targetKey).target,
+      );
+      return command === undefined ? undefined : Object.freeze({ command });
+    },
   });
 }
 
 /** Binds each room's and Hub stay's Rerolls list over engine candidates. */
 export function bindRoomRerollInteractions(input: {
+  readonly assembly: ProjectEvaluationAssembly;
   readonly candidates: CandidateProjectionSession;
+  readonly catalog: Catalog;
   readonly project: ProjectDocument;
   readonly requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>;
   readonly rewardPicker: RewardPickerProjectionService;
