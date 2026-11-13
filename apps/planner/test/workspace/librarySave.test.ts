@@ -4,7 +4,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import {
@@ -14,9 +14,40 @@ import {
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
+  authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import { createLibrarySaver } from '@planner/workspace/librarySave';
-import { createManualSaveScheduler } from '@planner-test/support/memoryProjectLibrary';
+import {
+  createManualSaveScheduler,
+  createMemoryProjectLibrary,
+} from '@planner-test/support/memoryProjectLibrary';
+
+/** A plan named this one cannot be shown: its workspace projection throws, as a defect's would. */
+const UNSHOWABLE = 'Unshowable';
+
+vi.mock(
+  '@planner/projections/structured-workspace',
+  async (
+    importOriginal: () => Promise<typeof import('@planner/projections/structured-workspace')>,
+  ) => {
+    const original = await importOriginal();
+    return {
+      ...original,
+      createStructuredWorkspaceProjection: (
+        ...args: Parameters<typeof original.createStructuredWorkspaceProjection>
+      ) => {
+        const service = original.createStructuredWorkspaceProjection(...args);
+        return Object.freeze({
+          ...service,
+          project: (assembly: Parameters<typeof service.project>[0]) => {
+            if (assembly.project.name === UNSHOWABLE) throw new Error('projection defect');
+            return service.project(assembly);
+          },
+        });
+      },
+    };
+  },
+);
 
 /** Records the saver's library calls in order; each call fails while `failing` is set. */
 function recordingAdapter() {
@@ -43,7 +74,7 @@ function recordingAdapter() {
   };
 }
 
-function setup() {
+function setup(admit: (project: ProjectDocument) => void = () => undefined) {
   const application = createApplication();
   const recording = recordingAdapter();
   const saver = createLibrarySaver({
@@ -51,6 +82,7 @@ function setup() {
     delayMs: 0,
     scheduler: createManualSaveScheduler().scheduler,
     store: application.store,
+    admit,
   });
   const open = (key: string, project: ProjectDocument, preserveOriginal: boolean) =>
     saver.open(key, () => application.store.dispatch(authoredProjectReplaced(project)), {
@@ -117,5 +149,84 @@ describe('library saver', () => {
     await saver.flush();
     expect(recording.calls).toEqual(['write Speedrun/plan']);
     expect(saver.openKey()).toBeNull();
+  });
+
+  it('never writes a plan its admission refuses, keeping the last written one', async () => {
+    const { application, open, recording, rename, saver } = setup((project) => {
+      if (project.name === UNSHOWABLE) throw new Error('projection defect');
+    });
+    await open('plan', plan('plan'), false);
+    rename('Shown');
+    await saver.flush();
+    expect(recording.calls).toEqual(['write plan']);
+
+    rename(UNSHOWABLE);
+    // A refusal does not reject, so it never holds the library or the window.
+    await saver.flush();
+    expect(recording.calls).toEqual(['write plan']);
+    expect(application.store.getState().librarySession.writeError).not.toBeNull();
+    expect(saver.refusedPresent()).toBe(true);
+    expect(saver.hasUnwrittenEdits()).toBe(true);
+
+    // Undoing back to the written plan leaves nothing unsaved.
+    application.store.dispatch(authoredProjectUndoRequested());
+    await saver.flush();
+    expect(recording.calls).toEqual(['write plan']);
+    expect(application.store.getState().librarySession.writeError).toBeNull();
+    expect(saver.hasUnwrittenEdits()).toBe(false);
+
+    rename(UNSHOWABLE);
+    await saver.flush();
+    rename('Shown again');
+    await saver.flush();
+    expect(recording.calls).toEqual(['write plan', 'write plan']);
+    expect(application.store.getState().librarySession.writeError).toBeNull();
+
+    // Opening another plan drops a refused edit instead of failing on it.
+    rename(UNSHOWABLE);
+    await saver.flush();
+    await open('other', plan('other'), false);
+    expect(saver.openKey()).toBe('other');
+    expect(recording.calls).toEqual(['write plan', 'write plan']);
+  });
+});
+
+describe('library saving with the application admission', () => {
+  it('keeps the stored plan openable when an edit cannot be shown', async () => {
+    const library = createMemoryProjectLibrary();
+    const saves = createManualSaveScheduler();
+    const application = createApplication({
+      projectLibrary: library.adapter,
+      saveScheduler: saves.scheduler,
+    });
+    const operations = application.projectOperations;
+    await operations.createNew('Underworld');
+    const key = operations.openKey()!;
+    const stored = await library.plan(catalog, key);
+    const writes = library.writes.length;
+
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'RenameProject',
+        project: createProjectAddress(),
+        name: UNSHOWABLE,
+      }),
+    );
+    saves.run();
+    // Closing the window, leaving for the Library or reloading all flush the same way.
+    const flushed = await operations.flush();
+    expect(flushed.status).toBe('failure');
+    expect(library.writes).toHaveLength(writes);
+    expect(await library.plan(catalog, key)).toEqual(stored);
+    expect(application.store.getState().librarySession.writeError).not.toBeNull();
+
+    // Opening the plan again shows it as stored.
+    await expect(operations.openPlan(key)).resolves.toMatchObject({ status: 'success' });
+    expect(application.store.getState().projectWorkspace).toMatchObject({
+      kind: 'openProject',
+      history: { present: stored },
+    });
+    expect(application.store.getState().librarySession.writeError).toBeNull();
+    expect((await operations.flush()).status).toBe('success');
   });
 });

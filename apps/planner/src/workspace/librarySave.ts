@@ -11,7 +11,8 @@ export interface SaveScheduler {
 /**
  * Writes every authored edit of the open plan to its library item. Edits are debounced and
  * coalesced; one write runs at a time and always writes the newest snapshot, so the last edit
- * wins. A failed write is reported and retried with the next edit or flush.
+ * wins. A failed write is reported and retried with the next edit or flush. A plan the planner
+ * could not open again is never written: the item keeps its last written plan.
  */
 export interface LibrarySaver {
   /** The open item's key, which a rename may change; null with no plan open. */
@@ -27,7 +28,10 @@ export interface LibrarySaver {
     publish: () => void,
     options?: { readonly preserveOriginal?: boolean },
   ): Promise<void>;
-  /** Writes pending edits now; rejects with the write failure. */
+  /**
+   * Writes pending edits now; rejects with the write failure. A plan refused as unopenable is
+   * left unwritten without rejecting, so it never holds the library or the window.
+   */
   flush(): Promise<void>;
   /**
    * Writes pending edits, then runs `task` with writes held, so a file move or rename cannot race
@@ -36,12 +40,16 @@ export interface LibrarySaver {
   hold<T>(task: () => Promise<T>): Promise<T>;
   /** Whether the open item has edits not yet written: pending, being written, or failed. */
   hasUnwrittenEdits(): boolean;
+  /** Whether the open plan as it is now was refused as unopenable, so its item keeps an older one. */
+  refusedPresent(): boolean;
   /** The open item was moved to `to`, as when it or its folder moves. */
   moved(from: string, to: string): void;
   /** Stops writing the open item, dropping its pending edits, as when it is deleted. */
   close(): void;
   dispose(): void;
 }
+
+const UNOPENABLE_EDIT = 'The planner can’t show your latest edit. Undo it to keep saving.';
 
 function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -52,6 +60,8 @@ export function createLibrarySaver(options: {
   readonly store: PlannerStore;
   readonly scheduler: SaveScheduler;
   readonly delayMs: number;
+  /** Throws for a plan the planner could not open again; the opener's own admission. */
+  readonly admit: (project: ProjectDocument) => void;
 }): LibrarySaver {
   const { adapter, store } = options;
   const present = () => selectPresentProject(store.getState());
@@ -59,6 +69,8 @@ export function createLibrarySaver(options: {
   /** The open item whose original must be kept before it is first overwritten. */
   let preserveBeforeWrite: string | null = null;
   let written: ProjectDocument | undefined;
+  /** The latest plan the admission refused, so it is not checked again. */
+  let refused: ProjectDocument | undefined;
   let observed = present();
   let publishing = false;
   let cancelPending: (() => void) | null = null;
@@ -75,7 +87,23 @@ export function createLibrarySaver(options: {
     for (;;) {
       const target = key;
       const snapshot = present();
-      if (target === null || snapshot === undefined || snapshot === written) return;
+      if (target === null || snapshot === undefined) return;
+      if (snapshot === written) {
+        // Undoing a refused edit back to the written plan leaves nothing unsaved.
+        if (refused !== undefined) {
+          refused = undefined;
+          store.dispatch(libraryWriteSucceeded());
+        }
+        return;
+      }
+      if (snapshot === refused) return;
+      try {
+        options.admit(snapshot);
+      } catch {
+        refused = snapshot;
+        store.dispatch(libraryWriteFailed({ message: UNOPENABLE_EDIT }));
+        return;
+      }
       try {
         if (preserveBeforeWrite === target) {
           await adapter.preserveOriginal(target);
@@ -83,6 +111,7 @@ export function createLibrarySaver(options: {
         }
         const entry = await adapter.write(target, encodeProjectDocument(snapshot));
         written = snapshot;
+        refused = undefined;
         if (store.getState().librarySession.writeError !== null) {
           store.dispatch(libraryWriteSucceeded());
         }
@@ -145,6 +174,7 @@ export function createLibrarySaver(options: {
       key = nextKey;
       preserveBeforeWrite = openOptions.preserveOriginal === true ? nextKey : null;
       written = present();
+      refused = undefined;
       observed = written;
     },
     flush,
@@ -165,6 +195,10 @@ export function createLibrarySaver(options: {
       const snapshot = present();
       return key !== null && snapshot !== undefined && snapshot !== written;
     },
+    refusedPresent(): boolean {
+      const snapshot = present();
+      return snapshot !== undefined && snapshot === refused;
+    },
     moved(from: string, to: string): void {
       if (key === from) key = to;
       if (preserveBeforeWrite === from) preserveBeforeWrite = to;
@@ -174,6 +208,7 @@ export function createLibrarySaver(options: {
       key = null;
       preserveBeforeWrite = null;
       written = undefined;
+      refused = undefined;
     },
     dispose(): void {
       unsubscribe();

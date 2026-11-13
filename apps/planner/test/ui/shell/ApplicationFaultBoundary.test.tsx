@@ -7,7 +7,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import { viewChanged } from '@planner/state/librarySessionSlice';
-import { selectEditorShown, useAppSelector } from '@planner/state/store';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectUndoRequested,
+} from '@planner/state/projectWorkspaceSlice';
+import { createProjectAddress } from '@run-planner/engine/authored-project';
+import {
+  selectCanUndoProject,
+  selectEditorShown,
+  selectPresentProject,
+  useAppSelector,
+} from '@planner/state/store';
 import { ApplicationFaultBoundary } from '@planner/ui/shell/ApplicationFaultBoundary';
 import { createFakeGameModuleHost } from '@planner-test/fixtures/gameModuleHost';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
@@ -19,11 +29,25 @@ afterEach(() => {
 
 function BrokenEditor() {
   const editorShown = useAppSelector(selectEditorShown);
-  if (editorShown) throw new Error('broken project projection');
-  return <p>Library is showing.</p>;
+  const name = useAppSelector((state) => selectPresentProject(state)?.name);
+  if (editorShown && name !== 'Shown') throw new Error('broken project projection');
+  return <p>{editorShown ? 'Editor is showing.' : 'Library is showing.'}</p>;
 }
 
-async function renderFault(options: { readonly withPlan: boolean; readonly desktop: boolean }) {
+const rename = (application: PlannerApplication, name: string) =>
+  application.store.dispatch(
+    authoredProjectCommandDispatched({
+      kind: 'RenameProject',
+      project: createProjectAddress(),
+      name,
+    }),
+  );
+
+async function renderFault(options: {
+  readonly withPlan: boolean;
+  readonly desktop: boolean;
+  readonly shownFirst?: boolean;
+}) {
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
   const game = createFakeGameModuleHost();
   const application = createApplication({
@@ -31,6 +55,7 @@ async function renderFault(options: { readonly withPlan: boolean; readonly deskt
     ...(options.desktop ? { gameModuleHost: game.host } : {}),
   });
   if (options.withPlan) await application.projectOperations.createNew('Underworld');
+  if (options.shownFirst === true) rename(application, 'Shown');
   const reload = vi.fn();
   render(<FaultBoundary application={application} reload={reload} />);
   return { application, game, reload };
@@ -52,6 +77,9 @@ function FaultBoundary({
           application.store.dispatch(viewChanged({ kind: 'home', tab: 'library' }))
         }
         reload={reload}
+        savePlan={async () => (await application.projectOperations.flush()).status === 'success'}
+        canUndo={() => selectCanUndoProject(application.store.getState())}
+        undo={() => application.store.dispatch(authoredProjectUndoRequested())}
       >
         <BrokenEditor />
       </ApplicationFaultBoundary>
@@ -76,6 +104,21 @@ describe('application fault recovery', () => {
       kind: 'home',
       tab: 'library',
     });
+  });
+
+  it('undoes the edit the plan cannot be shown after', async () => {
+    const { application } = await renderFault({
+      withPlan: true,
+      desktop: false,
+      shownFirst: true,
+    });
+    expect(screen.getByText('Editor is showing.')).toBeTruthy();
+
+    act(() => rename(application, 'Broken'));
+    await userEvent.click(await screen.findByRole('button', { name: 'Undo last edit' }));
+
+    await waitFor(() => expect(screen.getByText('Editor is showing.')).toBeTruthy());
+    expect(selectPresentProject(application.store.getState())?.name).toBe('Shown');
   });
 
   it('includes the fault in a bug report', async () => {

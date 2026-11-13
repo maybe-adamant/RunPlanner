@@ -12,18 +12,25 @@ interface ApplicationFaultBoundaryProps {
   readonly editorOpen: () => boolean;
   readonly returnToLibrary: () => void;
   readonly reload: () => void;
+  /** Writes the open plan's pending edits; resolves whether the library holds it as it is now. */
+  readonly savePlan: () => Promise<boolean>;
+  readonly canUndo: () => boolean;
+  readonly undo: () => void;
 }
 
 interface ApplicationFaultBoundaryState {
   readonly error: Error | null;
   readonly componentStack: string | null;
   readonly reporting: boolean;
+  /** Whether the library holds the open plan as it is now; null until its save settles. */
+  readonly saved: boolean | null;
 }
 
 const NO_FAULT: ApplicationFaultBoundaryState = {
   error: null,
   componentStack: null,
   reporting: false,
+  saved: null,
 };
 
 function normalizedError(error: unknown): Error {
@@ -56,6 +63,22 @@ export class ApplicationFaultBoundary extends Component<
     this.setState({ componentStack: errorInfo.componentStack ?? null });
   }
 
+  override componentDidUpdate(
+    _props: ApplicationFaultBoundaryProps,
+    previous: ApplicationFaultBoundaryState,
+  ): void {
+    const { error } = this.state;
+    if (previous.error !== null || error === null) return;
+    void this.props.savePlan().then(
+      (saved) => {
+        if (this.state.error === error) this.setState({ saved });
+      },
+      () => {
+        if (this.state.error === error) this.setState({ saved: false });
+      },
+    );
+  }
+
   override componentWillUnmount(): void {
     globalThis.window.removeEventListener('error', this.onWindowError);
     globalThis.window.removeEventListener('unhandledrejection', this.onUnhandledRejection);
@@ -74,6 +97,11 @@ export class ApplicationFaultBoundary extends Component<
     this.setState(NO_FAULT);
   };
 
+  private readonly undoLastEdit = (): void => {
+    this.props.undo();
+    this.setState(NO_FAULT);
+  };
+
   private fault(error: Error): BugReportFault {
     return {
       message: error.message,
@@ -87,14 +115,26 @@ export class ApplicationFaultBoundary extends Component<
     if (error === null) return this.props.children;
     const { bugReport } = this.props;
     const editorOpen = this.props.editorOpen();
+    const { saved } = this.state;
 
     return (
       <main className="application-fault-shell">
         <section aria-labelledby="application-fault-title" className="application-fault-card">
           <p className="eyebrow">Recovery</p>
           <h1 id="application-fault-title">Run Planner could not display this project</h1>
-          <p>Your plan is saved in the library.</p>
+          {saved === null ? null : (
+            <p>
+              {saved
+                ? 'Your plan is saved in the library.'
+                : 'Your latest edit isn’t saved. Undo it, or go back to the Library to keep the plan as last saved.'}
+            </p>
+          )}
           <div className="application-fault-actions">
+            {editorOpen && this.props.canUndo() ? (
+              <button className="primary-action" onClick={this.undoLastEdit} type="button">
+                Undo last edit
+              </button>
+            ) : null}
             {editorOpen ? (
               <button className="primary-action" onClick={this.backToLibrary} type="button">
                 <ActionIcon name="chevronLeft" />

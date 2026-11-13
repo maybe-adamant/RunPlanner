@@ -605,7 +605,12 @@ export function createProjectOperations(
     },
     async openPlan(key: string): Promise<ProjectOperationResult> {
       try {
-        if (options.library !== undefined && saver().openKey() === key) {
+        // A plan whose latest edit could not be shown reopens as its item last saved it.
+        if (
+          options.library !== undefined &&
+          saver().openKey() === key &&
+          !saver().refusedPresent()
+        ) {
           options.store.dispatch(viewChanged({ kind: 'editor' }));
           return result('openPlan', 'success', 'Opened the plan.');
         }
@@ -921,6 +926,12 @@ export function createProjectOperations(
       }
       try {
         await options.library.saver.flush();
+        if (options.library.saver.refusedPresent()) {
+          return Object.freeze({
+            status: 'failure' as const,
+            message: options.store.getState().librarySession.writeError ?? 'Not saved.',
+          });
+        }
         return Object.freeze({ status: 'success' as const, message: 'Saved the plan.' });
       } catch (error) {
         return Object.freeze({

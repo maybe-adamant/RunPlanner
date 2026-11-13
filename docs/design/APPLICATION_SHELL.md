@@ -165,8 +165,14 @@ coalesce, one write runs at a time and each writes the newest snapshot. A
 write that refiles the plan moves the saver to the new key; while the open
 plan or its folder moves, writes wait and resume there. Nothing announces a
 successful save. A failed write shows "Not saved · Details" in the editor
-header; the next edit or flush retries and success clears it. Navigation,
-findings and derived publication never write.
+header; the next edit or flush retries and success clears it. A snapshot is
+written only when it passes the same admission that opens a plan, its
+workspace projection included: a refused snapshot is never written, the item
+keeps its last written plan and the header shows "Not saved". Library
+operations never block on it; closing asks first. Undo back to a showable plan
+saves again; reopening the plan from the Library, or opening another, drops
+the refused edit.
+Navigation, findings and derived publication never write.
 
 Pending writes flush before another plan opens, before an update installs,
 when the page is hidden, and before the desktop window closes: the host holds
@@ -229,9 +235,10 @@ has rows, judged from those same rows; if the active index empties
 after an edit, the editor returns to Route.
 
 A fault boundary catches rendering errors and unhandled browser errors and
-rejections. It never continues an unknown partial interaction. It states that
-the plan is saved in the library and offers **Back to Library** while a plan is
-open, a bug report carrying the fault in the desktop app, **Reload** (which
+rejections. It never continues an unknown partial interaction. It flushes the
+open plan and states whether the library holds it as it is now, and offers
+**Undo last edit** and **Back to Library** while a plan is open, a bug report
+carrying the fault in the desktop app, **Reload** (which
 flushes pending writes first and starts on Home), and the error's technical
 details.
 

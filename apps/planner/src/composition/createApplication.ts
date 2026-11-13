@@ -178,6 +178,8 @@ export function createApplication(options: CreateApplicationOptions = {}) {
             },
           },
           store,
+          // An edit is written only when the plan it makes could be opened again.
+          admit: (project) => void prepareProjectWorkspace(project),
         });
   const projectOperations = createProjectOperations({
     catalog,
