@@ -122,7 +122,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 621442
+              }
             },
             {
               "occurrenceId": "a6b19a5f-d499-48d1-ae59-30aed524f968",
@@ -896,6 +899,7 @@
               },
               "additionalExits": [],
               "layout": {
+                "flipped": false,
                 "entryStartPointId": 755863
               }
             },

@@ -305,7 +305,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "2face299-6b3a-42bf-a2b7-be9c947ae0ba",
@@ -430,9 +433,13 @@
                   "secondLeft": "TemporaryBoonRarityTrait",
                   "secondRight": "TemporaryDiscountTrait"
                 },
-                "travelDealRefillKey": "TemporaryImprovedSecondaryTrait"
+                "travelDealRefillKey": "TemporaryImprovedSecondaryTrait",
+                "anchorId": 566971
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "6c147480-a9ed-456c-a186-3a0010547d96",
@@ -542,7 +549,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 560632
+              }
             },
             {
               "occurrenceId": "f65793c7-01e6-4a16-bc36-e635d797c017",
@@ -1435,7 +1445,8 @@
                 "twistResultKeyByGeneration": {
                   "travelDealRefill": "TemporaryBoonRarityTrait"
                 },
-                "travelDealRefillKey": "RandomStoreItem"
+                "travelDealRefillKey": "RandomStoreItem",
+                "anchorId": 566972
               },
               "additionalExits": []
             },
@@ -1754,7 +1765,8 @@
                   "left": "EncounterStartOffenseBuffBoon",
                   "middle": "ApolloBlindBoon",
                   "right": "OmegaHeraProjectileBoon"
-                }
+                },
+                "anchorId": 755023
               },
               "keepsakeRack": {
                 "keepsakeKey": null

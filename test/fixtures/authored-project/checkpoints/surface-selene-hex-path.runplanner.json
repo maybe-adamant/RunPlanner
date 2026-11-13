@@ -1525,7 +1525,8 @@
                     "rewardType": "MaxManaDrop",
                     "delay": 2
                   }
-                }
+                },
+                "anchorId": 616862
               },
               "keepsakeRack": {
                 "keepsakeKey": null
@@ -2429,7 +2430,8 @@
                     "rewardType": "MaxManaDrop",
                     "delay": 2
                   }
-                }
+                },
+                "anchorId": 723015
               },
               "keepsakeRack": {
                 "keepsakeKey": null
@@ -3659,7 +3661,8 @@
                     "rewardType": "MaxManaDrop",
                     "delay": 2
                   }
-                }
+                },
+                "anchorId": 487438
               },
               "keepsakeRack": {
                 "keepsakeKey": null

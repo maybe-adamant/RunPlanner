@@ -861,7 +861,10 @@
               "roomActions": {
                 "order": []
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "dream-f-1-1",
@@ -963,7 +966,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "dream-f-2-2",
@@ -1399,7 +1405,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "dream-f-8-1",
@@ -1674,7 +1683,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "dream-f-10-2",

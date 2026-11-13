@@ -244,7 +244,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "golden-f-b2-e2",
@@ -446,7 +449,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-f-b4-e2",
@@ -815,7 +821,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "golden-f-b8-e1",
@@ -1361,7 +1370,8 @@
                   "left": "ApolloWeaponBoon",
                   "middle": "ZeusSpecialBoon",
                   "right": "HeraCastBoon"
-                }
+                },
+                "anchorId": 755023
               },
               "keepsakeRack": {
                 "keepsakeKey": null
@@ -1766,7 +1776,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-g-b2-e1",
@@ -1814,7 +1827,11 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true,
+                "entryStartPointId": 568557
+              }
             },
             {
               "occurrenceId": "golden-g-b2-e2",
@@ -2081,7 +2098,11 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true,
+                "entryStartPointId": 569272
+              }
             },
             {
               "occurrenceId": "golden-g-b5-e1",
@@ -2156,7 +2177,10 @@
               "acquisitionSites": {
                 "roomExit": {}
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-g-b5-e2",
@@ -2277,7 +2301,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 568922
+              }
             },
             {
               "occurrenceId": "golden-g-b6-e2",
@@ -2398,7 +2425,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-g-b7-e2",
@@ -2639,7 +2669,8 @@
                   "left": "HeraCastBoon",
                   "middle": "HestiaManaBoon",
                   "right": "HestiaWeaponBoon"
-                }
+                },
+                "anchorId": 637448
               },
               "keepsakeRack": {
                 "keepsakeKey": null
@@ -2909,7 +2940,10 @@
               "roomActions": {
                 "order": []
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 621442
+              }
             },
             {
               "occurrenceId": "golden-h-combat02",
@@ -3062,6 +3096,7 @@
               },
               "additionalExits": [],
               "layout": {
+                "flipped": true,
                 "entryStartPointId": 565481
               }
             },
@@ -3745,6 +3780,7 @@
               },
               "additionalExits": [],
               "layout": {
+                "flipped": true,
                 "entryStartPointId": 755863
               }
             },
@@ -4089,7 +4125,8 @@
                   "left": "ApolloRetaliateBoon",
                   "middle": "HestiaSpecialBoon",
                   "right": "HestiaManaBoon"
-                }
+                },
+                "anchorId": 755008
               },
               "keepsakeRack": {
                 "keepsakeKey": null
@@ -4397,7 +4434,10 @@
               "roomActions": {
                 "order": []
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "golden-i-combat02",
@@ -4473,7 +4513,10 @@
               "roomActions": {
                 "order": []
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 696402
+              }
             },
             {
               "occurrenceId": "golden-i-combat09",

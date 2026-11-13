@@ -339,7 +339,8 @@
                     "rewardType": "MaxManaDrop",
                     "delay": 2
                   }
-                }
+                },
+                "anchorId": 668794
               },
               "phantomExit": {
                 "placeholderRoomGameName": null,
@@ -1518,7 +1519,8 @@
                     "rewardType": "MaxManaDrop",
                     "delay": 2
                   }
-                }
+                },
+                "anchorId": 616862
               },
               "keepsakeRack": {
                 "keepsakeKey": null

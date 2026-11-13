@@ -1399,7 +1399,8 @@
                     "rewardType": "ShopHermesUpgrade",
                     "delay": 2
                   }
-                }
+                },
+                "anchorId": 616862
               },
               "keepsakeRack": {
                 "keepsakeKey": "GoldifyKeepsake"
@@ -2440,7 +2441,8 @@
                     "rewardType": "MaxHealthDrop",
                     "delay": 2
                   }
-                }
+                },
+                "anchorId": 723015
               },
               "keepsakeRack": {
                 "keepsakeKey": null
@@ -2706,7 +2708,8 @@
                 {
                   "kind": "chaos",
                   "key": "chaos",
-                  "occurrenceId": "b5108a85-1adf-42b3-9d55-dabf2a721156"
+                  "occurrenceId": "b5108a85-1adf-42b3-9d55-dabf2a721156",
+                  "spawnPointIndex": 2
                 }
               ]
             },

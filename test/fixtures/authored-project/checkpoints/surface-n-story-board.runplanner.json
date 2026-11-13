@@ -1465,7 +1465,8 @@
                     "rewardType": "MaxManaDrop",
                     "delay": 2
                   }
-                }
+                },
+                "anchorId": 616862
               },
               "keepsakeRack": {
                 "keepsakeKey": null

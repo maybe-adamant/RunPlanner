@@ -244,7 +244,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "golden-f-b2-e2",
@@ -446,7 +449,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-f-b4-e2",
@@ -751,7 +757,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "golden-f-b8-e1",
@@ -1324,7 +1333,8 @@
                   "left": "ApolloWeaponBoon",
                   "middle": "ZeusSpecialBoon",
                   "right": "HeraCastBoon"
-                }
+                },
+                "anchorId": 755023
               },
               "keepsakeRack": {
                 "keepsakeKey": null
@@ -1686,7 +1696,8 @@
                     "sourceBiomeKey": "F",
                     "sourceOccurrenceId": "golden-f-preboss-shop:postboss",
                     "generationKey": "initial:secondLeft"
-                  }
+                  },
+                  "spawnPointIndex": 1
                 }
               ]
             },
@@ -1754,7 +1765,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": false
+              }
             },
             {
               "occurrenceId": "golden-g-b1-e1",
@@ -1840,7 +1854,11 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true,
+                "entryStartPointId": 568557
+              }
             },
             {
               "occurrenceId": "golden-g-b2-e2",
@@ -1926,7 +1944,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-g-b3-e2",
@@ -2050,7 +2071,11 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true,
+                "entryStartPointId": 568813
+              }
             },
             {
               "occurrenceId": "golden-g-b4-e2",
@@ -2171,7 +2196,10 @@
               "acquisitionSites": {
                 "roomExit": {}
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-g-b5-e2",
@@ -2275,7 +2303,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "entryStartPointId": 568922
+              }
             },
             {
               "occurrenceId": "golden-g-b6-e2",
@@ -2359,7 +2390,10 @@
                   }
                 ]
               },
-              "additionalExits": []
+              "additionalExits": [],
+              "layout": {
+                "flipped": true
+              }
             },
             {
               "occurrenceId": "golden-g-b7-e2",
@@ -2578,7 +2612,8 @@
                   "left": "HestiaWeaponBoon",
                   "middle": "HeraCastBoon",
                   "right": "ZeusSpecialBoon"
-                }
+                },
+                "anchorId": 637448
               },
               "keepsakeRack": {
                 "keepsakeKey": null

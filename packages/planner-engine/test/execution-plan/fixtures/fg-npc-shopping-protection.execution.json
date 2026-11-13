@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -4572,5 +4572,5 @@
       }
     }
   ],
-  "planFingerprint": "10b7e3d8"
+  "planFingerprint": "329a4ad3"
 }
