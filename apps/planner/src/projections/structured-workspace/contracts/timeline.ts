@@ -136,8 +136,6 @@ export interface WorkspaceRoomActionRow {
   readonly reference: RoomActionReference;
   readonly participation: 'required' | 'optional';
   readonly requiredScope?: import('@run-planner/engine/simulation').RoomActionRow['requiredScope'];
-  /** Participation is authored by an inventory control (Overview or a Travel Deal line). */
-  readonly participationOwnedByOverview: boolean;
   /** Engine-published exact materialization command for one derived acquisition entry. */
   readonly placement?: WorkspaceCommandIntent<DerivedPickupPlacementCommand>;
   readonly rank: number | null;

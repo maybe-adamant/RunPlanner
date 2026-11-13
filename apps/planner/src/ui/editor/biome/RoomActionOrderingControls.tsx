@@ -33,11 +33,9 @@ export function RoomActionRemovalControl({
       : `Remove ${row.label} from the timeline.`
     : row.rank === null
       ? undefined
-      : row.reference.kind === 'interactKeepsakeRack'
+      : row.participation === 'required'
         ? undefined
-        : row.participation === 'required'
-          ? undefined
-          : removable?.explanations.join(' ') || undefined;
+        : removable?.explanations.join(' ') || undefined;
   return (
     <TimelineActionDeleteButton
       {...(findingMark === undefined ? {} : { findingMark })}

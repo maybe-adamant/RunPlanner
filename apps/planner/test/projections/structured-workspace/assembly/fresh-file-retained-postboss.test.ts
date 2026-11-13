@@ -42,7 +42,7 @@ describe('Fresh File retained Postboss state', () => {
     // The sale is removed on its Timeline row.
     expect(
       room.roomActions?.rows.find((row) => row.reference.kind === 'sellPurgingPoolTrait'),
-    ).toMatchObject({ participationOwnedByOverview: false, rank: expect.any(Number) });
+    ).toMatchObject({ rank: expect.any(Number) });
 
     const clean = postbossRoom(createFreshFileFProject()).workbench.features.map(
       (feature) => feature.kind,

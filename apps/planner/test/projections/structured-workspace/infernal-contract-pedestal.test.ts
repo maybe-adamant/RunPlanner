@@ -129,7 +129,6 @@ describe('Contract pedestal editor', () => {
     ).toEqual([]);
     const row = collectRow(room(collected, peerId));
     expect(row?.label).toBe('Collect Double Pom');
-    expect(row?.participationOwnedByOverview).toBe(false);
     expect(livePedestal(room(collected, peerId))).toBeUndefined();
   });
 

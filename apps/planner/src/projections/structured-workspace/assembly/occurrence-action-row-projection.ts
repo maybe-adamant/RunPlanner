@@ -471,8 +471,6 @@ function roomActionsForOccurrence(
           : row.reference.kind === 'interactIncomingReward'
             ? controlForRole(rewardControl, row.reference.acquisitionRole)
             : rewardControl;
-      // Object purchases and collects are added from their entry and removed on their rows.
-      const participationOwnedByOverview = row.reference.kind === 'interactKeepsakeRack';
       const fountainRarity =
         row.reference.kind !== 'useFountain'
           ? undefined
@@ -637,7 +635,6 @@ function roomActionsForOccurrence(
         participation: isGoldPickup(row)
           ? (goldCapability?.participation ?? row.participation)
           : row.participation,
-        participationOwnedByOverview,
         rank: row.rank,
         ...(row.stale || artificerOutput === undefined
           ? {}
@@ -738,7 +735,6 @@ function roomActionsForOccurrence(
           proposalKeys: Object.freeze([]),
           reference,
           participation: 'required' as const,
-          participationOwnedByOverview: false,
           ...(capability.sourceFamily === undefined
             ? {}
             : { sourceFamily: capability.sourceFamily }),
@@ -815,7 +811,6 @@ function roomActionsForOccurrence(
           proposalKeys: Object.freeze([]),
           reference,
           participation: 'optional' as const,
-          participationOwnedByOverview: false,
           ...(capability.sourceFamily === undefined
             ? {}
             : { sourceFamily: capability.sourceFamily }),
@@ -865,7 +860,6 @@ function roomActionsForOccurrence(
               proposalKeys: Object.freeze([]),
               reference,
               participation: required ? ('required' as const) : ('optional' as const),
-              participationOwnedByOverview: false,
               ...(goldCapability.sourceFamily === undefined
                 ? {}
                 : { sourceFamily: goldCapability.sourceFamily }),

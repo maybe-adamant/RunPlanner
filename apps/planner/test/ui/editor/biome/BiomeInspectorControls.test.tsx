@@ -792,22 +792,20 @@ describe('Biome inspector controls', () => {
     const launcher = () => within(rackRow()).getByRole('button', { name: 'Choose Keepsake' });
     expect(postboss()?.keepsakeRack).toEqual({ keepsakeKey: null });
     const order = postboss()?.roomActions.order;
-    // Unchanged reads as the held keepsake; the row moves but cannot be removed.
+    // Unchanged reads as the held keepsake; the row moves and, being optional, can be removed.
     const unchanged = hintOf(launcher())!;
     expect(unchanged).toMatch(/ \(Unchanged\)$/);
     const held = unchanged.replace(/ \(Unchanged\)$/, '');
     expect(
       within(rackRow()).getByRole('button', { name: 'Reorder Use Keepsake Rack' }),
     ).toBeTruthy();
-    // Like other mandatory rows, its delete slot holds a disabled removal without a hint.
     const removal = within(rackRow()).getByRole<HTMLButtonElement>('button', {
       name: 'Remove Use Keepsake Rack from timeline',
     });
-    expect(removal.disabled).toBe(true);
+    expect(removal.disabled).toBe(false);
     expect(removal.closest('[data-timeline-cell]')?.getAttribute('data-timeline-cell')).toBe(
       'actions',
     );
-    expect(removal.hasAttribute('data-hint')).toBe(false);
 
     fireEvent.click(launcher());
     const dialog = () => screen.getByRole('dialog', { name: 'Choose Keepsake' });

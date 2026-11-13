@@ -591,9 +591,7 @@ export function RoomActionsWorkbench({
     const actionAccent = row.stale
       ? undefined
       : row.participation === 'optional'
-        ? row.participationOwnedByOverview && row.rank !== null
-          ? 'room'
-          : 'optional'
+        ? 'optional'
         : row.requiredScope;
     const removeRow = (): void => {
       const removable = proposals.find(
@@ -859,13 +857,7 @@ export function RoomActionsWorkbench({
               onRemove={removeRow}
               proposals={proposals}
               row={row}
-              showRemoval={
-                row.reference.kind !== 'interactKeepsakeRack' &&
-                row.reference.kind !== 'interactEris' &&
-                (!row.participationOwnedByOverview ||
-                  row.stale ||
-                  row.purchaseRemoval !== undefined)
-              }
+              showRemoval={row.reference.kind !== 'interactEris'}
             />
           }
         />
