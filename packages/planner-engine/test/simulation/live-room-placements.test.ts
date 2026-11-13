@@ -705,5 +705,21 @@ describe('live placements at a gap', () => {
     // With wheel 1 chosen, wheel 2 is offered after it, never before it.
     const first = withRoomOrder(three, ship, [choose('wheel1')]);
     expect(chooseKeysAt(first, 0)).not.toContain(roomActionKey(choose('wheel2')));
+
+    // A row preserved past the unplaced gate never locks the gate row out ahead of it.
+    const preserved = withRoomOrder(three, ship, [choose('wheel2')]);
+    const waiting = placementsOf(simulateProjectAssembly(catalog, preserved), ship)!;
+    expect(waiting.frontier).toBe(0);
+    const gate = verbsAt(waiting, 0).find(
+      (verb) =>
+        verb.reference !== undefined &&
+        roomActionKey(verb.reference) === roomActionKey(choose('wheel1')),
+    );
+    const [insert] = gate!.commands!;
+    expect(insert).toMatchObject({ kind: 'InsertRoomAction', index: 0 });
+    const repaired = applyProjectCommand(preserved, catalog, insert!);
+    expect(roomOrder(repaired, ship).map(roomActionKey)).toEqual(
+      [choose('wheel1'), choose('wheel2')].map(roomActionKey),
+    );
   });
 });
