@@ -1,3 +1,4 @@
+import type { ZagreusContractCandidateCapability } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import {
   assemble,
@@ -48,12 +49,12 @@ describe('structured workspace features assembly', () => {
     expect(room.workbench.features.some((feature) => feature.kind === 'chaos')).toBe(false);
   });
 
-  it('omits a consumed Contract and enables one after an earlier offer was skipped', () => {
+  it('locks a consumed Contract with its rule and enables one after an earlier offer was skipped', () => {
     const midshop = createOccurrenceId('golden-g-b5-e1');
     const contractFeature = (
       zagreusContractAssessment?: () => {
         readonly placementEligible: boolean;
-        readonly failedConditions: readonly ('enteredContractCap' | 'sourceRequirement')[];
+        readonly refusals: ZagreusContractCandidateCapability['refusals'];
         readonly enteredContractCount: number;
         readonly maximumEnteredThisRoute: number;
       },
@@ -74,15 +75,25 @@ describe('structured workspace features assembly', () => {
             : Object.freeze({ ...source, zagreusContractAssessment }),
       ).assembly.node.room.workbench.features.find((feature) => feature.kind === 'zagreusContract');
 
-    // The engine's entry-consumed policy reports the earlier Contract; the app omits the door.
+    // The engine's entry-consumed policy reports the earlier Contract; its toggle says why.
     expect(
       contractFeature(() => ({
         placementEligible: false,
-        failedConditions: ['enteredContractCap'],
+        refusals: [{ reason: 'capReached', per: 'route', count: 1, maximum: 0 }],
         enteredContractCount: 1,
         maximumEnteredThisRoute: 0,
       })),
-    ).toBeUndefined();
+    ).toMatchObject({
+      action: 'add',
+      presence: {
+        kind: 'optionalAbsent',
+        enabled: false,
+        lock: {
+          reason: 'refused',
+          sentences: ['This run already had a Zagreus Contract; no more can appear.'],
+        },
+      },
+    });
     // No earlier Contract: the reached Midshop offers its door.
     expect(contractFeature()).toMatchObject({
       action: 'add',

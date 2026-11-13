@@ -21,8 +21,14 @@ import type {
   PurgingPoolCandidateCapability,
   StygianWellCandidateCapability,
   ZagreusContractCandidateCapability,
+  RoomFeatureRefusal,
 } from '@run-planner/engine/simulation';
-import { type WorkspaceFeatureAssessment, type WorkspaceRoomSummary } from '../contract';
+import { roomFeatureRefusalSentences } from '@planner/projections/roomObjectPlacementCopy';
+import {
+  type WorkspaceFeatureAssessment,
+  type WorkspaceFeaturePresence,
+  type WorkspaceRoomSummary,
+} from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceExplicitRewardControl, WorkspaceRewardControl } from '../contracts/rewards';
@@ -122,7 +128,6 @@ export function assembleOccurrenceFeatures(
   const zagreusSpawn =
     zagreusDeclaration === undefined ||
     input.facts.authoredAdditionalExitKeys.includes(zagreusDeclaration.key) ||
-    input.facts.zagreusContractPlacement?.placementEligible === false ||
     !input.facts.detailsActive ||
     roomLocal.kind !== 'shop' ||
     !roomLocal.materialized
@@ -162,6 +167,35 @@ export function assembleOccurrenceFeatures(
     features: roomFeatures(input, room, encounterPhases, zagreusSpawn, chaosSpawn),
     chaosSpawn,
     zagreusSpawn,
+  });
+}
+
+/**
+ * An absent Chaos gate's or Contract's presence: enabled where the reached
+ * source admits it, else locked with each rule refusing it.
+ */
+function absentPresence(
+  feature: 'chaosGate' | 'zagreusContract',
+  placement:
+    | {
+        readonly placementEligible: boolean;
+        readonly refusals: readonly RoomFeatureRefusal[];
+      }
+    | undefined,
+): Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalAbsent' }> {
+  if (placement?.placementEligible === true)
+    return Object.freeze({ kind: 'optionalAbsent' as const, enabled: true });
+  return Object.freeze({
+    kind: 'optionalAbsent' as const,
+    enabled: false,
+    lock: Object.freeze(
+      placement === undefined
+        ? { reason: 'unreached' as const }
+        : {
+            reason: 'refused' as const,
+            sentences: roomFeatureRefusalSentences(feature, placement.refusals),
+          },
+    ),
   });
 }
 
@@ -496,10 +530,7 @@ function roomFeatures(
           Object.freeze({
             kind: 'zagreusContract' as const,
             action: 'add' as const,
-            presence: Object.freeze({
-              kind: 'optionalAbsent' as const,
-              enabled: input.facts.zagreusContractPlacement?.placementEligible === true,
-            }),
+            presence: absentPresence('zagreusContract', input.facts.zagreusContractPlacement),
             control: zagreusSpawn,
           }),
         ]
@@ -518,10 +549,7 @@ function roomFeatures(
           Object.freeze({
             kind: 'chaos' as const,
             action: 'add' as const,
-            presence: Object.freeze({
-              kind: 'optionalAbsent' as const,
-              enabled: chaosSpawn.authorable,
-            }),
+            presence: absentPresence('chaosGate', input.facts.chaosPlacement),
             control: chaosSpawn,
           }),
         ]

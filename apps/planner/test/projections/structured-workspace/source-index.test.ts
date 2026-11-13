@@ -205,12 +205,12 @@ describe('structured workspace source index', () => {
     const project = createGoldenFGHIProject();
     const evaluation = simulateProject(catalog, project);
     const chaos: ChaosCandidateCapability = Object.freeze({
-      failedConditions: Object.freeze([]),
+      refusals: Object.freeze([]),
       placementEligible: true,
     });
     const zagreusContract: ZagreusContractCandidateCapability = Object.freeze({
       enteredContractCount: 0,
-      failedConditions: Object.freeze([]),
+      refusals: Object.freeze([]),
       maximumEnteredThisRoute: 0,
       placementEligible: true,
     });

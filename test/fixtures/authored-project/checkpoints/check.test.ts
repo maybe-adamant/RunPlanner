@@ -281,9 +281,9 @@ describe('authored-project checkpoint integrity', () => {
     if (project.route.routeKey !== 'Surface') throw new Error('Surface route is missing');
     const route = project.route;
     const authoring = routeResourceAuthoring(catalog, route);
-    expect(authoring.assessmentByFamily.Pickaxe).toEqual({ legal: true, reasons: [] });
-    expect(authoring.assessmentByFamily.Exorcism).toEqual({ legal: true, reasons: [] });
-    expect(authoring.assessmentByFamily.Shovel).toEqual({ legal: true, reasons: [] });
+    expect(authoring.assessmentByFamily.Pickaxe).toEqual({ legal: true, refusals: [] });
+    expect(authoring.assessmentByFamily.Exorcism).toEqual({ legal: true, refusals: [] });
+    expect(authoring.assessmentByFamily.Shovel).toEqual({ legal: true, refusals: [] });
     expect(authoring.placements.Exorcism).toEqual({
       biomeKey: 'N',
       occurrenceId: 'surface-n-combat11-sideDoor1',

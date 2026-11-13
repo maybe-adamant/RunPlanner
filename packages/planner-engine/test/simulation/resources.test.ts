@@ -86,9 +86,10 @@ function directResourcePolicy(
     assessmentByFamily: Object.fromEntries(
       resourceFamilies.map((family) => [
         family,
-        placements[family] === null ? undefined : { legal: true, reasons: [] },
+        placements[family] === null ? undefined : { legal: true, refusals: [] },
       ]),
     ) as RouteResourceAuthoring['assessmentByFamily'],
+    refusedTargetsByFamily: { Pickaxe: [], Exorcism: [], Shovel: [], Fishing: [] },
     legalTargetsByFamily: {
       Pickaxe: [],
       Exorcism: [],
@@ -169,7 +170,7 @@ describe('selected resource success legality', () => {
 
     expect(authoring.assessmentByFamily.Pickaxe).toEqual({
       legal: false,
-      reasons: ['host resource rules unavailable'],
+      refusals: [{ reason: 'notHost' }],
     });
     expect(Object.values(unplaced).map((ids) => ids.length)).toEqual([24, 24, 24, 19]);
     expect(targetIds(authoring)).toEqual(unplaced);
@@ -181,10 +182,13 @@ describe('selected resource success legality', () => {
     const project = placeAll({ Pickaxe: host, Shovel: host });
     const authoring = routeResourceAuthoring(catalog, project.route);
 
-    for (const family of ['Pickaxe', 'Shovel'] as const)
+    for (const [family, other] of [
+      ['Pickaxe', 'Shovel'],
+      ['Shovel', 'Pickaxe'],
+    ] as const)
       expect(authoring.assessmentByFamily[family]).toEqual({
         legal: false,
-        reasons: ['room simple/complex capacity'],
+        refusals: [{ reason: 'roomCapacity', family: other, capacity: 'simpleComplex' }],
       });
     expect(
       simulateProject(catalog, project).findings.filter(
@@ -242,9 +246,13 @@ describe('selected resource success legality', () => {
 
     expect(authoring.assessmentByFamily.Pickaxe).toEqual({
       legal: false,
-      reasons: ['route excluded'],
+      refusals: [{ reason: 'routeExcluded' }],
     });
     expect(authoring.legalTargetsByFamily.Pickaxe).toEqual([]);
+    expect(authoring.refusedTargetsByFamily.Pickaxe).toContainEqual({
+      placement: { biomeKey: 'F', occurrenceId },
+      refusals: [{ reason: 'routeExcluded' }],
+    });
     expect(effectiveRouteResourcePlacements(authoring).Pickaxe).toBeNull();
     expect(
       deriveResourceExecutionPolicy(
@@ -320,8 +328,8 @@ describe('selected resource success legality', () => {
       assessResourcePlacement(catalog, 'Underworld', 'Pickaxe', at('F', 'pickaxe'), entered, {
         ...none(),
         Exorcism: at('N', 'target'),
-      }).reasons,
-    ).toContain('cross-family lookback');
+      }).refusals,
+    ).toContainEqual(expect.objectContaining({ reason: 'resourceLookback', scope: 'crossFamily' }));
   });
 
   it('derives same-room simple/complex capacity and Chaos all-tool suppression', () => {
@@ -353,7 +361,10 @@ describe('selected resource success legality', () => {
         ...none(),
         Pickaxe: at('F', 'ordinary'),
       }),
-    ).toEqual({ legal: false, reasons: ['room simple/complex capacity'] });
+    ).toEqual({
+      legal: false,
+      refusals: [{ reason: 'roomCapacity', family: 'Pickaxe', capacity: 'simpleComplex' }],
+    });
     expect(
       assessResourcePlacement(
         catalog,
@@ -366,7 +377,10 @@ describe('selected resource success legality', () => {
           Shovel: at('F', 'chaos'),
         },
       ),
-    ).toEqual({ legal: false, reasons: ['all-tool room capacity'] });
+    ).toEqual({
+      legal: false,
+      refusals: [{ reason: 'roomCapacity', family: 'Shovel', capacity: 'allTools' }],
+    });
   });
 
   it('publishes a tri-state row for an entered N side room at its history position', () => {
@@ -504,8 +518,8 @@ describe('selected resource success legality', () => {
     const selected = { ...none(), Fishing: at('N', 'n0') };
     expect(
       assessResourcePlacement(catalog, 'Surface', 'Pickaxe', at('N', 'n3'), entered, selected)
-        .reasons,
-    ).toContain('cross-family lookback');
+        .refusals,
+    ).toContainEqual(expect.objectContaining({ reason: 'resourceLookback', scope: 'crossFamily' }));
     expect(
       assessResourcePlacement(catalog, 'Surface', 'Pickaxe', at('N', 'n3'), entered, {
         ...none(),

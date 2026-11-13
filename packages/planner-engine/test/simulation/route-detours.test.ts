@@ -698,7 +698,7 @@ describe('route-detour simulation', () => {
         origin: additional,
         evidence: expect.objectContaining({
           kind: 'chaos',
-          failedConditions: expect.arrayContaining(['targetDomain']),
+          refusals: expect.arrayContaining([{ reason: 'targetDomain' }]),
         }),
       }),
     );
@@ -844,7 +844,10 @@ describe('route-detour simulation', () => {
         generationAssembly,
         createOccurrenceAddress(fBiome, firstCombat),
       ),
-    ).toMatchObject({ placementEligible: false, failedConditions: ['offerSpacing'] });
+    ).toMatchObject({
+      placementEligible: false,
+      refusals: [{ reason: 'offerSpacing', rooms: expect.any(Number) }],
+    });
 
     expect(generation.findings).toContainEqual(
       expect.objectContaining({
@@ -852,7 +855,7 @@ describe('route-detour simulation', () => {
         origin: secondAdditional,
         evidence: expect.objectContaining({
           kind: 'chaos',
-          failedConditions: expect.arrayContaining(['offerSpacing']),
+          refusals: expect.arrayContaining([expect.objectContaining({ reason: 'offerSpacing' })]),
         }),
       }),
     );
@@ -886,8 +889,14 @@ describe('route-detour simulation', () => {
         (finding) =>
           semanticAddressKey(finding.origin) === semanticAddressKey(secondAdditional) &&
           finding.evidence.kind === 'chaos' &&
-          Array.isArray(finding.evidence.failedConditions) &&
-          finding.evidence.failedConditions.includes('offerSpacing'),
+          Array.isArray(finding.evidence.refusals) &&
+          finding.evidence.refusals.some(
+            (refusal) =>
+              typeof refusal === 'object' &&
+              refusal !== null &&
+              !Array.isArray(refusal) &&
+              refusal.reason === 'offerSpacing',
+          ),
       );
       expect(spacingFinding !== undefined).toBe(blocked);
     },
@@ -935,7 +944,7 @@ describe('route-detour simulation', () => {
         origin: forcedAdditional,
         evidence: expect.objectContaining({
           kind: 'chaos',
-          failedConditions: expect.arrayContaining(['offerSpacing']),
+          refusals: expect.arrayContaining([expect.objectContaining({ reason: 'offerSpacing' })]),
         }),
       }),
     );

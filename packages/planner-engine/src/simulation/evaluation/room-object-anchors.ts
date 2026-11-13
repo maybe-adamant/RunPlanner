@@ -19,6 +19,7 @@ import {
 import type { HermesShrineCandidateCapability } from '../commerce/hermes-shrine';
 import type { HermesShrinePlacementRefusal } from '../commerce/hermes-shrine';
 import type { ChallengeSwitchInteraction } from '../commerce/object-interactions';
+import type { PurgingPoolPlacementRefusal } from '../room-feature-refusals';
 import type { PurgingPoolCandidateCapability } from '../commerce/purging-pool';
 import type {
   StygianWellCandidateCapability,
@@ -99,7 +100,13 @@ export type RoomAnchorObject =
       CommandOf<'AddStygianWell'>,
       CommandOf<'RemoveStygianWell'>
     >
-  | RoomAnchorObjectFacts<'purgingPool', never, PurgingPoolCandidateCapability, never, never>
+  | RoomAnchorObjectFacts<
+      'purgingPool',
+      PurgingPoolPlacementRefusal,
+      PurgingPoolCandidateCapability,
+      never,
+      never
+    >
   | RoomAnchorObjectFacts<
       'hermesShrine',
       Exclude<HermesShrinePlacementRefusal, { readonly reason: 'noAnchor' }>,
@@ -255,6 +262,15 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
       fixed: poolHosted,
       own: {},
       candidate: purgingPoolCandidateForProjectEvaluationAssembly(assembly, origin),
+    });
+  // A Pool the room declares stands on every route but the ones that exclude it.
+  else if (room?.purgingPool !== undefined)
+    drafts.push({
+      kind: 'purgingPool',
+      hosted: false,
+      present: false,
+      fixed: false,
+      own: { refusals: [Object.freeze({ reason: 'routeExcluded' as const })] },
     });
   const shrineHosted = hostedHere('hermesShrine');
   if (shrineHosted || authored.hermesShrine !== undefined) {

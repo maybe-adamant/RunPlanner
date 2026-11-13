@@ -499,3 +499,10 @@ export {
 export type { RequirementEvaluationEvidence } from '../requirements/evidence';
 export type { RewardOfferExclusionReason } from './rewards/offer-exclusions';
 export type { PhantomPlaceholderExclusion } from './generation/phantom-exit';
+export type {
+  ChaosGateRefusal,
+  PurgingPoolPlacementRefusal,
+  ResourcePlacementRefusal,
+  RoomFeatureRefusal,
+  ZagreusContractRefusal,
+} from './room-feature-refusals';

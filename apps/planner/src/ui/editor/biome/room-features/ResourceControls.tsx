@@ -10,6 +10,7 @@ import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
 import { hintProps } from '@planner/ui/controls/hint';
+import { featureLockHint } from '@planner/ui/feedback/candidatePresentation';
 import { elementIcon, gatheringToolIcon } from '@planner/ui/artwork/roomArtwork';
 
 type RoomResource = NonNullable<WorkspaceRoomSummary['resources']>[number];
@@ -56,6 +57,7 @@ function ResourceToggle({
   const toggle = (
     <IconToggle
       disabled={disabled}
+      disabledHint={featureLockHint(resource.lock)}
       icon={
         resource.element === undefined
           ? gatheringToolIcon(resource.family)

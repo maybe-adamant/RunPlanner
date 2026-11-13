@@ -3,6 +3,7 @@ import type {
   CandidateProjectionEvaluation,
 } from '@planner/projections/candidates/candidateProjection';
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
+import type { WorkspaceFeatureLock } from '@planner/projections/structured-workspace';
 
 export function candidateSelectState(
   option: CandidateOptionProjection<unknown, CandidateProjectionEvaluation> | undefined,
@@ -14,6 +15,12 @@ export function candidateSelectState(
 
 /** Hint of a control whose candidate context is unreached. */
 export const candidateWaitingHint = 'Waits on an earlier choice.';
+
+/** The hover reason of a room feature's disabled toggle: waiting, or the rules refusing it. */
+export function featureLockHint(lock: WorkspaceFeatureLock | undefined): string | undefined {
+  if (lock === undefined) return undefined;
+  return lock.reason === 'unreached' ? candidateWaitingHint : lock.sentences.join(' ');
+}
 
 /** Whether this evaluated candidate's context is unreached. */
 export function candidateWaits(

@@ -67,14 +67,14 @@ describe('Fresh File retained content', () => {
     );
     expect(capability).toMatchObject({
       placementEligible: false,
-      failedConditions: ['sourceRequirement'],
+      refusals: [{ reason: 'requirementUnmet', requirement: 'ZagreusContractRequirement' }],
     });
     expect(simulateProject(catalog, withDoor).findings).toContainEqual(
       expect.objectContaining({
         code: 'targetRoomUnavailable',
         evidence: expect.objectContaining({
           kind: 'zagreusContract',
-          failedConditions: ['sourceRequirement'],
+          refusals: [{ reason: 'requirementUnmet', requirement: 'ZagreusContractRequirement' }],
         }),
       }),
     );
@@ -89,7 +89,7 @@ describe('Fresh File retained content', () => {
         simulateProjectAssembly(catalog, mature),
         matureShop,
       ),
-    ).toMatchObject({ placementEligible: true, failedConditions: [] });
+    ).toMatchObject({ placementEligible: true, refusals: [] });
     expect(
       simulateProject(catalog, mature).findings.filter(
         (finding) => finding.evidence.kind === 'zagreusContract',

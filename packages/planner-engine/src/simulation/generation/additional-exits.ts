@@ -1,3 +1,4 @@
+import type { ChaosGateRefusal, ZagreusContractRefusal } from '../room-feature-refusals';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import { chaosGateSpawnPointIndices } from '../../authored-project/chaos-gate-position';
 import { evaluateRequirement } from '../../requirements/evaluator';
@@ -54,15 +55,19 @@ export function assessChaosPlacement(
       candidate.kind === 'chaos' && candidate.key === 'chaos',
   );
   const host = layout.chaos;
-  const failedConditions: string[] = [];
+  const refusals: ChaosGateRefusal[] = [];
+  const refuse = (refusal: ChaosGateRefusal) => {
+    if (!refusals.some((existing) => existing.reason === refusal.reason))
+      refusals.push(Object.freeze(refusal));
+  };
   if (declaration === undefined || !declaration.canSpawn || !declaration.canHost)
-    failedConditions.push('sourceCapability');
-  if (host === undefined || host.roomGameNames.length === 0) failedConditions.push('targetDomain');
+    refuse({ reason: 'notHost' });
+  if (host === undefined || host.roomGameNames.length === 0) refuse({ reason: 'targetDomain' });
   if (
     sourceDeclaration.secretPointAnchorCount !== undefined &&
     sourceDeclaration.secretPointAnchorCount <= 0
   )
-    failedConditions.push('physicalCapability');
+    refuse({ reason: 'physicalCapability' });
   if (declaration?.requirement !== undefined) assertGenerationRequirement(declaration.requirement);
   if (
     declaration?.requirement !== undefined &&
@@ -80,7 +85,7 @@ export function assessChaosPlacement(
       ),
     )
   ) {
-    failedConditions.push('sourceRequirement');
+    refuse({ reason: 'requirementUnmet', requirement: 'SecretDoorRequirements' });
   }
   const window = host?.offerSpacingWindow;
   if (window !== undefined) {
@@ -96,14 +101,13 @@ export function assessChaosPlacement(
         creation.additionalOrigin.additionalExitKey === 'chaos' &&
         recentOrigins.has(semanticAddressKey(creation.parentOrigin)),
     );
-    if (recentOffer !== undefined) failedConditions.push('offerSpacing');
+    if (recentOffer !== undefined) refuse({ reason: 'offerSpacing', rooms: window });
   }
-  if (targetGameName !== undefined && !host?.roomGameNames.includes(targetGameName)) {
-    if (!failedConditions.includes('targetDomain')) failedConditions.push('targetDomain');
-  }
+  if (targetGameName !== undefined && !host?.roomGameNames.includes(targetGameName))
+    refuse({ reason: 'targetDomain' });
   return Object.freeze({
-    placementEligible: failedConditions.length === 0,
-    failedConditions: Object.freeze(failedConditions),
+    placementEligible: refusals.length === 0,
+    refusals: Object.freeze(refusals),
   });
 }
 
@@ -129,7 +133,7 @@ export function assessZagreusContractPlacement(
   const enteredContractCount = parentHistory.entry.ledgers.roomAppearances.filter(
     (appearance) => appearance.gameName === declaration.targetRoomGameName,
   ).length;
-  const failedConditions: ('enteredContractCap' | 'sourceRequirement')[] = [];
+  const refusals: ZagreusContractRefusal[] = [];
   if (declaration.requirement !== undefined) assertGenerationRequirement(declaration.requirement);
   if (
     declaration.requirement !== undefined &&
@@ -147,12 +151,24 @@ export function assessZagreusContractPlacement(
       ),
     )
   )
-    failedConditions.push('sourceRequirement');
+    refusals.push(
+      Object.freeze({
+        reason: 'requirementUnmet' as const,
+        requirement: 'ZagreusContractRequirement' as const,
+      }),
+    );
   if (enteredContractCount > declaration.maxEnteredThisRoute)
-    failedConditions.push('enteredContractCap');
+    refusals.push(
+      Object.freeze({
+        reason: 'capReached' as const,
+        per: 'route' as const,
+        count: enteredContractCount,
+        maximum: declaration.maxEnteredThisRoute,
+      }),
+    );
   return Object.freeze({
-    placementEligible: failedConditions.length === 0,
-    failedConditions: Object.freeze(failedConditions),
+    placementEligible: refusals.length === 0,
+    refusals: Object.freeze(refusals),
     enteredContractCount,
     maximumEnteredThisRoute: declaration.maxEnteredThisRoute,
   });
@@ -224,7 +240,7 @@ export function evaluateAdditionalContinuationEntries(
         > => candidate.kind === 'chaos' && candidate.key === 'chaos',
       );
       const host = layout.chaos;
-      const failedConditions: string[] = [];
+      const refusals: ChaosGateRefusal[] = [];
       if (
         continuation.spawnPointIndex !== undefined &&
         (sourceDeclaration === undefined ||
@@ -242,10 +258,9 @@ export function evaluateAdditionalContinuationEntries(
           }),
         );
       }
-      if (declaration === undefined) failedConditions.push('sourceCapability');
-      if (host === undefined || !host.roomGameNames.includes(continuation.room.gameName)) {
-        failedConditions.push('targetDomain');
-      }
+      if (declaration === undefined) refusals.push(Object.freeze({ reason: 'notHost' as const }));
+      if (host === undefined || !host.roomGameNames.includes(continuation.room.gameName))
+        refusals.push(Object.freeze({ reason: 'targetDomain' as const }));
       if (!forced && sourceDeclaration !== undefined) {
         const capability = assessChaosPlacement(
           layout,
@@ -257,12 +272,12 @@ export function evaluateAdditionalContinuationEntries(
           rewardFactsBySource.get(semanticAddressKey(parentOrigin)),
           initialRewardLookups,
         );
-        for (const condition of capability?.failedConditions ?? []) {
-          if (!failedConditions.includes(condition)) failedConditions.push(condition);
-        }
+        for (const refusal of capability?.refusals ?? [])
+          if (!refusals.some((existing) => existing.reason === refusal.reason))
+            refusals.push(refusal);
       }
       const window = forced ? undefined : layout.chaos?.offerSpacingWindow;
-      if (failedConditions.length > 0) {
+      if (refusals.length > 0) {
         appendFinding(
           findings,
           findingRegions,
@@ -271,7 +286,7 @@ export function evaluateAdditionalContinuationEntries(
             sourceGameName: source.gameName,
             chaosRoomGameName: continuation.room.gameName,
             offerSpacingWindow: window ?? null,
-            failedConditions: Object.freeze(failedConditions),
+            refusals: Object.freeze(refusals),
           }),
         );
       }
@@ -319,7 +334,7 @@ export function evaluateAdditionalContinuationEntries(
           contractRoomGameName: continuation.room.gameName,
           priorEnteredContractCount,
           maximumEnteredThisRoute: declaration.maxEnteredThisRoute,
-          failedConditions: contractCapability.failedConditions,
+          refusals: contractCapability.refusals,
         }),
       );
     }

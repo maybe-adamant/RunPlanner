@@ -1,3 +1,4 @@
+import { roomFeatureRefusalSentences } from '@planner/projections/roomObjectPlacementCopy';
 import { normalExitOrdinal } from './ordering';
 import { assembleLockedDoors, assembleUnlockExitEncounters } from './locked-doors-assembly';
 import { assembleRoomObjectSlots } from './room-object-slots-assembly';
@@ -1021,6 +1022,30 @@ export function assembleWorkspaceOccurrence(
                         target.biomeKey === input.biome.biomeKey &&
                         target.occurrenceId === occurrence.occurrenceId,
                     ),
+                ...(() => {
+                  if (here) return {};
+                  const atThisRoom = (target: { biomeKey: string; occurrenceId: string }) =>
+                    target.biomeKey === input.biome.biomeKey &&
+                    target.occurrenceId === occurrence.occurrenceId;
+                  if (input.resourceAuthoring!.legalTargetsByFamily[family].some(atThisRoom))
+                    return {};
+                  const refused = input.resourceAuthoring!.refusedTargetsByFamily[family].find(
+                    (target) => atThisRoom(target.placement),
+                  );
+                  return {
+                    lock: Object.freeze(
+                      refused === undefined
+                        ? { reason: 'unreached' as const }
+                        : {
+                            reason: 'refused' as const,
+                            sentences: roomFeatureRefusalSentences(
+                              { resource: family },
+                              refused.refusals,
+                            ),
+                          },
+                    ),
+                  };
+                })(),
                 ...(currentPlacement === undefined ? {} : { currentPlacement }),
               });
             }),

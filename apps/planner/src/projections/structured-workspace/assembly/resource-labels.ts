@@ -1,6 +1,6 @@
 import type { ResourceFamily } from '@run-planner/engine/catalog-schema';
 
-function resourceFamilyLabel(family: ResourceFamily): string {
+export function resourceFamilyLabel(family: ResourceFamily): string {
   switch (family) {
     case 'Pickaxe':
       return 'Mining';

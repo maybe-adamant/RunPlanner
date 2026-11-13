@@ -706,8 +706,13 @@ press to append and its fight, generated at the press or, before the press is
 placed, where it would append, and the doors still locked when the room is
 left. A room's anchor query publishes its `ChallengeSwitchBase`
 anchors: each object it can hold in native spawn order (Well, Pool, Shrine,
-then switch), whether it is fixed, the anchor it takes, why native could not
-spawn it and the commands placing or removing it, and each anchor's choices.
+then switch, and a Pool its route excludes), whether it is fixed, the anchor
+it takes, why native could not spawn it and the commands placing or removing
+it, and each anchor's choices. Every room feature the owner can switch on
+states why it cannot appear in one shared vocabulary of typed refusals, each
+rule with its own values: the anchor objects', a Chaos gate's and an Infernal
+Contract door's at their reached source, and each resource success's for every
+entered host of its family.
 A structural authoring query answers, for any of those purchase commands, every
 index it may place its purchase at instead of appending.
 

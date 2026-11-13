@@ -138,7 +138,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     );
     if (sourceDeclaration.additionalExits.some((exit) => exit.kind === 'chaos')) {
       const capability = forcedChaosOccurrenceKeys.has(semanticAddressKey(source.origin))
-        ? Object.freeze({ placementEligible: true, failedConditions: Object.freeze([]) })
+        ? Object.freeze({ placementEligible: true, refusals: Object.freeze([]) })
         : assessChaosPlacement(
             layout,
             source,

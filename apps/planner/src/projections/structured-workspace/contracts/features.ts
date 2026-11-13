@@ -2,6 +2,7 @@ import type {
   WorkspaceCommandIntent,
   WorkspaceCommandsIntent,
   WorkspaceFeatureAssessment,
+  WorkspaceFeatureLock,
   WorkspaceFeaturePresence,
   WorkspaceInteractionChoice,
 } from '@planner/projections/structured-workspace/contract';
@@ -310,13 +311,6 @@ export interface WorkspaceRoomObjectEntryInteraction {
 /** An object native spawns on a room's challenge switch anchors, in its spawn order. */
 export type WorkspaceAnchorObject = import('@run-planner/engine/simulation').RoomAnchorObjectKind;
 
-/** Why an absent object cannot take an anchor slot now. */
-export type WorkspaceAnchorObjectLock =
-  /** The room's entry is not assessed yet. */
-  | { readonly reason: 'unreached' }
-  /** The rules refusing it here, each as one sentence. */
-  | { readonly reason: 'refused'; readonly sentences: readonly string[] };
-
 /** A present object's anchor: stored or pinned, and where it can move. */
 export interface WorkspaceRoomObjectAnchor {
   /** The stored anchor; absent until the walk reaches the room. */
@@ -343,7 +337,7 @@ export interface WorkspaceRoomAnchorObject {
   /** The choice adding it while absent, or removing it while present. */
   readonly toggleKey?: string;
   /** Why an absent object cannot be added now. */
-  readonly lock?: WorkspaceAnchorObjectLock;
+  readonly lock?: WorkspaceFeatureLock;
   /** A present object's anchor. */
   readonly anchor?: WorkspaceRoomObjectAnchor;
   /**
@@ -354,7 +348,7 @@ export interface WorkspaceRoomAnchorObject {
     readonly switchKind: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
     readonly toggleKey?: string;
     /** Why this kind cannot be observed now. */
-    readonly lock?: WorkspaceAnchorObjectLock;
+    readonly lock?: WorkspaceFeatureLock;
   }[];
 }
 

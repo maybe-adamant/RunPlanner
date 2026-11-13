@@ -496,6 +496,27 @@ describe('default object anchors', () => {
     }
   });
 
+  it('refuses a Pool its room declares on a route that excludes it', () => {
+    const project = createFreshFileFProject();
+    const postboss = project.route.biomes[0]!.topology!.occurrences.find(
+      (entry) => entry.occurrenceId === freshFileFPostbossId,
+    )!;
+    expect(postboss.purgingPool).toBeUndefined();
+    expect(catalog.rooms.byKey[postboss.gameName]?.purgingPool).toBeDefined();
+    const slots = roomObjectAnchorSlotsForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+      address(project, project.route.biomes[0]!.biomeKey, freshFileFPostbossId),
+    )!;
+    expect(object(slots, 'purgingPool')).toMatchObject({
+      hosted: false,
+      present: false,
+      fixed: false,
+      refusals: [{ reason: 'routeExcluded' }],
+    });
+    expect(object(slots, 'purgingPool').place).toBeUndefined();
+  });
+
   it('keeps the Well pin out of the Pool draw in a pinned room whose Well is absent', () => {
     const project = withRetainedFreshFilePostboss(createFreshFileFProject(), {
       well: false,

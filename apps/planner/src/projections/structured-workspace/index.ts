@@ -163,6 +163,7 @@ export type {
   WorkspaceRoomMap,
   WorkspaceRoomMapPoint,
   WorkspaceAnchorObject,
+  WorkspaceFeatureLock,
   WorkspaceRoomAnchorObject,
   WorkspaceRoomObjectAnchor,
   WorkspaceRoomLayout,

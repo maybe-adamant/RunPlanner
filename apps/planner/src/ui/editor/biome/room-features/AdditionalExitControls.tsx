@@ -6,6 +6,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { featureLockHint } from '@planner/ui/feedback/candidatePresentation';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
@@ -28,6 +29,11 @@ export function ZagreusSpawnWorkbench({
     <div className="room-feature-presence-row additional-exit-row">
       <IconToggle
         disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
+        disabledHint={
+          feature.presence.kind === 'optionalAbsent'
+            ? featureLockHint(feature.presence.lock)
+            : undefined
+        }
         icon={doorArtwork.ZagContract ?? undefined}
         name="Zagreus Contract"
         onToggle={() =>
@@ -70,6 +76,11 @@ export function ChaosSpawnWorkbench({
       ) : (
         <IconToggle
           disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
+          disabledHint={
+            feature.presence.kind === 'optionalAbsent'
+              ? featureLockHint(feature.presence.lock)
+              : undefined
+          }
           icon={doorArtwork.ChaosExitDoor ?? undefined}
           name="Chaos Gate"
           onToggle={() => {

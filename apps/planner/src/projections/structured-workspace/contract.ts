@@ -29,7 +29,6 @@ export type {
   WorkspaceRoomEntryPair,
   WorkspaceRoomEntryState,
   WorkspaceAnchorObject,
-  WorkspaceAnchorObjectLock,
   WorkspaceRoomAnchorObject,
   WorkspaceRoomObjectAnchor,
   WorkspaceZagreusContractControl,
@@ -260,8 +259,20 @@ export type WorkspaceAssessment = 'assessed' | 'blocked' | 'unassessed';
 export type WorkspaceFeatureAssessment = 'assessed' | 'unassessed';
 
 /** Closed application state for a structurally supported room feature. */
+/** Why an absent room feature cannot be switched on now. */
+export type WorkspaceFeatureLock =
+  /** The room's entry is not assessed yet. */
+  | { readonly reason: 'unreached' }
+  /** The rules refusing it here, each as one sentence. */
+  | { readonly reason: 'refused'; readonly sentences: readonly string[] };
+
 export type WorkspaceFeaturePresence =
-  | { readonly kind: 'optionalAbsent'; readonly enabled: boolean }
+  | {
+      readonly kind: 'optionalAbsent';
+      readonly enabled: boolean;
+      /** Why it cannot be switched on, while not enabled. */
+      readonly lock?: WorkspaceFeatureLock;
+    }
   | { readonly kind: 'optionalPresent' }
   | { readonly kind: 'forcedPresent' };
 export type WorkspaceProjectionSource = 'authored' | 'canonical' | 'progressive';
@@ -707,6 +718,8 @@ export interface WorkspaceRoomSummary {
     readonly action: 'add' | 'move' | 'remove';
     readonly interactionKey: string;
     readonly legal: boolean;
+    /** Why the success cannot be placed here, while it is not legal. */
+    readonly lock?: WorkspaceFeatureLock;
     /** Only present when selecting this room would replace another placement. */
     readonly currentPlacement?: {
       readonly address: import('@run-planner/engine/authored-project').OccurrenceAddress;
