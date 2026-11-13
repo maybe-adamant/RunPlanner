@@ -1,5 +1,5 @@
 import { resolveRoutePosition, type ResolvedRoutePosition } from '../route-context';
-import { INITIAL_ROLL_KEY, PURGING_POOL_REFRESH_ROLL_KEY } from '../feature-rolls';
+import { PURGING_POOL_REFRESH_ROLL_KEY } from '../feature-rolls';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { SemanticAddress } from '../addresses';
 import {
@@ -179,12 +179,6 @@ function commandContractAddress(command: CommandContractSubject): SemanticAddres
     case 'ReplaceStygianWellRollOffer':
     case 'ReplacePurgingPoolRollSlot':
       return command.action;
-    case 'SellPurgingPoolRollSlot':
-      return createRoomFeatureAddress(command.occurrence, {
-        kind: 'purgingPoolOffer',
-        slotKey: command.slotKey,
-        ...(command.rollKey === INITIAL_ROLL_KEY ? {} : { rollKey: command.rollKey }),
-      });
     case 'InsertReroll':
       return command.occurrence;
     case 'InsertHubReroll':
@@ -272,12 +266,6 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
     case 'ReplaceStygianWellRollOffer':
     case 'ReplacePurgingPoolRollSlot':
       return command.action;
-    case 'SellPurgingPoolRollSlot':
-      return createRoomFeatureAddress(command.occurrence, {
-        kind: 'purgingPoolOffer',
-        slotKey: command.slotKey,
-        ...(command.rollKey === INITIAL_ROLL_KEY ? {} : { rollKey: command.rollKey }),
-      });
     case 'ReplaceStygianWellOffer':
       return createRoomFeatureAddress(command.occurrence, {
         kind: 'stygianWellOffer',

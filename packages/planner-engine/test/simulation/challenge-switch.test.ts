@@ -770,11 +770,16 @@ describe('a left switch fight ends its room', () => {
       occurrence: occurrenceAddress,
     });
     project = settleTestEdit(project, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: occurrenceAddress,
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    project = settleTestEdit(project, {
       kind: 'SetStygianWellPurchase',
       occurrence: occurrenceAddress,
       generationKey: 'initial:healing',
       purchased: true,
-      itemKey: 'ArmorBoostStore',
     });
     const order = occurrence(project, 'F', 'golden-f-b8-e1').roomActions.order;
     expect(order.map((reference) => reference.kind)).toEqual([

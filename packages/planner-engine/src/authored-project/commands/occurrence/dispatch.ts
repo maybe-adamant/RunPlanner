@@ -12,12 +12,7 @@ import { applyShopOccurrenceCommand } from './shop';
 import { applyInfernalContractPedestalCommand } from './infernal-contract-pedestal';
 import { applyPhantomExitCommand } from './phantom-exit';
 import { applyFieldsOccurrenceCommand } from './fields';
-import {
-  applyFeatureRollCommand,
-  pinRollSlot,
-  roomShopItemKeys,
-  withoutStygianWellTwistResults,
-} from './feature-rolls';
+import { applyFeatureRollCommand, withoutStygianWellTwistResults } from './feature-rolls';
 import {
   INITIAL_ROLL_KEY,
   parseStygianWellGenerationKey,
@@ -928,7 +923,6 @@ export function applyOccurrenceCommand(
     case 'ReplaceStygianWellRollOffer':
     case 'InsertPurgingPoolReroll':
     case 'ReplacePurgingPoolRollSlot':
-    case 'SellPurgingPoolRollSlot':
       return applyFeatureRollCommand(document, catalog, located, command);
     case 'ReplaceStygianWellOffer': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
@@ -990,30 +984,7 @@ export function applyOccurrenceCommand(
       );
     }
     case 'SetStygianWellPurchase': {
-      const authored = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      if (authored.stygianWell === undefined)
-        failCommand(command, 'occurrence has no present Stygian Well');
-      const roll = parseStygianWellGenerationKey(command.generationKey);
-      if (command.itemKey !== undefined && !command.purchased)
-        failCommand(command, 'a slot is pinned only with its purchase');
-      if (command.itemKey !== undefined && !roomShopItemKeys(catalog).has(command.itemKey))
-        failCommand(command, 'unknown RoomShop item');
-      const occurrence =
-        command.itemKey === undefined
-          ? authored
-          : roll === undefined
-            ? withStygianWellInitialItem(authored, 'travelDealRefill', command.itemKey)
-            : roll.rollKey === INITIAL_ROLL_KEY
-              ? withStygianWellInitialItem(authored, roll.slotKey, command.itemKey)
-              : pinRollSlot(
-                  catalog,
-                  command,
-                  authored,
-                  'stygianWell',
-                  roll.rollKey,
-                  roll.slotKey,
-                  command.itemKey,
-                );
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       const well = occurrence.stygianWell;
       if (well === undefined) failCommand(command, 'occurrence has no present Stygian Well');
       const generation = command.generationKey;
@@ -1146,35 +1117,6 @@ export function applyOccurrenceCommand(
     case 'ReplaceGorgonDeathDefianceCondition':
       return applyEncounterOccurrenceCommand(document, catalog, located, command);
   }
-}
-
-/**
- * Pins an initial slot's or the Travel Deal restock's item; a changed item
- * drops the Twist result it resolved.
- */
-function withStygianWellInitialItem(
-  occurrence: import('../../model').RoomOccurrence,
-  slotKey: import('../../model').StygianWellSlotKey | 'travelDealRefill',
-  itemKey: string,
-): import('../../model').RoomOccurrence {
-  const well = occurrence.stygianWell!;
-  const previous =
-    slotKey === 'travelDealRefill' ? well.travelDealRefillKey : well.offerKeyBySlot[slotKey];
-  if (previous === itemKey) return occurrence;
-  const generation =
-    slotKey === 'travelDealRefill' ? slotKey : stygianWellGenerationKey(INITIAL_ROLL_KEY, slotKey);
-  return Object.freeze({
-    ...occurrence,
-    stygianWell: withoutStygianWellTwistResults(
-      Object.freeze({
-        ...well,
-        ...(slotKey === 'travelDealRefill'
-          ? { travelDealRefillKey: itemKey }
-          : { offerKeyBySlot: Object.freeze({ ...well.offerKeyBySlot, [slotKey]: itemKey }) }),
-      }),
-      (key) => key === generation,
-    ),
-  });
 }
 
 /** The room's encounters with one locked door's fight decisions replaced, or dropped when undefined. */

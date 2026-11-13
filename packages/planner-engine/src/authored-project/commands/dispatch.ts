@@ -282,7 +282,6 @@ function applyUnchecked(
     case 'ReplacePhantomExit':
     case 'InsertPurgingPoolReroll':
     case 'ReplacePurgingPoolRollSlot':
-    case 'SellPurgingPoolRollSlot':
     case 'ReplacePurgingPoolSlot':
     case 'SetErisSpawned':
     case 'ReplaceChallengeSwitch':

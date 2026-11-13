@@ -568,12 +568,21 @@ describe('live interactions at a gap', () => {
       occurrence: fWell,
       index: roomOrder(well, fWell).length,
     });
-    const bought = apply(rerolled, {
+    const pinned = apply(rerolled, {
+      kind: 'ReplaceStygianWellRollOffer',
+      action: createRoomActionAddress(
+        fBiome,
+        fWell.occurrenceId,
+        roomActionKey({ kind: 'rerollStygianWell', rerollId: 'r1' }),
+      ),
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    const bought = apply(pinned, {
       kind: 'SetStygianWellPurchase',
       occurrence: fWell,
       generationKey: 'r1:healing',
       purchased: true,
-      itemKey: 'ArmorBoostStore',
     });
     // Removing the reroll takes its purchase with it; a saved plan may still hold one.
     const raw = JSON.parse(encodeProjectDocument(bought));

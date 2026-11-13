@@ -396,11 +396,16 @@ describe('Well and Pool roll publication', () => {
       index: occurrence(project, postboss, 0).roomActions.order.length,
     });
     apply({
+      kind: 'ReplaceStygianWellRollOffer',
+      action: action(['rerollStygianWell', 'r1']),
+      slotKey: 'secondLeft',
+      itemKey: 'TemporaryBoonRarityTrait',
+    });
+    apply({
       kind: 'SetStygianWellPurchase',
       occurrence: room,
       generationKey: 'r1:secondLeft',
       purchased: true,
-      itemKey: 'TemporaryBoonRarityTrait',
     });
     apply({
       kind: 'SetStygianWellPurchase',

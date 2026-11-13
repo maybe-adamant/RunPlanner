@@ -195,15 +195,23 @@ describe('Stygian Well rolls', () => {
     });
   });
 
-  it('pin and buy a reroll slot in one edit', () => {
+  it('buy a pinned reroll slot', () => {
     const project = appendWellReroll(base());
-    const bought = applyProjectCommand(project, catalog, {
-      kind: 'SetStygianWellPurchase',
-      occurrence: room,
-      generationKey: 'r1:healing',
-      purchased: true,
-      itemKey: 'HealDropRange',
-    });
+    const bought = applyProjectCommand(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceStygianWellRollOffer',
+        action: wellReroll('r1'),
+        slotKey: 'healing',
+        itemKey: 'HealDropRange',
+      }),
+      catalog,
+      {
+        kind: 'SetStygianWellPurchase',
+        occurrence: room,
+        generationKey: 'r1:healing',
+        purchased: true,
+      },
+    );
     expect(order(bought).slice(-2)).toEqual(
       withItemContents(bought, room, [
         { kind: 'rerollStygianWell', rerollId: 'r1' },
@@ -214,15 +222,6 @@ describe('Stygian Well rolls', () => {
       r1: { healing: 'HealDropRange' },
     });
     expect(findings(bought)).toEqual([]);
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'SetStygianWellPurchase',
-        occurrence: room,
-        generationKey: 'r1:healing',
-        purchased: false,
-        itemKey: 'HealDropRange',
-      }),
-    ).toThrow('a slot is pinned only with its purchase');
   });
 
   it('report a blank slot missing until an edit stocks it, initial ones included', () => {
@@ -253,13 +252,21 @@ describe('Stygian Well rolls', () => {
     });
     expect(findings(stocked)).toEqual([]);
     expect(occurrenceOf(stocked).stygianWell?.offerKeyBySlot.healing).not.toBeNull();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetStygianWellPurchase',
-      occurrence: room,
-      generationKey: 'initial:healing',
-      purchased: true,
-      itemKey: 'HealDropRange',
-    });
+    project = applyProjectCommand(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: room,
+        slotKey: 'healing',
+        itemKey: 'HealDropRange',
+      }),
+      catalog,
+      {
+        kind: 'SetStygianWellPurchase',
+        occurrence: room,
+        generationKey: 'initial:healing',
+        purchased: true,
+      },
+    );
     expect(findings(project)).toEqual([]);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
@@ -553,21 +560,29 @@ describe('Pool of Purging rolls', () => {
     });
   });
 
-  it('pin and sell a reroll slot in one edit', () => {
+  it('sell a pinned reroll slot', () => {
     const project = settle(interacted(), {
       kind: 'InsertPurgingPoolReroll',
       occurrence: room,
       index: order(interacted()).length,
     });
     const traitKey = pool(project).rolls['r1']!.candidateTraitKeysBySlot.right[0]!;
-    const sold = applyProjectCommand(project, catalog, {
-      kind: 'SellPurgingPoolRollSlot',
-      occurrence: room,
-      rollKey: 'r1',
-      slotKey: 'right',
-      traitKey,
-      index: order(project).length,
-    });
+    const sale = { kind: 'sellPurgingPoolTrait', slotKey: 'right', rollKey: 'r1' } as const;
+    const sold = applyProjectCommand(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplacePurgingPoolRollSlot',
+        action: poolReroll('r1'),
+        slotKey: 'right',
+        traitKey,
+      }),
+      catalog,
+      {
+        kind: 'InsertRoomAction',
+        action: actionAt(sale),
+        reference: sale,
+        index: order(project).length,
+      },
+    );
     expect(order(sold).slice(-2)).toEqual(
       withItemContents(sold, room, [
         { kind: 'rerollPurgingPool', rerollId: 'r1' },
@@ -597,7 +612,7 @@ describe('Pool of Purging rolls', () => {
     expect(undoProjectHistory(removedHistory).present).toBe(sold);
   });
 
-  it('pin and sell a blank initial slot in one edit, and refuse a slot already sold', () => {
+  it('sell a stocked initial slot, and refuse a slot already sold', () => {
     const blank = applyProjectCommand(interacted(), catalog, {
       kind: 'ReplacePurgingPoolSlot',
       occurrence: room,
@@ -605,16 +620,22 @@ describe('Pool of Purging rolls', () => {
       traitKey: null,
     });
     const traitKey = pool(blank).candidateTraitKeysBySlot.left[0]!;
+    const sale = { kind: 'sellPurgingPoolTrait', slotKey: 'left' } as const;
     const sell = (project: ProjectDocument) =>
       applyProjectCommand(project, catalog, {
-        kind: 'SellPurgingPoolRollSlot',
-        occurrence: room,
-        rollKey: 'initial',
-        slotKey: 'left',
-        traitKey,
+        kind: 'InsertRoomAction',
+        action: actionAt(sale),
+        reference: sale,
         index: order(project).length,
       });
-    const sold = sell(blank);
+    const sold = sell(
+      applyProjectCommand(blank, catalog, {
+        kind: 'ReplacePurgingPoolSlot',
+        occurrence: room,
+        slotKey: 'left',
+        traitKey,
+      }),
+    );
     expect(
       sold.route.biomes[0]!.topology!.occurrences.find((entry) => entry.occurrenceId === postboss)!
         .purgingPool?.traitKeyBySlot.left,
@@ -623,17 +644,7 @@ describe('Pool of Purging rolls', () => {
       withItemContent(sold, room, { kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
     );
     expect(findings(sold)).toEqual([]);
-    expect(() => sell(sold)).toThrow('the slot is already sold');
-    expect(() =>
-      applyProjectCommand(blank, catalog, {
-        kind: 'SellPurgingPoolRollSlot',
-        occurrence: room,
-        rollKey: 'r9',
-        slotKey: 'left',
-        traitKey,
-        index: order(blank).length,
-      }),
-    ).toThrow('room action is not an ordered Pool reroll');
+    expect(() => sell(sold)).toThrow();
   });
 
   function pinnedPoolReroll(
@@ -740,27 +751,36 @@ describe('roll-reference ordering', () => {
 
   it('keeps a purchase or sale from a reroll after that reroll', () => {
     let project = applyProjectCommand(appendWellReroll(base()), catalog, {
+      kind: 'ReplaceStygianWellRollOffer',
+      action: wellReroll('r1'),
+      slotKey: 'healing',
+      itemKey: 'HealDropRange',
+    });
+    project = applyProjectCommand(project, catalog, {
       kind: 'SetStygianWellPurchase',
       occurrence: room,
       generationKey: 'r1:healing',
       purchased: true,
-      itemKey: 'HealDropRange',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'InsertPurgingPoolReroll',
       occurrence: room,
       index: order(project).length,
     });
+    const sale = { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' } as const;
     project = applyProjectCommand(project, catalog, {
-      kind: 'SellPurgingPoolRollSlot',
-      occurrence: room,
-      rollKey: 'r1',
+      kind: 'ReplacePurgingPoolRollSlot',
+      action: poolReroll('r1'),
       slotKey: 'left',
       traitKey: 'ApolloWeaponBoon',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: actionAt(sale),
+      reference: sale,
       index: order(project).length,
     });
     const purchase = { kind: 'purchaseStygianWellOffer', generationKey: 'r1:healing' } as const;
-    const sale = { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' } as const;
     const wellAt = order(project).findIndex((action) => action.kind === 'rerollStygianWell');
     const poolAt = order(project).findIndex((action) => action.kind === 'rerollPurgingPool');
     expect(canMove(project, purchase, wellAt)).toBe(false);
