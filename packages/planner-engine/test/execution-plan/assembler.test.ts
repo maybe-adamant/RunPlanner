@@ -23,6 +23,7 @@ import {
   purchaseTestHermesShrineOffer,
   replaceTestPlacedItem,
   settleTestEdit,
+  stockTestProject,
 } from '@run-planner/test-fixtures/shared';
 import {
   repinBoughtStygianWellSlot,
@@ -127,8 +128,12 @@ function withFigLeaf(project: ReturnType<typeof createCompleteFGProject>) {
   });
 }
 
+/** The plan's product once an edit has stocked the stock its changes left blank or stale. */
 function productFor(project: ReturnType<typeof createCompleteFGProject>) {
-  return assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project), catalog });
+  return assembleExecutionProduct({
+    assembly: simulateProjectAssembly(catalog, stockTestProject(project)),
+    catalog,
+  });
 }
 
 function artificerCreatedBoonProject() {

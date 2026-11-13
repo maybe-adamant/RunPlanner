@@ -117,9 +117,15 @@ export function collectTestRequiredItems(project: ProjectDocument): ProjectDocum
 export function authorTestTraitsAndRequiredItems(project: ProjectDocument): ProjectDocument {
   let current = project;
   for (let pass = 0; pass < 64; pass += 1) {
-    const next = stockTestProject(collectTestRequiredItems(authorLegalTraitOffers(current)));
-    if (next === current) return current;
-    current = next;
+    const next = collectTestRequiredItems(authorLegalTraitOffers(current));
+    if (next !== current) {
+      current = next;
+      continue;
+    }
+    // With traits and required items settled, stock what the walk reached.
+    const stocked = stockTestProject(current);
+    if (stocked === current) return current;
+    current = stocked;
   }
   throw new Error('trait offers and required items did not settle');
 }

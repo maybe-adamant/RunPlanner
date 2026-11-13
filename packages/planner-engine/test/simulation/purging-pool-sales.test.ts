@@ -26,6 +26,7 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import { reachedFrontier } from '../support/reward-frontier';
+import { stockTestProject } from '@run-planner/test-fixtures/shared';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const occurrence = createOccurrenceAddress(
@@ -41,7 +42,7 @@ function fRewards(project: ProjectDocument) {
   return biomeEvaluation.rewards;
 }
 
-function withPoolSlots(project: ProjectDocument, traitKeys: readonly string[]) {
+function withPoolSlots(project: ProjectDocument, traitKeys: readonly string[], list?: 'refresh') {
   const interacted = project;
   return traitKeys.reduce(
     (current, traitKey, index) =>
@@ -50,10 +51,17 @@ function withPoolSlots(project: ProjectDocument, traitKeys: readonly string[]) {
         occurrence,
         slotKey: (['left', 'middle', 'right'] as const)[index]!,
         traitKey,
+        ...(list === undefined ? {} : { list }),
       }),
     interacted,
   );
 }
+
+const pool = (project: ProjectDocument) =>
+  project.route.biomes
+    .find((plan) => plan.biomeKey === 'F')!
+    .topology!.occurrences.find((room) => room.occurrenceId === occurrence.occurrenceId)!
+    .purgingPool!;
 
 function sell(project: ProjectDocument, slotKey: 'left' | 'middle' | 'right') {
   const reference = { kind: 'sellPurgingPoolTrait' as const, slotKey };
@@ -76,7 +84,7 @@ function asConfiguredTailF(project: ProjectDocument): ProjectDocument {
 }
 
 describe('Purging Pool sales', () => {
-  it('waits for the fountain outcome before exposing pool inventory and then sells the rarified boon', () => {
+  it('regenerates the list when the Phial changes a listed boon, and sells from the regenerated list', () => {
     let project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: {
@@ -87,52 +95,48 @@ describe('Purging Pool sales', () => {
       },
       keepsakeKey: 'FountainRarityKeepsake',
     });
-    for (const slotKey of ['left', 'middle', 'right'] as const)
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplacePurgingPoolSlot',
-        occurrence,
-        slotKey,
-        traitKey: null,
-      });
+    project = withPoolSlots(project, ['ApolloWeaponBoon', 'ZeusSpecialBoon', 'HeraCastBoon']);
     const fountain = createRoomActionAddress(
       biome,
       occurrence.occurrenceId,
       roomActionKey({ kind: 'useFountain' }),
     );
     const outcome = createFountainRarityOutcomeAddress(fountain);
+    // An unresolved Phial withholds the judgment of the entry list.
     const pending = simulateProjectAssembly(catalog, project);
-    expect(purgingPoolCandidateForProjectEvaluationAssembly(pending, occurrence)).toBeUndefined();
+    expect(
+      purgingPoolCandidateForProjectEvaluationAssembly(pending, occurrence)?.refresh,
+    ).toBeUndefined();
     expect(pending.evaluation.route.biomes[0]?.findings).toContainEqual(
       expect.objectContaining({ code: 'fountainRarityResultMissing', origin: outcome }),
     );
-    expect(pending.evaluation.route.biomes[0]?.findings).not.toContainEqual(
-      expect.objectContaining({ code: 'purgingPoolTraitMissing' }),
+    // Rarifying a listed boon makes the entry list stale; the edit stocks the regenerated list.
+    const rarified = stockTestProject(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFountainRarityTarget',
+        outcome,
+        targetTraitKey: 'ApolloWeaponBoon',
+      }),
     );
-
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceFountainRarityTarget',
-      outcome,
-      targetTraitKey: 'ApolloWeaponBoon',
-    });
-    const ready = simulateProjectAssembly(catalog, project);
-    const capability = purgingPoolCandidateForProjectEvaluationAssembly(ready, occurrence);
-    expect(capability?.candidateTraitKeysBySlot.left).toContain('ApolloWeaponBoon');
-    // Blank slots stay native.
-    expect(ready.evaluation.route.biomes[0]?.findings).not.toContainEqual(
-      expect.objectContaining({ code: 'purgingPoolTraitMissing' }),
+    const ready = simulateProjectAssembly(catalog, rarified);
+    const refresh = purgingPoolCandidateForProjectEvaluationAssembly(ready, occurrence)?.refresh;
+    expect(refresh?.offeredSlotKeys).toEqual(['left', 'middle', 'right']);
+    expect(Object.keys(pool(rarified).refreshTraitKeyBySlot ?? {})).toHaveLength(3);
+    expect(pool(rarified).traitKeyBySlot.left).toBe('ApolloWeaponBoon');
+    expect(
+      ready.evaluation.findings.filter((finding) => finding.code.startsWith('purgingPool')),
+    ).toEqual([]);
+    const selected = withPoolSlots(
+      rarified,
+      ['ApolloWeaponBoon', 'ZeusSpecialBoon', 'HeraCastBoon'],
+      'refresh',
     );
-    const selected = withPoolSlots(project, [
-      'ApolloWeaponBoon',
-      'ZeusSpecialBoon',
-      'HeraCastBoon',
-    ]);
-    const beforeSale = fRewards(selected);
-    expect(beforeSale.frontier).toBeDefined();
-    expect(beforeSale.frontier?.state.traitHistory.equippedTraits.ApolloWeaponBoon).toMatchObject({
+    expect(
+      fRewards(selected).frontier?.state.traitHistory.equippedTraits.ApolloWeaponBoon,
+    ).toMatchObject({
       rarity: 'Heroic',
     });
     const afterSale = fRewards(sell(selected, 'left'));
-    expect(afterSale.frontier).toBeDefined();
     expect(
       reachedFrontier(afterSale).every(
         (branch) => branch.state.traitHistory.equippedTraits.ApolloWeaponBoon === undefined,
@@ -280,17 +284,19 @@ describe('Purging Pool sales', () => {
       action: fountain,
       toIndex: 0,
     });
-    const credited = fRewards(initial).frontier?.state.traitHistory;
+    const credited = fRewards(stockTestProject(initial)).frontier?.state.traitHistory;
     expect(credited?.equippedTraits.BoonDecayBoon).toMatchObject({ rarity: 'Heroic' });
     expect(credited?.equippedTraits.ApolloWeaponBoon).toMatchObject({ rarity: 'Heroic', level: 6 });
     const creditedTarget = credited?.equippedTraits.ApolloWeaponBoon;
     if (creditedTarget === undefined) throw new Error('missing credited Bridal Glow target');
 
-    const configured = withPoolSlots(initial, [
-      'BoonDecayBoon',
-      'ApolloWeaponBoon',
-      'ZeusSpecialBoon',
-    ]);
+    // The Phial rarifies a listed boon, so the Pool sells from its regenerated list.
+    const listed = ['BoonDecayBoon', 'ApolloWeaponBoon', 'ZeusSpecialBoon'];
+    const configured = withPoolSlots(
+      stockTestProject(withPoolSlots(initial, listed)),
+      listed,
+      'refresh',
+    );
     const sold = fRewards(sell(configured, 'left'));
     expect(sold.frontier).toBeDefined();
     expect(

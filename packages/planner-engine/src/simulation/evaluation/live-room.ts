@@ -36,7 +36,6 @@ import type {
   AcquisitionDisposition,
   AuthoredRewardState,
   ProjectDocument,
-  PurgingPoolSlotKey,
   RoomActionReference,
   RoomOccurrence,
 } from '../../authored-project/model';
@@ -148,15 +147,6 @@ export type LiveVerbChoice =
   | { readonly picker: 'rerollPress'; readonly timing: 'before'; readonly surface: RerollSurface }
   /** The list a Well or Pool reroll restocks, pinned slot by slot. */
   | { readonly picker: 'stygianWellRoll' | 'purgingPoolRoll'; readonly timing: 'after' }
-  /** The trait an unpinned Pool slot sells: one the list can show there that is still held. */
-  | {
-      readonly picker: 'purgingPoolSale';
-      readonly timing: 'before';
-      readonly rollKey: string;
-      readonly slotKey: PurgingPoolSlotKey;
-      /** Never empty. */
-      readonly traitKeys: readonly string[];
-    }
   /** The keepsake the rack swaps in; with none chosen the held keepsake stays. */
   | { readonly picker: 'keepsake'; readonly timing: 'after' }
   /** The reward the Artificer's replacement takes. */
@@ -768,37 +758,7 @@ function objectChoiceVerbs(
   const pool = poolCapability?.interaction;
   if (pool === undefined) return frozen(verbs);
   featureReroll('purgingPool', pool.reroll);
-  // A pinned slot's sale is a roster row. An unpinned one sells a trait its
-  // list can show that is still held where the room's actions end.
-  const listCandidates =
-    pool.rollKey === INITIAL_ROLL_KEY
-      ? poolCapability!.candidateTraitKeysBySlot
-      : poolCapability!.rolls[pool.rollKey]?.candidateTraitKeysBySlot;
-  const held = new Set(Object.values(pool.pendingRoll.candidateTraitKeysBySlot).flat());
-  for (const offer of pool.offers) {
-    if (offer.traitKey !== null) continue;
-    const traitKeys = (listCandidates?.[offer.slotKey] ?? []).filter((key) => held.has(key));
-    if (traitKeys.length === 0) continue;
-    verbs.push(
-      frozen({
-        object: 'purgingPool' as const,
-        owner: occurrence,
-        gap: orderLength,
-        verb: frozen({
-          verb: 'sell' as const,
-          participation: 'optional' as const,
-          reference: offer.sale,
-          choice: frozen({
-            picker: 'purgingPoolSale' as const,
-            timing: 'before' as const,
-            rollKey: pool.rollKey,
-            slotKey: offer.slotKey,
-            traitKeys: frozen(traitKeys),
-          }),
-        }),
-      }),
-    );
-  }
+  // Each stocked slot's sale is a roster row.
   return frozen(verbs);
 }
 

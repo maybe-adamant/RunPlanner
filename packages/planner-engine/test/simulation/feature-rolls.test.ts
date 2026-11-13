@@ -447,32 +447,18 @@ describe('Pool of Purging rolls', () => {
     });
     const capability = pool(project);
     expect(capability.rolls['r1']?.offeredSlotKeys).toEqual(['left', 'middle', 'right']);
+    // The reroll's edit stocked its list.
+    const list = occurrenceOf(project).purgingPool!.rerollTraitKeyBySlot!['r1']!;
     expect(capability.interaction).toMatchObject({
       rollKey: 'r1',
       reroll: { cost: 2 },
       offers: [
-        { slotKey: 'left', traitKey: null, sale: { slotKey: 'left', rollKey: 'r1' } },
-        { slotKey: 'middle', traitKey: null },
-        { slotKey: 'right', traitKey: null },
+        { slotKey: 'left', traitKey: list.left, sale: { slotKey: 'left', rollKey: 'r1' } },
+        { slotKey: 'middle', traitKey: list.middle },
+        { slotKey: 'right', traitKey: list.right },
       ],
     });
-    const traitKey = capability.rolls['r1']!.candidateTraitKeysBySlot.left[0]!;
-    // An unpinned slot cannot be sold until its trait is pinned.
     const sale = { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' } as const;
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'InsertRoomAction',
-        action: actionAt(sale),
-        reference: sale,
-        index: order(project).length,
-      }),
-    ).toThrow('room action is not active for this occurrence');
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplacePurgingPoolRollSlot',
-      action: poolReroll('r1'),
-      slotKey: 'left',
-      traitKey,
-    });
     project = applyProjectCommand(project, catalog, {
       kind: 'InsertRoomAction',
       action: actionAt(sale),
@@ -525,8 +511,8 @@ describe('Pool of Purging rolls', () => {
         { kind: 'sellPurgingPoolTrait', slotKey: 'right', rollKey: 'r1' },
       ]),
     );
-    expect(occurrenceOf(sold).purgingPool?.rerollTraitKeyBySlot).toEqual({
-      r1: { right: traitKey },
+    expect(occurrenceOf(sold).purgingPool?.rerollTraitKeyBySlot?.['r1']).toMatchObject({
+      right: traitKey,
     });
     // Removing the reroll takes its list and the list's sales with it.
     const removed = applyProjectCommand(sold, catalog, {
@@ -592,7 +578,7 @@ describe('Pool of Purging rolls', () => {
     rerollId: string,
     traits: Readonly<Partial<Record<'left' | 'middle' | 'right', string>>>,
   ): ProjectDocument {
-    let next = applyProjectCommand(project, catalog, {
+    let next = settle(project, {
       kind: 'InsertPurgingPoolReroll',
       occurrence: room,
       index: order(project).length,
@@ -624,6 +610,7 @@ describe('Pool of Purging rolls', () => {
     const partial = pinnedPoolReroll(interacted(), 'r1', {
       left: 'ApolloWeaponBoon',
       middle: 'HeraCastBoon',
+      right: 'RestockBoon',
     });
     expect(findings(partial)).toEqual([]);
   });
@@ -657,7 +644,7 @@ describe('Pool of Purging rolls', () => {
       reference: sale,
       index: order(project).length,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settle(project, {
       kind: 'InsertPurgingPoolReroll',
       occurrence: room,
       index: order(project).length - 1,

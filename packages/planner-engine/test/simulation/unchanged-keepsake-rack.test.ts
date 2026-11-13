@@ -1,3 +1,4 @@
+import { stockTestProject } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -34,7 +35,7 @@ function rackFirst(project: ProjectDocument): ProjectDocument {
 }
 
 function evaluated(project: ProjectDocument) {
-  const assembly = simulateProjectAssembly(catalog, project);
+  const assembly = simulateProjectAssembly(catalog, stockTestProject(project));
   const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
   if (f?.authoring !== 'complete' || f.validity !== 'valid')
     throw new Error(`expected a valid F: ${JSON.stringify(f?.findings)}`);

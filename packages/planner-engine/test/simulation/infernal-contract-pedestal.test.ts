@@ -184,7 +184,7 @@ describe('Infernal Contract pedestal', () => {
     expect(occurrence(project, shopId).acquisitionSites?.infernalContractPedestal).toEqual({
       pickupEntries: { infernalContractReward: null },
     });
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry: createAcquisitionEntryAddress(site, 'infernalContractReward'),
       value: { rewardType: 'BlindBoxLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
@@ -237,7 +237,7 @@ describe('Infernal Contract pedestal', () => {
       applyProjectCommand(project, catalog, { kind: 'RemoveRoomAction', action }),
     ).toThrowError(expect.objectContaining({ commandKind: 'RemoveRoomAction' }));
     expect(() =>
-      applyProjectCommand(project, catalog, {
+      settleTestEdit(project, {
         kind: 'ReplaceInfernalContractPedestalOffer',
         pedestal: createInfernalContractPedestalAddress(
           goldenGBiome,
@@ -325,7 +325,7 @@ describe('Infernal Contract pedestal acquisition and publication', () => {
     expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([
       expect.objectContaining({ code: 'rewardMissing', origin: gPedestal }),
     ]);
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceInfernalContractPedestalOffer',
       pedestal: gPedestal,
       value: { rewardType: 'BlindBoxLoot' },
@@ -344,7 +344,7 @@ describe('Infernal Contract pedestal acquisition and publication', () => {
       expect.objectContaining({ code: 'rewardMissing', origin: gEntry }),
     ]);
     project = authorTestTraitsAndRequiredItems(
-      applyProjectCommand(project, catalog, {
+      settleTestEdit(project, {
         kind: 'ReplaceAcquisitionEntryOffer',
         entry: gEntry,
         value: {
@@ -394,7 +394,7 @@ describe('Infernal Contract pedestal acquisition and publication', () => {
     if (selectedTraitKey === undefined) throw new Error('pedestal Pom has no eligible target');
     const value = { kind: 'choice', offeredTraitKeys, selectedTraitKey } as const;
     expect(capability?.evaluate(value).supported).toBe(true);
-    project = applyProjectCommand(project, catalog, {
+    project = settleTestEdit(project, {
       kind: 'ReplaceLevelResolution',
       levelResolution: resolution,
       value,
@@ -425,7 +425,7 @@ describe('Infernal Contract pedestal acquisition and publication', () => {
     ['TalentDrop', 3],
     ['TalentBigDrop', 5],
   ] as const)('accounts for collected %s points and their removal', (rewardType, points) => {
-    let project = applyProjectCommand(contractShopProject(true), catalog, {
+    let project = settleTestEdit(contractShopProject(true), {
       kind: 'ReplaceInfernalContractPedestalOffer',
       pedestal: gPedestal,
       value: { rewardType },

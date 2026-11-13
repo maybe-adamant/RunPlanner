@@ -8,11 +8,16 @@ import {
   createFountainRarityOutcomeAddress,
   createRoomFeatureAddress,
   semanticAddressKey,
-  type OccurrenceAddress,
 } from '../../../../authored-project/addresses';
 import { routePurgingPool } from '../../../../authored-project/route-profile';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
-import { assessPurgingPool, type PurgingPoolAssessment } from '../../../commerce/purging-pool';
+import {
+  assessPurgingPoolList,
+  isPurgingPoolEligibleTrait,
+  type PurgingPoolAssessment,
+} from '../../../commerce/purging-pool';
+import { PURGING_POOL_REFRESH_ROLL_KEY } from '../../../../authored-project/feature-rolls';
+import type { PurgingPoolRoomAssessment } from '../chronology-walk';
 import { ownerRegion } from '../../../finding-regions';
 import type { AuthoredFountainRarityResult } from '../../../../authored-project/model';
 import { assessPhialTraitTargets, consumePhial } from '../../../keepsakes/trait-effects';
@@ -35,13 +40,13 @@ export interface FountainUsedTransition {
   readonly timelineFacts: PlannerTimelineFacts;
   /** The authored Phial target's rarity across a use that settled with one. */
   readonly settlement?: FountainRaritySettlement;
-  /** The Purging Pool frontier this fountain unlocked, keyed by its room. */
-  readonly purgingPoolAssessment?: {
+  /**
+   * This use's judgment of its room's Pool entry list, keyed by its room: the
+   * list the Pool regenerates when the use made it stale, absent when it did not.
+   */
+  readonly purgingPoolRefresh?: {
     readonly key: string;
-    readonly value: {
-      readonly origin: OccurrenceAddress;
-      readonly assessment: PurgingPoolAssessment;
-    };
+    readonly refresh?: PurgingPoolAssessment;
   };
 }
 
@@ -58,12 +63,15 @@ export function applyFountainUsedTransition(
   branch: RewardBranchState | undefined,
   /** Undefined for a Hub-owned or non-authored fountain. */
   room: CanonicalAuthoredRoom | undefined,
+  /** The room's Pool entry list, when it has one. */
+  pool?: PurgingPoolRoomAssessment,
 ): FountainUsedTransition {
   const used = resolveFountainUse(catalog, event, result, branch);
-  // The fountain unlocks Postboss facilities. Capture the pool only after
-  // its rarity effects settle, never from entry or an unresolved Phial.
-  // A Pool on a route without one is never assessed, so its sales stay unavailable;
-  // only its use, an action, is a finding.
+  // The fountain unlocks Postboss facilities. Opening the Pool regenerates its
+  // list when a listed boon is gone or its rarity changed since the list was
+  // made; an unresolved Phial withholds that judgment. A Pool on a route without
+  // one is never assessed, so its sales stay unavailable; only its use, an
+  // action, is a finding.
   if (room?.purgingPool === undefined) return used;
   const findings = [...used.findings];
   const chronology = () =>
@@ -93,13 +101,30 @@ export function applyFountainUsedTransition(
     );
     return Object.freeze({ ...used, findings: Object.freeze(findings) });
   }
-  if (used.branch === undefined) return used;
-  const assessment = assessPurgingPool(
+  if (used.branch === undefined || pool === undefined) return used;
+  const traits = used.branch.state.traitHistory.equippedTraits;
+  const stale = pool.assessment.offeredSlotKeys.some((slotKey) => {
+    const traitKey = room.purgingPool!.traitKeyBySlot[slotKey];
+    if (traitKey === null) return false;
+    const trait = traits[traitKey];
+    return (
+      trait === undefined ||
+      !isPurgingPoolEligibleTrait(catalog, trait) ||
+      trait.rarity !== pool.entryRarities[traitKey]
+    );
+  });
+  if (!stale)
+    return Object.freeze({
+      ...used,
+      findings: Object.freeze(findings),
+      purgingPoolRefresh: Object.freeze({ key: semanticAddressKey(room.origin) }),
+    });
+  const refresh = assessPurgingPoolList(
     catalog,
-    room.purgingPool,
-    used.branch.state.traitHistory.equippedTraits,
+    room.purgingPool.refreshTraitKeyBySlot ?? {},
+    traits,
   );
-  for (const finding of assessment.findings)
+  for (const finding of refresh.findings)
     findings.push(
       Object.freeze({
         finding: rewardFinding(
@@ -107,6 +132,7 @@ export function applyFountainUsedTransition(
           createRoomFeatureAddress(room.origin, {
             kind: 'purgingPoolOffer',
             slotKey: finding.slotKey,
+            rollKey: PURGING_POOL_REFRESH_ROLL_KEY,
           }),
           { ...finding.evidence, slotKey: finding.slotKey },
         ),
@@ -117,10 +143,7 @@ export function applyFountainUsedTransition(
   return Object.freeze({
     ...used,
     findings: Object.freeze(findings),
-    purgingPoolAssessment: Object.freeze({
-      key: semanticAddressKey(room.origin),
-      value: Object.freeze({ origin: room.origin, assessment }),
-    }),
+    purgingPoolRefresh: Object.freeze({ key: semanticAddressKey(room.origin), refresh }),
   });
 }
 

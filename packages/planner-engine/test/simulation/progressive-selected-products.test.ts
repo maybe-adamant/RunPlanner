@@ -1,3 +1,4 @@
+import { stockTestProject } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 import { ordinaryRoutePosition } from '../support/route-position';
 
@@ -507,11 +508,14 @@ describe('progressive selected and blocked products', () => {
       reward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
-    completeProject = applyProjectCommand(completeProject, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait,
-      value: completeOffer,
-    });
+    // The changed H boons leave its Pool's lists stale, as an edit would redraw them.
+    completeProject = stockTestProject(
+      applyProjectCommand(completeProject, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait,
+        value: completeOffer,
+      }),
+    );
     const completeEvaluation = simulateProject(catalog, completeProject);
     const complete = completeEvaluation.route?.biomes.find(
       (candidate) => candidate.biomeKey === 'H',

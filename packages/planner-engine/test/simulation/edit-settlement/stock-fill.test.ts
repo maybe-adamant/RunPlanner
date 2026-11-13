@@ -224,4 +224,30 @@ describe('stock filled on first reach', () => {
       );
     });
   });
+
+  describe('a Purging Pool', () => {
+    const pool = createOccurrenceAddress(f, createOccurrenceId('golden-f-preboss-shop:postboss'));
+
+    it('redraws the unsold slots of a list an edit leaves stale, keeping the sold one', () => {
+      const project = loadCheckpoint('underworld-f-pool');
+      const before = occurrenceOf(project, pool).purgingPool!.traitKeyBySlot;
+      // A listed boon the run does not hold makes the entry list stale.
+      const settled = settle(project, {
+        kind: 'ReplacePurgingPoolSlot',
+        occurrence: pool,
+        slotKey: 'middle',
+        traitKey: 'AphroditeWeaponBoon',
+      });
+      expect(settled.fault).toBeUndefined();
+      const after = occurrenceOf(settled.assembly.project, pool).purgingPool!.traitKeyBySlot;
+      expect(after.left).toBe(before.left);
+      expect(after.middle).not.toBe('AphroditeWeaponBoon');
+      expect(new Set(Object.values(after)).size).toBe(3);
+      expect(
+        findingCodes(settled.assembly.project).filter((finding) =>
+          finding.code.startsWith('purgingPool'),
+        ),
+      ).toEqual([]);
+    });
+  });
 });

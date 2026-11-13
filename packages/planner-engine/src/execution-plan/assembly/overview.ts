@@ -685,8 +685,10 @@ function executionPurgingPool(
       traits: executionPoolTraits(purgingPoolRerollPins(room.purgingPool, reroll.rerollId)),
     }),
   );
+  const refresh = room.purgingPool.refreshTraitKeyBySlot;
   return Object.freeze({
     traits: executionPoolTraits(room.purgingPool.traitKeyBySlot),
+    ...(refresh === undefined ? {} : { refreshTraits: executionPoolTraits(refresh) }),
     ...(rerolls.length === 0 ? {} : { rerolls: Object.freeze(rerolls) }),
   });
 }

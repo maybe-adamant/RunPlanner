@@ -580,10 +580,12 @@ export type PhantomExitCommand = {
 };
 export type PurgingPoolCommand =
   | {
+      /** Stocks or, with null, clears one slot of the entry list or, with `refresh`, the regenerated one. */
       readonly kind: 'ReplacePurgingPoolSlot';
       readonly occurrence: OccurrenceAddress;
       readonly slotKey: 'left' | 'middle' | 'right';
       readonly traitKey: string | null;
+      readonly list?: 'refresh';
     }
   | {
       /** Inserts an unpinned Pool reroll; the engine allocates its id. */

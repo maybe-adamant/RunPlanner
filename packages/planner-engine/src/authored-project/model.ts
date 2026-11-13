@@ -170,15 +170,22 @@ export interface ShopState {
 export type PurgingPoolSlotKey = 'left' | 'middle' | 'right';
 
 /**
- * The Pool's observed sell lists: the initial one, where a null slot stays
- * native until a sale needs it, and each later list a `rerollPurgingPool`
- * room action draws. Use follows from the room's actions.
+ * The Pool's sell lists: the entry list the room generates on entry, the list
+ * the Pool regenerates when the fountain use makes the entry list stale, and
+ * each later list a `rerollPurgingPool` room action draws. A blank slot is
+ * stocked by the edit whose settlement first reaches it. Use follows from the
+ * room's actions.
  */
 export interface PurgingPoolState {
   readonly traitKeyBySlot: Readonly<Record<PurgingPoolSlotKey, string | null>>;
   /**
-   * The pinned slots of each present Pool reroll's list, by its `rerollId`;
-   * an unpinned slot stays native. Absent when nothing is pinned.
+   * The regenerated list's stocked slots, used only while the fountain use
+   * changes a listed boon's rarity; absent when nothing is stocked.
+   */
+  readonly refreshTraitKeyBySlot?: Readonly<Partial<Record<PurgingPoolSlotKey, string>>>;
+  /**
+   * The stocked slots of each present Pool reroll's list, by its `rerollId`;
+   * absent when nothing is stocked.
    */
   readonly rerollTraitKeyBySlot?: Readonly<
     Record<string, Readonly<Partial<Record<PurgingPoolSlotKey, string>>>>

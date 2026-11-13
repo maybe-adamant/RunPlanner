@@ -880,14 +880,22 @@ export interface ExecutionOverview {
     readonly anchorId?: number;
   };
   readonly purgingPool?: {
-    /** The initial list's pinned slots; the others stay native. */
+    /** The entry list the room generates on entry, slot by slot. */
     readonly traits: readonly {
       readonly slotKey: 'left' | 'middle' | 'right';
       readonly traitKey: string;
     }[];
     /**
+     * The list the Pool regenerates when it first opens because the fountain
+     * use changed a listed boon's rarity; absent when the entry list stays.
+     */
+    readonly refreshTraits?: readonly {
+      readonly slotKey: 'left' | 'middle' | 'right';
+      readonly traitKey: string;
+    }[];
+    /**
      * Each Pool reroll in action order: the k-th native reroll installs the
-     * k-th entry. Only pinned slots are listed; the others stay native.
+     * k-th entry, slot by slot.
      */
     readonly rerolls?: readonly {
       readonly rollKey: string;

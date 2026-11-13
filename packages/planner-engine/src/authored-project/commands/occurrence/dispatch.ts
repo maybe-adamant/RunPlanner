@@ -842,6 +842,26 @@ export function applyOccurrenceCommand(
         failCommand(command, `unknown Purging Pool slot ${String(command.slotKey)}`);
       if (command.traitKey !== null && catalog.traits.byKey[command.traitKey] === undefined)
         failCommand(command, 'unknown trait');
+      if (command.list === 'refresh') {
+        const { refreshTraitKeyBySlot: previous, ...pool } = occurrence.purgingPool;
+        const { [command.slotKey]: _replaced, ...kept } = previous ?? {};
+        void _replaced;
+        const refresh =
+          command.traitKey === null ? kept : { ...kept, [command.slotKey]: command.traitKey };
+        return updateOccurrence(
+          document,
+          located,
+          Object.freeze({
+            ...occurrence,
+            purgingPool: Object.freeze({
+              ...pool,
+              ...(Object.keys(refresh).length === 0
+                ? {}
+                : { refreshTraitKeyBySlot: Object.freeze(refresh) }),
+            }),
+          }),
+        );
+      }
       return updateOccurrence(
         document,
         located,

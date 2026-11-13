@@ -3,7 +3,9 @@ import {
   settleRewardSpawn,
   spawnDueHermesDeliveries,
 } from '../offer-lifecycle/spawned-trait-offers';
-import { routeRoomShop } from '../../../../authored-project/route-profile';
+import { routePurgingPool, routeRoomShop } from '../../../../authored-project/route-profile';
+import { assessPurgingPool } from '../../../commerce/purging-pool';
+import type { PurgingPoolRoomAssessment } from '../chronology-walk';
 import type { Catalog } from '../../../../catalog-schema';
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import {
@@ -70,6 +72,8 @@ export interface RoomEnteredTransition {
     readonly origin: OccurrenceAddress;
     readonly entry: StygianWellEntryCandidateContext;
   };
+  /** The Pool's entry list, generated from the traits held on entry. */
+  readonly purgingPoolAssessment?: PurgingPoolRoomAssessment;
   /** What native could place at a switch host's entry, observed switch or not. */
   readonly challengeSwitchAssessment?: {
     readonly origin: OccurrenceAddress;
@@ -545,9 +549,47 @@ export function applyRoomEnteredTransition(
       }
     }
   }
+  let purgingPoolAssessment: PurgingPoolRoomAssessment | undefined;
+  if (
+    room?.purgingPool !== undefined &&
+    next !== undefined &&
+    routePurgingPool(catalog.rooms.byKey[room.gameName], room.origin.routeKey) !== undefined
+  ) {
+    const traits = next.state.traitHistory.equippedTraits;
+    const assessment = assessPurgingPool(catalog, room.purgingPool, traits);
+    for (const finding of assessment.findings)
+      findings.push(
+        Object.freeze({
+          finding: rewardFinding(
+            finding.code,
+            createRoomFeatureAddress(room.origin, {
+              kind: 'purgingPoolOffer',
+              slotKey: finding.slotKey,
+            }),
+            { ...finding.evidence, slotKey: finding.slotKey },
+          ),
+          region: ownerRegion(room.origin),
+          chronology: findingChronology,
+        }),
+      );
+    purgingPoolAssessment = Object.freeze({
+      origin: room.origin,
+      assessment,
+      entryRarities: Object.freeze(
+        Object.fromEntries(
+          Object.values(room.purgingPool.traitKeyBySlot).flatMap((traitKey) =>
+            traitKey === null || traits[traitKey] === undefined
+              ? []
+              : [[traitKey, traits[traitKey]!.rarity]],
+          ),
+        ),
+      ),
+    });
+  }
   return Object.freeze({
     branch: next,
     findings: Object.freeze(findings),
+    ...(purgingPoolAssessment === undefined ? {} : { purgingPoolAssessment }),
     generatedPickupPlacements: dueDeliveries?.generatedPickupPlacements ?? Object.freeze([]),
     derivedAcquisitionEntryFrontiers: dueDeliveries?.frontiers ?? Object.freeze([]),
     ...(hermesShrineAssessment === undefined ? {} : { hermesShrineAssessment }),
