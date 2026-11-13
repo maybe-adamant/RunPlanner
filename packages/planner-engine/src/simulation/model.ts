@@ -259,6 +259,7 @@ export function isRequiredMissingInputFinding(
     case 'chaosRejectedBlockMissing':
     case 'hermesShrineDeliveryPlacementRequired':
     case 'echoGoldPickupPlacementRequired':
+    case 'ixionChaosMissing':
     case 'hexActivationMissing':
     case 'rewardMissing':
     case 'traitOfferMissing':

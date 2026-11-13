@@ -443,6 +443,33 @@ describe('Stygian Well consequential purchase state', () => {
     expect(forcedFindings).not.toContainEqual(
       expect.objectContaining({ code: 'ixionChaosMissing' }),
     );
+    // A plan that lost the forced gate misses a required input: the game spawns it.
+    const gateless = {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((biome) =>
+          biome.biomeKey !== 'H' || biome.topology === null
+            ? biome
+            : {
+                ...biome,
+                topology: {
+                  ...biome.topology,
+                  occurrences: biome.topology.occurrences.map((occurrence) =>
+                    occurrence.occurrenceId === goldenHStartId
+                      ? { ...occurrence, additionalExits: [] }
+                      : occurrence,
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const missing = simulateProjectAssembly(catalog, gateless).evaluation;
+    expect(missing.issue).toMatchObject({
+      kind: 'incomplete',
+      reasons: [expect.objectContaining({ code: 'ixionChaosMissing' })],
+    });
     expect(forcedFindings).not.toContainEqual(
       expect.objectContaining({
         code: 'targetRoomUnavailable',
