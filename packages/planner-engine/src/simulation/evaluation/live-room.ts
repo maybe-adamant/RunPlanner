@@ -1155,7 +1155,7 @@ export function liveRoomForProjectEvaluationAssembly(
   const rowPickers = new Map<string, LiveVerbChoice | undefined>();
   /** A row's own picker; a pickup's placement asks the outcome its spawn names first. */
   const pickerOf = (reference: RoomActionReference, placeChoice?: LiveVerbChoice) => {
-    if (placeChoice !== undefined) return placeChoice;
+    if (placeChoice !== undefined || !interactions) return placeChoice;
     const key = roomActionKey(reference);
     if (!rowPickers.has(key))
       rowPickers.set(key, rowChoice(catalog, assembly, room, occurrence, reference));
@@ -1254,10 +1254,12 @@ export function liveRoomForProjectEvaluationAssembly(
         reference,
         obligation,
         step,
-        // A wheel's choice is placed with the offer it takes.
-        interactions && step.kind === 'place' && reference.kind === 'chooseRewardWheel'
-          ? wheelPickChoice(assembly, room, occurrence, reference.wheelKey, step.command)
-          : pickerOf(reference, step.kind === 'place' ? placeChoice : undefined),
+        // A moved row keeps its outcome; a wheel's choice is placed with the offer it takes.
+        step.kind === 'move'
+          ? undefined
+          : interactions && step.kind === 'place' && reference.kind === 'chooseRewardWheel'
+            ? wheelPickChoice(assembly, room, occurrence, reference.wheelKey, step.command)
+            : pickerOf(reference, step.kind === 'place' ? placeChoice : undefined),
       ),
     ];
 
