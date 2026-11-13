@@ -4,6 +4,11 @@ import { catalog } from '@run-planner/hades2-catalog';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import {
+  createFreshFileFProject,
+  freshFileFPostbossId,
+  withRetainedFreshFilePostboss,
+} from '@run-planner/test-fixtures/fresh-file';
+import {
   authorTestTraitsAndRequiredItems,
   stockTestProject,
 } from '@run-planner/test-fixtures/shared';
@@ -22,9 +27,15 @@ import {
 import { simulateProjectAssembly } from '../../src/simulation';
 import type { PublishedBiomeEvaluation } from '../../src/simulation/evaluation/evaluation-products';
 import { assembleExecutionOverview } from '../../src/execution-plan/assembly/overview';
-import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
+import {
+  executionBatchesByRoom,
+  orderedExecutionRooms,
+} from '../../src/execution-plan/assembly/route';
+import { executionRoomOwnerKey } from '../../src/execution-plan/assembly/support';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { ExecutionCompilerError } from '../../src/execution-plan/assembler-errors';
+import { assembleExecutionProduct } from '../../src/execution-plan/assembler';
+import { compileExecutionPlan } from '../../src/execution-plan/compiler';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
   mergePlannerTimelineFacts,
@@ -58,8 +69,28 @@ function transactions(room: Room, biome: PublishedBiomeEvaluation) {
   );
 }
 
-function overview(room: Room, biome: PublishedBiomeEvaluation, using: Catalog = catalog) {
-  return assembleExecutionOverview(using, room, biome, undefined, [], new Map());
+function overview(
+  room: Room,
+  biome: PublishedBiomeEvaluation,
+  using: Catalog = catalog,
+  batch?: Parameters<typeof assembleExecutionOverview>[3],
+) {
+  return assembleExecutionOverview(using, room, biome, batch, [], new Map());
+}
+
+/** The catalog with one room's declaration changed. */
+function withRoom(
+  gameName: string,
+  change: (declared: Catalog['rooms']['byKey'][string]) => object,
+): Catalog {
+  const declared = catalog.rooms.byKey[gameName]!;
+  return {
+    ...catalog,
+    rooms: {
+      ...catalog.rooms,
+      byKey: { ...catalog.rooms.byKey, [gameName]: { ...declared, ...change(declared) } },
+    },
+  };
 }
 
 function expectCoverageMissing(run: () => unknown, message: RegExp) {
@@ -142,6 +173,64 @@ describe('execution assembly refuses a published blank', () => {
     expectCoverageMissing(
       () => overview(blank, f),
       /lacks Fateful Twist result for initial:secondRight/,
+    );
+  });
+
+  it('refuses an anchor object without an anchor, except a Well on its pin', () => {
+    const f = completeBiome(stockTestProject(loadUnderworldFStygianWellCheckpoint()), 'F');
+    const room = roomWhere(f, (candidate) => candidate.stygianWell !== undefined);
+    const declared = catalog.rooms.byKey[room.gameName]!;
+    expect(declared.mapPoints?.wellAnchorId).toBeDefined();
+    expect(room.stygianWell).not.toHaveProperty('anchorId');
+    // Past the room's anchors the pinned Well still stands native on its pin.
+    const full = withRoom(room.gameName, () => ({ challengeSwitchAnchorCount: 0 }));
+    expect(overview(room, f, full).stygianWell).not.toHaveProperty('anchorId');
+    // Unpinned, it has none to stand on.
+    const unpinned = withRoom(room.gameName, () => ({
+      challengeSwitchAnchorCount: 0,
+      mapPoints: { ...declared.mapPoints, wellAnchorId: undefined },
+    }));
+    expectCoverageMissing(() => overview(room, f, unpinned), /stygianWell without an anchor/);
+  });
+
+  it('publishes no Pool its route never spawns, kept unused from an older save', () => {
+    const project = withRetainedFreshFilePostboss(createFreshFileFProject(), {
+      poolSaleTraitKey: null,
+    });
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({
+        catalog,
+        assembly: simulateProjectAssembly(catalog, project),
+      }),
+    });
+    const postboss = plan.occurrences.find((room) => room.id === freshFileFPostbossId)!;
+    expect(postboss.overview).not.toHaveProperty('purgingPool');
+  });
+
+  it('refuses a Chaos gate without a spawn point', () => {
+    const g = completeBiome(loadUnderworldIxionChaosCheckpoint(), 'G');
+    const room = roomWhere(g, (candidate) => candidate.occurrenceId === 'golden-g-intro');
+    const batch = executionBatchesByRoom([g]).get(executionRoomOwnerKey(room))!;
+    expect(overview(room, g, catalog, batch).additional).toContainEqual(
+      expect.objectContaining({ kind: 'chaos', spawnPointIndex: expect.any(Number) }),
+    );
+    const unstored = {
+      ...batch,
+      additional: batch.additional.map((exit) => {
+        const copy = { ...exit };
+        delete copy.spawnPointIndex;
+        return copy;
+      }),
+    };
+    expectCoverageMissing(
+      () =>
+        overview(
+          room,
+          g,
+          withRoom(room.gameName, () => ({ secretPointAnchorCount: 0 })),
+          unstored,
+        ),
+      /Chaos gate without a spawn point/,
     );
   });
 

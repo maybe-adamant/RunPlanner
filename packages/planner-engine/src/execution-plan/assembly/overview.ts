@@ -18,6 +18,7 @@ import {
   createEncounterPhaseAddress,
   createTravelDealRefillRealizationAddress,
   semanticAddressKey,
+  type RoomAnchorObjectKind,
 } from '../../authored-project/addresses';
 import {
   hermesShrineDeliveryEntryKey,
@@ -30,7 +31,11 @@ import type { Catalog } from '../../catalog-schema';
 import { chaosGateSpawnPoint } from '../../authored-project/chaos-gate-position';
 import { fieldsSpatialPositions } from '../../simulation/fields/spatial';
 import { performedRoomActions } from '../../simulation/room-actions';
-import { roomObjectAnchorPositions } from '../../simulation/room-layout/object-anchor-positions';
+import {
+  roomAnchorObjectHosted,
+  roomObjectAnchorPositions,
+  type RoomObjectAnchorPosition,
+} from '../../simulation/room-layout/object-anchor-positions';
 import { resolvedEncounterPhaseForDefinition } from '../../simulation/encounters/resolve';
 import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import {
@@ -300,6 +305,11 @@ function executionAdditionalExits(
         exit.key !== 'chaos' || declaration === undefined
           ? exit.spawnPointIndex
           : chaosGateSpawnPoint(declaration, semanticAddressKey(exit.origin), exit.spawnPointIndex);
+      if (exit.key === 'chaos' && spawnPointIndex === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} publishes a Chaos gate without a spawn point`,
+        );
       return Object.freeze({
         kind: exit.key,
         ...(spawnPointIndex === undefined ? {} : { spawnPointIndex }),
@@ -824,15 +834,37 @@ function executionRoomLayout(
 
 /**
  * An object's publication with the anchor it stands on, stored or drawn;
- * the Well on its room's pin stays native.
+ * the Well on its room's pin stays native. One native never spawns on this
+ * route, kept from an older save, is not published. A published object always
+ * stands on an anchor: only an over-capacity room leaves it none, which a
+ * finding blocks.
  */
 function anchored<T extends object>(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  object: RoomAnchorObjectKind,
   published: T | undefined,
-  position: { readonly anchorId: number; readonly source: string } | undefined,
+  anchors: ReadonlyMap<RoomAnchorObjectKind, RoomObjectAnchorPosition>,
 ): T | undefined {
-  return published === undefined || position === undefined || position.source === 'pinned'
-    ? published
-    : Object.freeze({ ...published, anchorId: position.anchorId });
+  if (
+    published === undefined ||
+    !roomAnchorObjectHosted(catalog, room.gameName, room.origin.routeKey, object)
+  )
+    return undefined;
+  const position = anchors.get(object);
+  if (position?.source === 'pinned') return published;
+  if (position === undefined) {
+    if (
+      object === 'stygianWell' &&
+      catalog.rooms.byKey[room.gameName]?.mapPoints?.wellAnchorId !== undefined
+    )
+      return published;
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} publishes its ${object} without an anchor`,
+    );
+  }
+  return Object.freeze({ ...published, anchorId: position.anchorId });
 }
 
 type ResolvedEncounterCustomization = NonNullable<
@@ -1215,6 +1247,12 @@ export function assembleExecutionOverview(
     semanticAddressKey(room.origin),
   );
   const challengeSwitch = executionChallengeSwitch(catalog, room, biome);
+  const anchoredObjects = {
+    hermesShrine: anchored(catalog, room, 'hermesShrine', hermesShrine, anchors),
+    stygianWell: anchored(catalog, room, 'stygianWell', stygianWell, anchors),
+    purgingPool: anchored(catalog, room, 'purgingPool', purgingPool, anchors),
+    challengeSwitch: anchored(catalog, room, 'challengeSwitch', challengeSwitch, anchors),
+  };
   const lockedExits = executionLockedExits(room, biome);
   const biomeAddress = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
   const recordedPhases = new Map(
@@ -1339,15 +1377,15 @@ export function assembleExecutionOverview(
     ...(shop === undefined ? {} : { shop }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
-    ...(hermesShrine === undefined
+    ...(anchoredObjects.hermesShrine === undefined
       ? {}
-      : { hermesShrine: anchored(hermesShrine, anchors.get('hermesShrine'))! }),
-    ...(stygianWell === undefined
+      : { hermesShrine: anchoredObjects.hermesShrine }),
+    ...(anchoredObjects.stygianWell === undefined
       ? {}
-      : { stygianWell: anchored(stygianWell, anchors.get('stygianWell'))! }),
-    ...(purgingPool === undefined
+      : { stygianWell: anchoredObjects.stygianWell }),
+    ...(anchoredObjects.purgingPool === undefined
       ? {}
-      : { purgingPool: anchored(purgingPool, anchors.get('purgingPool'))! }),
+      : { purgingPool: anchoredObjects.purgingPool }),
     ...(layout === undefined ? {} : { layout }),
     ...(fields === undefined ? {} : { fields }),
     ...(!room.hasKeepsakeRack
@@ -1357,9 +1395,9 @@ export function assembleExecutionOverview(
             room.keepsakeRack === undefined ? {} : { keepsakeKey: room.keepsakeRack.keepsakeKey },
           ),
         }),
-    ...(challengeSwitch === undefined
+    ...(anchoredObjects.challengeSwitch === undefined
       ? {}
-      : { challengeSwitch: anchored(challengeSwitch, anchors.get('challengeSwitch'))! }),
+      : { challengeSwitch: anchoredObjects.challengeSwitch }),
     ...(lockedExits === undefined ? {} : { lockedExits }),
     ...(!room.hasRequiredFountain
       ? {}

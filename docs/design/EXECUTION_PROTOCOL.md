@@ -100,8 +100,11 @@ A value the game derives from the previous room's exit is absent and stays
 native. Object positions and stock are required, since publication accepts
 only plans whose reached positions and slots are filled: a Pool, Shrine or
 challenge switch always publishes its stored `anchorId`, and a Well publishes
-one except on its room's pin. A Chaos gate always publishes its stored
-`spawnPointIndex`; a Zagreus Contract exit has none.
+one except on its room's pin; an object native never spawns on the route, kept
+unused from an older save, is not published. A Chaos gate always publishes its
+stored `spawnPointIndex`; a Zagreus Contract exit has none. Publication refuses
+an object or gate left without one, which only a room carrying a finding can
+reach.
 
 Fields door targets carry cage rewards even when unpicked. Cage,
 optional-reward and Nemesis points are entered-room facts published only for
@@ -649,9 +652,8 @@ records only whether Ixion inserted the gate so removing that purchase can
 remove its generated topology. A visible Chaos gate consumes one pending Ixion
 regardless of how the gate originated.
 
-A Chaos entry in `overview.additional` may publish `spawnPointIndex`, a positive
-one-based index into numerically sorted native SecretPoint IDs. Omission leaves
-random placement unchanged. The scoped SecretDoor spawn adapter substitutes
+A Chaos entry in `overview.additional` publishes `spawnPointIndex`, a positive
+one-based index into numerically sorted native SecretPoint IDs. The scoped SecretDoor spawn adapter substitutes
 only its destination, preserving native gate creation, destination-room choice,
 health cost and Ixion consumption. An unavailable point produces a diagnostic
 and leaves the native destination unchanged, not a placement-only mismatch.
