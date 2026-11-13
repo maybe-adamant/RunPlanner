@@ -143,15 +143,15 @@ describe('placing actions at a chosen index', () => {
         },
       ],
       [
-        nProject,
+        applyProjectCommand(nProject, catalog, {
+          kind: 'ReplaceShopOfferOption',
+          offer: createShopOfferAddress(nBiome, nShop, 'travelDealRefill'),
+          value: { optionKey: travelOption(nProject).key, offer: { rewardType: 'BlindBoxLoot' } },
+        }),
         nShop,
         {
           kind: 'PurchaseShopTravelDealRefill',
           occurrence: createOccurrenceAddress(nBiome, nShop),
-          value: {
-            optionKey: travelOption(nProject).key,
-            offer: { rewardType: 'BlindBoxLoot' },
-          },
         },
       ],
       [
@@ -247,43 +247,6 @@ describe('placing actions at a chosen index', () => {
         else expect(apply, `${command.kind} at ${index}`).toThrow();
       }
     }
-  });
-
-  it('lists the same indices for a blank Travel Deal item whatever value stocks it', () => {
-    const nBiome = createBiomeAddress('Surface', 'N');
-    const nShop = createOccurrenceId('round-trip-n-preboss');
-    let project = createCompleteNProject();
-    for (const offerKey of ['Boon', 'MajorNonBoon'])
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceShopPurchaseParticipation',
-        offer: createShopOfferAddress(nBiome, nShop, offerKey),
-        purchased: true,
-      });
-    const room = project.route.biomes
-      .find((plan) => plan.biomeKey === 'N')!
-      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === nShop)!;
-    const profileKey = room.state.kind === 'shop' ? room.state.shop?.profileKey : undefined;
-    const listed = catalog.rewards.shops.byKey[profileKey ?? '']!.groups.values.flatMap(
-      (group) => group.options.values,
-    )
-      .flatMap((option) => {
-        try {
-          return [
-            positionedCommandInsertionIndexes(project, catalog, {
-              kind: 'PurchaseShopTravelDealRefill',
-              occurrence: createOccurrenceAddress(nBiome, nShop),
-              value: { optionKey: option.key, offer: { rewardType: option.rewardType } },
-            }),
-          ];
-        } catch {
-          // A bare offer of a reward that needs its payload is not a stockable value.
-          return [];
-        }
-      })
-      .filter((indexes) => indexes.length > 0);
-    // The purchase places the same action under the same order rules for every value.
-    expect(listed.length).toBeGreaterThan(1);
-    for (const indexes of listed) expect(indexes).toEqual(listed[0]);
   });
 
   it('lists nothing for a command that cannot apply without an index', () => {

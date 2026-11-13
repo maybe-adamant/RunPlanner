@@ -13,6 +13,7 @@ import {
   createHubRerollAddress,
   createRoomActionAddress,
   createRoomFeatureAddress,
+  createShopOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
   type HubDecisionAddress,
@@ -297,12 +298,18 @@ type ReplacedItem =
       /** A Travel Deal restock whose triggering purchase changed: a new item. */
       readonly kind: 'travelDealRefill';
       readonly room: OccurrenceAddress;
-      readonly stock: 'stygianWell' | 'hermesShrine';
+      readonly stock: 'stygianWell' | 'hermesShrine' | 'worldShop';
     };
 
 /** The replaced item's own address: its pickup entry or its rerolled owner. */
 function replacedItemAddress(item: ReplacedItem): SemanticAddress {
   if (item.kind === 'rerolledReward') return item.owner;
+  if (item.kind === 'travelDealRefill' && item.stock === 'worldShop')
+    return createShopOfferAddress(
+      createBiomeAddress(item.room.routeKey, item.room.biomeKey),
+      item.room.occurrenceId,
+      TRAVEL_DEAL_REFILL_ENTRY_KEY,
+    );
   if (item.kind === 'travelDealRefill')
     return createRoomFeatureAddress(item.room, {
       kind: item.stock === 'stygianWell' ? 'stygianWellOffer' : 'hermesShrineOffer',
@@ -723,6 +730,29 @@ function withoutReplacedItem(
     case 'rerolledReward':
       return resetRerolledRewardOffItsPress(project, catalog, item.owner);
     case 'travelDealRefill': {
+      if (item.stock === 'worldShop') {
+        const reference = placedEntry(
+          occurrenceAt(project, item.room),
+          'roomExit',
+          TRAVEL_DEAL_REFILL_ENTRY_KEY,
+        );
+        const removed =
+          reference === undefined
+            ? project
+            : withoutRow(catalog, project, { owner: item.room, reference, payload: 'taken' });
+        const occurrence = occurrenceAt(removed, item.room);
+        if (occurrence?.state.kind !== 'shop' || occurrence.state.shop == null) return removed;
+        const { travelDealRefill: _replaced, ...shop } = occurrence.state.shop;
+        void _replaced;
+        return withOccurrence(
+          removed,
+          item.room,
+          Object.freeze({
+            ...occurrence,
+            state: Object.freeze({ ...occurrence.state, shop: Object.freeze(shop) }),
+          }),
+        );
+      }
       const purchase =
         item.stock === 'stygianWell' ? 'purchaseStygianWellOffer' : 'purchaseHermesShrineOffer';
       const reference = occurrenceAt(project, item.room)?.roomActions.order.find(
@@ -778,10 +808,25 @@ function replacedTravelDealRefills(
       source: (candidates: CandidateArtifacts, biome: BiomeAddress, owner: OccurrenceAddress) =>
         candidates.biomeAt(biome)?.hermesShrines.at(owner)?.travelDealRefill?.sourceGenerationKey,
     },
+    worldShop: {
+      stored: (occurrence: RoomOccurrence | undefined) => {
+        const reward =
+          occurrence?.state.kind === 'shop'
+            ? occurrence.state.shop?.travelDealRefill?.reward
+            : undefined;
+        return reward == null ? undefined : JSON.stringify(reward.offer);
+      },
+      source: (candidates: CandidateArtifacts, biome: BiomeAddress, owner: OccurrenceAddress) =>
+        candidates
+          .biomeAt(biome)
+          ?.derivedAcquisitionEntries.entriesAt(createAcquisitionSiteAddress(owner, 'roomExit'))
+          .find((entry) => entry.address.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)?.capability
+          .sourceOfferKey,
+    },
   } as const;
   for (const { owner, occurrence } of occurrences(assembly.project)) {
     const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
-    for (const stock of ['stygianWell', 'hermesShrine'] as const) {
+    for (const stock of ['stygianWell', 'hermesShrine', 'worldShop'] as const) {
       const { stored, source } = stocks[stock];
       const item = stored(occurrence);
       if (item === undefined || stored(occurrenceAt(before.project, owner)) !== item) continue;

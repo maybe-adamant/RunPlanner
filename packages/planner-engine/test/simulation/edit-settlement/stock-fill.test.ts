@@ -7,6 +7,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomFeatureAddress,
+  createShopOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   roomActionKey,
@@ -248,6 +249,37 @@ describe('stock filled on first reach', () => {
           finding.code.startsWith('purgingPool'),
         ),
       ).toEqual([]);
+    });
+  });
+
+  describe('a World Shop', () => {
+    const shop = createOccurrenceAddress(f, createOccurrenceId('golden-f-preboss-shop'));
+    const shopState = (project: ProjectDocument) => {
+      const state = occurrenceOf(project, shop).state;
+      return state.kind === 'shop' ? state.shop! : undefined;
+    };
+    const refillRow = roomActionKey({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'roomExit',
+      entryKey: 'travelDealRefill',
+    });
+
+    it('replaces the Travel Deal item and its purchase when another purchase restocks', () => {
+      // Buying Minor first makes it the purchase Travel Deal restocks on.
+      const settled = settle(loadCheckpoint('underworld-world-shop-travel-deal'), {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(f, shop.occurrenceId, 'Minor'),
+        purchased: true,
+        index: 0,
+      });
+      expect(settled.fault).toBeUndefined();
+      const project = settled.assembly.project;
+      expect(occurrenceOf(project, shop).roomActions.order.map(roomActionKey)).not.toContain(
+        refillRow,
+      );
+      // The new item is the owner's to stock at the purchase that restocks it.
+      expect(shopState(project)?.travelDealRefill).toBeUndefined();
+      expect(findingCodes(project).map((finding) => finding.code)).toContain('rewardMissing');
     });
   });
 });

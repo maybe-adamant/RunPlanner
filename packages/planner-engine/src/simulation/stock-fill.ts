@@ -411,8 +411,8 @@ function purgingPoolFills(
 
 /**
  * Every blank stock slot the evaluated walk reached, with the command that
- * stocks it by a stable legal draw: Stygian Wells first, then Hermes Shrines,
- * Purging Pools and World Shops, each room in route order.
+ * stocks it by a stable legal draw: Stygian Wells first, then Hermes Shrines
+ * and Purging Pools, each room in route order.
  */
 export function stockFills(
   project: ProjectDocument,

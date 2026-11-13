@@ -1710,7 +1710,10 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
     let traitKey = pool.slots.find((entry) => entry.slot === slot)?.name;
     let ambiguous = false;
     if (traitKey === undefined && pool.soldSlots.includes(slot)) {
-      const eligible = new Set(capability.candidateTraitKeysBySlot[slotKey]);
+      // Every trait the list on show could hold, whatever the slots were stocked with.
+      const eligible = new Set(
+        capability.refresh?.eligibleTraitKeys ?? capability.assessment.eligibleTraitKeys,
+      );
       const sold = room.traits.removed.filter((name) => eligible.has(name) && !claimed.has(name));
       traitKey = sold[0];
       ambiguous = sold.length > 1;
@@ -1728,13 +1731,46 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
       claimed.add(traitKey);
     }
     if (traitKey === undefined) continue;
+    // The record's list is the one on show at opening: the regenerated one when
+    // the fountain use made the entry list stale. The edit that reached it
+    // stocked every slot; each recorded trait replaces its slot's draw.
+    const list = capability.refresh === undefined ? {} : { list: 'refresh' as const };
     const command: ProjectCommand = {
       kind: 'ReplacePurgingPoolSlot',
       occurrence: address,
       slotKey,
       traitKey,
+      ...list,
     };
-    if (!context.applyValid(command)) {
+    const listed = () => {
+      const stocked = authoredOccurrence(
+        context.assembly().project,
+        biomeKey,
+        occurrence.occurrenceId,
+      )?.purgingPool;
+      return capability.refresh === undefined
+        ? (stocked?.traitKeyBySlot ?? {})
+        : (stocked?.refreshTraitKeyBySlot ?? {});
+    };
+    const written = (): boolean => {
+      const current: Readonly<Partial<Record<string, string | null>>> = listed();
+      // A draw elsewhere holding the recorded trait is drawn again past it.
+      for (const other of POOL_SLOTS)
+        if (
+          other !== slotKey &&
+          current[other] === traitKey &&
+          !context.apply({
+            kind: 'ReplacePurgingPoolSlot',
+            occurrence: address,
+            slotKey: other,
+            traitKey: null,
+            ...list,
+          })
+        )
+          return false;
+      return listed()[slotKey] === traitKey || context.apply(command);
+    };
+    if (!context.transaction(written)) {
       // A refused trait leaves its slot open; a sale from it cannot be authored.
       context.note({
         area: 'pool',

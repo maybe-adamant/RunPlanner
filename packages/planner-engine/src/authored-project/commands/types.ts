@@ -328,13 +328,9 @@ export type RoomActionCommand =
       readonly index?: number;
     }
   | {
-      /**
-       * Buys the Shop's Travel Deal item at the end of the room's actions;
-       * `value` first stocks a blank one.
-       */
+      /** Buys the Shop's Travel Deal item at the end of the room's actions. */
       readonly kind: 'PurchaseShopTravelDealRefill';
       readonly occurrence: OccurrenceAddress;
-      readonly value?: ShopOptionSelection;
       /** Where the purchase enters the room's actions: any structurally legal index; absent, the end. */
       readonly index?: number;
     }

@@ -539,8 +539,7 @@ family, each group opening its short list; the optional pickups a room object
 produces sit beside that object. Loot the game spawns is not listed there: it
 is placed from its spawn row. A finding on an action marks its object or
 group entry, and navigating to the action opens its list. A Well
-or Pool offers buy or sell for each offered slot (a blank initial slot takes
-its item or trait in the same pick) and Reroll with its cost, disabled with a
+or Pool offers buy or sell for each offered slot and Reroll with its cost, disabled with a
 hint when screen rerolls are not enabled, nothing is left to reroll or the
 pool cannot pay. A World Shop offers each unbought item; a Shrine offers Buy
 for each unbought item and Rush for each bought one not yet rushed, one pick

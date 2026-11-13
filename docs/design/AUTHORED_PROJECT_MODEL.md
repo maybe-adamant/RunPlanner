@@ -720,19 +720,23 @@ whose item is not stocked, a rush without its purchase, and a same-room Shrine
 pickup without its rush; a rush ordered before its purchase is kept with its
 ordering finding. Its rushed or delayed delivery owns concrete acquisition
 payload. A Stygian Well or Pool of Purging holds what the game rolled on it,
-with no interaction flag: its initial stock, where a blank slot stays native,
-a pinned one is assessed, and a slot becomes required only once a purchase or
-sale uses it; use follows from the room's actions. Each later roll is a
+with no interaction flag: its initial stock (a Pool's entry list, the list its
+room generates on entry), stored slot by slot like any stock; use follows from
+the room's actions. A Pool also holds, while its fountain use makes the entry
+list stale, the list the Pool regenerates when it opens. Each later roll is a
 repeatable `rerollStygianWell` or `rerollPurgingPool` room action that holds
-only its engine-allocated `rerollId`; the roll's optional slot pins live on
-the Well or Pool under that id (an unpinned slot stays native). A Well
+only its engine-allocated `rerollId`; the roll's slots live on the Well or
+Pool under that id. A Well
 generation is bought exactly when the room's actions hold its one purchase,
 which names its roll and slot; the game rolls a Fateful Twist per bought
 generation, and its result lives on the Well under that generation. Pins and
 Twist results exist only for rolls the room holds, so removing a reroll takes
 them with it, and with them the purchases and sales of its list. Each Pool sale names its list (`rollKey`, absent for the initial
-list). A purchase or sale pins a blank slot in the same edit. Travel
-Deal refill state is
+list). Every Well, Pool and Shrine stock slot (their rolls, Travel Deal
+refills and Fateful Twist results) is stocked by the edit whose settlement
+first reaches it blank
+([Stock filled on first reach](SIMULATION_AND_VALIDATION.md#stock-filled-on-first-reach)).
+Travel Deal refill state is
 occurrence-local to its Shop, Shrine, or Well carrier. Pending deliveries,
 temporary effects, Spell reservations, and expiry remain derived simulation
 state.
@@ -873,8 +877,7 @@ commands. Shrine and Well purchase references are rejected the same way.
 Removing participation remains accepted for a retained stale purchase after
 its Shop owner disappears, allowing exact repair without deleting unrelated
 actions. `PurchaseShopTravelDealRefill` appends the purchase of the Shop's
-Travel Deal item and, given a value, first stocks a blank item, as one Undo
-step. Every purchase command here and below, including Well purchases, takes
+stocked Travel Deal item. Every purchase command here and below, including Well purchases, takes
 an optional index that places a new purchase at any structurally authorable
 position instead of its default ([roster](ROOM_LIFECYCLE_MODEL.md#roster)), in
 the same edit; an index without a new purchase is refused.
@@ -886,8 +889,7 @@ purchase: a new purchase inserts its purchase action at its canonical
 position, and clearing removes that action, its rush, its pickup and placed
 deliveries while retaining delivery payload. `PurchaseHermesShrineOffer`
 instead appends the purchase of one unbought item at the end of the room's
-actions, first stocking a blank Travel Deal refill when given its reward, as
-one Undo step. `SetHermesShrineRush` rushes one bought item, inserting its rush
+actions. `SetHermesShrineRush` rushes one bought item, inserting its rush
 action directly after its purchase or at any structurally authorable index
 after it in the same room, or un-rushes it, removing that action and retracting
 its optional same-room pickup; a rushed item's pickup is the owner's to place.
