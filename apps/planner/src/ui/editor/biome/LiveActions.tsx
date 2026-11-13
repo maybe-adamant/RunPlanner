@@ -147,6 +147,9 @@ function LiveItemChip({
   const [open, setOpen] = useState(false);
   const [choosing, setChoosing] = useState<WorkspaceLiveVerb>();
   const chip = useRef<HTMLButtonElement>(null);
+  // What a chosen verb opens next, once the closed list has handed back focus; earlier, the
+  // returning focus would dismiss it. True when it took focus.
+  const afterClose = useRef<() => boolean>(undefined);
   const mark = combinedMark(item.findingOwners.map((owner) => findingMark(owner, 'place')));
   const icon = itemIcon(item, biomeKey);
   const name = item.locked ? `${item.label}, locked` : item.label;
@@ -199,10 +202,12 @@ function LiveItemChip({
     const from = chip.current;
     if (opens === undefined || from === null) return;
     // The placed row's own choice opens once the Timeline shows it.
-    setTimeout(() => {
+    afterClose.current = () => {
       const row = actionRowElement(from, opens);
-      if (row !== null) openPlacedRow(row);
-    }, 0);
+      if (row === null) return false;
+      openPlacedRow(row);
+      return true;
+    };
   };
   const face = (
     <>
@@ -270,6 +275,11 @@ function LiveItemChip({
               : traitIcon(choice.icon.traitKey);
         }}
         model={model}
+        onCloseAutoFocus={(event) => {
+          const next = afterClose.current;
+          afterClose.current = undefined;
+          if (next?.() === true) event.preventDefault();
+        }}
         onOpenChange={(next) => {
           setOpen(next);
           if (!next) setChoosing(undefined);
@@ -294,8 +304,10 @@ function LiveItemChip({
           setChoosing(undefined);
           if (choosing.action.kind === 'rerollPress') {
             const press = { interactionKey: choosing.action.interactionKey, target: value };
-            // The reward picker opens once the verb list has closed and handed back focus.
-            setTimeout(() => onPress(press), 0);
+            afterClose.current = () => {
+              onPress(press);
+              return true;
+            };
             return;
           }
           if (choosing.action.kind !== 'choose') return;
