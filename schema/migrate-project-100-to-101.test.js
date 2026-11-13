@@ -7,6 +7,21 @@ import { runnerImport } from 'vite';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const runner = { configFile: false, logLevel: 'silent' };
+/** The current plan as far as a schema 101 save holds it: no flips, object anchors or non-Fields entries. */
+const heldBy101 = (current) => {
+  const copy = JSON.parse(JSON.stringify(current));
+  for (const biome of copy.route.biomes)
+    for (const occurrence of biome.topology?.occurrences ?? []) {
+      for (const object of ['stygianWell', 'purgingPool', 'hermesShrine', 'challengeSwitch'])
+        if (occurrence[object] !== undefined) delete occurrence[object].anchorId;
+      const entry = occurrence.layout?.entryStartPointId;
+      delete occurrence.layout;
+      if (occurrence.state?.kind === 'fieldsCombat' && entry !== undefined)
+        occurrence.layout = { entryStartPointId: entry };
+    }
+  return copy;
+};
+
 const checkpoint = (id) =>
   JSON.parse(
     readFileSync(
@@ -81,7 +96,7 @@ describe('schema 100 to 101 migration', () => {
     const migrated = migrate(settled);
     assert.equal(migrated.schemaVersion, 101);
     assert.equal('schemaRevision' in migrated, false);
-    assert.equal(canonical(migrated), canonical(current));
+    assert.equal(canonical(migrated), canonical(heldBy101(current)));
     assert.equal(settled.schemaVersion, 100);
   });
 
