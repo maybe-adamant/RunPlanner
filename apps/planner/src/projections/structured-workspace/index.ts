@@ -112,6 +112,7 @@ export type {
   WorkspaceSpawnSource,
   WorkspaceSpawnedItem,
   WorkspaceLiveChoice,
+  WorkspaceLiveGap,
   WorkspaceLiveItem,
   WorkspaceLiveVerb,
   WorkspaceRoomLive,

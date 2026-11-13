@@ -49,6 +49,11 @@ export interface GalleryCase {
   readonly openPicker?: string;
   /** With `openPicker`, the verb whose values the list then shows. */
   readonly openVerb?: string;
+  /**
+   * A room case shows the `+` of this Timeline gap, or of the last one shown, as a hover does,
+   * and with `open` opens its menu.
+   */
+  readonly gap?: { readonly index?: number; readonly open: boolean };
   /** An Overview case opens its Overview picker of this accessible name. */
   readonly openOverviewPicker?: string;
   /** The case opens its biome as the biome's tab does, not its target. */

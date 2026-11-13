@@ -5,6 +5,7 @@ import {
   roomActionKey,
   semanticAddressKey,
   type OccurrenceAddress,
+  type ProjectCommand,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -13,6 +14,7 @@ import type { LiveRoom, LiveVerb } from '@run-planner/engine/simulation';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import type {
   WorkspaceLiveFace,
+  WorkspaceLiveGap,
   WorkspaceLiveItem,
   WorkspaceLiveObjectKind,
   WorkspaceLiveVerb,
@@ -23,7 +25,9 @@ import type {
 import { featureRollCatalog } from './feature-roll-assembly';
 import type { OccurrenceActionLabelParts } from './occurrence-action-label';
 
-type EngineItem = LiveRoom['gaps'][number]['items'][number];
+type EngineGap = LiveRoom['gaps'][number];
+type EngineItem = EngineGap['items'][number];
+type ResetCommand = Extract<ProjectCommand, { readonly kind: 'ResetRoomActionsAfter' }>;
 
 /** An object's name, said by its chip. */
 const objectNames: Readonly<Record<WorkspaceLiveObjectKind, string>> = {
@@ -60,21 +64,24 @@ const verbWords: Readonly<Record<LiveVerb['verb'], string>> = {
 };
 
 /**
- * Adapts the engine's live room at its frontier to the Timeline's live row: each thing live
- * there with the verbs it offers, named and pictured as the rows they act on. What is live,
- * its verbs and their commands are the engine's.
+ * Adapts the engine's live room to the Timeline: the live row at its frontier and the menu of
+ * each gap before it, each thing live there with the verbs it offers, named and pictured as
+ * the rows they act on. What is live, its verbs, their commands and each gap's reset are the
+ * engine's.
  */
 export function projectRoomLive(input: {
   readonly catalog: Catalog;
   readonly owner: OccurrenceAddress;
   readonly live: LiveRoom;
   readonly rows: readonly WorkspaceRoomActionRow[];
+  /** The engine's Reset from here for each entry of the room's lifecycle Timeline. */
+  readonly resets: readonly (ResetCommand | undefined)[];
   /** Names a reference that is not a Timeline row yet, such as an unbought item. */
   readonly labelParts: (reference: RoomActionReference) => OccurrenceActionLabelParts;
 }): WorkspaceRoomLive | undefined {
   const { catalog, live, owner } = input;
-  const gap = live.gaps.find((candidate) => candidate.index === live.frontier);
-  if (gap === undefined) return undefined;
+  const frontier = live.gaps.find((candidate) => candidate.index === live.frontier);
+  if (frontier === undefined) return undefined;
   const rowByKey = new Map(input.rows.map((row) => [row.key, row]));
   const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
   const named = (reference: RoomActionReference) => {
@@ -105,7 +112,7 @@ export function projectRoomLive(input: {
     };
   };
   const poolLabels = featureRollCatalog(catalog, 'purgingPool');
-  const verbAction = (verb: LiveVerb): WorkspaceLiveVerbAction | undefined => {
+  const verbAction = (gap: EngineGap, verb: LiveVerb): WorkspaceLiveVerbAction | undefined => {
     const choice = verb.choice;
     if (choice?.timing === 'before') {
       switch (choice.picker) {
@@ -148,10 +155,10 @@ export function projectRoomLive(input: {
         : {}),
     });
   };
-  const verbsOf = (item: EngineItem, pickup: boolean): WorkspaceLiveVerb[] => {
+  const verbsOf = (gap: EngineGap, item: EngineItem, pickup: boolean): WorkspaceLiveVerb[] => {
     const verbs = item.verbs.flatMap((verb, index) => {
       if (verb.standing === true) return [];
-      const action = verbAction(verb);
+      const action = verbAction(gap, verb);
       if (action === undefined) return [];
       const word = verbWords[verb.verb];
       const subject = verb.reference === undefined ? undefined : named(verb.reference);
@@ -189,88 +196,118 @@ export function projectRoomLive(input: {
         )
     );
   };
-  const items = gap.items.flatMap((item): WorkspaceLiveItem[] => {
-    if (item.kind === 'pickup') {
-      const { row, face, name } = named(item.reference);
-      const verbs = verbsOf(item, true);
-      const locked = item.lockedUntil !== undefined;
-      // A required pickup stays shown without a verb here: its findings mark it.
-      if (verbs.length === 0 && !locked && item.participation !== 'required') return [];
+  // Findings mark and lead to the live row alone; an earlier gap only offers its verbs.
+  const itemsAt = (gap: EngineGap, marked: boolean) =>
+    gap.items.flatMap((item): WorkspaceLiveItem[] => {
+      if (item.kind === 'pickup') {
+        const { row, face, name } = named(item.reference);
+        const verbs = verbsOf(gap, item, true);
+        const locked = item.lockedUntil !== undefined;
+        // A required pickup stays shown without a verb here: its findings mark it.
+        if (verbs.length === 0 && (!marked || (!locked && item.participation !== 'required')))
+          return [];
+        return [
+          Object.freeze({
+            ...face,
+            key: semanticAddressKey(item.owner),
+            label: face.place === undefined ? name : `${name} · ${face.place.label}`,
+            group: item.participation,
+            ...(locked ? { locked: true as const } : {}),
+            ...(!marked || row === undefined || row.rank !== null ? {} : { anchor: row.address }),
+            findingOwners: Object.freeze(
+              marked
+                ? [
+                    row?.address ??
+                      createRoomActionAddress(
+                        biome,
+                        owner.occurrenceId,
+                        roomActionKey(item.reference),
+                      ),
+                  ]
+                : [],
+            ),
+            verbs: Object.freeze(verbs),
+          }),
+        ];
+      }
+      const verbs = verbsOf(gap, item, false);
+      if (verbs.length === 0) return [];
+      const shown = item.verbs.filter((verb) => verb.standing !== true);
+      const first = shown.find((verb) => verb.reference !== undefined)?.reference;
+      const face = first === undefined ? undefined : named(first);
+      const label =
+        item.object === 'encounterContact' || item.object === 'fieldsCage'
+          ? (face?.name ?? objectNames[item.object])
+          : item.object === 'challengeSwitch' && face?.row?.challengeSwitchKind !== undefined
+            ? challengeSwitchKindLabel(face.row.challengeSwitchKind)
+            : objectNames[item.object];
+      // An object shows its own icon; a contact its portrait, a cage its slot.
+      const portrait =
+        face === undefined
+          ? {}
+          : {
+              reference: first!,
+              ...(face.face.npcKey === undefined ? {} : { npcKey: face.face.npcKey }),
+              ...(face.face.challengeSwitchKind === undefined
+                ? {}
+                : { challengeSwitchKind: face.face.challengeSwitchKind }),
+              ...(item.object === 'fieldsCage' && face.face.place !== undefined
+                ? { place: face.face.place }
+                : {}),
+            };
+      // A required row off the Timeline first, then any other, takes its findings' navigation.
+      const unplaced = shown.flatMap((verb) => {
+        const row =
+          verb.reference === undefined ? undefined : rowByKey.get(roomActionKey(verb.reference));
+        return row === undefined || row.rank !== null ? [] : [row];
+      });
+      const anchor = marked
+        ? (unplaced.find((row) => row.participation === 'required') ?? unplaced[0])
+        : undefined;
       return [
         Object.freeze({
-          ...face,
-          key: semanticAddressKey(item.owner),
-          label: face.place === undefined ? name : `${name} · ${face.place.label}`,
-          group: item.participation,
-          ...(locked ? { locked: true as const } : {}),
-          ...(row === undefined || row.rank !== null ? {} : { anchor: row.address }),
-          findingOwners: Object.freeze([
-            row?.address ??
-              createRoomActionAddress(biome, owner.occurrenceId, roomActionKey(item.reference)),
-          ]),
+          ...portrait,
+          key: `${item.object}:${semanticAddressKey(item.owner)}`,
+          label,
+          group: shown.some((verb) => verb.participation === 'required')
+            ? ('required' as const)
+            : ('object' as const),
+          object: item.object,
+          ...(anchor === undefined ? {} : { anchor: anchor.address }),
+          findingOwners: Object.freeze(
+            shown.flatMap((verb) =>
+              !marked || verb.reference === undefined
+                ? []
+                : [
+                    rowByKey.get(roomActionKey(verb.reference))?.address ??
+                      createRoomActionAddress(
+                        biome,
+                        owner.occurrenceId,
+                        roomActionKey(verb.reference),
+                      ),
+                  ],
+            ),
+          ),
           verbs: Object.freeze(verbs),
         }),
       ];
-    }
-    const verbs = verbsOf(item, false);
-    if (verbs.length === 0) return [];
-    const shown = item.verbs.filter((verb) => verb.standing !== true);
-    const first = shown.find((verb) => verb.reference !== undefined)?.reference;
-    const face = first === undefined ? undefined : named(first);
-    const label =
-      item.object === 'encounterContact' || item.object === 'fieldsCage'
-        ? (face?.name ?? objectNames[item.object])
-        : item.object === 'challengeSwitch' && face?.row?.challengeSwitchKind !== undefined
-          ? challengeSwitchKindLabel(face.row.challengeSwitchKind)
-          : objectNames[item.object];
-    // An object shows its own icon; a contact its portrait, a cage its slot.
-    const portrait =
-      face === undefined
-        ? {}
-        : {
-            reference: first!,
-            ...(face.face.npcKey === undefined ? {} : { npcKey: face.face.npcKey }),
-            ...(face.face.challengeSwitchKind === undefined
-              ? {}
-              : { challengeSwitchKind: face.face.challengeSwitchKind }),
-            ...(item.object === 'fieldsCage' && face.face.place !== undefined
-              ? { place: face.face.place }
-              : {}),
-          };
-    // A required row off the Timeline first, then any other, takes its findings' navigation.
-    const unplaced = shown.flatMap((verb) => {
-      const row =
-        verb.reference === undefined ? undefined : rowByKey.get(roomActionKey(verb.reference));
-      return row === undefined || row.rank !== null ? [] : [row];
     });
-    const anchor = unplaced.find((row) => row.participation === 'required') ?? unplaced[0];
-    return [
-      Object.freeze({
-        ...portrait,
-        key: `${item.object}:${semanticAddressKey(item.owner)}`,
-        label,
-        group: shown.some((verb) => verb.participation === 'required')
-          ? ('required' as const)
-          : ('object' as const),
-        object: item.object,
-        ...(anchor === undefined ? {} : { anchor: anchor.address }),
-        findingOwners: Object.freeze(
-          shown.flatMap((verb) =>
-            verb.reference === undefined
-              ? []
-              : [
-                  rowByKey.get(roomActionKey(verb.reference))?.address ??
-                    createRoomActionAddress(
-                      biome,
-                      owner.occurrenceId,
-                      roomActionKey(verb.reference),
-                    ),
-                ],
-          ),
-        ),
-        verbs: Object.freeze(verbs),
-      }),
-    ];
+  const gaps = live.gaps
+    .filter((gap) => gap.index < live.frontier)
+    .map((gap): WorkspaceLiveGap => {
+      // The gap's reset is the one of the entry before it, or of a banner within it.
+      const reset = input.resets
+        .slice(Math.max(gap.entries.from - 1, 0), gap.entries.to)
+        .find((command) => command !== undefined);
+      return Object.freeze({
+        index: gap.index,
+        items: Object.freeze(itemsAt(gap, false)),
+        ...(reset === undefined ? {} : { reset: Object.freeze({ command: reset }) }),
+      });
+    });
+  return Object.freeze({
+    frontier: live.frontier,
+    items: Object.freeze(itemsAt(frontier, true)),
+    gaps: Object.freeze(gaps),
   });
-  return Object.freeze({ frontier: live.frontier, items: Object.freeze(items) });
 }

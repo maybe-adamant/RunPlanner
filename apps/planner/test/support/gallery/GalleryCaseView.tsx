@@ -264,6 +264,31 @@ function OpenedCase({
       window.clearTimeout(stop);
     };
   }, [entry, pickersClosed, view]);
+  // A case showing a gap's `+` focuses it, then opens its menu, as a user would.
+  const gapShown = useRef(false);
+  useEffect(() => {
+    if (view !== 'timeline' || pickersClosed || entry.gap === undefined) return;
+    const gap = entry.gap;
+    const timer = window.setInterval(() => {
+      const control = [
+        ...(frame.current?.querySelectorAll<HTMLButtonElement>(
+          gap.index === undefined
+            ? '.timeline-gap-control'
+            : `.timeline-gap-control[data-live-gap="${gap.index}"]`,
+        ) ?? []),
+      ].at(-1);
+      if (gapShown.current || control === undefined) return;
+      gapShown.current = true;
+      window.clearInterval(timer);
+      control.focus();
+      if (gap.open) control.click();
+    }, 50);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [entry, pickersClosed, view]);
   // A case showing an Overview list opens that picker once the Overview shows it.
   const overviewPickerOpened = useRef(false);
   useEffect(() => {

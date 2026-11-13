@@ -151,12 +151,15 @@ export function LeaveRow({
   actions,
   anchorOwner,
   children,
+  gap,
   heroDoor,
   label,
   pastEnd = false,
   status,
 }: {
   readonly actions?: ReactNode;
+  /** The control of the gap above this row, drawn on the spine. */
+  readonly gap?: ReactNode;
   /** The owner the row repairs, such as the exit selection; navigation lands on its picker. */
   readonly anchorOwner?: SemanticAddress;
   readonly children?: ReactNode;
@@ -193,6 +196,7 @@ export function LeaveRow({
         {...anchor()}
         aria-label={label}
         className="timeline-leave-row"
+        gap={gap}
         {...(heroDoor === undefined ? {} : { 'data-hero-door': heroDoor })}
         {...(pastEnd ? { 'data-plan-end': 'pastEnd' } : {})}
         kind="boundary"

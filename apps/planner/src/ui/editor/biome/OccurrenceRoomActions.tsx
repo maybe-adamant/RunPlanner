@@ -28,7 +28,7 @@ import { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
 import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 import { TimelineRow } from './TimelineRow';
-import { LiveRow } from './LiveActions';
+import { LiveRow, TimelineGapControl } from './LiveActions';
 import { TimelineMapStageContext, type TimelineMapStage } from './timelineMapStage';
 import { RowRewardName } from './RowRewardName';
 import { RowNpcName } from './RowNpcName';
@@ -510,6 +510,16 @@ export function RoomActionsWorkbench({
     const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
     return row?.reference.kind === 'chooseRewardWheel' && row.reference.wheelKey === wheelKey;
   };
+  // The `+` above a ranked row offers the gap before it.
+  const gapAbove = (rank: number | null) =>
+    rank === null || actions?.live === undefined ? undefined : (
+      <TimelineGapControl
+        announce={setAnnouncement}
+        biomeKey={actions.owner.biomeKey}
+        gap={actions.live.gaps.find((gap) => gap.index === rank - 1)}
+        interactions={interactions}
+      />
+    );
   const renderRow = (
     row: WorkspaceRoomActions['rows'][number],
     supplement?: Extract<
@@ -639,6 +649,7 @@ export function RoomActionsWorkbench({
     return (
       <Fragment key={row.key}>
         <TimelineRow
+          gap={waiting ? undefined : gapAbove(row.rank)}
           data-action-accent={actionAccent}
           data-door-press={doorPress === undefined ? undefined : ''}
           data-blocking-product={row.blockingProduct}
@@ -969,7 +980,14 @@ export function RoomActionsWorkbench({
                   ];
                 // The wheel is taken as the next phase starts.
                 if (phaseWheel !== undefined && isWheelChoiceAnchor(entry, phaseWheel.key))
-                  return selectWheel;
+                  return [
+                    <SelectWheelRow
+                      gap={gapAbove(entry.kind === 'action' ? entry.rank : null)}
+                      interactions={interactions}
+                      key={`select:${phaseWheel.key}`}
+                      wheel={phaseWheel}
+                    />,
+                  ];
                 if (entry.kind === 'boundary') return [renderBoundary(entry)];
                 if (entry.kind === 'spawned') return [renderSpawned(entry)];
                 if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);

@@ -49,6 +49,7 @@ import {
   hubStaysForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
   liveRoomForProjectEvaluationAssembly,
+  roomActionResetsForProjectEvaluationAssembly,
   encounterOutcomesForProjectEvaluationAssembly,
   fieldsSpatialPositionsForProjectEvaluationAssembly,
   chaosGatePositionForProjectEvaluationAssembly,
@@ -432,6 +433,7 @@ export function createStructuredWorkspaceProjection(
             throw error;
           }
         },
+        (occurrence) => roomActionResetsForProjectEvaluationAssembly(catalog, assembly, occurrence),
       );
       const routeSource = sources.route;
       const authoredRoute =

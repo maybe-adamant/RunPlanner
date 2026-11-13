@@ -347,6 +347,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly encounterOutcomes?: import('../source-index').WorkspaceBiomeSource['encounterOutcomes'];
   /** What is live at each gap of the room's actions; undefined while unreached. */
   readonly roomLive?: import('../source-index').WorkspaceBiomeSource['roomLive'];
+  /** Reset from here for each entry of the room's lifecycle Timeline. */
+  readonly roomActionResets?: import('../source-index').WorkspaceBiomeSource['roomActionResets'];
   /** Whether a new Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance?: import('../source-index').WorkspaceBiomeSource['rerollSpendAllowance'];
   /** A screen's next reroll and how far the pool at its point takes it. */
@@ -646,6 +648,7 @@ export function assembleWorkspaceOccurrence(
           catalog: input.catalog,
           owner: address,
           live: engineLive,
+          resets: input.roomActionResets?.(address) ?? [],
           rows: assembledRoomActions.rows,
           labelParts: (reference) =>
             occurrenceActionLabelParts(

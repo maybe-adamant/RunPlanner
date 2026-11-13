@@ -3492,3 +3492,69 @@ span.hub-board-status-line {
   font-size: 0.8rem;
   white-space: nowrap;
 }
+
+/* A gap's `+` sits on the spine above its row, shown on hover or keyboard focus. */
+.timeline-gap-control {
+  position: absolute;
+  top: -9px;
+  left: -21px;
+  z-index: 3;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--timeline-spine);
+  border-radius: 50%;
+  background: #1b1c22;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.timeline-row:hover > .timeline-gap-control,
+.timeline-gap-control:is(:focus-visible, :hover, [data-state='open']) {
+  opacity: 1;
+}
+
+.timeline-gap-control:is(:hover, :focus-visible, [data-state='open']) {
+  border-color: var(--selection-accent);
+  color: var(--selection-accent);
+}
+
+/* A gap's menu: what can be inserted there, then Reset from here. */
+.timeline-gap-menu {
+  z-index: 50;
+  display: grid;
+  gap: 8px;
+  max-width: min(32rem, calc(100 * var(--app-vw) - 24px));
+  padding: 8px 10px;
+  border: 1px solid #484954;
+  border-radius: 10px;
+  background: #1b1c22;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+  color: var(--text);
+}
+
+.timeline-gap-menu > .live-row-groups + .timeline-gap-reset {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.timeline-gap-reset {
+  justify-self: stretch;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.82rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.timeline-gap-reset:is(:hover, :focus-visible) {
+  background: rgb(255 255 255 / 6%);
+}

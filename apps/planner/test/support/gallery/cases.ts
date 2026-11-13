@@ -1620,6 +1620,40 @@ export const galleryCases: readonly GalleryCase[] = [
       ),
     target: room('N', 'surface-n-preboss:postboss'),
   },
+  // The gap menu.
+  {
+    id: 'gap-control-hover',
+    label: 'Gap menu: the `+` on the spine above a row',
+    shows: ['gap menu'],
+    project: loadSurfaceScheduledLifecycleCheckpoint,
+    target: room('P', 'surface-p-1-1-p_combat03'),
+    gap: { index: 1, open: false },
+  },
+  {
+    id: 'gap-menu-combat',
+    label: 'Gap menu: what a combat room can insert between two rows, and Reset from here',
+    shows: ['gap menu'],
+    project: loadSurfaceScheduledLifecycleCheckpoint,
+    target: room('P', 'surface-p-1-1-p_combat03'),
+    gap: { index: 1, open: true },
+  },
+  {
+    id: 'gap-menu-fields',
+    label: 'Gap menu: a Fields room between two rows',
+    shows: ['gap menu', 'Fields slot marks'],
+    project: loadNemesisFieldsCheckpoint,
+    target: room('H', 'golden-h-combat05'),
+    gap: { index: 2, open: true },
+  },
+  {
+    id: 'gap-menu-ship',
+    roomTab: 'shipCombat1Actions',
+    label: 'Gap menu: a Ship phase between two rows',
+    shows: ['gap menu', 'ship phase'],
+    project: shipNonFinalDeliveryProject,
+    target: room('O', 'surface-o-combat02'),
+    gap: { index: 1, open: true },
+  },
   // Shops and room objects.
   {
     id: 'world-shop-travel-deal',

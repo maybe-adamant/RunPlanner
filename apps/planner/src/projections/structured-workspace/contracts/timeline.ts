@@ -324,10 +324,22 @@ export interface WorkspaceLiveItem extends WorkspaceLiveFace {
   readonly verbs: readonly WorkspaceLiveVerb[];
 }
 
+/** A gap before the frontier: what can be inserted there, and its Reset from here. */
+export interface WorkspaceLiveGap {
+  readonly index: number;
+  readonly items: readonly WorkspaceLiveItem[];
+  /** Takes back every row after the gap; absent where that changes nothing. */
+  readonly reset?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ResetRoomActionsAfter' }>
+  >;
+}
+
 export interface WorkspaceRoomLive {
   /** The gap the walk stands at. */
   readonly frontier: number;
   readonly items: readonly WorkspaceLiveItem[];
+  /** Each gap before the frontier, in order. */
+  readonly gaps: readonly WorkspaceLiveGap[];
 }
 
 /** One item the game spawned, as a chip that leads to the action collecting it. */

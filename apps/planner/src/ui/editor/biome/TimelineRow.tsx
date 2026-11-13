@@ -20,6 +20,7 @@ export function TimelineRow({
   placement,
   removal,
   notice = false,
+  gap,
   ...item
 }: Omit<LiHTMLAttributes<HTMLLIElement>, 'children'> & {
   readonly kind: TimelineRowKind;
@@ -31,6 +32,8 @@ export function TimelineRow({
   readonly placement?: ReactNode;
   readonly removal?: ReactNode;
   readonly notice?: boolean;
+  /** The control of the gap above this row, drawn on the spine. */
+  readonly gap?: ReactNode;
 }) {
   const classes = ['timeline-row', notice ? 'timeline-row-notice' : undefined, className];
   const mapStage = useContext(TimelineMapStageContext);
@@ -41,6 +44,7 @@ export function TimelineRow({
       {...(mapStage === undefined ? {} : { 'data-map-stage': mapStage })}
       data-timeline-row-kind={kind}
     >
+      {gap}
       <span className="timeline-cell-handle" data-timeline-cell="handle">
         {notice ? <span aria-hidden="true" className="timeline-notice-dot" /> : handle}
       </span>

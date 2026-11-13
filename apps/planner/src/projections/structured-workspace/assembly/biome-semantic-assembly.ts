@@ -644,6 +644,7 @@ export function assembleWorkspaceBiomeSemantics(
       chaosGatePosition: source.chaosGatePosition,
       spawnedLoot: source.spawnedLoot,
       roomLive: source.roomLive,
+      roomActionResets: source.roomActionResets,
       encounterOutcomes: source.encounterOutcomes,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       transcendentEmbryoOutcomes: source.transcendentEmbryoOutcomes,

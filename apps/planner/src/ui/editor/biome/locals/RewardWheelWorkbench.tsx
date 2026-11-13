@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { type OccurrenceAddress } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
@@ -200,9 +202,12 @@ export function RewardWheelWorkbench({
 
 /** The phase's last row: which wheel offer is taken, then that offer's reward as it stands. */
 export function SelectWheelRow({
+  gap,
   interactions,
   wheel,
 }: {
+  /** The control of the gap above the choice, drawn on the spine. */
+  readonly gap?: ReactNode;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly wheel: WorkspaceRewardWheelDescriptor;
 }) {
@@ -217,7 +222,7 @@ export function SelectWheelRow({
   const chosen = offers[wheel.pickedOfferIndex - 1];
   const chosenReward = chosen === undefined ? null : (chosen.rerolledOffer ?? chosen.control.offer);
   return (
-    <LeaveRow label="Select wheel">
+    <LeaveRow gap={gap} label="Select wheel">
       <span className="timeline-leave-door">
         {offers.length > 1 ? (
           <DoorChipOptions
