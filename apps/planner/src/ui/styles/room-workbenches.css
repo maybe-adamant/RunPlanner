@@ -1284,6 +1284,11 @@
 }
 
 /* Trait-family chips in the timeline fit their name up to a cap, then end in an ellipsis. */
+/* Marks a row's outcome control for opening once the row is placed; lays out nothing. */
+.row-choice {
+  display: contents;
+}
+
 .timeline-cell-editors .trait-offer-launcher {
   width: auto;
   max-width: min(16rem, 100%);

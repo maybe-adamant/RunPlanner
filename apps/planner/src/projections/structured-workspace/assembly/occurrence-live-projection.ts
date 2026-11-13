@@ -142,7 +142,9 @@ export function projectRoomLive(input: {
       kind: 'apply' as const,
       intent: Object.freeze({ commands: verb.commands }),
       ...(choice?.timing === 'after' && verb.reference !== undefined
-        ? { opens: roomActionKey(verb.reference) }
+        ? {
+            opens: Object.freeze({ rowKey: roomActionKey(verb.reference), choice: choice.picker }),
+          }
         : {}),
     });
   };

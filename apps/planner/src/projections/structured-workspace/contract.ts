@@ -110,6 +110,7 @@ export type {
   WorkspaceLiveItem,
   WorkspaceLiveVerb,
   WorkspaceRoomLive,
+  WorkspaceRowChoice,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthDomain,
   WorkspaceSteadyGrowthInteraction,

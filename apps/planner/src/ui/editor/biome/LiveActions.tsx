@@ -208,9 +208,9 @@ function LiveItemChip({
     if (opens === undefined || from === null) return;
     // The placed row's own choice opens once the Timeline shows it.
     afterClose.current = () => {
-      const row = actionRowElement(from, opens);
+      const row = actionRowElement(from, opens.rowKey);
       if (row === null) return false;
-      openPlacedRow(row);
+      openPlacedRow(row, opens.choice);
       return true;
     };
   };

@@ -31,6 +31,7 @@ import {
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../../authored-project/shop';
 import type { Catalog } from '../../catalog-schema';
+import { resolveAcquisitionRole } from '../../reward-kernel';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import {
@@ -116,11 +117,17 @@ export interface SpawnedLootItem {
   /** The key of the unlock that frees it, for loot that spawns before it can be taken. */
   readonly lockedUntil?: string;
   /**
-   * An unplaced pickup whose placement asks for a choice: the Pom level its
-   * reward resolves, such as a Supply Chain Pom Slice's target.
+   * An unplaced pickup whose collection settles an outcome on its own picker
+   * once placed: the Pom level its reward resolves (a Supply Chain Pom
+   * Slice's target), the boon its offer gives, an Anvil of Fates result or a
+   * Path of Stars screen.
    */
-  readonly needsChoice?: 'levelResolution';
+  readonly needsChoice?: PickupOutcomeChoice;
 }
+
+/** The outcome a pickup's collection settles on its own picker. */
+export type PickupOutcomeChoice =
+  'levelResolution' | 'traitOffer' | 'anvilResult' | 'hexActivation';
 
 export interface SpawnMoment {
   /** Stable within the room: the kind, plus the phase where it has one. */
@@ -215,6 +222,13 @@ function compareOrder(left: readonly number[], right: readonly number[]): number
 
 type LevelResolutions = AuthoredRewardState['levelResolutionsByAcquisitionRole'];
 
+/** The reward a collect row acquires, with the outcomes its authored state holds per role. */
+export type CollectedReward = {
+  readonly offer: ResolvedRewardOffer;
+  readonly levelResolutionsByAcquisitionRole?: LevelResolutions;
+  readonly traitOffersByAcquisitionRole?: AuthoredRewardState['traitOffersByAcquisitionRole'];
+};
+
 /** The reward resolves a Pom level for the role, or for any role when none is named. */
 function resolvesLevel(levels: LevelResolutions, role?: string): boolean {
   return (
@@ -227,12 +241,7 @@ function resolvesLevel(levels: LevelResolutions, role?: string): boolean {
 function rowReward(
   room: CanonicalAuthoredRoom,
   reference: RoomActionReference,
-):
-  | {
-      readonly offer: ResolvedRewardOffer;
-      readonly levelResolutionsByAcquisitionRole?: LevelResolutions;
-    }
-  | undefined {
+): CollectedReward | undefined {
   switch (reference.kind) {
     case 'interactIncomingReward':
       return room.incomingReward;
@@ -251,10 +260,55 @@ function rowReward(
   }
 }
 
-/** Whether collecting the row's authored reward resolves a Pom level. */
-function rowResolvesLevel(room: CanonicalAuthoredRoom, reference: RoomActionReference): boolean {
-  return resolvesLevel(
-    rowReward(room, reference)?.levelResolutionsByAcquisitionRole,
+/**
+ * The outcome collecting a reward settles on its own picker, for the role or
+ * for any role when none is named: its Pom level, its trait offer, or what
+ * its concrete pickup opens (an Anvil of Fates result, a Path of Stars screen).
+ */
+export function rewardOutcome(
+  catalog: Catalog,
+  reward: CollectedReward | undefined,
+  role?: string,
+): PickupOutcomeChoice | undefined {
+  if (reward === undefined) return undefined;
+  if (resolvesLevel(reward.levelResolutionsByAcquisitionRole, role)) return 'levelResolution';
+  const offers = reward.traitOffersByAcquisitionRole;
+  if (
+    offers !== undefined &&
+    (role === undefined ? Object.keys(offers).length > 0 : role in offers)
+  )
+    return 'traitOffer';
+  const declaration = catalog.rewards.rewardTypes.byKey[reward.offer.rewardType];
+  for (const each of declaration?.acquisitionRoles.values ?? []) {
+    if (role !== undefined && each.key !== role) continue;
+    // A hidden source (Blind Box) has no identity until it is unwrapped.
+    if (
+      each.resolution.kind === 'payloadSource' &&
+      (reward.offer.payload === undefined || !(each.resolution.field in reward.offer.payload))
+    )
+      continue;
+    const { gameName } = resolveAcquisitionRole(
+      catalog.rewards,
+      reward.offer,
+      each.key,
+      'roomRewardPickup',
+    ).acquisition;
+    const acquisition = catalog.rewards.acquisitions.byKey[gameName];
+    if (acquisition?.pickupEffect?.kind === 'anvilOfFates') return 'anvilResult';
+    if (acquisition?.pathPointGrant !== undefined) return 'hexActivation';
+  }
+  return undefined;
+}
+
+/** The outcome collecting the row's authored reward settles on its own picker. */
+function rowOutcome(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  reference: RoomActionReference,
+): PickupOutcomeChoice | undefined {
+  return rewardOutcome(
+    catalog,
+    rowReward(room, reference),
     reference.kind === 'interactIncomingReward' ? reference.acquisitionRole : undefined,
   );
 }
@@ -452,7 +506,7 @@ export function spawnedLootForProjectEvaluationAssembly(
   ): SpawnedLootItem => {
     const action = actionAddress(row.reference);
     const command = row.rank === null ? insertion(room, row, action) : undefined;
-    const needsChoice = row.rank === null && rowResolvesLevel(room, row.reference);
+    const needsChoice = row.rank === null ? rowOutcome(catalog, room, row.reference) : undefined;
     const reward =
       row.reference.kind === 'collectRequiredReward'
         ? room.requiredReward === undefined
@@ -476,26 +530,26 @@ export function spawnedLootForProjectEvaluationAssembly(
               ...(command === undefined ? {} : { command }),
             }),
       ...(lockedUntil === undefined ? {} : { lockedUntil }),
-      ...(needsChoice ? { needsChoice: 'levelResolution' as const } : {}),
+      ...(needsChoice === undefined ? {} : { needsChoice }),
     });
   };
-  /** Placing a derived pickup authors its reward: a fixed one, else one of its single type. */
-  const derivedResolvesLevel = (
+  /**
+   * The outcome placing a derived pickup settles: its authored reward's, a
+   * fixed one's, else the Pom level a reward of its single type resolves.
+   */
+  const derivedOutcome = (
     entry: AcquisitionEntryAddress,
     capability: {
       readonly rewardTypes?: readonly string[];
       readonly fixedReward?: AuthoredRewardState;
       readonly producerLifecycleKey?: string;
     },
-  ): boolean => {
+  ): PickupOutcomeChoice | undefined => {
     const authored = room.acquisitionSites[entry.site.pointKey]?.entries[entry.entryKey];
-    if (authored !== undefined && authored !== null)
-      return resolvesLevel(authored.levelResolutionsByAcquisitionRole);
-    if (capability.fixedReward !== undefined)
-      return resolvesLevel(capability.fixedReward.levelResolutionsByAcquisitionRole);
+    if (authored !== undefined && authored !== null) return rewardOutcome(catalog, authored);
+    if (capability.fixedReward !== undefined) return rewardOutcome(catalog, capability.fixedReward);
     const rewardType = capability.rewardTypes?.length === 1 ? capability.rewardTypes[0] : undefined;
-    return (
-      rewardType !== undefined &&
+    return rewardType !== undefined &&
       capability.producerLifecycleKey !== undefined &&
       createUnresolvedLevelResolutions(
         catalog,
@@ -503,7 +557,8 @@ export function spawnedLootForProjectEvaluationAssembly(
         { kind: 'producerLifecycle', key: capability.producerLifecycleKey },
         occurrence.routeKey,
       ) !== undefined
-    );
+      ? 'levelResolution'
+      : undefined;
   };
   /** A derived pickup joins its ranked row only for placement. */
   const fromDerived = (
@@ -512,7 +567,7 @@ export function spawnedLootForProjectEvaluationAssembly(
     family: AcquisitionEntrySourceFamily,
     participation: RoomActionParticipation,
     command: ProjectCommand | undefined,
-    capability: Parameters<typeof derivedResolvesLevel>[1],
+    capability: Parameters<typeof derivedOutcome>[1],
   ): SpawnedLootItem => {
     const placed = liveRows.find(
       (row) =>
@@ -549,11 +604,11 @@ export function spawnedLootForProjectEvaluationAssembly(
               kind: 'unplaced' as const,
               ...(command === undefined ? {} : { command }),
             }),
-      ...(placed?.rank === undefined || placed.rank === null
-        ? derivedResolvesLevel(entry, capability)
-          ? { needsChoice: 'levelResolution' as const }
-          : {}
-        : {}),
+      ...(() => {
+        if (placed?.rank !== undefined && placed.rank !== null) return {};
+        const needsChoice = derivedOutcome(entry, capability);
+        return needsChoice === undefined ? {} : { needsChoice };
+      })(),
     });
   };
 

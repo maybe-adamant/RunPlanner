@@ -303,13 +303,19 @@ export interface WorkspaceLiveChoice {
   readonly intent: WorkspaceCommandIntent;
 }
 
+/** An outcome a placed row settles on its own picker, as the engine names it. */
+export type WorkspaceRowChoice = Extract<
+  import('@run-planner/engine/simulation').LiveVerbChoice,
+  { readonly timing: 'after' }
+>['picker'];
+
 /** What choosing a verb does. */
 export type WorkspaceLiveVerbAction =
-  /** Applies its commands as one edit; the placed row then opens its choice when `opens` names it. */
+  /** Applies its commands as one edit; the placed row then opens the choice `opens` names. */
   | {
       readonly kind: 'apply';
       readonly intent: import('../contract').WorkspaceCommandsIntent;
-      readonly opens?: string;
+      readonly opens?: { readonly rowKey: string; readonly choice: WorkspaceRowChoice };
     }
   /** Lists its values first. */
   | { readonly kind: 'choose'; readonly choices: readonly WorkspaceLiveChoice[] }

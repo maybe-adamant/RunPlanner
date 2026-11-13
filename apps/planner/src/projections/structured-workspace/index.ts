@@ -116,6 +116,7 @@ export type {
   WorkspaceLiveItem,
   WorkspaceLiveVerb,
   WorkspaceRoomLive,
+  WorkspaceRowChoice,
   WorkspaceRoomFeature,
   WorkspaceRoomWorkbenchPresentation,
   WorkspaceShipPhasePresentation,

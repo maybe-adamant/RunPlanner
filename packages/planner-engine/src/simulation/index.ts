@@ -374,6 +374,7 @@ export {
   type TimedPickupPlacementCommand,
   type LiveRoom,
   type LiveVerb,
+  type LiveVerbChoice,
 } from './evaluation/live-room';
 export { GoldLedgerContractError } from './commerce/gold/ledger';
 export type {

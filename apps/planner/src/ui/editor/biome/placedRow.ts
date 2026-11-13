@@ -1,3 +1,5 @@
+import type { WorkspaceRowChoice } from '@planner/projections/structured-workspace';
+
 /** Finds, focuses and opens a room action's Timeline row from a control beside it. */
 
 export function actionRowElement(from: HTMLElement, actionKey: string): HTMLElement | null {
@@ -14,16 +16,25 @@ export function focusActionRow(row: HTMLElement): void {
   row.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
 }
 
-/** A newly placed row's first unfinished choice opens; otherwise the row is focused. */
-export function openPlacedRow(row: HTMLElement): void {
-  const choice = [
-    ...row.querySelectorAll<HTMLElement>('.timeline-cell-editors button[data-has-findings="true"]'),
-  ].find((button) => !button.matches(':disabled') && button.ariaDisabled !== 'true');
-  if (choice === undefined) {
+const enabled = (control: HTMLElement) =>
+  !control.matches(':disabled') && control.getAttribute('aria-disabled') !== 'true';
+
+/**
+ * A newly placed row opens the outcome its placement names, where the row shows it: a
+ * picker opens, a toggle takes focus. Otherwise the row is focused.
+ */
+export function openPlacedRow(row: HTMLElement, choice: WorkspaceRowChoice): void {
+  const rowKey = row.getAttribute('data-room-action-key') ?? '';
+  const scope = row.closest('.room-actions-workbench') ?? row.ownerDocument;
+  const holder = scope.querySelector<HTMLElement>(
+    `[data-row-choice-for="${CSS.escape(rowKey)}"][data-row-choice="${CSS.escape(choice)}"]`,
+  );
+  const control = [...(holder?.querySelectorAll<HTMLElement>('button') ?? [])].find(enabled);
+  if (control === undefined) {
     focusActionRow(row);
     return;
   }
-  choice.focus({ preventScroll: true });
+  control.focus({ preventScroll: true });
   row.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-  choice.click();
+  if (!control.hasAttribute('aria-pressed')) control.click();
 }

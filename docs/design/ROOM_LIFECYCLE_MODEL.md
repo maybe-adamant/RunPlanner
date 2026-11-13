@@ -846,8 +846,9 @@ reward that spawns per role, or the Red Onion of a reward
 [Forfeit](TRAIT_OFFERS.md#fear-and-reward-settlement) replaced as it
 spawned), source,
 participation and placement: its ranked action, or the command that places it,
-an unplaced item that needs an input once placed (a Pom Slice's Pom) marked as
-needing that choice. Items come from the active action domain and the reached due
+an unplaced item marked with the outcome its pickup settles once placed (a Pom
+Slice's Pom, a boon's offer, an Anvil of Fates result, a Path of Stars
+screen). Items come from the active action domain and the reached due
 contacts rather than the authored order, so an unplaced item still appears.
 Only loot the walk produced is listed, and spawning is kept apart from
 resolving. Everything a moment spawns spawns together once the walk reaches
@@ -977,8 +978,13 @@ room's reached actions end. Each is offered only while a held card
 enables it and the reroll pool pays, and a sale only while its list can show a
 trait still held, which the picker lists. A picker comes **before** a verb
 whose commands it supplies (a reroll press's reward, a Pool sale's trait) or
-**after** one that applies as is (a Pom's level, a rerolled list, the rack's
-keepsake, the Artificer's replacement, the item Travel Deal restocks). Travel
+**after** one that applies as is: the outcome the placed row settles, opened
+once the row stands (a Pom's level, a pickup's, purchase's or contact's trait
+offer, an Anvil of Fates result, a Path of Stars screen, a rerolled list, the
+rack's keepsake, the Artificer's replacement, the item Travel Deal restocks, a
+Fateful Twist's result, a Nemesis event's reward and traded boon, the Phial's
+target, a challenge switch's outcome, a locked door's fight). A moved row
+keeps the outcome it has, so its move opens nothing. Travel
 Deal restocks as the purchase (the World Shop's first) or rush (the Shrine's
 first initial one) that triggers it settles, so the restocked item is that
 row's outcome, stocked by the edit that first reaches it, and offered to buy. Each verb is one edit against the current plan; verbs

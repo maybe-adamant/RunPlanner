@@ -28,6 +28,7 @@ import {
   STYGIAN_WELL_SLOT_KEYS,
   featureRerollIdsInUse,
   rerollActionKind,
+  stygianWellGenerationItemKey,
   stygianWellGenerationKey,
   stygianWellPurchasedGenerationKeys,
   stygianWellRerolls,
@@ -63,6 +64,7 @@ import { authoredRoom, roomWalk } from './evaluated-room';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
@@ -72,6 +74,7 @@ import {
   rerollSurfaceForProjectEvaluationAssembly,
 } from './reroll-authoring';
 import {
+  rewardOutcome,
   spawnedLootForProjectEvaluationAssembly,
   spawnMomentEntryIndex,
   type SpawnedLootItem,
@@ -150,7 +153,27 @@ export type LiveVerbChoice =
   /** The keepsake the rack swaps in; with none chosen the held keepsake stays. */
   | { readonly picker: 'keepsake'; readonly timing: 'after' }
   /** The reward the Artificer's replacement takes. */
-  | { readonly picker: 'artificerReplacement'; readonly timing: 'after' };
+  | { readonly picker: 'artificerReplacement'; readonly timing: 'after' }
+  /**
+   * The outcome the placed row settles, which its own picker shows where the
+   * reached state has one: a pickup's or contact's trait offer (a boon, the
+   * Gorgon's Athena), an Anvil of Fates result, a Path of Stars screen, a
+   * Fateful Twist's result, a Nemesis event's reward and traded boon, the
+   * Phial's target at the fountain, a challenge switch's outcome, or the
+   * fight a locked door's press starts.
+   */
+  | {
+      readonly picker:
+        | 'traitOffer'
+        | 'anvilResult'
+        | 'hexActivation'
+        | 'stygianWellTwist'
+        | 'nemesisEvent'
+        | 'fountainRarity'
+        | 'challengeSwitchOutcome'
+        | 'unlockExitFight';
+      readonly timing: 'after';
+    };
 
 /** One interaction available on an item at a gap. */
 export interface LiveVerb {
@@ -626,15 +649,75 @@ function standingDispositionVerbs(
   return Object.freeze(verbs);
 }
 
-/** The outcome a row of this kind takes from its own picker once it stands. */
-function rowChoice(reference: RoomActionReference): LiveVerbChoice | undefined {
+const after = (picker: Extract<LiveVerbChoice, { readonly timing: 'after' }>['picker']) =>
+  frozen({ picker, timing: 'after' as const }) as LiveVerbChoice;
+
+/**
+ * The outcome a row of this kind settles on its own picker once it stands: the
+ * rack's keepsake, a rerolled list, a contact's trait offer or Nemesis event,
+ * a Fateful Twist's result, the Phial's target, a switch's outcome or a
+ * locked door's fight.
+ */
+function rowChoice(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  room: CanonicalAuthoredRoom,
+  occurrence: OccurrenceAddress,
+  reference: RoomActionReference,
+): LiveVerbChoice | undefined {
   switch (reference.kind) {
+    case 'interactShopOffer': {
+      // A bought item settles what its pickup opens, as a picked-up one does.
+      const outcome = rewardOutcome(
+        catalog,
+        room.entryState?.kind === 'shop'
+          ? room.entryState.offers.find((offer) => offer.offerKey === reference.offerKey)
+          : undefined,
+      );
+      return outcome === undefined ? undefined : after(outcome);
+    }
     case 'interactKeepsakeRack':
-      return frozen({ picker: 'keepsake' as const, timing: 'after' as const });
+      return after('keepsake');
     case 'rerollStygianWell':
-      return frozen({ picker: 'stygianWellRoll' as const, timing: 'after' as const });
+      return after('stygianWellRoll');
     case 'rerollPurgingPool':
-      return frozen({ picker: 'purgingPoolRoll' as const, timing: 'after' as const });
+      return after('purgingPoolRoll');
+    case 'interactGorgon':
+      return after('traitOffer');
+    case 'interactEncounter': {
+      const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(
+        assembly,
+        createEncounterPhaseAddress(
+          createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+          { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+          reference.phaseKey,
+        ),
+      );
+      const definition =
+        status?.kind === 'active' && status.encounterDefinitionKey !== undefined
+          ? catalog.encounterDefinitions.byKey[status.encounterDefinitionKey]
+          : undefined;
+      if (definition?.nemesisRandomEvent !== undefined) return after('nemesisEvent');
+      return definition?.traitOfferProducer === undefined ? undefined : after('traitOffer');
+    }
+    case 'purchaseStygianWellOffer': {
+      const authored = authoredOccurrence(assembly.project, occurrence);
+      const itemKey =
+        authored === undefined
+          ? undefined
+          : stygianWellGenerationItemKey(authored, reference.generationKey);
+      // A Fateful Twist rolls its item as its purchase settles.
+      const grant = catalog.rewards.shops.byKey.RoomShop?.groups.values
+        .flatMap((group) => group.options.values)
+        .find((option) => option.key === itemKey)?.stygianWell?.grant;
+      return grant?.kind === 'twist' ? after('stygianWellTwist') : undefined;
+    }
+    case 'useFountain':
+      return after('fountainRarity');
+    case 'interactChallengeSwitch':
+      return after('challengeSwitchOutcome');
+    case 'unlockExit':
+      return after('unlockExitFight');
     default:
       return undefined;
   }
@@ -797,23 +880,19 @@ type GapStep =
 
 const STANDING: GapStep = frozen({ kind: 'standing' });
 
-const LEVEL_RESOLUTION_CHOICE: LiveVerbChoice = frozen({
-  picker: 'levelResolution',
-  timing: 'after',
-});
-
 /**
  * The verb a step performs on a row: standing, moving it here or placing it
- * here, with the item's or action's obligation. A placement's own picker
- * follows it, or, `before`, supplies its command instead.
+ * here, with the item's or action's obligation. The row's own picker follows
+ * a placement, or, `before`, supplies its command instead; a moved row keeps
+ * the outcome it already has.
  */
 function stepVerb(
   reference: RoomActionReference,
   obligation: Obligation,
   step: GapStep,
-  placeChoice?: LiveVerbChoice,
+  rowPicker?: LiveVerbChoice,
 ): LiveVerb {
-  const choice = (step.kind === 'place' ? placeChoice : undefined) ?? rowChoice(reference);
+  const choice = step.kind === 'move' ? undefined : rowPicker;
   const base = {
     verb: liveVerbKind(reference),
     participation: obligation.participation,
@@ -864,6 +943,15 @@ export function liveRoomForProjectEvaluationAssembly(
   const rowByKey = new Map(liveRows.map((row) => [row.key, row]));
   const actionAddress = (reference: RoomActionReference) =>
     createRoomActionAddress(biome, occurrence.occurrenceId, roomActionKey(reference));
+  const rowPickers = new Map<string, LiveVerbChoice | undefined>();
+  /** A row's own picker; a pickup's placement asks the outcome its spawn names first. */
+  const pickerOf = (reference: RoomActionReference, placeChoice?: LiveVerbChoice) => {
+    if (placeChoice !== undefined) return placeChoice;
+    const key = roomActionKey(reference);
+    if (!rowPickers.has(key))
+      rowPickers.set(key, rowChoice(catalog, assembly, room, occurrence, reference));
+    return rowPickers.get(key);
+  };
 
   // Stale rows have no Timeline entry, so the gaps around one share one stretch of it.
   const actionEntries = entries.flatMap((entry, index) =>
@@ -952,7 +1040,14 @@ export function liveRoomForProjectEvaluationAssembly(
           obligation.participation,
           obligation.deadline,
         )
-      : undefined) ?? [stepVerb(reference, obligation, step, placeChoice)];
+      : undefined) ?? [
+      stepVerb(
+        reference,
+        obligation,
+        step,
+        pickerOf(reference, step.kind === 'place' ? placeChoice : undefined),
+      ),
+    ];
 
   // Pickups, from the spawned loot, each with the gap it spawned at.
   interface PickupSpawn {
@@ -1026,7 +1121,7 @@ export function liveRoomForProjectEvaluationAssembly(
     const unlockGap = item.lockedUntil === undefined ? undefined : unlockGaps.get(item.lockedUntil);
     // A caged pickup cannot be taken until its cage unlocks; a row already there stands.
     const locked = item.lockedUntil !== undefined && (unlockGap === undefined || unlockGap > gap);
-    const placeChoice = item.needsChoice === undefined ? undefined : LEVEL_RESOLUTION_CHOICE;
+    const placeChoice = item.needsChoice === undefined ? undefined : after(item.needsChoice);
     if (row !== undefined && (row.rank !== null || item.placement.kind === 'unplaced')) {
       deadline = rowDeadline(row, (at) => !gatedPast(spawn, at));
       const step = gatedPast(spawn, gap) ? undefined : rowStep(row, gap);
@@ -1058,7 +1153,7 @@ export function liveRoomForProjectEvaluationAssembly(
             item.reference,
             { participation: item.participation, deadline },
             { kind: 'place', command: atIndex(command, gap) },
-            placeChoice,
+            pickerOf(item.reference, placeChoice),
           ),
         );
     }
@@ -1130,7 +1225,7 @@ export function liveRoomForProjectEvaluationAssembly(
           purchase.reference,
           { participation: 'optional' },
           { kind: 'place', command: atIndex(purchase.command, gap) },
-          purchase.choice,
+          pickerOf(purchase.reference, purchase.choice),
         ),
       ]);
     for (const { object, owner, gap: verbGap, verb } of choiceVerbs)

@@ -20,6 +20,7 @@ import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { ChallengeSwitchOutcomeControls } from './ChallengeSwitchOutcomeControls';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
+import { RowChoice } from './RowChoice';
 
 /** The Sea Star toggle for one acquisition role of a timeline row: lit when Double Up procs. */
 function SeaStarToggle({
@@ -268,34 +269,42 @@ export function RoomActionInlineEditors({
   );
   return (
     <>
-      {traitControls.map((control) => (
-        <TraitOfferLauncher
-          control={control}
-          interactions={interactions}
-          key={workspaceInteractionKey(control.address)}
-        />
-      ))}
-      {levels.map((control) => (
-        <PomResolutionLauncher
-          control={control}
-          interactions={interactions}
-          key={workspaceInteractionKey(control.address)}
-        />
-      ))}
-      {anvilInteractions.map(({ anvil, owner }) => (
-        <AnvilResultLauncher
-          interaction={anvil}
-          key={workspaceInteractionKey(owner)}
-          owner={owner}
-        />
-      ))}
-      {hexActivations.map(({ hexActivation, owner }) => (
-        <HexActivationLauncher
-          interaction={hexActivation}
-          key={workspaceInteractionKey(owner)}
-          owner={owner}
-        />
-      ))}
+      <RowChoice choice="traitOffer" rowKey={row.key}>
+        {traitControls.map((control) => (
+          <TraitOfferLauncher
+            control={control}
+            interactions={interactions}
+            key={workspaceInteractionKey(control.address)}
+          />
+        ))}
+      </RowChoice>
+      <RowChoice choice="levelResolution" rowKey={row.key}>
+        {levels.map((control) => (
+          <PomResolutionLauncher
+            control={control}
+            interactions={interactions}
+            key={workspaceInteractionKey(control.address)}
+          />
+        ))}
+      </RowChoice>
+      <RowChoice choice="anvilResult" rowKey={row.key}>
+        {anvilInteractions.map(({ anvil, owner }) => (
+          <AnvilResultLauncher
+            interaction={anvil}
+            key={workspaceInteractionKey(owner)}
+            owner={owner}
+          />
+        ))}
+      </RowChoice>
+      <RowChoice choice="hexActivation" rowKey={row.key}>
+        {hexActivations.map(({ hexActivation, owner }) => (
+          <HexActivationLauncher
+            interaction={hexActivation}
+            key={workspaceInteractionKey(owner)}
+            owner={owner}
+          />
+        ))}
+      </RowChoice>
       {payload === undefined
         ? null
         : conversions.map((conversion) => (
@@ -307,13 +316,17 @@ export function RoomActionInlineEditors({
             />
           ))}
       {row.fountainRarity === undefined ? null : (
-        <FountainRarityEffectRow control={row.fountainRarity} interactions={interactions} />
+        <RowChoice choice="fountainRarity" rowKey={row.key}>
+          <FountainRarityEffectRow control={row.fountainRarity} interactions={interactions} />
+        </RowChoice>
       )}
       {row.challengeSwitchOutcome === undefined ? null : (
-        <ChallengeSwitchOutcomeControls
-          interactions={interactions}
-          outcome={row.challengeSwitchOutcome}
-        />
+        <RowChoice choice="challengeSwitchOutcome" rowKey={row.key}>
+          <ChallengeSwitchOutcomeControls
+            interactions={interactions}
+            outcome={row.challengeSwitchOutcome}
+          />
+        </RowChoice>
       )}
     </>
   );

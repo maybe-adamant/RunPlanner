@@ -55,6 +55,7 @@ import { NemesisEventPending, NemesisInteractionSentence } from './NemesisEventE
 import { StygianWellTwistChips } from './commerce/StygianWellTwist';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
 import { SpawnCopyChips, SpawnedLootRow } from './SpawnedLootRow';
+import { RowChoice } from './RowChoice';
 import { FightGoldAmount, GoldAmount, PurchaseCost } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
@@ -706,10 +707,12 @@ export function RoomActionsWorkbench({
               ) : row.unlockDoorLabel !== undefined ? (
                 <strong>Unlock</strong>
               ) : nemesisInteraction !== undefined && nemesisInteraction.value !== null ? (
-                <NemesisInteractionSentence
-                  findingMark={(control) => findingMark(row.address, control)}
-                  interaction={nemesisInteraction}
-                />
+                <RowChoice choice="nemesisEvent" rowKey={row.key}>
+                  <NemesisInteractionSentence
+                    findingMark={(control) => findingMark(row.address, control)}
+                    interaction={nemesisInteraction}
+                  />
+                </RowChoice>
               ) : row.labelParts === undefined ? (
                 // A reroll's object icon and die already say what it does.
                 row.featureRoll === undefined ? (
@@ -730,12 +733,14 @@ export function RoomActionsWorkbench({
                     row.stygianWellTwist === undefined ? (
                       rowName
                     ) : (
-                      <StygianWellTwistChips
-                        bought={rowName}
-                        interactions={interactions}
-                        label={row.label}
-                        twist={row.stygianWellTwist}
-                      />
+                      <RowChoice choice="stygianWellTwist" rowKey={row.key}>
+                        <StygianWellTwistChips
+                          bought={rowName}
+                          interactions={interactions}
+                          label={row.label}
+                          twist={row.stygianWellTwist}
+                        />
+                      </RowChoice>
                     )
                   ) : (
                     <>
@@ -770,14 +775,25 @@ export function RoomActionsWorkbench({
               )}
               {row.featureRoll === undefined ? null : (
                 // A reroll's restocked slots follow its die on the label's line.
-                <FeatureRollSlots
-                  feature={row.featureRoll.feature}
-                  interactions={interactions}
-                  label={row.label}
-                  slots={row.featureRoll.slots}
-                />
+                <RowChoice
+                  choice={
+                    row.featureRoll.feature === 'stygianWell'
+                      ? 'stygianWellRoll'
+                      : 'purgingPoolRoll'
+                  }
+                  rowKey={row.key}
+                >
+                  <FeatureRollSlots
+                    feature={row.featureRoll.feature}
+                    interactions={interactions}
+                    label={row.label}
+                    slots={row.featureRoll.slots}
+                  />
+                </RowChoice>
               )}
-              <RoomActionArtificerOutput interactions={interactions} row={row} />
+              <RowChoice choice="artificerReplacement" rowKey={row.key}>
+                <RoomActionArtificerOutput interactions={interactions} row={row} />
+              </RowChoice>
               {row.slot === undefined ? null : (
                 <span className="visually-hidden">{` · slot ${row.slot}`}</span>
               )}
@@ -797,14 +813,18 @@ export function RoomActionsWorkbench({
                     label={row.unlockDoorLabel}
                   />
                   {row.unlockExitEncounter === undefined ? null : (
-                    <UnlockExitFightControl
-                      encounter={row.unlockExitEncounter}
-                      interactions={interactions}
-                    />
+                    <RowChoice choice="unlockExitFight" rowKey={row.key}>
+                      <UnlockExitFightControl
+                        encounter={row.unlockExitEncounter}
+                        interactions={interactions}
+                      />
+                    </RowChoice>
                   )}
                 </span>
               ) : doorPress === undefined ? (
-                renderRowContent?.(row)
+                <RowChoice choice="keepsake" rowKey={row.key}>
+                  {renderRowContent?.(row)}
+                </RowChoice>
               ) : (
                 <DoorRerollRowReward
                   {...(pressChips === undefined ? {} : { chips: pressChips })}
@@ -864,7 +884,7 @@ export function RoomActionsWorkbench({
           }
         />
         {row.travelDealLine === undefined ? null : (
-          <TravelDealLine interactions={interactions} line={row.travelDealLine} />
+          <TravelDealLine interactions={interactions} line={row.travelDealLine} rowKey={row.key} />
         )}
         {row.purgingPoolRefresh === undefined ? null : (
           <PurgingPoolRefreshRow interactions={interactions} refresh={row.purgingPoolRefresh} />

@@ -33,6 +33,7 @@ import { checkpointRegistry } from '@run-planner/test-fixtures/checkpoints/regis
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   loadUnderworldFGCheckpoint,
+  loadUnderworldFGHICheckpoint,
   loadUnderworldFStygianWellCheckpoint,
   loadUnderworldWorldShopTravelDealCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
@@ -517,8 +518,8 @@ describe('live interactions at a gap', () => {
     const choices = objectVerbs(well).filter(
       ({ verb }) => verb.choice !== undefined && verb.standing !== true,
     );
+    // A moved row keeps its outcome: the rack's move opens no picker.
     expect(choices.map(summary)).toEqual([
-      [0, 'keepsakeRack', 'use', 'keepsake', ['MoveRoomAction']],
       [last, 'purgingPool', 'reroll', 'purgingPoolRoll', ['InsertPurgingPoolReroll']],
       [last, 'stygianWell', 'reroll', 'stygianWellRoll', ['InsertStygianWellReroll']],
     ]);
@@ -807,12 +808,15 @@ describe('live interactions at a gap', () => {
     });
     expect(interactions(stocked, worldShop).frontier).toBe(1);
     const later = shopVerbs(stocked);
+    // Past the restock each purchase keeps only its own item's outcome: a boon's offer.
     expect(later.map(summary)).toEqual([
       ...first
         .filter((verb) => verb !== trigger)
         .map((verb) => [
           roomActionKey(verb.reference!),
-          undefined,
+          verb.reference?.kind === 'interactShopOffer' && verb.reference.offerKey === 'Boon'
+            ? 'traitOffer'
+            : undefined,
           ['ReplaceShopPurchaseParticipation'],
         ]),
       [roomActionKey(travelDealRefillPurchase), undefined, ['PurchaseShopTravelDealRefill']],
@@ -886,6 +890,97 @@ describe('live interactions at a gap', () => {
     expect(summary(refillBuy).slice(2)).toEqual([undefined, ['PurchaseHermesShrineOffer']]);
     // Once refilled, no later rush carries the picker.
     expect(shrineVerbs(stocked).filter((verb) => verb.choice !== undefined)).toEqual([]);
+  });
+
+  it('names the outcome each placed row settles, opened on the row its edit places', () => {
+    // Each plan's rooms, taken back to their entry one at a time, show the row's placement
+    // with the picker its outcome takes once it stands.
+    const expected: readonly (readonly [string, string, LiveVerb['verb']])[] = [
+      ['surface-n-entry-frontier', 'traitOffer', 'pickUp'],
+      ['underworld-fg', 'traitOffer', 'talkTo'],
+      ['underworld-gorgon-athena', 'traitOffer', 'talkTo'],
+      ['surface-anvil', 'anvilResult', 'buy'],
+      ['surface-ordinary-hex-path', 'hexActivation', 'pickUp'],
+      ['nemesis-f-trait-trade', 'nemesisEvent', 'talkTo'],
+      ['dream-mixed-handoff', 'stygianWellTwist', 'buy'],
+      ['underworld-fg', 'fountainRarity', 'use'],
+    ];
+    const missing: string[] = [];
+    for (const [id, picker, verbKind] of expected) {
+      const project = checkpointRegistry.find(({ entry }) => entry.id === id)!.load();
+      const found = project.route.biomes.some((biome) =>
+        (biome.topology?.occurrences ?? []).some((occurrence) => {
+          const address = createOccurrenceAddress(
+            createBiomeAddress(project.route.routeKey, biome.biomeKey),
+            occurrence.occurrenceId,
+          );
+          const reset =
+            occurrence.roomActions.order.length === 0
+              ? project
+              : applyProjectCommand(project, catalog, {
+                  kind: 'ResetRoomActionsAfter',
+                  occurrence: address,
+                  afterActionKey: null,
+                });
+          const live = liveRoomForProjectEvaluationAssembly(
+            catalog,
+            simulateProjectAssembly(catalog, reset),
+            address,
+          );
+          const verb = live?.gaps[live.frontier]?.items
+            .flatMap((item) => item.verbs)
+            .find(
+              (candidate) => candidate.choice?.picker === picker && candidate.verb === verbKind,
+            );
+          if (verb === undefined) return false;
+          // The outcome follows the edit that places its row.
+          expect(verb.choice?.timing).toBe('after');
+          const placed = verb.commands!.reduce(
+            (document, command) => applyProjectCommand(document, catalog, command),
+            reset,
+          );
+          expect(roomOrder(placed, address).map(roomActionKey)).toContain(
+            roomActionKey(verb.reference!),
+          );
+          return true;
+        }),
+      );
+      if (!found) missing.push(`${id} ${picker}`);
+    }
+    expect(missing).toEqual([]);
+
+    // A locked door's press opens its fight; a challenge switch's press its outcome.
+    const fgh = loadUnderworldFGHICheckpoint();
+    const gHost = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'G'),
+      createOccurrenceId('golden-g-b1-e1'),
+    );
+    const locked = applyProjectCommand(fgh, catalog, {
+      kind: 'ReplaceLockedExit',
+      occurrence: gHost,
+      exitKey: 'exit2',
+      locked: true,
+    });
+    const frontierVerbs = (document: ProjectDocument, address: OccurrenceAddress) => {
+      const live = interactions(document, address);
+      return live.gaps[live.frontier]!.items.flatMap((item) => item.verbs);
+    };
+    expect(
+      frontierVerbs(locked, gHost)
+        .filter((verb) => verb.verb === 'unlock')
+        .map((verb) => [verb.choice?.picker, verb.commands?.map((command) => command.kind)]),
+    ).toEqual([['unlockExitFight', ['InsertRoomAction']]]);
+    const switchRoom = fRoom('golden-f-b5-e1');
+    const observed = applyProjectCommand(fgh, catalog, {
+      kind: 'ReplaceChallengeSwitch',
+      occurrence: switchRoom,
+      variantKey: 'PerfectClearChallengeSwitch_Pom',
+    });
+    expect(
+      frontierVerbs(observed, switchRoom)
+        .filter((verb) => verb.verb === 'press')
+        .map((verb) => [verb.choice?.picker, verb.commands?.map((command) => command.kind)]),
+    ).toEqual([['challengeSwitchOutcome', ['InsertRoomAction']]]);
   });
 
   it('offers a caged pickup nothing to do until its cage unlocks', () => {

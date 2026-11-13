@@ -131,8 +131,8 @@ describe('challenge switch rows on the room Overview', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     await pickRoomObjectAction(user, 'Unseen Sigil', 'Press Unseen Sigil');
 
-    await user.click(screen.getByRole('button', { name: 'Switch outcome: succeed' }));
-    await user.click(screen.getByRole('option', { name: 'succeed with Nectar' }));
+    // Pressing the switch opens its outcome on the placed row.
+    await user.click(await screen.findByRole('option', { name: 'succeed with Nectar' }));
     expect(hostRoom(application).challengeSwitch).toMatchObject({
       outcome: 'hitless',
       nectarDropped: true,

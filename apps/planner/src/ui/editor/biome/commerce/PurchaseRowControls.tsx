@@ -7,6 +7,7 @@ import {
   type WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
+import { RowChoice } from '../RowChoice';
 import { TimelineRow } from '../TimelineRow';
 import { HermesShrineSlotEditor, StygianWellSlotEditor } from './RoomInventoryPanel';
 
@@ -17,15 +18,22 @@ import { HermesShrineSlotEditor, StygianWellSlotEditor } from './RoomInventoryPa
 export function TravelDealLine({
   interactions,
   line,
+  rowKey,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly line: NonNullable<WorkspaceRoomActionRow['travelDealLine']>;
+  /** The purchase or rush row that restocks. */
+  readonly rowKey: string;
 }) {
   return (
     <TimelineRow
       aria-label="Restock"
       notice
-      editors={travelDealLineEditor(interactions, line)}
+      editors={
+        <RowChoice choice="travelDealRefill" rowKey={rowKey}>
+          {travelDealLineEditor(interactions, line)}
+        </RowChoice>
+      }
       data-travel-deal-line=""
       kind="continuation"
       label={
