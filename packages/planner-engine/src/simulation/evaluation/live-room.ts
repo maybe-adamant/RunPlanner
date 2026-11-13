@@ -137,7 +137,7 @@ export type LiveVerbKind =
  * The picker a verb needs. `before`: the picker supplies the verb's commands,
  * which are then absent; the indices a command accepts do not depend on the
  * value chosen. `after`: the commands apply as is and the picker then sets the
- * placed row's own outcome, a finding until it is chosen.
+ * placed row's own outcome, which placing the row opens.
  */
 export type LiveVerbChoice =
   /** A Pom's level, or the trait a level resolution takes. */
@@ -262,8 +262,8 @@ export interface LiveObject {
   readonly owner: SemanticAddress;
   /**
    * Its rows' and purchases' verbs, then the ones whose row a picker creates
-   * or the engine allocates (a reroll press, a Well or Pool reroll, an
-   * unpinned Pool sale).
+   * or the engine allocates (a reroll press, a Well or Pool reroll); each
+   * stocked Pool slot's sale is a roster row.
    */
   readonly verbs: readonly LiveVerb[];
 }
@@ -896,8 +896,7 @@ interface ObjectVerb {
 /**
  * The verbs a room's objects allow whose row is not a roster row yet: a door,
  * cage or wheel reroll press at its surface's append point, and a Well or Pool
- * reroll and an unpinned Pool slot's sale where the room's reached actions
- * end. Each is offered only where its object is reached, a held card enables
+ * reroll where the room's reached actions end. Each is offered only where its object is reached, a held card enables
  * it and the reroll pool there pays for it, the fixed budget edit settlement
  * enforces.
  */

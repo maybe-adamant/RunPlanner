@@ -181,12 +181,10 @@ export function projectRoomLive(input: {
       const label =
         pickup || subject === undefined || verb.verb === 'reroll'
           ? word
-          : verb.verb === 'sell' && action.kind === 'choose'
-            ? word
-            : // A row named in full already leads with its verb.
-              subject.name.startsWith(`${word} `)
-              ? subject.name
-              : `${word} ${subject.name}`;
+          : // A row named in full already leads with its verb.
+            subject.name.startsWith(`${word} `)
+            ? subject.name
+            : `${word} ${subject.name}`;
       return [
         {
           ...(subject?.face ?? {}),

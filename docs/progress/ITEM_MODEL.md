@@ -64,22 +64,25 @@ notes and investigations are outside the repo under
 - Every live item (pickup or object) carries `verbs`: kind, participation,
   deadline, the row it stands as or places, and either the ordered commands
   performing it at that gap (empty while standing) or a picker. A picker is
-  `before` (it supplies the commands: reroll press, unpinned Pool sale, blank
-  Travel Deal item) or `after` (the commands apply as is: Pom level, Well or
-  Pool rerolled list, rack keepsake, Artificer replacement).
+  `before` (it supplies the commands: a reroll press's target and reward, the
+  offer a wheel's choice takes) or `after` (the commands apply as is and the
+  placed row opens the outcome it settles: Pom level, trait offer, Anvil
+  result, Path of Stars screen, Sea Star copy, Well or Pool rerolled list,
+  rack keepsake, Artificer replacement, Travel Deal item, Twist result,
+  Nemesis event item, Phial target, switch outcome, locked door's fight).
 - Each existing action maps to one verb by its row kind. A standing row
   acquiring one reached role adds goldify and transform where the
   conversion capability captured at its contact supports them (paid items
   never), each a `ReplaceAcquisitionDisposition`; the row's own verb then
-  undoes a conversion.
+  undoes a conversion. At the frontier an unplaced loose pickup offers the
+  same alternatives, each its placement plus the disposition, judged at the
+  state where the room's reached actions end.
 - Choice verbs the live product lacked: door, cage and wheel reroll presses
-  at the surface's append point; Well and Pool rerolls and unpinned Pool
-  sales where the room's reached actions end; each only while a held card
-  enables it and the pool pays, and a sale only while its list can show a
-  held trait (the picker's `traitKeys`, never empty). A pinned Pool sale and
-  the rack are roster rows already. Verbs at one gap are alternatives: each
-  is one edit, and the product is read again after it, so a sale and a
-  reroll at the same gap never compose.
+  at the surface's append point; Well and Pool rerolls where the room's
+  reached actions end; each only while a held card enables it and the pool
+  pays. Each stocked Pool slot's sale and the rack are roster rows already.
+  Verbs at one gap are alternatives: each is one edit, and the product is
+  read again after it, so a sale and a reroll at the same gap never compose.
 - `progression` at the frontier: `leaveRoom` once the walk passes the room
   with nothing required live; `chooseWheel` when the next wheel's choice is
   the only required thing live. Leaving is the exit decision, not a row, so
@@ -89,9 +92,8 @@ notes and investigations are outside the repo under
 
 Gaps left for C5b (the engine cannot derive them today):
 
-- Goldify and transform for an unplaced item, or for a placed one at any
-  gap but its own: the conversion capability exists only at a reached
-  contact, so the state at another gap is unknown.
+- Goldify and transform for a placed item at any gap but its own, or for an
+  unplaced one before the frontier: the state there is not captured.
 - Shared conversion capacity: a row's offer reads its own contact, which
   counts only earlier conversions, so goldifying or transforming an earlier
   row can starve a later standing conversion (its finding then shows). The
@@ -104,7 +106,7 @@ Gaps left for C5b (the engine cannot derive them today):
 - A new reroll press carries no `reference`: the picker allocates its row
   id. (A Well or Pool reroll names its row since C5b-1.)
 - A row covering several roles (a caged Blind Box) gets no conversion verbs.
-- Well and Pool rerolls, Pool sales and door rerolls only at their append
+- Well and Pool rerolls and door rerolls only at their append
   point: no engine query answers their other legal indices. A wheel
   reroll while its choice is unplaced appends past the frontier, so it is
   not offered.

@@ -977,10 +977,9 @@ one edit, judged at the state where the room's reached actions end, which is
 where its row appends; an earlier gap only places it. Verbs whose row a
 choice creates are offered where the engine already reads them: a door, cage
 or wheel reroll press at its surface's append point, and a Well or Pool
-reroll and a Pool slot's sale where the room's reached actions end. Each is
-offered only while a held card enables it and the reroll pool pays, and a
-sale only while its list can show a trait still held, which the picker
-lists. A picker comes **before** a verb
+reroll where the room's reached actions end, each only while a held card
+enables it and the reroll pool pays. Each stocked Pool slot's sale is a
+roster row. A picker comes **before** a verb
 whose commands it supplies (a reroll press's reward, the offer a wheel's
 choice takes, each offer placing the choice with it picked) or
 **after** one that applies as is: the outcome the placed row settles, opened
