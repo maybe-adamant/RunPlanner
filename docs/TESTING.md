@@ -21,8 +21,9 @@ pass/fail.
 ## Equivalence
 
 `npm run test:equivalence` compares digests of the `simulateProject` product,
-the encoded execution plan and a candidate-session probe for the execution
-fixtures, checkpoints and the listed route builders with the committed
+the encoded execution plan and a candidate-session probe for each distinct
+project among the execution fixtures, checkpoints and the listed route builders
+with the committed
 `packages/planner-engine/test/equivalence/baseline.json`. `EQUIVALENCE_WRITE=1`
 rewrites the baseline, only for an intended product change.
 
