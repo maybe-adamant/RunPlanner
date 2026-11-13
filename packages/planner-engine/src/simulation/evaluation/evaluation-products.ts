@@ -160,6 +160,8 @@ export interface RoomStopCoverage {
    * outcome or delivery, a wheel's offers). `before`: it stopped before reaching it.
    */
   readonly at: 'entry' | 'before';
+  /** The stop is a required item left unplaced at its deadline, which placing it answers. */
+  readonly placement?: true;
 }
 
 export interface PrefixBiomeEvaluationCoverage {

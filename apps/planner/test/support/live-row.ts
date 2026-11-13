@@ -27,3 +27,27 @@ export async function takeLive(
   await user.click(await screen.findByRole('option', { name: verb }));
   if (value !== undefined) await user.click(await screen.findByRole('option', { name: value }));
 }
+
+/**
+ * Takes a thing through the `+` above the row the walk stopped at, the last gap the Timeline
+ * offers, where a walk stopped by anything but an unplaced required item shows no live row.
+ */
+export async function takeAtStop(
+  user: UserEvent,
+  thing: string | RegExp,
+  verb: string | RegExp,
+): Promise<void> {
+  const controls = [...document.querySelectorAll<HTMLElement>('.timeline-gap-control')];
+  const last = controls.reduce<HTMLElement | undefined>(
+    (latest, control) =>
+      latest === undefined || Number(control.dataset.liveGap) > Number(latest.dataset.liveGap)
+        ? control
+        : latest,
+    undefined,
+  );
+  if (last === undefined) throw new Error('No Timeline gap');
+  await user.click(last);
+  const menu = await screen.findByRole('dialog', { name: 'Insert here' });
+  await user.click(within(menu).getByRole('button', { name: thing }));
+  await user.click(await screen.findByRole('option', { name: verb }));
+}

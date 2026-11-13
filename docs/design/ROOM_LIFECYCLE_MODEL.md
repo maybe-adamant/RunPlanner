@@ -874,7 +874,11 @@ is the gap the walk stands at, where the next action goes: the last gap before
 the room's published stop, or after the last row of a room the walk passes.
 Nothing past the frontier is live, since the walk has not reached it. The
 live row is this product at the frontier, and a Timeline gap's controls are
-the same product at that gap.
+the same product at that gap. The product says whether the walk stopped in
+the room before passing its frontier: at a required item left unplaced, which
+the live row answers, or at any other block, which no live item answers, so
+the application shows no live row there and only the gap above the stopped
+row.
 
 A required item left unplaced never holds the walk where it spawns: the walk
 passes the event or action that spawns it, the item lies live on the ground,

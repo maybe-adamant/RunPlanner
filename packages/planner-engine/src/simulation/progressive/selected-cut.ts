@@ -804,6 +804,7 @@ function roomStop(
     kind: RoomStopCoverage['kind'],
     entryIndex: number,
     at: RoomStopCoverage['at'],
+    placement = false,
   ): { readonly coverage: RoomStopCoverage; readonly entryIndex: number } => {
     const entry = entries[entryIndex];
     const coverage: RoomStopCoverage = Object.freeze({
@@ -825,6 +826,7 @@ function roomStop(
             ),
           }),
       at,
+      ...(placement ? { placement: true as const } : {}),
     });
     return Object.freeze({ coverage, entryIndex });
   };
@@ -982,7 +984,7 @@ function roomStop(
       }
     };
     const unreached = entries.findIndex((_, index) => !entryReached(index));
-    return stop('timeline', unreached < 0 ? entries.length : unreached, 'before');
+    return stop('timeline', unreached < 0 ? entries.length : unreached, 'before', true);
   }
   const firstRow = entries.findIndex(
     (entry) => entry.kind === 'action' && rowKeys?.includes(entry.action.key) === true,

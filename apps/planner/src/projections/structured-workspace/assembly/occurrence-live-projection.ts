@@ -288,22 +288,38 @@ export function projectRoomLive(input: {
         }),
       ];
     });
+  // A walk stopped by anything but an unplaced required item has no live row: the frontier is
+  // only the gap above the stopped row, offering what stands before it.
+  const stopped = live.blocked?.kind === 'stop';
+  const stoppedRowKey = stopped
+    ? input.rows.find((row) => row.rank === live.frontier + 1)?.key
+    : undefined;
   const gaps = live.gaps
-    .filter((gap) => gap.index < live.frontier)
+    .filter((gap) => gap.index < live.frontier || (stopped && gap.index === live.frontier))
     .map((gap): WorkspaceLiveGap => {
       // The gap's reset is the one of the entry before it, or of a banner within it.
       const reset = input.resets
         .slice(Math.max(gap.entries.from - 1, 0), gap.entries.to)
         .find((command) => command !== undefined);
+      // The stopped row's own pickup stands below it, not in the gap above it.
+      const shown =
+        gap.index === live.frontier && stoppedRowKey !== undefined
+          ? {
+              ...gap,
+              items: gap.items.filter(
+                (item) => item.kind !== 'pickup' || roomActionKey(item.reference) !== stoppedRowKey,
+              ),
+            }
+          : gap;
       return Object.freeze({
         index: gap.index,
-        items: Object.freeze(itemsAt(gap, false)),
+        items: Object.freeze(itemsAt(shown, false)),
         ...(reset === undefined ? {} : { reset: Object.freeze({ command: reset }) }),
       });
     });
   return Object.freeze({
     frontier: live.frontier,
-    items: Object.freeze(itemsAt(frontier, true)),
+    items: Object.freeze(stopped ? [] : itemsAt(frontier, true)),
     gaps: Object.freeze(gaps),
   });
 }

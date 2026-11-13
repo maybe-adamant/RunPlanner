@@ -665,6 +665,9 @@ describe('live placements at a gap', () => {
     // The pickup spawns at Wheels open and is due at the choice, its only gap.
     const live = placementsOf(assembly, ship)!;
     expect(live.frontier).toBe(0);
+    // The walk stands at the unplaced delivery, which the live row answers.
+    expect(live.blocked).toEqual({ kind: 'placement' });
+    expect(stop).toMatchObject({ placement: true });
     const pickup = live.gaps[0]!.items.find(
       (item) => item.kind === 'pickup' && roomActionKey(item.reference) === deliveryKey,
     );

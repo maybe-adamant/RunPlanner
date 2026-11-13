@@ -82,7 +82,7 @@ import {
   workspaceBiome,
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
-import { takeLive } from '@planner-test/support/live-row';
+import { takeAtStop, takeLive } from '@planner-test/support/live-row';
 import {
   dormantShopProject,
   insertRoomAction,
@@ -1262,7 +1262,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(condition.getAttribute('aria-pressed')).toBe('true');
     expect(condition.disabled).toBe(false);
     // Talked to before the blocked Athena offer, the Gorgon row is reached with its unsupported support.
-    await takeLive(view.user, 'Gorgon', /^Talk to/);
+    // The blocked offer stops the walk, so the Gorgon is taken through the gap above the stop.
+    await takeAtStop(view.user, 'Gorgon', /^Talk to/);
     expect(screen.getByRole('button', { name: 'Edit Trait · Divine Dash' })).toBeTruthy();
     await view.user.click(condition);
     await waitFor(() => {
@@ -1817,8 +1818,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrence.occurrenceId),
     );
     openRoomTab('Room Timeline');
-    // Picking it up adds the pickup where the walk stands.
-    await addOptionalAction(view.user, /^Max Magick/);
+    // The context-invalid participant stops the walk: picking it up adds the pickup above it.
+    await takeAtStop(view.user, /^Max Magick/, 'Pick up');
 
     const present = view.application.store.getState().projectWorkspace.history!.present;
     expect(

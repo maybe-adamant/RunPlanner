@@ -254,6 +254,12 @@ export interface LiveRoom {
   readonly progression?: LiveProgression;
   /** The optional pickups still loose when the room is left, once the walk passes the room. */
   readonly leftBehind?: readonly LivePickup[];
+  /**
+   * The walk stopped in the room before passing its frontier: at a required
+   * item left unplaced, which the frontier's items answer, or at any other
+   * block, which no frontier item answers. Absent once the walk passed it.
+   */
+  readonly blocked?: { readonly kind: 'placement' } | { readonly kind: 'stop' };
 }
 
 /**
@@ -1195,10 +1201,15 @@ export function liveRoomForProjectEvaluationAssembly(
           only.verb.standing !== true
         ? frozen({ kind: 'chooseWheel' as const, wheel: only.item.owner })
         : undefined;
+  const blocked =
+    stop === undefined || stop.kind === 'exit'
+      ? undefined
+      : frozen({ kind: stop.placement === true ? ('placement' as const) : ('stop' as const) });
   return frozen({
     owner: room.origin,
     frontier,
     gaps: frozen(gaps),
+    ...(blocked === undefined ? {} : { blocked }),
     ...(progression === undefined ? {} : { progression }),
     ...(passed
       ? {
