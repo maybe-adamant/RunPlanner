@@ -1,6 +1,7 @@
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createInfernalContractPedestalAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
   createShopOfferAddress,
@@ -467,19 +468,20 @@ function placeRefillByStamp(
 /**
  * The Contract pedestal's item is the one pedestal option its room used beyond
  * the stock it bought, in either Preboss form; collecting it is that use. An
- * uncollected pedestal leaves no trace in the record.
+ * uncollected pedestal leaves no trace in the record: the options it may be,
+ * or undefined then.
  */
-function answerContractPedestal(
+function recordedPedestalItem(
   context: RunImportContext,
   pedestal: Origin<'infernalContractPedestal'>,
-): boolean {
+): { readonly roomIndex: number; readonly values: readonly ShopOptionSelection[] } | undefined {
   const occurrence = authoredOccurrence(
     context.assembly().project,
     pedestal.biomeKey,
     pedestal.occurrenceId,
   );
   const roomIndex = context.occurrences.visitsOf(pedestal.occurrenceId)[0];
-  if (occurrence === undefined || roomIndex === undefined) return false;
+  if (occurrence === undefined || roomIndex === undefined) return undefined;
   const room = context.record.rooms[roomIndex]!;
   const bought = new Map<string, number>();
   if (room.store?.kind === 'worldShop')
@@ -491,9 +493,20 @@ function answerContractPedestal(
   const unexplained = [...new Set(values.map((value) => value.offer.rewardType))].filter(
     (type) => (room.uses[type] ?? 0) > (bought.get(type) ?? 0),
   );
-  if (unexplained.length !== 1) return false;
-  for (const value of values) {
-    if (value.offer.rewardType !== unexplained[0]) continue;
+  if (unexplained.length !== 1) return undefined;
+  return {
+    roomIndex,
+    values: values.filter((value) => value.offer.rewardType === unexplained[0]),
+  };
+}
+
+/** Writes the record's pedestal item over its stock and collects it; false when none applies. */
+function authorContractPedestal(
+  context: RunImportContext,
+  pedestal: Origin<'infernalContractPedestal'>,
+  item: NonNullable<ReturnType<typeof recordedPedestalItem>>,
+): boolean {
+  for (const value of item.values) {
     const command: ProjectCommand = {
       kind: 'ReplaceInfernalContractPedestalOption',
       pedestal,
@@ -502,11 +515,14 @@ function answerContractPedestal(
     const evaluation = context
       .candidates()
       .evaluate({ kind: 'infernalContractPedestalOption', pedestal, value });
+    const project = context.assembly().project;
     if (
       evaluation.kind !== 'infernalContractPedestal' ||
       !evaluation.result.supported ||
       !evaluation.result.findings.every(isQuestionFinding) ||
-      !context.applyValid(command)
+      // The stock may already hold the record's item.
+      (applyProjectCommand(project, context.catalog, command) !== project &&
+        !context.applyValid(command))
     )
       continue;
     if (
@@ -520,12 +536,49 @@ function answerContractPedestal(
         area: 'shop',
         reason: 'refused',
         address: pedestal,
-        record: record(roomIndex),
+        record: record(item.roomIndex),
       });
     return true;
   }
+  return false;
+}
+
+function answerContractPedestal(
+  context: RunImportContext,
+  pedestal: Origin<'infernalContractPedestal'>,
+): boolean {
+  const item = recordedPedestalItem(context, pedestal);
+  if (item === undefined) return false;
+  if (authorContractPedestal(context, pedestal, item)) return true;
   context.refuse();
   return false;
+}
+
+/**
+ * A spawned pedestal's recorded item, once its settlement has stocked it: the
+ * record's item replaces the draw, which stays when the record shows none.
+ */
+function importContractPedestal(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+): void {
+  const used = `contractPedestal:${occurrence.occurrenceId}`;
+  if (context.used.has(used) || (occurrence.infernalContractPedestal?.reward ?? null) === null)
+    return;
+  context.used.add(used);
+  const pedestal = createInfernalContractPedestalAddress(
+    createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+    occurrence.occurrenceId,
+  );
+  const item = recordedPedestalItem(context, pedestal);
+  if (item === undefined || authorContractPedestal(context, pedestal, item)) return;
+  context.note({
+    area: 'shop',
+    reason: 'refused',
+    address: pedestal,
+    record: record(item.roomIndex),
+  });
 }
 
 /** The Shrine's recorded option for each slot, by its slot's group. */
@@ -929,6 +982,7 @@ export function importCommerce(context: RunImportContext): void {
       occurrence;
     importShopPurchases(context, biomeKey, current());
     importShopRefill(context, biomeKey, current());
+    importContractPedestal(context, biomeKey, current());
     importShrine(context, biomeKey, occurrence);
     pickUpRushedItems(context, biomeKey, occurrence);
     importWell(context, biomeKey, occurrence);

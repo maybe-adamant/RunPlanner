@@ -6,6 +6,7 @@ import {
   createHubDecisionAddress,
   createHubSlotAddress,
   createIncomingRewardAddress,
+  createInfernalContractPedestalAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteAddress,
@@ -130,6 +131,9 @@ const SHOP_OUTRANKED_FACTOR = 0.001;
 /** The offer weight of a wanted god's boon; a due god's is higher. */
 const WANTED_GOD_WEIGHT = 30;
 
+/** The steered-stock key of a room's Contract pedestal. */
+const PEDESTAL_STEER_KEY = 'infernalContractPedestal';
+
 const RESOURCE_FAMILIES = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
 
 /** Quick Buck and Buried Treasure: their drops are optional, but a player takes them. */
@@ -184,7 +188,7 @@ export class DraftWalk {
   private readonly essenceRooms = new Map<number, number>();
   /** Rooms the walk passed after their Quick Buck and Buried Treasure drops were picked up. */
   private readonly dropRoomsDone = new Set<string>();
-  /** Shops whose filled stock the walk has steered, and whose Travel Deal item it has. */
+  /** Shops and Contract pedestals whose filled stock the walk has steered, and Travel Deal items. */
   private readonly steeredShops = new Set<string>();
   /** Reward commands this walk applied. */
   private readonly authoredRewards = new Set<string>();
@@ -271,6 +275,7 @@ export class DraftWalk {
       for (const room of this.enteredRooms(biomeKey)) {
         this.steeredShops.add(`${biomeKey}/${room.occurrenceId}`);
         this.steeredShops.add(`${biomeKey}/${room.occurrenceId}/${TRAVEL_DEAL_REFILL_ENTRY_KEY}`);
+        this.steeredShops.add(`${biomeKey}/${room.occurrenceId}/${PEDESTAL_STEER_KEY}`);
       }
   }
 
@@ -1238,11 +1243,20 @@ export class DraftWalk {
     const biome = createBiomeAddress(this.project.route.routeKey, biomeKey);
     for (const room of this.enteredRooms(biomeKey)) {
       const occurrence = this.occurrence(biomeKey, room.occurrenceId);
+      const key = `${biomeKey}/${room.occurrenceId}`;
+      const apply = (command: ProjectCommand) => this.apply(command);
+      // Settlement stocks the pedestal once the Contract spawns it; the walk steers it once.
+      const pedestalKey = `${key}/${PEDESTAL_STEER_KEY}`;
+      if (
+        !this.steeredShops.has(pedestalKey) &&
+        (occurrence?.infernalContractPedestal?.reward ?? null) !== null
+      ) {
+        this.steeredShops.add(pedestalKey);
+        this.steerPedestal(createInfernalContractPedestalAddress(biome, room.occurrenceId), apply);
+      }
       const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
       const profile = this.catalog.rewards.shops.byKey[shop?.profileKey ?? ''];
       if (shop === undefined || profile === undefined) continue;
-      const key = `${biomeKey}/${room.occurrenceId}`;
-      const apply = (command: ProjectCommand) => this.apply(command);
       if (!this.steeredShops.has(key)) {
         this.steeredShops.add(key);
         // Each pick is judged beside its stocked peers, so it never invalidates them.
@@ -1308,6 +1322,48 @@ export class DraftWalk {
     return undefined;
   }
 
+  /** Replaces the Contract pedestal's item with a steered pick and collects it when wanted. */
+  private steerPedestal(
+    origin: Extract<SemanticAddress, { readonly kind: 'infernalContractPedestal' }>,
+    apply: (command: ProjectCommand) => boolean,
+  ): boolean {
+    const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
+    if (occurrence === undefined) return false;
+    const values = infernalContractPedestalOptionValues(this.catalog, occurrence.gameName).filter(
+      (value) => {
+        const evaluation = this.evaluate({
+          kind: 'infernalContractPedestalOption',
+          pedestal: origin,
+          value,
+        });
+        return (
+          'result' in evaluation &&
+          'supported' in evaluation.result &&
+          evaluation.result.supported &&
+          evaluation.result.findings.length === 0
+        );
+      },
+    );
+    this.noteSupply(values.map((value) => value.offer));
+    const ordered = this.weighted(values, (v) => this.steering.shopWeight(v.offer));
+    for (const value of this.inPoolOrder(ordered, values, (v) => v.offer)) {
+      const command: ProjectCommand = {
+        kind: 'ReplaceInfernalContractPedestalOption',
+        pedestal: origin,
+        value,
+      };
+      // The stock already holds the pick: nothing to replace.
+      if (
+        applyProjectCommand(this.project, this.catalog, command) === this.project ||
+        apply(command)
+      ) {
+        this.buyWanted(origin, value.offer);
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** The Shop slot a Travel Deal refill restocks, as settlement derived it. */
   private refilledSlotKey(
     biomeKey: string,
@@ -1354,33 +1410,7 @@ export class DraftWalk {
       this.buyFiller(origin);
       return true;
     }
-    if (origin.kind === 'infernalContractPedestal') {
-      const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
-      if (occurrence === undefined) return false;
-      const values = infernalContractPedestalOptionValues(this.catalog, occurrence.gameName).filter(
-        (value) => {
-          const evaluation = this.evaluate({
-            kind: 'infernalContractPedestalOption',
-            pedestal: origin,
-            value,
-          });
-          return (
-            'result' in evaluation &&
-            'supported' in evaluation.result &&
-            evaluation.result.supported &&
-            evaluation.result.findings.length === 0
-          );
-        },
-      );
-      this.noteSupply(values.map((value) => value.offer));
-      const ordered = this.weighted(values, (v) => this.steering.shopWeight(v.offer));
-      for (const value of this.inPoolOrder(ordered, values, (v) => v.offer))
-        if (apply({ kind: 'ReplaceInfernalContractPedestalOption', pedestal: origin, value })) {
-          this.buyWanted(origin, value.offer);
-          return true;
-        }
-      return false;
-    }
+    if (origin.kind === 'infernalContractPedestal') return this.steerPedestal(origin, apply);
     if (origin.kind === 'rewardWheelOffer') {
       const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
       const room = occurrence === undefined ? undefined : this.roomOf(occurrence.gameName);

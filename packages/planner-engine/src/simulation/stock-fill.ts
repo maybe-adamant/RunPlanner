@@ -1,6 +1,7 @@
 import {
   createBiomeAddress,
   createAcquisitionSiteAddress,
+  createInfernalContractPedestalAddress,
   createOccurrenceAddress,
   createShopOfferAddress,
   type ShopOfferAddress,
@@ -24,6 +25,7 @@ import {
 import { roomActionKey } from '../authored-project/room-actions/state';
 import { stableChoice } from '../authored-project/stable-hash';
 import { shopOfferOptionValues, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../authored-project/shop';
+import { infernalContractPedestalOptionValues } from '../authored-project/infernal-contract-pedestal';
 import type { ShopOptionSelection } from '../reward-kernel/model';
 import type { Catalog } from '../catalog-schema';
 import type { ProjectCommand } from '../authored-project/commands/types';
@@ -580,11 +582,47 @@ function worldShopFills(
 }
 
 /**
+ * The Contract pedestal's blank item once the walk spawns it, with the Contract
+ * held: a draw over the options its one slot admits there.
+ */
+function infernalContractPedestalFills(
+  catalog: Catalog,
+  artifacts: BiomeCandidateArtifacts,
+  owner: OccurrenceAddress,
+  occurrence: RoomOccurrence,
+): StockFill[] {
+  if (occurrence.infernalContractPedestal?.reward !== null) return [];
+  const pedestal = createInfernalContractPedestalAddress(
+    createBiomeAddress(owner.routeKey, owner.biomeKey),
+    owner.occurrenceId,
+  );
+  const evaluate = artifacts.rewardProducers.at(pedestal)?.evaluateShopOption;
+  if (evaluate === undefined) return [];
+  const legal = infernalContractPedestalOptionValues(catalog, occurrence.gameName).filter(
+    (value) => evaluate(pedestal, value).supported,
+  );
+  const key = stableChoice(
+    `${occurrence.occurrenceId}|infernalContractPedestal`,
+    legal.map(shopValueKey),
+  );
+  const value = legal.find((candidate) => shopValueKey(candidate) === key);
+  if (value === undefined) return [];
+  return [
+    Object.freeze<StockFill>({
+      key: semanticAddressKey(pedestal),
+      owner: pedestal,
+      command: { kind: 'ReplaceInfernalContractPedestalOption', pedestal, value },
+    }),
+  ];
+}
+
+/**
  * Every blank stock slot the evaluated walk reached, with the command that
  * stocks it by a stable legal draw: Stygian Wells first, then Hermes Shrines,
  * Purging Pools and World Shops, each room in route order. A Pool list is
  * also redrawn when a value the walk judged valid before the edit is now
- * stale.
+ * stale. Contract pedestals stock once nothing else does, as their draw sees
+ * the Shop their room stocked first.
  */
 export function stockFills(
   catalog: Catalog,
@@ -596,16 +634,21 @@ export function stockFills(
     const biomeArtifacts = artifacts.biomeAt(biome);
     return biomeArtifacts === undefined ? [] : [{ artifacts: biomeArtifacts, owner, occurrence }];
   });
+  const fills = [
+    stygianWellFills,
+    hermesShrineFills,
+    (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
+      purgingPoolFills(room, owner, occurrence, poolValuesBefore),
+    (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
+      worldShopFills(catalog, room, owner, occurrence),
+  ].flatMap((fillsOf) =>
+    reached.flatMap((room) => fillsOf(room.artifacts, room.owner, room.occurrence)),
+  );
   return Object.freeze(
-    [
-      stygianWellFills,
-      hermesShrineFills,
-      (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
-        purgingPoolFills(room, owner, occurrence, poolValuesBefore),
-      (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
-        worldShopFills(catalog, room, owner, occurrence),
-    ].flatMap((fillsOf) =>
-      reached.flatMap((room) => fillsOf(room.artifacts, room.owner, room.occurrence)),
-    ),
+    fills.length > 0
+      ? fills
+      : reached.flatMap((room) =>
+          infernalContractPedestalFills(catalog, room.artifacts, room.owner, room.occurrence),
+        ),
   );
 }

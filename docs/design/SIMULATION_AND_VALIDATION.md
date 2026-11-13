@@ -571,8 +571,9 @@ positions unset and take the defaults.
 ### Stock filled on first reach
 
 A Stygian Well's rolls, Travel Deal restock and Fateful Twist results, a
-Hermes Shrine's items and Travel Deal refill, a Pool of Purging's lists and a
-World Shop's items and Travel Deal item are stored, never derived. A blank
+Hermes Shrine's items and Travel Deal refill, a Pool of Purging's lists, a
+World Shop's items and Travel Deal item and an Infernal Contract pedestal's
+item are stored, never derived. A blank
 slot the walk reaches is an incomplete finding where it is generated, and the
 edit whose settlement first reaches it stocks it as part of that edit, so one
 Undo reverts both. The stock is a stable legal draw: each slot scores its
@@ -583,7 +584,10 @@ order; a reroll's last drawn slot avoids repeating every item on show before
 it, which the game's ban rules out. A World Shop stocks one slot at a time,
 each from the values its joint inventory admits beside its stocked peers. A
 Travel Deal restock draws under its triggering purchase's identity, a World
-Shop's from the restocked slot's values.
+Shop's from the restocked slot's values. A Contract pedestal, spawned once the
+walk reaches its Preboss holding the Contract, draws from the options its slot
+admits after every other stock is filled, as its draw sees the Shop its room
+stocked first.
 
 A stored value an upstream edit makes illegal keeps its value and raises its
 finding, with two exceptions. A Pool list that an edit makes stale (a listed

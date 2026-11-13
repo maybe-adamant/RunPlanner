@@ -7,6 +7,8 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createIncomingRewardAddress,
+  createExitSelectionAddress,
+  createInfernalContractPedestalAddress,
   createProjectAddress,
   createRoomFeatureAddress,
   createShopOfferAddress,
@@ -21,6 +23,7 @@ import {
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import {
+  createPreparedProjectCandidateSession,
   hermesShrineCandidateForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
@@ -28,6 +31,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { settleProjectUpgrade } from '@run-planner/engine/project-migration';
 import { loadCheckpoint } from '@run-planner/test-fixtures/checkpoints/registry';
+import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { stockFills } from '../../../src/simulation/stock-fill';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/project-evaluation-assembly';
 
@@ -420,6 +424,50 @@ describe('stock filled on first reach', () => {
             index: 0,
           }).assembly.project,
         ),
+      ).toEqual(stocked);
+    });
+  });
+
+  describe('an Infernal Contract pedestal', () => {
+    const g = createBiomeAddress('Underworld', 'G');
+    const peer = createOccurrenceId('zagreus-contract-preboss-peer');
+    const pedestal = createInfernalContractPedestalAddress(g, peer);
+    // Entering the boon-form Preboss with the Contract held spawns its blank pedestal.
+    const enterBoonForm: ProjectCommand = {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(g, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('zagreus-contract-return'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    };
+
+    it('stocks the item with the edit that spawns it, the same way every time', () => {
+      const project = loadUnderworldZagreusContractCheckpoint();
+      const settled = settle(project, enterBoonForm);
+      expect(settled.fault).toBeUndefined();
+      const stocked = occurrenceOf(
+        settled.assembly.project,
+        createOccurrenceAddress(g, peer),
+      ).infernalContractPedestal!;
+      expect(stocked.reward).not.toBeNull();
+      expect(stocked.optionKey).not.toBeNull();
+      const evaluation = createPreparedProjectCandidateSession(catalog, settled.assembly).evaluate({
+        kind: 'infernalContractPedestalOption',
+        pedestal,
+        value: { optionKey: stocked.optionKey!, offer: stocked.reward!.offer },
+      });
+      expect(evaluation).toMatchObject({ result: { supported: true } });
+      expect(
+        findingCodes(settled.assembly.project).filter(
+          (finding) => finding.origin === semanticAddressKey(pedestal),
+        ),
+      ).toEqual([]);
+      expect(
+        occurrenceOf(
+          settle(project, enterBoonForm).assembly.project,
+          createOccurrenceAddress(g, peer),
+        ).infernalContractPedestal,
       ).toEqual(stocked);
     });
   });

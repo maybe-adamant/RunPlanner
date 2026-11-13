@@ -322,9 +322,8 @@ function collected(project: ProjectDocument, value: boolean): ProjectDocument {
 describe('Infernal Contract pedestal acquisition and publication', () => {
   it('resolves a collected Mystery at its pedestal entry and publishes the same source', () => {
     let project = contractShopProject();
-    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([
-      expect.objectContaining({ code: 'rewardMissing', origin: gPedestal }),
-    ]);
+    // The edit that spawned the pedestal stocked it.
+    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([]);
     project = settleTestEdit(project, {
       kind: 'ReplaceInfernalContractPedestalOffer',
       pedestal: gPedestal,
