@@ -13,8 +13,9 @@ reachability, and recipe-backed canonical-byte integrity. Engine domain suites
 own the reached scenario and export workflows.
 
 `npm run fixtures:checkpoints:regenerate` rewrites only recipe-backed
-checkpoints through `encodeProjectDocument`; normal integrity checks verify
-their recipe equality. This is not save migration: migrate source saves before
+checkpoints through `encodeProjectDocument`, writing only those whose content
+beyond the schema revision line changed, so a revision bump alone touches none;
+normal integrity checks verify their recipe equality. This is not save migration: migrate source saves before
 regeneration when the schema changes. Imported user-authored checkpoints keep
 canonical loader and integrity coverage and are not reconstructed by the
 command.
