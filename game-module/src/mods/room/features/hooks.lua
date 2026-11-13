@@ -41,8 +41,7 @@ function hooks.attach(module, session, getState, report, room)
         local state = getState(runtime)
         local scope = secretScope
         if state == nil or state.state ~= "synchronized" or scope == nil or scope.consumed
-            or scope.additional == nil or scope.additional.spawnPointIndex == nil
-            or type(args) ~= "table" or args.Name ~= "SecretDoor" then return base(args) end
+            or scope.additional == nil or type(args) ~= "table" or args.Name ~= "SecretDoor" then return base(args) end
         scope.consumed = true
         local points = {}
         for _, id in ipairs(_G.GetIdsByType({ Name = "SecretPoint" })) do points[#points + 1] = id end

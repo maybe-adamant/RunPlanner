@@ -4,9 +4,16 @@ local poolInventory = {}
 local SLOTS = { "left", "middle", "right" }
 
 -- A plan publishes every shown slot of a list, so the list is exactly its slots in order.
+-- A list shows as many traits as are eligible, up to three.
 local function plannedSelection(entry, available)
+    local eligible = 0
+    for _ in pairs(available) do eligible = eligible + 1 end
+    local shown = math.min(#SLOTS, eligible)
+    if #entry.traits ~= shown then
+        return nil, { checkpoint = "purging-pool-inventory", expected = #entry.traits, observed = shown }
+    end
     local bySlot = {}
-    for _, slot in ipairs(entry.traits or {}) do
+    for _, slot in ipairs(entry.traits) do
         local option = available[slot.traitKey]
         if option == nil then
             return nil, { checkpoint = "purging-pool-inventory", expected = slot.traitKey, observed = nil }

@@ -97,14 +97,18 @@ entry (start and end point) where the room or its arrival door fixes them, or
 the stored value where the game rolls or picks among eligible entries
 ([positions filled on first reach](SIMULATION_AND_VALIDATION.md#positions-filled-on-first-reach)).
 A value the game derives from the previous room's exit is absent and stays
-native. A Well, Pool, Shrine or challenge switch publishes its stored
-`anchorId`; the Well on its room's pin publishes none. A Chaos gate publishes
-its stored `spawnPointIndex`.
+native. Object positions and stock are required, since publication accepts
+only plans whose reached positions and slots are filled: a Pool, Shrine or
+challenge switch always publishes its stored `anchorId`, and a Well publishes
+one except on its room's pin. A Chaos gate always publishes its stored
+`spawnPointIndex`; a Zagreus Contract exit has none.
 
 Fields door targets carry cage rewards even when unpicked. Cage,
 optional-reward and Nemesis points are entered-room facts published only for
 selected Fields occurrences, each slot's stored point: drawn on first reach,
-then kept until the owner changes it.
+then kept until the owner changes it. A selected Fields occurrence publishes
+one point for each active cage in cage order and one for each optional reward,
+and a Nemesis point exactly when it plans the Nemesis.
 Reward wheels follow the same selection boundary: a selected Ship occurrence
 publishes one wheel per active combat phase, and an unselected Ship door
 target, which is never entered, publishes none.
@@ -112,9 +116,12 @@ target, which is never entered, publishes none.
 A native room field locked by `BlockedByRequirements`, such as the H Postboss
 Pool on a fresh profile, is unusable natively and counts as absent. A present
 Stygian Well or Pool of Purging is emitted with every slot of its initial
-roll; the native adapter realizes the object and installs each slot. A Pool
-also emits the list it regenerates at its first opening when the fountain use
-changed a listed boon, which the adapter installs in place of the entry list.
+roll, which a decoder requires: all three Well slots, and as many Pool traits
+as are eligible, up to three, a count the module checks against the live
+eligible set. The native adapter realizes the object and installs each slot.
+A Pool also emits the list it regenerates at its first opening when the
+fountain use changed a listed boon, which the adapter installs in place of the
+entry list.
 Both list their rerolls in action order, slot by slot: the k-th native reroll
 installs the k-th entry, and a Well slot bought earlier in the room is not
 restocked and stays blank. Each purchase and sale names its roll.

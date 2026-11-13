@@ -370,9 +370,9 @@ function TestFieldsFeatures.testEveryPublishedSlotTakesItsPointAndOtherDrawsStay
     lu.assertNil(diagnostics["fields-point"])
 end
 
-function TestFieldsFeatures.testAnUnpublishedSlotDrawsFullyNatively()
+function TestFieldsFeatures.testANativeDrawPastThePublishedCagesStaysNative()
     local callbacks, _, _, diagnostics = fixture({
-        cagePoints = { { slotKey = "cage2", pointId = 12 } },
+        cagePoints = { { slotKey = "cage1", pointId = 12 } },
         optionalRewards = {},
     })
     local cages = { 11, 12, 13 }
@@ -381,9 +381,9 @@ function TestFieldsFeatures.testAnUnpublishedSlotDrawsFullyNatively()
         for _ = 1, 2 do drawn[#drawn + 1] = callbacks.RemoveRandomValue(nil, {}, secondDraw, cages) end
         return true
     end, { OptionalRewardChances = {}, BonusRewardStoreName = "FieldsOptionalRewards" }, {})
-    -- cage1's native draw takes 12, so cage2's point is unavailable.
+    -- cage1 takes its point; the unpublished second draw is the native one.
     lu.assertEquals(drawn, { 12, 13 })
-    lu.assertEquals(diagnostics["fields-point"], { expected = 12, observed = nil })
+    lu.assertNil(diagnostics["fields-point"])
 end
 
 function TestFieldsFeatures.testUnavailablePlannedPointDiagnosesAndDrawsNatively()

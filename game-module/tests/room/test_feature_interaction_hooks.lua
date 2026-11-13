@@ -320,6 +320,7 @@ function TestFeatureInteractionHooks.testPinnedPoolSteersOnlyTheNativeSaleMenu()
         purgingPool = { traits = {
             { slotKey = "left", traitKey = "TraitB" },
             { slotKey = "middle", traitKey = "TraitA" },
+            { slotKey = "right", traitKey = "TraitD" },
         } },
     } } }, function() return nil end)
     local session = stub()
@@ -337,6 +338,7 @@ function TestFeatureInteractionHooks.testPinnedPoolSteersOnlyTheNativeSaleMenu()
             TraitA = { Name = "TraitA", Value = 10 },
             TraitB = { Name = "TraitB", Value = 20 },
             TraitC = { Name = "TraitC", Value = 30 },
+            TraitD = { Name = "TraitD", Value = 40 },
         },
     }
     _G.CurrentRun = { CurrentRoom = nativeRoom }
@@ -350,8 +352,10 @@ function TestFeatureInteractionHooks.testPinnedPoolSteersOnlyTheNativeSaleMenu()
 
     lu.assertEquals(nativeRoom.SellOptions[1].Name, "TraitB")
     lu.assertEquals(nativeRoom.SellOptions[2].Name, "TraitA")
+    lu.assertEquals(nativeRoom.SellOptions[3].Name, "TraitD")
     lu.assertNil(nativeRoom.SellValues.TraitA)
     lu.assertNil(nativeRoom.SellValues.TraitB)
+    lu.assertNil(nativeRoom.SellValues.TraitD)
     lu.assertNotNil(nativeRoom.SellValues.TraitC)
     lu.assertEquals(nativeRoom.__runPlannerPoolRollsHandled, { [0] = true })
     lu.assertNil(callbacks.GenerateSellTraitShop)
@@ -363,8 +367,10 @@ function TestFeatureInteractionHooks.testPoolInstallationFollowsPhialRefreshAndD
     local module, _, callbacks = capture()
     local state = { state = "synchronized" }
     local rooms = {
-        first = { overview = { purgingPool = { traits = { { slotKey = "left", traitKey = "A" } } } } },
-        second = { overview = { purgingPool = { traits = { { slotKey = "left", traitKey = "B" } } } } },
+        first = { overview = { purgingPool = { traits = {
+            { slotKey = "left", traitKey = "A" }, { slotKey = "middle", traitKey = "B" } } } } },
+        second = { overview = { purgingPool = { traits = {
+            { slotKey = "left", traitKey = "B" }, { slotKey = "middle", traitKey = "A" } } } } },
     }
     local session = { diagnostic = function() error("unexpected diagnostic") end }
     local room = { occurrence = function(_, native) return rooms[native.__runPlannerExecutionRoomId] end }
@@ -381,12 +387,12 @@ function TestFeatureInteractionHooks.testPoolInstallationFollowsPhialRefreshAndD
     end
     lu.assertNil(callbacks.HandleSecretSpawns)
     lu.assertEquals(openPool(callbacks, second, function() generate(second) end), "native-result")
-    lu.assertEquals(second.SellOptions, { { Name = "B", Value = 20 } })
+    lu.assertEquals(second.SellOptions, { { Name = "B", Value = 20 }, { Name = "A", Value = 40, Rarity = "Heroic" } })
     lu.assertEquals(first.SellOptions[1].Rarity, "Common")
     -- Native menu opening has regenerated after Phial, before button creation.
     openPool(callbacks, first, function() generate(first) end)
-    lu.assertEquals(first.SellOptions, { { Name = "A", Value = 40, Rarity = "Heroic" } })
-    first.SellOptions[1] = nil
+    lu.assertEquals(first.SellOptions, { { Name = "A", Value = 40, Rarity = "Heroic" }, { Name = "B", Value = 20 } })
+    first.SellOptions = {}
     openPool(callbacks, first)
     lu.assertEquals(first.SellOptions, {})
     -- A reroll's button rebuild is not another installation.
@@ -429,11 +435,35 @@ function TestFeatureInteractionHooks.testPoolInstallationFailureIsAtomicAndUnbou
     lu.assertEquals(#diagnostics, 1)
 end
 
+-- A published list shows min(3, eligible) traits; another count is a positional diagnostic.
+function TestFeatureInteractionHooks.testPoolListCountAgainstLiveEligibleSetIsDiagnosed()
+    local module, _, callbacks = capture()
+    local state = { state = "synchronized" }
+    local diagnostics = {}
+    local occurrence = { overview = { purgingPool = {
+        traits = { { slotKey = "left", traitKey = "A" }, { slotKey = "middle", traitKey = "B" } },
+    } } }
+    require("mods.room.features.inventory.purging_pool_hooks").attach(module,
+        { diagnostic = function(_, checkpoint, evidence)
+            diagnostics[#diagnostics + 1] = { checkpoint, evidence }
+        end },
+        function() return state end, function() end, { occurrence = function() return occurrence end })
+    local nativeRoom = { __runPlannerExecutionRoomId = "pool", SellTraitShop = {} }
+    openPool(callbacks, nativeRoom, function()
+        nativeRoom.SellValues = { A = { Name = "A", Value = 10 }, C = { Name = "C", Value = 30 },
+            D = { Name = "D", Value = 40 } }
+        nativeRoom.SellOptions = { { Name = "B", Value = 20 } }
+    end)
+    lu.assertEquals(diagnostics, { { "purging-pool-inventory", { expected = 2, observed = 3 } } })
+    lu.assertEquals(nativeRoom.SellOptions, { { Name = "B", Value = 20 } })
+    lu.assertNotNil(nativeRoom.SellValues.A)
+end
+
 function TestFeatureInteractionHooks.testPoolRefreshesValuesEvenWhenPhialTargetWasNotANativeOfferedRow()
     local module, _, callbacks = capture()
     local state = { state = "synchronized" }
     local occurrence = { overview = { purgingPool = {
-        traits = { { slotKey = "left", traitKey = "A" } } } } }
+        traits = { { slotKey = "left", traitKey = "A" }, { slotKey = "middle", traitKey = "B" } } } } }
     require("mods.room.features.inventory.purging_pool_hooks").attach(module,
         { diagnostic = function() error("unexpected diagnostic") end },
         function() return state end, function() end, { occurrence = function() return occurrence end })
@@ -452,7 +482,9 @@ function TestFeatureInteractionHooks.testPoolRefreshesValuesEvenWhenPhialTargetW
     end
     local ok, failure = pcall(function()
         openPool(callbacks, native) -- No native regeneration: B is unchanged.
-        lu.assertEquals(native.SellOptions, { { Name = "A", Value = 40, Rarity = "Heroic" } })
+        lu.assertEquals(native.SellOptions, {
+            { Name = "A", Value = 40, Rarity = "Heroic" }, { Name = "B", Value = 20, Rarity = "Common" },
+        })
         native.SellOptions = {}
         openPool(callbacks, native)
         lu.assertEquals(native.SellOptions, {})
@@ -466,7 +498,7 @@ function TestFeatureInteractionHooks.testPoolScopeIsThreadLocalAndConsumedBefore
     local module, _, callbacks = capture()
     local state = { state = "synchronized" }
     local occurrence = { overview = { purgingPool = {
-        traits = { { slotKey = "left", traitKey = "A" } } } } }
+        traits = { { slotKey = "left", traitKey = "A" }, { slotKey = "middle", traitKey = "B" } } } } }
     require("mods.room.features.inventory.purging_pool_hooks").attach(module,
         { diagnostic = function() error("unexpected diagnostic") end },
         function() return state end, function() end, { occurrence = function() return occurrence end })
@@ -1325,7 +1357,10 @@ function TestFeatureInteractionHooks.testPoolInstallsEachRerollsPinsAndAFurtherR
     local state = { state = "synchronized" }
     local mismatches = {}
     local occurrence = { overview = { purgingPool = {
-        traits = { { slotKey = "left", traitKey = "B" } },
+        traits = {
+            { slotKey = "left", traitKey = "B" }, { slotKey = "middle", traitKey = "C" },
+            { slotKey = "right", traitKey = "A" },
+        },
         rerolls = {
             { rollKey = "r1", traits = { { slotKey = "left", traitKey = "C" }, { slotKey = "middle", traitKey = "A" } } },
             { rollKey = "r2", traits = {} },
@@ -1358,13 +1393,15 @@ function TestFeatureInteractionHooks.testPoolInstallsEachRerollsPinsAndAFurtherR
         openPool(callbacks, native, function()
             native.SellValues, native.SellOptions = {}, { { Name = "C", Value = 30 } }
         end)
-        lu.assertEquals(native.SellOptions, { { Name = "B", Value = 20 } })
+        lu.assertEquals(native.SellOptions, {
+            { Name = "B", Value = 20 }, { Name = "C", Value = 30 }, { Name = "A", Value = 10 },
+        })
         -- After selling B, the reroll installs its published list.
         values.B = nil
         callbacks.SellTraitScreenReroll(nil, {}, nativeReroll({ "A", "C" }), {})
         lu.assertEquals(native.SellOptions, { { Name = "C", Value = 30 }, { Name = "A", Value = 10 } })
         lu.assertEquals(native.__runPlannerPoolRollsHandled, { [0] = true, [1] = true })
-        -- An unpinned roll stays native.
+        -- An empty published roll installs nothing.
         callbacks.SellTraitScreenReroll(nil, {}, nativeReroll({ "C" }), {})
         lu.assertEquals(native.SellOptions, { { Name = "C", Value = 30 } })
         lu.assertEquals(mismatches, {})

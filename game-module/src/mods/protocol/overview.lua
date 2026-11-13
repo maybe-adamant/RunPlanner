@@ -216,6 +216,10 @@ end
 local function wellOffers(value, rollKey, label)
     local offers, offersError = p.arr(value, label, 3)
     if not offers then return nil, offersError end
+    -- Nothing is bought before the initial roll, so it stocks every slot.
+    if rollKey == "initial" and #offers ~= 3 then
+        return p.fail(label .. " must stock the healing, secondLeft and secondRight slots")
+    end
     local seen = {}
     for index, valueRow in ipairs(offers) do
         local rowLabel = label .. "[" .. index .. "]"
@@ -252,9 +256,11 @@ local function featureRerolls(value, label, decodeRoll)
     return rows
 end
 
--- An object's chosen or default ChallengeSwitchBase anchor; absent for a pinned Well.
-local function anchorId(record, label)
-    if record.anchorId ~= nil and not p.int(record.anchorId, label .. ".anchorId", 1) then
+-- An object's chosen or default ChallengeSwitchBase anchor; only a Well may omit it, on its room's pin.
+local function anchorId(record, label, optional)
+    if record.anchorId == nil and optional then return true end
+    if record.anchorId == nil then return p.fail(label .. ".anchorId is required") end
+    if not p.int(record.anchorId, label .. ".anchorId", 1) then
         return p.fail(label .. " has invalid anchor")
     end
     return true
@@ -281,11 +287,11 @@ local function roomLayout(value, label)
     return record
 end
 
--- A present Well: its initial roll's pinned slots, then its rerolls'. Unlisted slots stay native.
+-- A present Well: its initial roll's three slots, then its rerolls'.
 local function stygianWell(value, label)
     local record, errorMessage = p.exact(value, { "offers" }, { "rerolls", "anchorId" }, label)
     if not record then return nil, errorMessage end
-    local _, anchorError = anchorId(record, label)
+    local _, anchorError = anchorId(record, label, true)
     if anchorError then return nil, anchorError end
     local _, offersError = wellOffers(record.offers, "initial", label .. ".offers")
     if offersError then return nil, offersError end
@@ -455,6 +461,9 @@ local function additional(value, label)
             label .. "[" .. index .. "]"
         )
         if not row then return nil, rowError end
+        if row.kind == "chaos" and row.spawnPointIndex == nil then
+            return p.fail(label .. "[" .. index .. "].spawnPointIndex is required for a Chaos gate")
+        end
         if row.spawnPointIndex ~= nil and (row.kind ~= "chaos"
             or not p.int(row.spawnPointIndex, label .. ".spawnPointIndex", 1)) then
             return p.fail(label .. " has invalid Chaos spawn point index")
@@ -521,22 +530,21 @@ local function fields(value, label)
     for index, valueRow in ipairs(optionals) do
         local row, rowError = p.exact(
             valueRow,
-            { "slotKey", "reward" },
-            { "pointId" },
+            { "slotKey", "pointId", "reward" },
+            {},
             label .. ".optionalRewards[" .. index .. "]"
         )
         if not row then return nil, rowError end
         if not p.str(row.slotKey, label .. ".optionalRewards[" .. index .. "].slotKey")
             or seenOptionals[row.slotKey]
-            or (row.pointId ~= nil
-                and (not p.int(row.pointId, label .. ".optionalRewards[" .. index .. "].pointId", 1)
-                    or pointIds[row.pointId])) then
+            or not p.int(row.pointId, label .. ".optionalRewards[" .. index .. "].pointId", 1)
+            or pointIds[row.pointId] then
             return p.fail(label .. " has invalid optional point")
         end
         local _, rewardError = rewards.reward(row.reward, label .. ".optionalRewards[" .. index .. "].reward")
         if rewardError then return nil, rewardError end
         seenOptionals[row.slotKey] = true
-        if row.pointId ~= nil then pointIds[row.pointId] = true end
+        pointIds[row.pointId] = true
     end
     if record.nemesisPointId ~= nil
         and (not p.int(record.nemesisPointId, label .. ".nemesisPointId", 1)
@@ -833,6 +841,16 @@ function overview.decode(value, label)
     if record.fields ~= nil then
         local _, fieldsError = fields(record.fields, label .. ".fields")
         if fieldsError then return nil, fieldsError end
+        local nemesisPhase = false
+        for _, phase in ipairs(phases) do
+            if phase.encounterKey == "NemesisRandomEvent" then nemesisPhase = true end
+        end
+        if nemesisPhase and record.fields.nemesisPointId == nil then
+            return p.fail(label .. ".fields.nemesisPointId is required for a planned Nemesis")
+        end
+        if not nemesisPhase and record.fields.nemesisPointId ~= nil then
+            return p.fail(label .. ".fields.nemesisPointId requires a NemesisRandomEvent phase")
+        end
     end
     if record.hub ~= nil then
         local hub, hubError = p.exact(record.hub,

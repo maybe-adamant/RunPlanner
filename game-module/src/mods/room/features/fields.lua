@@ -8,19 +8,16 @@ local placement = type(import) == "function" and import("mods/room/features/plac
     or require("mods.room.features.placement")
 local fields = {}
 
--- Planned points by one-based slot rank ("cage2" -> 2).
+-- Planned points in draw order; cage points are listed in cage rank order.
 local function cageSlots(layout)
     local byRank = {}
-    for _, cage in ipairs(layout.cagePoints or {}) do
-        local rank = tonumber(string.match(cage.slotKey or "", "(%d+)$"))
-        if rank ~= nil then byRank[rank] = cage.pointId end
-    end
+    for rank, cage in ipairs(layout.cagePoints) do byRank[rank] = cage.pointId end
     return byRank
 end
 
 local function optionalSlots(layout)
     local byIndex = {}
-    for index, optional in ipairs(layout.optionalRewards or {}) do byIndex[index] = optional.pointId end
+    for index, optional in ipairs(layout.optionalRewards) do byIndex[index] = optional.pointId end
     return byIndex
 end
 
@@ -87,8 +84,8 @@ local function encounterName(value)
     return type(value) == "table" and (value.GenusName or value.Name) or value
 end
 
--- Each planned slot's point holds that slot's object: the cage of its
--- CageRewards entry, or an optional reward. Unplanned slots are not checked.
+-- Each slot's point holds that slot's object: the cage of its CageRewards
+-- entry, or an optional reward.
 local function unplacedSlots(layout, nativeRoom, activeObstacles)
     local cagesAt = {}
     for _, value in pairs(activeObstacles or {}) do
@@ -97,9 +94,8 @@ local function unplacedSlots(layout, nativeRoom, activeObstacles)
         end
     end
     local result = {}
-    for _, cage in ipairs(layout.cagePoints or {}) do
-        local rank = tonumber(string.match(cage.slotKey or "", "(%d+)$"))
-        local planned = rank and type(nativeRoom.CageRewards) == "table" and nativeRoom.CageRewards[rank] or nil
+    for rank, cage in ipairs(layout.cagePoints) do
+        local planned = type(nativeRoom.CageRewards) == "table" and nativeRoom.CageRewards[rank] or nil
         local observed = cagesAt[cage.pointId]
         local wanted = type(planned) == "table" and encounterName(planned.Encounter) or nil
         if observed == nil or (wanted ~= nil and encounterName(observed.Encounter) ~= wanted) then
@@ -112,8 +108,8 @@ local function unplacedSlots(layout, nativeRoom, activeObstacles)
     for _, restore in pairs(restores) do
         if type(restore) == "table" and restore.SpawnRewardOnId ~= nil then restoredAt[restore.SpawnRewardOnId] = true end
     end
-    for _, optional in ipairs(layout.optionalRewards or {}) do
-        if optional.pointId ~= nil and not restoredAt[optional.pointId] then
+    for _, optional in ipairs(layout.optionalRewards) do
+        if not restoredAt[optional.pointId] then
             result[#result + 1] = { slotKey = optional.slotKey, pointId = optional.pointId }
         end
     end
@@ -125,14 +121,13 @@ local function completedSnapshot(occurrence, nativeRoom, context)
     local getLocation = context.getLocation
     local priorRewards = context.cageRewards or {}
     local plannedCages, plannedOptional = {}, {}
-    for _, cage in ipairs(layout.cagePoints or {}) do
-        local rank = tonumber(string.match(cage.slotKey or "", "(%d+)$"))
+    for rank, cage in ipairs(layout.cagePoints) do
         plannedCages[#plannedCages + 1] = {
             slotKey = scalar(cage.slotKey), point = point(cage.pointId, getLocation),
-            reward = reward(rank and priorRewards[rank]),
+            reward = reward(priorRewards[rank]),
         }
     end
-    for _, optional in ipairs(layout.optionalRewards or {}) do
+    for _, optional in ipairs(layout.optionalRewards) do
         plannedOptional[#plannedOptional + 1] = {
             slotKey = scalar(optional.slotKey), point = point(optional.pointId, getLocation), reward = reward(optional.reward),
         }
@@ -230,11 +225,11 @@ function fields.attach(module, session, getState, report, room)
             scope.optionalDraws = scope.optionalDraws + 1
             wanted = scope.optionalByIndex[scope.optionalDraws]
         end
-        if wanted ~= nil then
-            local taken = placement.take(values, wanted)
-            if taken ~= nil then return taken end
-            session.diagnostic(getState(runtime), "fields-point", { expected = wanted, observed = nil })
-        end
+        -- Only a native draw past the published slots has no point to take.
+        if wanted == nil then return base(values, ...) end
+        local taken = placement.take(values, wanted)
+        if taken ~= nil then return taken end
+        session.diagnostic(getState(runtime), "fields-point", { expected = wanted, observed = nil })
         return base(values, ...)
     end)
 
@@ -307,7 +302,7 @@ function fields.attach(module, session, getState, report, room)
         local layout = currentLayout(state, nativeRoom)
         if layout == nil then return base(nativeRoom, args) end
         local scope = {
-            optionalRewards = layout.optionalRewards or {},
+            optionalRewards = layout.optionalRewards,
             cageByRank = cageSlots(layout),
             optionalByIndex = optionalSlots(layout),
             cagePoints = placement.set(_G.GetIdsByType and _G.GetIdsByType({ Name = "LootPoint" })),
@@ -340,6 +335,7 @@ function fields.attach(module, session, getState, report, room)
         base, source, args)
         local state = getState(runtime)
         local layout = currentLayout(state, _G.CurrentRun and _G.CurrentRun.CurrentRoom)
+        -- A Fields room publishes a Nemesis point exactly when it plans the Nemesis.
         if layout == nil or layout.nemesisPointId == nil then return base(source, args) end
         local prior = activeNemesis
         activeNemesis = { pointId = layout.nemesisPointId, used = false }
@@ -359,10 +355,7 @@ function fields.attach(module, session, getState, report, room)
     module.hooks.wrap("SelectSpawnPoint", "run-planner-fields-nemesis-point", function(_, _runtime, base,
         currentRoom, unit, source, args, depth)
         local scope = activeNemesis
-        if scope == nil or scope.pointId == nil then
-            return base(currentRoom, unit, source, args, depth)
-        end
-        if scope.used then return base(currentRoom, unit, source, args, depth) end
+        if scope == nil or scope.used then return base(currentRoom, unit, source, args, depth) end
         scope.used = true
         return scope.pointId
     end)

@@ -162,14 +162,14 @@ local function validateFieldsCageSlots(row, label)
             return p.fail(label .. ".cagePoints must use canonical ordered cage slots")
         end
     end
-    -- A cage without a point stays native; a listed one names an active cage, in order.
-    local previous = 0
-    for _, point in ipairs(layout.cagePoints) do
-        local rank = tonumber(string.match(point.slotKey, "^cage(%d+)$"))
-        if rank == nil or rank > #activeCagePhases or rank <= previous then
+    -- Every active cage stands on a point, in cage order.
+    if #layout.cagePoints ~= #activeCagePhases then
+        return p.fail(label .. ".cagePoints must name a point for each active cage")
+    end
+    for index, point in ipairs(layout.cagePoints) do
+        if point.slotKey ~= "cage" .. index then
             return p.fail(label .. ".cagePoints must use canonical ordered cage slots")
         end
-        previous = rank
     end
     return true
 end
