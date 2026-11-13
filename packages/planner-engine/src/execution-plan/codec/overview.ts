@@ -6,6 +6,7 @@ import {
   fail,
   integer,
   object,
+  oneOf,
   stringArray,
   stringValue,
 } from './primitives';
@@ -802,10 +803,13 @@ export function overview(value: unknown, label: string) {
                   well.rerolls,
                   `${label}.stygianWell.rerolls`,
                   (row, rollKey, path) => {
-                    exact(row, ['rollKey', 'offers'], [], path);
+                    exact(row, ['rollKey', 'offers'], ['boughtSlots'], path);
+                    const offers = wellOffers(row.offers, rollKey, `${path}.offers`);
+                    const boughtSlots = wellBoughtSlots(row.boughtSlots, rollKey, offers, path);
                     return Object.freeze({
                       rollKey,
-                      offers: wellOffers(row.offers, rollKey, `${path}.offers`),
+                      offers,
+                      ...(boughtSlots === undefined ? {} : { boughtSlots }),
                     });
                   },
                 ),
@@ -1102,7 +1106,7 @@ export function overview(value: unknown, label: string) {
   });
 }
 
-const WELL_SLOT_KEYS = ['healing', 'secondLeft', 'secondRight'];
+const WELL_SLOT_KEYS = ['healing', 'secondLeft', 'secondRight'] as const;
 
 /** One Well roll's authored offers, each at a slot of that roll. */
 function wellOffers(
@@ -1131,6 +1135,33 @@ function wellOffers(
   if (new Set(offers.map((offer) => offer.generationKey)).size !== offers.length)
     fail(`${label} has duplicate generation keys`);
   return offers;
+}
+
+/**
+ * A Well reroll's slots bought before it, which the game blanks: present only
+ * when non-empty, and with the restocked offers exactly the three slots.
+ */
+function wellBoughtSlots(
+  value: unknown,
+  rollKey: string,
+  offers: readonly import('../model').ExecutionWellOffer[],
+  label: string,
+): readonly (typeof WELL_SLOT_KEYS)[number][] | undefined {
+  const bought =
+    value === undefined
+      ? []
+      : array(value, `${label}.boughtSlots`).map((entry, index) =>
+          oneOf<(typeof WELL_SLOT_KEYS)[number]>(
+            entry,
+            WELL_SLOT_KEYS,
+            `${label}.boughtSlots[${index}]`,
+          ),
+        );
+  if (value !== undefined && bought.length === 0) fail(`${label}.boughtSlots must not be empty`);
+  const offered = offers.map((offer) => offer.generationKey.slice(rollKey.length + 1));
+  if (new Set([...offered, ...bought]).size !== 3 || offered.length + bought.length !== 3)
+    fail(`${label} offers and boughtSlots must be the healing, secondLeft and secondRight slots`);
+  return value === undefined ? undefined : Object.freeze(bought);
 }
 
 /** A Well's or Pool's rerolls in action order, each named by a distinct reroll id. */

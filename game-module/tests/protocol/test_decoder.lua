@@ -2531,8 +2531,9 @@ function TestProtocol.testWellAndPoolRerollsNameTheirRollsAndPinnedSlots()
         .. '{"generationKey":"initial:secondLeft","offerKey":"LastStandShopItem"},'
         .. '{"generationKey":"initial:secondRight","offerKey":"RandomStoreItem"}]'
     lu.assertNotNil(decoded('"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":['
-        .. '{"rollKey":"r1","offers":[{"generationKey":"r1:secondRight","offerKey":"LastStandShopItem"}]},'
-        .. '{"rollKey":"r2","offers":[]}]}'))
+        .. '{"rollKey":"r1","offers":[{"generationKey":"r1:secondRight","offerKey":"LastStandShopItem"}],'
+        .. '"boughtSlots":["healing","secondLeft"]},'
+        .. '{"rollKey":"r2","offers":[],"boughtSlots":["healing","secondLeft","secondRight"]}]}'))
     lu.assertNotNil(decoded('"stygianWell":{"anchorId":1,' .. initial .. '}'))
     lu.assertNotNil(decoded('"purgingPool":{"anchorId":1,"traits":[{"slotKey":"right","traitKey":"A"}]}'))
     lu.assertNotNil(decoded('"purgingPool":{"anchorId":1,"traits":[],"rerolls":['
@@ -2547,10 +2548,22 @@ function TestProtocol.testWellAndPoolRerollsNameTheirRollsAndPinnedSlots()
         '"purgingPool":{"anchorId":1,"traits":[{"traitKey":"A"}]}',
         '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[]}',
         '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"initial","offers":[]}]}',
-        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[]},'
-            .. '{"rollKey":"r1","offers":[]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[],'
+            .. '"boughtSlots":["healing","secondLeft","secondRight"]},{"rollKey":"r1","offers":[],'
+            .. '"boughtSlots":["healing","secondLeft","secondRight"]}]}',
         '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":['
             .. '{"generationKey":"r2:healing","offerKey":"HealDropRange"}]}]}',
+        -- A reroll's offers and bought slots are exactly the three slots, disjoint.
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":['
+            .. '{"generationKey":"r1:healing","offerKey":"HealDropRange"}],"boughtSlots":["secondLeft"]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":['
+            .. '{"generationKey":"r1:healing","offerKey":"HealDropRange"}],'
+            .. '"boughtSlots":["healing","secondLeft","secondRight"]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[],'
+            .. '"boughtSlots":["healing","healing","secondRight"]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[],'
+            .. '"boughtSlots":["healing","secondLeft","middle"]}]}',
+        '"stygianWell":{"anchorId":1,' .. initial .. ',"rerolls":[{"rollKey":"r1","offers":[],"boughtSlots":[]}]}',
         '"stygianWell":{"offers":[{"generationKey":"r1:healing","offerKey":"HealDropRange"}]}',
         '"purgingPool":{"anchorId":1,"rerollCount":1,"traits":[]}',
         '"purgingPool":{"anchorId":1,"traits":[],"rerolls":[{"rollKey":"r1","traits":['

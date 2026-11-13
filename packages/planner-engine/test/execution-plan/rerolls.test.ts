@@ -434,9 +434,25 @@ describe('Well and Pool roll publication', () => {
   it('publishes each roll in action order and the purchases and sales naming them', () => {
     const plan = planOf(rolledProject());
     const roomPlan = plan.occurrences.find((candidate) => candidate.id === postboss)!;
+    // The slots bought before the reroll stay blank and are named instead.
     expect(roomPlan.overview.stygianWell?.rerolls).toEqual([
-      { rollKey: 'r1', offers: [{ generationKey: 'r1:healing', offerKey: 'HealDropRange' }] },
+      {
+        rollKey: 'r1',
+        offers: [{ generationKey: 'r1:healing', offerKey: 'HealDropRange' }],
+        boughtSlots: ['secondLeft', 'secondRight'],
+      },
     ]);
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+    expect(() =>
+      decodeExecutionPlan(
+        JSON.parse(
+          encodeExecutionPlan(plan).replace(
+            '"boughtSlots":["secondLeft","secondRight"]',
+            '"boughtSlots":["secondLeft"]',
+          ),
+        ),
+      ),
+    ).toThrow('offers and boughtSlots must be the healing, secondLeft and secondRight slots');
     // The reroll's edit stocked its whole list.
     expect(roomPlan.overview.purgingPool?.rerolls).toEqual([
       {

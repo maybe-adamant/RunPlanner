@@ -869,12 +869,14 @@ export interface ExecutionOverview {
     readonly offers: readonly ExecutionWellOffer[];
     /**
      * Each Well reroll in action order: the k-th native reroll installs the
-     * k-th entry. Every restocked slot is listed; slots bought earlier stay
-     * blank.
+     * k-th entry. Every restocked slot is listed, and the slots bought before
+     * it, which the game leaves blank, in `boughtSlots`; together they are
+     * the three slots.
      */
     readonly rerolls?: readonly {
       readonly rollKey: string;
       readonly offers: readonly ExecutionWellOffer[];
+      readonly boughtSlots?: readonly ('healing' | 'secondLeft' | 'secondRight')[];
     }[];
     /** The `ChallengeSwitchBase` anchor it stands on; absent on its room's pin. */
     readonly anchorId?: number;

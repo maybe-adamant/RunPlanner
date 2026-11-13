@@ -128,7 +128,9 @@ fountain use changed a listed boon, which the adapter installs in place of the
 entry list.
 Both list their rerolls in action order, slot by slot: the k-th native reroll
 installs the k-th entry, and a Well slot bought earlier in the room is not
-restocked and stays blank. Each purchase and sale names its roll.
+restocked and stays blank: a Well roll lists such slots as `boughtSlots`, so
+its offers and bought slots are exactly the three slots, which a decoder
+requires. Each purchase and sale names its roll.
 
 A rerolled trait, Chaos or Pom level screen lists its earlier screens, oldest
 first, beside its final one. The adapter installs the first when the screen

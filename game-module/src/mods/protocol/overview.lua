@@ -212,26 +212,35 @@ local function phantomExit(value, label)
     return record
 end
 
--- One Well roll's authored offers, each at a distinct slot of that roll.
-local function wellOffers(value, rollKey, label)
+local WELL_SLOTS = { healing = true, secondLeft = true, secondRight = true }
+
+-- One Well roll's offers, each at a distinct slot; with the slots bought
+-- before it, which the game blanks, they are the three slots.
+local function wellOffers(value, rollKey, label, boughtSlots)
     local offers, offersError = p.arr(value, label, 3)
     if not offers then return nil, offersError end
-    -- Nothing is bought before the initial roll, so it stocks every slot.
-    if rollKey == "initial" and #offers ~= 3 then
+    local seen = {}
+    for index, slot in ipairs(boughtSlots or {}) do
+        if not p.one(slot, WELL_SLOTS, label .. ".boughtSlots[" .. index .. "]") or seen[slot] then
+            return p.fail(label .. " has invalid bought slot")
+        end
+        seen[slot] = true
+    end
+    if #offers + #(boughtSlots or {}) ~= 3 then
         return p.fail(label .. " must stock the healing, secondLeft and secondRight slots")
     end
-    local seen = {}
     for index, valueRow in ipairs(offers) do
         local rowLabel = label .. "[" .. index .. "]"
         local row, rowError = p.exact(valueRow, { "generationKey", "offerKey" }, { "twistResultKey" }, rowLabel)
         if not row then return nil, rowError end
-        if not p.wellGenerationKey(row.generationKey, rowLabel .. ".generationKey", rollKey)
-            or seen[row.generationKey]
+        local _, slot = p.wellGenerationKey(row.generationKey, rowLabel .. ".generationKey", rollKey)
+        if slot == nil
+            or seen[slot]
             or not p.str(row.offerKey, rowLabel .. ".offerKey")
             or (row.twistResultKey ~= nil and not p.str(row.twistResultKey, rowLabel .. ".twistResultKey")) then
             return p.fail(rowLabel .. " has invalid Well offer")
         end
-        seen[row.generationKey] = true
+        seen[slot] = true
     end
     return offers
 end
@@ -296,9 +305,14 @@ local function stygianWell(value, label)
     if offersError then return nil, offersError end
     if record.rerolls ~= nil then
         local _, rerollsError = featureRerolls(record.rerolls, label .. ".rerolls", function(row, rowLabel)
-            local roll, rollError = p.exact(row, { "rollKey", "offers" }, {}, rowLabel)
+            local roll, rollError = p.exact(row, { "rollKey", "offers" }, { "boughtSlots" }, rowLabel)
             if not roll then return nil, rollError end
-            return wellOffers(roll.offers, roll.rollKey, rowLabel .. ".offers")
+            if roll.boughtSlots ~= nil then
+                local bought, boughtError = p.arr(roll.boughtSlots, rowLabel .. ".boughtSlots", 3)
+                if not bought then return nil, boughtError end
+                if #bought == 0 then return p.fail(rowLabel .. ".boughtSlots must not be empty") end
+            end
+            return wellOffers(roll.offers, roll.rollKey, rowLabel .. ".offers", roll.boughtSlots)
         end)
         if rerollsError then return nil, rerollsError end
     end

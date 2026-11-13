@@ -676,9 +676,15 @@ function executionStygianWell(
     const roll = assessed?.actions.flatMap((action) =>
       'roll' in action && action.roll.rollKey === reroll.rerollId ? [action.roll] : [],
     )[0];
+    // The game blanks a slot bought before the reroll instead of restocking it.
+    const boughtSlots =
+      roll === undefined
+        ? []
+        : STYGIAN_WELL_SLOT_KEYS.filter((slotKey) => !roll.offeredSlotKeys.includes(slotKey));
     return Object.freeze({
       rollKey: reroll.rerollId,
       offers: executionWellOffers(room, reroll.rerollId, roll?.offeredSlotKeys),
+      ...(boughtSlots.length === 0 ? {} : { boughtSlots: Object.freeze(boughtSlots) }),
     });
   });
   return Object.freeze({
