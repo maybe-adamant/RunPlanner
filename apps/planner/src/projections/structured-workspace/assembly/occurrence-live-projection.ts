@@ -23,6 +23,7 @@ import type {
   WorkspaceRoomLive,
 } from '../contracts/timeline';
 import type { OccurrenceActionLabelParts } from './occurrence-action-label';
+import { spawnedRewardFace } from './occurrence-spawned-loot-projection';
 
 type EngineGap = LiveRoom['gaps'][number];
 type EngineItem = EngineGap['items'][number];
@@ -83,6 +84,16 @@ export function projectRoomLive(input: {
   if (frontier === undefined) return undefined;
   const rowByKey = new Map(input.rows.map((row) => [row.key, row]));
   const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
+  // What each pickup spawns as, which pictures it where its row names no reward.
+  const spawnedByKey = new Map(
+    live.gaps.flatMap((gap) =>
+      gap.items.flatMap((item) =>
+        item.kind === 'pickup' && item.reward !== undefined
+          ? [[roomActionKey(item.reference), item.reward] as const]
+          : [],
+      ),
+    ),
+  );
   const named = (reference: RoomActionReference) => {
     const row = rowByKey.get(roomActionKey(reference));
     const parts: Omit<OccurrenceActionLabelParts, 'label'> =
@@ -90,15 +101,19 @@ export function projectRoomLive(input: {
         ? input.labelParts(reference)
         : // A row named only in full drops its verb: the thing is named, its verbs listed apart.
           (row.labelParts ?? Object.freeze({ name: row.label.replace(/^Collect /, '') }));
+    const spawned = spawnedByKey.get(roomActionKey(reference));
+    // The row's own reward keeps its boost, Trial side and shop item.
+    const reward = parts.reward ?? (spawned === undefined ? undefined : spawnedRewardFace(spawned));
     const face: WorkspaceLiveFace = Object.freeze({
       reference,
       ...(row?.sourceFamily === undefined ? {} : { sourceFamily: row.sourceFamily }),
       ...(row?.challengeSwitchKind === undefined
         ? {}
         : { challengeSwitchKind: row.challengeSwitchKind }),
-      ...(parts.reward === undefined ? {} : { reward: parts.reward }),
+      ...(reward === undefined ? {} : { reward }),
       ...(parts.npcKey === undefined ? {} : { npcKey: parts.npcKey }),
       ...(parts.traitKey === undefined ? {} : { traitKey: parts.traitKey }),
+      ...(parts.encounterKey === undefined ? {} : { encounterKey: parts.encounterKey }),
       ...(parts.place === undefined ? {} : { place: parts.place }),
     });
     const name = parts.name ?? row?.label ?? reference.kind;
@@ -108,6 +123,7 @@ export function projectRoomLive(input: {
       face,
       name: parts.travelDeal === true || row?.travelDeal === true ? `${name} · Travel Deal` : name,
       slot: parts.slot ?? row?.slot,
+      verb: parts.verb,
     };
   };
   const verbAction = (gap: EngineGap, verb: LiveVerb): WorkspaceLiveVerbAction | undefined => {
@@ -135,8 +151,10 @@ export function projectRoomLive(input: {
       if (verb.standing === true) return [];
       const action = verbAction(gap, verb);
       if (action === undefined) return [];
-      const word = verbWords[verb.verb];
       const subject = verb.reference === undefined ? undefined : named(verb.reference);
+      // A contact fought rather than talked to says its row's own verb.
+      const word =
+        verb.verb === 'talkTo' && subject?.verb !== undefined ? subject.verb : verbWords[verb.verb];
       // A pickup's menu names its verbs alone; an object's name what each acts on.
       const label =
         pickup || subject === undefined || verb.verb === 'reroll'
@@ -223,6 +241,9 @@ export function projectRoomLive(input: {
           : {
               reference: first!,
               ...(face.face.npcKey === undefined ? {} : { npcKey: face.face.npcKey }),
+              ...(face.face.encounterKey === undefined
+                ? {}
+                : { encounterKey: face.face.encounterKey }),
               ...(face.face.challengeSwitchKind === undefined
                 ? {}
                 : { challengeSwitchKind: face.face.challengeSwitchKind }),

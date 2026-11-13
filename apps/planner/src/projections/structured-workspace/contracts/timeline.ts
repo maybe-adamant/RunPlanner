@@ -116,6 +116,8 @@ export interface WorkspaceRoomActionRow {
     readonly origin?: string;
     /** The NPC a Talk row names, by NPC key; the row shows its portrait with the name as its title. */
     readonly npcKey?: string;
+    /** The encounter a fought contact names, by native declaration key; the row shows its icon. */
+    readonly encounterKey?: string;
     /** The trait the name stands for, such as a Pool sale's; the row shows it as a chip. */
     readonly traitKey?: string;
     /** The name is the room object used; the row shows its icon as a chip after the verb. */
@@ -286,6 +288,8 @@ export interface WorkspaceLiveFace {
   readonly reward?: NonNullable<WorkspaceRoomActionRow['labelParts']>['reward'];
   /** The NPC it talks to. */
   readonly npcKey?: string;
+  /** The encounter it fights, by native declaration key. */
+  readonly encounterKey?: string;
   readonly traitKey?: string;
   /** The Fields cage or optional slot it sits in. */
   readonly place?: { readonly badge: string; readonly label: string };
@@ -359,7 +363,7 @@ export interface WorkspaceSpawnedItem {
   readonly actionKey: string;
   readonly label: string;
   /** What it spawns as, which its chip shows; absent while its reward is not chosen. */
-  readonly reward?: import('@run-planner/engine/simulation').SpawnedLootReward;
+  readonly reward?: WorkspaceLiveFace['reward'];
   readonly participation: 'required' | 'optional';
   /** The Fields cage or optional slot it sits in, marked on its chip. */
   readonly place?: { readonly badge: string; readonly label: string };

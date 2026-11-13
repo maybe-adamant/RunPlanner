@@ -7,27 +7,13 @@ import type {
   WorkspaceSpawnSource,
   WorkspaceSpawnedItem,
 } from '@planner/projections/structured-workspace';
-import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomActionIcon, sourceFamilyIcon } from '@planner/ui/artwork/roomArtwork';
-import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { IconToggleLock } from '@planner/ui/controls/IconToggle';
 import { TimelineRow } from './TimelineRow';
 import { actionRowElement, focusActionRow } from './placedRow';
-
-/** The item it spawns as, drawn from the engine's product rather than its row's label. */
-function spawnedRewardIcon(
-  reward: NonNullable<WorkspaceSpawnedItem['reward']>,
-): ArtworkSource | undefined {
-  switch (reward.kind) {
-    case 'offer':
-      return offerIcon(reward.offer);
-    case 'pickup':
-      return rewardIcon(reward.gameName);
-    case 'requiredDrop':
-      return rewardIcon(reward.consumableKey);
-  }
-}
 
 function SpawnedItemChip({
   copy,
@@ -62,7 +48,7 @@ function SpawnedItemChip({
           copy !== undefined
             ? sourceFamilyIcon(copy.family)
             : item.reward !== undefined
-              ? spawnedRewardIcon(item.reward)
+              ? offerIcon(item.reward.offer)
               : row === undefined
                 ? undefined
                 : (roomActionIcon(
@@ -70,7 +56,7 @@ function SpawnedItemChip({
                     row.address.biomeKey,
                     row.sourceFamily,
                     row.challengeSwitchKind,
-                  ) ?? sourceFamilyIcon(row.sourceFamily))
+                  ) ?? sourceFamilyIcon(row.sourceFamily, row.challengeSwitchKind))
         }
       />
       {copy === undefined ? null : (

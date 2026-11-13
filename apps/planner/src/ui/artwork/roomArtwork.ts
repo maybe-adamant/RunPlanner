@@ -131,8 +131,15 @@ export function roomActionIcon(
 /** The icon of what produces a family's pickups: its trait, or the NPC who gives them. */
 export function sourceFamilyIcon(
   family: AcquisitionEntrySourceFamily | undefined,
+  challengeSwitchKind?: ChallengeSwitchKind,
 ): string | undefined {
   switch (family?.kind) {
+    case 'challengeSwitch':
+      return challengeSwitchKind === undefined
+        ? undefined
+        : challengeSwitchIcon(challengeSwitchKind);
+    case 'hermesShrineDelivery':
+      return roomObjectIcon('hermesShrine');
     case 'trait':
       return traitIcon(family.traitKey);
     case 'seaStar':

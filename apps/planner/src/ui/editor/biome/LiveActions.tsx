@@ -11,6 +11,7 @@ import {
   type WorkspaceRoomLive,
 } from '@planner/projections/structured-workspace';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
+import { foughtEncounterIcon } from '@planner/ui/artwork/encounterArtwork';
 import { npcPortrait } from '@planner/ui/artwork/npcs/npcArtwork';
 import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
 import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
@@ -50,10 +51,12 @@ function faceIcon(face: Face, biomeKey: string): ArtworkSource | undefined {
   const portrait = npcPortrait(face.npcKey);
   if (portrait !== undefined) return portrait;
   if (face.traitKey !== undefined) return traitIcon(face.traitKey);
+  const encounter = foughtEncounterIcon(face.encounterKey);
+  if (encounter !== undefined) return encounter;
   return face.reference === undefined
     ? undefined
     : (roomActionIcon(face.reference, biomeKey, face.sourceFamily, face.challengeSwitchKind) ??
-        sourceFamilyIcon(face.sourceFamily));
+        sourceFamilyIcon(face.sourceFamily, face.challengeSwitchKind));
 }
 
 /** A live thing's icon: a pickup's own, or its object's. */
@@ -265,7 +268,8 @@ function LiveItemChip({
         itemIcon={(entry) => {
           if (choosing === undefined) {
             const verb = item.verbs.find((candidate) => candidate.key === entry.value);
-            return verb === undefined ? undefined : faceIcon(verb, biomeKey);
+            if (verb === undefined) return undefined;
+            return verb.action.kind === 'rerollPress' ? rerollDieArtwork : faceIcon(verb, biomeKey);
           }
           if (press !== undefined) return rerollDieArtwork;
           if (choosing.action.kind !== 'choose') return undefined;

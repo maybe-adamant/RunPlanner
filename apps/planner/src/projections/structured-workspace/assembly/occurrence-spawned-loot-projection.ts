@@ -5,11 +5,13 @@ import type {
   SpawnMoment,
   SpawnUnlock,
   SpawnedLootItem,
+  SpawnedLootReward,
 } from '@run-planner/engine/simulation';
 import type { WorkspaceRoomLocal } from '../contracts/locals';
 import { challengeSwitchKindLabel } from '@planner/projections/challengeSwitchCopy';
 import type {
   WorkspaceActionSpawn,
+  WorkspaceLiveFace,
   WorkspaceRoomActionRow,
   WorkspaceRoomLifecycleTimelineEntry,
   WorkspaceSpawnGroup,
@@ -20,6 +22,19 @@ import type {
 
 type TimelineEntry = WorkspaceRoomLifecycleTimelineEntry;
 type SpawnedEntry = Extract<TimelineEntry, { readonly kind: 'spawned' }>;
+
+/** What an item spawns as, drawn as a reward's face: its offer, its concrete pickup or its drop. */
+export function spawnedRewardFace(
+  reward: SpawnedLootReward,
+): NonNullable<WorkspaceLiveFace['reward']> {
+  const offer =
+    reward.kind === 'offer'
+      ? reward.offer
+      : Object.freeze({
+          rewardType: reward.kind === 'pickup' ? reward.gameName : reward.consumableKey,
+        });
+  return Object.freeze({ offer, boosted: false });
+}
 
 /** The name a spawned item's chip carries: its row's name, else its whole label. */
 function itemLabel(row: WorkspaceRoomActionRow | undefined): string {
@@ -57,7 +72,7 @@ function projectItem(
     key: semanticAddressKey(item.owner),
     actionKey,
     label,
-    ...(item.reward === undefined ? {} : { reward: item.reward }),
+    ...(item.reward === undefined ? {} : { reward: spawnedRewardFace(item.reward) }),
     participation: item.participation,
     ...(place === undefined ? {} : { place }),
     ...(item.lockedUntil === undefined || unlocked ? {} : { locked: true as const }),

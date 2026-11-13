@@ -595,8 +595,9 @@ function roomActionsForOccurrence(
         input.rerollTargetLabel,
         input.evaluatedRoom?.requiredReward,
       );
+      // A switch's drops carry its kind, which marks them as it marks the switch.
       const challengeSwitchKind =
-        row.reference.kind === 'interactChallengeSwitch'
+        row.reference.kind === 'interactChallengeSwitch' || sourceFamily?.kind === 'challengeSwitch'
           ? observedChallengeSwitchKind(input.catalog, input.occurrence)
           : undefined;
       return Object.freeze({
@@ -623,6 +624,9 @@ function roomActionsForOccurrence(
                 ...(labelParts.place === undefined ? {} : { place: labelParts.place }),
                 ...(labelParts.origin === undefined ? {} : { origin: labelParts.origin }),
                 ...(labelParts.npcKey === undefined ? {} : { npcKey: labelParts.npcKey }),
+                ...(labelParts.encounterKey === undefined
+                  ? {}
+                  : { encounterKey: labelParts.encounterKey }),
                 ...(labelParts.traitKey === undefined ? {} : { traitKey: labelParts.traitKey }),
                 ...(labelParts.object === undefined ? {} : { object: labelParts.object }),
                 ...(labelParts.reward === undefined ? {} : { reward: labelParts.reward }),

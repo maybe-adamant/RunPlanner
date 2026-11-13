@@ -1634,6 +1634,42 @@ export const galleryCases: readonly GalleryCase[] = [
       ),
     target: room('N', 'surface-n-preboss:postboss'),
   },
+  {
+    id: 'live-row-quick-buck',
+    label: 'Live row: Quick Buck’s gold left on the ground under its boon',
+    shows: ['live row', 'generated pickup'],
+    project: () =>
+      withoutRoomActionOrder(loadSurfaceNQuickBuckCheckpoint(), 'N', 'surface-n-opening', 1),
+    target: room('N', 'surface-n-opening'),
+  },
+  {
+    id: 'live-row-switch-drops',
+    label: 'Live row: a challenge switch’s drops after its use',
+    shows: ['live row', 'generated pickup'],
+    project: createGoldenFGHIProject,
+    commands: [
+      (project) => ({
+        kind: 'ReplaceChallengeSwitch',
+        occurrence: occurrenceAddress(project, 'F', 'golden-f-b5-e1'),
+        variantKey: 'TimeChallengeSwitch_Money',
+      }),
+      appendRoomAction('F', 'golden-f-b5-e1', { kind: 'interactChallengeSwitch' }),
+    ],
+    target: room('F', 'golden-f-b5-e1'),
+  },
+  {
+    id: 'live-row-delivery',
+    label: 'Live row: a Hermes Shrine delivery left beside the room reward',
+    shows: ['live row', 'generated pickup'],
+    project: () =>
+      withoutRoomActionOrder(
+        loadSurfaceScheduledLifecycleCheckpoint(),
+        'P',
+        'surface-p-1-1-p_combat03',
+        1,
+      ),
+    target: room('P', 'surface-p-1-1-p_combat03'),
+  },
   // The gap menu.
   {
     id: 'gap-control-hover',

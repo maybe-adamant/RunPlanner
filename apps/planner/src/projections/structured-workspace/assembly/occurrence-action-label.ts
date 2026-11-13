@@ -156,6 +156,8 @@ export interface OccurrenceActionLabelParts {
   };
   /** The NPC a Talk row names, by NPC key; the row can show the NPC's portrait for the name. */
   readonly npcKey?: string;
+  /** The encounter a fought contact names, by native declaration key, which the row can show as its icon. */
+  readonly encounterKey?: string;
   /** The trait the name stands for, such as a Pool sale's, which the row can show as a chip. */
   readonly traitKey?: string;
   /** The name is the room object used, which the row can show as its icon chip. */
@@ -524,9 +526,11 @@ export function occurrenceActionLabelParts(
           : isCombatBearingEncounterPhaseKind(definition.kind)
             ? 'Clear'
             : 'Talk to';
-      return plain(
-        `${verb} ${phase?.selectedEncounter.label ?? `${reference.phaseKey} encounter`}`,
-      );
+      const encounterName = phase?.selectedEncounter.label ?? `${reference.phaseKey} encounter`;
+      // A plain fight reads in words; a miniboss or other named contact by its icon.
+      return key === undefined || definition === undefined || definition.kind === 'combat'
+        ? plain(`${verb} ${encounterName}`)
+        : Object.freeze({ ...labelParts(verb, encounterName), encounterKey: key });
     }
     case 'interactGorgon':
       return talkTo('Athena');
@@ -575,7 +579,7 @@ export function occurrenceActionLabelParts(
             ? undefined
             : // A persisted entry key is never shown; an unnamed pickup reads plainly.
               (explicitRewardLabel ?? 'Pickup');
-      return actionLabel(
+      const parts = actionLabel(
         entryLabel,
         'Collect',
         true,
@@ -584,6 +588,18 @@ export function occurrenceActionLabelParts(
         undefined,
         source?.origin,
       );
+      // A reward the source fixes or the entry names is pictured before it is chosen.
+      const named =
+        authoredOffer ??
+        (explicitRewardType === undefined
+          ? undefined
+          : Object.freeze({ rewardType: explicitRewardType }));
+      return parts.reward !== undefined ||
+        named === undefined ||
+        explicitRewardLabel === undefined ||
+        parts.name !== explicitRewardLabel
+        ? parts
+        : withReward(parts, named, false);
     }
     case 'useFountain':
       return Object.freeze({ ...labelParts('Use', 'Fountain'), object: true as const });

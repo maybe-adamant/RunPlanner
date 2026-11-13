@@ -33,6 +33,7 @@ import { LiveRow, TimelineGapControl } from './LiveActions';
 import { TimelineMapStageContext, type TimelineMapStage } from './timelineMapStage';
 import { RowRewardName } from './RowRewardName';
 import { RowNpcName } from './RowNpcName';
+import { foughtEncounterIcon } from '@planner/ui/artwork/encounterArtwork';
 import { npcPortrait } from '@planner/ui/artwork/npcs/npcArtwork';
 import { RoomActionAcquisitionRow } from './RoomActionAcquisitionRow';
 import {
@@ -539,7 +540,8 @@ export function RoomActionsWorkbench({
       const proposal = actions.proposals.find((candidate) => candidate.key === key);
       return proposal === undefined ? [] : [proposal];
     });
-    const portrait = npcPortrait(row.labelParts?.npcKey);
+    const portrait =
+      npcPortrait(row.labelParts?.npcKey) ?? foughtEncounterIcon(row.labelParts?.encounterKey);
     // A Talk row's portrait names the NPC, so the row leads with no second icon.
     // A used object is named by its own chip after the verb, so it leads with no icon.
     const objectChip =
