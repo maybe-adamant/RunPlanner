@@ -1,3 +1,4 @@
+import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 export const SOURCE_SCHEMA_VERSION: 102;
@@ -8,3 +9,5 @@ export function migrateProjectDocument(
   value: unknown,
   context: { readonly catalog: Catalog },
 ): unknown;
+
+export function stockRevision0Project(project: ProjectDocument, catalog: Catalog): ProjectDocument;

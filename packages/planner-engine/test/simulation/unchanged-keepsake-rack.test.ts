@@ -1,3 +1,4 @@
+import { stockTestProject } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -34,7 +35,7 @@ function rackFirst(project: ProjectDocument): ProjectDocument {
 }
 
 function evaluated(project: ProjectDocument) {
-  const assembly = simulateProjectAssembly(catalog, project);
+  const assembly = simulateProjectAssembly(catalog, stockTestProject(project));
   const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
   if (f?.authoring !== 'complete' || f.validity !== 'valid')
     throw new Error(`expected a valid F: ${JSON.stringify(f?.findings)}`);
@@ -103,7 +104,7 @@ describe('an unchanged Postboss rack', () => {
       outcome,
       targetTraitKey,
     });
-    const { f, postboss } = evaluated(authorLegalTraitOffers(project));
+    const { f, postboss } = evaluated(authorLegalTraitOffers(stockTestProject(project)));
     expect(f.rewards.timelineFacts.dependencies.filter(touchesRack)).toEqual([]);
     const fountain = postboss.timeline.transactions.find(
       (transaction) => transaction.kind === 'fountainUse',

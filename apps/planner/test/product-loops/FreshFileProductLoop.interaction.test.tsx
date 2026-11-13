@@ -14,7 +14,7 @@ import {
   freshFileGIntroId,
 } from '@run-planner/test-fixtures/fresh-file';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
-import { timelineRow } from '@planner-test/support/timeline-rows';
+import { takeLive } from '@planner-test/support/live-row';
 
 afterEach(() => {
   cleanup();
@@ -83,11 +83,7 @@ describe('Fresh File product loop', () => {
       }),
     ).toBeTruthy();
     // The boon is live until the owner places its pickup; its offer is reached once picked up.
-    const pickup = timelineRow(
-      'Collect Apollo',
-      screen.getByRole('region', { name: 'Room Timeline' }),
-    );
-    await user.click(within(pickup).getByRole('button', { name: 'Restore required action' }));
+    await takeLive(user, 'Apollo', 'Pick up');
     await user.click(screen.getByRole('button', { name: 'Edit Trait · Pick trait' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Offer state' }));

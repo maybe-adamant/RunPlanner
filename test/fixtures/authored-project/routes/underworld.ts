@@ -51,6 +51,7 @@ import {
   collectTestRequiredItems,
   replaceTestPlacedItem,
   settleTestEdit,
+  stockTestProject,
 } from '../shared';
 import { authorTestArtificerReplacement } from '../room-actions';
 import {
@@ -1399,11 +1400,14 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     simulateProjectAssembly(catalog, project),
   ).traitOfferStartingOutcome(forcedTrait, replacement.giver.key);
   if (traitDraft === undefined) throw new Error('no candidate-supported H miniboss trait offer');
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait: forcedTrait,
-    value: traitDraft,
-  });
+  // The changed H boons leave its Pool's stored lists stale, as an edit would redraw them.
+  return stockTestProject(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: forcedTrait,
+      value: traitDraft,
+    }),
+  );
 }
 
 /** Golden H whose Echo copies a last Talent Drop; the copy's Path screen is unauthored. */

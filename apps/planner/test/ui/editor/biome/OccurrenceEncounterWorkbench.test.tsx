@@ -82,6 +82,7 @@ import {
   workspaceBiome,
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
+import { takeLive } from '@planner-test/support/live-row';
 import {
   dormantShopProject,
   insertRoomAction,
@@ -134,25 +135,20 @@ function queryTimelineRow(label: string | RegExp): HTMLElement | null {
 }
 
 /** Spawned items not yet collected, each a chip in its spawn row. */
-function unplacedSpawnChips(): HTMLButtonElement[] {
+function unplacedSpawnChips(): HTMLElement[] {
   return [
-    ...document.querySelectorAll<HTMLButtonElement>(
-      '[data-spawned-loot] button.timeline-chip:not([data-spawn-placed])',
+    ...document.querySelectorAll<HTMLElement>(
+      '[data-spawned-loot] .timeline-chip:not([data-spawn-placed])',
     ),
   ];
 }
 
-/** Places a spawned optional pickup from its chip. */
+/** Picks up a spawned optional pickup from the live row. */
 async function addOptionalAction(
   user: ReturnType<typeof renderOccurrenceWorkbench>['user'],
   name: string | RegExp,
 ): Promise<void> {
-  const chip = unplacedSpawnChips().find((candidate) => {
-    const label = candidate.getAttribute('aria-label') ?? '';
-    return typeof name === 'string' ? label === name : name.test(label);
-  });
-  if (chip === undefined) throw new Error(`no spawned pickup ${String(name)}`);
-  await user.click(chip);
+  await takeLive(user, typeof name === 'string' ? name : name, 'Pick up');
 }
 
 /** The spawned pickups not yet collected, each named by its source and itself. */
@@ -1208,6 +1204,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       }),
     ).toBe(condition);
     await view.user.click(condition);
+    // The Gorgon's Athena is talked to from the live row.
+    await takeLive(view.user, 'Gorgon', /^Talk to/);
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Edit Trait · Pick trait' })).toBeTruthy();
     });
@@ -1263,7 +1261,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     }) as HTMLButtonElement;
     expect(condition.getAttribute('aria-pressed')).toBe('true');
     expect(condition.disabled).toBe(false);
-    // Collected before the blocked Athena offer, the Gorgon row is reached with its unsupported support.
+    // Talked to before the blocked Athena offer, the Gorgon row is reached with its unsupported support.
+    await takeLive(view.user, 'Gorgon', /^Talk to/);
     expect(screen.getByRole('button', { name: 'Edit Trait · Divine Dash' })).toBeTruthy();
     await view.user.click(condition);
     await waitFor(() => {
@@ -1818,7 +1817,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrence.occurrenceId),
     );
     openRoomTab('Room Timeline');
-    // Adding appends the pickup at its last legal position.
+    // Picking it up adds the pickup where the walk stands.
     await addOptionalAction(view.user, /^Max Magick/);
 
     const present = view.application.store.getState().projectWorkspace.history!.present;
@@ -1827,9 +1826,8 @@ describe('OccurrenceEncounterWorkbench', () => {
         .find((biome) => biome.biomeKey === 'G')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-        )
-        ?.roomActions.order.at(-1),
-    ).toEqual(
+        )?.roomActions.order,
+    ).toContainEqual(
       withItemContent(present, createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId), {
         kind: 'interactAcquisitionEntry',
         siteKey: narcissusSite,
@@ -2308,7 +2306,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(queryByHint(actions, 'Converted by the Vow of Forfeit.')).toBeNull();
     expect(within(actions).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
     // The row names its converted reward by icon, with the reward as its accessible name.
-    expect(within(actions).getByRole('img', { name: 'Red Onion' })).toBeTruthy();
+    expect(within(actions).getAllByRole('img', { name: 'Red Onion' }).length).toBeGreaterThan(0);
     expect(actions.textContent).not.toContain('(Red Onion)');
     expect(actions.textContent).not.toContain('Forfeit');
   });
@@ -2745,6 +2743,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(2);
 
     openRoomTab('Combat 1 Timeline');
+    // The picked offer lies on the ground until it is picked up from the live row.
+    await takeLive(view.user, 'Hermes', 'Pick up');
     expect(
       within(screen.getByRole('region', { name: 'Room Timeline' })).getByRole('button', {
         name: 'Edit Trait · Pick trait',
@@ -3008,7 +3008,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
     expect(screen.queryByText('Eventual God')).toBeNull();
-    await pickRoomObjectAction(view.user, 'World Shop', 'Buy Travel Deal item');
+    await pickRoomObjectAction(view.user, 'World Shop', /Travel Deal$/);
     const purchase = () => timelineRow('Buy Mystery Boon · Travel Deal Offer');
     await view.user.click(within(purchase()).getByRole('button', { name: 'Reward' }));
     const options = within(await screen.findByRole('listbox')).getAllByRole('option');

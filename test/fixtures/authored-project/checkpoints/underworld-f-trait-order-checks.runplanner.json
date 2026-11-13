@@ -1744,16 +1744,16 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "EmptyMaxHealthShopItem",
+                  "secondLeft": "TemporaryImprovedExTrait",
+                  "secondRight": "MetaCurrencyRange"
                 }
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "EncounterStartOffenseBuffBoon",
+                  "middle": "ApolloBlindBoon",
+                  "right": "OmegaHeraProjectileBoon"
                 }
               },
               "keepsakeRack": {

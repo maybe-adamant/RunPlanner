@@ -45,8 +45,15 @@ export interface GalleryCase {
   readonly doorsExpanded?: true;
   /** A room case opens its Not reached yet rows. */
   readonly notReachedExpanded?: true;
-  /** A room case opens the Optional actions picker of this name on its Timeline. */
+  /** A room case opens the verbs of the live thing of this name on its Timeline. */
   readonly openPicker?: string;
+  /** With `openPicker`, the verb whose values the list then shows. */
+  readonly openVerb?: string;
+  /**
+   * A room case shows the `+` of this Timeline gap, or of the last one shown, as a hover does,
+   * and with `open` opens its menu.
+   */
+  readonly gap?: { readonly index?: number; readonly open: boolean };
   /** An Overview case opens its Overview picker of this accessible name. */
   readonly openOverviewPicker?: string;
   /** The case opens its biome as the biome's tab does, not its target. */
@@ -126,13 +133,14 @@ export function occurrenceAddress(
 }
 
 /**
- * The project as a save that never placed the room's actions decodes: its required actions
- * stay owed and the Timeline offers to restore them.
+ * The project as a save that placed only the room's first `keep` actions decodes: the rest
+ * stay owed and the live row offers them.
  */
 export function withoutRoomActionOrder(
   project: ProjectDocument,
   biomeKey: string,
   occurrenceId: string,
+  keep = 0,
 ): ProjectDocument {
   return decodeProjectDocument(
     {
@@ -148,7 +156,10 @@ export function withoutRoomActionOrder(
                   ...biome.topology,
                   occurrences: biome.topology.occurrences.map((occurrence) =>
                     occurrence.occurrenceId === occurrenceId
-                      ? { ...occurrence, roomActions: { order: [] } }
+                      ? {
+                          ...occurrence,
+                          roomActions: { order: occurrence.roomActions.order.slice(0, keep) },
+                        }
                       : occurrence,
                   ),
                 },

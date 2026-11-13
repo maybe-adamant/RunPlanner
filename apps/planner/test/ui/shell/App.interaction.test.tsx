@@ -1272,19 +1272,10 @@ describe('planner history interaction', () => {
     const childTarget = () =>
       document.getElementById(semanticOwnerControlElementId(childDestination.focusAddress));
     await waitFor(() => expect(childTarget()).not.toBeNull());
-    const childRow = childTarget()?.closest('[data-room-action-key]');
     expect(childDestination.focusAddress.kind).toBe('roomAction');
-    if (childDestination.focusAddress.kind !== 'roomAction') {
-      throw new Error('Sea Star duplicate does not focus its room action');
-    }
-    expect(childRow?.getAttribute('data-room-action-key')).toBe(
-      childDestination.focusAddress.actionKey,
-    );
-    // The row reads its verb, then the reward as an icon named by the reward.
-    expect(childRow?.textContent).toContain('Collect');
-    expect(
-      childRow?.querySelector('[role="img"].row-reward-icon')?.getAttribute('aria-label'),
-    ).toBe('Gold');
+    // The copy lies on the ground: its finding leads to its chip on the live row.
+    expect(childTarget()?.closest('.timeline-live-row')).not.toBeNull();
+    expect(within(childTarget()!).getByRole('button').getAttribute('aria-label')).toBe('Gold');
     expect(
       application.store
         .getState()

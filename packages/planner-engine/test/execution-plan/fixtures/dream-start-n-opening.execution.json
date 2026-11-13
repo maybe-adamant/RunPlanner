@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "execution-dream-q-f-n-h",
   "routeKey": "Dream",
   "startingLoadout": {
@@ -1704,7 +1704,13 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "FirstHitHealTrait" },
+            { "generationKey": "initial:secondLeft", "offerKey": "TemporaryMoveSpeedTrait" },
+            { "generationKey": "initial:secondRight", "offerKey": "TemporaryBoonRarityTrait" }
+          ]
+        },
         "layout": { "flipped": false },
         "keepsakeRack": {},
         "fountain": {}
@@ -3775,7 +3781,13 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "FirstHitHealTrait" },
+            { "generationKey": "initial:secondLeft", "offerKey": "RandomStoreItem" },
+            { "generationKey": "initial:secondRight", "offerKey": "MetaCurrencyRange" }
+          ]
+        },
         "layout": { "flipped": false },
         "keepsakeRack": {},
         "fountain": {}
@@ -6802,7 +6814,13 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "FirstHitHealTrait" },
+            { "generationKey": "initial:secondLeft", "offerKey": "MemPointsCommonRange" },
+            { "generationKey": "initial:secondRight", "offerKey": "TemporaryImprovedCastTrait" }
+          ]
+        },
         "layout": { "flipped": false },
         "keepsakeRack": {},
         "fountain": {}
@@ -7323,5 +7341,5 @@
       }
     }
   ],
-  "planFingerprint": "78ca446e"
+  "planFingerprint": "0557b1c2"
 }

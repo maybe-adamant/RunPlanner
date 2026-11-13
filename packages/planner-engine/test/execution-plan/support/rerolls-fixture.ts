@@ -87,12 +87,19 @@ export function underworldFRerollsProject(): ProjectDocument {
     occurrence: room,
     index: order(project, postboss).length,
   });
+  const action = (key: readonly unknown[]) =>
+    createRoomActionAddress(f, postboss as never, JSON.stringify(key));
+  apply({
+    kind: 'ReplaceStygianWellRollOffer',
+    action: action(['rerollStygianWell', 'r1']),
+    slotKey: 'healing',
+    itemKey: 'HealDropRange',
+  });
   apply({
     kind: 'SetStygianWellPurchase',
     occurrence: room,
     generationKey: 'r1:healing',
     purchased: true,
-    itemKey: 'HealDropRange',
   });
   apply({
     kind: 'InsertPurgingPoolReroll',
@@ -100,11 +107,16 @@ export function underworldFRerollsProject(): ProjectDocument {
     index: order(project, postboss).length,
   });
   apply({
-    kind: 'SellPurgingPoolRollSlot',
-    occurrence: room,
-    rollKey: 'r1',
+    kind: 'ReplacePurgingPoolRollSlot',
+    action: action(['rerollPurgingPool', 'r1']),
     slotKey: 'middle',
     traitKey: 'HeraCastBoon',
+  });
+  const sale = { kind: 'sellPurgingPoolTrait', slotKey: 'middle', rollKey: 'r1' } as const;
+  apply({
+    kind: 'InsertRoomAction',
+    action: action(['sellPurgingPoolTrait', 'middle', 'r1']),
+    reference: sale,
     index: order(project, postboss).length,
   });
   return project;

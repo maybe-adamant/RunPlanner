@@ -644,6 +644,7 @@ export function ContextualPickerPopover<T>({
   itemIcon,
   model,
   onActiveChange,
+  onCloseAutoFocus,
   onOpenChange,
   onSelect,
   open,
@@ -662,6 +663,8 @@ export function ContextualPickerPopover<T>({
   readonly itemIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
   readonly model: ContextualPickerModel<T>;
   readonly onActiveChange?: (item: ContextualPickerItem<T> | undefined) => void;
+  /** Runs once the closed list hands focus back; preventing it keeps focus where it moved. */
+  readonly onCloseAutoFocus?: (event: Event) => void;
   readonly onOpenChange: (open: boolean) => void;
   readonly onSelect: (value: T) => void;
   readonly open: boolean;
@@ -686,6 +689,7 @@ export function ContextualPickerPopover<T>({
           className="contextual-picker-popover"
           {...(collisionBoundary == null ? {} : { collisionBoundary })}
           collisionPadding={12}
+          {...(onCloseAutoFocus === undefined ? {} : { onCloseAutoFocus })}
           side={side}
           sideOffset={side === 'right' ? 8 : 6}
           sticky="always"

@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -2809,8 +2809,21 @@
           { "slotKey": "Encounter", "encounterKey": "Story_Chronos_01", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
-        "purgingPool": { "traits": [], "anchorId": 755023 },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "FirstHitHealTrait" },
+            { "generationKey": "initial:secondLeft", "offerKey": "LimitedSwapTraitDrop" },
+            { "generationKey": "initial:secondRight", "offerKey": "MemPointsCommonRange" }
+          ]
+        },
+        "purgingPool": {
+          "traits": [
+            { "slotKey": "left", "traitKey": "ApolloWeaponBoon" },
+            { "slotKey": "middle", "traitKey": "ZeusSpecialBoon" },
+            { "slotKey": "right", "traitKey": "HeraCastBoon" }
+          ],
+          "anchorId": 755023
+        },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -4467,8 +4480,21 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
-        "purgingPool": { "traits": [], "anchorId": 637448 },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "LastStandShopItem" },
+            { "generationKey": "initial:secondLeft", "offerKey": "TemporaryMoveSpeedTrait" },
+            { "generationKey": "initial:secondRight", "offerKey": "TemporaryImprovedExTrait" }
+          ]
+        },
+        "purgingPool": {
+          "traits": [
+            { "slotKey": "left", "traitKey": "HeraCastBoon" },
+            { "slotKey": "middle", "traitKey": "HestiaManaBoon" },
+            { "slotKey": "right", "traitKey": "HestiaWeaponBoon" }
+          ],
+          "anchorId": 637448
+        },
         "layout": { "flipped": false },
         "keepsakeRack": {},
         "fountain": {}
@@ -4532,5 +4558,5 @@
       }
     }
   ],
-  "planFingerprint": "e8f7d211"
+  "planFingerprint": "75089499"
 }

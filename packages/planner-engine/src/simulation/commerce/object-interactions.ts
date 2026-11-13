@@ -1,7 +1,6 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { HermesShrineDelay, HermesShrineGenerationKey } from '../../authored-project/model';
-import type { ShopOptionSelection } from '../../reward-kernel';
 
 type CommandOf<Kind extends ProjectCommand['kind']> = Extract<
   ProjectCommand,
@@ -19,13 +18,15 @@ export interface WorldShopInteraction {
     readonly offerKey: string;
     readonly command: CommandOf<'ReplaceShopPurchaseParticipation'>;
   }[];
+  /**
+   * Travel Deal is held and no purchase has restocked yet: the next item bought
+   * restocks its slot, and that purchase settles the restocked item.
+   */
+  readonly travelDealRestocksNextPurchase: boolean;
   /** The Travel Deal item, once its first purchase made it live and while it is unbought. */
   readonly travelDealRefill?: {
-    /** Null while the item is blank; the pick then adds its chosen `value` to `command`. */
     readonly rewardType: string | null;
     readonly optionKey: string | null;
-    /** The items the reached state can stock there, each ready as the command's `value`. */
-    readonly values: readonly ShopOptionSelection[];
     readonly command: CommandOf<'PurchaseShopTravelDealRefill'>;
   };
 }
@@ -33,7 +34,6 @@ export interface WorldShopInteraction {
 /** One unbought Hermes Shrine item that can be bought there. */
 export interface HermesShrineInteractionOffer {
   readonly generationKey: HermesShrineGenerationKey;
-  /** Null only for a blank Travel Deal refill; the pick then adds its chosen `rewardType`. */
   readonly rewardType: string | null;
   readonly delay: HermesShrineDelay | null;
   readonly buy: CommandOf<'PurchaseHermesShrineOffer'>;
@@ -57,6 +57,11 @@ export interface HermesShrineInteraction {
   readonly rushes: readonly HermesShrineInteractionRush[];
   /** A rush made with Travel Deal has refilled its slot at the reached state. */
   readonly travelDealRefillLive: boolean;
+  /**
+   * Travel Deal is held and no rush has refilled yet: the next initial item
+   * rushed refills its slot, and that rush settles the refilled item.
+   */
+  readonly travelDealRefillsNextRush: boolean;
   /** The live refill while it is unbought, with the rewards the reached state can stock. */
   readonly travelDealRefill?: HermesShrineInteractionOffer & {
     readonly candidateRewardTypes: readonly string[];

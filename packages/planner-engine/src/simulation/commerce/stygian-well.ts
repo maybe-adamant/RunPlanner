@@ -107,9 +107,9 @@ export interface StygianWellAssessment {
   readonly issues: readonly StygianWellInventoryAssessmentIssue[];
 }
 
-/** A duplicate names the slot that repeats an earlier slot. */
+/** A duplicate names the slot that repeats an earlier slot; a missing slot is still blank. */
 export interface StygianWellInventoryAssessmentIssue {
-  readonly kind: 'wrongGroup' | 'duplicate';
+  readonly kind: 'missing' | 'wrongGroup' | 'duplicate';
   readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
 }
 
@@ -160,9 +160,11 @@ export interface StygianWellRollAssessment {
   /** Every slot not bought earlier in the room; bought slots stay blank. */
   readonly offeredSlotKeys: readonly StygianWellSlotKey[];
   readonly candidateItemKeysBySlot: Readonly<Record<StygianWellSlotKey, readonly string[]>>;
-  /** Pinned slots only; an unpinned slot stays native. */
+  /** The items on show just before the reroll: the game bans one of them from the roll. */
+  readonly shownItemKeys: readonly string[];
+  /** A blank offered slot is missing until the edit that first reaches it stocks it. */
   readonly issues: readonly {
-    readonly kind: 'wrongGroup' | 'duplicate' | 'notOffered';
+    readonly kind: 'missing' | 'wrongGroup' | 'duplicate' | 'notOffered';
     readonly slotKey: StygianWellSlotKey;
   }[];
 }
@@ -179,7 +181,7 @@ export interface StygianWellPurchaseAssessment {
   readonly twistCandidateItemKeys?: readonly string[];
   readonly issues: readonly (
     | {
-        readonly kind: 'refillWrongGroup' | 'refillDuplicate';
+        readonly kind: 'refillMissing' | 'refillWrongGroup' | 'refillDuplicate';
         readonly generationKey: 'travelDealRefill';
       }
     | {
@@ -290,11 +292,12 @@ export function assessStygianWell(
     secondLeft: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'secondLeft'),
     secondRight: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'secondRight'),
   });
-  // A blank slot stays native; only a pinned one is assessed.
+  // A blank slot is stocked by the edit that first reaches it; until then it is missing.
   const issues: StygianWellInventoryAssessmentIssue[] = [];
   for (const key of STYGIAN_WELL_SLOT_KEYS) {
     const itemKey = well.offerKeyBySlot[key];
-    if (itemKey !== null && !domains[key].includes(itemKey))
+    if (itemKey === null) issues.push({ kind: 'missing', generationKey: `initial:${key}` });
+    else if (!domains[key].includes(itemKey))
       issues.push({ kind: 'wrongGroup', generationKey: `initial:${key}` });
   }
   STYGIAN_WELL_SLOT_KEYS.forEach((key, index) => {
@@ -326,6 +329,7 @@ export function assessStygianWellRoll(
   offeredSlotKeys: readonly StygianWellSlotKey[],
   state: Pick<StygianWellRunState, 'timedInstances'>,
   traitHistory: import('../traits').TraitHistoryState | undefined,
+  shownItemKeys: readonly string[] = [],
 ): StygianWellRollAssessment {
   const candidateItemKeysBySlot = Object.freeze(
     Object.fromEntries(
@@ -338,7 +342,10 @@ export function assessStygianWellRoll(
   const issues: StygianWellRollAssessment['issues'][number][] = [];
   STYGIAN_WELL_SLOT_KEYS.forEach((slotKey, index) => {
     const itemKey = offerKeyBySlot[slotKey];
-    if (itemKey === undefined) return;
+    if (itemKey === undefined) {
+      if (offeredSlotKeys.includes(slotKey)) issues.push({ kind: 'missing', slotKey });
+      return;
+    }
     if (!offeredSlotKeys.includes(slotKey)) issues.push({ kind: 'notOffered', slotKey });
     else if (!candidateItemKeysBySlot[slotKey].includes(itemKey))
       issues.push({ kind: 'wrongGroup', slotKey });
@@ -353,6 +360,7 @@ export function assessStygianWellRoll(
     rollKey,
     offeredSlotKeys: Object.freeze([...offeredSlotKeys]),
     candidateItemKeysBySlot,
+    shownItemKeys: Object.freeze([...shownItemKeys]),
     issues: Object.freeze(issues),
   });
 }
@@ -407,9 +415,11 @@ export function assessStygianWellPurchase(
           const candidateItemKeys = Object.freeze(
             sourceDomain.filter((key) => !first.rollItemKeys.includes(key)),
           );
-          // An unpinned restock stays native until its purchase needs it.
+          // A blank restock is stocked by the edit that first reaches this purchase.
           const refill = first.travelDealRefillKey;
-          if (refill !== undefined && refill !== null && !candidateItemKeys.includes(refill))
+          if (refill === undefined || refill === null)
+            issues.push({ kind: 'refillMissing', generationKey: 'travelDealRefill' });
+          else if (!candidateItemKeys.includes(refill))
             issues.push({
               kind: sourceDomain.includes(refill) ? 'refillDuplicate' : 'refillWrongGroup',
               generationKey: 'travelDealRefill',
@@ -622,6 +632,8 @@ export interface StygianWellInteraction {
 export interface StygianWellRollCapability {
   readonly offeredSlotKeys: readonly StygianWellSlotKey[];
   readonly candidateItemKeysBySlot: Readonly<Record<StygianWellSlotKey, readonly string[]>>;
+  /** The items on show just before the reroll: the game bans one of them from the roll. */
+  readonly shownItemKeys: readonly string[];
 }
 
 export interface StygianWellCandidateCapability {
@@ -713,6 +725,7 @@ export function createStygianWellCandidateArtifacts(
               Object.freeze({
                 offeredSlotKeys: roll.offeredSlotKeys,
                 candidateItemKeysBySlot: roll.candidateItemKeysBySlot,
+                shownItemKeys: roll.shownItemKeys,
               }),
             ]),
           ),

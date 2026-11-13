@@ -15,21 +15,12 @@ export type {
   WorkspaceChallengeSwitchVariant,
   WorkspaceChaosExitControl,
   WorkspaceChaosSpawnControl,
-  WorkspaceFeatureRollActions,
-  WorkspaceFeatureRollActionsInteraction,
-  WorkspaceFeatureRollLock,
-  WorkspaceFeatureRollOption,
   WorkspaceFeatureRollSlot,
   WorkspaceFeatureRollSlotInteraction,
   WorkspaceLockedDoors,
   WorkspaceUnlockExitEncounter,
   WorkspaceRoomFeature,
-  WorkspaceRoomObject,
-  WorkspaceRoomObjectChoice,
-  WorkspaceRoomObjectEntry,
   WorkspaceRoomObjectEntryInteraction,
-  WorkspaceRoomObjectLock,
-  WorkspaceRoomObjectOption,
   WorkspaceRoomObjectSlots,
   WorkspaceRoomMap,
   WorkspaceRoomMapPoint,
@@ -115,6 +106,11 @@ export type {
   WorkspaceSpawnGroup,
   WorkspaceSpawnSource,
   WorkspaceSpawnedItem,
+  WorkspaceLiveChoice,
+  WorkspaceLiveGap,
+  WorkspaceLiveItem,
+  WorkspaceLiveVerb,
+  WorkspaceRoomLive,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthDomain,
   WorkspaceSteadyGrowthInteraction,
@@ -441,10 +437,6 @@ export interface WorkspaceInteractionCatalog {
   readonly phantomExits: ReadonlyMap<string, WorkspacePhantomExitInteraction>;
   readonly roomRerolls: ReadonlyMap<string, WorkspaceRoomRerollsInteraction>;
   /** Each Well and Pool's Interact picker. */
-  readonly featureRollActions: ReadonlyMap<
-    string,
-    import('./contracts/features').WorkspaceFeatureRollActionsInteraction
-  >;
   /** Each World Shop, Hermes Shrine and Pedestal entry. */
   readonly roomObjectEntries: ReadonlyMap<
     string,
@@ -560,8 +552,6 @@ export interface WorkspaceShipPhasePresentation {
     WorkspaceRoomTab,
     'shipIntroActions' | 'shipCombat1Actions' | 'shipCombat2Actions'
   >;
-  /** Active required actions owned by this phase but not yet inserted. */
-  readonly unplacedRows: readonly WorkspaceRoomActionRow[];
   readonly actionRows: readonly WorkspaceRoomActionRow[];
   readonly encounter?: WorkspaceEncounterPhase;
   readonly key: string;
@@ -575,10 +565,8 @@ export interface WorkspaceShipPhasePresentation {
   readonly notReached?: WorkspaceRoomActions['timeline']['notReached'];
   /** Where the walk stops before this phase: its room's Overview, or an earlier phase. */
   readonly waitsOn?: import('./contracts/timeline').WorkspaceTimelineWait;
-  /** Active optional actions owned by this phase but not yet inserted. */
-  readonly optionalRows: readonly WorkspaceRoomActionRow[];
-  /** The room objects' entries, on the last phase, where a new action is appended. */
-  readonly objectEntries?: readonly import('./contracts/features').WorkspaceRoomObjectEntry[];
+  /** The phase the walk's frontier stands in, which shows the room's live row. */
+  readonly holdsLive?: true;
   /** The active wheel the next phase's combat is chosen at, opened and taken on this tab. */
   readonly wheel?: WorkspaceRewardWheelDescriptor;
   /** The wheel's offer rerolls, where it can or did reroll. */

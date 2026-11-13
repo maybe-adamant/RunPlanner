@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "dream-single-q",
   "routeKey": "Dream",
   "startingLoadout": {
@@ -1542,5 +1542,5 @@
       }
     }
   ],
-  "planFingerprint": "753f0c5f"
+  "planFingerprint": "840a82d0"
 }

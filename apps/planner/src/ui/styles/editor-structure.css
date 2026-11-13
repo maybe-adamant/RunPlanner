@@ -958,12 +958,6 @@ select {
   display: block;
 }
 
-.shop-family-offer-list {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-}
-
 .acquisition-entry-resolution {
   margin-top: 8px;
   padding-top: 8px;

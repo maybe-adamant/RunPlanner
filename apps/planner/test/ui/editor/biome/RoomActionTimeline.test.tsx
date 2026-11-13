@@ -55,7 +55,6 @@ import {
 import { createReachableNaturalChaosProject } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import {
   loadSurfaceNOPQProject,
-  surfaceShrineTravelDealProject,
   nBiome,
   nOccurrenceIds,
   oBiome,
@@ -65,10 +64,8 @@ import {
   authorLegalTraitOffers,
   authorTestTraitsAndRequiredItems,
   replaceTestRoomActionOrder,
-  replaceTestShopOfferActions,
   withItemContents,
 } from '@run-planner/test-fixtures/shared';
-import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   renderOccurrenceWorkbench,
   workspaceProjection,
@@ -85,6 +82,7 @@ import {
   pickRoomObjectAction,
   threeCageFieldsProject,
 } from '@planner-test/support/occurrence-workbench';
+import { liveChip, takeLive } from '@planner-test/support/live-row';
 
 import { hintOf, queryByHint } from '@planner-test/support/hints';
 
@@ -198,44 +196,6 @@ afterEach(() => {
 });
 
 describe('Ship timeline tab recovery', () => {
-  it('restores an imported phase-local required delivery without entering inactive repairs', async () => {
-    const complete = surfaceShrineTravelDealProject();
-    const host = complete.route.biomes
-      .find((biome) => biome.biomeKey === 'O')!
-      .topology!.occurrences.find((room) => room.occurrenceId === oOccurrenceIds.combat04)!;
-    const delivery = host.roomActions.order.find(
-      (reference) =>
-        reference.kind === 'interactAcquisitionEntry' &&
-        reference.siteKey === 'hermesShrineDelivery',
-    )!;
-    const project = applyProjectCommand(complete, catalog, {
-      kind: 'UnplaceGeneratedDelivery',
-      action: createRoomActionAddress(oBiome, host.occurrenceId, roomActionKey(delivery)),
-    });
-    const view = renderOccurrenceWorkbench(
-      project,
-      'Surface',
-      'O',
-      occurrenceById(oOccurrenceIds.combat04),
-      undefined,
-      { initialTab: 'shipCombat1Actions' },
-    );
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(0);
-    const required = screen.getByRole('region', { name: 'Required actions' });
-    await view.user.click(within(required).getByRole('button', { name: 'Restore delivery' }));
-    expect(screen.queryByRole('region', { name: 'Required actions' })).toBeNull();
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(1);
-    expect(
-      screen.getByRole('tab', { name: 'Combat 1 Timeline' }).getAttribute('aria-selected'),
-    ).toBe('true');
-    expect(screen.queryByRole('region', { name: 'Intro ship phase' })).toBeNull();
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(screen.getByRole('region', { name: 'Required actions' })).not.toBeNull();
-    expect(
-      screen.getByRole('tab', { name: 'Combat 1 Timeline' }).getAttribute('aria-selected'),
-    ).toBe('true');
-  });
-
   it('recovers a removed phase tab and restores only that phase on Undo', async () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
@@ -588,17 +548,8 @@ describe('OccurrenceRoomActions', () => {
     if (fieldsEncounter !== null) expectBefore(fieldsEncounter, fieldsActions);
     const timeline = within(fieldsActions).getByRole('list', { name: 'Room timeline' });
     expect(queryActionRow(timeline, /^Collect .+ · Optional 1$/)).toBeNull();
-    // The unplaced optional reward is placed from its chip where it spawns.
-    const optionalChip = within(
-      within(timeline).getByRole('listitem', { name: 'Spawned' }),
-    ).getByRole('button', { name: /· Optional 1$/ });
-    expect(optionalChip.getAttribute('aria-disabled')).not.toBe('true');
-    expect(
-      within(within(fieldsActions).getByRole('region', { name: 'Optional actions' })).queryByRole(
-        'button',
-        { name: 'Optional rewards' },
-      ),
-    ).toBeNull();
+    // The unplaced optional reward is taken from the live row.
+    expect(liveChip(/· Optional 1$/)).toBeTruthy();
     expect(actionRow(timeline, /^Collect .+ · Cage 1$/).getAttribute('data-action-accent')).toBe(
       'room',
     );
@@ -696,8 +647,6 @@ describe('OccurrenceRoomActions', () => {
         ])[0],
       );
     });
-    expect(within(actions).getByRole('region', { name: 'Optional actions' })).toBeTruthy();
-
     const cageOneAction = createRoomActionAddress(
       goldenHBiome,
       occurrenceId,
@@ -900,52 +849,6 @@ describe('OccurrenceRoomActions', () => {
   // This three-cage route is repairable-invalid under the run-scoped ledger,
   // and the missing anchor is exactly the repair leaf it publishes, so the
   // product under test stays observable on it.
-  it('keeps a missing active Fields cage anchor in Timeline repairs', () => {
-    const occurrenceId = createOccurrenceId('golden-h-combat02');
-    const authored = threeCageFieldsProject();
-    const malformed = decodeProjectDocument(
-      {
-        ...authored,
-        route: {
-          ...authored.route,
-          biomes: authored.route.biomes.map((biome) =>
-            biome.biomeKey !== 'H' || biome.topology === null
-              ? biome
-              : {
-                  ...biome,
-                  topology: {
-                    ...biome.topology,
-                    occurrences: biome.topology.occurrences.map((occurrence) =>
-                      occurrence.occurrenceId !== occurrenceId
-                        ? occurrence
-                        : {
-                            ...occurrence,
-                            roomActions: {
-                              order: occurrence.roomActions.order.filter(
-                                (reference) =>
-                                  reference.kind !== 'completeFieldsCage' ||
-                                  reference.phaseKey !== 'Cage03',
-                              ),
-                            },
-                          },
-                    ),
-                  },
-                },
-          ),
-        },
-      },
-      catalog,
-    );
-    renderOccurrenceWorkbench(malformed, 'Underworld', 'H', occurrenceById(occurrenceId));
-    openRoomTab('Room Timeline');
-    const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
-    const repairs = within(actions).getByRole('region', { name: 'Timeline repairs' });
-    expect(() => actionRow(timeline, /^Unlock .+ · Cage 3$/)).toThrow();
-    expect(actionRow(repairs, /^Unlock .+ · Cage 3 required$/)).toBeTruthy();
-    expect(within(repairs).queryByText('This required action has not been placed.')).toBeNull();
-  });
-
   it('accepts a Fields optional reward directly on the Room entered checkpoint', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const view = renderOccurrenceWorkbench(
@@ -959,12 +862,8 @@ describe('OccurrenceRoomActions', () => {
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
     expect(queryActionRow(timeline, /^Collect .+ · Optional 1$/)).toBeNull();
     const historyLength = view.application.store.getState().projectWorkspace.history!.past.length;
-    // One click on its spawn chip adds the optional reward at its last legal place.
-    await view.user.click(
-      within(within(timeline).getByRole('listitem', { name: 'Spawned' })).getByRole('button', {
-        name: /· Optional 1$/,
-      }),
-    );
+    // Picking it up from the live row adds the optional reward where the walk stands.
+    await takeLive(view.user, /· Optional 1$/, 'Pick up');
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyLength + 1,
     );
@@ -1039,40 +938,15 @@ describe('OccurrenceRoomActions', () => {
       'F',
       completionOccurrenceById(postbossId),
     );
-    openRoomTab('Room Overview');
-    const left = screen.getByRole('button', { name: 'Pool of Purging Offer 1 Item' });
-    await view.user.click(left);
-    // Blank slots are native: the selected option is Unresolved.
-    const firstTrait = within(screen.getByRole('listbox'))
-      .getAllByRole('option')
-      .find((option) => option.getAttribute('aria-selected') !== 'true');
-    if (firstTrait === undefined) throw new Error('F Pool has no eligible trait candidate');
-    const leftTraitLabel =
-      firstTrait.querySelector('.contextual-picker-item-label')?.textContent ??
-      firstTrait.textContent;
-    await view.user.click(firstTrait);
-    for (const label of ['Middle slot', 'Right slot'] as const) {
-      const slotNumber = label === 'Middle slot' ? 2 : 3;
-      const slot = screen.getByRole('button', {
-        name: `Pool of Purging Offer ${slotNumber} Item`,
-      });
-      await view.user.click(slot);
-      const trait = within(screen.getByRole('listbox'))
-        .getAllByRole('option')
-        .find((option) => option.getAttribute('aria-selected') !== 'true');
-      if (trait === undefined) throw new Error(`F Pool ${label} has no eligible trait candidate`);
-      await view.user.click(trait);
-    }
-    await waitFor(() =>
-      expect(
-        view.application.store
-          .getState()
-          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
-          ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
-          ?.traitKeyBySlot.left,
-      ).not.toBeNull(),
-    );
-
+    // The walk stocked the Pool's list when it reached the room.
+    const leftTraitKey = view.application.store
+      .getState()
+      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
+      ?.traitKeyBySlot.left;
+    if (leftTraitKey === undefined || leftTraitKey === null)
+      throw new Error('F Pool left slot is not stocked');
+    const leftTraitLabel = catalog.traits.byKey[leftTraitKey]!.label;
     openRoomTab('Room Timeline');
     expect(screen.queryByText(`Sell ${leftTraitLabel}`)).toBeNull();
     openRoomTab('Room Overview');
@@ -1091,7 +965,6 @@ describe('OccurrenceRoomActions', () => {
         .getState()
         .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions.order;
-    const poolActionKeys = () => poolActionOrder()?.map(roomActionKey);
     const sold = recordedIn(view, goldenFBiome, postbossId, [
       { kind: 'useFountain' },
       { kind: 'interactKeepsakeRack' },
@@ -1119,36 +992,6 @@ describe('OccurrenceRoomActions', () => {
     await waitFor(() => expect(poolActionOrder()).toEqual(sold));
     view.application.store.dispatch(authoredProjectRedoRequested());
     await waitFor(() => expect(poolActionOrder()).toEqual(moved));
-
-    openRoomTab('Room Overview');
-    await view.user.click(screen.getByRole('button', { name: 'Pool of Purging Offer 1 Item' }));
-    await view.user.click(screen.getByRole('option', { name: 'Unresolved' }));
-    // Unpinning the slot refines nothing away: the sale keeps the trait it was placed for.
-    await waitFor(() => expect(poolActionOrder()).toContainEqual(leftSaleRow));
-
-    const leftSale = createRoomActionAddress(
-      goldenFBiome,
-      postbossId,
-      roomActionKey({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
-    );
-    act(() => view.application.store.dispatch(semanticOwnerNavigated(leftSale)));
-    openRoomTab('Room Timeline');
-    // A sale whose slot lost its pin stays on the timeline with its finding.
-    const stale = (await screen.findByText('Sell left Pool trait')).closest('li');
-    if (stale === null) throw new Error('Retained Pool sale is missing');
-    expect(document.getElementById(semanticOwnerControlElementId(leftSale))).toBe(stale);
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(leftSale);
-    await view.user.click(
-      within(stale).getByRole('button', { name: 'Remove Sell left Pool trait from timeline' }),
-    );
-    await waitFor(() => expect(poolActionKeys()).not.toContain(roomActionKey(leftSaleRow)));
-    expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
-        ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
-        ?.traitKeyBySlot.middle,
-    ).not.toBeNull();
   });
 
   it('orders the pickup outcome before the editing it enables on one pickup line', async () => {
@@ -1325,7 +1168,7 @@ describe('OccurrenceRoomActions', () => {
     });
   });
 
-  it('restores an unranked required action once without free insertion UI', async () => {
+  it('picks up an unranked required item from the live row', async () => {
     const occurrenceId = goldenFOccurrenceId(1, 1);
     const authored = createFConversionFrontierProject('MetaCurrencyDrop').project;
     const reference = occurrenceRoomActionOrder(authored, 'Underworld', 'F', occurrenceId)?.[0];
@@ -1364,22 +1207,10 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(within(actions).queryByText('This required action has not been placed.')).toBeNull();
-    expect(within(actions).getByRole('region', { name: 'Timeline repairs' })).toBeTruthy();
     expect(actions.querySelector('[data-reorder-handle]')).toBeNull();
-    const repairRow = within(actions)
-      .getByRole('button', { name: 'Restore required action' })
-      .closest<HTMLElement>('[data-room-action-key]');
-    if (repairRow === null) throw new Error('Required repair row is missing');
-    expect(within(repairRow).queryByText('Position')).toBeNull();
-    const missingRequiredDelete = within(repairRow).getByRole('button', {
-      name: /Remove .* from timeline/,
-    });
-    expect((missingRequiredDelete as HTMLButtonElement).disabled).toBe(true);
 
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(
-      within(repairRow).getByRole('button', { name: 'Restore required action' }),
-    );
+    await takeLive(view.user, 'Bones', 'Pick up');
     await waitFor(() =>
       expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
         historyBefore + 1,
@@ -1396,9 +1227,7 @@ describe('OccurrenceRoomActions', () => {
     });
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Restore required action' })).toBeTruthy(),
-    );
+    await waitFor(() => expect(liveChip('Bones')).toBeTruthy());
   });
 
   it('focuses and removes a stale Standard encounter action after encounter replacement', async () => {
@@ -1628,9 +1457,7 @@ describe('OccurrenceRoomActions', () => {
     expect(screen.queryByRole('checkbox', { name: /^Purchased/ })).toBeNull();
     openRoomTab('Room Timeline');
     // This room's actions are not reached yet, so nothing can be bought.
-    const entry = screen.getByRole('button', { name: 'World Shop' });
-    expect(entry).toHaveProperty('disabled', true);
-    expect(hintOf(entry)).toBe('Waits on an earlier choice.');
+    expect(document.querySelector('.timeline-live-row')).toBeNull();
 
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(within(actions).getByText('Doors open')).toBeTruthy();
@@ -1760,7 +1587,7 @@ describe('OccurrenceRoomActions', () => {
     expect(document.querySelector('.room-action-drag-preview')).toBeNull();
   });
 
-  it('buys a stocked item and the live Travel Deal item from the World Shop entry, each appended', async () => {
+  it('buys a stocked item and the live Travel Deal item from the live row, each appended', async () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const reference = {
       kind: 'interactAcquisitionEntry' as const,
@@ -1780,64 +1607,21 @@ describe('OccurrenceRoomActions', () => {
         'F',
         shopId,
       );
-    await view.user.click(screen.getByRole('button', { name: 'World Shop' }));
+    await view.user.click(liveChip('World Shop'));
     const options = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
       .map((option) => option.textContent);
-    expect(options).toContain('Buy Travel Deal item');
-    // Each unbought item is offered by the row it appends; the bought Slot 2 item is not.
-    expect(options).toEqual(['Buy Apollo', 'Buy Max Magick', 'Buy Travel Deal item']);
+    // Each unbought item is offered by the row it adds, the Travel Deal item once and last;
+    // the bought Slot 2 item is not.
+    expect(options).toEqual(['Buy Apollo', 'Buy Max Magick', 'Buy Armor · Travel Deal']);
     expect(options).not.toContain('Buy Heal');
-    await view.user.click(screen.getByRole('option', { name: 'Buy Travel Deal item' }));
+    await view.user.click(screen.getByRole('option', { name: 'Buy Armor · Travel Deal' }));
     expect(order()?.at(-1)).toEqual(recordedIn(view, goldenFBiome, shopId, [reference])[0]);
     const stocked = order()?.length ?? 0;
     await pickRoomObjectAction(view.user, 'World Shop', 'Buy Max Magick');
     expect(order()).toHaveLength(stocked + 1);
     expect(order()?.at(-1)).toEqual(
       recordedIn(view, goldenFBiome, shopId, [{ kind: 'interactShopOffer', offerKey: 'Minor' }])[0],
-    );
-  });
-
-  it('stocks and buys a blank Travel Deal item in one pick from the World Shop entry', async () => {
-    const shopId = createOccurrenceId('golden-f-preboss-shop');
-    // A Travel Deal purchase whose refilled item was never stocked.
-    const project = authorLegalTraitOffers(
-      replaceTestShopOfferActions(
-        applyProjectCommand(loadUnderworldFStygianWellCheckpoint(), catalog, {
-          kind: 'ReplaceShopOffer',
-          offer: createShopOfferAddress(goldenFBiome, shopId, 'MajorNonBoon'),
-          value: { rewardType: 'MaxHealthDrop' },
-        }),
-        catalog,
-        createOccurrenceAddress(goldenFBiome, shopId),
-        ['MajorNonBoon'],
-      ),
-    );
-    const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(shopId));
-    openRoomTab('Room Timeline');
-    const room = () =>
-      view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')!
-        .topology!.occurrences.find((candidate) => candidate.occurrenceId === shopId)!;
-    const before = room().roomActions.order.length;
-    await pickRoomObjectAction(view.user, 'World Shop', 'Buy Travel Deal item…');
-    await view.user.click(screen.getByRole('button', { name: 'Pick item for Travel Deal' }));
-    const choices = within(await screen.findByRole('listbox'))
-      .getAllByRole('option')
-      .map((option) => option.textContent);
-    expect(choices.length).toBeGreaterThan(1);
-    expect(room().roomActions.order).toHaveLength(before);
-    await view.user.click(screen.getAllByRole('option')[0]!);
-    expect(room().roomActions.order).toHaveLength(before + 1);
-    expect(room().roomActions.order.at(-1)).toEqual(
-      recordedIn(view, goldenFBiome, shopId, [
-        { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: 'travelDealRefill' },
-      ])[0],
-    );
-    const state = room().state;
-    expect(state.kind === 'shop' && state.shop?.travelDealRefill?.optionKey).toEqual(
-      expect.any(String),
     );
   });
 

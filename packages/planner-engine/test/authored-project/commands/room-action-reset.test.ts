@@ -6,6 +6,7 @@ import {
   applyProjectHistoryCommand,
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
+  createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
@@ -229,20 +230,26 @@ describe('ResetRoomActionsAfter', () => {
       .flatMap((group) => group.options.values)
       .find((candidate) => candidate.rewardType === 'BlindBoxLoot');
     if (option === undefined) throw new Error('expected a Mystery Shop option');
+    const stockTravelDeal = (document: ProjectDocument) =>
+      applyProjectCommand(document, catalog, {
+        kind: 'ReplaceShopOfferOption',
+        offer: createShopOfferAddress(
+          createBiomeAddress(shop.routeKey, shop.biomeKey),
+          shop.occurrenceId,
+          'travelDealRefill',
+        ),
+        value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
+      });
     const before = order(project, shop);
     const boon: RoomActionReference = { kind: 'interactShopOffer', offerKey: 'Boon' };
     const bought = applyProjectCommand(
-      applyProjectCommand(project, catalog, {
+      applyProjectCommand(stockTravelDeal(project), catalog, {
         kind: 'ReplaceShopPurchaseParticipation',
         offer: createShopOfferAddress(nBiome, shop.occurrenceId, 'Boon'),
         purchased: true,
       }),
       catalog,
-      {
-        kind: 'PurchaseShopTravelDealRefill',
-        occurrence: shop,
-        value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
-      },
+      { kind: 'PurchaseShopTravelDealRefill', occurrence: shop },
     );
     const refill = roomActionKey({
       kind: 'interactAcquisitionEntry',

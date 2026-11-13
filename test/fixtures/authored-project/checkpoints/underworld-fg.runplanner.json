@@ -1287,16 +1287,16 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "FirstHitHealTrait",
+                  "secondLeft": "LimitedSwapTraitDrop",
+                  "secondRight": "MemPointsCommonRange"
                 }
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "ApolloWeaponBoon",
+                  "middle": "ZeusSpecialBoon",
+                  "right": "HeraCastBoon"
                 }
               },
               "keepsakeRack": {
@@ -2565,16 +2565,16 @@
               },
               "stygianWell": {
                 "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
+                  "healing": "LastStandShopItem",
+                  "secondLeft": "TemporaryMoveSpeedTrait",
+                  "secondRight": "TemporaryImprovedExTrait"
                 }
               },
               "purgingPool": {
                 "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
+                  "left": "HeraCastBoon",
+                  "middle": "HestiaManaBoon",
+                  "right": "HestiaWeaponBoon"
                 }
               },
               "keepsakeRack": {

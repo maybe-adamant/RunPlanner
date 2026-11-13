@@ -26,12 +26,8 @@ import {
   type HermesShrineInventoryOffer,
   type HermesShrineSlotKey,
 } from '../../../authored-project/model';
-import {
-  shopOfferOptionValues,
-  TRAVEL_DEAL_REFILL_ENTRY_KEY,
-} from '../../../authored-project/shop';
+import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../../authored-project/shop';
 import type { Catalog } from '../../../catalog-schema';
-import type { ShopOptionSelection } from '../../../reward-kernel';
 import {
   challengeSwitchKindVariant,
   eliteChallengeAttributeOptions,
@@ -118,30 +114,11 @@ export function captureRoomActionEnd(
 
 type DerivedEntryFrontiers = ReadonlyMap<string, DerivedAcquisitionEntryFrontier>;
 
-/** The refilled slot's items the reached state can stock without a finding. */
-function travelDealRefillValues(
-  catalog: Catalog,
-  profileKey: string,
-  slotIndex: number | undefined,
-  frontier: DerivedAcquisitionEntryFrontier,
-): readonly ShopOptionSelection[] {
-  const slot =
-    slotIndex === undefined
-      ? undefined
-      : catalog.rewards.shops.byKey[profileKey]?.slots.values[slotIndex];
-  if (slot === undefined) return Object.freeze([]);
-  return Object.freeze(
-    shopOfferOptionValues(catalog, profileKey, slot.key).filter((value) => {
-      const result = frontier.evaluateShopOption?.(value);
-      return result?.supported === true && result.findings.length === 0;
-    }),
-  );
-}
-
 function worldShopInteraction(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
   historySequence: number,
+  branch: RewardBranchState,
   derivedEntries: DerivedEntryFrontiers,
 ): WorldShopInteraction | undefined {
   const shop = room.entryState;
@@ -171,8 +148,16 @@ function worldShopInteraction(
   const seeded = attestDerivedAcquisitionEntryCandidateCapability(refillFrontier);
   const live = seeded?.kind === 'travelDealRefill';
   const refill = shop.travelDealRefill ?? null;
+  // The first normal paid purchase made with Travel Deal held at entry restocks:
+  // a settled purchase leaves its placeholder until then; before any, the held trait decides.
+  const restocksNext =
+    seeded?.kind === 'travelDealPlaceholder' ||
+    (seeded === undefined &&
+      bought.size === 0 &&
+      branch.state.traitHistory.equippedTraits.RestockBoon !== undefined);
   return Object.freeze({
     historySequence,
+    travelDealRestocksNextPurchase: restocksNext,
     offers: Object.freeze(
       shop.offers
         .filter((offer) => !bought.has(offer.offerKey))
@@ -193,12 +178,6 @@ function worldShopInteraction(
           travelDealRefill: Object.freeze({
             rewardType: refill?.offer.rewardType ?? null,
             optionKey: refill?.optionKey ?? null,
-            values: travelDealRefillValues(
-              catalog,
-              shop.profileKey,
-              seeded?.slotIndex,
-              refillFrontier!,
-            ),
             command: Object.freeze({
               kind: 'PurchaseShopTravelDealRefill' as const,
               occurrence: room.origin,
@@ -228,6 +207,7 @@ function shrineOffer(
 function hermesShrineInteraction(
   room: CanonicalAuthoredRoom,
   historySequence: number,
+  branch: RewardBranchState,
   realized: RealizedHermesShrineTravelDealRefill | undefined,
 ): HermesShrineInteraction | undefined {
   const shrine = room.hermesShrine;
@@ -274,6 +254,8 @@ function hermesShrineInteraction(
     offers: Object.freeze(offers),
     rushes: Object.freeze(rushes),
     travelDealRefillLive: live,
+    travelDealRefillsNextRush:
+      !live && branch.state.traitHistory.equippedTraits.RestockBoon !== undefined,
     ...(!live || !unbought('travelDealRefill')
       ? {}
       : {
@@ -648,11 +630,13 @@ export function roomObjectInteractions(
       context.catalog,
       room,
       end.historySequence,
+      end.branch,
       derivedEntries,
     );
     const hermesShrine = hermesShrineInteraction(
       room,
       end.historySequence,
+      end.branch,
       state.hermesShrineTravelDealRefills.get(roomKey),
     );
     const championItem = championItemInteraction(room, end.historySequence, end.branch);

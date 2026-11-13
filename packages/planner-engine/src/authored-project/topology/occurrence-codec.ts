@@ -253,9 +253,14 @@ function decodePurgingPoolState(
     failProjectDocument(path, 'requires a room declaration with a Purging Pool');
   const raw = expectRecord(value, path);
   const hasRerollPins = Object.hasOwn(raw, 'rerollTraitKeyBySlot');
+  const hasRefresh = Object.hasOwn(raw, 'refreshTraitKeyBySlot');
   expectExactKeys(
     raw,
-    ['traitKeyBySlot', ...(hasRerollPins ? ['rerollTraitKeyBySlot'] : [])],
+    [
+      'traitKeyBySlot',
+      ...(hasRefresh ? ['refreshTraitKeyBySlot'] : []),
+      ...(hasRerollPins ? ['rerollTraitKeyBySlot'] : []),
+    ],
     path,
   );
   const traits = expectRecord(raw.traitKeyBySlot, `${path}.traitKeyBySlot`);
@@ -283,8 +288,29 @@ function decodePurgingPoolState(
         },
       )
     : undefined;
+  const refreshTraitKeyBySlot = hasRefresh
+    ? (() => {
+        const refreshPath = `${path}.refreshTraitKeyBySlot`;
+        const pins = expectRecord(raw.refreshTraitKeyBySlot, refreshPath);
+        if (Object.keys(pins).length === 0)
+          failProjectDocument(refreshPath, 'must stock at least one slot');
+        return Object.freeze(
+          Object.fromEntries(
+            Object.entries(pins).map(([slotKey, entry]) => {
+              if (!room.purgingPool!.slotKeys.includes(slotKey as never))
+                failProjectDocument(refreshPath, `contains unknown slot ${slotKey}`);
+              const traitKey = expectNonBlankString(entry, `${refreshPath}.${slotKey}`);
+              if (catalog.traits.byKey[traitKey] === undefined)
+                failProjectDocument(`${refreshPath}.${slotKey}`, 'unknown trait');
+              return [slotKey, traitKey];
+            }),
+          ),
+        ) as Readonly<Partial<Record<'left' | 'middle' | 'right', string>>>;
+      })()
+    : undefined;
   return Object.freeze({
     traitKeyBySlot: Object.freeze(traitKeyBySlot),
+    ...(refreshTraitKeyBySlot === undefined ? {} : { refreshTraitKeyBySlot }),
     ...(rerollTraitKeyBySlot === undefined ? {} : { rerollTraitKeyBySlot }),
   });
 }

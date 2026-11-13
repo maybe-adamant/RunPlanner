@@ -816,12 +816,18 @@ export function overview(value: unknown, label: string) {
     record.purgingPool === undefined
       ? undefined
       : object(record.purgingPool, `${label}.purgingPool`);
-  if (pool !== undefined) exact(pool, ['traits'], ['rerolls', 'anchorId'], `${label}.purgingPool`);
+  if (pool !== undefined)
+    exact(pool, ['traits'], ['refreshTraits', 'rerolls', 'anchorId'], `${label}.purgingPool`);
   const parsedPool =
     pool === undefined
       ? undefined
       : Object.freeze({
           traits: poolTraits(pool.traits, `${label}.purgingPool.traits`),
+          ...(pool.refreshTraits === undefined
+            ? {}
+            : {
+                refreshTraits: poolTraits(pool.refreshTraits, `${label}.purgingPool.refreshTraits`),
+              }),
           ...(pool.rerolls === undefined
             ? {}
             : {

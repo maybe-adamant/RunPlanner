@@ -1,189 +1,35 @@
-import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
-import { useState } from 'react';
+import type { RollFeature } from '@run-planner/engine/authored-project';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
   requireWorkspaceInteraction,
-  type WorkspaceFeatureRollActions,
-  type WorkspaceFeatureRollLock,
   type WorkspaceFeatureRollSlot,
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
-import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
-import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
-import { TimelineRow } from '../TimelineRow';
-import { pickSubject } from './pickSubject';
 
-const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
+const emptyPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
 
-/** Why the entry, or one of its options, cannot be picked here. */
-function featureRollLockHint(lock: WorkspaceFeatureRollLock): string {
-  switch (lock) {
-    case 'unreached':
-      return candidateWaitingHint;
-    case 'notEnabled':
-      return 'Rerolls are not enabled.';
-    case 'nothingLeft':
-      return 'Nothing left to reroll.';
-    case 'poolEmpty':
-      return 'No rerolls left.';
-    case 'poolShort':
-      return 'Not enough rerolls left.';
-    case 'allBought':
-      return 'Everything here is bought.';
-    case 'allSold':
-      return 'Everything here is sold.';
-  }
-}
-
-function rollIcon(feature: WorkspaceFeatureRollActions['feature'], key: string) {
+function rollIcon(feature: RollFeature, key: string) {
   return feature === 'stygianWell' ? (wellArtwork[key] ?? undefined) : traitIcon(key);
 }
 
-/**
- * A Well or Pool's entry above the optional actions: what can be done at the
- * end of the room's actions, each pick appending one action there.
- */
-export function FeatureRollEntry({
-  actions,
-  findingMark,
-  interactions,
-}: {
-  readonly actions: WorkspaceFeatureRollActions;
-  /** Findings of this object's timeline rows (purchases, sales, rerolls). */
-  readonly findingMark?: FindingMarkProps;
-  readonly interactions: WorkspaceInteractionCatalog;
-}) {
-  const interaction = requireWorkspaceInteraction(
-    interactions.featureRollActions,
-    actions.interactionKey,
-  );
-  const executeIntent = useCommandIntent();
-  const [choosing, setChoosing] = useState<string>();
-  const name = actions.feature === 'stygianWell' ? 'Stygian Well' : 'Pool of Purging';
-  const idPrefix = `interact-${actions.interactionKey}`;
-  const pending =
-    choosing !== undefined &&
-    actions.options.some((option) => option.key === choosing && option.needsChoice === true)
-      ? choosing
-      : undefined;
-  const model: ContextualPickerModel<string> = Object.freeze({
-    sections: Object.freeze(
-      actions.options.length === 0
-        ? []
-        : [
-            Object.freeze({
-              collapsible: false,
-              key: 'interact',
-              kind: 'category' as const,
-              label: name,
-              items: Object.freeze(
-                actions.options.map((option) =>
-                  Object.freeze({
-                    disabled: option.locked !== undefined,
-                    key: option.key,
-                    label: option.label,
-                    ...(option.ariaLabel === undefined ? {} : { ariaLabel: option.ariaLabel }),
-                    ...(option.status === undefined ? {} : { status: option.status }),
-                    selected: false,
-                    state:
-                      option.locked === undefined ? ('possible' as const) : ('impossible' as const),
-                    value: option.key,
-                    ...(option.locked === undefined
-                      ? {}
-                      : { explanations: Object.freeze([featureRollLockHint(option.locked)]) }),
-                  }),
-                ),
-              ),
-            }),
-          ],
-    ),
-  });
-  return (
-    <TimelineRow
-      className="room-action-feature-roll"
-      data-feature={actions.feature}
-      kind="insertion"
-      label={
-        <ContextualPicker<string>
-          {...(findingMark === undefined ? {} : { findingMark })}
-          ariaLabel={name}
-          {...(actions.locked === undefined
-            ? {}
-            : { disabledHint: featureRollLockHint(actions.locked) })}
-          id={`${idPrefix}-action`}
-          insertion
-          itemTrailIcon={(item) => {
-            if (item.value === 'reroll') return rerollDieArtwork;
-            const sold = actions.options.find((option) => option.key === item.value)?.item;
-            return sold === undefined ? undefined : rollIcon(actions.feature, sold);
-          }}
-          label=""
-          model={model}
-          onSelect={(optionKey) => {
-            const option = actions.options.find((candidate) => candidate.key === optionKey);
-            if (option === undefined || option.locked !== undefined) return;
-            if (option.needsChoice === true) {
-              setChoosing(optionKey);
-              return;
-            }
-            setChoosing(undefined);
-            executeIntent(interaction.intentFor(optionKey));
-          }}
-          placeholder={`${name} ▸`}
-          triggerIcon={roomObjectIcon(actions.feature)}
-          {...(pending === undefined
-            ? {}
-            : {
-                triggerLabel:
-                  actions.options.find((option) => option.key === pending)?.label ?? pending,
-              })}
-        />
-      }
-      editors={
-        pending === undefined ? null : (
-          <ContextualPicker<string>
-            ariaLabel={`Pick ${actions.feature === 'stygianWell' ? 'item' : 'trait'} for ${pickSubject(actions.options.find((option) => option.key === pending)?.label ?? pending)}`}
-            id={`${idPrefix}-choice`}
-            itemIcon={(item) => rollIcon(actions.feature, item.value)}
-            key={pending}
-            label=""
-            layout="inline"
-            model={interaction.choices(pending)}
-            onOpenChange={(open) => {
-              // Closing the list without a choice abandons the pick.
-              if (!open) setChoosing(undefined);
-            }}
-            onSelect={(value) => {
-              setChoosing(undefined);
-              executeIntent(interaction.choiceIntentFor(pending, value));
-            }}
-            placeholder="Pick"
-            triggerSize="content"
-          />
-        )
-      }
-    />
-  );
-}
-
-/** The restocked slots of a Well or Pool reroll on its Timeline row: each pinned or native. */
+/** The restocked slots of a Well or Pool reroll on its Timeline row. */
 export function FeatureRollSlots({
   feature,
   interactions,
   label,
   slots,
 }: {
-  readonly feature: WorkspaceFeatureRollActions['feature'];
+  readonly feature: RollFeature;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
   readonly slots: readonly WorkspaceFeatureRollSlot[];
@@ -210,7 +56,7 @@ function FeatureRollSlotPicker({
   rowLabel,
   slot,
 }: {
-  readonly feature: WorkspaceFeatureRollActions['feature'];
+  readonly feature: RollFeature;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly rowLabel: string;
   readonly slot: WorkspaceFeatureRollSlot;
@@ -223,25 +69,25 @@ function FeatureRollSlotPicker({
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   return (
-    <ContextualPicker<string | null>
+    <ContextualPicker<string>
       ariaLabel={`${rowLabel} ${slot.label}`}
       findingTarget={findingTarget(slot.address)}
       id={`${interaction.key}-picker`}
-      itemIcon={(item) => (item.value === null ? undefined : rollIcon(feature, item.value))}
+      itemIcon={(item) => rollIcon(feature, item.value)}
       label=""
       layout="inline"
       loading={picker.pending}
-      model={picker.result ?? emptyNullablePicker}
+      model={picker.result ?? emptyPicker}
       onOpenChange={(open) => {
         if (open) picker.activate();
       }}
       onSelect={(value) => executeIntent(interaction.intentFor(value))}
-      placeholder="Any"
+      placeholder={slot.label}
       triggerIcon={slot.value === null ? undefined : rollIcon(feature, slot.value)}
       {...(slot.valueLabel === undefined ? {} : { triggerLabel: slot.valueLabel })}
       triggerSize="icon"
-      // An unpinned slot restocks whatever the roll gives.
       triggerUnknown
+      {...(interaction.contextReached ? {} : { disabledHint: candidateWaitingHint })}
     />
   );
 }

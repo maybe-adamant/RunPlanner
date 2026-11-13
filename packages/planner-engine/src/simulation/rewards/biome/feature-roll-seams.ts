@@ -114,10 +114,15 @@ function purgingPoolWalk(
 ): Extract<FeatureRollWalk, { readonly feature: 'purgingPool' }> | undefined {
   const walk = state.featureRolls.get(featureRollWalkKey(roomKey, 'purgingPool'));
   if (walk?.feature === 'purgingPool') return walk;
-  const initial = state.purgingPoolAssessments.get(roomKey)?.assessment;
+  // The list on show once the fountain use opens the Pool: its refresh, else the entry list.
+  const assessed = state.purgingPoolAssessments.get(roomKey);
+  const initial = assessed?.refresh ?? assessed?.assessment;
   return room.purgingPool === undefined
     ? undefined
-    : initialPurgingPoolRollWalk(room.purgingPool, initial?.eligibleTraitKeys.length ?? 0);
+    : initialPurgingPoolRollWalk(
+        initial?.offeredSlotKeys ?? [],
+        initial?.eligibleTraitKeys.length ?? 0,
+      );
 }
 
 function withWalk(
@@ -208,6 +213,7 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
       offered,
       settled.branch.state.stygianWell,
       settled.branch.state.traitHistory,
+      onShow.filter((itemKey): itemKey is string => itemKey !== null),
     );
     for (const issue of roll.issues)
       addRewardFinding(
@@ -215,9 +221,11 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
         rewardFinding(
           issue.kind === 'notOffered'
             ? 'rollOfferUnavailable'
-            : issue.kind === 'duplicate'
-              ? 'stygianWellDuplicate'
-              : 'stygianWellWrongGroup',
+            : issue.kind === 'missing'
+              ? 'stygianWellMissing'
+              : issue.kind === 'duplicate'
+                ? 'stygianWellDuplicate'
+                : 'stygianWellWrongGroup',
           createRoomFeatureAddress(room.origin, {
             kind: 'stygianWellOffer',
             generationKey: stygianWellGenerationKey(event.rerollId, issue.slotKey),
@@ -266,14 +274,16 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
       ? purgingPoolRerollPins(room.purgingPool, reference.rerollId)
       : {};
   // The ban applies only when the previous draw left eligible traits unshown.
-  if (walk.eligibleCount > walk.offeredSlotKeys.length) {
-    const view = { purgingPool: room.purgingPool, roomActions: { order: rankedReferences(room) } };
+  const banned = walk.eligibleCount > walk.offeredSlotKeys.length;
+  const view = { purgingPool: room.purgingPool, roomActions: { order: rankedReferences(room) } };
+  const shown = purgingPoolOfferedSlots(walk).map(
+    (slotKey) => purgingPoolRollTraitKey(view, walk.rollKey, slotKey) ?? null,
+  );
+  if (banned) {
     reportRepeatsAllOffers(
       findings,
       event.owner,
-      purgingPoolOfferedSlots(walk).map(
-        (slotKey) => purgingPoolRollTraitKey(view, walk.rollKey, slotKey) ?? null,
-      ),
+      shown,
       Object.values(pins).filter((traitKey): traitKey is string => traitKey !== undefined),
       region,
       chronology,
@@ -321,7 +331,13 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
           ...existing,
           rolls: Object.freeze({
             ...existing.rolls,
-            [event.rerollId]: Object.freeze({ offeredSlotKeys, assessment }),
+            [event.rerollId]: Object.freeze({
+              offeredSlotKeys,
+              assessment,
+              ...(banned
+                ? { shownTraitKeys: shown.filter((key): key is string => key !== null) }
+                : {}),
+            }),
           }),
         }),
       ),
@@ -495,7 +511,9 @@ export function purgingPoolSale(
   }
   // An incomplete list or invalid pin is its own finding; the sale has no effect.
   const list =
-    rollKey === INITIAL_ROLL_KEY ? assessment.assessment : assessment.rolls?.[rollKey]?.assessment;
+    rollKey === INITIAL_ROLL_KEY
+      ? (assessment.refresh ?? assessment.assessment)
+      : assessment.rolls?.[rollKey]?.assessment;
   const listed =
     list !== undefined && !list.findings.some((finding) => finding.slotKey === sale.slotKey);
   const { branch } = state;
@@ -618,6 +636,8 @@ export function purgingPoolInteractions(
         pendingRoll: Object.freeze({
           offeredSlotKeys: purgingPoolRerollSlots({}, pending.eligibleTraitKeys.length),
           candidateTraitKeysBySlot: pending.candidateTraitKeysBySlot,
+          eligibleTraitKeys: pending.eligibleTraitKeys,
+          staleSlotKeys: Object.freeze([]),
         }),
       }),
     );

@@ -405,10 +405,17 @@ describe('authored-project Shop occurrence commands', () => {
         occurrence: shop,
       }),
     ).toThrow(/Travel Deal item is unresolved/);
-    const history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+    // The purchase that restocks the slot settles its item; the refill purchase buys it.
+    const stock = (document: typeof project) =>
+      applyProjectCommand(document, catalog, {
+        kind: 'ReplaceShopOfferOption',
+        offer: createShopOfferAddress(nBiome, shop.occurrenceId, 'travelDealRefill'),
+        value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
+      });
+    const stocked = stock(project);
+    const history = applyProjectHistoryCommand(createProjectHistory(stocked), catalog, {
       kind: 'PurchaseShopTravelDealRefill',
       occurrence: shop,
-      value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
     });
     const bought = room(history.present);
     expect(bought.roomActions.order.at(-1)).toEqual(
@@ -418,12 +425,11 @@ describe('authored-project Shop occurrence commands', () => {
       expect.objectContaining({ optionKey: option.key }),
     );
     expect(bought.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeNull();
-    expect(undoProjectHistory(history).present).toBe(project);
+    expect(undoProjectHistory(history).present).toBe(stocked);
 
     const purchase = {
       kind: 'PurchaseShopTravelDealRefill' as const,
       occurrence: shop,
-      value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
     };
     let withPurchases = project;
     for (const offerKey of ['Boon', 'MajorNonBoon', 'Minor'])
@@ -432,6 +438,7 @@ describe('authored-project Shop occurrence commands', () => {
         offer: createShopOfferAddress(nBiome, shopId, offerKey),
         purchased: true,
       });
+    withPurchases = stock(withPurchases);
     const before = room(withPurchases).roomActions.order;
     // Bought after the first purchase, whose Travel Deal stocks it, up to the end.
     expect(positionedCommandInsertionIndexes(withPurchases, catalog, purchase)).toEqual([1, 2, 3]);

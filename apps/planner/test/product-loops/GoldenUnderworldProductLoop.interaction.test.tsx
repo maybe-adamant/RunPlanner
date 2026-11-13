@@ -52,7 +52,8 @@ import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
-import { timelineRow } from '@planner-test/support/timeline-rows';
+import { takeLive } from '@planner-test/support/live-row';
+import { queryTimelineRow, timelineRow } from '@planner-test/support/timeline-rows';
 
 afterEach(() => {
   cleanup();
@@ -221,14 +222,8 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     expect(currentEvaluation(application)).toBe(evaluationBefore);
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    const unplacedRow = timelineRow('Collect Apollo', actions);
-    expect(within(unplacedRow).queryByText('Position')).toBeNull();
-    expect(
-      within(unplacedRow).queryByRole('button', { name: 'Reorder Collect Apollo' }),
-    ).toBeNull();
-    await view.user.click(
-      within(unplacedRow).getByRole('button', { name: 'Restore required action' }),
-    );
+    expect(queryTimelineRow('Collect Apollo', actions)).toBeNull();
+    await takeLive(view.user, 'Apollo', 'Pick up');
     expect(currentWorkspace(application).history.past).toHaveLength(historyBefore + 2);
     expect(authoredOccurrence()?.roomActions.order).toEqual([
       expect.objectContaining({

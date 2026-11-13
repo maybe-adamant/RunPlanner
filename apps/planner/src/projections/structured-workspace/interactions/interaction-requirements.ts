@@ -53,60 +53,20 @@ export interface WorkspaceRerollTargetRequirement {
   readonly rewardTypes: WorkspaceRerollRewardTypes;
 }
 
-/** How one Interact option of a Well or Pool becomes its command. */
-export type WorkspaceFeatureRollActionRequirement =
-  | { readonly key: string; readonly kind: 'reroll' }
-  | {
-      readonly key: string;
-      readonly kind: 'wellPurchase';
-      readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
-      /** An unpinned reroll slot: its item is chosen with the purchase. */
-      readonly choices?: readonly { readonly key: string; readonly label: string }[];
-    }
-  | {
-      readonly key: string;
-      readonly kind: 'poolSale';
-      readonly sale: Extract<
-        import('@run-planner/engine/authored-project').RoomActionReference,
-        { readonly kind: 'sellPurgingPoolTrait' }
-      >;
-      readonly action: import('@run-planner/engine/authored-project').RoomActionAddress;
-      /** A blank slot: its trait is chosen with the sale, pinned on its list. */
-      readonly choices?: readonly { readonly key: string; readonly label: string }[];
-    };
-
 /** One option of a room object's entry with the command it appends. */
 export interface WorkspaceRoomObjectActionRequirement {
   readonly key: string;
   readonly command: Extract<
     import('@run-planner/engine/authored-project').ProjectCommand,
     {
-      readonly kind:
-        | 'ReplaceShopPurchaseParticipation'
-        | 'PurchaseShopTravelDealRefill'
-        | 'PurchaseHermesShrineOffer'
-        | 'SetHermesShrineRush'
-        | 'SetInfernalContractPedestalCollected'
-        | 'ReplaceLockedExit'
-        | 'InsertRoomAction';
+      readonly kind: 'ReplaceLockedExit';
     }
   >;
-  /** A blank item: what it stocks is chosen with the purchase, each choice its complete command. */
-  readonly choices?: readonly WorkspaceRoomObjectActionChoice[];
-}
-
-/** One item a blank Shop or Shrine item can stock, bought with it. */
-export interface WorkspaceRoomObjectActionChoice {
-  readonly key: string;
-  readonly label: string;
-  /** The reward its icon shows. */
-  readonly rewardType: string;
-  readonly command: WorkspaceRoomObjectActionRequirement['command'];
 }
 
 export type WorkspaceOccurrenceInteractionRequirement =
   | {
-      /** A World Shop, Hermes Shrine or Pedestal entry. */
+      /** A room's locked doors' toggles. */
       readonly kind: 'roomObjectActions';
       readonly owner: OccurrenceAddress;
       readonly interactionKey: string;
@@ -123,16 +83,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
-      /** A Well or Pool's Interact picker: options appended at `appendIndex`. */
-      readonly kind: 'featureRollActions';
-      readonly owner: OccurrenceAddress;
-      readonly interactionKey: string;
-      readonly feature: import('@run-planner/engine/authored-project').RollFeature;
-      readonly appendIndex: number;
-      readonly options: readonly WorkspaceFeatureRollActionRequirement[];
-    }
-  | {
-      /** The restocked slots of one Well or Pool reroll, each pinned or native. */
+      /** The restocked slots of one Well or Pool reroll. */
       readonly kind: 'featureRollSlots';
       readonly owner: OccurrenceAddress;
       readonly interactionKey: string;
@@ -293,6 +244,8 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly assessment: WorkspaceFeatureAssessment;
       readonly kind: 'purgingPoolSlots';
       readonly owner: OccurrenceAddress;
+      /** The list the Pool regenerates after its fountain use; the entry list when absent. */
+      readonly list?: 'refresh';
       readonly slots: readonly {
         readonly interactionKey: string;
         readonly slotKey: 'left' | 'middle' | 'right';
@@ -473,13 +426,15 @@ function occurrenceInteractionRequirementKey(
   if (
     requirement.kind === 'roomRerolls' ||
     requirement.kind === 'featureRollSlots' ||
-    requirement.kind === 'featureRollActions' ||
     requirement.kind === 'roomObjectActions' ||
     requirement.kind === 'roomChoices'
   )
     return `${requirement.kind}:${requirement.interactionKey}`;
   if (requirement.kind === 'unlockExitEncounter')
     return `${requirement.kind}:${requirement.encounter.interactionKey}`;
+  // A Pool holds its entry list and the list its fountain use regenerates.
+  if (requirement.kind === 'purgingPoolSlots' && requirement.list !== undefined)
+    return `${requirement.kind}:${requirement.list}:${semanticAddressKey(requirement.owner)}`;
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
 

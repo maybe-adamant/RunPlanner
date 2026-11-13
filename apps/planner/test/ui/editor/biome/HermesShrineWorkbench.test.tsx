@@ -64,6 +64,7 @@ import {
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
 import { RouteShrinesPanel } from '@planner/ui/shell/RouteShrinesPanel';
+import { liveChip, takeLive } from '@planner-test/support/live-row';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
 import {
   findTimelineRow,
@@ -217,13 +218,7 @@ describe('Hermes Shrine workbench', () => {
     // A rushed item is optional loot left on the ground: picked up, removed and re-added.
     expect(deliveryRow).toMatchObject({ participation: 'optional', rank: null });
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
-    const spawnedBigHeal = () =>
-      screen
-        .getAllByRole('listitem', { name: 'Spawned' })
-        .flatMap((row) => within(row).queryAllByRole('button', { name: 'Big Heal' }));
-    expect(spawnedBigHeal()).toHaveLength(1);
-    expect(spawnedBigHeal()[0]!.hasAttribute('data-spawn-placed')).toBe(false);
-    await view.user.click(spawnedBigHeal()[0]!);
+    await takeLive(view.user, 'Big Heal', 'Pick up');
     const deliveryTimelineRow = await findTimelineRow('Collect Big Heal');
     expect(within(deliveryTimelineRow).queryByText('required')).toBeNull();
     const remove = within(deliveryTimelineRow).getByRole('button', {
@@ -231,16 +226,8 @@ describe('Hermes Shrine workbench', () => {
     });
     expect(remove).toHaveProperty('disabled', false);
     await view.user.click(remove);
-    // The removed item is re-added from the spawn row under its Rush.
-    const chip = await waitFor(() => {
-      const found = screen
-        .getAllByRole('listitem', { name: 'Spawned' })
-        .flatMap((row) => within(row).queryAllByRole('button', { name: 'Big Heal' }));
-      expect(found).toHaveLength(1);
-      return found[0]!;
-    });
-    expect(chip.hasAttribute('data-spawn-placed')).toBe(false);
-    await view.user.click(chip);
+    // The removed item lies on the ground again and is picked up from the live row.
+    await takeLive(view.user, 'Big Heal', 'Pick up');
     await waitFor(() => expect(timelineRow('Collect Big Heal')).toBeTruthy());
     const present = application.store.getState().projectWorkspace.history!.present;
     expect(
@@ -287,12 +274,8 @@ describe('Hermes Shrine workbench', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
     await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Buy Mystery Boon');
     await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Mystery Boon');
-    // The rushed item is picked up from where it spawned.
-    await view.user.click(
-      within(screen.getByRole('listitem', { name: 'Spawned' })).getByRole('button', {
-        name: 'Mystery Boon',
-      }),
-    );
+    // The rushed item is picked up from the live row.
+    await takeLive(view.user, 'Mystery Boon', 'Pick up');
     const entryKey = hermesShrineDeliveryEntryKey(owner, 'initial:secondRight');
     const entry = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(owner, 'hermesShrineDelivery'),
@@ -420,10 +403,7 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.devotion),
     );
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const delivery = timelineRow('Collect Mystery Boon');
-    if (delivery === null) throw new Error('unplaced Mystery delivery row is missing');
-    expect(within(delivery).queryByRole('button', { name: 'Reward' })).toBeNull();
-    await view.user.click(within(delivery).getByRole('button', { name: 'Restore delivery' }));
+    await takeLive(view.user, 'Mystery Boon', 'Pick up');
     const placedDeliveryRow = await findTimelineRow('Collect Mystery Boon');
     if (placedDeliveryRow === null) throw new Error('placed Mystery delivery row is missing');
 
@@ -484,7 +464,7 @@ describe('Hermes Shrine workbench', () => {
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'Q', occurrence(host.occurrenceId));
     fireEvent.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await view.user.click(screen.getByRole('button', { name: 'Restore delivery' }));
+    await takeLive(view.user, 'Mystery Boon', 'Pick up');
     const placed = view.application.store.getState().projectWorkspace.history!.present;
     act(() =>
       view.application.store.dispatch(
@@ -672,14 +652,8 @@ describe('Hermes Shrine workbench', () => {
     );
 
     await view.user.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const deliveryRow = timelineRow('Collect Big Heal');
-    if (deliveryRow === null) throw new Error('delayed delivery row is missing');
-    expect(within(deliveryRow).queryByRole('button', { name: 'Remove action' })).toBeNull();
-    await view.user.click(within(deliveryRow).getByRole('button', { name: 'Restore delivery' }));
-
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Restore delivery' })).toBeNull(),
-    );
+    await takeLive(view.user, 'Big Heal', 'Pick up');
+    await waitFor(() => expect(timelineRow('Collect Big Heal')).toBeTruthy());
     const present = application.store.getState().projectWorkspace.history!.present;
     const host = present.route?.biomes
       .find((biome) => biome.biomeKey === 'O')
@@ -716,9 +690,7 @@ describe('Hermes Shrine workbench', () => {
       application,
     );
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const delivery = timelineRow('Collect Max Health');
-    if (delivery === null) throw new Error('N side-room delivery row is missing');
-    expect(within(delivery).getByRole('button', { name: 'Restore delivery' })).toBeTruthy();
+    expect(liveChip('Max Health')).toBeTruthy();
     expect(
       application.store
         .getState()
@@ -742,7 +714,7 @@ describe('Hermes Shrine workbench', () => {
       nodeKey: sourceNode.key,
       inspectorSubject: { kind: 'node', nodeKey: sourceNode.key },
     });
-    await view.user.click(within(delivery).getByRole('button', { name: 'Restore delivery' }));
+    await takeLive(view.user, 'Max Health', 'Pick up');
     await waitFor(() =>
       expect(
         application.store
@@ -904,7 +876,7 @@ describe('Hermes Shrine workbench', () => {
     ).toHaveProperty('disabled', false);
     expect(within(line).queryByRole('checkbox')).toBeNull();
 
-    await pickRoomObjectAction(view.user, 'Hermes Shrine', /^Buy .*Travel Deal Offer$/);
+    await pickRoomObjectAction(view.user, 'Hermes Shrine', /^Buy .*Travel Deal$/);
     expect(shrine().roomActions.order).toContainEqual(
       expect.objectContaining({ generationKey: 'travelDealRefill' }),
     );

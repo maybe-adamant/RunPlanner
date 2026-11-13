@@ -22,6 +22,7 @@ import {
   requireWorkspaceBiome,
   projectStructuredWorkspaceFixture,
 } from '@planner-test/fixtures/structuredWorkspace';
+import { takeLive } from '@planner-test/support/live-row';
 import { renderWorkspace } from '@planner-test/support/biome-workbench';
 
 afterEach(() => cleanup());
@@ -67,8 +68,7 @@ describe('room map door steps', () => {
     const { application, user } = renderWorkspace(locked, 'Underworld', 'G');
     focusRoom(application, host);
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await user.click(screen.getByRole('button', { name: 'Doors' }));
-    await user.click(await screen.findByRole('option', { name: 'Unlock Door 2' }));
+    await takeLive(user, 'Locked doors', 'Unlock Door 2');
     // With no row marked, the Timeline's map shows the doors as the room is left.
     expect(mapDoor(2).getAttribute('data-locked')).toBeNull();
 

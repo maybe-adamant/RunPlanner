@@ -157,7 +157,7 @@ function* candidateAnswers(
 }
 
 /** A Shop slot's or Travel Deal refill's options the engine admits there. */
-function* shopOfferAnswers(
+export function* shopOfferAnswers(
   context: RunImportContext,
   offer: Origin<'shopOffer'>,
 ): Generator<readonly ProjectCommand[]> {

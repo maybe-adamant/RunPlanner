@@ -18,6 +18,8 @@ import type {
 export type RollFeature = 'stygianWell' | 'purgingPool';
 
 export const INITIAL_ROLL_KEY = 'initial';
+/** The Pool's list regenerated when the fountain use makes its entry list stale. */
+export const PURGING_POOL_REFRESH_ROLL_KEY = 'refresh';
 export const STYGIAN_WELL_SLOT_KEYS = Object.freeze([
   'healing',
   'secondLeft',
@@ -199,8 +201,9 @@ export function stygianWellGenerationTwistResultKey(
 }
 
 /**
- * The authored trait of one Pool roll slot: undefined when the roll is not
- * present, null while it is unresolved or unpinned.
+ * The authored trait of one Pool list slot: the initial list's is the
+ * regenerated list's while one is stored, else the entry list's. Undefined
+ * when the roll is not present, null while the slot is blank.
  */
 export function purgingPoolRollTraitKey(
   occurrence: {
@@ -212,7 +215,11 @@ export function purgingPoolRollTraitKey(
 ): string | null | undefined {
   const pool = occurrence.purgingPool;
   if (pool === undefined) return undefined;
-  if (rollKey === INITIAL_ROLL_KEY) return pool.traitKeyBySlot[slotKey];
+  // A stored refresh replaces the entry list once the fountain use opens the Pool.
+  if (rollKey === INITIAL_ROLL_KEY || rollKey === PURGING_POOL_REFRESH_ROLL_KEY)
+    return pool.refreshTraitKeyBySlot === undefined
+      ? pool.traitKeyBySlot[slotKey]
+      : (pool.refreshTraitKeyBySlot[slotKey] ?? null);
   const present = purgingPoolRerolls(occurrence.roomActions.order).some(
     (candidate) => candidate.rerollId === rollKey,
   );

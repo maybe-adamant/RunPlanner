@@ -40,6 +40,7 @@ import {
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   authorLegalTraitOffers,
+  stockTestProject,
   collectTestRequiredItems,
   replaceTestPlacedItem,
 } from '@run-planner/test-fixtures/shared';
@@ -395,7 +396,8 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       vowKey: 'BoonSkipShrineUpgrade',
       rank: 1,
     });
-    project = authorLegalTraitOffers(project);
+    // The vow changes the F boons, so the Postboss Pool list is redrawn as an edit would.
+    project = authorLegalTraitOffers(stockTestProject(authorLegalTraitOffers(project)));
     // A new cage2 Boon resets its trait offer, so evaluation blocks at cage2's
     // pickup, which precedes cage1's pickup in this room.
     project = replaceTestPlacedItem(project, {

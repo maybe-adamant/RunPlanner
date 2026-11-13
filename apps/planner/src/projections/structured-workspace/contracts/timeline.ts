@@ -92,12 +92,6 @@ export interface WorkspaceRoomActionRow {
   readonly address: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
   readonly key: string;
   readonly label: string;
-  /** Where the room's Add area offers this action while it is optional and unplaced. */
-  readonly addGroup?: {
-    readonly key: string;
-    readonly label: string;
-    readonly object?: 'worldShop' | 'hermesShrine' | 'challengeSwitch';
-  };
   /** Engine-published source of a generated pickup; absent for every other action. */
   readonly sourceFamily?: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;
   /** The observed switch's kind on a switch use row, named and pictured by it. */
@@ -133,6 +127,8 @@ export interface WorkspaceRoomActionRow {
       readonly boosted: boolean;
       /** A Stygian Well item's own key: the row shows that item, not its reward type. */
       readonly itemKey?: string;
+      /** A Trial god's boon: which side of the Trial it is, marked on the icon. */
+      readonly devotionRole?: WorkspaceDevotionRole;
     };
   };
   readonly marker: WorkspaceMarker;
@@ -191,6 +187,13 @@ export interface WorkspaceRoomActionRow {
     readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
     readonly interactionKey: string;
   };
+  /**
+   * The list the Pool regenerates as this fountain use makes its entry list stale, shown
+   * on its own row right after it.
+   */
+  readonly purgingPoolRefresh?: {
+    readonly slots: readonly import('./features').WorkspacePurgingPoolSlot[];
+  };
   /** The restocked slots of this Well or Pool reroll. */
   readonly featureRoll?: {
     readonly feature: import('@run-planner/engine/authored-project').RollFeature;
@@ -245,17 +248,8 @@ export interface WorkspaceRoomActions {
   readonly owner: OccurrenceAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
   readonly rows: readonly WorkspaceRoomActionRow[];
-  /**
-   * Active optional actions that have not been inserted into the lifecycle order,
-   * apart from spawned loot, which its spawn row places.
-   */
-  readonly optionalRows: readonly WorkspaceRoomActionRow[];
-  /** Missing required or retained stale rows rendered once outside active lifecycle order. */
+  /** Retained stale rows rendered once outside active lifecycle order. */
   readonly repairRows: readonly WorkspaceRoomActionRow[];
-  /** Each present Well and Pool's next purchase, sale or reroll, opened above the optional actions. */
-  readonly featureRolls?: readonly import('./features').WorkspaceFeatureRollActions[];
-  /** Each present World Shop, Hermes Shrine and Pedestal's next action, opened above the optional actions. */
-  readonly objectEntries?: readonly import('./features').WorkspaceRoomObjectEntry[];
   readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
   readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
   /** The room's urn gold, shown on its Room entered banner. */
@@ -269,6 +263,95 @@ export interface WorkspaceRoomActions {
   readonly actionSpawns?: readonly WorkspaceActionSpawn[];
   /** Sea Star copies, each marked on the row collecting the pickup it copies. */
   readonly spawnCopies?: readonly WorkspaceSpawnCopy[];
+  /** What can be done next, at the walk's frontier; absent while the room is unreached. */
+  readonly live?: WorkspaceRoomLive;
+}
+
+type EngineLiveItem =
+  import('@run-planner/engine/simulation').LiveRoom['gaps'][number]['items'][number];
+
+/** The room objects the engine names as live. */
+export type WorkspaceLiveObjectKind = Extract<
+  EngineLiveItem,
+  { readonly kind: 'object' }
+>['object'];
+
+/** Which side of a Trial of the Gods a god's boon is on. */
+export type WorkspaceDevotionRole = 'chosen' | 'spurned';
+
+/** How a live thing or verb is pictured: the row it acts on, by its icon inputs. */
+export interface WorkspaceLiveFace {
+  readonly reference?: RoomActionReference;
+  readonly sourceFamily?: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;
+  readonly challengeSwitchKind?: import('@run-planner/engine/catalog-schema').ChallengeSwitchKind;
+  /** The reward it takes or buys. */
+  readonly reward?: NonNullable<WorkspaceRoomActionRow['labelParts']>['reward'];
+  /** The NPC it talks to. */
+  readonly npcKey?: string;
+  readonly traitKey?: string;
+  /** The Fields cage or optional slot it sits in. */
+  readonly place?: { readonly badge: string; readonly label: string };
+}
+
+/** A value a verb's picker offers before the verb applies, each applying it with that value. */
+export interface WorkspaceLiveChoice {
+  readonly key: string;
+  readonly label: string;
+  readonly icon: { readonly rewardType: string } | { readonly traitKey: string };
+  readonly intent: WorkspaceCommandIntent;
+}
+
+/** What choosing a verb does. */
+export type WorkspaceLiveVerbAction =
+  /** Applies its commands as one edit; the placed row then opens its choice when `opens` names it. */
+  | {
+      readonly kind: 'apply';
+      readonly intent: import('../contract').WorkspaceCommandsIntent;
+      readonly opens?: string;
+    }
+  /** Lists its values first. */
+  | { readonly kind: 'choose'; readonly choices: readonly WorkspaceLiveChoice[] }
+  /** Picks a door, cage or wheel offer, then its new reward, from the surface's rerolls. */
+  | { readonly kind: 'rerollPress'; readonly interactionKey: string };
+
+/** One interaction with a live thing. */
+export interface WorkspaceLiveVerb extends WorkspaceLiveFace {
+  readonly key: string;
+  readonly label: string;
+  readonly action: WorkspaceLiveVerbAction;
+}
+
+/** A thing live at the frontier: a pickup on the ground or a room object, with its verbs. */
+export interface WorkspaceLiveItem extends WorkspaceLiveFace {
+  readonly key: string;
+  readonly label: string;
+  readonly group: 'required' | 'optional' | 'object';
+  readonly object?: WorkspaceLiveObjectKind;
+  /** Spawned before it can be taken. */
+  readonly locked?: true;
+  /** The row off the Timeline this thing stands for, where finding navigation lands. */
+  readonly anchor?: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
+  /** The rows whose placement findings mark this thing. */
+  readonly findingOwners: readonly import('@run-planner/engine/authored-project').RoomActionSemanticAddress[];
+  readonly verbs: readonly WorkspaceLiveVerb[];
+}
+
+/** A gap before the frontier: what can be inserted there, and its Reset from here. */
+export interface WorkspaceLiveGap {
+  readonly index: number;
+  readonly items: readonly WorkspaceLiveItem[];
+  /** Takes back every row after the gap; absent where that changes nothing. */
+  readonly reset?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ResetRoomActionsAfter' }>
+  >;
+}
+
+export interface WorkspaceRoomLive {
+  /** The gap the walk stands at. */
+  readonly frontier: number;
+  readonly items: readonly WorkspaceLiveItem[];
+  /** Each gap before the frontier, in order. */
+  readonly gaps: readonly WorkspaceLiveGap[];
 }
 
 /** One item the game spawned, as a chip that leads to the action collecting it. */
@@ -279,23 +362,13 @@ export interface WorkspaceSpawnedItem {
   readonly label: string;
   /** What it spawns as, which its chip shows; absent while its reward is not chosen. */
   readonly reward?: import('@run-planner/engine/simulation').SpawnedLootReward;
-  /** What using its chip does, said on hover. */
-  readonly hint: string;
   readonly participation: 'required' | 'optional';
   /** The Fields cage or optional slot it sits in, marked on its chip. */
   readonly place?: { readonly badge: string; readonly label: string };
   /** Spawned before it can be taken; its unlock row lists it again. */
   readonly locked?: true;
-  readonly placement:
-    /** Collected in the order: its row is focused. */
-    | {
-        readonly kind: 'placed';
-        readonly owner: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
-      }
-    /** Not collected yet: one edit places it. */
-    | { readonly kind: 'unplaced'; readonly intent: WorkspaceCommandIntent }
-    /** Not collected yet and no place takes it now. */
-    | { readonly kind: 'unavailable'; readonly reason: string };
+  /** Collected in the order, its chip leading to its row; or still on the ground. */
+  readonly placed: boolean;
 }
 
 /** The boon, keepsake, NPC or room object that spawned a group of items. */

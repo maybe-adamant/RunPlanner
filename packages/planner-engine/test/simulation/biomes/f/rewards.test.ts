@@ -38,6 +38,7 @@ import {
 } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
+import { withFixedTestWellStock } from '../../../support/stygian-well';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -281,27 +282,46 @@ function evaluate(
   initialBranches?: Parameters<typeof evaluateBiomeRewards>[5],
 ) {
   if (authorTraits) project = authorTestTraitsAndRequiredItems(project);
-  project = scheduleTestRequiredRoomActions(project, catalog, biome);
-  const snapshot = materializeBiome(
-    catalog,
-    biome,
-    ordinaryPositionFor(catalog, biome),
-    complete(project),
-    traitContext(project),
-  );
-  const history = composeBiomeHistory(catalog, snapshot, ordinaryPositionFor(catalog, snapshot));
-  return {
-    snapshot,
-    history,
-    rewards: evaluateBiomeRewards(
+  project = withFixedTestWellStock(scheduleTestRequiredRoomActions(project, catalog, biome));
+  const run = (plan: ProjectDocument) => {
+    const snapshot = materializeBiome(
       catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      complete(plan),
+      traitContext(plan),
+    );
+    const history = composeBiomeHistory(catalog, snapshot, ordinaryPositionFor(catalog, snapshot));
+    return {
       snapshot,
       history,
-      ordinaryPositionFor(catalog, snapshot),
-      traitContext(project),
-      initialBranches,
-    ),
+      rewards: evaluateBiomeRewards(
+        catalog,
+        snapshot,
+        history,
+        ordinaryPositionFor(catalog, snapshot),
+        traitContext(plan),
+        initialBranches,
+      ),
+    };
   };
+  // A blank Pool entry list takes the first eligible traits its room assessed on entry.
+  const first = run(project);
+  let stocked = project;
+  for (const { origin, assessment } of first.rewards.purgingPoolAssessments)
+    for (const finding of assessment.findings)
+      if (finding.code === 'purgingPoolTraitMissing') {
+        const traitKey =
+          assessment.eligibleTraitKeys[assessment.offeredSlotKeys.indexOf(finding.slotKey)];
+        if (traitKey !== undefined)
+          stocked = applyProjectCommand(stocked, catalog, {
+            kind: 'ReplacePurgingPoolSlot',
+            occurrence: origin,
+            slotKey: finding.slotKey,
+            traitKey,
+          });
+      }
+  return stocked === project ? first : run(stocked);
 }
 
 function olympianContactSeed(project: ProjectDocument, keepsakeKey: string) {

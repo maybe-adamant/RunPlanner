@@ -59,17 +59,8 @@ export type WorkspaceRoomFeature =
       readonly assessment: WorkspaceFeatureAssessment;
       readonly inventoryAddress: RoomFeatureAddress;
       readonly inventoryMarker: WorkspaceMarker;
-      readonly slots: readonly {
-        readonly candidateTraitKeys: readonly string[];
-        readonly candidateTraits: readonly { readonly key: string; readonly label: string }[];
-        readonly interactionKey: string;
-        readonly key: 'left' | 'middle' | 'right';
-        readonly label: string;
-        readonly address: RoomFeatureAddress;
-        readonly marker: WorkspaceMarker;
-        readonly traitLabel?: string;
-        readonly traitKey: string | null;
-      }[];
+      /** The list the Pool shows on entry. */
+      readonly slots: readonly WorkspacePurgingPoolSlot[];
     }
   | {
       /** Shrine inventory is always visible and authored once present. */
@@ -142,6 +133,19 @@ export type WorkspaceRoomFeature =
       };
     };
 
+/** One slot of a Pool of Purging list: its entry list or the list it regenerates. */
+export interface WorkspacePurgingPoolSlot {
+  readonly candidateTraitKeys: readonly string[];
+  readonly candidateTraits: readonly { readonly key: string; readonly label: string }[];
+  readonly interactionKey: string;
+  readonly key: 'left' | 'middle' | 'right';
+  readonly label: string;
+  readonly address: RoomFeatureAddress;
+  readonly marker: WorkspaceMarker;
+  readonly traitLabel?: string;
+  readonly traitKey: string | null;
+}
+
 export interface WorkspaceStygianWellSlot {
   readonly key: import('@run-planner/engine/authored-project').StygianWellSlotKey;
   readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
@@ -155,36 +159,6 @@ export interface WorkspaceStygianWellSlot {
   readonly offerInteractionKey: string;
   /** Bought on the room's timeline. */
   readonly purchased: boolean;
-}
-
-/** Why a Well or Pool option cannot be picked where it would be appended. */
-export type WorkspaceFeatureRollLock =
-  'unreached' | 'notEnabled' | 'nothingLeft' | 'poolEmpty' | 'poolShort' | 'allBought' | 'allSold';
-
-/** One thing a Well or Pool visit can do next: buy or sell an offered slot, or reroll. */
-export interface WorkspaceFeatureRollOption {
-  readonly key: string;
-  readonly kind: 'offer' | 'reroll';
-  readonly label: string;
-  /** The Well item bought or the trait sold; absent on a blank slot and a reroll. */
-  readonly item?: string;
-  /** The spoken name where the label is terse, as a reroll's cost. */
-  readonly ariaLabel?: string;
-  /** Trailing figures after the label, as a reroll's pool and cost. */
-  readonly status?: string;
-  /** An unpinned reroll slot: picking it first chooses its item or trait. */
-  readonly needsChoice?: true;
-  readonly locked?: WorkspaceFeatureRollLock;
-}
-
-/** One Well or Pool's options at the end of the room's actions. */
-export interface WorkspaceFeatureRollActions {
-  readonly interactionKey: string;
-  readonly feature: import('@run-planner/engine/authored-project').RollFeature;
-  /** Empty while the end of the room's actions is unreached. */
-  readonly options: readonly WorkspaceFeatureRollOption[];
-  /** Nothing can be done here now. */
-  readonly locked?: WorkspaceFeatureRollLock;
 }
 
 /** One restocked slot of a Well or Pool reroll, optionally pinned on its Timeline row. */
@@ -201,40 +175,16 @@ export interface WorkspaceFeatureRollSlot {
   readonly assessed: boolean;
 }
 
-type FeatureRollCommand = Extract<
-  ProjectCommand,
-  {
-    readonly kind:
-      | 'SetStygianWellPurchase'
-      | 'InsertStygianWellReroll'
-      | 'InsertRoomAction'
-      | 'SellPurgingPoolRollSlot'
-      | 'InsertPurgingPoolReroll';
-  }
->;
-
-/** Engine-backed options of one Well or Pool's Interact picker. */
-export interface WorkspaceFeatureRollActionsInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  /** The action an option appends when it needs no choice. */
-  readonly intentFor: (optionKey: string) => WorkspaceCommandIntent<FeatureRollCommand>;
-  /** The item or trait an unpinned reroll slot is bought or sold as. */
-  readonly choices: (optionKey: string) => ContextualPickerModel<string>;
-  readonly choiceIntentFor: (
-    optionKey: string,
-    value: string,
-  ) => WorkspaceCommandIntent<FeatureRollCommand>;
-}
-
 /** One restocked slot's pin on a Well or Pool reroll. */
 export interface WorkspaceFeatureRollSlotInteraction {
   readonly key: string;
   /** The reroll whose slot this pins. */
   readonly owner: import('@run-planner/engine/authored-project').RoomActionAddress;
-  readonly load: () => ContextualPickerModel<string | null>;
+  /** The walk reached the roll: its slots are stocked and can be overridden. */
+  readonly contextReached: boolean;
+  readonly load: () => ContextualPickerModel<string>;
   readonly intentFor: (
-    value: string | null,
+    value: string,
   ) => WorkspaceCommandIntent<
     Extract<
       ProjectCommand,
@@ -345,47 +295,10 @@ export interface WorkspaceChaosSpawnInteraction {
   >;
 }
 
-/** A room object interacted with through the room's actions, apart from the Well and Pool. */
-export type WorkspaceRoomObject = 'worldShop' | 'hermesShrine' | 'championItem';
-
-/** Why a room object's entry, or one of its options, cannot be picked. */
-export type WorkspaceRoomObjectLock = 'unreached' | 'allBought' | 'collected' | 'inactive';
-
-/** One thing a Shop, Shrine or Pedestal can do next, named as its timeline row. */
-export interface WorkspaceRoomObjectOption {
-  readonly key: string;
-  readonly label: string;
-  /** The item the option buys or collects, as its timeline row shows it; absent on a blank item. */
-  readonly reward?: {
-    readonly offer: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
-    /** A shop item's own key, whose artwork can differ from its reward type's. */
-    readonly itemKey?: string;
-  };
-  /** A blank item: picking it first chooses what it stocks. */
-  readonly needsChoice?: true;
-  readonly locked?: WorkspaceRoomObjectLock;
-}
-
-/** One present room object's entry at the top of the optional actions. */
-export interface WorkspaceRoomObjectEntry {
-  readonly interactionKey: string;
-  readonly object: WorkspaceRoomObject;
-  readonly options: readonly WorkspaceRoomObjectOption[];
-  /** Nothing can be done here now. */
-  readonly locked?: WorkspaceRoomObjectLock;
-}
-
 type RoomObjectCommand = Extract<
   ProjectCommand,
   {
-    readonly kind:
-      | 'ReplaceShopPurchaseParticipation'
-      | 'PurchaseShopTravelDealRefill'
-      | 'PurchaseHermesShrineOffer'
-      | 'SetHermesShrineRush'
-      | 'SetInfernalContractPedestalCollected'
-      | 'ReplaceLockedExit'
-      | 'InsertRoomAction';
+    readonly kind: 'ReplaceLockedExit';
   }
 >;
 
@@ -394,19 +307,6 @@ export interface WorkspaceRoomObjectEntryInteraction {
   readonly owner: OccurrenceAddress;
   /** The action an option appends when it needs no choice. */
   readonly intentFor: (optionKey: string) => WorkspaceCommandIntent<RoomObjectCommand>;
-  /** What a blank item can stock. */
-  readonly choices: (optionKey: string) => ContextualPickerModel<WorkspaceRoomObjectChoice>;
-  readonly choiceIntentFor: (
-    optionKey: string,
-    choiceKey: string,
-  ) => WorkspaceCommandIntent<RoomObjectCommand>;
-}
-
-/** One item a blank Shop or Shrine item can stock. */
-export interface WorkspaceRoomObjectChoice {
-  readonly key: string;
-  /** The reward its icon shows. */
-  readonly rewardType: string;
 }
 
 /** An object native spawns on a room's challenge switch anchors, in its spawn order. */
@@ -623,11 +523,6 @@ export interface WorkspaceLockedDoors {
     /** A locked door's fight before its press; a pressed door's sits on its press row. */
     readonly fight?: WorkspaceUnlockExitEncounter;
   }[];
-  /** The Doors object's presses: each locked door not yet pressed; absent while unreached. */
-  readonly unlocks?: {
-    readonly interactionKey: string;
-    readonly options: readonly { readonly exitKey: string; readonly label: string }[];
-  };
   /** The doors the room cannot be left through: locked and never pressed. */
   readonly lockedAtLeave: readonly string[];
 }

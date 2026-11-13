@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -2961,7 +2961,14 @@
             }
           ]
         },
-        "purgingPool": { "traits": [], "anchorId": 755023 },
+        "purgingPool": {
+          "traits": [
+            { "slotKey": "left", "traitKey": "ApolloWeaponBoon" },
+            { "slotKey": "middle", "traitKey": "ZeusSpecialBoon" },
+            { "slotKey": "right", "traitKey": "HeraCastBoon" }
+          ],
+          "anchorId": 755023
+        },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -4872,8 +4879,24 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "offers": [] },
-        "purgingPool": { "traits": [], "anchorId": 637448 },
+        "stygianWell": {
+          "offers": [
+            { "generationKey": "initial:healing", "offerKey": "DamageSelfDrop" },
+            {
+              "generationKey": "initial:secondLeft",
+              "offerKey": "TemporaryImprovedSecondaryTrait"
+            },
+            { "generationKey": "initial:secondRight", "offerKey": "TemporaryEmptySlotDamageTrait" }
+          ]
+        },
+        "purgingPool": {
+          "traits": [
+            { "slotKey": "left", "traitKey": "HestiaWeaponBoon" },
+            { "slotKey": "middle", "traitKey": "HeraCastBoon" },
+            { "slotKey": "right", "traitKey": "ZeusSpecialBoon" }
+          ],
+          "anchorId": 637448
+        },
         "layout": { "flipped": false },
         "keepsakeRack": {},
         "fountain": {}
@@ -4937,5 +4960,5 @@
       }
     }
   ],
-  "planFingerprint": "c8fc32c9"
+  "planFingerprint": "2fc4fdb4"
 }

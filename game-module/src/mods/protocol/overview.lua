@@ -401,7 +401,7 @@ end
 
 local POOL_SLOTS = { left = true, middle = true, right = true }
 
--- One Pool list's pinned slots; the others stay native.
+-- One Pool list, slot by slot.
 local function poolTraits(value, label)
     local traits, traitsError = p.arr(value, label, 3)
     if not traits then return nil, traitsError end
@@ -425,14 +425,18 @@ local function poolRoll(row, label)
     return poolTraits(roll.traits, label .. ".traits")
 end
 
--- A present Pool: its initial list's pinned slots, then its rerolls'.
+-- A present Pool: its entry list, the list it regenerates at opening, then its rerolls'.
 local function purgingPool(value, label)
-    local record, errorMessage = p.exact(value, { "traits" }, { "rerolls", "anchorId" }, label)
+    local record, errorMessage = p.exact(value, { "traits" }, { "refreshTraits", "rerolls", "anchorId" }, label)
     if not record then return nil, errorMessage end
     local _, anchorError = anchorId(record, label)
     if anchorError then return nil, anchorError end
     local _, traitsError = poolTraits(record.traits, label .. ".traits")
     if traitsError then return nil, traitsError end
+    if record.refreshTraits ~= nil then
+        local _, refreshError = poolTraits(record.refreshTraits, label .. ".refreshTraits")
+        if refreshError then return nil, refreshError end
+    end
     if record.rerolls ~= nil then
         local _, rerollsError = featureRerolls(record.rerolls, label .. ".rerolls", poolRoll)
         if rerollsError then return nil, rerollsError end

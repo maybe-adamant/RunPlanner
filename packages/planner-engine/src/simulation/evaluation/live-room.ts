@@ -36,7 +36,6 @@ import type {
   AcquisitionDisposition,
   AuthoredRewardState,
   ProjectDocument,
-  PurgingPoolSlotKey,
   RoomActionReference,
   RoomOccurrence,
 } from '../../authored-project/model';
@@ -138,21 +137,16 @@ export type LiveVerbKind =
 export type LiveVerbChoice =
   /** A Pom's level, or the trait a level resolution takes. */
   | { readonly picker: 'levelResolution'; readonly timing: 'after' }
-  /** A blank Travel Deal item's value, from the room's object interactions. */
-  | { readonly picker: 'travelDealItem'; readonly timing: 'before' }
+  /**
+   * The item Travel Deal restocks: the purchase (a World Shop item's) or rush
+   * (a Hermes Shrine item's) restocks its slot as it settles, so the restocked
+   * item is that row's outcome, from the room's object interactions.
+   */
+  | { readonly picker: 'travelDealRefill'; readonly timing: 'after' }
   /** A press's target and the reward it draws, from the reroll surface. */
   | { readonly picker: 'rerollPress'; readonly timing: 'before'; readonly surface: RerollSurface }
   /** The list a Well or Pool reroll restocks, pinned slot by slot. */
   | { readonly picker: 'stygianWellRoll' | 'purgingPoolRoll'; readonly timing: 'after' }
-  /** The trait an unpinned Pool slot sells: one the list can show there that is still held. */
-  | {
-      readonly picker: 'purgingPoolSale';
-      readonly timing: 'before';
-      readonly rollKey: string;
-      readonly slotKey: PurgingPoolSlotKey;
-      /** Never empty. */
-      readonly traitKeys: readonly string[];
-    }
   /** The keepsake the rack swaps in; with none chosen the held keepsake stays. */
   | { readonly picker: 'keepsake'; readonly timing: 'after' }
   /** The reward the Artificer's replacement takes. */
@@ -358,14 +352,20 @@ interface ObjectPurchase {
   readonly reference: RoomActionReference;
   readonly command: ProjectCommand;
   readonly indexes: ReadonlySet<number>;
-  readonly needsChoice?: 'travelDealItem';
+  readonly choice?: LiveVerbChoice;
 }
+
+const TRAVEL_DEAL_REFILL_CHOICE: LiveVerbChoice = frozen({
+  picker: 'travelDealRefill',
+  timing: 'after',
+});
 
 /**
  * The purchases a room's objects offer that are not yet rows: a World Shop's
- * unbought items and live Travel Deal item, a Shrine's unbought items to buy
- * and bought ones to rush, a Well's unbought stocked items, and an uncollected Pedestal, which
- * only appends.
+ * unbought items and stocked Travel Deal item, a Shrine's unbought items to
+ * buy, its stocked refill and bought ones to rush, a Well's unbought stocked
+ * items, and an uncollected Pedestal, which only appends. The purchase or rush
+ * Travel Deal restocks on settles the restocked item, so its picker follows it.
  */
 function objectPurchases(
   catalog: Catalog,
@@ -379,7 +379,7 @@ function objectPurchases(
   const positioned = (
     object: LiveObjectKind,
     command: PositionedCommand,
-    needsChoice?: 'travelDealItem',
+    choice?: LiveVerbChoice,
     probe: PositionedCommand = command,
   ) => {
     const indexes = positionedCommandInsertionIndexes(document, catalog, probe);
@@ -391,53 +391,38 @@ function objectPurchases(
         reference: positionedCommandReference(command),
         command,
         indexes: new Set(indexes),
-        ...(needsChoice === undefined ? {} : { needsChoice }),
+        ...(choice === undefined ? {} : { choice }),
       }),
     );
   };
   const interactions = roomObjectInteractionsForProjectEvaluationAssembly(assembly, occurrence);
   const shop = interactions?.worldShop;
-  for (const offer of shop?.offers ?? []) positioned('worldShop', offer.command);
+  const restocks =
+    shop?.travelDealRestocksNextPurchase === true ? TRAVEL_DEAL_REFILL_CHOICE : undefined;
+  for (const offer of shop?.offers ?? []) positioned('worldShop', offer.command, restocks);
+  // A blank item stops the walk at the purchase that restocks it, so only a stocked one is bought.
   const refill = shop?.travelDealRefill;
-  if (refill !== undefined) {
-    if (refill.rewardType !== null) positioned('worldShop', refill.command);
-    // A blank item is stocked by the purchase; its positions do not depend on the value.
-    else if (refill.values[0] !== undefined)
-      positioned('worldShop', refill.command, 'travelDealItem', {
-        ...refill.command,
-        value: refill.values[0],
-      });
-  }
+  if (refill !== undefined && refill.rewardType !== null) positioned('worldShop', refill.command);
   const shrine = interactions?.hermesShrine;
-  const shrineItems = [
-    ...(shrine?.offers ?? []).map((offer) => ({ offer, candidate: undefined })),
-    ...(shrine?.travelDealRefill === undefined
-      ? []
-      : [
-          {
-            offer: shrine.travelDealRefill,
-            candidate: shrine.travelDealRefill.candidateRewardTypes[0],
-          },
-        ]),
-  ];
-  for (const { offer, candidate } of shrineItems) {
-    const command = offer.buy;
-    if (offer.rewardType !== null) positioned('hermesShrine', command);
-    // A blank refill is stocked by the purchase; its positions do not depend on the reward.
-    else if (candidate !== undefined)
-      positioned('hermesShrine', command, 'travelDealItem', {
-        ...command,
-        rewardType: candidate,
-      });
-  }
-  // A bought item's rush, wherever its rush row may enter.
+  for (const offer of [
+    ...(shrine?.offers ?? []),
+    ...(shrine?.travelDealRefill === undefined ? [] : [shrine.travelDealRefill]),
+  ])
+    if (offer.rewardType !== null) positioned('hermesShrine', offer.buy);
+  // A bought item's rush, wherever its rush row may enter; an initial item's may refill.
   for (const { rush } of shrine?.rushes ?? [])
-    positioned('hermesShrine', {
-      kind: rush.kind,
-      occurrence: rush.occurrence,
-      generationKey: rush.generationKey,
-      rushed: rush.rushed,
-    });
+    positioned(
+      'hermesShrine',
+      {
+        kind: rush.kind,
+        occurrence: rush.occurrence,
+        generationKey: rush.generationKey,
+        rushed: rush.rushed,
+      },
+      shrine?.travelDealRefillsNextRush === true && rush.generationKey !== 'travelDealRefill'
+        ? TRAVEL_DEAL_REFILL_CHOICE
+        : undefined,
+    );
   const pedestal = interactions?.championItem?.collect;
   if (pedestal !== undefined && 'command' in pedestal)
     purchases.push(
@@ -773,37 +758,7 @@ function objectChoiceVerbs(
   const pool = poolCapability?.interaction;
   if (pool === undefined) return frozen(verbs);
   featureReroll('purgingPool', pool.reroll);
-  // A pinned slot's sale is a roster row. An unpinned one sells a trait its
-  // list can show that is still held where the room's actions end.
-  const listCandidates =
-    pool.rollKey === INITIAL_ROLL_KEY
-      ? poolCapability!.candidateTraitKeysBySlot
-      : poolCapability!.rolls[pool.rollKey]?.candidateTraitKeysBySlot;
-  const held = new Set(Object.values(pool.pendingRoll.candidateTraitKeysBySlot).flat());
-  for (const offer of pool.offers) {
-    if (offer.traitKey !== null) continue;
-    const traitKeys = (listCandidates?.[offer.slotKey] ?? []).filter((key) => held.has(key));
-    if (traitKeys.length === 0) continue;
-    verbs.push(
-      frozen({
-        object: 'purgingPool' as const,
-        owner: occurrence,
-        gap: orderLength,
-        verb: frozen({
-          verb: 'sell' as const,
-          participation: 'optional' as const,
-          reference: offer.sale,
-          choice: frozen({
-            picker: 'purgingPoolSale' as const,
-            timing: 'before' as const,
-            rollKey: pool.rollKey,
-            slotKey: offer.slotKey,
-            traitKeys: frozen(traitKeys),
-          }),
-        }),
-      }),
-    );
-  }
+  // Each stocked slot's sale is a roster row.
   return frozen(verbs);
 }
 
@@ -836,32 +791,30 @@ type GapStep =
 
 const STANDING: GapStep = frozen({ kind: 'standing' });
 
+const LEVEL_RESOLUTION_CHOICE: LiveVerbChoice = frozen({
+  picker: 'levelResolution',
+  timing: 'after',
+});
+
 /**
  * The verb a step performs on a row: standing, moving it here or placing it
- * here, with the item's or action's obligation. A placement whose blank
- * Travel Deal item needs its value leaves its command to the picker.
+ * here, with the item's or action's obligation. A placement's own picker
+ * follows it, or, `before`, supplies its command instead.
  */
 function stepVerb(
   reference: RoomActionReference,
   obligation: Obligation,
   step: GapStep,
-  needsChoice?: 'levelResolution' | 'travelDealItem',
+  placeChoice?: LiveVerbChoice,
 ): LiveVerb {
-  const choice =
-    step.kind === 'place' && needsChoice === 'levelResolution'
-      ? frozen({ picker: 'levelResolution' as const, timing: 'after' as const })
-      : rowChoice(reference);
+  const choice = (step.kind === 'place' ? placeChoice : undefined) ?? rowChoice(reference);
   const base = {
     verb: liveVerbKind(reference),
     participation: obligation.participation,
     ...(obligation.deadline === undefined ? {} : { deadline: obligation.deadline }),
     reference,
   };
-  if (step.kind === 'place' && needsChoice === 'travelDealItem')
-    return frozen({
-      ...base,
-      choice: frozen({ picker: 'travelDealItem' as const, timing: 'before' as const }),
-    });
+  if (choice?.timing === 'before') return frozen({ ...base, choice });
   return frozen({
     ...base,
     ...(step.kind === 'standing'
@@ -983,7 +936,7 @@ export function liveRoomForProjectEvaluationAssembly(
     reference: RoomActionReference,
     obligation: Obligation,
     step: GapStep,
-    needsChoice?: 'levelResolution' | 'travelDealItem',
+    placeChoice?: LiveVerbChoice,
   ): readonly LiveVerb[] =>
     (interactions && step.kind === 'standing'
       ? standingDispositionVerbs(
@@ -993,7 +946,7 @@ export function liveRoomForProjectEvaluationAssembly(
           obligation.participation,
           obligation.deadline,
         )
-      : undefined) ?? [stepVerb(reference, obligation, step, needsChoice)];
+      : undefined) ?? [stepVerb(reference, obligation, step, placeChoice)];
 
   // Pickups, from the spawned loot, each with the gap it spawned at.
   interface PickupSpawn {
@@ -1064,16 +1017,20 @@ export function liveRoomForProjectEvaluationAssembly(
     const verbs: LiveVerb[] = [];
     let deadline: number | undefined;
     let lastIndex: number | undefined;
+    const unlockGap = item.lockedUntil === undefined ? undefined : unlockGaps.get(item.lockedUntil);
+    // A caged pickup cannot be taken until its cage unlocks; a row already there stands.
+    const locked = item.lockedUntil !== undefined && (unlockGap === undefined || unlockGap > gap);
+    const placeChoice = item.needsChoice === undefined ? undefined : LEVEL_RESOLUTION_CHOICE;
     if (row !== undefined && (row.rank !== null || item.placement.kind === 'unplaced')) {
       deadline = rowDeadline(row, (at) => !gatedPast(spawn, at));
       const step = gatedPast(spawn, gap) ? undefined : rowStep(row, gap);
-      if (step !== undefined)
+      if (step !== undefined && (!locked || step.kind === 'standing'))
         verbs.push(
           ...rowVerbs(
             item.reference,
             { participation: item.participation, deadline },
             step,
-            item.needsChoice,
+            placeChoice,
           ),
         );
     } else if (item.placement.kind === 'unplaced' && item.placement.command !== undefined) {
@@ -1089,17 +1046,16 @@ export function liveRoomForProjectEvaluationAssembly(
       }
       lastIndex = indexes.length === 0 ? undefined : Math.max(...indexes);
       if (item.participation === 'required') deadline = lastIndex;
-      if (indexes.includes(gap))
+      if (!locked && indexes.includes(gap))
         verbs.push(
           stepVerb(
             item.reference,
             { participation: item.participation, deadline },
             { kind: 'place', command: atIndex(command, gap) },
-            item.needsChoice,
+            placeChoice,
           ),
         );
     }
-    const unlockGap = item.lockedUntil === undefined ? undefined : unlockGaps.get(item.lockedUntil);
     return frozen({
       kind: 'pickup' as const,
       owner: item.owner,
@@ -1114,9 +1070,7 @@ export function liveRoomForProjectEvaluationAssembly(
         ...(spawn.moment === undefined ? {} : { moment: spawn.moment }),
         ...(spawn.sourceAction === undefined ? {} : { sourceAction: spawn.sourceAction }),
       }),
-      ...(item.lockedUntil !== undefined && (unlockGap === undefined || unlockGap > gap)
-        ? { lockedUntil: item.lockedUntil }
-        : {}),
+      ...(locked ? { lockedUntil: item.lockedUntil } : {}),
       verbs: frozen(verbs),
     });
   };
@@ -1141,9 +1095,18 @@ export function liveRoomForProjectEvaluationAssembly(
       entry.verbs.push(...verbs);
       byObject.set(key, entry);
     };
+    const bought = purchases.filter((purchase) => purchase.indexes.has(gap));
+    const boughtKeys = new Set(bought.map((purchase) => roomActionKey(purchase.reference)));
     for (const { row, object, owner } of objectRows) {
       const step = rowStep(row, gap);
       if (step === undefined) continue;
+      // An unplaced row its object's purchase places is bought through that purchase alone,
+      // and a Travel Deal item only once a purchase has restocked it.
+      if (
+        step.kind !== 'standing' &&
+        (boughtKeys.has(row.key) || row.sourceFamily?.kind === 'shopTravelDealRefill')
+      )
+        continue;
       if (step.kind !== 'standing' && waits(row) && onGround(gap)) continue;
       add(
         object,
@@ -1155,16 +1118,15 @@ export function liveRoomForProjectEvaluationAssembly(
         ),
       );
     }
-    for (const purchase of purchases)
-      if (purchase.indexes.has(gap))
-        add(purchase.object, purchase.owner, [
-          stepVerb(
-            purchase.reference,
-            { participation: 'optional' },
-            { kind: 'place', command: atIndex(purchase.command, gap) },
-            purchase.needsChoice,
-          ),
-        ]);
+    for (const purchase of bought)
+      add(purchase.object, purchase.owner, [
+        stepVerb(
+          purchase.reference,
+          { participation: 'optional' },
+          { kind: 'place', command: atIndex(purchase.command, gap) },
+          purchase.choice,
+        ),
+      ]);
     for (const { object, owner, gap: verbGap, verb } of choiceVerbs)
       if (verbGap === gap) add(object, owner, [verb]);
     return [...byObject.values()].map((entry) =>

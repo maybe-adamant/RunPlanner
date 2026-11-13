@@ -85,42 +85,15 @@ export function assembleLockedDoors(input: {
       ),
     ),
   });
-  const unlockKey = `doorUnlocks:${semanticAddressKey(input.address)}`;
-  const appendable = (product?.unlocks ?? []).flatMap((unlock) =>
-    unlock.append === undefined ? [] : [{ exitKey: unlock.exitKey, command: unlock.append }],
-  );
-  const unlocks: EntryRequirement = Object.freeze({
-    kind: 'roomObjectActions' as const,
-    owner: input.address,
-    interactionKey: unlockKey,
-    options: Object.freeze(
-      appendable.map((unlock) => Object.freeze({ key: unlock.exitKey, command: unlock.command })),
-    ),
-  });
   return Object.freeze({
     lockedDoors: Object.freeze({
       address,
       marker: input.markerDestinations.marker(address),
       interactionKey,
       doors: Object.freeze(doors),
-      ...(product?.unlocks === undefined
-        ? {}
-        : {
-            unlocks: Object.freeze({
-              interactionKey: unlockKey,
-              options: Object.freeze(
-                appendable.map((unlock) =>
-                  Object.freeze({
-                    exitKey: unlock.exitKey,
-                    label: `Unlock ${doorLabel(unlock.exitKey)}`,
-                  }),
-                ),
-              ),
-            }),
-          }),
       lockedAtLeave: product?.lockedAtLeave ?? Object.freeze([]),
     }),
-    requirements: Object.freeze([toggles, unlocks]),
+    requirements: Object.freeze([toggles]),
   });
 }
 
