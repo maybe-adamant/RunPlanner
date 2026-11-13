@@ -10,7 +10,8 @@ import * as prettier from 'prettier';
  *
  *   npm run planner:room-map-calibration -- [--skip <room>]... <manifest.json>...
  *
- * Each manifest entry is one clean room capture with its RCMAP record; a room
+ * Each manifest entry is one clean room capture with its RCMAP record; a
+ * Preboss's Shop variant capture (`shopVariant`) is keyed `<room>_Shop`. A room
  * may appear in only one manifest, and `--skip` leaves out a captured room the
  * planner does not package. A world
  * point lands at image pixel centre + scale * (world - camera target), where
@@ -47,7 +48,9 @@ export function calibrationEntries(manifest) {
   return Object.entries(manifest)
     .map(([room, entry]) => {
       const record = entry.rcmap;
-      if (record?.room !== room) throw new Error(`${room}: manifest record names ${record?.room}`);
+      // A Preboss's Shop variant is its own image, keyed `<room>_Shop`.
+      const imageRoom = record?.shopVariant === true ? `${record.room}_Shop` : record?.room;
+      if (imageRoom !== room) throw new Error(`${room}: manifest record names ${imageRoom}`);
       if (record.flipped !== false) throw new Error(`${room}: capture is flipped`);
       if (entry.stitched === true) {
         if (entry.calibration === undefined)

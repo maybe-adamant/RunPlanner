@@ -383,6 +383,7 @@ export function OccurrenceWorkbench({
               map={room.map}
               placements={roomMapPlacements(room)}
               roomIdentity={roomIdentity}
+              shop={room.roomLocal.kind === 'shop'}
               {...(localVisit === undefined ? {} : { sideDoors: sideDoorMapDoors(localVisit) })}
               stage={shownMapStage}
               title={room.label}

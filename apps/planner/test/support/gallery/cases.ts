@@ -1059,6 +1059,22 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-preboss-shop:postboss'),
   },
   {
+    id: 'room-map-f-preboss-shop',
+    overview: true,
+    label: 'F Preboss holding the Shop: its map with Charon’s stall',
+    shows: ['Shop variant map'],
+    project: createGoldenFGHIProject,
+    target: room('F', 'golden-f-preboss-shop'),
+  },
+  {
+    id: 'room-map-f-preboss-free',
+    overview: true,
+    label: 'F Preboss holding a free reward: its empty-floor map',
+    shows: ['free-reward map'],
+    project: createGoldenFGHIProject,
+    target: room('F', 'golden-f-preboss-free'),
+  },
+  {
     id: 'room-map-f-roll-entry',
     overview: true,
     label: 'F room whose flip rolls: each entry with the flip it needs',

@@ -24,6 +24,10 @@ WebPs unless replacing them from a source image. For example:
 convert source.png -quality 90 -define webp:method=6 -define webp:lossless=false RoomName.webp
 ```
 
+A Preboss that holds a shop has a second image, `<room>_Shop` (Charon, his
+stall and its item pads on the same terrain), shown for an occurrence whose
+room holds a shop; it has its own calibration and the room's points.
+
 Every map is a clean capture: `roomMapCalibration.ts` records each image's capture camera and the
 editor draws their points from the catalog's map points. Regenerate it from the
 capture manifests with `npm run planner:room-map-calibration` whenever one of

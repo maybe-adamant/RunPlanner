@@ -26,7 +26,12 @@ function renderMap(
 ) {
   render(
     <RoomMapViewport
-      asset={{ gameName: 'H_Combat04', src: '/map.webp', isPlaceholder: false }}
+      asset={{
+        gameName: 'H_Combat04',
+        imageName: 'H_Combat04',
+        src: '/map.webp',
+        isPlaceholder: false,
+      }}
       controlsPlacement={controlsPlacement}
       title="Combat 04"
     />,

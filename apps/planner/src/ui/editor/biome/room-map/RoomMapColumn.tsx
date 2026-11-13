@@ -1,8 +1,7 @@
 import type { WorkspaceRoomMap } from '@planner/projections/structured-workspace';
 import { roomMapMarkers } from '@planner/projections/roomMapMarkers';
-import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
-import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
+import { roomMapImageFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorChipFace } from '../DecisionWorkbench';
 import type { DoorChip } from '../doorSummary';
 import {
@@ -40,6 +39,7 @@ export function RoomMapColumn({
   map,
   placements,
   roomIdentity,
+  shop = false,
   sideDoors = [],
   stage,
   title,
@@ -60,13 +60,16 @@ export function RoomMapColumn({
   readonly map: WorkspaceRoomMap;
   /** A different room never inherits this map's pan and zoom. */
   readonly roomIdentity: string;
+  /** The occurrence holds a shop: a Preboss shows its Shop variant. */
+  readonly shop?: boolean | undefined;
   readonly stage: RoomMapStage;
   readonly title: string;
 }) {
   const highlight = useRoomMapHighlight();
   const pointers = useRoomMapPointers();
-  const calibration = roomMapCalibrations[gameName];
-  if (calibration === undefined) return null;
+  const image = roomMapImageFor(gameName, shop);
+  if (image === undefined) return null;
+  const { asset, calibration } = image;
   // The flip a previewed entry sets shows the room that way.
   const shownFlip =
     highlight?.kind === 'entry' && highlight.flipped !== undefined ? highlight.flipped : flipped;
@@ -118,7 +121,7 @@ export function RoomMapColumn({
   return (
     <section aria-label={`${title} map`} className="room-map-column">
       <RoomMapViewport
-        asset={roomMapAssetFor(gameName)}
+        asset={asset}
         controlsPlacement="collapsible-overlay"
         key={roomIdentity}
         mirrored={shownFlip}
