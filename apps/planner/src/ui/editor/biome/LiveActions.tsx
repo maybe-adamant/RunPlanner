@@ -82,9 +82,10 @@ function itemIcon(item: WorkspaceLiveItem, biomeKey: string): ArtworkSource | un
       return rerollDieArtwork;
     case 'fieldsCage':
       return roomObjectIcon('doorLock');
+    case 'rewardWheel':
+      return roomObjectIcon('rewardWheel');
     case 'encounterContact':
     case 'gorgon':
-    case 'rewardWheel':
       return faceIcon(item, biomeKey);
   }
 }

@@ -8,7 +8,8 @@ import iconFountainThessaly from './assets/FountainThessaly.webp';
 export const fountainArtwork: Readonly<Record<string, string | null>> = {
   F: iconFountainErebus,
   G: iconFountainOceanus,
-  H: null,
+  // Fields' post-boss room holds the generic fountain, drawn in Tartarus art.
+  H: iconFountainTartarus,
   I: iconFountainTartarus,
   N: null,
   O: iconFountainThessaly,
