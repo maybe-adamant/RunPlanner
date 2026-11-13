@@ -385,6 +385,21 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-b1-e1'),
   },
   {
+    id: 'devotion-door',
+    doorsExpanded: true,
+    label: 'Trial door with its chosen and spurned gods',
+    shows: ['Trial god pair icon', 'door reward picker'],
+    project: () => underworldCheckpointArtifacts['underworld-f-trait-order-checks'].load(),
+    target: room('F', '4fcb700b-b26a-49bf-8f93-5ec021de7235'),
+  },
+  {
+    id: 'devotion-collect',
+    label: 'Trial room: the chosen and spurned gods’ Collect rows',
+    shows: ['Collect chosen boon', 'Collect spurned boon'],
+    project: loadSurfaceNOHermesShrineDeliveryCheckpoint,
+    target: room('O', 'surface-o-devotion'),
+  },
+  {
     id: 'stale-incoming-reward',
     label: 'Stale incoming reward kept for repair',
     shows: ['Timeline repairs (stale row)', 'finding'],

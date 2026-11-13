@@ -2166,6 +2166,23 @@
   line-height: 1;
 }
 
+/* A Trial god's boon: a whole heart for the chosen god, a broken one for the spurned. */
+.row-reward-devotion {
+  display: grid;
+  width: var(--badge-small);
+  height: var(--badge-small);
+  place-items: center;
+  border-radius: 50%;
+  background: var(--finding);
+}
+
+.row-reward-devotion svg {
+  display: block;
+  width: 72%;
+  height: 72%;
+  fill: #1b1c22;
+}
+
 .row-reward-arrow {
   color: var(--muted);
 }

@@ -633,6 +633,9 @@ export function RoomActionsWorkbench({
           ) : (
             <RowRewardName
               boosted={row.labelParts.reward.boosted}
+              {...(row.labelParts.reward.devotionRole === undefined
+                ? {}
+                : { devotionRole: row.labelParts.reward.devotionRole })}
               {...(row.labelParts.reward.itemKey === undefined
                 ? {}
                 : { itemKey: row.labelParts.reward.itemKey })}

@@ -12,6 +12,8 @@ import iconBoon2 from './assets/Boon2.webp';
 import iconChampionOfElysium from './assets/ChampionOfElysium.webp';
 import iconChaos from './assets/Chaos.webp';
 import iconDemeter from './assets/Demeter.webp';
+// Drawn for the planner rather than taken from the game's artwork.
+import iconDevotion from './assets/Devotion.svg';
 import iconDreamPoints from './assets/DreamPoints.webp';
 import iconEarth from './assets/Earth.webp';
 import iconEmptyMaxHealth from './assets/EmptyMaxHealth.webp';
@@ -133,7 +135,7 @@ export const rewardArtwork: Readonly<Record<string, string | null>> = {
   GemPointsBigDrop: iconGemPoints,
   DreamPointsDrop: iconDreamPoints,
   Boon: iconBoon2,
-  Devotion: null,
+  Devotion: iconDevotion,
   RandomLoot: iconBoon2,
   BlindBoxLoot: iconMysteryBox,
   WeaponUpgradeDrop: iconHammer,

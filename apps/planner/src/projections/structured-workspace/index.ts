@@ -243,6 +243,7 @@ export type {
 } from './presentation/hub-ranking';
 export { createStructuredWorkspaceProjection } from './projector';
 export type {
+  WorkspaceDevotionRole,
   WorkspaceEncounterEvents,
   WorkspaceNotReachedEntry,
   WorkspaceTimelineWait,

@@ -21,6 +21,7 @@ import { featureRollCatalog, featureRollNumber } from './feature-roll-assembly';
 import { workspaceAcquisitionRoleLabel } from './occurrence-reward-assembly';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
+import type { WorkspaceDevotionRole } from '../contracts/timeline';
 
 /**
  * A room's door or cage press as its row names it: its target as the room's
@@ -150,6 +151,8 @@ export interface OccurrenceActionLabelParts {
     readonly boosted: boolean;
     /** A shop item's own key, whose artwork can differ from its reward type's. */
     readonly itemKey?: string;
+    /** A Trial god's side, marked on its icon. */
+    readonly devotionRole?: WorkspaceDevotionRole;
   };
   /** The NPC a Talk row names, by NPC key; the row can show the NPC's portrait for the name. */
   readonly npcKey?: string;
@@ -351,11 +354,17 @@ export function occurrenceActionLabelParts(
       if (role === 'chosenSource' || role === 'spurnedSource') {
         const payload = rewardControl?.offer?.payload;
         const source = payload?.kind === 'DevotionPair' ? payload[role] : undefined;
-        return plain(
-          `Collect ${role === 'chosenSource' ? 'Chosen' : 'Spurned'} boon${
-            source === undefined ? '' : ` · ${timelineRewardName(catalog, source)}`
-          }`,
-        );
+        const side = role === 'chosenSource' ? 'Chosen' : 'Spurned';
+        if (source === undefined) return plain(`Collect ${side} boon`);
+        // The god's icon names the row, its side marked on it.
+        return Object.freeze({
+          ...labelParts('Collect', `${side} boon · ${timelineRewardName(catalog, source)}`),
+          reward: Object.freeze({
+            offer: Object.freeze({ rewardType: source }),
+            boosted: false,
+            devotionRole: role === 'chosenSource' ? ('chosen' as const) : ('spurned' as const),
+          }),
+        });
       }
       return actionLabel(
         rewardControl?.offer == null ? workspaceAcquisitionRoleLabel(role) : undefined,

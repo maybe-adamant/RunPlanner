@@ -127,6 +127,8 @@ export interface WorkspaceRoomActionRow {
       readonly boosted: boolean;
       /** A Stygian Well item's own key: the row shows that item, not its reward type. */
       readonly itemKey?: string;
+      /** A Trial god's boon: which side of the Trial it is, marked on the icon. */
+      readonly devotionRole?: WorkspaceDevotionRole;
     };
   };
   readonly marker: WorkspaceMarker;
@@ -266,6 +268,9 @@ export type WorkspaceLiveObjectKind = Extract<
   EngineLiveItem,
   { readonly kind: 'object' }
 >['object'];
+
+/** Which side of a Trial of the Gods a god's boon is on. */
+export type WorkspaceDevotionRole = 'chosen' | 'spurned';
 
 /** How a live thing or verb is pictured: the row it acts on, by its icon inputs. */
 export interface WorkspaceLiveFace {

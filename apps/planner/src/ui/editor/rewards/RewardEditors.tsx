@@ -66,13 +66,15 @@ function pickerRowIcon(
   return rewardIcon(step === 'spurned' ? payload.spurnedSource : payload.chosenSource);
 }
 
-/** While picking a Trial, the trigger fills its gods in as each is picked. */
+/** While picking a Trial, the trigger shows the Trial until its chosen god is picked, then that god. */
 function triggerIcon(
   offer: ResolvedRewardOffer,
   step: RewardPickerStep | undefined,
 ): ArtworkSource | undefined {
   if (step === undefined || offer.payload?.kind !== 'DevotionPair') return offerIcon(offer);
-  return [step === 'spurned' ? rewardIcon(offer.payload.chosenSource) : undefined, undefined];
+  return step === 'spurned'
+    ? [rewardIcon(offer.payload.chosenSource), undefined]
+    : rewardIcon('Devotion');
 }
 
 function offerKey(offer: ResolvedRewardOffer): string {
