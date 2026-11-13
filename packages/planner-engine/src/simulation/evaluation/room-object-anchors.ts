@@ -67,8 +67,8 @@ interface RoomAnchorObjectFacts<
   readonly slotIndex?: number;
   /**
    * Why native could not spawn it here, the anchors included; empty when it
-   * can. Undefined while its entry assessment is unreached, and for a Pool
-   * the route does not host.
+   * can. Undefined while its entry assessment is unreached. A room that
+   * never holds it is `hosted: false`, not a refusal.
    */
   readonly refusals?: readonly (Refusal | RoomAnchorFullRefusal)[];
   /** Adds the absent object on a free anchor; present only when `refusals` is empty. */
@@ -95,7 +95,7 @@ interface RoomAnchorObjectFacts<
 export type RoomAnchorObject =
   | RoomAnchorObjectFacts<
       'stygianWell',
-      Exclude<StygianWellPlacementRefusal, { readonly reason: 'noAnchor' }>,
+      Exclude<StygianWellPlacementRefusal, { readonly reason: 'noAnchor' | 'notHost' }>,
       StygianWellCandidateCapability,
       CommandOf<'AddStygianWell'>,
       CommandOf<'RemoveStygianWell'>
@@ -109,7 +109,7 @@ export type RoomAnchorObject =
     >
   | RoomAnchorObjectFacts<
       'hermesShrine',
-      Exclude<HermesShrinePlacementRefusal, { readonly reason: 'noAnchor' }>,
+      Exclude<HermesShrinePlacementRefusal, { readonly reason: 'noAnchor' | 'notHost' }>,
       HermesShrineCandidateCapability,
       CommandOf<'SetHermesShrinePresence'>,
       CommandOf<'SetHermesShrinePresence'>
@@ -241,8 +241,9 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
         candidate === undefined
           ? {}
           : {
+              // `hosted` and the anchors answer these declaration rules.
               refusals: candidate.placementRefusals.filter(
-                (refusal) => refusal.reason !== 'noAnchor',
+                (refusal) => refusal.reason !== 'noAnchor' && refusal.reason !== 'notHost',
               ),
               place: Object.freeze({ kind: 'AddStygianWell' as const, occurrence: origin }),
             },
@@ -291,8 +292,9 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
         candidate === undefined
           ? {}
           : {
+              // `hosted` and the anchors answer these declaration rules.
               refusals: candidate.placementRefusals.filter(
-                (refusal) => refusal.reason !== 'noAnchor',
+                (refusal) => refusal.reason !== 'noAnchor' && refusal.reason !== 'notHost',
               ),
               place: presence(true),
             },
@@ -377,7 +379,7 @@ export function roomObjectAnchorSlotsForProjectEvaluationAssembly(
     });
   }
 
-  // Only hosted objects take anchors; an unhosted present one carries its host refusal.
+  // Only hosted objects take anchors.
   const holders = drafts
     .filter((draft) => draft.hosted && draft.present)
     .map((draft) => draft.kind);

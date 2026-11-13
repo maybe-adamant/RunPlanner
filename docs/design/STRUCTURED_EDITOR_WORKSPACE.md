@@ -443,9 +443,10 @@ has: Encounter (encounters), Spawns (Fields optional rewards, additional
 exits, room objects, resources, NPCs, as existence only; the challenge switch
 is one toggle per kind, turning one on replacing the switch), Offers (Shop,
 Well, Pool and Shrine stock, the challenge switch's reward, the Pedestal's
-item) and Layout. A presence toggle the room cannot take now is disabled, its
-hover naming each engine refusal as one sentence, or that it waits on an
-earlier choice; door-generated side doors, being chance-driven, carry none. Its rows share one column grid of
+item) and Layout. A feature the room never holds by its declarations has no
+toggle; one it cannot take now is disabled, its hover naming each engine
+refusal as one sentence, or that it waits on an earlier choice;
+door-generated side doors, being chance-driven, carry none. Its rows share one column grid of
 label, value picker and secondary action, so each picker starts at the same
 place in every section and room. A room object or Chaos Gate the room always
 has is named without a presence toggle.

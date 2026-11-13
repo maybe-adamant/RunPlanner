@@ -25,11 +25,13 @@ const names: Readonly<
 });
 
 function nameOf(feature: RoomFeatureNoun): { readonly one: string; readonly many: string } {
-  if (typeof feature === 'object') {
-    const label = resourceFamilyLabel(feature.resource);
-    return { one: `${label} success`, many: `${label} successes` };
-  }
-  return names[feature];
+  return typeof feature === 'object' ? resourceSpotName(feature.resource) : names[feature];
+}
+
+/** A resource family's spot: lowercase mid-sentence, capitalized where a sentence starts. */
+function resourceSpotName(family: ResourceFamily): { readonly one: string; readonly many: string } {
+  const label = resourceFamilyLabel(family);
+  return { one: `${label.toLowerCase()} spot`, many: `${label} spots` };
 }
 
 /** The rule refusing a room feature here, as one sentence. */
@@ -39,15 +41,12 @@ export function roomFeatureRefusalSentence(
 ): string {
   const { one, many } = nameOf(feature);
   switch (refusal.reason) {
-    case 'notHost':
-      return `This room never holds a ${one}.`;
-    case 'noAnchor':
-    case 'physicalCapability':
-      return `This room has no spot for a ${one}.`;
     case 'noFreeAnchor':
       return 'The room’s other objects take every spot.';
     case 'biomeDepth':
       return `${many} need biome depth ${refusal.minimumBiomeDepth}; this room is at ${refusal.biomeDepthCache}.`;
+    case 'biomeDepthCeiling':
+      return `${many} need biome depth ${refusal.maximumBiomeDepth} or less; this room is at ${refusal.biomeDepthCache}.`;
     case 'recentWell':
     case 'recentShrine':
     case 'recentSwitch':
@@ -58,20 +57,23 @@ export function roomFeatureRefusalSentence(
       return challengeSwitchRuleSentence(refusal);
     case 'routeExcluded':
       return `This room holds no ${one} on this route.`;
-    case 'targetDomain':
-      return `This biome has no room a ${one} can lead to.`;
     case 'requirementUnmet':
       return `The game’s requirements for a ${one} aren’t met here.`;
     case 'offerSpacing':
-      return `${many} need ${refusal.rooms} rooms between offers.`;
+      return `${many} need more than ${refusal.rooms} rooms after the last ${one}.`;
     case 'capReached':
       return refusal.per === 'biome'
         ? `Only one ${one} per biome.`
         : `This run already had ${refusal.count === 1 ? `a ${one}` : `${refusal.count} ${many}`}; no more can appear.`;
-    case 'resourceLookback':
-      return `${many} need ${refusal.rooms} rooms after a ${resourceFamilyLabel(refusal.family)} success.`;
+    case 'resourceLookback': {
+      // The rule is the later spot's: this host's, or the other spot's when it comes after.
+      const other = resourceSpotName(refusal.family);
+      return refusal.order === 'before'
+        ? `${many} need more than ${refusal.rooms} rooms after the last ${other.one}.`
+        : `${other.many} need more than ${refusal.rooms} rooms after the last ${one}.`;
+    }
     case 'roomCapacity':
-      return `This room has no space for a ${one} beside its ${resourceFamilyLabel(refusal.family)} success.`;
+      return `This room has no space for a ${one} beside its ${resourceSpotName(refusal.family).one}.`;
   }
 }
 

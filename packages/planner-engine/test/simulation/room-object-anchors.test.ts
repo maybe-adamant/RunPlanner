@@ -385,9 +385,10 @@ describe('room object anchor slots', () => {
     ]);
     expect(slots.unanchored).toEqual(['stygianWell', 'purgingPool']);
     expect(object(slots, 'stygianWell')).toMatchObject({
+      hosted: false,
       present: true,
       fixed: false,
-      refusals: [{ reason: 'notHost' }],
+      refusals: [],
       remove: { kind: 'RemoveStygianWell' },
     });
     // No command removes a retained Pool; its finding clears with its use.

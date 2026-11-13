@@ -499,7 +499,9 @@ export {
 export type { RequirementEvaluationEvidence } from '../requirements/evidence';
 export type { RewardOfferExclusionReason } from './rewards/offer-exclusions';
 export type { PhantomPlaceholderExclusion } from './generation/phantom-exit';
+export { chaosGateHosted } from './generation/additional-exits';
 export type {
+  ChaosGateHostRefusal,
   ChaosGateRefusal,
   PurgingPoolPlacementRefusal,
   ResourcePlacementRefusal,

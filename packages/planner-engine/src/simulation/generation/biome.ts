@@ -19,6 +19,7 @@ import type {
 } from './target-policy';
 import {
   assessChaosPlacement,
+  chaosGateHostRefusals,
   assessZagreusContractPlacement,
   evaluateAdditionalContinuationEntries,
 } from './additional-exits';
@@ -137,18 +138,20 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
     );
     if (sourceDeclaration.additionalExits.some((exit) => exit.kind === 'chaos')) {
+      // A room that never hosts a natural gate has no candidate unless a Spark forces one.
       const capability = forcedChaosOccurrenceKeys.has(semanticAddressKey(source.origin))
         ? Object.freeze({ placementEligible: true, refusals: Object.freeze([]) })
-        : assessChaosPlacement(
-            layout,
-            source,
-            sourceDeclaration,
-            parentHistory,
-            undefined,
-            enteredBiomeCount,
-            rewardFactsBySource.get(semanticAddressKey(source.origin)),
-            initialRewardLookups,
-          );
+        : chaosGateHostRefusals(layout, sourceDeclaration).length > 0
+          ? undefined
+          : assessChaosPlacement(
+              layout,
+              source,
+              sourceDeclaration,
+              parentHistory,
+              enteredBiomeCount,
+              rewardFactsBySource.get(semanticAddressKey(source.origin)),
+              initialRewardLookups,
+            );
       if (capability !== undefined) {
         chaosCapabilities.set(semanticAddressKey(source.origin), capability);
       }

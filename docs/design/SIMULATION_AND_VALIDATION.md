@@ -711,8 +711,12 @@ it takes, why native could not spawn it and the commands placing or removing
 it, and each anchor's choices. Every room feature the owner can switch on
 states why it cannot appear in one shared vocabulary of typed refusals, each
 rule with its own values: the anchor objects', a Chaos gate's and an Infernal
-Contract door's at their reached source, and each resource success's for every
-entered host of its family.
+Contract door's at their reached source, and each resource spot's for every
+entered host of its family. A room that never holds the feature by its
+declarations (no host declaration, `SecretPoint` or anchor, or no Chaos room
+in its biome) is no toggle target and carries no such refusal; a source
+requirement names the rule that fails, the route standing in for save
+progression such as `ChaosUnlocked`.
 A structural authoring query answers, for any of those purchase commands, every
 index it may place its purchase at instead of appending.
 

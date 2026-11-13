@@ -4,7 +4,10 @@ import type { HermesShrinePlacementRefusal } from './commerce/hermes-shrine';
 import type { StygianWellPlacementRefusal } from './commerce/stygian-well';
 import type { RoomAnchorFullRefusal } from './evaluation/room-object-anchors';
 
-/** The room cannot hold the feature: its declaration hosts none. */
+/**
+ * Declaration: the room never holds the feature. A toggle never offers it
+ * there, so no consumer explains it; findings on authored state still carry it.
+ */
 export type NotHostRefusal = {
   readonly reason: 'notHost';
 };
@@ -14,12 +17,12 @@ export type RouteExcludedRefusal = {
   readonly reason: 'routeExcluded';
 };
 
-/** The room has no physical point for the feature (a Chaos gate's `SecretPoint`). */
+/** Declaration: the room has no physical point for the feature (a Chaos gate's `SecretPoint`). */
 export type PhysicalCapabilityRefusal = {
   readonly reason: 'physicalCapability';
 };
 
-/** The biome offers no room the feature could lead to (no Chaos room). */
+/** Declaration: the biome offers no room the feature could lead to (no Chaos room). */
 export type TargetDomainRefusal = {
   readonly reason: 'targetDomain';
 };
@@ -30,7 +33,17 @@ export type RequirementUnmetRefusal = {
   readonly requirement: 'SecretDoorRequirements' | 'ZagreusContractRequirement';
 };
 
-/** The feature was offered within its spacing window: `rooms` rooms must pass between offers. */
+/** The room's biome depth is past the deepest one the feature appears at. */
+export type BiomeDepthCeilingRefusal = {
+  readonly reason: 'biomeDepthCeiling';
+  readonly biomeDepthCache: number;
+  readonly maximumBiomeDepth: number;
+};
+
+/**
+ * The feature was offered too recently: no offer within `rooms` rooms after
+ * the last one (`NoRecentChaosEncounter`).
+ */
 export type OfferSpacingRefusal = {
   readonly reason: 'offerSpacing';
   readonly rooms: number;
@@ -45,35 +58,36 @@ export type CapReachedRefusal = {
 };
 
 /**
- * Another resource success lies within this host's lookback: `rooms` rooms
- * before it for `family`, the same family or another one.
+ * Another resource spot of `family` lies within a lookback of `rooms` rooms:
+ * before this host by this host's rule, or after it by that spot's rule.
  */
 export type ResourceLookbackRefusal = {
   readonly reason: 'resourceLookback';
   readonly family: ResourceFamily;
   readonly scope: 'sameFamily' | 'crossFamily';
+  readonly order: 'before' | 'after';
   readonly rooms: number;
 };
 
-/** The room holds another resource success it has no capacity beside. */
+/** The room holds another resource spot it has no capacity beside. */
 export type RoomCapacityRefusal = {
   readonly reason: 'roomCapacity';
   readonly family: ResourceFamily;
   readonly capacity: 'allTools' | 'simpleComplex';
 };
 
-/** Why a Chaos gate cannot spawn in its source room. */
+/** Why a Chaos source room never holds a gate (to a given Chaos room), by its declarations. */
+export type ChaosGateHostRefusal = NotHostRefusal | PhysicalCapabilityRefusal | TargetDomainRefusal;
+
+/** Why a Chaos gate cannot spawn in a source room that hosts gates. */
 export type ChaosGateRefusal =
-  | NotHostRefusal
-  | TargetDomainRefusal
-  | PhysicalCapabilityRefusal
-  | RequirementUnmetRefusal
-  | OfferSpacingRefusal;
+  RouteExcludedRefusal | BiomeDepthCeilingRefusal | RequirementUnmetRefusal | OfferSpacingRefusal;
 
 /** Why a Midshop cannot open its Infernal Contract door. */
-export type ZagreusContractRefusal = RequirementUnmetRefusal | CapReachedRefusal;
+export type ZagreusContractRefusal =
+  RouteExcludedRefusal | RequirementUnmetRefusal | CapReachedRefusal;
 
-/** Why a resource success cannot be placed on a host. */
+/** Why a resource spot cannot be placed on a host. */
 export type ResourcePlacementRefusal =
   | NotHostRefusal
   | RouteExcludedRefusal
@@ -85,10 +99,12 @@ export type ResourcePlacementRefusal =
 export type PurgingPoolPlacementRefusal = RouteExcludedRefusal;
 
 /**
- * Why a room feature the owner can switch on cannot appear where it is
- * asked: one typed rule per reason, shared by every toggleable feature.
+ * Why a room feature the owner can switch on cannot appear where a toggle
+ * offers it: one typed rule per reason, shared by every toggleable feature.
+ * Declaration refusals are absent, since a toggle is offered only where the
+ * room can hold the feature.
  */
-export type RoomFeatureRefusal =
+export type RoomFeatureRefusal = Exclude<
   | StygianWellPlacementRefusal
   | HermesShrinePlacementRefusal
   | ChallengeSwitchPlacementIssue
@@ -96,4 +112,6 @@ export type RoomFeatureRefusal =
   | ChaosGateRefusal
   | ZagreusContractRefusal
   | ResourcePlacementRefusal
-  | PurgingPoolPlacementRefusal;
+  | PurgingPoolPlacementRefusal,
+  { readonly reason: 'notHost' | 'noAnchor' }
+>;

@@ -14,14 +14,15 @@ import {
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import type {
-  ChaosGatePositionAuthoring,
-  HermesShrineCandidateCapability,
-  ChaosCandidateCapability,
-  PurgingPoolCandidateCapability,
-  StygianWellCandidateCapability,
-  ZagreusContractCandidateCapability,
-  RoomFeatureRefusal,
+import {
+  chaosGateHosted,
+  type ChaosGatePositionAuthoring,
+  type HermesShrineCandidateCapability,
+  type ChaosCandidateCapability,
+  type PurgingPoolCandidateCapability,
+  type StygianWellCandidateCapability,
+  type ZagreusContractCandidateCapability,
+  type RoomFeatureRefusal,
 } from '@run-planner/engine/simulation';
 import { roomFeatureRefusalSentences } from '@planner/projections/roomObjectPlacementCopy';
 import {
@@ -145,9 +146,10 @@ export function assembleOccurrenceFeatures(
           });
         })();
   const chaosDeclaration = room.additionalExits.find((candidate) => candidate.kind === 'chaos');
+  // A room that never hosts a natural gate offers no toggle.
   const chaosSpawn =
     chaosDeclaration === undefined ||
-    !chaosDeclaration.canSpawn ||
+    !chaosGateHosted(input.catalog, input.biome.biomeKey, room.gameName) ||
     input.facts.authoredAdditionalExitKeys.includes(chaosDeclaration.key) ||
     !input.facts.detailsActive
       ? undefined

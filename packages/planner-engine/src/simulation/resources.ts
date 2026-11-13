@@ -1,4 +1,4 @@
-import type { ResourcePlacementRefusal } from './room-feature-refusals';
+import type { NotHostRefusal, ResourcePlacementRefusal } from './room-feature-refusals';
 import type { Catalog, ResourceFamily } from '../catalog-schema';
 import {
   createBiomeAddress,
@@ -52,13 +52,16 @@ export interface RouteResourceAuthoring {
     Record<ResourceFamily, ResourcePlacementLegality | undefined>
   >;
   readonly legalTargetsByFamily: Readonly<Record<ResourceFamily, readonly ResourcePlacement[]>>;
-  /** Each entered host of a family it cannot take now, with every rule refusing it. */
+  /**
+   * Each entered host of a family it cannot take now, with every rule
+   * refusing it. A room that never hosts the family is no target.
+   */
   readonly refusedTargetsByFamily: Readonly<
     Record<
       ResourceFamily,
       readonly {
         readonly placement: ResourcePlacement;
-        readonly refusals: readonly ResourcePlacementRefusal[];
+        readonly refusals: readonly Exclude<ResourcePlacementRefusal, NotHostRefusal>[];
       }[]
     >
   >;
@@ -199,22 +202,29 @@ export function routeResourceAuthoring(
     ]),
   ) as Record<ResourceFamily, ResourcePlacement | null>;
   const assessedTargets = (family: ResourceFamily) =>
-    entered.flatMap((entry) => {
+    entered.flatMap((entry): RouteResourceAuthoring['refusedTargetsByFamily'][ResourceFamily] => {
       if (entry.origin.kind !== 'occurrence') return [];
       const room = catalog.rooms.byKey[entry.gameName];
-      if (room?.resourcePointSupport.families.includes(family) !== true) return [];
+      if (
+        room?.resourcePointSupport.families.includes(family) !== true ||
+        room.resourcePointSupport.rules[family] === undefined
+      )
+        return [];
       const placement = Object.freeze({
         biomeKey: entry.biomeKey,
         occurrenceId: entry.origin.occurrenceId,
       });
       const proposal = { ...legalPlacements, [family]: placement };
-      const { refusals } = assessResourcePlacement(
+      const refusals = assessResourcePlacement(
         catalog,
         route.routeKey,
         family,
         placement,
         entered,
         proposal,
+      ).refusals.filter(
+        (refusal): refusal is Exclude<ResourcePlacementRefusal, NotHostRefusal> =>
+          refusal.reason !== 'notHost',
       );
       return [{ placement, refusals }];
     });
@@ -325,9 +335,12 @@ export function assessResourcePlacement(
         { family, candidate: targetCandidate },
         { family: otherFamily, candidate: otherCandidate },
       ),
+      // The other spot's own rule: this host lies before it, within its lookback.
       ...resourcePointConflicts(
         { family: otherFamily, candidate: otherCandidate },
         { family, candidate: targetCandidate },
+      ).map((refusal) =>
+        refusal.reason === 'resourceLookback' ? { ...refusal, order: 'after' as const } : refusal,
       ),
     ])
       refuse({ ...refusal, ...('family' in refusal ? { family: otherFamily } : {}) });
@@ -373,6 +386,7 @@ function resourcePointConflicts(
           reason: 'resourceLookback',
           family: candidate.family,
           scope: 'sameFamily',
+          order: 'before',
           rooms: targetRule.sameFamilyLookback,
         });
       if (
@@ -383,6 +397,7 @@ function resourcePointConflicts(
           reason: 'resourceLookback',
           family: candidate.family,
           scope: 'crossFamily',
+          order: 'before',
           rooms: targetRule.crossFamilyLookback[candidate.family],
         });
       if (
