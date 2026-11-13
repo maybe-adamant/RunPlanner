@@ -1568,6 +1568,10 @@
   --timeline-node: #8e8b97;
   --timeline-band: rgb(255 255 255 / 7%);
   --timeline-band-divider: rgb(255 255 255 / 10%);
+
+  /* The live row's group brackets, mapped onto the legend colours. */
+  --live-group-required: var(--timeline-before-leaving);
+  --live-group-optional: var(--timeline-optional);
 }
 
 [data-action-accent='optional'] {
@@ -3459,38 +3463,38 @@ span.hub-board-status-line {
   gap: var(--badged-chip-gap, 6px);
 }
 
-.live-row-group + .live-row-group {
-  padding-inline-start: 10px;
-  border-inline-start: 1px solid var(--border);
+/* A required or optional group stands in a bracket of its live row colour; objects stand bare. */
+.live-row-group:is([data-live-group='required'], [data-live-group='optional']) {
+  position: relative;
+  padding-inline: 7px;
 }
 
-/*
- * A required or optional thing carries its Timeline row colour as an underline in its
- * border band, below a finding ring; it replaces the picker's own accent underline.
- */
-.timeline-chip.live-chip[data-live-group='required'] {
-  --live-group-colour: var(--timeline-before-leaving);
+.live-row-group[data-live-group='required'] {
+  --live-group-colour: var(--live-group-required);
 }
 
-.timeline-chip.live-chip[data-live-group='optional'] {
-  --live-group-colour: var(--timeline-optional);
+.live-row-group[data-live-group='optional'] {
+  --live-group-colour: var(--live-group-optional);
 }
 
-.timeline-chip.live-chip:is([data-live-group='required'], [data-live-group='optional'])::after {
+.live-row-group:is([data-live-group='required'], [data-live-group='optional'])::before,
+.live-row-group:is([data-live-group='required'], [data-live-group='optional'])::after {
   position: absolute;
-  inset: auto 3px -2px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--live-group-colour);
+  inset-block: -2px;
+  width: 4px;
+  border: 1.5px solid var(--live-group-colour);
   content: '';
   pointer-events: none;
 }
 
-.contextual-picker-trigger.timeline-chip.live-chip:is(
-    [data-live-group='required'],
-    [data-live-group='optional']
-  ):not([data-has-findings='true']) {
-  box-shadow: none;
+.live-row-group:is([data-live-group='required'], [data-live-group='optional'])::before {
+  inset-inline-start: 0;
+  border-inline-end: 0;
+}
+
+.live-row-group:is([data-live-group='required'], [data-live-group='optional'])::after {
+  inset-inline-end: 0;
+  border-inline-start: 0;
 }
 
 .timeline-chip.live-chip[aria-disabled='true'] {

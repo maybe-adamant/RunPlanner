@@ -245,7 +245,6 @@ function LiveItemChip({
         aria-disabled
         aria-label={name}
         className={className}
-        data-live-group={item.group}
         ref={chip}
         type="button"
       >
@@ -316,7 +315,6 @@ function LiveItemChip({
           aria-haspopup="menu"
           aria-label={name}
           className={className}
-          data-live-group={item.group}
           ref={chip}
           type="button"
         >
