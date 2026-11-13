@@ -26,6 +26,11 @@
   zoom: var(--app-scale, 1);
 }
 
+/* Radix lifts its wrapper to the content's z-index, so the note sits above Timeline rows like the hint layer. */
+.hint-popover {
+  z-index: 200;
+}
+
 .hint-card,
 .hint-popover {
   display: block;
