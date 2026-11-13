@@ -104,7 +104,7 @@ describe('an unchanged Postboss rack', () => {
       outcome,
       targetTraitKey,
     });
-    const { f, postboss } = evaluated(authorLegalTraitOffers(project));
+    const { f, postboss } = evaluated(authorLegalTraitOffers(stockTestProject(project)));
     expect(f.rewards.timelineFacts.dependencies.filter(touchesRack)).toEqual([]);
     const fountain = postboss.timeline.transactions.find(
       (transaction) => transaction.kind === 'fountainUse',
