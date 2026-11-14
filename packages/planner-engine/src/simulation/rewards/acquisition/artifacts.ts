@@ -194,8 +194,8 @@ export interface UnsettledPickupSource {
   readonly dispositionByAcquisitionRole?: AuthoredRewardState['dispositionByAcquisitionRole'];
 }
 
-/** The conversions a role not yet taken could make where its room's actions end. */
-export type FrontierConversionCapability = Required<
+/** The conversions a role not yet taken could make where its row would be placed. */
+export type PlacementConversionCapability = Required<
   Pick<
     AcquisitionConversionCandidateCapability,
     'timePieceAssessment' | 'artificerAssessment' | 'seaStarAssessment'
@@ -208,15 +208,17 @@ export interface AcquisitionConversionCandidateArtifacts {
   ) => AcquisitionConversionCandidateCapability | undefined;
   /**
    * For a role whose pickup the walk spawned and did not take: the same
-   * conversion questions its contact would ask, at the state where the
-   * room's reached actions end, where its row would append. Undefined once
-   * the role settled, or where the room's actions were not reached.
+   * conversion questions its contact would ask where its row would be
+   * placed, at the state the reached row `before` meets, or, without one,
+   * where the room's reached actions end and its row would append. Undefined
+   * once the role settled, or where that point was not reached.
    */
-  readonly atFrontier: (
+  readonly atPlacement: (
     room: SemanticAddress,
     address: AcquisitionRoleAddress,
     source: UnsettledPickupSource,
-  ) => FrontierConversionCapability | undefined;
+    before?: string,
+  ) => PlacementConversionCapability | undefined;
   readonly atReplacement: (address: AcquisitionEntryAddress) =>
     | {
         readonly address: AcquisitionRoleAddress;
@@ -250,10 +252,13 @@ export function createAcquisitionConversionCandidateArtifacts(
     readonly peeks: ReadonlyMap<string, ForfeitPeek>;
     /** The state where each entered room's reached actions end, by room. */
     readonly roomFrontiers?: ReadonlyMap<string, RewardBranchState>;
+    /** The state each reached row of an entered room meets before it settles, by room and row. */
+    readonly roomActionContacts?: ReadonlyMap<string, ReadonlyMap<string, RewardBranchState>>;
   } = { frontier: undefined, peeks: new Map() },
 ): AcquisitionConversionCandidateArtifacts {
   const privateContexts = new Map(contexts);
   const roomFrontiers = new Map(spawned.roomFrontiers ?? []);
+  const roomActionContacts = new Map(spawned.roomActionContacts ?? []);
   const privatePeeks = new Map(spawned.peeks);
   // Before its pickup, a role reads what Forfeit made of its spawned object
   // or, while it has not spawned, the game's Onion preview of it.
@@ -331,13 +336,18 @@ export function createAcquisitionConversionCandidateArtifacts(
       ...(hexActivation === undefined ? {} : { hexActivation }),
     });
   };
-  const atFrontier = (
+  const atPlacement = (
     room: SemanticAddress,
     address: AcquisitionRoleAddress,
     pickup: UnsettledPickupSource,
-  ): FrontierConversionCapability | undefined => {
+    before?: string,
+  ): PlacementConversionCapability | undefined => {
     if (privateContexts.has(semanticAddressKey(address))) return undefined;
-    const branch = roomFrontiers.get(semanticAddressKey(room));
+    const roomKey = semanticAddressKey(room);
+    const branch =
+      before === undefined
+        ? roomFrontiers.get(roomKey)
+        : roomActionContacts.get(roomKey)?.get(before);
     const binding = catalog.rewards.producerLifecycles.byKey[
       pickup.producerLifecycleKey
     ]?.rewardTypes.byKey[pickup.offer.rewardType]?.acquisitionLifecycle.find(
@@ -378,7 +388,7 @@ export function createAcquisitionConversionCandidateArtifacts(
   };
   return Object.freeze({
     at,
-    atFrontier,
+    atPlacement,
     atReplacement: (replacement: AcquisitionEntryAddress) => {
       const replacementKey = semanticAddressKey(replacement);
       for (const entry of privateContexts.values()) {
@@ -393,7 +403,7 @@ export function createAcquisitionConversionCandidateArtifacts(
 export function createEmptyAcquisitionConversionCandidateArtifacts(): AcquisitionConversionCandidateArtifacts {
   return Object.freeze({
     at: () => undefined,
-    atFrontier: () => undefined,
+    atPlacement: () => undefined,
     atReplacement: () => undefined,
   });
 }

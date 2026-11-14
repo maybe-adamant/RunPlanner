@@ -197,17 +197,19 @@ export function acquisitionConversionCandidateForProjectEvaluationAssembly(
 
 /**
  * The conversions a role whose pickup the walk spawned and did not take could
- * make where its room's reached actions end; undefined once it settled.
+ * make where its row would be placed: just before the reached row `before`,
+ * or, without one, where its room's reached actions end; undefined once it settled.
  */
-export function frontierAcquisitionConversionForProjectEvaluationAssembly(
+export function placementAcquisitionConversionForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   room: OccurrenceAddress,
   address: AcquisitionRoleAddress,
   source: UnsettledPickupSource,
+  before?: string,
 ) {
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(address.routeKey, address.biomeKey))
-    ?.acquisitionConversions.atFrontier(room, address, source);
+    ?.acquisitionConversions.atPlacement(room, address, source, before);
 }
 
 /** Narrow reachability query for one exact immediate-keepsake child. */

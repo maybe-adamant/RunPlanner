@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRewardWheelAddress,
@@ -22,7 +23,7 @@ import {
   type RoomOccurrence,
   type ShopState,
 } from '@run-planner/engine/authored-project';
-import { frontierAcquisitionConversionForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
+import { placementAcquisitionConversionForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   rerollPressForProjectEvaluationAssembly,
@@ -415,7 +416,7 @@ describe('live interactions at a gap', () => {
     // A paid item is never converted, whatever the state its row would append to.
     const assembly = simulateProjectAssembly(catalog, unplaced);
     const conversion = (instanceProvenance: 'free' | 'paid') =>
-      frontierAcquisitionConversionForProjectEvaluationAssembly(
+      placementAcquisitionConversionForProjectEvaluationAssembly(
         assembly,
         start,
         offered[0]!.acquisition!,
@@ -430,7 +431,7 @@ describe('live interactions at a gap', () => {
     expect(conversion('paid')?.timePieceAssessment.supported).toBe(false);
     // Once its row is placed it converts only from its own contact.
     expect(
-      frontierAcquisitionConversionForProjectEvaluationAssembly(
+      placementAcquisitionConversionForProjectEvaluationAssembly(
         simulateProjectAssembly(catalog, project),
         start,
         offered[0]!.acquisition!,
@@ -482,7 +483,7 @@ describe('live interactions at a gap', () => {
     const conversion = (document: ProjectDocument) => {
       const assembly = simulateProjectAssembly(catalog, document);
       const reward = canonicalRoom(assembly, start)!.incomingReward!;
-      return frontierAcquisitionConversionForProjectEvaluationAssembly(
+      return placementAcquisitionConversionForProjectEvaluationAssembly(
         assembly,
         start,
         acquisition,
@@ -539,6 +540,87 @@ describe('live interactions at a gap', () => {
         ['goldify', undefined],
       ]);
     }
+  });
+
+  it("offers an unplaced reward's conversions at an inner gap as its row placed there does", () => {
+    // Ashes in this Fields room's second optional slot, with Time Piece and the Artificer:
+    // placed between the cage rows, it can be goldified or transformed in the same edit.
+    const h = createBiomeAddress('Underworld', 'H');
+    const fields = createOccurrenceAddress(h, createOccurrenceId('golden-h-combat02'));
+    const project = applyProjectCommand(
+      withJudgment(
+        withJudgment(
+          withArcana(withTimePiece(loadUnderworldFGHCheckpoint()), ['MetaToRunUpgrade']),
+          'F',
+          'golden-f-preboss-shop:boss',
+          ['ChanneledCast', 'StartingGold', 'HealthRegen', 'BonusDodge', 'SprintShield'],
+        ),
+        'G',
+        'golden-g-preboss-shop:boss',
+        ['LowManaDamageBonus', 'CastCount', 'MagicCrit', 'CastBuff', 'BonusHealth'],
+      ),
+      catalog,
+      {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(h, fields.occurrenceId, 'optionalRewards', 'optional2'),
+        value: { rewardType: 'MetaCardPointsCommonDrop' },
+      },
+    );
+    const offered = (item: LiveItem | undefined) =>
+      item?.verbs.map((verb) => [verb.verb, verb.commands?.map((command) => command.kind)]);
+    const ashesKey = roomActionKey({
+      kind: 'interactLocalReward',
+      groupKey: 'optionalRewards',
+      slotKey: 'optional2',
+    });
+    const live = interactions(project, fields);
+    // Cage02, its reward, Cage01, its reward: gap 2 lies between the two cages.
+    const inner = 2;
+    expect(inner).toBeLessThan(live.frontier);
+    const ashes = live.gaps[inner]!.items.find(
+      (item) => item.kind === 'pickup' && roomActionKey(item.reference) === ashesKey,
+    );
+    expect(offered(ashes)).toEqual([
+      ['pickUp', ['InsertRoomAction']],
+      ['goldify', ['InsertRoomAction', 'ReplaceAcquisitionDisposition']],
+      ['transform', ['InsertRoomAction', 'ReplaceAcquisitionDisposition']],
+    ]);
+    for (const verb of ashes!.verbs)
+      expect(verbAccepted(project, fields, verb, inner), verb.verb).toBe(true);
+    // Placed there, the row stands picked up with the same alternatives at its own gap.
+    const placed = applyProjectCommand(project, catalog, ashes!.verbs[0]!.commands![0]!);
+    expect(
+      roomVerbs(interactions(placed, fields))
+        .filter(
+          ({ gap, verb }) =>
+            gap === inner &&
+            verb.reference !== undefined &&
+            roomActionKey(verb.reference) === ashesKey,
+        )
+        .map(({ verb }) => [verb.verb, verb.standing]),
+    ).toEqual([
+      ['pickUp', true],
+      ['goldify', undefined],
+      ['transform', undefined],
+    ]);
+
+    // A required cage reward left unplaced offers its conversions at an inner gap too.
+    const cage2 = { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' } as const;
+    const unplaced = applyProjectCommand(project, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(h, fields.occurrenceId, roomActionKey(cage2)),
+    });
+    const required = interactions(unplaced, fields);
+    expect(1).toBeLessThan(required.frontier);
+    const reward = required.gaps[1]!.items.find(
+      (item) => item.kind === 'pickup' && roomActionKey(item.reference) === roomActionKey(cage2),
+    );
+    expect(offered(reward)).toEqual([
+      ['pickUp', ['InsertRoomAction']],
+      ['goldify', ['InsertRoomAction', 'ReplaceAcquisitionDisposition']],
+    ]);
+    for (const verb of reward!.verbs)
+      expect(verbAccepted(unplaced, fields, verb, 1), verb.verb).toBe(true);
   });
 
   it('withholds goldify without a Time Piece charge, and while Unfated', () => {

@@ -987,11 +987,12 @@ capability captured at its contact supports, so a paid item is never
 goldified or transformed, and Time Piece needs a charge and the Fated state.
 That capability counts only the conversions before the contact, so taking an
 earlier row's offer can starve a later conversion, which then raises its
-finding. At the frontier an unplaced loose pickup acquiring one role
-offers the same alternatives, each placing it and setting its disposition in
-one edit, judged at the state where the room's reached actions end, which is
-where its row appends; an earlier gap only places it. Verbs whose row a
-choice creates are offered where the engine already reads them: a door, cage
+finding. An unplaced loose pickup acquiring one role offers the same
+alternatives at each gap that can place it, each placing it and setting its
+disposition in one edit, judged at the state its row would meet there: at the
+frontier where the room's reached actions end, where its row appends, and at
+an earlier gap the state the next reached row meets before it settles. Verbs
+whose row a choice creates are offered where the engine already reads them: a door, cage
 or wheel reroll press at its surface's append point, and a Well or Pool
 reroll where the room's reached actions end, each only while a held card
 enables it and the reroll pool pays. Each stocked Pool slot's sale is a

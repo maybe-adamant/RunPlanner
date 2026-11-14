@@ -53,6 +53,8 @@ export interface ChronologyWalkContext {
   readonly history: BiomeRewardHistory;
   /** The room actions the lifecycle walk reached, placed in that history. */
   readonly reachedActions: readonly ReachedHistoryRoomAction[];
+  /** The reached room actions by the history sequence their contact is read at. */
+  readonly reachedActionsBySequence: ReadonlyMap<number, readonly ReachedHistoryRoomAction[]>;
   readonly prepared: PreparedRewardEvaluationInputs;
   /** Sources whose outgoing checkpoint creates a Hub instead of a reward batch. */
   readonly hubTakeoverSources: ReadonlySet<string>;
@@ -185,6 +187,11 @@ export interface ChronologyWalkState {
     string,
     { readonly historySequence: number; readonly branch: RewardBranchState }
   >;
+  /**
+   * The state each reached row of an entered room meets before it settles,
+   * where a new action placed just before it would settle; by room, then row key.
+   */
+  readonly roomActionContacts: ReadonlyMap<string, ReadonlyMap<string, RewardBranchState>>;
   /** Shrine-keyed Travel Deal refill domain, captured at the first rush made with the trait. */
   readonly hermesShrineTravelDealRefills: ReadonlyMap<string, RealizedHermesShrineTravelDealRefill>;
   /** Gorgon phases keyed `occurrence::phase`, shared by the outcome and settlement. */
@@ -264,6 +271,7 @@ export function createChronologyWalkState(
     purgingPoolAssessments: new Map(),
     featureRolls: new Map(),
     roomActionEnds: new Map(),
+    roomActionContacts: new Map(),
     hermesShrineTravelDealRefills: new Map(),
     eligibleGorgonPhases: new Set<string>(),
     blockedGorgonPhases: new Set<string>(),

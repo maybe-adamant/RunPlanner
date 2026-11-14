@@ -363,6 +363,8 @@ export function publishChronology(
             ([roomKey, end]) => [roomKey, end.branch],
           ),
         ),
+        // One placed before a reached row converts at the state that row meets.
+        roomActionContacts: walk.roomActionContacts,
       },
     ),
     derivedAcquisitionEntryArtifacts: createDerivedAcquisitionEntryCandidateArtifacts(

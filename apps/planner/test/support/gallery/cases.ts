@@ -8,6 +8,7 @@ import {
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
   createNemesisRandomEventAddress,
@@ -1834,6 +1835,53 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['gap menu', 'Fields slot marks'],
     project: loadNemesisFieldsCheckpoint,
     target: room('H', 'golden-h-combat05'),
+    gap: { index: 2, open: true },
+  },
+  {
+    id: 'gap-menu-fields-conversions',
+    label:
+      'Gap menu: an optional reward between two cages, goldified or transformed as it is placed',
+    shows: ['gap menu', 'goldify', 'transform'],
+    project: loadUnderworldFGHCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'GoldifyKeepsake',
+      },
+      {
+        kind: 'ReplaceManualArcanaSelection',
+        route: createRouteAddress('Underworld'),
+        arcanaKeys: ['MetaToRunUpgrade'],
+      },
+      ...(
+        [
+          ['F', ['ChanneledCast', 'StartingGold', 'HealthRegen', 'BonusDodge', 'SprintShield']],
+          ['G', ['LowManaDamageBonus', 'CastCount', 'MagicCrit', 'CastBuff', 'BonusHealth']],
+        ] as const
+      ).map(([biomeKey, arcanaKeys]) => ({
+        kind: 'ReplaceJudgmentArcana' as const,
+        judgment: {
+          kind: 'judgmentArcana' as const,
+          routeKey: 'Underworld',
+          biomeKey,
+          occurrenceId: createOccurrenceId(`golden-${biomeKey.toLowerCase()}-preboss-shop:boss`),
+          phaseKey: 'Encounter',
+        },
+        arcanaKeys,
+      })),
+      {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(
+          createBiomeAddress('Underworld', 'H'),
+          createOccurrenceId('golden-h-combat02'),
+          'optionalRewards',
+          'optional2',
+        ),
+        value: { rewardType: 'MetaCardPointsCommonDrop' },
+      },
+    ],
+    target: room('H', 'golden-h-combat02'),
     gap: { index: 2, open: true },
   },
   {

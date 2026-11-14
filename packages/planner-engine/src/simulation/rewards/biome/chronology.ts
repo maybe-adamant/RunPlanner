@@ -30,6 +30,7 @@ import {
 } from './chronology-accumulator';
 import { publishChronology } from './chronology-publication';
 import type { HistoryEvent } from '../../history';
+import type { ReachedHistoryRoomAction } from '../../history/model';
 import { walkHistoryEvent } from './chronology-seams';
 import { captureRunState, targetSlotHistory } from './chronology-run-state';
 import { applyRoomEntryEffects } from './lifecycle-transitions/room-entered';
@@ -119,8 +120,15 @@ function createWalkContext(
     snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
       ? semanticAddressKey(snapshot.frontier.parent.origin)
       : undefined;
+  const reachedActionsBySequence = new Map<number, ReachedHistoryRoomAction[]>();
+  for (const action of inputs.reachedActions) {
+    const atSequence = reachedActionsBySequence.get(action.sequence) ?? [];
+    atSequence.push(action);
+    reachedActionsBySequence.set(action.sequence, atSequence);
+  }
   return Object.freeze({
     ...inputs,
+    reachedActionsBySequence,
     rooms,
     views,
     enteredBiomeCount: routePosition.ordinal,

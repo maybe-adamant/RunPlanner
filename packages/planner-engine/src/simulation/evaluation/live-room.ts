@@ -66,7 +66,7 @@ import type { ProjectEvaluationAssembly } from './evaluation-products';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
-  frontierAcquisitionConversionForProjectEvaluationAssembly,
+  placementAcquisitionConversionForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
@@ -737,14 +737,15 @@ function unsettledPickupSource(
 
 /**
  * The ways an unplaced loose pickup can be taken by the edit that places it
- * at the frontier: placed as its disposition stands, or placed and converted
- * where the state its row would append to supports that conversion, which a
- * paid item never does. The same alternatives a standing row offers from its
- * contact, each one edit. A plain pickup keeps its own outcome picker, else
- * Sea Star's copy where it applies. Undefined when its owner is no single
- * acquisition role whose source the room holds.
+ * at a gap: placed as its disposition stands, or placed and converted where
+ * the state its row would meet there supports that conversion, which a paid
+ * item never does: the state the reached row `before` it meets, else the one
+ * its row would append to. The same alternatives a standing row offers from
+ * its contact, each one edit. A plain pickup keeps its own outcome picker,
+ * else Sea Star's copy where it applies. Undefined when its owner is no
+ * single acquisition role whose source the room holds.
  */
-function frontierDispositionVerbs(
+function placementDispositionVerbs(
   assembly: ProjectEvaluationAssembly,
   room: CanonicalAuthoredRoom,
   occurrence: OccurrenceAddress,
@@ -753,6 +754,7 @@ function frontierDispositionVerbs(
   obligation: Obligation,
   place: Extract<GapStep, { readonly kind: 'place' }>,
   outcome: LiveVerbChoice | undefined,
+  before: string | undefined,
 ): readonly LiveVerb[] | undefined {
   const authored = authoredOccurrence(assembly.project, occurrence);
   const pickup = unsettledPickupSource(room, reference);
@@ -771,11 +773,12 @@ function frontierDispositionVerbs(
   const [source] = sources;
   if (source === undefined || sources.length > 1) return undefined;
   const dispositions = source.reward.dispositionByAcquisitionRole;
-  const capability = frontierAcquisitionConversionForProjectEvaluationAssembly(
+  const capability = placementAcquisitionConversionForProjectEvaluationAssembly(
     assembly,
     occurrence,
     source.acquisition,
     { ...pickup, dispositionByAcquisitionRole: dispositions },
+    before,
   );
   if (capability === undefined) return undefined;
   const supported: Readonly<Record<AcquisitionDisposition['kind'], boolean>> = {
@@ -1319,6 +1322,12 @@ export function liveRoomForProjectEvaluationAssembly(
     .filter((row) => row.rank !== null)
     .sort((left, right) => left.rank! - right.rank!);
   const waits = waitsForRequiredObjects(roster.eventGraph);
+  /** The reached row a new one placed at an inner gap would precede; none at the frontier. */
+  const rowAfter = (gap: number): string | undefined => {
+    if (gap >= frontier) return undefined;
+    const next = ordered.find((row) => row.rank! > gap && rowByKey.get(row.key)?.rank !== null);
+    return next !== undefined && next.rank! - 1 <= frontier ? next.key : undefined;
+  };
   const required = ({ item }: PickupSpawn) => item.participation === 'required';
   /** Whether a required pickup at this gap stands past its deadline. */
   const gatedPast = (spawn: PickupSpawn, gap: number) => {
@@ -1356,9 +1365,9 @@ export function liveRoomForProjectEvaluationAssembly(
       const obligation = { participation: item.participation, deadline };
       if (step !== undefined && (!locked || step.kind === 'standing'))
         verbs.push(
-          // At the frontier the edit placing it can also convert it.
-          ...((interactions && step.kind === 'place' && gap === frontier
-            ? frontierDispositionVerbs(
+          // The edit placing it can also convert it.
+          ...((interactions && step.kind === 'place'
+            ? placementDispositionVerbs(
                 assembly,
                 room,
                 occurrence,
@@ -1367,6 +1376,7 @@ export function liveRoomForProjectEvaluationAssembly(
                 obligation,
                 step,
                 pickerOf(item.reference, placeChoice),
+                rowAfter(gap),
               )
             : undefined) ?? rowVerbs(item.reference, obligation, step, placeChoice)),
         );

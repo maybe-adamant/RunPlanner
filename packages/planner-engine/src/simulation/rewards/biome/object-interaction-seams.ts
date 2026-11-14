@@ -74,22 +74,39 @@ function authoredRoom(
 }
 
 /**
- * Records an entered room's latest reached point before its actions close,
- * where a new action appends: its objects' interactions and a loose pickup's
- * conversions read the state there.
+ * Records where a new action of an entered room would settle: its latest
+ * reached point before its actions close, where one appends, and the state
+ * each reached row meets before it settles, where one placed just before it
+ * would. Its objects' interactions and a loose pickup's conversions read them.
  */
-export function captureRoomActionEnd(
+export function captureRoomActionPoints(
   context: ChronologyWalkContext,
+  received: ChronologyWalkState,
   state: ChronologyWalkState,
   event: HistoryEvent,
 ): ChronologyWalkState {
+  let contacts = state.roomActionContacts;
+  // A row with events of its own meets the state before its first; one without, the state
+  // after the event it settles with.
+  for (const action of context.reachedActionsBySequence.get(event.sequence) ?? []) {
+    const branch = action.boundary === 'before' ? received.branch : state.branch;
+    const roomKey = semanticAddressKey(action.room);
+    if (branch === undefined || authoredRoom(context, roomKey) === undefined) continue;
+    const byRoom = new Map(contacts);
+    byRoom.set(roomKey, new Map(contacts.get(roomKey)).set(action.actionKey, branch));
+    contacts = byRoom;
+  }
+  const withContacts =
+    contacts === state.roomActionContacts
+      ? state
+      : Object.freeze({ ...state, roomActionContacts: contacts });
   if (!('origin' in event) || SEQUENCE_CLOSED_BY.has(event.kind) || state.branch === undefined)
-    return state;
+    return withContacts;
   const roomKey = semanticAddressKey(event.origin);
   const room = authoredRoom(context, roomKey);
-  if (room === undefined) return state;
+  if (room === undefined) return withContacts;
   return Object.freeze({
-    ...state,
+    ...withContacts,
     roomActionEnds: new Map(state.roomActionEnds).set(
       roomKey,
       Object.freeze({ historySequence: event.sequence, branch: state.branch }),
