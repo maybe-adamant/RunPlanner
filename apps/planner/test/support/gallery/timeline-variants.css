@@ -87,12 +87,20 @@ body[data-timeline-variant='spine']
   color: var(--muted);
 }
 
+/* The spine breaks briefly at each phase change. */
 body[data-timeline-variant='spine']
-  .timeline-row[data-timeline-row-kind='boundary']:not(
+  .room-action-list
+  > .timeline-row[data-timeline-row-kind='boundary']:not(
     .timeline-leave-row,
     [data-timeline-event='wheelsOpen']
   )::before {
-  content: none;
+  top: calc(50% - 7px);
+  left: calc(var(--timeline-row-spine-x) - 2px);
+  width: 4px;
+  height: 14px;
+  border-radius: 0;
+  background: #15171d;
+  content: '';
 }
 
 body[data-timeline-variant='spine']
@@ -108,7 +116,7 @@ body[data-timeline-variant='spine']
   width: auto;
   height: auto;
   border: 0;
-  color: #8e8b97;
+  color: #aaa5b3;
   background: none;
 }
 
@@ -160,7 +168,7 @@ body[data-timeline-variant='spine']
   )
   .timeline-banner-title
   strong {
-  color: #9d98a6;
+  color: #b8b3c1;
   font-size: 0.78rem;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -169,7 +177,7 @@ body[data-timeline-variant='spine']
 body[data-timeline-variant='spine']
   .timeline-row[data-timeline-row-kind='boundary']
   :is(.timeline-phase-chip, .fields-cage-slot) {
-  color: #9d98a6;
+  color: #b8b3c1;
   font-size: 0.68rem;
   font-weight: 500;
 }
@@ -209,31 +217,38 @@ body[data-timeline-variant='spine']
   .timeline-row.timeline-row-notice
   [data-timeline-cell='label']
   > strong {
-  color: #9d98a6;
+  color: #b8b3c1;
   font-size: 0.8rem;
   font-weight: 500;
 }
 
-/* An action's spawn is a note under it: a hook from its row, pulled up against it. */
+/*
+ * Whatever has a cause hangs under it with a hook, one line each: an action's spawn under
+ * its action, a phase's spawn, unlock or settled outcome under its divider.
+ */
 body[data-timeline-variant='spine']
   .room-action-list
-  > .timeline-row.timeline-row-notice[data-spawned-loot='action'] {
-  margin-top: -2px;
+  > .timeline-row:is(.timeline-row-notice, [data-timeline-row-kind='effect']) {
+  --timeline-row-lead: -2px;
 }
 
 body[data-timeline-variant='spine']
-  .timeline-row.timeline-row-notice[data-spawned-loot='action']
+  .room-action-list
+  > .timeline-row:is(.timeline-row-notice, [data-timeline-row-kind='effect'])
   > [data-timeline-cell='sentence'] {
   padding-left: 18px;
 }
 
 body[data-timeline-variant='spine']
-  .timeline-row.timeline-row-notice[data-spawned-loot='action']
+  .room-action-list
+  > .timeline-row:is(.timeline-row-notice, [data-timeline-row-kind='effect'])
   > [data-timeline-cell='sentence']::before {
   position: absolute;
+  top: 50%;
   left: 2px;
-  color: #6d6878;
+  color: #7d7888;
   content: '↳';
+  transform: translateY(-55%);
 }
 
 /* The live row is the spine's last slot: a hollow dot. */
@@ -258,4 +273,71 @@ body[data-timeline-variant='spine']
   color: #b4afbd;
   font-size: 0.82rem;
   font-weight: 500;
+}
+
+/* A Fields cage's encounter starts with its Unlock: a hooked line under that row, not a divider. */
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row[data-timeline-row-kind='boundary']:is(
+    [data-boundary-kind='encounterBegun'],
+    [data-boundary-kind='encounterStarted']
+  ):has(.fields-cage-slot) {
+  --timeline-row-lead: -2px;
+  min-height: 0;
+}
+
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row[data-timeline-row-kind='boundary']:is(
+    [data-boundary-kind='encounterBegun'],
+    [data-boundary-kind='encounterStarted']
+  ):has(.fields-cage-slot)::before,
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row[data-timeline-row-kind='boundary']:is(
+    [data-boundary-kind='encounterBegun'],
+    [data-boundary-kind='encounterStarted']
+  ):has(.fields-cage-slot)
+  > [data-timeline-cell='sentence']::after {
+  content: none;
+}
+
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row[data-timeline-row-kind='boundary']:is(
+    [data-boundary-kind='encounterBegun'],
+    [data-boundary-kind='encounterStarted']
+  ):has(.fields-cage-slot)
+  > .timeline-event-node {
+  display: none;
+}
+
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row[data-timeline-row-kind='boundary']:is(
+    [data-boundary-kind='encounterBegun'],
+    [data-boundary-kind='encounterStarted']
+  ):has(.fields-cage-slot)
+  > [data-timeline-cell='sentence'] {
+  padding-left: 18px;
+}
+
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row[data-timeline-row-kind='boundary']:is(
+    [data-boundary-kind='encounterBegun'],
+    [data-boundary-kind='encounterStarted']
+  ):has(.fields-cage-slot)
+  > [data-timeline-cell='sentence']::before {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  color: #7d7888;
+  content: '↳';
+  transform: translateY(-55%);
+}
+
+/* The live row's slot is its dot; it paints no stripe beside its chips. */
+body[data-timeline-variant='spine'] .room-action-list > .timeline-row.timeline-live-row {
+  background-image: none;
 }
