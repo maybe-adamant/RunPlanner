@@ -65,12 +65,13 @@ function rerollIds(project: ProjectDocument): readonly string[] {
   );
 }
 
-function insertReroll(project: ProjectDocument, reward: ResolvedRewardOffer): ProjectCommand {
+/** Appends a press of the target's door; without a reward its result is unset. */
+function insertReroll(project: ProjectDocument, reward?: ResolvedRewardOffer): ProjectCommand {
   return {
     kind: 'InsertReroll',
     occurrence: createOccurrenceAddress(f, source as never),
     target: { kind: 'door', exitKey: 'exit2', occurrenceId: target as never },
-    reward,
+    ...(reward === undefined ? {} : { reward }),
     index: occurrence(project, source).roomActions.order.length,
   };
 }
@@ -142,6 +143,46 @@ describe('rerolled rewards', () => {
     expect(effective(project)?.offer).toEqual({ rewardType: 'RoomMoneyDrop' });
     project = applyProjectCommand(project, catalog, removeReroll('r1'));
     expect(occurrence(project, target).rerolledIncomingReward).toBeUndefined();
+  });
+
+  it('keep a set press item while a later press is unset, and follow each edit of the pair', () => {
+    const base = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    const apply = (project: ProjectDocument, command: ProjectCommand) =>
+      applyProjectCommand(project, catalog, command);
+    const setPress = (rerollId: string, reward: ResolvedRewardOffer): ProjectCommand => ({
+      kind: 'ReplaceRerollReward',
+      action: createRoomActionAddress(f, source as never, JSON.stringify(['reroll', rerollId])),
+      reward,
+    });
+    const record = (project: ProjectDocument) => occurrence(project, target).rerolledIncomingReward;
+    const stack = { rewardType: 'StackUpgrade' } as const;
+    // An unset first press holds a null result and no outcomes, then takes them once set.
+    const unsetOnly = apply(base, insertReroll(base));
+    expect(record(unsetOnly)).toEqual({ results: { r1: null }, pressId: 'r1' });
+    expect(effective(unsetOnly)).toBeUndefined();
+    expect(effective(apply(unsetOnly, setPress('r1', zeus)))?.offer).toEqual(zeus);
+
+    const first = apply(base, insertReroll(base, zeus));
+    const pair = apply(first, insertReroll(first));
+    // The unset press leaves the set one's item and its outcomes in place.
+    expect(record(pair)).toMatchObject({ results: { r1: zeus, r2: null }, pressId: 'r1' });
+    expect(effective(pair)).toEqual(effective(first));
+    // Setting it replaces the item with its own.
+    const bothSet = apply(pair, setPress('r2', stack));
+    expect(record(bothSet)).toMatchObject({ results: { r1: zeus, r2: stack }, pressId: 'r2' });
+    expect(effective(bothSet)?.offer).toEqual(stack);
+    expect(record(apply(bothSet, removeReroll('r1')))).toMatchObject({
+      results: { r2: stack },
+      pressId: 'r2',
+    });
+    // Removing the set press leaves only the unset one: no item, no outcomes.
+    const unsetLeft = apply(pair, removeReroll('r1'));
+    expect(record(unsetLeft)).toEqual({ results: { r2: null }, pressId: 'r2' });
+    expect(effective(unsetLeft)).toBeUndefined();
+    // Removing the unset press leaves the set one as it was.
+    expect(record(apply(pair, removeReroll('r2')))).toEqual(record(first));
+    // A saved pair decodes as it was.
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(pair)), catalog)).toEqual(pair);
   });
 
   it('hold each press result on the item, with the press its outcomes belong to, strictly', () => {
