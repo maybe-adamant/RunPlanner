@@ -192,7 +192,7 @@ function VisitRoomPicker({
         return (
           <>
             {room === undefined ? null : (
-              <span aria-hidden="true">
+              <span aria-hidden="true" className="hub-visit-option-room">
                 <RoomNumberIcon number={room.roomNumber} room={room.roomIcon} />
               </span>
             )}
@@ -727,7 +727,7 @@ export function HubTimeline({
     ] as const;
   return (
     <div className="room-map-workbench">
-      <div className="room-map-columns">
+      <div className="room-map-columns hub-map-columns">
         <div className="room-map-controls-column">
           <section
             aria-label="Ephyra Hub timeline"
@@ -739,35 +739,37 @@ export function HubTimeline({
               <h5>Visits</h5>
               {resetControl}
             </header>
-            <ol className="hub-segments">{node.stays.map(segment)}</ol>
-            {node.fountain.useIn === undefined ? null : (
-              <div
-                {...findingAnchor(node.fountain.address)}
-                className="hub-timeline-row hub-timeline-fountain"
-                data-used="false"
-                tabIndex={-1}
-              >
-                <span className="hub-timeline-step">
-                  <ArtworkIcon
-                    className="artwork-label-icon"
-                    source={hubFountainIcon(node.fountain.address.biomeKey)}
+            <div className="hub-spine">
+              <ol className="hub-segments">{node.stays.map(segment)}</ol>
+              {node.fountain.useIn === undefined ? null : (
+                <div
+                  {...findingAnchor(node.fountain.address)}
+                  className="hub-timeline-row hub-timeline-fountain"
+                  data-used="false"
+                  tabIndex={-1}
+                >
+                  <span className="hub-timeline-step">
+                    <ArtworkIcon
+                      className="artwork-label-icon"
+                      source={hubFountainIcon(node.fountain.address.biomeKey)}
+                    />
+                  </span>
+                  <strong className="hub-timeline-room">Fountain</strong>
+                  <HubRowPlacement
+                    findingMark={findingMark(node.fountain.address)}
+                    label="Use Fountain"
+                    locked={locked}
+                    moves={node.fountain.useIn}
+                    onApply={replaceActions}
+                    trigger="Use…"
+                    waiting={waiting}
                   />
-                </span>
-                <strong className="hub-timeline-room">Fountain</strong>
-                <HubRowPlacement
-                  findingMark={findingMark(node.fountain.address)}
-                  label="Use Fountain"
-                  locked={locked}
-                  moves={node.fountain.useIn}
-                  onApply={replaceActions}
-                  trigger="Use…"
-                  waiting={waiting}
-                />
-              </div>
-            )}
-            {node.requirements.visits.planned < node.requiredVisitCount ? null : (
-              <HubLeaveSegment node={node} />
-            )}
+                </div>
+              )}
+              {node.requirements.visits.planned < node.requiredVisitCount ? null : (
+                <HubLeaveSegment node={node} />
+              )}
+            </div>
           </section>
         </div>
         <HubBoardMap

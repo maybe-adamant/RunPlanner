@@ -210,7 +210,7 @@ export function HubOverview({
   const slotsByKey = new Map(node.slots.map((slot) => [slot.hubSlotKey, slot] as const));
   return (
     <div className="room-map-workbench">
-      <div className="room-map-columns">
+      <div className="room-map-columns hub-map-columns">
         <div className="room-map-controls-column">
           <section aria-label="Hub door rewards" className="hub-overview-rewards">
             <header className="room-feature-category-heading hub-column-title">

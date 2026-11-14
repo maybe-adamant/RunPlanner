@@ -785,7 +785,8 @@
   background: none;
 }
 
-.room-actions-workbench {
+.room-actions-workbench,
+.hub-spine {
   /* Spine gutter, the spine's centre in it, and the inset of a row's first column; headings start there too. */
   --timeline-gutter: 18px;
   --timeline-spine-x: 9px;
@@ -2763,10 +2764,35 @@ span.hub-board-status-line {
   display: none;
 }
 
+/* The Hub's list column keeps one compact width on both tabs, so switching tabs never moves the map. */
+.hub-map-columns.room-map-columns {
+  grid-template-columns: 22rem minmax(26rem, 1fr);
+}
+
+@container room-map-workbench (max-width: 56rem) {
+  .hub-map-columns.room-map-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hub-map-columns > .room-map-controls-column > * {
+    max-width: 30rem;
+  }
+}
+
+@media (orientation: portrait) {
+  .hub-map-columns.room-map-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hub-map-columns > .room-map-controls-column > * {
+    max-width: 30rem;
+  }
+}
+
 .hub-door-rows,
 .hub-segments {
   display: grid;
-  gap: 6px;
+  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2775,9 +2801,10 @@ span.hub-board-status-line {
 .hub-door-rows {
   grid-template-columns: auto auto minmax(0, 1fr);
   column-gap: 12px;
+  row-gap: 0;
 }
 
-/* Rows share one grid, so the room column fits the longest room name. */
+/* Rows share one grid, so the room column fits the longest room name; alternate rows are shaded. */
 .hub-door-row {
   display: grid;
   grid-column: 1 / -1;
@@ -2786,16 +2813,16 @@ span.hub-board-status-line {
   column-gap: 12px;
   min-width: 0;
   padding: 2px 8px;
-  border: 1px solid #34353e;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 2%);
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease;
+  border-radius: 4px;
+  background: transparent;
+  transition: background-color 160ms ease;
+}
+
+.hub-door-row:nth-child(odd) {
+  background: rgb(255 255 255 / 2.5%);
 }
 
 .hub-door-row[data-linked='true'] {
-  border-color: #f5d386;
   background: rgb(245 211 134 / 8%);
 }
 
@@ -2805,7 +2832,6 @@ span.hub-board-status-line {
 
 @keyframes hub-door-row-recent {
   from {
-    border-color: #f5d386;
     background: rgb(245 211 134 / 28%);
   }
 }
@@ -2813,7 +2839,7 @@ span.hub-board-status-line {
 @media (prefers-reduced-motion: reduce) {
   .hub-door-row[data-recent='true'] {
     animation: none;
-    border-color: #f5d386;
+    background: rgb(245 211 134 / 8%);
   }
 }
 
@@ -2832,20 +2858,71 @@ span.hub-board-status-line {
   white-space: nowrap;
 }
 
+/*
+ * The Hub Timeline on one spine like a room's: each stay, the unused fountain and the
+ * leave are nodes on it, measured from the room Timeline's spine variables.
+ */
+.hub-spine {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding-left: var(--timeline-gutter);
+}
+
+.hub-spine::before {
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  left: calc(var(--timeline-spine-x) - 1px);
+  width: 2px;
+  border-radius: 999px;
+  background: var(--timeline-spine);
+  content: '';
+}
+
+.hub-spine :is(.hub-segment, .hub-timeline-row) {
+  --hub-stripe: transparent;
+  position: relative;
+  border: 0;
+  border-radius: 0 6px 6px 0;
+  box-shadow: inset 3px 0 0 var(--hub-stripe);
+  background: transparent;
+}
+
+/* A node on the spine, level with the item's first line. */
+.hub-spine :is(.hub-segment, .hub-timeline-row)::before {
+  position: absolute;
+  top: 11px;
+  left: calc(var(--timeline-row-spine-x) - 4px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--timeline-node);
+  content: '';
+}
+
+.hub-spine > .hub-timeline-row::before {
+  top: calc(50% - 4px);
+}
+
 /* Each Timeline segment: its stay's header, then its rerolls and fountain. */
 .hub-segment {
   display: grid;
   gap: 2px;
   min-width: 0;
-  padding: 2px 6px;
-  border: 1px solid #34353e;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 2%);
+  padding: 2px 6px 2px 9px;
 }
 
-.hub-segment[data-selected='true'] {
-  border-color: #f5d386;
-  background: rgb(245 211 134 / 6%);
+.hub-spine .hub-segment[data-selected='true'] {
+  --hub-stripe: #f5d386;
+  background: rgb(245 211 134 / 5%);
+}
+
+/* A stay's rerolls hang under its header, along a dashed guide. */
+.hub-segment .room-rerolls-list:not(:empty) {
+  margin-left: 10px;
+  padding-left: 8px;
+  border-left: 1px dashed rgb(255 255 255 / 14%);
 }
 
 .hub-segment[data-plan-end='pastEnd'] {
@@ -2953,6 +3030,11 @@ span.hub-board-status-line {
   min-height: 30px;
 }
 
+/* A visit's room options keep a numbered room's overhang on every room, so their names align. */
+.hub-visit-option-room > .biome-rail-icons-room-slot {
+  margin-inline-end: calc(var(--badge-overhang) * var(--badge-size));
+}
+
 .hub-segment-head .contextual-picker {
   flex: 0 1 auto;
   min-width: 0;
@@ -2987,9 +3069,8 @@ span.hub-board-status-line {
   color: #f5d386;
 }
 
-.hub-timeline-column > .hub-timeline-row {
-  border: 1px solid #34353e;
-  border-radius: 8px;
+.hub-spine > .hub-timeline-row {
+  padding-left: 9px;
 }
 
 /* Slot chips on one line, each with its order or slot number underneath. */

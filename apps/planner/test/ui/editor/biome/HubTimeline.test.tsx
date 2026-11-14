@@ -272,6 +272,10 @@ describe('HubTimeline', () => {
     const visits = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
     const leave = within(visits).getByRole('group', { name: 'Leave' });
     expect(within(leave).getByRole('button', { name: 'Open Preboss' })).toBeTruthy();
-    expect(visits.lastElementChild).toBe(leave);
+    // Nothing in the Timeline follows the Leave segment.
+    const following = [...visits.querySelectorAll('*')].slice(
+      [...visits.querySelectorAll('*')].indexOf(leave) + 1,
+    );
+    expect(following.every((element) => leave.contains(element))).toBe(true);
   });
 });
