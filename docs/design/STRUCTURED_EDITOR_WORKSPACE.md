@@ -524,7 +524,8 @@ empty slot), never on the Pom. What produced a generated pickup is the engine's
 published source family: the row tells it as an origin hint shown on hover and
 focus and carried in its accessible description, and the Add area groups by
 it. Where the engine lets a pickup be goldified or transformed, the verb itself
-is the choice between collecting and those conversions; a Mystery Boon whose
+opens the live row's verb menu with its current way checked, and choosing
+another swaps the row's way in place; a Mystery Boon whose
 source the row authors shows its source picker in place of its name. Headings,
 drag previews and action controls share the projected label.
 

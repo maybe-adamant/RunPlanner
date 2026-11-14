@@ -712,6 +712,8 @@ export function RoomActionsWorkbench({
                 <>
                   {row.labelParts.verb === undefined ? null : (
                     <RoomActionVerb
+                      announce={setAnnouncement}
+                      biomeKey={actions.owner.biomeKey}
                       interactions={interactions}
                       row={row}
                       verb={row.labelParts.verb}
