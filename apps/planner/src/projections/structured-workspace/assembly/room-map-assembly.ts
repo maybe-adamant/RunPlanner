@@ -1,5 +1,6 @@
 import {
   nativeExitDoorOrder,
+  worldShopItemPoints,
   type Catalog,
   type RoomDeclaration,
 } from '@run-planner/engine/catalog-schema';
@@ -20,6 +21,12 @@ export function assembleRoomMap(
   room: RoomDeclaration,
   /** The authored Chaos gate's one-based spawn point, chosen or default. */
   chaosGateSpawnPointIndex: number | undefined,
+  stock: {
+    /** The World Shop's stocked offers in native order, its empty slots left out. */
+    readonly shopOfferKeys: readonly string[];
+    /** The room holds the Infernal Contract pedestal. */
+    readonly contractPedestal: boolean;
+  },
 ): WorkspaceRoomMap | undefined {
   const points = room.mapPoints;
   if (points === undefined) return undefined;
@@ -61,6 +68,14 @@ export function assembleRoomMap(
     chaosPoints: Object.freeze(points.secretPoints.map(point)),
     fieldsCagePoints: Object.freeze((points.fieldsCagePoints ?? []).map(point)),
     fieldsOptionalPoints: Object.freeze((points.fieldsOptionalPoints ?? []).map(point)),
+    shopItems: Object.freeze(
+      worldShopItemPoints(points, stock.shopOfferKeys).map(({ item, point: at }) =>
+        Object.freeze({ ...point(at), offerKey: item }),
+      ),
+    ),
+    ...(stock.contractPedestal && points.contractPedestalPoint !== undefined
+      ? { contractPedestal: point(points.contractPedestalPoint) }
+      : {}),
     ...(chaosGate === undefined ? {} : { chaosGate: point(chaosGate) }),
     ...(points.shipWheel === undefined
       ? {}

@@ -14,10 +14,11 @@ import type { WorkspaceExplicitRewardControl } from './rewards';
 export interface WorkspaceShopPurchaseDescriptor {
   readonly address: AcquisitionEntryAddress;
   readonly marker: WorkspaceMarker;
+  /** The plan buys it. */
+  readonly purchased: boolean;
 }
 
 export interface WorkspaceShopSupplementalPurchaseDescriptor extends WorkspaceShopPurchaseDescriptor {
-  readonly purchased: boolean;
   readonly reference: Extract<RoomActionReference, { readonly kind: 'interactAcquisitionEntry' }>;
 }
 

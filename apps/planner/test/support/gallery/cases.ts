@@ -1103,6 +1103,22 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('F', 'golden-f-preboss-shop'),
   },
   {
+    id: 'room-map-shop-stock',
+    overview: true,
+    label: 'World Shop stock on its points: the bought item ringed, its Travel Deal refill on it',
+    shows: ['Shop items on the map', 'bought item', 'Travel Deal refill on its point'],
+    project: loadUnderworldWorldShopTravelDealCheckpoint,
+    target: room('F', 'golden-f-preboss-shop'),
+  },
+  {
+    id: 'room-map-shop-stock-pedestal',
+    overview: true,
+    label: 'Preboss Shop stock beside the Contract pedestal’s item',
+    shows: ['Shop items on the map', 'Contract pedestal on its point'],
+    project: loadTraitOrderChecks,
+    target: room('F', traitOrderChecks.preboss),
+  },
+  {
     id: 'room-map-f-preboss-free',
     overview: true,
     label: 'F Preboss holding a free reward: its empty-floor map',

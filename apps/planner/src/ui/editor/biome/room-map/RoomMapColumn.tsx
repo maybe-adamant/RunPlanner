@@ -26,8 +26,8 @@ const chipName = (chip: DoorChip): string =>
   chip.locked === true ? `${chip.label} · Locked` : chip.label;
 
 /**
- * The room's map beside its controls: its doors, Chaos gate, entries, anchors
- * and Fields points, mirrored when the room is flipped. A Ship phase a wheel
+ * The room's map beside its controls: its doors, Chaos gate, entries, anchors,
+ * Fields points and Shop stock, mirrored when the room is flipped. A Ship phase a wheel
  * follows shows the wheel's offers in place of the doors.
  */
 export function RoomMapColumn({
@@ -129,6 +129,7 @@ export function RoomMapColumn({
           <div aria-label={`${title} map points`} className="room-map-marker-layer" role="group">
             <RoomMapSpots
               {...(heroAtSideDoor ? { away: true } : {})}
+              bought={taken}
               markers={markers}
               {...(placements === undefined
                 ? {}

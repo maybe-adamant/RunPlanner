@@ -425,7 +425,10 @@ its item stands on as stored, and the point an item stands on or another
 occupant holds is not offered. While a Fields chip is hovered or its
 list is open, the map numbers the free points of that slot's family. The link runs both ways:
 hovering a control previews its point, and pointing at a map point marks the control that owns
-it (an anchor's or Fields point's chip, Entry, the Chaos Gate, a door's chips and rows). Overview contains read-only
+it (an anchor's or Fields point's chip, Entry, the Chaos Gate, a door's chips and rows). The map
+also stands each World Shop item on the point the game spawns it at, solidly ringed once the plan
+has bought it and carrying its Travel Deal refill, and the Contract pedestal's item on the
+pedestal. Overview contains read-only
 incoming context and meaningful room-local setup: Fields identities, World
 Shop inventory, and Room features, whose Shrine and Well inventories likewise
 hold only their fixed slots (a Shrine slot shows its item and the delay rolled
