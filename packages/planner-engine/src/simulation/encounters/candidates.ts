@@ -49,7 +49,11 @@ export interface EncounterCandidateArtifacts {
   readonly statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined;
   /** Exact reached/pending Gorgon control capability for this phase. */
   readonly gorgonAt: (origin: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined;
-  /** Exact branch-correlated Nemesis event capability at its interaction owner. */
+  /**
+   * A Nemesis event's family support once its phase is prepared, since she
+   * queues her event as she spawns on entry; its assessment once her
+   * interaction is reached.
+   */
   readonly nemesisAt: (
     origin: NemesisRandomEventAddress,
   ) => NemesisRandomEventCandidateSupport | undefined;
@@ -64,6 +68,34 @@ export interface EncounterCandidateArtifacts {
    * preparation. Its candidate context reads nothing later.
    */
   readonly preparedAt: (origin: EncounterPhaseAddress) => HistoryFindingChronology | undefined;
+}
+
+/**
+ * The declaration-owned family support of one Nemesis random event: the game
+ * queues her event as she spawns on room entry, so it reads no reached state.
+ */
+export function nemesisRandomEventFamilySupport(
+  catalog: Catalog,
+  origin: NemesisRandomEventAddress,
+): NemesisRandomEventCandidateSupport | undefined {
+  const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
+  if (policy === undefined) return undefined;
+  return Object.freeze({
+    origin,
+    familyKeys: Object.freeze([
+      'freeItem',
+      'goldTrade',
+      'damageTrade',
+      'traitTrade',
+      'damageContest',
+    ] as const),
+    goldTradeResponses: policy.goldTrade.response,
+    damageTradeResponses: policy.damageTrade.response,
+    traitTradeResponses: policy.traitTrade.response,
+    damageContestResults: Object.freeze(['success', 'failure'] as const),
+    traitTradeRewardType: policy.traitTrade.fixedResultRewardType,
+    damageContestFailureRewardType: policy.damageContest.failureResultRewardType,
+  });
 }
 
 export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
@@ -348,8 +380,14 @@ export function evaluateEncounterCandidatesInternal(
       at: (origin: EncounterPhaseAddress) => privateEntries.get(semanticAddressKey(origin)),
       statusAt: (origin: EncounterPhaseAddress) => privateStatuses.get(semanticAddressKey(origin)),
       gorgonAt: (origin: EncounterPhaseAddress) => gorgonSupport.get(semanticAddressKey(origin)),
-      nemesisAt: (origin: NemesisRandomEventAddress) =>
-        privateNemesis.get(semanticAddressKey(origin)),
+      nemesisAt: (origin: NemesisRandomEventAddress) => {
+        const reached = privateNemesis.get(semanticAddressKey(origin));
+        if (reached !== undefined) return reached;
+        const status = privateStatuses.get(semanticAddressKey(origin.encounter));
+        return status?.kind === 'active' && status.encounterDefinitionKey === 'NemesisRandomEvent'
+          ? nemesisRandomEventFamilySupport(catalog, origin)
+          : undefined;
+      },
       roomAt: (origin: OccurrenceAddress) => privateRooms.get(semanticAddressKey(origin)),
       figLeafAt: (origin: EncounterPhaseAddress) => privateFigLeaf.get(semanticAddressKey(origin)),
       preparedAt: (origin: EncounterPhaseAddress) => preparedAt.get(semanticAddressKey(origin)),

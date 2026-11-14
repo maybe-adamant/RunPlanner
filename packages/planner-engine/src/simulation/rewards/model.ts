@@ -63,7 +63,10 @@ export interface GorgonPhaseCandidateSupport {
   readonly suppressTemporaryBoonRarity?: boolean;
 }
 
-/** Exact pre-interaction domain for the one selected Nemesis random event. */
+/**
+ * One selected Nemesis random event: its families once its phase is prepared,
+ * as she queues her event on spawn, and its domains once her interaction is reached.
+ */
 export interface NemesisRandomEventCandidateSupport {
   readonly origin: NemesisRandomEventAddress;
   readonly familyKeys: readonly (
@@ -76,7 +79,7 @@ export interface NemesisRandomEventCandidateSupport {
   readonly damageContestResults: readonly ('success' | 'failure')[];
   readonly traitTradeRewardType: string;
   readonly damageContestFailureRewardType: string;
-  /** The domains at the event's one reached state; absent where none is reached. */
+  /** The domains at her interaction's one reached state; absent until it is reached. */
   readonly assessment?: NemesisRandomEventAssessment;
 }
 

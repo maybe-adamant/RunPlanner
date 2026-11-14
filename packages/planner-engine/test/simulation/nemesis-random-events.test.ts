@@ -432,9 +432,28 @@ describe('Nemesis random events', () => {
       throw new Error('missing blocked F evaluation');
     expect(blocked.coverage.blockedAt).toEqual(event);
     expect(blocked.coverage.roomTimeline).toBeUndefined();
-    expect(
-      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(familyMissing, event),
-    ).toBeUndefined();
+    // She queues her event as she spawns on entry: its families are reached with the Overview,
+    // its domains only with her interaction.
+    const entered = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      familyMissing,
+      event,
+    );
+    expect(entered?.familyKeys).toHaveLength(5);
+    expect(entered?.assessment).toBeUndefined();
+    const unplaced = applyProjectCommand(project, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event,
+      family: 'goldTrade',
+    });
+    expect(occurrence(unplaced).roomActions.order).not.toContainEqual(
+      expect.objectContaining({ kind: 'interactEncounter' }),
+    );
+    const beforeInteraction = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, unplaced),
+      event,
+    );
+    expect(beforeInteraction?.familyKeys).toHaveLength(5);
+    expect(beforeInteraction?.assessment).toBeUndefined();
     const assembly = simulateProjectAssembly(catalog, selectFamily(project, 'goldTrade'));
     const capability = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
       assembly,
@@ -605,13 +624,19 @@ describe('Nemesis random events', () => {
       spatial: createFieldsSpatialAddress(owner, { kind: 'nemesis' }),
       pointId: 623602,
     });
-    project = collectTestRequiredItems(
-      applyProjectCommand(project, catalog, {
-        kind: 'SelectNemesisRandomEventFamily',
-        event,
-        family: 'traitTrade',
-      }),
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event,
+      family: 'traitTrade',
+    });
+    // The Passive event's family is an entry fact; only its domains wait on her row.
+    const unplaced = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, project),
+      event,
     );
+    expect(unplaced?.familyKeys).toHaveLength(5);
+    expect(unplaced?.assessment).toBeUndefined();
+    project = collectTestRequiredItems(project);
 
     // The real route acquires Hestia from Cage03, then Apollo from Cage02.
     // This Fields room's first cage is a money drop rather than a Pom, so the

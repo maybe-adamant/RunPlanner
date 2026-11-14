@@ -265,17 +265,21 @@ function projectNemesisEventDomain(
   }
 }
 
-/** Whether the engine reached this Nemesis event; a non-exact assembly reaches nothing. */
+/**
+ * How far the engine reached this Nemesis event: its family with the room's
+ * entry, its details with her interaction. A non-exact assembly reaches nothing.
+ */
 function nemesisEventReached(
   assembly: ProjectEvaluationAssembly,
   event: import('@run-planner/engine/authored-project').NemesisRandomEventAddress,
-): boolean {
+): 'unreached' | 'family' | 'interaction' {
   try {
-    return (
-      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(assembly, event) !== undefined
-    );
+    const support = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(assembly, event);
+    if (support === undefined) return 'unreached';
+    return support.assessment === undefined ? 'family' : 'interaction';
   } catch (error) {
-    if (error instanceof Error && error.name === 'ProjectSimulationContractError') return false;
+    if (error instanceof Error && error.name === 'ProjectSimulationContractError')
+      return 'unreached';
     throw error;
   }
 }
@@ -483,13 +487,14 @@ export function bindOccurrenceLocalInteractions(
                   encounterKey: nemesisChoice.value,
                   owner: createNemesisRandomEventAddress(phase.owner),
                   familyPicker: projectStableIdentityPicker({
-                    // The declared families claim nothing until the event's context is reached.
-                    assessment: nemesisEventReached(
-                      assembly,
-                      createNemesisRandomEventAddress(phase.owner),
-                    )
-                      ? 'assessed'
-                      : 'unassessed',
+                    // The declared families claim nothing until the room's entry is reached.
+                    assessment:
+                      nemesisEventReached(
+                        assembly,
+                        createNemesisRandomEventAddress(phase.owner),
+                      ) === 'unreached'
+                        ? 'unassessed'
+                        : 'assessed',
                     choices: NEMESIS_RANDOM_EVENT_FAMILIES.map((family) => ({
                       label: nemesisFamilyLabel(family),
                       value: family,
@@ -704,7 +709,7 @@ export function bindOccurrenceLocalInteractions(
                       value,
                     }),
                   }),
-                contextReached: nemesisEventReached(assembly, event.owner),
+                contextReached: nemesisEventReached(assembly, event.owner) === 'interaction',
                 load: () =>
                   event.value === null
                     ? undefined

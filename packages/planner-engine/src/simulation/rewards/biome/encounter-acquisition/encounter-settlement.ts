@@ -58,6 +58,7 @@ import { addRewardFinding, rewardFinding } from '../../findings';
 import type { BossArcanaOutcome } from '../../model';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 import { nemesisGeneratedPickupSiteKey } from '../../../../authored-project/acquisition/pickup-producers';
+import { nemesisRandomEventFamilySupport } from '../../../encounters/candidates';
 import {
   applyTraitOfferTransition,
   invalidatedTraitOffers,
@@ -684,7 +685,8 @@ export function applyEncounterSettlementTransition(inputs: {
       ),
     );
     const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
-    if (policy !== undefined) {
+    const family = nemesisRandomEventFamilySupport(catalog, owner);
+    if (policy !== undefined && family !== undefined) {
       const interactionOwner = createRoomActionAddress(
         createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
         room.occurrenceId,
@@ -763,20 +765,7 @@ export function applyEncounterSettlementTransition(inputs: {
         });
       })(reached);
       const candidate = Object.freeze({
-        origin: owner,
-        familyKeys: Object.freeze([
-          'freeItem',
-          'goldTrade',
-          'damageTrade',
-          'traitTrade',
-          'damageContest',
-        ] as const),
-        goldTradeResponses: policy.goldTrade.response,
-        damageTradeResponses: policy.damageTrade.response,
-        traitTradeResponses: policy.traitTrade.response,
-        damageContestResults: Object.freeze(['success', 'failure'] as const),
-        traitTradeRewardType: policy.traitTrade.fixedResultRewardType,
-        damageContestFailureRewardType: policy.damageContest.failureResultRewardType,
+        ...family,
         ...(assessment === undefined ? {} : { assessment }),
       });
       nemesisCandidate = Object.freeze({ key: semanticAddressKey(owner), value: candidate });

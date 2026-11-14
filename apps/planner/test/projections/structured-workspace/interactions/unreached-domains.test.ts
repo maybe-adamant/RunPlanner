@@ -44,7 +44,7 @@ describe('declared domains without a reached context', () => {
     }
   });
 
-  it('marks the Nemesis families not evaluated while the event context is unreached', () => {
+  it('marks the Nemesis families not evaluated only while her room is unentered', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
     const event = createNemesisRandomEventAddress(
       createEncounterPhaseAddress(goldenHBiome, { kind: 'occurrence', occurrenceId }, 'Passive'),
@@ -53,19 +53,44 @@ describe('declared domains without a reached context', () => {
       projectStructuredWorkspaceFixture(project)
         .workspace.interactions.nemesisEvents.get(semanticAddressKey(event))!
         .familyPicker.sections.map((section) => section.kind);
+    // A cage point another cage already holds blocks that room's Overview.
+    const collideCage = (room: string, pointId: number) =>
+      applyProjectCommand(loadNemesisFieldsCheckpoint(), catalog, {
+        kind: 'ReplaceFieldsSpatialPoint',
+        spatial: createFieldsSpatialAddress(
+          createOccurrenceAddress(goldenHBiome, createOccurrenceId(room)),
+          { kind: 'cage', slotKey: 'cage2' },
+        ),
+        pointId,
+      });
     expect(families(loadNemesisFieldsCheckpoint())).not.toContain('unassessed');
-    expect(
-      families(
-        applyProjectCommand(loadNemesisFieldsCheckpoint(), catalog, {
-          kind: 'ReplaceFieldsSpatialPoint',
-          // A cage point another cage already holds blocks the room's Overview.
-          spatial: createFieldsSpatialAddress(createOccurrenceAddress(goldenHBiome, occurrenceId), {
-            kind: 'cage',
-            slotKey: 'cage2',
-          }),
-          pointId: 573087,
-        }),
-      ),
-    ).toEqual(['unassessed']);
+    // Her event is an entry fact beside the blocking one, never waiting on it or her row.
+    expect(families(collideCage('golden-h-combat05', 573087))).not.toContain('unassessed');
+    expect(families(collideCage('golden-h-combat02', 621502))).toEqual(['unassessed']);
+  });
+
+  it('reaches a Nemesis family with her room and its details only with her row', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const event = createNemesisRandomEventAddress(phase);
+    const selected = applyProjectCommand(
+      applyProjectCommand(createGoldenFGHIProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'NemesisRandomEvent',
+      }),
+      catalog,
+      { kind: 'SelectNemesisRandomEventFamily', event, family: 'goldTrade' },
+    );
+    const interaction = projectStructuredWorkspaceFixture(
+      selected,
+    ).workspace.interactions.nemesisEvents.get(semanticAddressKey(event))!;
+    expect(interaction.familyPicker.sections.map((section) => section.kind)).not.toContain(
+      'unassessed',
+    );
+    expect(interaction.contextReached).toBe(false);
   });
 });

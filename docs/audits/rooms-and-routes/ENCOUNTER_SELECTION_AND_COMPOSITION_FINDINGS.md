@@ -610,15 +610,21 @@ Nemesis uses two selection checkpoints:
 
 1. encounter preparation can choose combat or `NemesisRandomEvent` from a
    legal encounter list;
-2. interacting with Nemesis during `NemesisRandomEvent` causes the narrative
-   system to choose one eligible interaction family and its realized request
-   or offer. The player chooses only the response where that family has an
-   accept/decline decision.
+2. her spawn on room entry queues one eligible interaction family. The
+   encounter's `StartRoomUnthreadedEvents` run `SpawnNemesisForRandomEvents`,
+   which calls `CheckAvailableTextLines` (`EncounterLogic.lua:242-254`), so
+   `GetRandomEligibleTextLines` sets her `NextInteractLines` before the player
+   can act (`RoomLogic.lua:3603-3637`). `UseNPC` draws again only when the
+   queued set is no longer eligible at the interaction
+   (`InteractLogic.lua:128-133`).
 
-`GetRandomEligibleTextLines` owns the second random choice. The interaction
-family is therefore a realized game outcome, not a menu from which the player
-chooses. External dialogue and profile-history requirements affect which lines
-can be selected, but do not change the five ordinary mechanical families.
+The realized request or offer (the item, price, damage or traded boon) is
+built while her lines play at the interaction, from the state there. The
+player chooses only the response where that family has an accept/decline
+decision. The family is therefore a realized game outcome fixed with the
+room's entry, not a menu from which the player chooses. External dialogue and
+profile-history requirements affect which lines can be selected, but do not
+change the five ordinary mechanical families.
 
 ### Biome placement and ordinary reward delivery
 
