@@ -317,6 +317,9 @@ export const fEncounterDefinitions = [
             requirement: 'talentLegal',
           },
         ],
+        // Her ordinary damage lines need NoHitShieldAvailable (NPCData_Nemesis.lua:10199-10606,
+        // RequirementsData.lua:1384-1390).
+        unavailableWhileHeldTraitKeys: ['ReserveManaHitShieldBoon'],
         response: ['accept', 'decline'],
         pickupRequiredOnAccept: true,
       },

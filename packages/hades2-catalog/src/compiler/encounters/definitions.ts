@@ -464,7 +464,7 @@ export function normalizeEncounterDefinitions(
               );
               exactKeys(
                 policy.damageTrade,
-                ['variants', 'response', 'pickupRequiredOnAccept'],
+                ['variants', 'unavailableWhileHeldTraitKeys', 'response', 'pickupRequiredOnAccept'],
                 `${path}.nemesisRandomEvent.damageTrade`,
               );
               exactKeys(
@@ -661,6 +661,10 @@ export function normalizeEncounterDefinitions(
                 }),
                 damageTrade: Object.freeze({
                   variants: normalizeDamageVariants(),
+                  unavailableWhileHeldTraitKeys: freezeUniqueStrings(
+                    policy.damageTrade.unavailableWhileHeldTraitKeys,
+                    `${path}.nemesisRandomEvent.damageTrade.unavailableWhileHeldTraitKeys`,
+                  ),
                   response: Object.freeze(['accept', 'decline']) as readonly ['accept', 'decline'],
                   pickupRequiredOnAccept: true as const,
                 }),

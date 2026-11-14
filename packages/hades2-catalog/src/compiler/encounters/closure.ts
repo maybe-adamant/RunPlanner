@@ -138,6 +138,12 @@ export function validateEncounterDefinitionClosure(input: {
         `${path}.nemesisRandomEvent.damageTrade[${variantIndex}].rewardType`,
       ),
     );
+    for (const traitKey of event.damageTrade.unavailableWhileHeldTraitKeys)
+      if (input.traits.traits.byKey[traitKey] === undefined)
+        fail(
+          `${path}.nemesisRandomEvent.damageTrade.unavailableWhileHeldTraitKeys`,
+          `unknown trait ${traitKey}`,
+        );
     event.freeItem.resultRewardTypes.forEach((rewardType) =>
       assertRewardType(rewardType, `${path}.nemesisRandomEvent.freeItem.resultRewardTypes`),
     );

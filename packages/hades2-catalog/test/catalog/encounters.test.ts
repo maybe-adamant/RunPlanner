@@ -1688,6 +1688,7 @@ describe('encounter envelope catalog', () => {
           { rewardType: 'RoomMoneyDrop', enteredBiome: { min: 2 }, requirement: 'none' },
           { rewardType: 'TalentDrop', enteredBiome: {}, requirement: 'talentLegal' },
         ],
+        unavailableWhileHeldTraitKeys: ['ReserveManaHitShieldBoon'],
         response: ['accept', 'decline'],
         pickupRequiredOnAccept: true,
       },

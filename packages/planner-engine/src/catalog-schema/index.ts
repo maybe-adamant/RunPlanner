@@ -686,6 +686,8 @@ export interface EncounterDefinition {
         readonly enteredBiome: { readonly min?: number; readonly max?: number };
         readonly requirement: 'none' | 'pomLegal' | 'talentLegal';
       }[];
+      /** Held traits that make her damage lines ineligible (`NoHitShieldAvailable`). */
+      readonly unavailableWhileHeldTraitKeys: readonly string[];
       readonly response: readonly ['accept', 'decline'];
       readonly pickupRequiredOnAccept: true;
     };
