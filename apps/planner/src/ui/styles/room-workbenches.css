@@ -3673,11 +3673,28 @@ span.hub-board-status-line {
   display: inline-flex;
 }
 
-/* The live row: what can be done next, in its groups. */
+/*
+ * The live row: what can be done next, in its groups. A dashed ivory card with a faint hatch,
+ * not yet authored; its chips stay dim until the row is hovered or focused.
+ */
 .timeline-row.timeline-live-row {
-  --timeline-row-lead: 4px;
+  --timeline-row-lead: 10px;
   --timeline-row-stripe: transparent;
+  border-radius: 4px;
+  outline: 1.5px dashed #a59f8f;
+  outline-offset: -1.5px;
   box-shadow: none;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(232 226 210 / 5%) 0 1.5px,
+    transparent 1.5px 7px
+  );
+  background-repeat: repeat;
+  background-size: auto;
+}
+
+.timeline-row.timeline-live-row:is(:hover, :focus-within) {
+  outline-color: #cfc8b6;
 }
 
 /* The live row is the spine's last slot: a hollow dashed dot. */
@@ -3693,123 +3710,25 @@ span.hub-board-status-line {
   content: '';
 }
 
-/* Card look: a dashed outline, a quiet "Next" where an action has its verb, chips dimmed until used. */
-.timeline-row.timeline-live-row[data-live-style='card'] {
-  outline: 1px dashed #5a5b68;
-  outline-offset: -1px;
-  border-radius: 4px;
-}
-
-.timeline-row.timeline-live-row[data-live-style='card']:is(:hover, :focus-within) {
-  outline-color: #7a7b88;
-}
-
+/* "Next" stands where an action row has its verb. */
 .live-row-lead {
   flex: 0 0 auto;
-  color: var(--muted);
+  color: #c9c3b4;
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
 
-.timeline-live-row[data-live-style^='card'] .live-row-groups {
-  opacity: 0.75;
+/* The groups wrap beside "Next", never under it. */
+.timeline-live-row .live-row-groups {
+  min-width: 0;
+  flex: 1 1 0;
+  opacity: 0.7;
   transition: opacity 120ms ease;
 }
 
-.timeline-live-row[data-live-style^='card']:is(:hover, :focus-within) .live-row-groups {
+.timeline-live-row:is(:hover, :focus-within) .live-row-groups {
   opacity: 1;
-}
-
-/* Stronger card: a heavier neutral ivory outline, a brighter "Next", more room above. */
-.timeline-row.timeline-live-row:is([data-live-style='card2'], [data-live-style='card3']) {
-  --timeline-row-lead: 10px;
-  outline: 1.5px dashed #a59f8f;
-  outline-offset: -1.5px;
-  border-radius: 4px;
-}
-
-.timeline-row.timeline-live-row:is([data-live-style='card2'], [data-live-style='card3']):is(
-    :hover,
-    :focus-within
-  ) {
-  outline-color: #cfc8b6;
-}
-
-.timeline-live-row:is([data-live-style='card2'], [data-live-style='card3']) .live-row-lead {
-  color: #c9c3b4;
-  font-weight: 600;
-}
-
-.timeline-live-row:is([data-live-style='card2'], [data-live-style='card3']) .live-row-groups {
-  opacity: 0.7;
-}
-
-.timeline-live-row:is([data-live-style='card2'], [data-live-style='card3']):is(
-    :hover,
-    :focus-within
-  )
-  .live-row-groups {
-  opacity: 1;
-}
-
-/* Placeholder card: a faint hatch inside the outline, for what is not authored yet. */
-.timeline-row.timeline-live-row[data-live-style='card3'] {
-  background-image: repeating-linear-gradient(
-    135deg,
-    rgb(232 226 210 / 5%) 0 1.5px,
-    transparent 1.5px 7px
-  );
-  background-size: auto;
-  background-repeat: repeat;
-}
-
-/* Divider look: a dashed "Next" rule over the chips; the dot sits on the rule. */
-.timeline-row.timeline-live-row[data-live-style='divider'] {
-  --live-divider-height: 18px;
-  --timeline-row-lead: 8px;
-}
-
-.timeline-row.timeline-live-row[data-live-style='divider'] > [data-timeline-cell='sentence'] {
-  grid-column: 2 / -1;
-}
-
-.timeline-row.timeline-live-row[data-live-style='divider']
-  > :is([data-timeline-cell='money'], [data-timeline-cell='actions']) {
-  display: none;
-}
-
-.room-action-list > .timeline-row.timeline-live-row[data-live-style='divider']::before {
-  top: calc(3px + var(--live-divider-height) / 2 - 4.5px);
-}
-
-.live-row-divider {
-  display: flex;
-  height: var(--live-divider-height);
-  flex: 1 0 100%;
-  align-items: center;
-  gap: 8px;
-  color: #c9c2a8;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.live-row-divider::before,
-.live-row-divider::after {
-  height: 0;
-  border-top: 1px dashed rgb(245 211 134 / 35%);
-  content: '';
-}
-
-.live-row-divider::before {
-  width: 14px;
-  flex: 0 0 auto;
-}
-
-.live-row-divider::after {
-  flex: 1 1 auto;
 }
 
 .live-row-groups {

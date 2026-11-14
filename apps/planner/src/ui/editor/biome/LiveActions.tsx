@@ -429,10 +429,6 @@ function LiveGroups({
   );
 }
 
-// A preview switch between candidate live row looks; unset keeps the default.
-const liveRowStyles = ['card', 'card2', 'card3', 'divider'] as const;
-const liveRowStyle = liveRowStyles.find((style) => style === import.meta.env.VITE_LIVE_ROW_STYLE);
-
 /**
  * The live row at the walk's frontier: the things the room has live there, by group. A
  * thing's chip lists its verbs; choosing one adds its row here.
@@ -449,35 +445,24 @@ export function LiveRow({
   readonly live: WorkspaceRoomLive;
 }) {
   if (live.items.length === 0) return null;
-  const groups = (
-    <LiveGroups
-      announce={announce}
-      biomeKey={biomeKey}
-      interactions={interactions}
-      items={live.items}
-      label="Next"
-    />
-  );
   return (
     <TimelineRow
       className="timeline-live-row"
       data-live-gap={live.frontier}
-      {...(liveRowStyle === undefined ? {} : { 'data-live-style': liveRowStyle })}
       kind="insertion"
       label={
-        liveRowStyle === undefined ? (
-          groups
-        ) : (
-          <>
-            <span
-              aria-hidden="true"
-              className={liveRowStyle === 'divider' ? 'live-row-divider' : 'live-row-lead'}
-            >
-              Next
-            </span>
-            {groups}
-          </>
-        )
+        <>
+          <span aria-hidden="true" className="live-row-lead">
+            Next
+          </span>
+          <LiveGroups
+            announce={announce}
+            biomeKey={biomeKey}
+            interactions={interactions}
+            items={live.items}
+            label="Next"
+          />
+        </>
       }
     />
   );
