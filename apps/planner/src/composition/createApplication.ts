@@ -144,6 +144,13 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     return Object.freeze({ assembly, project });
   };
   const store = createPlannerStore({ catalog, assembleProjectEvaluation });
+  // An edit can publish an assembly the engine stamped with stored positions rather than walked;
+  // returning to its plan by Redo reuses it.
+  const unsubscribeEvaluationCache = store.subscribe(() => {
+    const workspace = store.getState().projectWorkspace;
+    if (workspace.kind === 'openProject' && !evaluationCache.has(workspace.assembly.project))
+      evaluationCache.set(workspace.assembly.project, workspace.assembly);
+  });
   const draftRun = createDraftRunController({
     catalog,
     store,
@@ -296,6 +303,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     structuredWorkspace,
     startupReady,
     dispose(): void {
+      unsubscribeEvaluationCache();
       editorSessionReconciliation.dispose();
       draftRun.dispose();
       librarySaver?.dispose();
