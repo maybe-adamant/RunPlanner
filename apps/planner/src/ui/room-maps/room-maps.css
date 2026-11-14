@@ -567,6 +567,44 @@
   outline-offset: 3px;
 }
 
+/* An entry beyond the captured frame: at its edge, an arrow pointing out toward it. */
+.room-map-entry:is([data-off-frame-x], [data-off-frame-y])::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border: 7px solid transparent;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 80%));
+}
+
+.room-map-entry[data-off-frame-y='below']::after {
+  top: 100%;
+  border-top-color: #fff4c7;
+  transform: translate(-50%, 2px);
+}
+
+.room-map-entry[data-off-frame-y='above']::after {
+  top: auto;
+  bottom: 100%;
+  border-bottom-color: #fff4c7;
+  transform: translate(-50%, -2px);
+}
+
+.room-map-entry[data-off-frame-x='right']:not([data-off-frame-y])::after {
+  left: 100%;
+  border-left-color: #fff4c7;
+  transform: translate(2px, -50%);
+}
+
+.room-map-entry[data-off-frame-x='left']:not([data-off-frame-y])::after {
+  left: auto;
+  right: 100%;
+  border-right-color: #fff4c7;
+  transform: translate(-2px, -50%);
+}
+
 /* A door: its chip once open, a dashed ring while closed. */
 .room-map-door {
   display: inline-flex;

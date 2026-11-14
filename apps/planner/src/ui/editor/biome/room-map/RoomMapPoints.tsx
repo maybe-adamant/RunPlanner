@@ -172,6 +172,8 @@ export function RoomMapSpots({
             className="room-map-entry"
             data-chosen={chosen || undefined}
             data-dim={(picking?.id !== undefined && picking.id !== entry.id) || undefined}
+            data-off-frame-x={entry.offFrame?.x}
+            data-off-frame-y={entry.offFrame?.y}
             data-preview={previewed('entry', entry.id)}
             data-unset={shown.mark === '?' || undefined}
             key={`entry:${entry.id}`}

@@ -24,9 +24,15 @@ WebPs unless replacing them from a source image. For example:
 convert source.png -quality 90 -define webp:method=6 -define webp:lossless=false RoomName.webp
 ```
 
-A Preboss that holds a shop has a second image, `<room>_Shop` (Charon, his
-stall and its item pads on the same terrain), shown for an occurrence whose
-room holds a shop; it has its own calibration and the room's points.
+A room that holds either a shop or a free reward (the F, G, H and P Prebosses,
+`H_Bridge01`) has a second image, `<room>_Shop` (Charon and his empty item pads
+on the same terrain), shown for an occurrence whose room holds a shop; it has
+its own calibration and the room's points. A room that always holds a shop
+(Shop rooms, the I, N, O and Q Prebosses) has only its own image, captured with
+the shop and its pads empty.
+
+An entry the capture leaves out of frame (the Q Preboss's, far below) is drawn
+at the frame's edge with an arrow toward it.
 
 Every map is a clean capture: `roomMapCalibration.ts` records each image's capture camera and the
 editor draws their points from the catalog's map points. Regenerate it from the

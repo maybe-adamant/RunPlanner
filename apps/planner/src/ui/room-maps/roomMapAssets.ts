@@ -4,13 +4,13 @@ import { roomMapCalibrations } from './roomMapCalibration';
 
 export interface RoomMapAsset {
   readonly gameName: string;
-  /** The image's own name: the game name, suffixed `_Shop` for a Preboss's Shop variant. */
+  /** The image's own name: the game name, suffixed `_Shop` for a room's Shop variant. */
   readonly imageName: string;
   readonly isPlaceholder: boolean;
   readonly src: string;
 }
 
-/** A Preboss's Shop variant: Charon and his stall stand on the same terrain and points. */
+/** A room's Shop variant, where it may hold a shop or a free reward: same terrain and points. */
 const shopVariantSuffix = '_Shop';
 
 const assetModules = import.meta.glob<string>('./assets/**/*.{avif,jpeg,jpg,png,svg,webp}', {
@@ -49,7 +49,7 @@ export const roomMapAssets = Object.freeze(
   allRoomMapAssets.filter((asset) => asset.imageName === asset.gameName),
 );
 
-/** The Preboss Shop variants, each beside its room's free-reward map. */
+/** The Shop variants, each beside its room's free-reward map. */
 export const roomMapShopAssets = Object.freeze(
   allRoomMapAssets.filter((asset) => asset.imageName !== asset.gameName),
 );

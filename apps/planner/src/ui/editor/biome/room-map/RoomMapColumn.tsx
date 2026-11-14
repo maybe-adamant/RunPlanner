@@ -60,7 +60,7 @@ export function RoomMapColumn({
   readonly map: WorkspaceRoomMap;
   /** A different room never inherits this map's pan and zoom. */
   readonly roomIdentity: string;
-  /** The occurrence holds a shop: a Preboss shows its Shop variant. */
+  /** The occurrence holds a shop: shown on its room's Shop variant where one exists. */
   readonly shop?: boolean | undefined;
   readonly stage: RoomMapStage;
   readonly title: string;

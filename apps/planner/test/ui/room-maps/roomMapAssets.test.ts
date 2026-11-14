@@ -60,7 +60,12 @@ describe('room map assets', () => {
       ),
     ).toEqual([]);
     for (const asset of roomMapShopAssets) {
-      expect(catalog.rooms.byKey[asset.gameName]?.kind, asset.imageName).toBe('Preboss');
+      const room = catalog.rooms.byKey[asset.gameName];
+      expect(
+        room?.kind === 'Preboss' ||
+          (room?.routeOverlays?.some((overlay) => overlay.kind === 'Shop') ?? false),
+        asset.imageName,
+      ).toBe(true);
       expect(roomMapCalibrations[asset.imageName], asset.imageName).toBeDefined();
     }
   });
