@@ -2234,7 +2234,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const intro = screen.getByLabelText('Intro ship phase');
     const wheelOpen = within(intro).getByLabelText('Wheels opened · Phase 1');
     // Its encounter begins as its wheels open, so no Encounter marker ends the Intro.
-    expect(within(intro).getAllByLabelText('Intro encounter started')).toHaveLength(1);
+    expect(within(intro).getAllByLabelText('Encounter started · Intro')).toHaveLength(1);
     const selectWheel = within(intro).getByRole('listitem', { name: 'Select wheel' });
     expect(within(intro).getByLabelText('Phase 1 reward')).toBeTruthy();
     expect(within(intro).queryByLabelText('Next phase ready')).toBeNull();
@@ -2252,7 +2252,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(combatOne).toBeTruthy();
     expect(within(combatOne).queryByRole('heading', { name: 'Phase 1' })).toBeNull();
     expect(within(combatOne).queryByRole('heading', { name: 'Timeline' })).toBeNull();
-    expect(within(combatOne).getByLabelText('Phase 1 encounter started')).toBeTruthy();
+    expect(within(combatOne).getByLabelText('Encounter started · Phase 1')).toBeTruthy();
     expect(within(combatOne).queryByLabelText('Encounter started')).toBeNull();
     expect(within(combatOne).queryByLabelText('Phase 1 reward')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Phase 2 Timeline' })).toBeNull();
@@ -2479,7 +2479,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const combatTwo = screen.getByLabelText('Phase 2 ship phase');
     expect(within(combatTwo).queryByRole('heading', { name: 'Phase 2' })).toBeNull();
     expect(within(combatTwo).queryByRole('heading', { name: 'Timeline' })).toBeNull();
-    expect(within(combatTwo).getByLabelText('Phase 2 encounter started')).toBeTruthy();
+    expect(within(combatTwo).getByLabelText('Encounter started · Phase 2')).toBeTruthy();
     // The wheel reward row keeps its full name; its phase tab already names the phase.
     expect(
       within(combatTwo).getByRole('button', { name: /^Reorder Collect .+ · Phase 2 reward/ }),

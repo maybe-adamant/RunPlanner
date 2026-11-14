@@ -576,10 +576,10 @@ describe('OccurrenceRoomActions', () => {
       'Encounter ended, Cage 3',
     ]);
     for (const [index, end] of ends.entries())
-      expect(within(end).getByRole('img', { name: `Cage ${index + 1}` })).toBeTruthy();
+      expect(end.getAttribute('data-fields-cage')).toBe(String(index + 1));
     for (const [index, start] of starts.entries()) {
-      // The start banner marks its cage and links its encounter identity, which names the cage.
-      expect(within(start).getByRole('img', { name: `Cage ${index + 1}` })).toBeTruthy();
+      // The start banner keeps its cage for its Unlock row to name, and links its encounter identity.
+      expect(start.getAttribute('data-fields-cage')).toBe(String(index + 1));
       expect(
         within(start).getByRole('button', { name: new RegExp(`Cage ${index + 1}`) }),
       ).toBeTruthy();
@@ -713,7 +713,7 @@ describe('OccurrenceRoomActions', () => {
     // Each cage start banner names its encounter read-only; identity stays in Overview.
     for (const slot of [1, 2, 3]) {
       const start = screen.getByLabelText(`Encounter started, Cage ${slot}`);
-      expect(within(start).getByRole('img', { name: `Cage ${slot}` })).toBeTruthy();
+      expect(start.getAttribute('data-fields-cage')).toBe(String(slot));
     }
     for (const cage of ['Cage 1', 'Cage 2', 'Cage 3'])
       expect(screen.queryByRole('button', { name: cage })).toBeNull();
@@ -1323,7 +1323,7 @@ describe('OccurrenceRoomActions', () => {
       expect(new Set(proposal.explanations).size).toBe(proposal.explanations.length);
       expect(proposal.explanations[0]).toMatch(
         new RegExp(
-          `^${row.label} must come (before|after) (Phase [123] encounter started|Phase [123] encounter ended|Phase [123]'s end effects|choosing the Phase [123] wheel)\\.$`,
+          `^${row.label} must come (before|after) (Encounter started \\(Phase [123]\\)|Encounter ended \\(Phase [123]\\)|end effects \\(Phase [123]\\)|choosing the Phase [123] wheel)\\.$`,
         ),
       );
     }

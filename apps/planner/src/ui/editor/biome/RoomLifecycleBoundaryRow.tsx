@@ -50,13 +50,6 @@ export function LifecycleBoundaryRow({
   const titleHint = [fieldsCage?.cage, identity?.label]
     .filter((part) => part !== undefined)
     .join(' · ');
-  // A Fields cage is known by its slot, subscripted on its encounter's name as its rewards mark it.
-  const cageSlot =
-    fieldsCage === undefined ? null : (
-      <span aria-label={fieldsCage.cage} className="fields-cage-slot" role="img">
-        C{fieldsCage.slot}
-      </span>
-    );
   return (
     <TimelineRow
       aria-label={accessibleLabel}
@@ -64,6 +57,8 @@ export function LifecycleBoundaryRow({
       data-boundary-kind={boundary.kind}
       data-reorder-anchor={boundary.key}
       data-phase={phase}
+      // A Fields cage's markers follow its Unlock row, which already names the cage.
+      data-fields-cage={fieldsCage?.slot}
       data-phase-start={
         (beginsEncounter === true || boundary.kind === 'roomEntered') && phase !== undefined
           ? ''
@@ -76,17 +71,15 @@ export function LifecycleBoundaryRow({
         <>
           <span className="timeline-banner-title">
             {identity === undefined ? (
-              cageSlot === null ? (
+              fieldsCage === undefined ? (
                 <BannerTitle
                   label={phaseTitle?.marker ?? label}
                   phase={phaseTitle?.phase}
                   toggle={toggle}
                 />
               ) : (
-                // The slot hugs the title as a subscript, as it does on a start banner.
                 <span {...hintProps(titleHint, undefined, accessibleLabel)}>
                   <BannerTitle label={label} toggle={toggle} />
-                  {cageSlot}
                 </span>
               )
             ) : (
@@ -97,8 +90,10 @@ export function LifecycleBoundaryRow({
                 onClick={() => dispatch(semanticOwnerNavigated(identity.owner))}
                 type="button"
               >
-                <strong>{label}</strong>
-                {cageSlot}
+                <strong>{phaseTitle?.marker ?? label}</strong>
+                {phaseTitle === undefined ? null : (
+                  <span className="timeline-phase-chip">{phaseTitle.phase}</span>
+                )}
               </button>
             )}
           </span>

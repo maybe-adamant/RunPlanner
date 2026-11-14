@@ -11,16 +11,9 @@ export const roomEventMarker = Object.freeze({
   doorsOpened: 'Doors opened',
 } as const);
 
-/** An encounter's start, named by its phase where the room has several. */
-export function encounterStartedName(phaseLabel: string | undefined): string {
-  return phaseLabel === undefined
-    ? roomEventMarker.encounterBegun
-    : `${phaseLabel} encounter started`;
-}
-
-/** An encounter's end, named by its phase where the room has several. */
-export function encounterEndedName(phaseLabel: string | undefined): string {
-  return phaseLabel === undefined ? roomEventMarker.encounterEnd : `${phaseLabel} encounter ended`;
+/** A point out of its Timeline names its phase in brackets, where a chip cannot show it. */
+export function phaseReference(name: string, phaseLabel: string | undefined): string {
+  return phaseLabel === undefined ? name : `${name} (${phaseLabel})`;
 }
 
 /** A marker of one phase in a room of several, as its banner names it. */
@@ -33,7 +26,7 @@ export interface RoomEventPhaseNames {
   readonly label: (phaseKey: string) => string;
   /** More than one phase plays, so a phase's point names its phase. */
   readonly multiPhase: boolean;
-  /** A Ship's phases: its Combat is named by the phase alone. */
+  /** A Ship's phases: its fight's start is its encounter's start. */
   readonly ship: boolean;
   readonly phaseOfWheel: (wheelKey: string) => string | undefined;
   /** The phase's Combat starts as its wheel is chosen. */
@@ -52,7 +45,7 @@ export function roomEventPointName(point: RoomEventPoint, phases?: RoomEventPhas
       return roomEventMarker.roomEntered;
     case 'wheelsOpen': {
       const phaseKey = phases?.phaseOfWheel(point.wheelKey);
-      return phaseMarker(
+      return phaseReference(
         roomEventMarker.wheelsOpen,
         phaseKey === undefined ? undefined : phases!.label(phaseKey),
       );
@@ -60,21 +53,20 @@ export function roomEventPointName(point: RoomEventPoint, phases?: RoomEventPhas
     case 'gate': {
       if (phases?.choosesWheel(point.phaseKey) === true)
         return `choosing the ${phases.label(point.phaseKey)} wheel`;
-      return encounterStartedName(phase(point.phaseKey));
+      return phaseReference(roomEventMarker.encounterBegun, phase(point.phaseKey));
     }
     case 'encounterStarted': {
-      const label = phase(point.phaseKey);
-      return label === undefined
-        ? roomEventMarker.encounterStarted
-        : phases!.ship
-          ? encounterStartedName(label)
-          : `${label} combat started`;
+      // A Ship phase's fight starts its encounter, its begin standing with its wheel.
+      return phaseReference(
+        phases?.ship === true ? roomEventMarker.encounterBegun : roomEventMarker.encounterStarted,
+        phase(point.phaseKey),
+      );
     }
     case 'encounterEnd':
-      return encounterEndedName(phase(point.phaseKey));
+      return phaseReference(roomEventMarker.encounterEnd, phase(point.phaseKey));
     case 'endEffects': {
       const label = phase(point.phaseKey);
-      return label === undefined ? 'the end effects' : `${label}'s end effects`;
+      return label === undefined ? 'the end effects' : `end effects (${label})`;
     }
     case 'doorsOpened':
       return roomEventMarker.doorsOpened;
