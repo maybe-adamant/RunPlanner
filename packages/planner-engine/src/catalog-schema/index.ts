@@ -1421,6 +1421,8 @@ export interface RoomMapPoints {
   readonly shopPoints?: readonly RoomMapPoint[];
   /** RoomData `ZagContractRewardDestinationId`: where the Infernal Contract pedestal item spawns. */
   readonly contractPedestalPoint?: RoomMapPoint;
+  /** RoomData `ZagContractDestinationId`: where a Midshop's Contract door spawns. */
+  readonly contractExitPoint?: RoomMapPoint;
 }
 
 /** RoomData facts, resolved through `InheritFrom`, that decide a room's flip and entry. */
