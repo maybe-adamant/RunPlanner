@@ -462,6 +462,11 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly beginsEncounter?: true;
       /** Read-only identity of the cage assigned to this encounter cycle. */
       readonly fieldsCage?: WorkspaceFieldsCageLabel;
+      /**
+       * The action row whose verb starts this marker (a cage's Unlock, a gate pickup, a
+       * wheel's choice, a press), which the engine stands it right after.
+       */
+      readonly triggerActionKey?: string;
     }
   | {
       readonly kind: 'action';

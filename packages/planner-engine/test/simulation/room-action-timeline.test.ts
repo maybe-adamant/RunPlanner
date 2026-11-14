@@ -638,6 +638,62 @@ describe('room lifecycle timeline', () => {
     );
   });
 
+  it('drops the trigger of a Combat moved forward past its wheel choice', () => {
+    const wheelPhase = (phaseKey: string, wheelKey: string) =>
+      Object.freeze({
+        ...encounter(phaseKey),
+        rewardAttachment: Object.freeze({
+          kind: 'rewardWheel' as const,
+          key: wheelKey,
+          reward: Object.freeze({
+            kind: 'countedChoice' as const,
+            storeKeys: Object.freeze(['store']),
+            eligibleRewardTypes: Object.freeze([]),
+            ineligibleRewardTypes: Object.freeze([]),
+            allowedRewardTypes: Object.freeze([]),
+            producerLifecycleKey: 'test',
+          }),
+          defaultStoreKey: 'store',
+          offerKeys: Object.freeze(['offer1']),
+          offerCount: Object.freeze({ min: 1, max: 1, defaultValue: 1 }),
+          picked: 'exactlyOne' as const,
+        }),
+      });
+    const choose1 = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' };
+    const choose2 = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' };
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'ShipCombatRoom',
+      encounterPhases: Object.freeze([
+        wheelPhase('Combat1', 'wheel1'),
+        wheelPhase('Combat2', 'wheel2'),
+      ]),
+      roomActionRoster: roster({
+        rows: Object.freeze([
+          // Retained-invalid: the second wheel's choice ranked before the first's.
+          rankedRow(choose2, { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel2' }, 1),
+          rankedRow(choose1, { kind: 'beforeWheelPhase' as const, wheelKey: 'wheel1' }, 2),
+        ]),
+      }),
+    });
+    const started = (phaseKey: string) =>
+      timeline.entries.find(
+        (entry) =>
+          entry.kind === 'boundary' &&
+          entry.boundary.kind === 'encounterStarted' &&
+          entry.boundary.phaseKey === phaseKey,
+      );
+
+    expect(started('Combat1')).toMatchObject({
+      rank: 2,
+      placement: 'after',
+      trigger: { kind: 'roomAction', actionKey: roomActionKey(choose1) },
+    });
+    // Its choice stands earlier, so the Combat no longer follows it.
+    expect(started('Combat2')).toMatchObject({ rank: 2, placement: 'after' });
+    expect(started('Combat2')).not.toHaveProperty('trigger');
+  });
+
   it('places Ship wheel controls at each next phase and emits one final cleanup', () => {
     const choose1 = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' };
     const reward1 = { kind: 'interactWheelReward' as const, wheelKey: 'wheel1' };
