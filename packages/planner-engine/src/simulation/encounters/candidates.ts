@@ -49,7 +49,10 @@ export interface EncounterCandidateArtifacts {
   readonly statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined;
   /** Exact reached/pending Gorgon control capability for this phase. */
   readonly gorgonAt: (origin: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined;
-  /** Exact branch-correlated Nemesis event capability at its interaction owner. */
+  /**
+   * A Nemesis event's family support from the state she spawns in on room
+   * entry; its assessment once her interaction is reached.
+   */
   readonly nemesisAt: (
     origin: NemesisRandomEventAddress,
   ) => NemesisRandomEventCandidateSupport | undefined;

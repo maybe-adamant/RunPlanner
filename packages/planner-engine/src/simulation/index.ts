@@ -181,6 +181,8 @@ export {
   type GorgonPhaseCandidateSupport,
   type NemesisRandomEventAssessment,
   type NemesisRandomEventCandidateSupport,
+  type NemesisRandomEventFamily,
+  type NemesisRandomEventFamilyRefusal,
   type CountedRewardDraw,
   type CountedRewardOwnerAddress,
   type RewardBranch,

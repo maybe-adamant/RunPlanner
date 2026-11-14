@@ -610,15 +610,21 @@ Nemesis uses two selection checkpoints:
 
 1. encounter preparation can choose combat or `NemesisRandomEvent` from a
    legal encounter list;
-2. interacting with Nemesis during `NemesisRandomEvent` causes the narrative
-   system to choose one eligible interaction family and its realized request
-   or offer. The player chooses only the response where that family has an
-   accept/decline decision.
+2. her spawn on room entry queues one eligible interaction family. The
+   encounter's `StartRoomUnthreadedEvents` run `SpawnNemesisForRandomEvents`,
+   which calls `CheckAvailableTextLines` (`EncounterLogic.lua:242-254`), so
+   `GetRandomEligibleTextLines` sets her `NextInteractLines` before the player
+   can act (`RoomLogic.lua:3603-3637`). `UseNPC` draws again only when the
+   queued set is no longer eligible at the interaction
+   (`InteractLogic.lua:128-133`).
 
-`GetRandomEligibleTextLines` owns the second random choice. The interaction
-family is therefore a realized game outcome, not a menu from which the player
-chooses. External dialogue and profile-history requirements affect which lines
-can be selected, but do not change the five ordinary mechanical families.
+The realized request or offer (the item, price, damage or traded boon) is
+built while her lines play at the interaction, from the state there. The
+player chooses only the response where that family has an accept/decline
+decision. The family is therefore a realized game outcome fixed with the
+room's entry, not a menu from which the player chooses. External dialogue and
+profile-history requirements affect which lines can be selected, but do not
+change the five ordinary mechanical families.
 
 ### Biome placement and ordinary reward delivery
 
@@ -664,7 +670,29 @@ random event in that biome.
 | damage contest | success or failure, then one eligible result from the corresponding pool                            | deal damage after starting the five-second contest                         | required for a `StackUpgrade` success; otherwise optional                                           |
 
 The free-item pool includes `LastStandDrop` only while `MissingLastStand` is
-true. It has no accept/decline step.
+true. It has no accept/decline step. Whether a Last Stand is missing depends on
+damage taken, which the Planner does not model, so it keeps `LastStandDrop`
+in the free-item pool unconditionally.
+
+Two families carry run-state line requirements; the others have none, so they
+are always eligible on a mature profile:
+
+| Family       | Line requirement (every ordinary line)                                                                                                  | Checked                                                                    |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| damage trade | `NoHitShieldAvailable`: no `ReserveManaHitShieldBoon` held (`RequirementsData.lua:1384-1390`)                                           | when she queues on entry, and again by `UseNPC`, which redraws if it fails |
+| trait trade  | `RequiredSellableGodTraits`: some held trait passes `IsGodTrait(..., ForShop = true)` with a rarity (`RequirementsLogic.lua:1187-1199`) | the same two points                                                        |
+
+The Planner offers a family only when the entry state queues it and reports a
+retained refused family as the event's own finding. The damage trade's shield
+can be picked up in the room before she is answered, so that redraw is the
+interaction's finding. Nothing in a Nemesis room removes the last sellable god
+trait before her interaction, so the trait trade has no interaction-time
+finding. `IsGodTrait` for shops admits `GodLoot` and every giver marked
+`TreatAsGodLootByShops` (`TraitLogic.lua:1547-1560`): Hermes, and the field
+NPCs Artemis, Athena, Dionysus and Hades, whose boons enter `FieldLootData`
+(`RunData.lua:555-569`) and roll a rarity. Her once-per-profile introduction
+and repeat-sighting damage lines skip the shield requirement; the Planner
+assumes a mature profile that has spent them.
 
 The Gold-trade result and price domains in `NPCData.lua` are:
 
@@ -682,13 +710,11 @@ The damage-trade pool uses the same health and magick split at two entered
 biomes and the same Pom split after one entered biome. The early result costs
 10–20 damage; each corresponding late result costs 20–40. `RoomMoneyDrop`
 uses 10–20 through the first entered biome and 20–40 afterward. `TalentDrop`
-always costs 10–20 and is present only when `TalentLegal` is true. The repeat
-interaction family also requires `NoHitShieldAvailable`. The current source
-offers Path of Stars (`TalentDrop`), not Psyche.
+always costs 10–20 and is present only when `TalentLegal` is true. The
+current source offers Path of Stars (`TalentDrop`), not Psyche.
 
-The trait trade is eligible only when the hero owns a rarity-bearing trait for
-which `IsGodTrait(..., ForShop = true)` succeeds. Trade construction selects
-exactly one trait, randomly among Common candidates when any exist and
+Trade construction (`GenerateSellTraitShop`, `SellTraitLogic.lua:14-53`) runs
+as her conversation ends and selects exactly one held sellable god trait, randomly among Common candidates when any exist and
 otherwise randomly among all eligible candidates. Acceptance removes that
 exact trait before creating the Gold pickup.
 

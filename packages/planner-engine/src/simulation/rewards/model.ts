@@ -63,12 +63,26 @@ export interface GorgonPhaseCandidateSupport {
   readonly suppressTemporaryBoonRarity?: boolean;
 }
 
-/** Exact pre-interaction domain for the one selected Nemesis random event. */
+export type NemesisRandomEventFamily =
+  'freeItem' | 'goldTrade' | 'damageTrade' | 'traitTrade' | 'damageContest';
+
+/** Why her lines of one family cannot be queued from the state she reads them in. */
+export type NemesisRandomEventFamilyRefusal =
+  | { readonly kind: 'heldTrait'; readonly traitKey: string }
+  | { readonly kind: 'noSellableGodTrait' };
+
+/**
+ * One selected Nemesis random event: its families once its room is entered,
+ * as she queues her event on spawn from the entry state, and its domains once
+ * her interaction is reached.
+ */
 export interface NemesisRandomEventCandidateSupport {
   readonly origin: NemesisRandomEventAddress;
-  readonly familyKeys: readonly (
-    'freeItem' | 'goldTrade' | 'damageTrade' | 'traitTrade' | 'damageContest'
-  )[];
+  readonly familyKeys: readonly NemesisRandomEventFamily[];
+  /** Families the entry state cannot queue, each with its reason. */
+  readonly unavailableFamilies: Readonly<
+    Partial<Record<NemesisRandomEventFamily, NemesisRandomEventFamilyRefusal>>
+  >;
   /** Declaration-owned closed controls; UI does not infer these policy values. */
   readonly goldTradeResponses: readonly ('accept' | 'decline')[];
   readonly damageTradeResponses: readonly ('accept' | 'decline')[];
@@ -76,7 +90,7 @@ export interface NemesisRandomEventCandidateSupport {
   readonly damageContestResults: readonly ('success' | 'failure')[];
   readonly traitTradeRewardType: string;
   readonly damageContestFailureRewardType: string;
-  /** The domains at the event's one reached state; absent where none is reached. */
+  /** The domains at her interaction's one reached state; absent until it is reached. */
   readonly assessment?: NemesisRandomEventAssessment;
 }
 

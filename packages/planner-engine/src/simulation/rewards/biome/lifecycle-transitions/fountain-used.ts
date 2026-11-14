@@ -13,7 +13,7 @@ import { routePurgingPool } from '../../../../authored-project/route-profile';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import {
   assessPurgingPoolList,
-  isPurgingPoolEligibleTrait,
+  isSellableGodTrait,
   type PurgingPoolAssessment,
 } from '../../../commerce/purging-pool';
 import { PURGING_POOL_REFRESH_ROLL_KEY } from '../../../../authored-project/feature-rolls';
@@ -109,7 +109,7 @@ export function applyFountainUsedTransition(
     const trait = traits[traitKey];
     return (
       trait === undefined ||
-      !isPurgingPoolEligibleTrait(catalog, trait) ||
+      !isSellableGodTrait(catalog, trait) ||
       trait.rarity !== pool.entryRarities[traitKey]
     );
   });

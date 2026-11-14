@@ -100,6 +100,7 @@ export type RewardGenerationFindingCode =
   | 'fieldsOptionalCapacityUnavailable'
   | 'nemesisOutcomeMissing'
   | 'nemesisOutcomeUnavailable'
+  | 'nemesisEventUnavailable'
   | 'purgingPoolUnavailable'
   | 'purgingPoolTraitMissing'
   | 'purgingPoolTraitUnavailable'

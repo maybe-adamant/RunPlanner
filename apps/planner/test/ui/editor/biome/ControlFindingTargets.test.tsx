@@ -7,8 +7,10 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
+  createIncomingRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceId,
+  createTraitOfferAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -141,6 +143,49 @@ it('marks the Nemesis interaction choice its action row needs, not the row', asy
   const reward = within(row).getByRole('button', { name: 'Reward' });
   expect(paintedFindings()).toEqual([reward]);
   await waitFor(() => expect(document.activeElement).toBe(reward));
+});
+
+it('marks the Overview event type picker of a family her spawn state refuses', async () => {
+  const phase = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+    'Encounter',
+  );
+  const shieldRoom = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(3, 1));
+  let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: shieldRoom,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(shieldRoom, 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Demeter',
+      options: [
+        { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Common' },
+        { traitKey: 'DemeterCastBoon', rarity: 'Common' },
+        { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+      rarificationActions: [],
+    },
+  } as never);
+  project = applyProjectCommand(collectTestRequiredItems(project), catalog, {
+    kind: 'SelectEncounter',
+    phase,
+    encounterKey: 'NemesisRandomEvent',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SelectNemesisRandomEventFamily',
+    event: createNemesisRandomEventAddress(phase),
+    family: 'damageTrade',
+  });
+  const view = renderWorkspace(project, 'Underworld', 'F');
+  await selectFirstFinding(view);
+  const picker = await screen.findByRole('button', { name: /^Nemesis event type/ });
+  expect(paintedFindings()).toEqual([picker]);
 });
 
 it('marks Delete on a Timeline action that should not exist', async () => {

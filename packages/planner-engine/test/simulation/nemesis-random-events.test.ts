@@ -432,9 +432,28 @@ describe('Nemesis random events', () => {
       throw new Error('missing blocked F evaluation');
     expect(blocked.coverage.blockedAt).toEqual(event);
     expect(blocked.coverage.roomTimeline).toBeUndefined();
-    expect(
-      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(familyMissing, event),
-    ).toBeUndefined();
+    // She queues her event as she spawns on entry: its families are reached with the Overview,
+    // its domains only with her interaction.
+    const entered = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      familyMissing,
+      event,
+    );
+    expect(entered?.familyKeys).toHaveLength(5);
+    expect(entered?.assessment).toBeUndefined();
+    const unplaced = applyProjectCommand(project, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event,
+      family: 'goldTrade',
+    });
+    expect(occurrence(unplaced).roomActions.order).not.toContainEqual(
+      expect.objectContaining({ kind: 'interactEncounter' }),
+    );
+    const beforeInteraction = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, unplaced),
+      event,
+    );
+    expect(beforeInteraction?.familyKeys).toHaveLength(5);
+    expect(beforeInteraction?.assessment).toBeUndefined();
     const assembly = simulateProjectAssembly(catalog, selectFamily(project, 'goldTrade'));
     const capability = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
       assembly,
@@ -487,6 +506,62 @@ describe('Nemesis random events', () => {
         ),
       ),
     ).toBe(false);
+  });
+
+  it('refuses her damage trade on entry while the hero holds the Demeter hit shield', () => {
+    const shieldRoom = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(3, 1));
+    let shielded = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: shieldRoom,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    });
+    shielded = applyProjectCommand(shielded, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(shieldRoom, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Demeter',
+        options: [
+          { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Common' },
+          { traitKey: 'DemeterCastBoon', rarity: 'Common' },
+          { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    } as never);
+    shielded = selectEvent(collectTestRequiredItems(shielded));
+    const event = createNemesisRandomEventAddress(phase);
+    const entered = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, shielded),
+      event,
+    );
+    expect(entered?.unavailableFamilies).toEqual({
+      damageTrade: { kind: 'heldTrait', traitKey: 'ReserveManaHitShieldBoon' },
+    });
+    // A retained refused family keeps its value and stops the walk at her room's Overview.
+    const refused = simulateProjectAssembly(catalog, selectFamily(shielded, 'damageTrade'));
+    expect(occurrence(refused.project).encounters.nemesisRandomEventByPhase?.Encounter?.kind).toBe(
+      'damageTrade',
+    );
+    expect(refused.evaluation.findings).toEqual([
+      expect.objectContaining({
+        code: 'nemesisEventUnavailable',
+        origin: event,
+        evidence: {
+          kind: 'damageTrade',
+          reason: 'heldTrait',
+          traitKey: 'ReserveManaHitShieldBoon',
+        },
+      }),
+    ]);
+    expect(
+      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(refused, event)?.assessment,
+    ).toBeUndefined();
+    const allowed = simulateProjectAssembly(catalog, selectFamily(shielded, 'goldTrade'));
+    expect(allowed.evaluation.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'nemesisEventUnavailable' }),
+    );
   });
 
   it('blocks an unavailable trait trade at the event before its required child can settle', () => {
@@ -605,13 +680,19 @@ describe('Nemesis random events', () => {
       spatial: createFieldsSpatialAddress(owner, { kind: 'nemesis' }),
       pointId: 623602,
     });
-    project = collectTestRequiredItems(
-      applyProjectCommand(project, catalog, {
-        kind: 'SelectNemesisRandomEventFamily',
-        event,
-        family: 'traitTrade',
-      }),
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event,
+      family: 'traitTrade',
+    });
+    // The Passive event's family is an entry fact; only its domains wait on her row.
+    const unplaced = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, project),
+      event,
     );
+    expect(unplaced?.familyKeys).toHaveLength(5);
+    expect(unplaced?.assessment).toBeUndefined();
+    project = collectTestRequiredItems(project);
 
     // The real route acquires Hestia from Cage03, then Apollo from Cage02.
     // This Fields room's first cage is a money drop rather than a Pom, so the
