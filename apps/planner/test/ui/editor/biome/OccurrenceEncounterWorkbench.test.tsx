@@ -164,6 +164,11 @@ type EncounterUser = ReturnType<typeof renderOccurrenceWorkbench>['user'];
 async function saveEncounter(user: EncounterUser, dialog: HTMLElement) {
   await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 }
+/** Opens the shown phase's wheel offers, which its Wheels opened line holds in a popover. */
+function openWheelOffers(): void {
+  const trigger = screen.getByRole('button', { name: 'Edit offers' });
+  if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
+}
 /** Opens the Select wheel list of Phase 1's wheel. */
 async function openWheelPicks(user: EncounterUser): Promise<HTMLElement> {
   await user.click(screen.getByRole('button', { name: 'Phase 1 reward offer' }));
@@ -2236,7 +2241,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     // Its encounter begins as its wheels open, so no Encounter marker ends the Intro.
     expect(within(intro).getAllByLabelText('Encounter started · Intro')).toHaveLength(1);
     const selectWheel = within(intro).getByRole('listitem', { name: 'Select wheel' });
-    expect(within(intro).getByLabelText('Phase 1 reward')).toBeTruthy();
+    openWheelOffers();
+    expect(screen.getByLabelText('Phase 1 reward')).toBeTruthy();
     expect(within(intro).queryByLabelText('Next phase ready')).toBeNull();
     expect(
       wheelOpen.compareDocumentPosition(selectWheel) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -2303,6 +2309,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(oOccurrenceIds.combat04));
 
     openRoomTab('Intro Timeline');
+    openWheelOffers();
     const ship = screen.getByLabelText('Phase 1 reward');
     const trigger = getByHint(ship, 'Converted by the Vow of Forfeit.');
     expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
@@ -2399,6 +2406,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(true);
 
     openRoomTab('Intro Timeline');
+    openWheelOffers();
     expect(
       within(screen.getByLabelText('Phase 1 reward')).getAllByRole('button', { name: 'Reward' })
         .length,
@@ -2468,6 +2476,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const combatOne = screen.getByLabelText('Phase 1 ship phase');
     // The Phase 2 wheel opens on the Phase 1 Timeline it follows.
     expect(within(combatOne).queryByText('Choose Phase 2 wheel')).toBeNull();
+    openWheelOffers();
     const restoredWheel = screen.getByLabelText('Phase 2 reward');
     expect(
       within(restoredWheel).getByRole('button', { name: /^Reward pool$/i }).textContent,
@@ -2705,6 +2714,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
 
     openRoomTab('Intro Timeline');
+    openWheelOffers();
     let rewardWheel = screen.getByLabelText('Phase 1 reward');
     const offerGrid = within(rewardWheel).getByRole('group', { name: 'Wheel offers' });
     const offerRows = () => within(offerGrid).getAllByRole('article');
@@ -2754,6 +2764,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       }),
     ).toBeTruthy();
     openRoomTab('Intro Timeline');
+    openWheelOffers();
     rewardWheel = screen.getByLabelText('Phase 1 reward');
 
     act(() =>
@@ -2808,6 +2819,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
 
     openRoomTab('Intro Timeline');
+    openWheelOffers();
     const wheel = screen.getByLabelText('Phase 1 reward');
     const pool = within(wheel).getByRole('button', { name: /^Reward pool$/i });
     await view.user.click(pool);

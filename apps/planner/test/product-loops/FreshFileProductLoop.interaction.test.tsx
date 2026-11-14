@@ -14,6 +14,7 @@ import {
   freshFileGIntroId,
 } from '@run-planner/test-fixtures/fresh-file';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import { expandDoors } from '@planner-test/support/biome-workbench';
 import { takeLive } from '@planner-test/support/live-row';
 
 afterEach(() => {
@@ -45,6 +46,7 @@ describe('Fresh File product loop', () => {
     await user.click(screen.getByRole('button', { name: 'Erebus' }));
     expect(project().route.biomes[0]?.topology?.occurrences[0]?.gameName).toBe('F_Opening01');
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expandDoors();
     await user.click(screen.getByLabelText('Reward Pool'));
     await user.click(within(screen.getByRole('listbox')).getByText('Minor Reward'));
     const decisions = () => project().route.biomes[0]!.topology!.decisions;

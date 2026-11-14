@@ -613,7 +613,6 @@ export function assembleWorkspaceOccurrence(
         address,
         markerDestinations: input.markerDestinations,
         product: lockedDoorsProduct,
-        fights: unlockEncounters,
       });
   // The switch's use row carries the fight's outcome control; a door's press, its fight.
   const switchOutcome = challengeSwitch?.outcome;

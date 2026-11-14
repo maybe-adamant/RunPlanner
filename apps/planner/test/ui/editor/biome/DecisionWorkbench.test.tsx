@@ -82,6 +82,8 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { decisionContainingOccurrence } from '@planner-test/support/occurrence-workbench';
 import {
+  doorsEditor,
+  expandDoors,
   renderBiomeClearAction,
   renderDecisionWorkbench,
   renderOccurrenceWorkbench,
@@ -720,15 +722,14 @@ describe('DecisionWorkbench', () => {
     expect(within(contract).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
     expect(within(contract).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     expect(contract.querySelector('hr')).toBeNull();
-    // The contract is taken from the Leave row, which follows the doors.
-    const room = within(contract).getByRole('img', { name: 'Reward: Champion of Elysium' });
-    expect(room.compareDocumentPosition(leaveRow()) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    // The contract is taken from the Leave row.
     expect(await exitChoices()).toContain('Infernal Contract');
     await pickExit(decisionView.user, 'Infernal Contract');
     await waitFor(() =>
-      expect(screen.getByRole('article', { name: 'Infernal Contract exit' }).dataset.picked).toBe(
-        'true',
-      ),
+      expect(
+        within(expandDoors()).getByRole('article', { name: 'Infernal Contract exit' }).dataset
+          .picked,
+      ).toBe('true'),
     );
     cleanup();
 
@@ -970,7 +971,9 @@ describe('DecisionWorkbench', () => {
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
-      expect(screen.getByRole('article', { name: 'Door 1 unspecified room offer' })).toBeTruthy(),
+      expect(
+        within(expandDoors()).getByRole('article', { name: 'Door 1 unspecified room offer' }),
+      ).toBeTruthy(),
     );
     expect(screen.queryByLabelText('Door 2 room')).toBeNull();
   });
@@ -1141,7 +1144,8 @@ describe('DecisionWorkbench', () => {
       within(card).getByRole('button', { name: `View map of ${target.room.label}` }),
     );
 
-    const mapDialog = screen.getByRole('dialog');
+    const mapDialog = screen.getAllByRole('dialog').find((dialog) => dialog !== doorsEditor());
+    if (mapDialog === undefined) throw new Error('the map dialog is missing');
     expect(within(mapDialog).getByRole('heading', { name: target.room.label })).toBeTruthy();
     expect(mapDialog.querySelector(`[data-hint="${target.room.gameName}"]`)).toBeTruthy();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
@@ -2132,6 +2136,7 @@ describe('DecisionWorkbench', () => {
     );
     if (!target.selected) {
       await pickExit(view.user, `Door ${target.index}`);
+      expandDoors();
       await waitFor(() =>
         expect(
           screen.getAllByRole('button', { name: /^Replace Door \d+ with Anomaly$/ }),

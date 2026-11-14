@@ -3,6 +3,9 @@ import { StopNotice } from './StopNotice';
 import { ArtworkChip } from '../rewards/TimelineChip';
 import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { EncounterOutcomeChoice } from '@run-planner/engine/simulation';
+import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import { doorEditorChosen } from '@planner/state/editorSessionSlice';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -50,8 +53,7 @@ import { DoorRerollRowReward } from './RoomRerolls';
 import { UnlockedDoor } from './DecisionWorkbench';
 import { UnlockExitFightControl } from './UnlockExitFightControl';
 import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
-import { doorsOpenToggle, wheelOfferChips, type DoorsPart } from './doorSummary';
-import { doorsDetailInline } from './doorsMomentVariant';
+import { wheelOfferChips } from './doorSummary';
 import { NemesisEventPending, NemesisInteractionSentence } from './NemesisEventEditor';
 import { StygianWellTwistChips } from './commerce/StygianWellTwist';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
@@ -64,12 +66,7 @@ import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
 import { roomActionIcon } from '@planner/ui/artwork/roomArtwork';
 import { pickupSourceBadgeIcon } from '@planner/ui/artwork/sourceBadgeArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
-import {
-  DoorsOpenBanner,
-  DoorsOpenControls,
-  DoorsOpenDetailRow,
-  type TimelineDoors,
-} from './TimelineDoors';
+import { DoorsOpenBanner, type TimelineDoors } from './TimelineDoors';
 /** Room-owned boundary additions: editors on the boundary row and rows that follow it. */
 export interface TimelineBoundaryContent {
   readonly editors?: ReactNode;
@@ -136,7 +133,7 @@ function NotReachedGroup({
             onClick={() => setExpanded((open) => !open)}
             type="button"
           >
-            <span aria-hidden="true" className="timeline-banner-toggle-caret">
+            <span aria-hidden="true" className="room-action-not-reached-caret">
               {expanded ? '▾' : '▸'}
             </span>
             Not reached yet
@@ -204,20 +201,43 @@ export function RoomActionsWorkbench({
       : undefined;
   // A Ship phase that a wheel follows opens it like doors: its offers, then its pick.
   const phaseWheel = mode.kind === 'shipPhase' ? mode.phase.wheel : undefined;
-  // Wheels whose offers stand opposite their default: shown inline, or shut in a popover.
-  const [toggledWheels, setToggledWheels] = useState<ReadonlySet<string>>(() => new Set());
-  const wheelsOpenByDefault = doorsDetailInline;
-  const wheelHoldsFindings =
-    phaseWheel !== undefined &&
-    [phaseWheel.marker, ...phaseWheel.offers.map((offer) => offer.control.marker)].some(
-      (marker) => findingMark(marker.address)['data-has-findings'],
+  const wheelMarkers =
+    phaseWheel === undefined
+      ? []
+      : [phaseWheel.marker, ...phaseWheel.offers.map((offer) => offer.control.marker)];
+  const wheelHoldsFindings = wheelMarkers.some(
+    (marker) => findingMark(marker.address)['data-has-findings'],
+  );
+  // A wheel's popover opens when asked, by the user or by navigation to the wheel or an offer;
+  // a choice holds until the next navigation.
+  const dispatch = useAppDispatch();
+  const wheelChoiceKey =
+    phaseWheel === undefined || actions === undefined
+      ? undefined
+      : `${actions.interactionKey}:wheel:${phaseWheel.key}`;
+  const wheelChoice = useAppSelector((state) =>
+    wheelChoiceKey === undefined
+      ? undefined
+      : state.editorSession.doorEditorChoices?.[wheelChoiceKey],
+  );
+  const navigationRevision = useAppSelector(
+    (state) => state.editorSession.semanticNavigationRevision,
+  );
+  const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
+  const wheelRequested =
+    focusedOwner !== null &&
+    wheelMarkers.some(
+      (marker) => semanticAddressKey(marker.address) === semanticAddressKey(focusedOwner),
     );
+  const wheelExpanded =
+    (wheelRequested &&
+      (wheelChoice === undefined || wheelChoice.navigationRevision !== navigationRevision)) ||
+    (wheelChoice?.expanded === true && wheelChoice.navigationRevision === navigationRevision);
   const wheelDoors: TimelineDoors | undefined =
     phaseWheel === undefined || actions === undefined
       ? undefined
       : {
           noun: 'offer' as const,
-          detailId: `wheel-${actions.interactionKey}-${phaseWheel.key}-detail`,
           summary: { chips: wheelOfferChips(phaseWheel, 'first'), label: 'Offer summary' },
           detail: (
             <RewardWheelWorkbench
@@ -227,29 +247,15 @@ export function RoomActionsWorkbench({
               wheel={phaseWheel}
             />
           ),
-          part: (part: DoorsPart) => (
-            <RewardWheelWorkbench
-              inTimeline
-              interactions={interactions}
-              occurrence={actions.owner}
-              show={part}
-              wheel={phaseWheel}
-            />
-          ),
-          expanded:
-            (wheelsOpenByDefault && wheelHoldsFindings) ||
-            toggledWheels.has(phaseWheel.key) !== wheelsOpenByDefault,
-          ...(wheelHoldsFindings && wheelsOpenByDefault
-            ? {}
-            : {
-                onExpandedChange: (expanded: boolean) =>
-                  setToggledWheels((toggled) => {
-                    const next = new Set(toggled);
-                    if (expanded === wheelsOpenByDefault) next.delete(phaseWheel.key);
-                    else next.add(phaseWheel.key);
-                    return next;
-                  }),
+          expanded: wheelExpanded,
+          onExpandedChange: (expanded: boolean) =>
+            dispatch(
+              doorEditorChosen({
+                room: `${actions.interactionKey}:wheel:${phaseWheel.key}`,
+                choice: { expanded, navigationRevision },
               }),
+            ),
+          holdsFindings: wheelHoldsFindings,
         };
   // A room whose walk stops in it has not reached its doors, unless it stops at their opening,
   // which keeps its doors and Leave row to repair; a saved end keeps its last row.
@@ -438,11 +444,9 @@ export function RoomActionsWorkbench({
     const content = renderBoundaryContent?.(entry.boundary);
     const boundary = entry.boundary;
     const doorsOpen = boundary.kind === 'doorsOpened' && !doorsWait ? roomDoors : undefined;
-    const modifiers = [
-      renderSupplement(entry.supplement),
-      content?.editors,
-      doorsOpen === undefined ? undefined : <DoorsOpenControls doors={doorsOpen} />,
-    ].filter((node) => node !== null && node !== undefined && node !== false);
+    const modifiers = [renderSupplement(entry.supplement), content?.editors].filter(
+      (node) => node !== null && node !== undefined && node !== false,
+    );
     // A fight's gold sits on its end banner, or where a boss phase has none, on its defeat;
     // a Nemesis bet the phase settles is summed into it. A room's urn gold shows as it is entered.
     const fightGold =
@@ -472,7 +476,7 @@ export function RoomActionsWorkbench({
           }
           label={entry.label}
           phaseTitle={entry.phaseTitle}
-          toggle={doorsOpen === undefined ? undefined : doorsOpenToggle(doorsOpen)}
+          {...(doorsOpen === undefined ? {} : { doors: doorsOpen })}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
           {...(underTrigger ? { underTrigger: true } : {})}
           {...(entry.supplement?.identityLabel !== undefined
@@ -485,9 +489,6 @@ export function RoomActionsWorkbench({
             : {})}
         />
         {content?.rows}
-        {doorsDetailInline && doorsOpen?.expanded === true && doorsOpen.detail !== undefined ? (
-          <DoorsOpenDetailRow id={doorsOpen.detailId}>{doorsOpen.detail}</DoorsOpenDetailRow>
-        ) : null}
       </Fragment>
     );
   };

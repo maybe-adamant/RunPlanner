@@ -346,8 +346,9 @@ describe('plan end in the biome workspace', () => {
     );
     openRoom(application, createOccurrenceAddress(nBiome, nOccurrenceId('combat05')));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    expandDoors(roomCard());
-    const door = within(roomCard()).getByRole('article', { name: 'Hidden return door' });
+    const door = within(expandDoors(roomCard())).getByRole('article', {
+      name: 'Hidden return door',
+    });
     expect(within(door).getByRole('button', { name: 'Choose' })).toHaveProperty('disabled', false);
   });
 

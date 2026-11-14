@@ -8,9 +8,8 @@ import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { hintProps } from '@planner/ui/controls/hint';
 import { TimelineRow } from './TimelineRow';
-import { BannerTitle } from './TimelineDoors';
+import { BannerTitle, DoorsMomentTitle, type TimelineDoors } from './TimelineDoors';
 import { TimelineEventIcon } from './TimelineEventIcon';
-import type { BannerToggle } from './doorSummary';
 import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 
 /** Render-only boundary row; timeline placement remains the projection's authority. */
@@ -23,7 +22,7 @@ export function LifecycleBoundaryRow({
   fieldsCage,
   identity,
   phaseTitle,
-  toggle,
+  doors,
 }: {
   /** The marker and its phase shown, where the label names both. */
   readonly phaseTitle?: { readonly marker: string; readonly phase: string } | undefined;
@@ -38,8 +37,8 @@ export function LifecycleBoundaryRow({
   readonly fieldsCage?: WorkspaceFieldsCageLabel;
   /** The phase's settled identity: the title's hint, and a link to its Overview picker. */
   readonly identity?: { readonly label: string; readonly owner: EncounterPhaseAddress };
-  /** The title shows or hides the editor under the banner, such as the doors'. */
-  readonly toggle?: BannerToggle | undefined;
+  /** The Doors open moment the banner opens, its chips on its title. */
+  readonly doors?: TimelineDoors | undefined;
 }) {
   const dispatch = useAppDispatch();
   const accessibleLabel = boundarySpokenLabel(label, fieldsCage);
@@ -62,16 +61,18 @@ export function LifecycleBoundaryRow({
       label={
         <>
           <span className="timeline-banner-title">
-            {identity === undefined ? (
+            {doors !== undefined ? (
+              <DoorsMomentTitle
+                doors={doors}
+                label={phaseTitle?.marker ?? label}
+                phase={phaseTitle?.phase}
+              />
+            ) : identity === undefined ? (
               fieldsCage === undefined ? (
-                <BannerTitle
-                  label={phaseTitle?.marker ?? label}
-                  phase={phaseTitle?.phase}
-                  toggle={toggle}
-                />
+                <BannerTitle label={phaseTitle?.marker ?? label} phase={phaseTitle?.phase} />
               ) : (
                 <span {...hintProps(titleHint, undefined, accessibleLabel)}>
-                  <BannerTitle label={label} toggle={toggle} />
+                  <BannerTitle label={label} />
                 </span>
               )
             ) : (

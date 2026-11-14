@@ -616,17 +616,18 @@ room whose walk stops before it, or at a row after it (a Postboss purchase
 after the fountain), shows neither its doors on **Doors opened** nor its Leave
 row, while a stop at the doors opening itself keeps both to repair them there. The engine-placed **Doors opened** marker holds the doors'
 compact state on its line: one chip per door, each its room's icon then
-its rewards' icons as first drawn, the picked door outlined and a missing door
-dashed; a fixed exit (a boss door, the next biome) is one chip of its
+its rewards' icons as first drawn, the picked door outlined and a door still
+waiting on its room or on a reward it shows dashed; a fixed exit (a boss door, the next biome) is one chip of its
 destination, and an Ephyra room's hidden return door is a chip of its own.
-Beside the chips a disclosure shows or hides the doors' editor, which follows
-the marker as one block under it: the batch rules (pool line, Fields roll and
-cage facts, a boss door's pool), then the shared door table without selection
-controls. The editor stays collapsed until it needs attention: a finding on
-any owner it repairs, the room's doors being the next required input, or
-navigation to a door owner or one of their findings opens it. An explicit open
-or close is remembered per room for the session (neither authored nor in
-history) and yields only to attention it has not yet seen.
+The marker's name and its chips are one control, **Edit doors**, that opens
+the whole moment's editor in one popover: the batch rules (pool line, Fields
+roll and cage facts, a boss door's pool), then the shared door table without
+selection controls. Hovering or focusing any part of the line selects the whole
+moment, never one chip. The popover opens only when asked: a click, or
+navigation to a door owner or one of their findings. A finding on any owner it
+repairs marks the line but never opens it. An explicit open or close is
+remembered per room for the session (neither authored nor in history) until
+the next navigation.
 The table's header ends in one quiet red action that removes the batch.
 
 The room's last Timeline row says how it is left. **Leave room** is one picker
@@ -806,10 +807,10 @@ its lock as the hint (unreached, or a challenge switch in the room). The room
 locks its doors exactly while one is locked. A locked door's press is an option of the room's Doors object, beside
 its rerolls, so the object appears for a locked door even without rerolls; the
 press row carries the fight's Combat entry, the same encounter customization
-editor. The Leave room picker offers only the doors the engine publishes as
+editor, which the door editor never repeats. The Leave room picker offers only the doors the engine publishes as
 open at leave, keeping a saved pick of a still-locked door, which carries its
-finding. That finding and any finding on a door's press count as the door
-editor's attention.
+finding. That finding and any finding on a door's press mark the Doors opened
+line.
 
 ### Wheel offers
 
@@ -818,7 +819,8 @@ picker, with no arrow, since a wheel has no separate counted store) beside its
 offer count, then its active offers as rows of the door table: offer label (L
 Offer and R Offer, or Offer alone) and reward, each as first drawn. They remain
 rewards, not doors: no room selector, door number, map or topology interaction
-is introduced. Each wheel opens on the phase it follows, and the next room's
+is introduced. Each wheel opens on the phase it follows, its **Wheels opened**
+line opening its editor in a popover as the doors' line does, and the next room's
 doors show the last active wheel's pool as a plain value.
 
 The chronological Choose action does not duplicate card selection with another

@@ -41,8 +41,7 @@ async function openDoors(view: ReturnType<typeof renderWorkspace>, occurrenceId:
   );
   const details = screen.getByRole('complementary', { name: 'Details' });
   await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
-  expandDoors(details);
-  return within(details).getByRole('article', { name: 'Hidden return door' });
+  return within(expandDoors(details)).getByRole('article', { name: 'Hidden return door' });
 }
 
 async function choose(view: ReturnType<typeof renderWorkspace>, picker: HTMLElement, name: RegExp) {

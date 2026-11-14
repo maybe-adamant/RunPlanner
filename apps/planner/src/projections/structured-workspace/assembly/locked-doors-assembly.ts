@@ -41,8 +41,6 @@ export function assembleLockedDoors(input: {
   readonly address: OccurrenceAddress;
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly product: LockedDoorsInteraction | undefined;
-  /** Each locked door's fight, by its press's action key. */
-  readonly fights: ReadonlyMap<string, WorkspaceUnlockExitEncounter>;
 }):
   | {
       readonly lockedDoors: WorkspaceLockedDoors;
@@ -55,13 +53,8 @@ export function assembleLockedDoors(input: {
   const address = createRoomFeatureAddress(input.address, { kind: 'lockedExits' });
   const interactionKey = semanticAddressKey(address);
   const locked = occurrence.lockedExits ?? [];
-  const unpressedFight = (exitKey: string) => {
-    const unlock = product?.unlocks?.find((candidate) => candidate.exitKey === exitKey);
-    return unlock?.append === undefined ? undefined : input.fights.get(unlock.action.actionKey);
-  };
-  const doors = (product?.doors ?? exitKeys.map((exitKey) => ({ exitKey }))).map((door) => {
-    const fight = unpressedFight(door.exitKey);
-    return Object.freeze({
+  const doors = (product?.doors ?? exitKeys.map((exitKey) => ({ exitKey }))).map((door) =>
+    Object.freeze({
       exitKey: door.exitKey,
       label: doorLabel(door.exitKey),
       locked: locked.includes(door.exitKey),
@@ -70,9 +63,8 @@ export function assembleLockedDoors(input: {
         : 'lock' in door && door.lock !== undefined
           ? { lock: door.lock }
           : {}),
-      ...(fight === undefined ? {} : { fight }),
-    });
-  });
+    }),
+  );
   const toggles: EntryRequirement = Object.freeze({
     kind: 'roomObjectActions' as const,
     owner: input.address,
@@ -97,10 +89,7 @@ export function assembleLockedDoors(input: {
   });
 }
 
-/**
- * Each locked door's fight as the engine prepared it, at its press or where
- * its press would append, by its press's action key.
- */
+/** Each pressed locked door's fight as the engine prepared it, by its press's action key. */
 export function assembleUnlockExitEncounters(
   catalog: Catalog,
   address: OccurrenceAddress,
@@ -110,7 +99,8 @@ export function assembleUnlockExitEncounters(
   const encounters = new Map<string, WorkspaceUnlockExitEncounter>();
   for (const unlock of product?.unlocks ?? []) {
     const encounter = unlock.encounter;
-    if (encounter === undefined) continue;
+    // A door's fight is customized on its press row, so an unpressed door shows none.
+    if (encounter === undefined || unlock.append !== undefined) continue;
     const view = encounterCompositionView(catalog, encounter);
     encounters.set(
       unlock.action.actionKey,

@@ -46,9 +46,8 @@ import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
-import { doorChipMapLink, type DoorChip, type DoorsPart } from './doorSummary';
+import { doorChipMapLink, type DoorChip } from './doorSummary';
 import { DoorRows } from './DoorRows';
-import { UnlockExitFightControl } from './UnlockExitFightControl';
 import type { DoorNoteFor } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
@@ -914,7 +913,6 @@ export function BatchDoorsDetail({
   noteFor,
   node,
   repair,
-  show,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   /** The room's lockable doors, each toggled on its row. */
@@ -923,28 +921,20 @@ export function BatchDoorsDetail({
   readonly node: BatchNode;
   /** The doors' repair or removal, where it sits under the doors. */
   readonly repair?: ReactNode;
-  /** One part of the doors alone: their batch rules, or one door by its chip key. */
-  readonly show?: DoorsPart | undefined;
 }) {
   const findingAnchor = useFindingAnchor();
-  const shows = (key: string) => show === undefined || (show.kind === 'door' && show.key === key);
   // Where the doors lie past the plan end every door row is read-only together;
   // the end room's own doors still open inside the plan.
   const locked = useAuthoringLocked(node.owner);
   const lockFor = (exitKey: string, index: number) => {
     const door = lockedDoors?.doors.find((candidate) => candidate.exitKey === exitKey);
     return lockedDoors === undefined || door === undefined ? undefined : (
-      <>
-        <DoorLockToggle
-          door={door}
-          index={index}
-          interactions={interactions}
-          lockedDoors={lockedDoors}
-        />
-        {door.fight === undefined ? null : (
-          <UnlockExitFightControl encounter={door.fight} interactions={interactions} />
-        )}
-      </>
+      <DoorLockToggle
+        door={door}
+        index={index}
+        interactions={interactions}
+        lockedDoors={lockedDoors}
+      />
     );
   };
   return (
@@ -957,54 +947,43 @@ export function BatchDoorsDetail({
       tabIndex={-1}
     >
       <div className="door-body" data-authoring-locked={locked || undefined} inert={locked}>
-        {show?.kind === 'door' ? null : (
-          <div className="door-batch">
-            <BatchSettings interactions={interactions} noteFor={noteFor} node={node} />
-            {show?.kind === 'rules' && repair !== undefined ? (
-              <div className="doors-part-repair">{repair}</div>
-            ) : null}
-          </div>
-        )}
-        {show?.kind === 'rules' ? null : (
-          <DoorRows ariaLabel="Door rows" role="group">
-            <DoorRowsHeader
-              {...(repair === undefined || show !== undefined ? {} : { action: repair })}
-              rewardNote={noteFor('rewardColumn')}
+        <div className="door-batch">
+          <BatchSettings interactions={interactions} noteFor={noteFor} node={node} />
+        </div>
+        <DoorRows ariaLabel="Door rows" role="group">
+          <DoorRowsHeader
+            {...(repair === undefined ? {} : { action: repair })}
+            rewardNote={noteFor('rewardColumn')}
+          />
+          {node.targets.map((target) => (
+            <TargetRow
+              interactions={interactions}
+              key={target.exitKey}
+              lock={lockFor(target.exitKey, target.index)}
+              node={node}
+              target={target}
             />
-            {node.targets
-              .filter((target) => shows(target.exitKey))
-              .map((target) => (
-                <TargetRow
+          ))}
+          {node.kind === 'takeoverBatch'
+            ? null
+            : node.missingTargets.map((target) => (
+                <MissingTargetRow
                   interactions={interactions}
                   key={target.exitKey}
                   lock={lockFor(target.exitKey, target.index)}
-                  node={node}
                   target={target}
                 />
               ))}
-            {node.kind === 'takeoverBatch'
-              ? null
-              : node.missingTargets
-                  .filter((target) => shows(target.exitKey))
-                  .map((target) => (
-                    <MissingTargetRow
-                      interactions={interactions}
-                      key={target.exitKey}
-                      lock={lockFor(target.exitKey, target.index)}
-                      target={target}
-                    />
-                  ))}
-            {[node.zagreusContract, node.chaos].map((control) =>
-              control === undefined || !shows(workspaceInteractionKey(control.owner)) ? null : (
-                <AdditionalExitRow
-                  control={control}
-                  interactions={interactions}
-                  key={workspaceInteractionKey(control.owner)}
-                />
-              ),
-            )}
-          </DoorRows>
-        )}
+          {[node.zagreusContract, node.chaos].map((control) =>
+            control === undefined ? null : (
+              <AdditionalExitRow
+                control={control}
+                interactions={interactions}
+                key={workspaceInteractionKey(control.owner)}
+              />
+            ),
+          )}
+        </DoorRows>
       </div>
     </section>
   );

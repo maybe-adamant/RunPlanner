@@ -69,7 +69,7 @@ describe('locked doors in the structured workspace', () => {
     });
   });
 
-  it('customizes a locked door’s fight on the door, then on its press row', () => {
+  it('customizes a locked door’s fight on its press row only', () => {
     const project = createGoldenFGHIProject();
     const locked = apply(project, {
       kind: 'ReplaceLockedExit',
@@ -84,19 +84,8 @@ describe('locked doors in the structured workspace', () => {
     const lockedDoors = room(lockedWorkspace).lockedDoors!;
     expect(lockedDoors.doors[0]).toMatchObject({ locked: true });
     expect(lockedDoors.lockedAtLeave).toEqual(['exit2']);
-    // Before its press the door carries its fight, customized on the door.
-    const fight = lockedDoors.doors[0]!.fight;
-    expect(fight).toMatchObject({
-      definitionKey: 'GeneratedG_ExtraDoor',
-      exitKey: 'exit2',
-      customization: [{ key: 'generatedComposition' }],
-    });
-    const early = lockedWorkspace.interactions.unlockExitEncounters.get(fight!.interactionKey);
-    expect(early?.generatedAssessment).toBeDefined();
-    expect(early?.intentFor('generatedComposition', null).command).toMatchObject({
-      kind: 'ReplaceLockedExitCustomization',
-      exitKey: 'exit2',
-    });
+    // Before its press the fight has no customization entry.
+    expect(lockedWorkspace.interactions.unlockExitEncounters.size).toBe(0);
     const press = unlockPress(room(lockedWorkspace));
     expect(press).toMatchObject({
       kind: 'InsertRoomAction',
@@ -109,7 +98,6 @@ describe('locked doors in the structured workspace', () => {
     expect(summary.roomActions?.live?.items.some((item) => item.object === 'lockedDoors')).toBe(
       false,
     );
-    expect(summary.lockedDoors?.doors[0]?.fight).toBeUndefined();
     const row = summary.roomActions!.rows.find((candidate) => candidate.label === 'Unlock Door 2');
     expect(row?.unlockExitEncounter).toMatchObject({
       definitionKey: 'GeneratedG_ExtraDoor',
