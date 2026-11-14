@@ -4,6 +4,8 @@ import {
   createAdditionalExitAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createShopOfferAddress,
+  createTraitOfferAddress,
   createExitDecisionAddress,
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
@@ -82,6 +84,9 @@ import {
   createUnderworldFWellCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
 import {
+  loadSurfaceNStoryBoardProject,
+  nBiome,
+  nOccurrenceId,
   loadSurfaceNOPProject,
   placeDueHermesShrineDeliveries,
   surfaceShrineDeliveriesProject,
@@ -2506,4 +2511,122 @@ export const galleryCases: readonly GalleryCase[] = [
     commands: [unofferableRarity('N', 'surface-n-combat05', 'self')],
     target: room('N', occurrenceId),
   })),
+  ...lastStandNoteCases(),
 ];
+
+/** Shape preview of the note on items offered only while the hero is missing a Last Stand. */
+function lastStandNoteCases(): readonly GalleryCase[] {
+  const wellRoom = ['F', 'golden-f-b5-e1'] as const;
+  const shrineRoom = ['O', 'surface-o-combat02'] as const;
+  const placeWell = placeAnchorObject(...wellRoom, 'stygianWell');
+  const placeShrine = placeAnchorObject(...shrineRoom, 'hermesShrine');
+  const chooseWellItem: GalleryStep = (project) => ({
+    kind: 'ReplaceStygianWellOffer',
+    occurrence: occurrenceAddress(project, ...wellRoom),
+    slotKey: 'healing',
+    itemKey: 'LastStandShopItem',
+  });
+  const chooseShrineItem: GalleryStep = (project) => ({
+    kind: 'ReplaceHermesShrineOffer',
+    occurrence: occurrenceAddress(project, ...shrineRoom),
+    slotKey: 'first',
+    value: { rewardType: 'LastStandDrop' },
+  });
+  const chooseShopItem: GalleryStep = {
+    kind: 'ReplaceShopOfferOption',
+    offer: createShopOfferAddress(
+      createBiomeAddress('Surface', 'Q'),
+      createOccurrenceId('surface-q-preboss'),
+      'Survival',
+    ),
+    value: { optionKey: 'LastStandDrop', offer: { rewardType: 'LastStandDrop' } },
+  };
+  return [
+    {
+      id: 'last-stand-well-picker',
+      overview: true,
+      label: 'Last Stand note: the Well’s Healing list with Kiss of Styx',
+      shows: ['Well item picker'],
+      project: createGoldenFGHIProject,
+      commands: [placeWell],
+      target: room(...wellRoom),
+      openOverviewPicker: 'Stygian Well Offer 1 Item',
+    },
+    {
+      id: 'last-stand-shrine-picker',
+      overview: true,
+      label: 'Last Stand note: the Hermes Shrine’s first list with Death Defiance',
+      shows: ['Shrine item picker'],
+      project: loadSurfaceNOPQCheckpoint,
+      commands: [placeShrine],
+      target: room(...shrineRoom),
+      openOverviewPicker: 'Hermes Shrine Offer 1 Item',
+    },
+    {
+      id: 'last-stand-shop-picker',
+      overview: true,
+      label: 'Last Stand note: a Q World Shop Survival slot’s list',
+      shows: ['World Shop item picker'],
+      project: loadSurfaceAnvilCheckpoint,
+      target: room('Q', 'surface-q-preboss'),
+      openOverviewPicker: 'Offer 4 Item',
+    },
+    {
+      id: 'last-stand-well-chosen',
+      overview: true,
+      label: 'Last Stand note: Kiss of Styx chosen in the Well',
+      shows: ['Well inventory'],
+      project: createGoldenFGHIProject,
+      commands: [placeWell, chooseWellItem],
+      target: room(...wellRoom),
+    },
+    {
+      id: 'last-stand-shrine-chosen',
+      overview: true,
+      label: 'Last Stand note: Death Defiance chosen at the Hermes Shrine',
+      shows: ['Shrine inventory'],
+      project: loadSurfaceNOPQCheckpoint,
+      commands: [placeShrine, chooseShrineItem],
+      target: room(...shrineRoom),
+    },
+    {
+      id: 'last-stand-shop-chosen',
+      overview: true,
+      label: 'Last Stand note: Death Defiance chosen in a Q World Shop slot',
+      shows: ['World Shop inventory'],
+      project: loadSurfaceAnvilCheckpoint,
+      commands: [chooseShopItem],
+      target: room('Q', 'surface-q-preboss'),
+    },
+    {
+      id: 'last-stand-trait-note',
+      label: 'Last Stand note: the trait offer’s existing Death Defiance notice',
+      shows: ['trait offer popup notice'],
+      project: loadSurfaceNStoryBoardProject,
+      commands: [
+        {
+          kind: 'ReplaceTraitOffer',
+          trait: createTraitOfferAddress(
+            createEncounterPhaseAddress(
+              nBiome,
+              { kind: 'occurrence', occurrenceId: nOccurrenceId('story') },
+              'Encounter',
+            ),
+            'selection',
+          ),
+          value: {
+            kind: 'traits',
+            giverKey: 'Medea',
+            options: [
+              { traitKey: 'ManaOverTimeCurse' },
+              { traitKey: 'MoneyOnDeathCurse' },
+              { traitKey: 'DeathDefianceRetaliateCurse' },
+            ],
+            selectedOptionKey: 'option1',
+          },
+        },
+      ],
+      target: room('N', nOccurrenceId('story')),
+    },
+  ];
+}

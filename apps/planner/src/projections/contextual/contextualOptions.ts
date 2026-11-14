@@ -27,6 +27,7 @@ import { summarizeRewardOffer } from '../rewards/rewardOfferSummary';
 import { biomeFieldLabel } from '../structured-workspace/assembly/biome-field-labels';
 import { workspaceRewardStoreLabel } from '../structured-workspace/assembly/reward-labels';
 import { rewardWheelOfferLabel } from '../rewards/wheelOfferLabel';
+import type { ShopOptionEntry } from '@run-planner/engine/reward-kernel';
 
 export type ContextualOptionState = 'forced' | 'possible' | 'impossible' | 'unassessed';
 
@@ -47,6 +48,7 @@ export interface ContextualOption<T> {
   readonly explanations?: readonly CandidateExplanation[];
   /** Entries of this choice its counted store still holds. */
   readonly count?: number;
+  readonly offerCondition?: ShopOptionEntry['unmodeledOfferCondition'];
 }
 
 export interface ContextualOptionPresentation {
@@ -56,6 +58,8 @@ export interface ContextualOptionPresentation {
   /** Domain-specific, typed reasons supplied by its application projector. */
   readonly explanations?: readonly CandidateExplanation[];
   readonly selected: boolean;
+  /** A game offer condition on hero state the plan does not track. */
+  readonly offerCondition?: ShopOptionEntry['unmodeledOfferCondition'];
 }
 
 /** A blocked choice shows at most this many reason lines. */
@@ -1385,6 +1389,9 @@ export function createContextualOptionResolver(catalog: Catalog): ContextualOpti
             selected: display.selected,
             ...(explanations.length === 0 ? {} : { explanations }),
             ...(display.count === undefined ? {} : { count: display.count }),
+            ...(display.offerCondition === undefined
+              ? {}
+              : { offerCondition: display.offerCondition }),
           });
         }),
       );

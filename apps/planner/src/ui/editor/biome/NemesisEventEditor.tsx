@@ -14,6 +14,7 @@ import { useFindingTarget, type FindingMarkProps } from '@planner/ui/feedback/us
 import type { WorkspaceFindingControl } from '@planner/projections/structured-workspace';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
+import { OfferConditionNotice } from '@planner/ui/feedback/OfferConditionNote';
 
 const emptyPicker: ContextualPickerModel<string> = Object.freeze({ sections: Object.freeze([]) });
 const nemesisPortrait = npcPortrait('Nemesis') ?? '';
@@ -147,11 +148,14 @@ export function NemesisInteractionSentence({
       );
     case 'freeItem':
       return (
-        <span className="nemesis-interaction-sentence">
-          {nemesis}
-          {words('gives')}
-          {reward}
-        </span>
+        <>
+          <span className="nemesis-interaction-sentence">
+            {nemesis}
+            {words('gives')}
+            {reward}
+          </span>
+          <OfferConditionNotice condition={interaction.selectedOfferCondition} />
+        </>
       );
     case 'goldTrade':
       return (

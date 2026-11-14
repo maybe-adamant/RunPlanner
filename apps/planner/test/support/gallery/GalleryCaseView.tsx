@@ -21,6 +21,7 @@ import {
 } from '@planner/state/store';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import { PomResolutionDialog } from '@planner/ui/editor/rewards/PomResolutionEditor';
+import { TraitOfferDialog } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
 import { RemovedActionsNotice } from '@planner/ui/feedback/RemovedActionsNotice';
@@ -76,6 +77,9 @@ function CaseWorkspace({
   const project = useAppSelector(selectPresentProject);
   const activePanel = useAppSelector((state) => state.editorSession.activePanel);
   const evaluation = useAppSelector(selectProjectEvaluation);
+  const traitDialogTarget = useAppSelector(
+    (state) => state.editorSession.traitDialogTarget ?? null,
+  );
   const levelResolutionTarget = useAppSelector(
     (state) => state.editorSession.levelResolutionDialogTarget ?? null,
   );
@@ -138,6 +142,14 @@ function CaseWorkspace({
           interactions={workspace.interactions}
           key={semanticAddressKey(levelResolutionTarget)}
           target={levelResolutionTarget}
+        />
+      )}
+      {traitDialogTarget === null ? null : (
+        <TraitOfferDialog
+          findings={workspace.traitDialogFindings(traitDialogTarget)}
+          interactions={workspace.interactions}
+          key={semanticAddressKey(traitDialogTarget)}
+          target={traitDialogTarget}
         />
       )}
     </FindingTargetScope>

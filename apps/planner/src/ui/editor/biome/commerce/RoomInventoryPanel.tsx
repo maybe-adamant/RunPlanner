@@ -25,6 +25,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
+import { OfferConditionNotices } from '@planner/ui/feedback/OfferConditionNote';
 
 const wellIcon = (itemKey: string | null): string | undefined =>
   itemKey === null ? undefined : (wellArtwork[itemKey] ?? undefined);
@@ -77,6 +78,15 @@ export function RoomInventoryPanel({
                 ))}
               </NumberedSlots>
             )}
+            {feature.presence.kind === 'optionalAbsent' ? null : (
+              <OfferConditionNotices
+                conditions={feature.slots.map(
+                  (slot) =>
+                    interactions.stygianWellOffers.get(slot.offerInteractionKey)
+                      ?.selectedOfferCondition,
+                )}
+              />
+            )}
           </fieldset>
         );
       })();
@@ -128,6 +138,13 @@ export function RoomInventoryPanel({
                 })}
               </NumberedSlots>
             )}
+            <OfferConditionNotices
+              conditions={feature.slots.map(
+                (slot) =>
+                  interactions.hermesShrineOffers.get(slot.offerInteractionKey)
+                    ?.selectedOfferCondition,
+              )}
+            />
           </fieldset>
         );
       })();

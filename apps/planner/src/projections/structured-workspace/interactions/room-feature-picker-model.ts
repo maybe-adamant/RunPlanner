@@ -10,6 +10,7 @@ export interface StableIdentityPickerChoice<T> {
   readonly value: T;
   /** The engine's reason this reached choice cannot be taken here; it shows disabled. */
   readonly unavailable?: string;
+  readonly offerCondition?: ContextualPickerItem<T>['offerCondition'];
 }
 
 export interface StableIdentityPickerInput<T> {
@@ -37,6 +38,8 @@ export function projectStableIdentityPicker<T>({
     selected !== undefined &&
     (selectedChoice === undefined || selectedChoice.unavailable !== undefined);
   const itemState = assessment === 'assessed' ? ('possible' as const) : ('unassessed' as const);
+  const condition = (choice: StableIdentityPickerChoice<T> | undefined) =>
+    choice?.offerCondition === undefined ? {} : { offerCondition: choice.offerCondition };
   const selectedItem = selectedIsStale
     ? Object.freeze({
         disabled: true,
@@ -48,6 +51,7 @@ export function projectStableIdentityPicker<T>({
         selected: true,
         state: 'impossible' as const,
         value: selected,
+        ...condition(selectedChoice),
       })
     : selectedChoice === undefined
       ? undefined
@@ -58,6 +62,7 @@ export function projectStableIdentityPicker<T>({
           selected: true,
           state: itemState,
           value: selectedChoice.value,
+          ...condition(selectedChoice),
         });
   // A refused current choice shows once, as the current selection.
   const listed = selectedIsStale
@@ -73,6 +78,7 @@ export function projectStableIdentityPicker<T>({
           selected: Object.is(choice.value, selected),
           state: 'impossible' as const,
           value: choice.value,
+          ...condition(choice),
         })
       : Object.freeze({
           disabled: false,
@@ -81,6 +87,7 @@ export function projectStableIdentityPicker<T>({
           selected: Object.is(choice.value, selected),
           state: itemState,
           value: choice.value,
+          ...condition(choice),
         }),
   );
   const retainedUnassessed =

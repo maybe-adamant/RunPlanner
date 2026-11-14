@@ -1054,3 +1054,25 @@ button.hex-column-deal[data-has-findings='true'] {
   padding: 0.15rem 0.25rem;
   text-align: center;
 }
+
+.offer-condition-marker {
+  color: var(--attention);
+  cursor: help;
+  font-size: 0.7rem;
+  margin-left: 0.35rem;
+}
+
+.offer-condition-foot {
+  border-top: 1px solid #353640;
+  color: var(--muted);
+  display: grid;
+  font-size: 0.74rem;
+  gap: 0.1rem;
+  margin: 4px 0 0;
+  padding: 6px 8px 2px;
+}
+
+.offer-condition-notice {
+  flex-basis: 100%;
+  margin-top: 0.35rem;
+}

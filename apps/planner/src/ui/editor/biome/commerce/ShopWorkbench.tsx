@@ -1,4 +1,5 @@
 import {
+  workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
@@ -6,6 +7,7 @@ import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { OverviewRow } from '../RoomOverviewSections';
+import { OfferConditionNotices } from '@planner/ui/feedback/OfferConditionNote';
 
 /** The Shop's stock; purchases are timeline actions, and Travel Deal is authored under its purchase. */
 export function ShopWorkbench({
@@ -39,6 +41,14 @@ export function ShopWorkbench({
             </NumberedSlot>
           ))}
         </NumberedSlots>
+        <OfferConditionNotices
+          conditions={room.offers.map(
+            (offer) =>
+              interactions.shopOffers.get(
+                workspaceInteractionKey(offer.rewardControl.owner.address),
+              )?.selectedOfferCondition,
+          )}
+        />
       </OverviewRow>
     </section>
   );

@@ -175,6 +175,9 @@ function derivedRewardSupplementalOffer(
                     key: option.key,
                     label: option.label,
                     rewardType: option.rewardType,
+                    ...(option.unmodeledOfferCondition === undefined
+                      ? {}
+                      : { offerCondition: option.unmodeledOfferCondition }),
                   }),
                 ] as const,
             ),

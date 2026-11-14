@@ -44,6 +44,8 @@ interface WorkspaceRewardControlBase {
       readonly key: string;
       readonly label: string;
       readonly rewardType: string;
+      /** A game offer condition on hero state the plan does not track. */
+      readonly offerCondition?: import('@run-planner/engine/reward-kernel').ShopOptionEntry['unmodeledOfferCondition'];
     }[];
   };
   readonly owner: RewardCandidateOwner;
