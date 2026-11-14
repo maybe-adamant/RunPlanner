@@ -5,6 +5,7 @@ import { roomMapImageFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorChipFace } from '../DecisionWorkbench';
 import type { DoorChip } from '../doorSummary';
 import {
+  ContractDoorMark,
   RoomMapNumber,
   RoomMapLegend,
   RoomMapSideDoors,
@@ -197,7 +198,9 @@ export function RoomMapColumn({
                 {...markerPlacement(markers.contractExit, open && contractChip !== undefined)}
                 {...pointers({ kind: 'contractExit' })}
               >
-                {!open || contractChip === undefined ? null : (
+                {!open || contractChip === undefined ? (
+                  <ContractDoorMark />
+                ) : (
                   <span aria-hidden="true" className="room-map-door-face">
                     <DoorChipFace chip={contractChip} />
                   </span>
@@ -271,7 +274,6 @@ export function RoomMapColumn({
       />
       <RoomMapLegend
         chaos={markers.chaosGate !== undefined || chaosPoints.length > 0}
-        contract={markers.contractExit !== undefined}
         markers={wheelSpots === undefined ? markers : { ...markers, doors }}
         wheel={wheelSpots !== undefined && wheelSpots.length > 0}
       />

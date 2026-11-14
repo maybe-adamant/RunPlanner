@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { WorkspaceRoomMap } from '@planner/projections/structured-workspace';
 import { roomMapMarkers, type RoomMapMarkers } from '@planner/projections/roomMapMarkers';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
+import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
 import { melinoeIcon } from '@planner/ui/artwork/player/playerArtwork';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
@@ -242,6 +243,13 @@ export function RoomMapSpots({
 const shopBadgeIcon = rewardIcon('Shop');
 const contractBadgeIcon = traitIcon('InfernalContractBoon');
 
+/** The Contract door's icon in its exit ring while it is shut. */
+export function ContractDoorMark() {
+  return (
+    <ArtworkIcon className="artwork-label-icon" source={doorArtwork.ZagContract ?? undefined} />
+  );
+}
+
 const stockBadge = (icon: ArtworkSource | undefined) => (
   <span aria-hidden="true" className="room-map-point-badge">
     <ArtworkIcon className="artwork-label-icon" source={icon} />
@@ -332,14 +340,11 @@ export function RoomMapSideDoors({
 /** The kinds of point a map shows, one swatch each, under the map. */
 export function RoomMapLegend({
   chaos,
-  contract = false,
   markers,
   wheel = false,
 }: {
   /** Whether the map shows a Chaos gate or Chaos points. */
   readonly chaos: boolean;
-  /** Whether the map shows a Contract door. */
-  readonly contract?: boolean;
   readonly markers: RoomMapMarkers;
   /** Whether the map shows a Ship wheel's offers. */
   readonly wheel?: boolean;
@@ -349,7 +354,7 @@ export function RoomMapLegend({
     ...(wheel ? (['wheel'] as const) : []),
     ...(markers.sideDoors.length > 0 ? (['side'] as const) : []),
     ...(chaos ? (['chaos'] as const) : []),
-    ...(contract ? (['contract'] as const) : []),
+    ...(markers.contractExit === undefined ? [] : (['contract'] as const)),
     ...(markers.entries.length > 0 ? (['entry'] as const) : []),
     ...(markers.anchors.length > 0 ? (['anchor'] as const) : []),
     ...(markers.fieldsCagePoints.length > 0 ? (['cage'] as const) : []),
@@ -361,7 +366,7 @@ export function RoomMapLegend({
     wheel: 'Wheel offer',
     side: 'Side door',
     chaos: 'Chaos',
-    contract: 'Contract exit',
+    contract: 'Infernal Contract',
     entry: 'Entry',
     anchor: 'Object spot',
     cage: 'Cage point',
@@ -374,7 +379,9 @@ export function RoomMapLegend({
           {kind === 'entry' ? (
             <img alt="" className="room-map-legend-entry" draggable={false} src={melinoeIcon} />
           ) : (
-            <span aria-hidden="true" className="room-map-legend-swatch" />
+            <span aria-hidden="true" className="room-map-legend-swatch">
+              {kind === 'contract' ? <ContractDoorMark /> : null}
+            </span>
           )}
           {names[kind]}
         </li>
@@ -394,13 +401,7 @@ export function RoomFeatureMapLegend({
   const calibration = roomMapCalibrations[gameName];
   if (calibration === undefined) return null;
   const markers = roomMapMarkers(map, calibration);
-  return (
-    <RoomMapLegend
-      chaos={markers.chaosPoints.length > 0}
-      contract={markers.contractExit !== undefined}
-      markers={markers}
-    />
-  );
+  return <RoomMapLegend chaos={markers.chaosPoints.length > 0} markers={markers} />;
 }
 
 /**
@@ -460,7 +461,9 @@ export function RoomFeatureMapPoints({
           data-contract
           role="img"
           style={position(markers.contractExit)}
-        />
+        >
+          <ContractDoorMark />
+        </span>
       )}
       {markers.doors.map((door) => (
         <span

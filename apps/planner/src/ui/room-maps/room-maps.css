@@ -12,8 +12,6 @@
   /* Cocoons (G) never share a map with Fields cages, so they share its cyan. */
   --legend-cocoon: #00e5ff;
   --legend-pickup: #e8e4da;
-  /* Midshops also hold exits, Chaos and anchors: Zagreus's red stands apart from them. */
-  --legend-contract: #ff4b3e;
   --legend-selection: #f5d386;
   --hub-perfect: #49c8dc;
   --hub-good: #4bb36f;
@@ -739,8 +737,11 @@
   border-color: var(--legend-chaos);
 }
 
-.room-map-door[data-contract] {
-  border-color: var(--legend-contract);
+/* A shut Contract door: an exit ring holding the Contract's icon. */
+.room-map-door[data-contract]:is([data-closed], [data-ring]) > .artwork-label-icon {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
 }
 
 .room-map-door[data-side] {
@@ -889,8 +890,18 @@
   rotate: 45deg;
 }
 
+/* The Contract door's swatch: its icon in an exit ring, as its marker stands shut. */
 .room-map-legend > li[data-kind='contract'] > .room-map-legend-swatch {
-  border-color: var(--legend-contract);
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+}
+
+.room-map-legend > li[data-kind='contract'] .artwork-label-icon {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
 }
 
 .room-map-legend-entry {
