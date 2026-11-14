@@ -3537,6 +3537,12 @@ span.hub-board-status-line {
   outline-offset: 2px;
 }
 
+/* A chip on the Doors open line rings inside itself, which the line's title would clip outside. */
+.doors-moment-trigger .timeline-door-chip[data-map-pointed] {
+  border-radius: 6px;
+  outline-offset: -2px;
+}
+
 .room-map-column > .room-map-viewport > .room-map-canvas {
   width: 100%;
   aspect-ratio: 16 / 9;
