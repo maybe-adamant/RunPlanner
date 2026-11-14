@@ -55,6 +55,7 @@ import {
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import { doorsEditor } from '@planner-test/support/biome-workbench';
 import {
   createManualSaveScheduler,
   createMemoryProjectLibrary,
@@ -495,9 +496,10 @@ describe('surface product loop', () => {
       biomeKey: 'P',
     });
     expect(currentHistory(application)).toBe(historyBefore);
-    const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
-    expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
+    // Navigation to the target opens its doors.
+    const doors = doorsEditor();
+    expect(doors.querySelector('.biome-batch-workbench')).not.toBeNull();
+    expect(within(doors).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
 
   it('repairs a Hub Phial target on the Hub timeline fountain row and reopens it from the fountain', async () => {

@@ -8,7 +8,7 @@ import { EncounterCustomizationLauncher } from './locals/EncounterPhaseControl';
 const isCustomizationFinding = (finding: { readonly code: string }) =>
   finding.code === 'unlockExitCustomizationUnavailable';
 
-/** A locked door's fight: its Customize launcher on the press row, or on the door before it. */
+/** A locked door's fight: its Customize launcher on the door's press row. */
 export function UnlockExitFightControl({
   encounter,
   interactions,

@@ -50,6 +50,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import { doorsEditor, expandDoors } from '@planner-test/support/biome-workbench';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 import { takeLive } from '@planner-test/support/live-row';
@@ -583,10 +584,11 @@ describe('underworld product loop', () => {
       'Chaos 06',
     );
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(within(gate).getByRole('button', { name: 'Chaos gate room' }).textContent).toContain(
-      'Chaos 01',
-    );
-    await view.user.click(within(gate).getByRole('button', { name: 'Chaos gate room' }));
+    const restoredGate = within(expandDoors()).getByRole('article', { name: 'Chaos gate exit' });
+    expect(
+      within(restoredGate).getByRole('button', { name: 'Chaos gate room' }).textContent,
+    ).toContain('Chaos 01');
+    await view.user.click(within(restoredGate).getByRole('button', { name: 'Chaos gate room' }));
     await view.user.click(screen.getByRole('option', { name: 'Chaos 06' }));
     await pickExit(view.user, 'Chaos gate');
     // The rail opens the room the exit leads to.
@@ -649,8 +651,11 @@ describe('underworld product loop', () => {
           decision.source.occurrenceId === chaosOccurrenceId,
       ),
     ).toBe(false);
-    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const rewardPool = screen.getByRole('button', { name: /Reward Pool/ });
+    // The next step opens its source room's doors on its Timeline.
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const rewardPool = within(doorsEditor()).getByRole('button', { name: /Reward Pool/ });
     await view.user.click(rewardPool);
     const nextPool = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
@@ -1025,7 +1030,9 @@ describe('underworld product loop', () => {
     );
     await pickExit(view.user, 'Infernal Contract');
     expect(
-      screen.getByRole('article', { name: 'Infernal Contract exit' }).getAttribute('data-picked'),
+      within(expandDoors())
+        .getByRole('article', { name: 'Infernal Contract exit' })
+        .getAttribute('data-picked'),
     ).toBe('true');
     const oceanusRail = screen
       .getByRole('region', { name: 'Oceanus route structure' })

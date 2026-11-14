@@ -80,7 +80,6 @@ export type FocusPresentation =
  */
 export interface DoorEditorChoice {
   readonly expanded: boolean;
-  readonly attention: readonly string[];
   readonly navigationRevision: number;
 }
 
@@ -112,7 +111,7 @@ export interface EditorSessionState {
   readonly focusPresentation?: FocusPresentation | null;
   /** Open dialogs holding an unsaved local draft; history shortcuts wait while any is open. */
   readonly openDraftEditors: number;
-  /** Each room occurrence's remembered door-editor choice, by room interaction key. */
+  /** Each room's (or Ship wheel's) door-editor choice, by its interaction key. */
   readonly doorEditorChoices?: Readonly<Record<string, DoorEditorChoice>>;
 }
 
@@ -235,10 +234,10 @@ const editorSessionSlice = createSlice({
       state,
       action: PayloadAction<{ readonly room: string; readonly choice: DoorEditorChoice }>,
     ) {
-      const { attention, expanded, navigationRevision } = action.payload.choice;
+      const { expanded, navigationRevision } = action.payload.choice;
       state.doorEditorChoices = {
         ...state.doorEditorChoices,
-        [action.payload.room]: { attention: [...attention], expanded, navigationRevision },
+        [action.payload.room]: { expanded, navigationRevision },
       };
     },
     findingSelected(state, action: PayloadAction<FindingSelection>) {

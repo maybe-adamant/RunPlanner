@@ -38,6 +38,8 @@ import { PurchaseCost } from '@planner/ui/editor/biome/commerce/GoldAmount';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
 import {
+  doorsEditor,
+  expandDoors,
   leaveOptionNames,
   openLeavePicker,
   renderWorkspace,
@@ -65,63 +67,48 @@ function history(view: ReturnType<typeof renderWorkspace>) {
 }
 
 describe('a room’s doors on its Timeline', () => {
-  it('keeps its doors collapsed by default and remembers an explicit choice per room', async () => {
+  it('opens its doors in one popover only when asked, until the next navigation', async () => {
     const view = renderWorkspace(loadUnderworldFGCheckpoint(), 'Underworld', 'F');
     const details = await openTimeline(view);
     const before = history(view);
-    const disclosure = () => within(details).getByRole('button', { name: 'Door details' });
-    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
-    expect(within(details).queryByRole('region', { name: 'Door details' })).toBeNull();
-    // The closed row still names every door.
-    const summary = within(details).getByRole('list', { name: 'Door summary' });
-    // Chips name their doors without being tab stops of their own.
-    expect(
-      within(summary)
-        .getAllByRole('listitem')
-        .every((chip) => !chip.hasAttribute('tabindex')),
-    ).toBe(true);
+    const trigger = () => within(details).getByRole('button', { name: 'Edit doors' });
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('dialog', { name: 'Doors' })).toBeNull();
+    // The marker's name and its chips are one control, with no chip a control of its own.
+    expect(within(trigger()).getByText('Doors opened')).toBeTruthy();
+    expect(within(details).getByLabelText('Doors opened').querySelectorAll('button')).toHaveLength(
+      1,
+    );
 
-    await view.user.click(disclosure());
-    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
-    expect(document.getElementById(disclosure().getAttribute('aria-controls')!)).not.toBeNull();
-    expect(within(details).getByRole('region', { name: 'Door details' })).toBeTruthy();
+    await view.user.click(trigger());
+    expect(trigger().getAttribute('aria-expanded')).toBe('true');
+    expect(within(doorsEditor()).getByRole('region', { name: 'Door details' })).toBeTruthy();
 
-    // The open stays across a tab switch and a visit to another room.
-    await view.user.click(within(details).getByRole('tab', { name: 'Room Overview' }));
-    await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
-    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+    // A visit to another room and back leaves them shut.
     act(() =>
       view.application.store.dispatch(
         semanticOwnerFocused(createOccurrenceAddress(f, createOccurrenceId('golden-f-start'))),
       ),
     );
     await openTimeline(view);
-    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
-
-    // So does a close.
-    await view.user.click(disclosure());
-    await view.user.click(within(details).getByRole('tab', { name: 'Room Overview' }));
-    await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
-    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
     // Opening and closing is no authored edit.
     expect(history(view)).toBe(before);
 
-    // Navigating to a door's owner opens the doors again.
+    // Navigating to a door's owner opens the doors.
     act(() =>
       view.application.store.dispatch(semanticOwnerFocused(createIncomingRewardAddress(f, doorTo))),
     );
-    expect(within(details).getByRole('region', { name: 'Door details' })).toBeTruthy();
+    expect(within(doorsEditor()).getByRole('region', { name: 'Door details' })).toBeTruthy();
   });
 
-  it('opens on a door finding, stays closed after a close while it lasts, and reopens on a new one', async () => {
+  it('marks its line with a door finding without opening, and opens on navigation to it', async () => {
     const view = renderWorkspace(loadUnderworldFGCheckpoint(), 'Underworld', 'F');
     const details = await openTimeline(view);
-    const disclosure = () => within(details).getByRole('button', { name: 'Door details' });
-    await view.user.click(disclosure());
-    await view.user.click(disclosure());
-    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+    const trigger = () => within(details).getByRole('button', { name: 'Edit doors' });
+    expect(trigger().hasAttribute('data-has-findings')).toBe(false);
 
-    // A door reward the bag cannot give is new attention: the doors open.
+    // A door reward the bag cannot give is a finding the doors repair.
     const doorTwo = createIncomingRewardAddress(f, createOccurrenceId('golden-f-b3-e2'));
     act(() =>
       view.application.store.dispatch(
@@ -138,13 +125,8 @@ describe('a room’s doors on its Timeline', () => {
         (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(doorTwo),
       );
     if (finding === undefined) throw new Error('missing door reward finding');
-    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
-
-    // Closed again with the same finding, the doors stay closed.
-    await view.user.click(disclosure());
-    await view.user.click(within(details).getByRole('tab', { name: 'Room Overview' }));
-    await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
-    expect(disclosure().getAttribute('aria-expanded')).toBe('false');
+    expect(trigger().hasAttribute('data-has-findings')).toBe(true);
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
 
     // Navigating to the finding opens them, so its target shows.
     act(() =>
@@ -152,11 +134,11 @@ describe('a room’s doors on its Timeline', () => {
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       ),
     );
-    expect(within(details).getByRole('region', { name: 'Door details' })).toBeTruthy();
-    expect(disclosure().getAttribute('aria-expanded')).toBe('true');
+    expect(within(doorsEditor()).getByRole('region', { name: 'Door details' })).toBeTruthy();
+    expect(trigger().getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('opens when the room’s doors are the next required input', async () => {
+  it('stays shut while the room’s doors are the next required input', async () => {
     const start = createOccurrenceId('timeline-doors-f-start');
     let project = createProjectDocument(catalog, {
       projectId: 'timeline-doors-frontier',
@@ -197,8 +179,8 @@ describe('a room’s doors on its Timeline', () => {
     const details = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(details).getByRole('tab', { name: 'Room Timeline' }));
     expect(
-      within(details).getByRole('button', { name: 'Door details' }).getAttribute('aria-expanded'),
-    ).toBe('true');
+      within(details).getByRole('button', { name: 'Edit doors' }).getAttribute('aria-expanded'),
+    ).toBe('false');
   });
 
   it('picks the exit on the Leave row as one authored step', async () => {
@@ -263,9 +245,9 @@ describe('a room’s doors on its Timeline', () => {
       gold,
     );
     // The Doors opened row keeps Door 1's first draw.
-    const firstDraw = within(within(details).getByLabelText('Doors opened')).getAllByRole(
-      'listitem',
-    )[0]!;
+    const firstDraw = within(details)
+      .getByRole('button', { name: 'Edit doors' })
+      .querySelector<HTMLElement>('.timeline-door-chip')!;
     expect(
       [...firstDraw.querySelectorAll('img')].map((img) => img.getAttribute('src')),
     ).not.toContain(gold);
@@ -323,19 +305,13 @@ describe('a room’s door notes', () => {
     return details;
   }
 
-  async function openDoors(view: ReturnType<typeof renderWorkspace>, details: HTMLElement) {
-    const disclosure = within(details).getByRole('button', { name: 'Door details' });
-    if (disclosure.getAttribute('aria-expanded') === 'false') await view.user.click(disclosure);
-  }
-
   const noteText = (marker: Element) => marker.getAttribute('aria-description');
 
   it('hints the hidden door’s name with its note, in no notes section', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
-    const details = await openRoom(view, sideRoom);
-    await openDoors(view, details);
+    const doors = expandDoors(await openRoom(view, sideRoom));
     expect(screen.queryByRole('complementary', { name: 'Notes' })).toBeNull();
-    const door = within(details).getByRole('article', { name: 'Hidden return door' });
+    const door = within(doors).getByRole('article', { name: 'Hidden return door' });
     const name = within(door).getByRole('group', { name: 'Hidden' });
     expect(noteText(name)).toBe(
       'Its room and reward are drawn when the doors first unlock, before any side door.',
@@ -349,8 +325,7 @@ describe('a room’s door notes', () => {
       view,
       createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-miniboss01')),
     );
-    await openDoors(view, details);
-    const column = within(details).getByRole('group', { name: 'Reward' });
+    const column = within(expandDoors(details)).getByRole('group', { name: 'Reward' });
     expect(noteText(column)).toBe('Cage rewards appear bottom to top on the door');
     expect(column.tabIndex).toBe(0);
   });
@@ -361,10 +336,9 @@ describe('a room’s door notes', () => {
       view,
       createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop')),
     );
-    await openDoors(view, details);
-    expect(noteText(within(details).getByRole('group', { name: 'Major Reward' }))).toBe(
-      'Fixed for this boss',
-    );
+    expect(
+      noteText(within(expandDoors(details)).getByRole('group', { name: 'Major Reward' })),
+    ).toBe('Fixed for this boss');
   });
 });
 

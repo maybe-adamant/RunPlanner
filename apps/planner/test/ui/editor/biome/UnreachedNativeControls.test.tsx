@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -153,6 +153,7 @@ describe('native settings whose candidate context is unreached, on first render'
     })();
     renderOccurrenceWorkbench(frontier, 'Surface', 'O', occurrenceById(occurrenceId));
     openRoomTab('Intro Timeline');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit offers' }));
     const count = screen.getByRole('button', { name: 'Offers' }) as HTMLButtonElement;
     expect(count.disabled).toBe(false);
     const upstream = withInvalidEncounter(

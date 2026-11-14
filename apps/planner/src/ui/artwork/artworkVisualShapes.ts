@@ -229,6 +229,8 @@ export const artworkVisualShapes: Readonly<
   'artwork/clockwork/assets/ClockworkCountdown6.webp': [0.517, 0.584, 0.823],
   'artwork/combat-rooms/assets/CodexFoesSurface.webp': [0.5, 0.5, 1],
   'artwork/combat-rooms/assets/CodexFoesUnderworld.webp': [0.5, 0.507, 1],
+  'artwork/doors/assets/AnomalyAsphodel.webp': [0.5, 0.5, 0.986],
+  'artwork/doors/assets/AnomalyMystery.webp': [0.5, 0.5, 1],
   'artwork/doors/assets/ChaosGate.webp': [0.502, 0.5, 0.996],
   'artwork/doors/assets/EphyraDoor.webp': [0.5, 0.5, 1],
   'artwork/doors/assets/EphyraSubRoomDoor.webp': [0.5, 0.5, 1],

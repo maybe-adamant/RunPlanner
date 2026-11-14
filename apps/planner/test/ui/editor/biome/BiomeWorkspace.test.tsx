@@ -74,6 +74,7 @@ import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import { RunStateLauncher } from '@planner/ui/editor/biome/RunStateSheet';
 import userEvent from '@testing-library/user-event';
 import {
+  doorsEditor,
   expandDoors,
   leaveOptionNames,
   openLeavePicker,
@@ -128,9 +129,9 @@ function roomWorkbench(inspector: HTMLElement): HTMLElement | null {
   return within(inspector).queryByRole('tablist', { name: 'Room workbench' });
 }
 
-/** The open door decision's workbench, known by the decision kind it shows. */
+/** The open door decision's workbench, in the inspector's door popover. */
 function doorWorkbench(inspector: HTMLElement): HTMLElement | null {
-  return inspector.querySelector<HTMLElement>('[data-batch-kind]');
+  return inspector.ownerDocument.querySelector<HTMLElement>('[data-batch-kind]');
 }
 
 function railMarkerKeys(container: HTMLElement): readonly string[] {
@@ -1311,8 +1312,8 @@ describe('BiomeWorkspace', () => {
     if (picked === undefined) throw new Error('P selected room is missing');
     const beforeText = railDecision.textContent;
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Timeline' }));
-    expandDoors(inspector);
-    const pickedDoor = within(inspector).getByRole('article', {
+    const doors = expandDoors(inspector);
+    const pickedDoor = within(doors).getByRole('article', {
       name: `${picked.door.room.label} room offer`,
     });
     await view.user.click(within(pickedDoor).getByRole('button', { name: /^Reward(: |$)/ }));
@@ -1393,12 +1394,13 @@ describe('BiomeWorkspace', () => {
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(roomWorkbench(inspector)).not.toBeNull();
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Timeline' }));
-    expect(within(inspector).getByRole('group', { name: 'Door rows' })).toBeTruthy();
+    const doors = expandDoors(inspector);
+    expect(within(doors).getByRole('group', { name: 'Door rows' })).toBeTruthy();
     expect(within(inspector).queryByText('Continue from this room')).toBeNull();
-    expect(within(inspector).queryByRole('button', { name: 'Reset Doors' })).toBeNull();
+    expect(within(doors).queryByRole('button', { name: 'Reset Doors' })).toBeNull();
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
 
-    const pool = within(inspector).getByRole('button', { name: 'Reward Pool' });
+    const pool = within(doors).getByRole('button', { name: 'Reward Pool' });
     await view.user.click(pool);
     const minor = within(await screen.findByRole('listbox')).getByText('Minor Reward');
     expect(minor.closest('[cmdk-item]')?.getAttribute('aria-disabled')).not.toBe('true');
@@ -1439,7 +1441,9 @@ describe('BiomeWorkspace', () => {
     );
     const restoredInspector = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(restoredInspector).getByRole('tab', { name: 'Room Timeline' }));
-    expect(screen.getByRole('group', { name: 'Door rows' })).toBeTruthy();
+    expect(
+      within(expandDoors(restoredInspector)).getByRole('group', { name: 'Door rows' }),
+    ).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Reset Doors' })).toBeNull();
   });
 
@@ -1454,8 +1458,9 @@ describe('BiomeWorkspace', () => {
     // Its open doors keep the hidden return door; it is left through its side visits,
     // the last way out leading back to the Hub.
     await openTimeline(createOccurrenceAddress(nBiome, nOccurrenceId('combat02')));
-    expandDoors(details());
-    expect(within(details()).getByRole('article', { name: 'Hidden return door' })).toBeTruthy();
+    expect(
+      within(expandDoors(details())).getByRole('article', { name: 'Hidden return door' }),
+    ).toBeTruthy();
     const exits = within(details()).getAllByRole('listitem', { name: 'Leave room' });
     expect(within(exits.at(-1)!).getByRole('button', { name: 'Exit door' }).textContent).toBe(
       'Hub',
@@ -1969,8 +1974,8 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    expandDoors(inspector);
-    expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
+    const doors = expandDoors(inspector);
+    expect(within(doors).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
     expect(doorWorkbench(inspector)).not.toBeNull();
   });
 
@@ -2018,8 +2023,8 @@ describe('BiomeWorkspace', () => {
       ),
     );
 
-    const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const door = within(inspector).getByRole('article', {
+    // Navigation to a door owner opens the doors.
+    const door = within(doorsEditor()).getByRole('article', {
       name: `${story.room.label} room offer`,
     });
     expect(within(door).queryByText('Door reward')).toBeNull();
@@ -2121,6 +2126,7 @@ describe('boss-door reward pool in the Doors open row', () => {
     biomeKey: string,
   ): Promise<{
     readonly section: HTMLElement;
+    readonly doors: HTMLElement;
     readonly user: ReturnType<typeof renderWorkspace>['user'];
   }> {
     const view = renderWorkspace(project, routeKey, biomeKey);
@@ -2133,20 +2139,19 @@ describe('boss-door reward pool in the Doors open row', () => {
     act(() => view.application.store.dispatch(semanticOwnerFocused(node.room.address)));
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const section = screen.getByRole('complementary', { name: 'Details' });
-    expandDoors(section);
-    return { section, user: view.user };
+    return { section, doors: expandDoors(section), user: view.user };
   }
 
   it('authors a rolling boss pool beside its fixed destination door', async () => {
-    const { section } = await openBossDoors(loadSurfaceNOPQProject(), 'Surface', 'O');
-    const picker = within(section).getByRole('button', { name: 'Reward Pool' });
+    const { section, doors } = await openBossDoors(loadSurfaceNOPQProject(), 'Surface', 'O');
+    const picker = within(doors).getByRole('button', { name: 'Reward Pool' });
     expect(within(section).getByRole('listitem', { name: 'Leave room' })).toBeTruthy();
     expect(picker.textContent).not.toContain('Select pool');
   });
 
   it('explains a saturated boss pool with the ledger that forced it', async () => {
-    const { section, user } = await openBossDoors(loadSurfaceNOPQProject(), 'Surface', 'P');
-    await user.click(within(section).getByRole('button', { name: 'Reward Pool' }));
+    const { doors, user } = await openBossDoors(loadSurfaceNOPQProject(), 'Surface', 'P');
+    await user.click(within(doors).getByRole('button', { name: 'Reward Pool' }));
     await user.click(await screen.findByRole('button', { name: 'Unavailable (1)' }));
     const excluded = within(screen.getByRole('listbox')).getByText('Major Reward');
     const item = excluded.closest('[cmdk-item]');
@@ -2159,24 +2164,22 @@ describe('boss-door reward pool in the Doors open row', () => {
   });
 
   it('reports a pinned boss pool in the same place, with nothing to author', async () => {
-    const { section } = await openBossDoors(createGoldenFGHIProject(), 'Underworld', 'H');
+    const { section, doors } = await openBossDoors(createGoldenFGHIProject(), 'Underworld', 'H');
     // H's boss pins its entered store at spawn.
-    expect(within(section).queryByRole('button', { name: 'Reward Pool' })).toBeNull();
-    expect(within(section).getByText('Major Reward')).toBeTruthy();
+    expect(within(doors).queryByRole('button', { name: 'Reward Pool' })).toBeNull();
+    expect(within(doors).getByText('Major Reward')).toBeTruthy();
     expect(
-      within(section).getByRole('group', { name: 'Major Reward' }).getAttribute('aria-description'),
+      within(doors).getByRole('group', { name: 'Major Reward' }).getAttribute('aria-description'),
     ).toBe('Fixed for this boss');
     expect(within(section).getByRole('listitem', { name: 'Leave room' })).toBeTruthy();
   });
 
   it('reports a store-ignoring boss pool in the same place', async () => {
-    const { section } = await openBossDoors(createCompleteFGProject(), 'Underworld', 'F');
-    expect(within(section).queryByRole('button', { name: 'Reward Pool' })).toBeNull();
-    expect(within(section).getByRole('status', { name: 'Effective Pool' }).textContent).toBe(
-      'None',
-    );
+    const { section, doors } = await openBossDoors(createCompleteFGProject(), 'Underworld', 'F');
+    expect(within(doors).queryByRole('button', { name: 'Reward Pool' })).toBeNull();
+    expect(within(doors).getByRole('status', { name: 'Effective Pool' }).textContent).toBe('None');
     expect(
-      within(section).getByRole('group', { name: 'None' }).getAttribute('aria-description'),
+      within(doors).getByRole('group', { name: 'None' }).getAttribute('aria-description'),
     ).toBe('Ignored for this boss');
     expect(within(section).getByRole('listitem', { name: 'Leave room' })).toBeTruthy();
   });

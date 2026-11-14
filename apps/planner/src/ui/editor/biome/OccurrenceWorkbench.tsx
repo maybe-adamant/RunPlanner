@@ -112,8 +112,6 @@ interface OccurrenceWorkbenchProps {
   readonly timelineDoors?: TimelineDoorsContent;
   /** Navigation landed on a door owner, so the Doors open row opens. */
   readonly doorsRequested?: boolean;
-  /** The room's exit is the authoring frontier: its doors are the next required input. */
-  readonly doorsFrontier?: boolean;
   /** The room's place against the plan end; past it, every panel is read-only but its last row. */
   readonly planEndRelation?: WorkspacePlanEndRelation;
   /** Exact room-owned additions to ordinary lifecycle rows. */
@@ -128,7 +126,6 @@ interface OccurrenceWorkbenchProps {
 export function OccurrenceWorkbench({
   incomingDoor,
   doorsRequested = false,
-  doorsFrontier = false,
   timelineDoors,
   entryIdentity,
   initialTab,
@@ -173,9 +170,8 @@ export function OccurrenceWorkbench({
     });
   }
   const selectedTab = tabState.active;
-  // The door editor stays shut unless it needs attention (a finding inside or
-  // on a locked door, or the doors as the next required input) or navigation asks for it. A
-  // remembered choice holds until attention it has not seen appears.
+  // The doors' popover opens only when asked: by the user, or by navigation to a door
+  // owner; a choice holds until the next navigation.
   const doorChoice = useAppSelector(
     (state) => state.editorSession.doorEditorChoices?.[roomIdentity],
   );
@@ -184,32 +180,24 @@ export function OccurrenceWorkbench({
     timelineDoors?.findingOwners ?? [],
     timelineDoors?.attentionFindings,
   );
-  const doorAttention = [...doorFindingKeys, ...(doorsFrontier ? ['frontier'] : [])];
   const currentNavigation = navigationRevision ?? -1;
   const doorsExpanded =
     (doorsRequested &&
       (doorChoice === undefined || doorChoice.navigationRevision !== currentNavigation)) ||
-    (doorChoice === undefined
-      ? doorAttention.length > 0
-      : doorChoice.expanded ||
-        doorAttention.some((attention) => !doorChoice.attention.includes(attention)));
+    (doorChoice?.expanded === true && doorChoice.navigationRevision === currentNavigation);
   const doors: TimelineDoors | undefined =
     timelineDoors === undefined
       ? undefined
       : {
           ...timelineDoors,
           noun: 'door' as const,
-          detailId: `occurrence-${room.occurrenceId}-doors-detail`,
           expanded: doorsExpanded,
+          holdsFindings: doorFindingKeys.length > 0,
           onExpandedChange: (expanded: boolean) =>
             dispatch(
               doorEditorChosen({
                 room: roomIdentity,
-                choice: {
-                  expanded,
-                  attention: doorAttention,
-                  navigationRevision: currentNavigation,
-                },
+                choice: { expanded, navigationRevision: currentNavigation },
               }),
             ),
         };

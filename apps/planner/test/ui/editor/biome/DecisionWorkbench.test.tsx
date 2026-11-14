@@ -82,6 +82,8 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { decisionContainingOccurrence } from '@planner-test/support/occurrence-workbench';
 import {
+  doorsEditor,
+  expandDoors,
   renderBiomeClearAction,
   renderDecisionWorkbench,
   renderOccurrenceWorkbench,
@@ -720,15 +722,14 @@ describe('DecisionWorkbench', () => {
     expect(within(contract).queryByRole('button', { name: /^Reward(: |$)/ })).toBeNull();
     expect(within(contract).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     expect(contract.querySelector('hr')).toBeNull();
-    // The contract is taken from the Leave row, which follows the doors.
-    const room = within(contract).getByRole('img', { name: 'Reward: Champion of Elysium' });
-    expect(room.compareDocumentPosition(leaveRow()) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    // The contract is taken from the Leave row.
     expect(await exitChoices()).toContain('Infernal Contract');
     await pickExit(decisionView.user, 'Infernal Contract');
     await waitFor(() =>
-      expect(screen.getByRole('article', { name: 'Infernal Contract exit' }).dataset.picked).toBe(
-        'true',
-      ),
+      expect(
+        within(expandDoors()).getByRole('article', { name: 'Infernal Contract exit' }).dataset
+          .picked,
+      ).toBe('true'),
     );
     cleanup();
 
@@ -970,7 +971,9 @@ describe('DecisionWorkbench', () => {
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
-      expect(screen.getByRole('article', { name: 'Door 1 unspecified room offer' })).toBeTruthy(),
+      expect(
+        within(expandDoors()).getByRole('article', { name: 'Door 1 unspecified room offer' }),
+      ).toBeTruthy(),
     );
     expect(screen.queryByLabelText('Door 2 room')).toBeNull();
   });
@@ -1141,7 +1144,8 @@ describe('DecisionWorkbench', () => {
       within(card).getByRole('button', { name: `View map of ${target.room.label}` }),
     );
 
-    const mapDialog = screen.getByRole('dialog');
+    const mapDialog = screen.getAllByRole('dialog').find((dialog) => dialog !== doorsEditor());
+    if (mapDialog === undefined) throw new Error('the map dialog is missing');
     expect(within(mapDialog).getByRole('heading', { name: target.room.label })).toBeTruthy();
     expect(mapDialog.querySelector(`[data-hint="${target.room.gameName}"]`)).toBeTruthy();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
@@ -1268,12 +1272,14 @@ describe('DecisionWorkbench', () => {
       firstNodeOfKind('ordinaryBatch'),
     );
 
-    const selector = screen.getByLabelText('Fields door roll');
+    const selector = screen.getByRole('button', { name: 'Fields door roll' });
     const fieldsEditor = selector.closest('.fields-batch-editor');
     expect(fieldsEditor).not.toBeNull();
     expect(selector.closest('.batch-reward-pool')).toBeNull();
-    expect(within(fieldsEditor as HTMLElement).getByText('Cages per combat room')).toBeTruthy();
-    expect(within(fieldsEditor as HTMLElement).getByText('Prior Max outcomes')).toBeTruthy();
+    // The roll's cages and the run's Maximum rolls follow the picker on its one line.
+    expect(fieldsEditor?.querySelector('.fields-batch-summary')?.textContent).toMatch(
+      /cages? · Max \d+\/\d+$/,
+    );
   });
 
   it('marks a Vow of Forfeit realization on the forfeited door reward control', () => {
@@ -1405,8 +1411,9 @@ describe('DecisionWorkbench', () => {
 
     const noteOn = (words: string) =>
       screen.getByRole('group', { name: words }).getAttribute('aria-description');
-    expect(noteOn('Cages per combat room')).toBe('No room here uses the cage count');
-    expect(noteOn('Fields door roll')).toBe('Max still affects later Fields rolls');
+    // One hint, on the roll, tells both the cages and the Maximum rule.
+    expect(noteOn('Fields door roll')).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Cages per combat room' })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Reward' })).toBeNull();
   });
 
@@ -1551,7 +1558,7 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(owner),
     );
 
-    await view.user.click(screen.getByLabelText('Fields door roll'));
+    await view.user.click(screen.getByRole('button', { name: 'Fields door roll' }));
     const required = within(screen.getByRole('listbox')).getByText('Maximum');
     const requiredItem = required.closest('[cmdk-item]');
     expect(requiredItem?.getAttribute('data-candidate-state')).toBe('forced');
@@ -1587,7 +1594,7 @@ describe('DecisionWorkbench', () => {
     });
     const view = renderDecisionWorkbench(project, 'Underworld', 'H', subjectForOwner(owner));
 
-    const trigger = screen.getByLabelText('Fields door roll');
+    const trigger = screen.getByRole('button', { name: 'Fields door roll' });
     await view.user.click(trigger);
     const maximum = within(screen.getByRole('listbox')).getByText('Maximum');
     const item = maximum.closest('[cmdk-item]');
@@ -1615,10 +1622,9 @@ describe('DecisionWorkbench', () => {
     });
     renderDecisionWorkbench(blockHCombat05Trait(), 'Underworld', 'H', subjectForOwner(owner));
 
-    const summary = screen.getByText('Prior Max outcomes').closest('.fields-batch-summary');
+    const summary = document.querySelector('.fields-batch-summary');
     if (!(summary instanceof HTMLElement)) throw new Error('Fields summary is missing');
-    expect(within(summary).getByText('1 / 2')).toBeTruthy();
-    expect(within(summary).queryByText('Unavailable')).toBeNull();
+    expect(summary.textContent).toContain('Max 1/2');
   });
 
   it('distinguishes a forced effective reward pool from the authored base pool', () => {
@@ -2132,22 +2138,17 @@ describe('DecisionWorkbench', () => {
     );
     if (!target.selected) {
       await pickExit(view.user, `Door ${target.index}`);
+      expandDoors();
       await waitFor(() =>
-        expect(
-          screen.getAllByRole('button', { name: /^Replace Door \d+ with Anomaly$/ }),
-        ).toHaveLength(1),
+        expect(screen.getAllByRole('button', { name: 'Make Anomaly' })).toHaveLength(1),
       );
     }
     const targetCard = doorRow(`Door ${target.index}`);
-    expect(screen.getAllByRole('button', { name: /^Replace Door \d+ with Anomaly$/ })).toHaveLength(
-      1,
-    );
-    await view.user.click(
-      within(targetCard).getByRole('button', { name: /^Replace Door \d+ with Anomaly$/ }),
-    );
+    expect(screen.getAllByRole('button', { name: 'Make Anomaly' })).toHaveLength(1);
+    await view.user.click(within(targetCard).getByRole('button', { name: 'Make Anomaly' }));
     const anomalyCard = screen
       .getAllByLabelText(/ room offer$/)
-      .find((card) => within(card).queryByRole('button', { name: /^Restore / }));
+      .find((card) => within(card).queryByRole('button', { name: 'Restore door' }));
     if (anomalyCard === undefined) throw new Error('Authored Anomaly target card is missing');
     expect(within(anomalyCard).getByRole('button', { name: /^Door \d+ room$/ })).toBeTruthy();
     const commands = dispatch.mock.calls

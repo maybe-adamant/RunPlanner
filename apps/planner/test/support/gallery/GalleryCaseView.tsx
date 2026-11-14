@@ -211,7 +211,7 @@ function OpenedCase({
     if (view !== 'timeline' || entry.doorsExpanded !== true) return;
     frame.current
       ?.querySelector<HTMLButtonElement>(
-        '.timeline-banner-toggle[aria-controls$="-doors-detail"][aria-expanded="false"]',
+        '.doors-moment-trigger[aria-label="Edit doors"][aria-expanded="false"]',
       )
       ?.click();
   }, [entry, view]);

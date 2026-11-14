@@ -430,10 +430,16 @@ export function renderBiomeClearAction(
   });
 }
 
-/** Opens a room Timeline's door editor, which stays collapsed until something asks for it. */
-export function expandDoors(scope: HTMLElement = document.body): void {
-  const disclosure = within(scope).getByRole('button', { name: 'Door details' });
-  if (disclosure.getAttribute('aria-expanded') !== 'true') fireEvent.click(disclosure);
+/** Opens a room Timeline's door editor popover, which stays shut until something asks for it. */
+export function expandDoors(scope: HTMLElement = document.body): HTMLElement {
+  const trigger = within(scope).getByRole('button', { name: 'Edit doors' });
+  if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
+  return doorsEditor();
+}
+
+/** The open door editor popover, which renders outside the Timeline. */
+export function doorsEditor(): HTMLElement {
+  return screen.getByRole('dialog', { name: 'Doors' });
 }
 
 /** Opens the room's Leave room picker, or its nth where it has several, and returns its options. */

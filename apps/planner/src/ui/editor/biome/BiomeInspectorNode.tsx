@@ -423,7 +423,6 @@ function OccurrenceInspector({
       initialTab={roomTab ?? (defaultToDoors ? node.room.doorsTab : 'overview')}
       // A selected decision is its doors: selecting it asks for them.
       doorsRequested={doorsRequested || defaultToDoors}
-      doorsFrontier={outgoing?.kind === 'frontier'}
       {...(doors === undefined ? {} : { timelineDoors: doors })}
     />
   );

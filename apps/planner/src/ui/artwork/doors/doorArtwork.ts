@@ -1,3 +1,5 @@
+import iconAnomalyAsphodel from './assets/AnomalyAsphodel.webp';
+import iconAnomalyMystery from './assets/AnomalyMystery.webp';
 import iconChaosGate from './assets/ChaosGate.webp';
 import iconEphyraDoor from './assets/EphyraDoor.webp';
 import iconEphyraSubRoomDoor from './assets/EphyraSubRoomDoor.webp';
@@ -31,3 +33,12 @@ export const doorArtwork: Readonly<Record<string, string | null>> = {
   ChaosExitDoor: iconChaosGate,
   ChaosReturnExitDoor: null,
 };
+
+/** Icons that can stand for an Anomaly: the run history's mystery biome, or an Asphodel crop. */
+const anomalyArtwork = {
+  mystery: iconAnomalyMystery,
+  asphodel: iconAnomalyAsphodel,
+} as const;
+
+/** The icon of turning a door into an Anomaly. */
+export const anomalyIcon: string = anomalyArtwork.mystery;

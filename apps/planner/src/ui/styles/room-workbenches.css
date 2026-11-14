@@ -237,6 +237,26 @@
   filter: none;
 }
 
+/* A door's one-press change, sized as an icon toggle: what the door becomes, badged as an action. */
+.door-change-action {
+  position: relative;
+  display: inline-grid;
+  width: var(--timeline-control-height, 26px);
+  height: var(--timeline-control-height, 26px);
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.door-change-action:hover,
+.door-change-action:focus-visible {
+  border-color: var(--border);
+  background: rgb(255 255 255 / 5%);
+}
+
 /* Aetos is one compact picker: his icon, the wave and the caret. */
 .encounter-aetos-picker {
   display: inline-flex;
@@ -2350,12 +2370,6 @@
 
 /* Doors on the Timeline: the Doors open row's door chips, its editor and the room's last row. */
 
-.timeline-doors-open-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .timeline-door-chips {
   display: inline-flex;
   align-items: center;
@@ -2381,6 +2395,75 @@
 
 .timeline-door-chip[data-unavailable] {
   opacity: 0.5;
+}
+
+/*
+ * The Doors open moment: its name and chips are one button, lit together as one
+ * selection while hovered, focused or open.
+ */
+.timeline-banner-title:has(> .doors-moment-trigger) {
+  max-width: none;
+  align-self: stretch;
+}
+
+.doors-moment-trigger {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  margin-inline: -6px;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.doors-moment-trigger:hover,
+.doors-moment-trigger:focus-visible,
+.doors-moment-trigger[data-state='open'] {
+  border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--selection-accent) 10%, transparent);
+}
+
+.doors-moment-trigger:focus-visible {
+  outline: 2px solid var(--selection-accent);
+  outline-offset: 2px;
+}
+
+button.doors-moment-trigger[data-has-findings] {
+  box-shadow: inset 0 0 0 2px var(--finding);
+}
+
+.doors-moment-trigger .timeline-door-chip[data-missing] {
+  border-color: color-mix(in srgb, var(--attention) 60%, transparent);
+  background: color-mix(in srgb, var(--attention) 9%, transparent);
+}
+
+.doors-moment-trigger .timeline-door-chip[data-missing] .timeline-door-chip-blank {
+  color: var(--attention);
+  font-weight: 700;
+}
+
+.doors-moment-popover {
+  z-index: 50;
+  /* The doors' editor sizes to its container, so the popover gives it a definite width. */
+  width: min(500px, calc(100 * var(--app-vw) - 24px));
+  max-height: var(--radix-popover-content-available-height);
+  overflow: auto;
+  padding: 8px 10px 10px;
+  border: 1px solid #484954;
+  border-radius: 10px;
+  background: #1b1c22;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+}
+
+/* The popover takes focus as it opens; its controls show focus, the popover itself does not. */
+.doors-moment-popover:focus {
+  outline: none;
 }
 
 /* A door chip to pick: the picked one lit, the others dim until hovered. */
@@ -2705,11 +2788,7 @@ button.timeline-chip {
 }
 
 /* A marker's bigger content sits under it at the action indent, unbordered. */
-.timeline-doors-detail-row {
-  padding: 4px 8px 10px calc(var(--timeline-row-start) + 3px + 36px);
-}
-
-.timeline-doors-detail-row > .timeline-doors-detail {
+.doors-moment-popover > .timeline-doors-detail {
   display: grid;
   gap: 8px;
 }
@@ -2775,38 +2854,6 @@ button.timeline-chip {
   grid-column: 5 / -1;
   justify-self: end;
   padding-left: 12px;
-}
-
-/* A banner title that shows or hides its editor fills the line up to the banner's controls. */
-.timeline-banner-title:has(> .timeline-banner-toggle) {
-  max-width: none;
-  align-self: stretch;
-}
-
-.timeline-banner-toggle {
-  display: inline-flex;
-  flex: 1 1 auto;
-  align-items: center;
-  align-self: stretch;
-  gap: 6px;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-.timeline-banner-toggle:focus-visible {
-  outline: 2px solid var(--selection-accent);
-  outline-offset: 2px;
-}
-
-.timeline-banner-toggle-caret {
-  width: 0.8rem;
-  color: var(--muted);
 }
 
 /* A press row: the door, its reward before, the new reward, then every door as it leaves them. */
@@ -3490,6 +3537,12 @@ span.hub-board-status-line {
   outline-offset: 2px;
 }
 
+/* A chip on the Doors open line rings inside itself, which the line's title would clip outside. */
+.doors-moment-trigger .timeline-door-chip[data-map-pointed] {
+  border-radius: 6px;
+  outline-offset: -2px;
+}
+
 .room-map-column > .room-map-viewport > .room-map-canvas {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -3558,6 +3611,11 @@ span.hub-board-status-line {
   color: inherit;
   font: inherit;
   cursor: pointer;
+}
+
+.room-action-not-reached-caret {
+  width: 0.8rem;
+  color: var(--muted);
 }
 
 .room-action-not-reached-count {

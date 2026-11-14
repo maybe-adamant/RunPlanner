@@ -974,39 +974,19 @@ select {
   border: 0;
 }
 
+/* A Fields batch's one line: its roll picker, then what the roll gives. */
 .fields-batch-editor {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: end;
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
   padding: 12px 14px 0;
 }
 
 .fields-batch-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.fields-batch-summary div {
-  padding: 7px 9px;
-  border: 1px solid #3a3b45;
-  border-radius: 8px;
-  background: rgb(12 13 17 / 24%);
-}
-
-.fields-batch-summary dt {
-  color: #8e8b95;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.fields-batch-summary dd {
-  margin: 4px 0 0;
   color: #eee7dc;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .door-information-note {
@@ -1511,37 +1491,13 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
-/* The Fields roll and its facts read as one compact line under the pool. */
+/* In the doors' editor the Fields line sits flush under the pool. */
 .door-workbench .fields-batch-editor {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 18px;
   padding: 0;
 }
 
 .door-workbench .fields-batch-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-}
-
-/* Each fact keeps its label and value together; the facts wrap as wholes. */
-.door-workbench .fields-batch-summary div {
-  display: inline-flex;
-  white-space: nowrap;
-  align-items: baseline;
-  gap: 6px;
-  padding: 0;
-  border: 0;
-  background: none;
-}
-
-.door-workbench .fields-batch-summary :is(dt, dd) {
-  margin: 0;
   font-size: 0.84rem;
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 .door-workbench .fields-batch-editor > .door-information-note {

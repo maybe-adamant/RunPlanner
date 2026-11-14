@@ -35,7 +35,11 @@ import { RoomFeatureMapLegend, RoomFeatureMapPoints } from './room-map/RoomMapPo
 import { useRoomMapLinks, type RoomMapHighlight } from './room-map/roomMapHighlight';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { CandidatePicker } from './CandidatePicker';
-import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
+import {
+  AnomalyRoomControl,
+  MakeAnomalyAction,
+  RevertAnomalyAction,
+} from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
 import { roomKindIcon } from './roomIcon';
 import { DoorRewardEditor, DoorRewardHiddenTag, FixedRewardChip } from './DoorRewardEditor';
@@ -48,7 +52,6 @@ import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
 import { doorChipMapLink, type DoorChip } from './doorSummary';
 import { DoorRows } from './DoorRows';
-import { UnlockExitFightControl } from './UnlockExitFightControl';
 import type { DoorNoteFor } from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 import { IconToggle } from '@planner/ui/controls/IconToggle';
@@ -384,11 +387,8 @@ function TargetRow({
     door.room.anomaly === undefined;
   const replaceWithAnomaly =
     !target.selected || target.anomalyTakeover === undefined ? null : (
-      <button
-        aria-label={`Replace Door ${target.index} with Anomaly`}
-        className="quiet-action action-compact"
-        data-command="SwitchTargetToAnomaly"
-        onClick={() =>
+      <MakeAnomalyAction
+        onMake={() =>
           dispatch(
             authoredProjectCommandDispatched({
               kind: 'SwitchTargetToAnomaly',
@@ -396,10 +396,7 @@ function TargetRow({
             }),
           )
         }
-        type="button"
-      >
-        {target.anomalyTakeover.label}
-      </button>
+      />
     );
   return (
     <DoorRow
@@ -443,9 +440,7 @@ function TargetRow({
         <>
           <DoorRewardHiddenTag door={door} />
           {replaceWithAnomaly}
-          {door.room.anomaly === undefined ? null : (
-            <RevertAnomalyAction doorIndex={target.index} room={door.room} />
-          )}
+          {door.room.anomaly === undefined ? null : <RevertAnomalyAction room={door.room} />}
         </>
       }
       state={{
@@ -683,26 +678,13 @@ function BatchSettings({
             />
           )}
           {node.fields === undefined ? null : (
-            <>
-              <dl className="fields-batch-summary">
-                <div>
-                  <dt>
-                    <NotedText label="Cages per combat room" note={noteFor('cageCount')}>
-                      Cages per combat room
-                    </NotedText>
-                  </dt>
-                  <dd>{node.fields.doorCageRewardCount}</dd>
-                </div>
-                <div>
-                  <dt>Prior Max outcomes</dt>
-                  <dd>
-                    {node.fields.priorMaxOutcomes === undefined
-                      ? 'Unavailable'
-                      : `${node.fields.priorMaxOutcomes.fieldsMaxDoorsRolled} / ${node.fields.priorMaxOutcomes.maxDoorCageCeiling}`}
-                  </dd>
-                </div>
-              </dl>
-            </>
+            // The roll's result: each combat room's cages, then the run's Maximum rolls so far.
+            <span className="fields-batch-summary">
+              {`→ ${node.fields.doorCageRewardCount} ${node.fields.doorCageRewardCount === 1 ? 'cage' : 'cages'}`}
+              {node.fields.priorMaxOutcomes === undefined
+                ? null
+                : ` · Max ${node.fields.priorMaxOutcomes.fieldsMaxDoorsRolled}/${node.fields.priorMaxOutcomes.maxDoorCageCeiling}`}
+            </span>
           )}
         </div>
       )}
@@ -930,17 +912,12 @@ export function BatchDoorsDetail({
   const lockFor = (exitKey: string, index: number) => {
     const door = lockedDoors?.doors.find((candidate) => candidate.exitKey === exitKey);
     return lockedDoors === undefined || door === undefined ? undefined : (
-      <>
-        <DoorLockToggle
-          door={door}
-          index={index}
-          interactions={interactions}
-          lockedDoors={lockedDoors}
-        />
-        {door.fight === undefined ? null : (
-          <UnlockExitFightControl encounter={door.fight} interactions={interactions} />
-        )}
-      </>
+      <DoorLockToggle
+        door={door}
+        index={index}
+        interactions={interactions}
+        lockedDoors={lockedDoors}
+      />
     );
   };
   return (
