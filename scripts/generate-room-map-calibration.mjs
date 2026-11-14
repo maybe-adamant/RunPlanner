@@ -10,8 +10,9 @@ import * as prettier from 'prettier';
  *
  *   npm run planner:room-map-calibration -- [--skip <room>]... <manifest.json>...
  *
- * Each manifest entry is one clean room capture with its RCMAP record; a
- * Preboss's Shop variant capture (`shopVariant`) is keyed `<room>_Shop`. A room
+ * Each manifest entry is one clean room capture with its RCMAP record; the Shop
+ * capture (`shopVariant`) of a room that may hold a shop or a free reward is keyed
+ * `<room>_Shop`, while a shop-only room's capture keeps the room's name. A room
  * may appear in only one manifest, and `--skip` leaves out a captured room the
  * planner does not package. A world
  * point lands at image pixel centre + scale * (world - camera target), where
@@ -44,12 +45,27 @@ function stitchedCalibration(calibration) {
   };
 }
 
+/**
+ * Rooms that always hold their shop: their only image is the Shop capture, so a
+ * `shopVariant` record names the room itself, never a `<room>_Shop` variant.
+ */
+const shopOnlyRooms = new Set([
+  'I_PreBoss01',
+  'I_PreBoss02',
+  'N_PreBoss01',
+  'O_PreBoss01',
+  'Q_PreBoss01',
+]);
+
 export function calibrationEntries(manifest) {
   return Object.entries(manifest)
     .map(([room, entry]) => {
       const record = entry.rcmap;
-      // A Preboss's Shop variant is its own image, keyed `<room>_Shop`.
-      const imageRoom = record?.shopVariant === true ? `${record.room}_Shop` : record?.room;
+      // A room that may hold a shop or a free reward keys its Shop capture `<room>_Shop`.
+      const imageRoom =
+        record?.shopVariant === true && !shopOnlyRooms.has(record.room)
+          ? `${record.room}_Shop`
+          : record?.room;
       if (imageRoom !== room) throw new Error(`${room}: manifest record names ${imageRoom}`);
       if (record.flipped !== false) throw new Error(`${room}: capture is flipped`);
       if (entry.stitched === true) {
