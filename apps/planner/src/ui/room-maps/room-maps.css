@@ -12,6 +12,8 @@
   /* Cocoons (G) never share a map with Fields cages, so they share its cyan. */
   --legend-cocoon: #00e5ff;
   --legend-pickup: #e8e4da;
+  --legend-shop: #e81cff;
+  --legend-pedestal: #3f5bff;
   --legend-selection: #f5d386;
   --hub-perfect: #49c8dc;
   --hub-good: #4bb36f;
@@ -542,16 +544,16 @@
 
 /* World Shop items ring in magenta, the Contract pedestal in indigo; a bought item rings solid. */
 .room-map-point[data-point='shop'] {
-  border-color: #e81cff;
+  border-color: var(--legend-shop);
 }
 
 .room-map-point[data-point='pedestal'] {
-  border-color: #3f5bff;
+  border-color: var(--legend-pedestal);
 }
 
 .room-map-point[data-taken] {
   z-index: 2;
-  outline: 2px solid rgb(255 244 199 / 85%);
+  outline: 2px solid var(--legend-selection);
   outline-offset: 2px;
 }
 
@@ -564,7 +566,7 @@
   width: 62%;
   aspect-ratio: 1;
   place-items: center;
-  border: 2px solid #e81cff;
+  border: 2px solid var(--legend-shop);
   border-radius: 50%;
   background: rgb(17 25 35 / 92%);
 }
@@ -889,11 +891,11 @@
 }
 
 .room-map-legend > li[data-kind='shop'] > .room-map-legend-swatch {
-  border-color: #e81cff;
+  border-color: var(--legend-shop);
 }
 
 .room-map-legend > li[data-kind='pedestal'] > .room-map-legend-swatch {
-  border-color: #3f5bff;
+  border-color: var(--legend-pedestal);
 }
 
 .room-map-legend-entry {
