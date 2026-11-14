@@ -1161,7 +1161,8 @@
 
 .timeline-cell-label
   :is(.room-action-inline-reward, .contextual-picker[data-trigger-size='content'])
-  .contextual-picker-trigger:not(.timeline-chip) {
+  .contextual-picker-trigger:not(.timeline-chip),
+.timeline-cell-label .contextual-picker-trigger.room-action-verb {
   width: auto;
   min-height: var(--timeline-control-height);
   padding: 2px 7px;

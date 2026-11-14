@@ -282,10 +282,8 @@ describe('OccurrenceRoomActions', () => {
       within(screen.getByRole('listbox'))
         .getAllByRole('option')
         .map((option) => option.getAttribute('aria-label') ?? option.textContent?.replace('✓', '')),
-    ).toEqual(['Collect', expect.stringMatching(/^Goldify · Time Piece/)]);
-    const timePiece = screen.getByRole('option', {
-      name: /^Goldify · Time Piece/,
-    });
+    ).toEqual(['Collect', 'Goldify']);
+    const timePiece = screen.getByRole('option', { name: 'Goldify' });
 
     expect(timePiece.getAttribute('aria-disabled')).not.toBe('true');
     await view.user.click(timePiece);
@@ -1020,7 +1018,7 @@ describe('OccurrenceRoomActions', () => {
     expectBefore(disposition, pomLauncher);
 
     await view.user.click(disposition);
-    await view.user.click(screen.getByRole('option', { name: 'Transform · Artificer' }));
+    await view.user.click(screen.getByRole('option', { name: 'Transform' }));
     await waitFor(() => {
       const outcome = screen.getByRole('button', { name: /^How to take .+: Transform$/ });
       const sourceAction = outcome.closest<HTMLElement>('[data-room-action-key]');

@@ -1744,7 +1744,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(
       within(orderedPsycheRow).getByRole('button', { name: /^How to take Psyche: Collect/ }),
     );
-    await view.user.click(screen.getByRole('option', { name: /^Goldify · Time Piece/ }));
+    await view.user.click(screen.getByRole('option', { name: 'Goldify' }));
     expect(
       authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.psyche
         ?.dispositionByAcquisitionRole.self,
