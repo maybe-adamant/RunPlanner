@@ -172,5 +172,14 @@ export function normalizeRoomMapPoints(raw: RoomMapPoints, path: string): RoomMa
             `${path}.contractPedestalPoint`,
           ),
         }),
+    ...(raw.contractExitPoint === undefined
+      ? {}
+      : {
+          contractExitPoint: normalizeOwnPoint(
+            raw.contractExitPoint,
+            seen,
+            `${path}.contractExitPoint`,
+          ),
+        }),
   });
 }

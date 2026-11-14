@@ -584,10 +584,18 @@ export function assembleWorkspaceOccurrence(
     authoring: input.roomLayout?.(address),
     marker: (owner) => input.markerDestinations.marker(owner),
   });
-  const roomMap = assembleRoomMap(input.catalog, room, chaosGatePosition?.spawnPointIndex, {
-    shopOfferKeys: roomLocal.kind === 'shop' ? roomLocal.offers.map((offer) => offer.key) : [],
-    contractPedestal: features.some((feature) => feature.kind === 'infernalContractPedestal'),
-  });
+  const roomMap = assembleRoomMap(
+    input.catalog,
+    room,
+    {
+      chaosGateSpawnPointIndex: chaosGatePosition?.spawnPointIndex,
+      contractExit: input.facts.authoredAdditionalExitKeys.includes('zagreusContract'),
+    },
+    {
+      shopOfferKeys: roomLocal.kind === 'shop' ? roomLocal.offers.map((offer) => offer.key) : [],
+      contractPedestal: features.some((feature) => feature.kind === 'infernalContractPedestal'),
+    },
+  );
   const lockedDoorsProduct = input.facts.detailsActive
     ? input.roomObjectInteractions?.(address)?.lockedDoors
     : undefined;

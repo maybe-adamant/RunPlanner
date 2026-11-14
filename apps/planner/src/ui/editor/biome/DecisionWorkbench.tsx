@@ -529,7 +529,7 @@ function AdditionalExitRow({
         <span className="door-row-number">{chaos === undefined ? 'Contract' : 'Chaos Gate'}</span>
       }
       map={{ gameName: room.gameName, hostId: key, points: room.map, title: room.label }}
-      {...(chaos === undefined ? {} : { mapLink: { kind: 'chaosGate' } as const })}
+      mapLink={chaos === undefined ? { kind: 'contractExit' } : { kind: 'chaosGate' }}
       reward={
         <span className="door-row-rewards">
           <span className="row-reward-fixed">

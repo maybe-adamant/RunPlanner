@@ -56,6 +56,8 @@ export interface GalleryCase {
   readonly gap?: { readonly index?: number; readonly open: boolean };
   /** A room case opens its Timeline legend. */
   readonly legendOpen?: true;
+  /** A room case works on its Timeline's room action row at this index, so its map shows that row. */
+  readonly mapRow?: number;
   /** An Overview case opens its Overview picker of this accessible name. */
   readonly openOverviewPicker?: string;
   /** The case opens its biome as the biome's tab does, not its target. */

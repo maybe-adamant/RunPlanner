@@ -312,6 +312,8 @@ export type WorkspaceRowChoice = Extract<
 
 /** What choosing a verb does. */
 export type WorkspaceLiveVerbAction =
+  /** What a placed row already does: choosing it changes nothing. */
+  | { readonly kind: 'current' }
   /** Applies its commands as one edit; the placed row then opens the choice `opens` names. */
   | {
       readonly kind: 'apply';

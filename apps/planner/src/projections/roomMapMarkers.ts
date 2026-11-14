@@ -46,6 +46,7 @@ export interface RoomMapMarkers {
   readonly anchors: readonly (RoomMapMarkerPosition & { readonly id: number })[];
   readonly chaosPoints: readonly (RoomMapMarkerPosition & { readonly id: number })[];
   readonly chaosGate?: RoomMapMarkerPosition & { readonly id: number };
+  readonly contractExit?: RoomMapMarkerPosition & { readonly id: number };
   readonly fieldsCagePoints: readonly (RoomMapMarkerPosition & { readonly id: number })[];
   readonly fieldsOptionalPoints: readonly (RoomMapMarkerPosition & { readonly id: number })[];
   readonly shopItems: readonly (RoomMapMarkerPosition & {
@@ -158,6 +159,11 @@ export function roomMapMarkers(
     ...(map.chaosGate === undefined
       ? {}
       : { chaosGate: Object.freeze({ id: map.chaosGate.id, ...place(map.chaosGate) }) }),
+    ...(map.contractExit === undefined
+      ? {}
+      : {
+          contractExit: Object.freeze({ id: map.contractExit.id, ...place(map.contractExit) }),
+        }),
     ...(map.wheel === undefined
       ? {}
       : {

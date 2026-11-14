@@ -114,52 +114,52 @@ const groupNames: Readonly<Record<WorkspaceLiveItem['group'], string>> = {
   object: 'Objects',
 };
 
-const pickerItem = (key: string, label: string) =>
+const pickerItem = (key: string, label: string, selected = false) =>
   Object.freeze({
     key,
     value: key,
     label,
     state: 'possible' as const,
-    selected: false,
+    selected,
     disabled: false,
   });
 
 /**
- * One live thing: its chip opens the list of its verbs; a verb that needs a value lists its
+ * The shared list of a thing's verbs, opened from its trigger: a live thing's chip, or a
+ * placed row's verb word, whose current verb is checked. A verb that needs a value lists its
  * values next, and a reroll press its target, placed with a drawn reward its row then opens on.
  */
-function LiveItemChip({
+export function VerbMenu({
   announce,
+  applied = (label) => `${label} added to the timeline.`,
   biomeKey,
+  children,
   interactions,
-  item,
+  label,
   onApplied,
+  verbs,
 }: {
   readonly announce: (message: string) => void;
+  /** What applying a verb of this label announces. */
+  readonly applied?: (label: string) => string;
   readonly biomeKey: string;
+  /** The trigger, which keeps its own name and marks. */
+  readonly children: ReactElement;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly item: WorkspaceLiveItem;
-  /** Called once a verb's rows are added. */
+  /** The list's name: the thing or row its verbs act on. */
+  readonly label: string;
+  /** Called once a verb applies. */
   readonly onApplied?: () => void;
+  readonly verbs: readonly WorkspaceLiveVerb[];
 }) {
   const executeCommands = useCommandsIntent();
   const executeIntent = useCommandIntent();
-  const findingMark = useFindingMark();
-  const findingAnchor = useFindingAnchor();
   const [open, setOpen] = useState(false);
   const [choosing, setChoosing] = useState<WorkspaceLiveVerb>();
-  const chip = useRef<HTMLButtonElement>(null);
+  const anchor = useRef<HTMLSpanElement>(null);
   // What a chosen verb opens next, once the closed list has handed back focus; earlier, the
   // returning focus would dismiss it. True when it took focus.
   const afterClose = useRef<() => boolean>(undefined);
-  const mark = combinedMark(item.findingOwners.map((owner) => findingMark(owner, 'place')));
-  const icon = itemIcon(item, biomeKey);
-  const name = item.locked ? `${item.label}, locked` : item.label;
-  const badge =
-    item.object === undefined
-      ? pickupSourceBadgeIcon(item.sourceFamily, item.challengeSwitchKind)
-      : undefined;
-  const inert = item.verbs.length === 0;
   const press =
     choosing?.action.kind === 'rerollPress'
       ? requireWorkspaceInteraction(interactions.roomRerolls, choosing.action.interactionKey)
@@ -171,10 +171,12 @@ function LiveItemChip({
             {
               key: 'verbs',
               kind: 'category' as const,
-              label: item.label,
+              label,
               collapsible: false,
-              items: item.verbs.map((verb) =>
-                pickerItem(verb.key, verb.action.kind === 'apply' ? verb.label : `${verb.label}…`),
+              items: verbs.map((verb) =>
+                verb.action.kind === 'choose' || verb.action.kind === 'rerollPress'
+                  ? pickerItem(verb.key, `${verb.label}…`)
+                  : pickerItem(verb.key, verb.label, verb.action.kind === 'current'),
               ),
             },
           ],
@@ -197,7 +199,7 @@ function LiveItemChip({
           };
   /** The placed row's own choice opens once the Timeline shows it. */
   const openOnClose = (opens: { readonly rowKey: string; readonly choice: WorkspaceRowChoice }) => {
-    const from = chip.current;
+    const from = anchor.current;
     if (from === null) return;
     afterClose.current = () => {
       const row = actionRowElement(from, opens.rowKey);
@@ -209,10 +211,110 @@ function LiveItemChip({
   const apply = (verb: WorkspaceLiveVerb) => {
     if (verb.action.kind !== 'apply') return;
     executeCommands(verb.action.intent);
-    announce(`${verb.label} added to the timeline.`);
+    announce(applied(verb.label));
     onApplied?.();
     if (verb.action.opens !== undefined) openOnClose(verb.action.opens);
   };
+  return (
+    <span className="live-action-menu" ref={anchor}>
+      <ContextualPickerPopover<string>
+        choiceLabel={choosing?.label ?? label}
+        itemIcon={(entry) => {
+          if (choosing === undefined) {
+            const verb = verbs.find((candidate) => candidate.key === entry.value);
+            if (verb === undefined) return undefined;
+            return verb.action.kind === 'rerollPress' ? rerollDieArtwork : faceIcon(verb, biomeKey);
+          }
+          if (press !== undefined) return rerollDieArtwork;
+          if (choosing.action.kind !== 'choose') return undefined;
+          const choice = choosing.action.choices.find((candidate) => candidate.key === entry.value);
+          return choice?.offer === undefined ? undefined : offerIcon(choice.offer);
+        }}
+        model={model}
+        onCloseAutoFocus={(event) => {
+          const next = afterClose.current;
+          afterClose.current = undefined;
+          if (next?.() === true) event.preventDefault();
+        }}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setChoosing(undefined);
+        }}
+        onSelect={(value) => {
+          if (choosing === undefined) {
+            const verb = verbs.find((candidate) => candidate.key === value);
+            if (verb === undefined) return;
+            switch (verb.action.kind) {
+              case 'current':
+                setOpen(false);
+                return;
+              case 'apply':
+                setOpen(false);
+                apply(verb);
+                return;
+              case 'choose':
+              case 'rerollPress':
+                // The list stays open on the verb's values.
+                setTimeout(() => {
+                  setChoosing(verb);
+                  setOpen(true);
+                }, 0);
+                return;
+            }
+          }
+          setOpen(false);
+          setChoosing(undefined);
+          if (choosing.action.kind === 'rerollPress') {
+            const intent = press?.pressIntent(value);
+            if (intent === undefined) return;
+            executeIntent(intent);
+            announce(applied(choosing.label));
+            onApplied?.();
+            if (choosing.action.opens !== undefined) openOnClose(choosing.action.opens);
+            return;
+          }
+          if (choosing.action.kind !== 'choose') return;
+          const choice = choosing.action.choices.find((candidate) => candidate.key === value);
+          if (choice === undefined) return;
+          executeCommands(choice.intent);
+          announce(applied(`${choosing.label} ${choice.label}`));
+          onApplied?.();
+        }}
+        open={open}
+        searchable={false}
+        side="bottom"
+      >
+        {children}
+      </ContextualPickerPopover>
+    </span>
+  );
+}
+
+/** One live thing: its chip opens the list of its verbs. */
+function LiveItemChip({
+  announce,
+  biomeKey,
+  interactions,
+  item,
+  onApplied,
+}: {
+  readonly announce: (message: string) => void;
+  readonly biomeKey: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly item: WorkspaceLiveItem;
+  /** Called once a verb's rows are added. */
+  readonly onApplied?: () => void;
+}) {
+  const findingMark = useFindingMark();
+  const findingAnchor = useFindingAnchor();
+  const mark = combinedMark(item.findingOwners.map((owner) => findingMark(owner, 'place')));
+  const icon = itemIcon(item, biomeKey);
+  const name = item.locked ? `${item.label}, locked` : item.label;
+  const badge =
+    item.object === undefined
+      ? pickupSourceBadgeIcon(item.sourceFamily, item.challengeSwitchKind)
+      : undefined;
+  const inert = item.verbs.length === 0;
   const face = (
     <>
       {icon === undefined ? (
@@ -254,88 +356,31 @@ function LiveItemChip({
         aria-disabled
         aria-label={name}
         className={className}
-        ref={chip}
         type="button"
       >
         {face}
       </button>,
     );
   return anchored(
-    <span className="live-action-menu">
-      <ContextualPickerPopover<string>
-        choiceLabel={choosing?.label ?? item.label}
-        itemIcon={(entry) => {
-          if (choosing === undefined) {
-            const verb = item.verbs.find((candidate) => candidate.key === entry.value);
-            if (verb === undefined) return undefined;
-            return verb.action.kind === 'rerollPress' ? rerollDieArtwork : faceIcon(verb, biomeKey);
-          }
-          if (press !== undefined) return rerollDieArtwork;
-          if (choosing.action.kind !== 'choose') return undefined;
-          const choice = choosing.action.choices.find((candidate) => candidate.key === entry.value);
-          return choice?.offer === undefined ? undefined : offerIcon(choice.offer);
-        }}
-        model={model}
-        onCloseAutoFocus={(event) => {
-          const next = afterClose.current;
-          afterClose.current = undefined;
-          if (next?.() === true) event.preventDefault();
-        }}
-        onOpenChange={(next) => {
-          setOpen(next);
-          if (!next) setChoosing(undefined);
-        }}
-        onSelect={(value) => {
-          if (choosing === undefined) {
-            const verb = item.verbs.find((candidate) => candidate.key === value);
-            if (verb === undefined) return;
-            if (verb.action.kind === 'apply') {
-              setOpen(false);
-              apply(verb);
-              return;
-            }
-            // The list stays open on the verb's values.
-            setTimeout(() => {
-              setChoosing(verb);
-              setOpen(true);
-            }, 0);
-            return;
-          }
-          setOpen(false);
-          setChoosing(undefined);
-          if (choosing.action.kind === 'rerollPress') {
-            const intent = press?.pressIntent(value);
-            if (intent === undefined) return;
-            executeIntent(intent);
-            announce(`${choosing.label} added to the timeline.`);
-            onApplied?.();
-            if (choosing.action.opens !== undefined) openOnClose(choosing.action.opens);
-            return;
-          }
-          if (choosing.action.kind !== 'choose') return;
-          const choice = choosing.action.choices.find((candidate) => candidate.key === value);
-          if (choice === undefined) return;
-          executeCommands(choice.intent);
-          announce(`${choosing.label} ${choice.label} added to the timeline.`);
-          onApplied?.();
-        }}
-        open={open}
-        searchable={false}
-        side="bottom"
+    <VerbMenu
+      announce={announce}
+      biomeKey={biomeKey}
+      interactions={interactions}
+      label={item.label}
+      verbs={item.verbs}
+      {...(onApplied === undefined ? {} : { onApplied })}
+    >
+      <button
+        {...mark}
+        {...hintProps(undefined, mark?.['aria-description'], name)}
+        aria-haspopup="menu"
+        aria-label={name}
+        className={className}
+        type="button"
       >
-        <button
-          {...mark}
-          {...hintProps(undefined, mark?.['aria-description'], name)}
-          aria-haspopup="menu"
-          aria-label={name}
-          className={className}
-          ref={chip}
-          type="button"
-        >
-          {face}
-        </button>
-      </ContextualPickerPopover>
-    </span>,
+        {face}
+      </button>
+    </VerbMenu>,
   );
 }
 

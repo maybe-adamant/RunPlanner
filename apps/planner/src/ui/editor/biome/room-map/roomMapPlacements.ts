@@ -5,7 +5,7 @@ import type {
 import { offerIcon, shopItemIcon } from '@planner/ui/artwork/rewardIcon';
 import { heldObjectIcon, heldObjectName } from '../room-features/roomObjectFace';
 import { fieldsSlotBadge, fieldsSlotIcon } from '../room-layout/fieldsSlotFace';
-import type { RoomMapOccupant, RoomMapPlacements, RoomMapShopItem } from './RoomMapPoints';
+import type { RoomMapOccupant, RoomMapPlacements } from './RoomMapPoints';
 
 type ShopItemControl = Extract<
   WorkspaceRoomFeature,
@@ -24,49 +24,80 @@ function shopItemFace(control: ShopItemControl, fallback: string): RoomMapOccupa
   };
 }
 
-/** The Shop's stock by offer, each with its purchase and any Travel Deal refill on its point. */
-function shopItems(room: WorkspaceRoomSummary): ReadonlyMap<string, RoomMapShopItem> {
+/**
+ * How far into the room's Timeline the map stands: `start` before any row,
+ * `end` after every row, or the keys of the rows made by then.
+ */
+export type RoomMapStockStage = 'start' | 'end' | ReadonlySet<string>;
+
+/** The room's Timeline rows made by the stage, as the walk takes them. */
+function madeRows(room: WorkspaceRoomSummary, stage: RoomMapStockStage) {
+  if (stage === 'start') return [];
+  return (room.roomActions?.rows ?? []).filter(
+    (row) => row.rank !== null && !row.stale && (stage === 'end' || stage.has(row.key)),
+  );
+}
+
+/**
+ * The Shop item standing on each offer's point at the stage: a bought item
+ * is gone, and the Travel Deal refill stands on the item whose purchase the
+ * engine names as its trigger until the refill is bought.
+ */
+function shopItems(
+  room: WorkspaceRoomSummary,
+  made: ReturnType<typeof madeRows>,
+): ReadonlyMap<string, RoomMapOccupant> {
   if (room.roomLocal.kind !== 'shop') return new Map();
+  const bought = new Set(
+    made.flatMap((row) =>
+      row.reference.kind === 'interactShopOffer' ? [row.reference.offerKey] : [],
+    ),
+  );
+  const refillBought = made.some((row) => row.sourceFamily?.kind === 'shopTravelDealRefill');
   const refill = room.roomLocal.supplementalOffers.find(
     (offer) => offer.kind === 'travelDealRefill',
   );
   return new Map(
-    room.roomLocal.offers.map((offer) => {
-      const refillFace =
-        refill?.sourceOfferKey === offer.key
+    room.roomLocal.offers.flatMap((offer) => {
+      const face = !bought.has(offer.key)
+        ? shopItemFace(offer.rewardControl, offer.label)
+        : refill?.sourceOfferKey === offer.key && !refillBought
           ? shopItemFace(refill.rewardControl, 'Travel Deal refill')
           : undefined;
-      return [
-        offer.key,
-        {
-          slotLabel: offer.label,
-          purchased: offer.purchase.purchased,
-          ...(shopItemFace(offer.rewardControl, offer.label) ?? {}),
-          ...(refillFace === undefined ? {} : { refill: refillFace }),
-        },
-      ] as const;
+      return face === undefined ? [] : [[offer.key, face] as const];
     }),
   );
 }
 
-function contractPedestal(room: WorkspaceRoomSummary): RoomMapOccupant | undefined {
+/** The pedestal's item until it is collected. */
+function contractPedestal(
+  room: WorkspaceRoomSummary,
+  made: ReturnType<typeof madeRows>,
+): RoomMapOccupant | undefined {
   const pedestal = room.workbench.features.find(
     (feature) => feature.kind === 'infernalContractPedestal',
   );
   if (pedestal?.kind !== 'infernalContractPedestal') return undefined;
-  return (
-    shopItemFace(pedestal.rewardControl, 'Contract pedestal') ?? { label: 'Contract pedestal' }
-  );
+  if (made.some((row) => row.reference.kind === 'interactInfernalContractPedestal'))
+    return undefined;
+  return shopItemFace(pedestal.rewardControl, 'Contract pedestal');
 }
 
-/** The room's planned entry, anchor occupants, Fields slots and Shop stock, as its map shows them. */
-export function roomMapPlacements(room: WorkspaceRoomSummary): Omit<RoomMapPlacements, 'preview'> {
+/**
+ * The room's planned entry, anchor occupants, Fields slots and the Shop and
+ * pedestal stock standing at the stage, as its map shows them.
+ */
+export function roomMapPlacements(
+  room: WorkspaceRoomSummary,
+  stage: RoomMapStockStage,
+): Omit<RoomMapPlacements, 'preview'> {
   const layout = room.layout;
   const anchors = room.objectSlots?.anchors ?? [];
   const fields = room.roomLocal.kind === 'fields' ? room.roomLocal : undefined;
-  const pedestal = contractPedestal(room);
+  const made = madeRows(room, stage);
+  const pedestal = contractPedestal(room, made);
   return {
-    shopItems: shopItems(room),
+    shopItems: shopItems(room, made),
     ...(pedestal === undefined ? {} : { contractPedestal: pedestal }),
     ...(layout?.entryId === undefined ? {} : { entryId: layout.entryId }),
     entryEligible: layout?.eligible ?? [],

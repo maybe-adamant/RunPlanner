@@ -570,7 +570,9 @@ After that a stored position changes only when the owner changes it. Two items
 on one point, or a point an upstream edit makes ineligible, keep their values
 and raise their findings; nothing is re-claimed or displaced. Filling a
 position is not an edit of its room: it removes no retained stale row there.
-An item left no free point stays blank, which only an invalid or
+Filling stock is: stock changes what the room and later rooms can buy, sell or
+reroll, while a position can at most collide with another position in its own
+room. An item left no free point stays blank, which only an invalid or
 over-capacity room can reach. Authoring products show stored positions only;
 execution publishes every reached position. Draft and the run import take the
 filled positions; the import writes the record's points over them. Loading a

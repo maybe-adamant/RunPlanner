@@ -72,6 +72,15 @@ function timelineDoorStep(row: Element, stepKeys: ReadonlySet<string>): string |
   return undefined;
 }
 
+/** The room's action rows at or before the row: what the room has done by then. */
+function timelineMadeRows(row: Element): readonly string[] {
+  const rows = [...(row.parentElement?.children ?? [])];
+  return rows.slice(0, rows.indexOf(row) + 1).flatMap((candidate) => {
+    const key = (candidate as HTMLElement).dataset.roomActionKey;
+    return key === undefined ? [] : [key];
+  });
+}
+
 /**
  * The side door Melinoë stands at from the row: the latest row at or before
  * it that places her says where (a side door's slot key, empty for the
@@ -288,6 +297,8 @@ export function OccurrenceWorkbench({
     readonly step?: string;
     /** The side door Melinoë stands at; none puts her at the entry. */
     readonly heroDoor?: string;
+    /** The room's action rows made by the row, for the stock standing there. */
+    readonly made: readonly string[];
   }>();
   const mapRow = useRef<HTMLElement>(undefined);
   const shipPhases = room.workbench.kind === 'ship' ? room.workbench.phases : [];
@@ -322,8 +333,10 @@ export function OccurrenceWorkbench({
     markMapRow(row);
     const step = timelineDoorStep(row, new Set(stepsShown.map((candidate) => candidate.actionKey)));
     const heroDoor = timelineHeroDoor(row);
+    const made = timelineMadeRows(row);
     if (
       stage !== mapStage?.stage ||
+      made.join('\n') !== mapStage.made.join('\n') ||
       step !== mapStage.step ||
       heroDoor !== mapStage.heroDoor ||
       mapStage.tab !== activeTab ||
@@ -335,6 +348,7 @@ export function OccurrenceWorkbench({
         stage,
         ...(step === undefined ? {} : { step }),
         ...(heroDoor === undefined ? {} : { heroDoor }),
+        made,
       });
   };
   // The doors or wheel offers as they stand at the marked row: the latest press's, else as they open.
@@ -386,7 +400,11 @@ export function OccurrenceWorkbench({
                 ? { heroSideDoor: mapStage.heroDoor }
                 : {})}
               map={room.map}
-              placements={roomMapPlacements(room)}
+              placements={roomMapPlacements(
+                room,
+                // Overview shows the room's stock as entered; the Timeline as the row leaves it.
+                mapStageShown ? new Set(mapStage.made) : timelineTab ? 'end' : 'start',
+              )}
               roomIdentity={roomIdentity}
               shop={room.roomLocal.kind === 'shop'}
               {...(localVisit === undefined ? {} : { sideDoors: sideDoorMapDoors(localVisit) })}

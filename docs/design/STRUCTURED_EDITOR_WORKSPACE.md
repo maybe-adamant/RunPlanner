@@ -425,10 +425,12 @@ its item stands on as stored, and the point an item stands on or another
 occupant holds is not offered. While a Fields chip is hovered or its
 list is open, the map numbers the free points of that slot's family. The link runs both ways:
 hovering a control previews its point, and pointing at a map point marks the control that owns
-it (an anchor's or Fields point's chip, Entry, the Chaos Gate, a door's chips and rows). The map
-also stands each World Shop item on the point the game spawns it at, solidly ringed once the plan
-has bought it and carrying its Travel Deal refill, and the Contract pedestal's item on the
-pedestal. Overview contains read-only
+it (an anchor's or Fields point's chip, Entry, the Chaos Gate, the Contract door, a door's chips
+and rows). The map also stands each World Shop item on the point the game spawns it at, and the
+Contract pedestal's item on the pedestal, as stock that changes along the room: Overview shows it
+as the room is entered, and the Timeline as its worked-on row leaves it, a bought or collected
+item gone and a Travel Deal restock on its bought item's point from the purchase the engine names
+as its trigger. Overview contains read-only
 incoming context and meaningful room-local setup: Fields identities, World
 Shop inventory, and Room features, whose Shrine and Well inventories likewise
 hold only their fixed slots (a Shrine slot shows its item and the delay rolled
@@ -527,7 +529,8 @@ empty slot), never on the Pom. What produced a generated pickup is the engine's
 published source family: the row tells it as an origin hint shown on hover and
 focus and carried in its accessible description, and the Add area groups by
 it. Where the engine lets a pickup be goldified or transformed, the verb itself
-is the choice between collecting and those conversions; a Mystery Boon whose
+opens the live row's verb menu with its current way checked, and choosing
+another swaps the row's way in place; a Mystery Boon whose
 source the row authors shows its source picker in place of its name. Headings,
 drag previews and action controls share the projected label.
 
