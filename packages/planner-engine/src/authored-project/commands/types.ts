@@ -538,15 +538,16 @@ export type InfernalContractPedestalCommand =
     };
 /**
  * Door, cage, wheel and Hub board rerolls. The engine allocates each new
- * reroll's identity and stores its reward on the target; room rerolls are
- * removed and moved as room actions. A cage press names the slot it redrew.
+ * reroll's identity and stores its reward on the target, unset until the
+ * owner sets it; room rerolls are removed and moved as room actions. A cage
+ * press names the slot it redrew.
  */
 export type RerollCommand =
   | {
       readonly kind: 'InsertReroll';
       readonly occurrence: OccurrenceAddress;
       readonly target: import('../model').ResolvedRerollTarget;
-      readonly reward: ResolvedRewardOffer;
+      readonly reward?: ResolvedRewardOffer;
       readonly index: number;
     }
   | {
@@ -558,7 +559,7 @@ export type RerollCommand =
       readonly kind: 'InsertHubReroll';
       readonly hub: HubDecisionAddress;
       readonly hubSlotKey: string;
-      readonly reward: ResolvedRewardOffer;
+      readonly reward?: ResolvedRewardOffer;
       readonly index: number;
     }
   | {

@@ -88,11 +88,10 @@ function executionLockedExits(value: unknown, label: string) {
   return Object.freeze(exits);
 }
 
-/** An object's optional `ChallengeSwitchBase` anchor. */
+/** An object's `ChallengeSwitchBase` anchor: stored, drawn or the Well's pin. */
 function anchorId(record: Readonly<Record<string, unknown>>, label: string) {
-  return record.anchorId === undefined
-    ? {}
-    : { anchorId: integer(record.anchorId, `${label}.anchorId`, 1) };
+  if (record.anchorId === undefined) fail(`${label}.anchorId is required`);
+  return { anchorId: integer(record.anchorId, `${label}.anchorId`, 1) };
 }
 
 /** The room's flip and entry where they are determined. */
@@ -277,12 +276,10 @@ function fields(value: unknown, label: string): ExecutionFieldsLayout {
   const optionalRewards = Object.freeze(
     array(record.optionalRewards, `${label}.optionalRewards`).map((entry, index) => {
       const row = object(entry, `${label}.optionalRewards[${index}]`);
-      exact(row, ['slotKey', 'reward'], ['pointId'], `${label}.optionalRewards[${index}]`);
+      exact(row, ['slotKey', 'pointId', 'reward'], [], `${label}.optionalRewards[${index}]`);
       return Object.freeze({
         slotKey: stringValue(row.slotKey, `${label}.optionalRewards[${index}].slotKey`),
-        ...(row.pointId === undefined
-          ? {}
-          : { pointId: integer(row.pointId, `${label}.optionalRewards[${index}].pointId`, 1) }),
+        pointId: integer(row.pointId, `${label}.optionalRewards[${index}].pointId`, 1),
         reward: reward(row.reward, `${label}.optionalRewards[${index}].reward`),
       });
     }),
@@ -290,7 +287,6 @@ function fields(value: unknown, label: string): ExecutionFieldsLayout {
   if (new Set(optionalRewards.map((entry) => entry.slotKey)).size !== optionalRewards.length)
     fail(`${label}.optionalRewards has duplicate slot keys`);
   for (const entry of optionalRewards) {
-    if (entry.pointId === undefined) continue;
     if (pointIds.has(entry.pointId)) fail(`${label} reuses a Fields point ID`);
     pointIds.add(entry.pointId);
   }
@@ -804,7 +800,7 @@ export function overview(value: unknown, label: string) {
     well === undefined
       ? undefined
       : Object.freeze({
-          offers: wellOffers(well.offers, 'initial', `${label}.stygianWell.offers`),
+          offers: initialWellOffers(well.offers, `${label}.stygianWell.offers`),
           ...(well.rerolls === undefined
             ? {}
             : {
@@ -887,7 +883,9 @@ export function overview(value: unknown, label: string) {
           );
           if (row.kind !== 'chaos' && row.kind !== 'zagreusContract')
             fail(`${label}.additional[${index}].kind is unsupported`);
-          if (row.spawnPointIndex !== undefined && row.kind !== 'chaos')
+          if (row.kind === 'chaos' && row.spawnPointIndex === undefined)
+            fail(`${label}.additional[${index}].spawnPointIndex is required for Chaos`);
+          if (row.kind !== 'chaos' && row.spawnPointIndex !== undefined)
             fail(`${label}.additional[${index}].spawnPointIndex is Chaos-only`);
           const ixion =
             row.ixionOrigin === undefined
@@ -901,16 +899,16 @@ export function overview(value: unknown, label: string) {
               `${label}.additional[${index}].ixionOrigin`,
             );
           return Object.freeze({
-            kind: row.kind,
-            ...(row.spawnPointIndex === undefined
-              ? {}
-              : {
+            ...(row.kind === 'chaos'
+              ? {
+                  kind: 'chaos' as const,
                   spawnPointIndex: integer(
                     row.spawnPointIndex,
                     `${label}.additional[${index}].spawnPointIndex`,
                     1,
                   ),
-                }),
+                }
+              : { kind: 'zagreusContract' as const }),
             owner: stringValue(row.owner, `${label}.additional[${index}].owner`, MAX_OWNER_STRING),
             room: roomReference(row.room, `${label}.additional[${index}].room`),
             ...(ixion === undefined
@@ -1143,6 +1141,14 @@ function wellOffers(
   );
   if (new Set(offers.map((offer) => offer.generationKey)).size !== offers.length)
     fail(`${label} has duplicate generation keys`);
+  return offers;
+}
+
+/** The initial Well roll: nothing is bought before it, so it stocks all three slots. */
+function initialWellOffers(value: unknown, label: string) {
+  const offers = wellOffers(value, 'initial', label);
+  if (offers.length !== 3)
+    fail(`${label} must stock the healing, secondLeft and secondRight slots`);
   return offers;
 }
 

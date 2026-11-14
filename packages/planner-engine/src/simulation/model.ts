@@ -51,6 +51,7 @@ export type RewardGenerationFindingCode =
   | 'phantomExitRewardUnavailable'
   | 'rerollUnavailable'
   | 'rerollTargetUnavailable'
+  | 'rerollResultMissing'
   | 'rerollPoolExceeded'
   | 'screenRerollUnavailable'
   | 'rollOfferUnavailable'
@@ -264,6 +265,7 @@ export function isRequiredMissingInputFinding(
     case 'rewardMissing':
     case 'traitOfferMissing':
     case 'rerolledScreenMissing':
+    case 'rerollResultMissing':
     case 'allTogetherResultMissing':
     case 'judgmentOutcomeMissing':
     case 'figurineOutcomeMissing':

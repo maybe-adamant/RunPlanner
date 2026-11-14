@@ -300,18 +300,29 @@ local function openPool(callbacks, nativeRoom, beforeRender)
     return result
 end
 
-function TestFeatureInteractionHooks.testUnpinnedPoolLeavesNativeSaleMenuUntouched()
-    local module, _, callbacks = capture()
-    local nativeOptions = { { Name = "TraitA" }, { Name = "TraitB" } }
-    local active = opaque({ occurrence = { overview = {
-        purgingPool = { traits = {} },
-    } } }, function() return nil end)
-    local session = stub()
-    session.occurrence = function() return active.occurrence end
-    attachFeatureHooks(module, session, function() return { state = "synchronized" } end, function() end, session)
-    local nativeRoom = { __runPlannerExecutionRoomId = "pool", SellOptions = nativeOptions, SellTraitShop = {} }
-    openPool(callbacks, nativeRoom)
-    lu.assertEquals(nativeOptions, { { Name = "TraitA" }, { Name = "TraitB" } })
+-- An empty published list is checked too: the live set must hold no eligible trait.
+function TestFeatureInteractionHooks.testEmptyPoolListAgainstLiveEligibleSetIsDiagnosed()
+    local function opened(sellValues)
+        local module, _, callbacks = capture()
+        local diagnostics, state = {}, { state = "synchronized" }
+        local occurrence = { overview = { purgingPool = { traits = {} } } }
+        require("mods.room.features.inventory.purging_pool_hooks").attach(module,
+            { diagnostic = function(_, checkpoint, evidence)
+                diagnostics[#diagnostics + 1] = { checkpoint, evidence }
+            end },
+            function() return state end, function() end,
+            { occurrence = function() return occurrence end })
+        local nativeRoom = { __runPlannerExecutionRoomId = "pool", SellTraitShop = {} }
+        openPool(callbacks, nativeRoom, function()
+            nativeRoom.SellValues = sellValues
+            nativeRoom.SellOptions = {}
+        end)
+        return diagnostics, nativeRoom
+    end
+    local diagnostics, nativeRoom = opened({ A = { Name = "A", Value = 10 }, B = { Name = "B", Value = 20 } })
+    lu.assertEquals(diagnostics, { { "purging-pool-inventory", { expected = 0, observed = 2 } } })
+    lu.assertNotNil(nativeRoom.SellValues.A)
+    lu.assertEquals((opened({})), {})
 end
 
 function TestFeatureInteractionHooks.testPinnedPoolSteersOnlyTheNativeSaleMenu()
@@ -1401,13 +1412,15 @@ function TestFeatureInteractionHooks.testPoolInstallsEachRerollsPinsAndAFurtherR
         callbacks.SellTraitScreenReroll(nil, {}, nativeReroll({ "A", "C" }), {})
         lu.assertEquals(native.SellOptions, { { Name = "C", Value = 30 }, { Name = "A", Value = 10 } })
         lu.assertEquals(native.__runPlannerPoolRollsHandled, { [0] = true, [1] = true })
-        -- An empty published roll installs nothing.
-        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll({ "C" }), {})
-        lu.assertEquals(native.SellOptions, { { Name = "C", Value = 30 } })
+        -- With every boon sold, an empty published roll matches the empty live set.
+        values.A, values.C = nil, nil
+        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll({}), {})
+        lu.assertEquals(native.SellOptions, {})
         lu.assertEquals(mismatches, {})
         -- Reopening keeps the shown list.
         openPool(callbacks, native)
-        lu.assertEquals(native.SellOptions, { { Name = "C", Value = 30 } })
+        lu.assertEquals(native.SellOptions, {})
+        values.A = 10
         callbacks.SellTraitScreenReroll(nil, {}, nativeReroll({ "A" }), {})
         lu.assertEquals(native.SellOptions, { { Name = "A", Value = 10 } })
         lu.assertEquals(mismatches, { { "screen-reroll", 2, 3 } })

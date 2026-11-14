@@ -533,7 +533,7 @@ describe('rows on a replaced item in edit settlement', () => {
 
   describe('keeps each derived entry’s new observation when its pickup goes', () => {
     it('an Artificer replacement', () => {
-      const project = loadCheckpoint('underworld-f-duo-exchange-order');
+      const project = loadCheckpoint('underworld-f-trait-order-checks');
       const room = at(f, 'f4adb787-5267-4ce6-8712-e53744e505ff');
       const row = order(project, room).find(
         (reference) =>

@@ -22,6 +22,15 @@ const unknownAvailability: WorkspacePlanEndAvailability = Object.freeze({
   reason: 'unknown',
 });
 
+/** Moves the route's single plan end to the room. */
+export function planEndCommand(room: OccurrenceAddress) {
+  return Object.freeze({
+    kind: 'ReplacePlanEnd' as const,
+    route: createRouteAddress(room.routeKey),
+    planEnd: Object.freeze({ biomeKey: room.biomeKey, occurrenceId: room.occurrenceId }),
+  });
+}
+
 /** One room's plan-end action: set the route's single end to it, or remove the end. */
 export function assembleRoomPlanEnd(input: {
   readonly room: OccurrenceAddress;
@@ -32,16 +41,7 @@ export function assembleRoomPlanEnd(input: {
   return Object.freeze({
     ...(input.relation === undefined ? {} : { relation: input.relation }),
     availability: () => input.availability() ?? unknownAvailability,
-    endIntent: Object.freeze({
-      command: Object.freeze({
-        kind: 'ReplacePlanEnd' as const,
-        route,
-        planEnd: Object.freeze({
-          biomeKey: input.room.biomeKey,
-          occurrenceId: input.room.occurrenceId,
-        }),
-      }),
-    }),
+    endIntent: Object.freeze({ command: planEndCommand(input.room) }),
     removeIntent: Object.freeze({
       command: Object.freeze({ kind: 'ReplacePlanEnd' as const, route, planEnd: null }),
     }),

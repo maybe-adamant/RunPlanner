@@ -33,6 +33,8 @@ import {
 import { executionRoomOwnerKey } from '../../src/execution-plan/assembly/support';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { ExecutionCompilerError } from '../../src/execution-plan/assembler-errors';
+import { executionHubRerolls, executionReroll } from '../../src/execution-plan/assembly/rerolls';
+import type { CanonicalHubDecision } from '../../src/simulation/materialization';
 import { assembleExecutionProduct } from '../../src/execution-plan/assembler';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
@@ -280,5 +282,38 @@ describe('execution assembly refuses a published blank', () => {
         /lacks Fields optional point/,
       );
     });
+  });
+
+  it('refuses a room press or a Hub press whose result is unset', () => {
+    const f = completeBiome(stockTestProject(loadUnderworldFStygianWellCheckpoint()), 'F');
+    const room = roomWhere(f, (candidate) => candidate.stygianWell !== undefined);
+    const press = { kind: 'reroll', rerollId: 'r1', target: { kind: 'wheelOffer' } } as const;
+    const unset = {
+      ...room,
+      rerollPresses: new Map([
+        ['r1', { target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' } }],
+      ]),
+    } as unknown as typeof room;
+    expectCoverageMissing(
+      () => executionReroll(unset, undefined, press as never),
+      /reroll r1 lacks its result/,
+    );
+    const hub = {
+      rerolls: [{ origin: { rerollId: 'r1' }, hubSlotKey: 'combat05' }],
+      board: {
+        targets: [
+          {
+            hubSlotKey: 'combat05',
+            room: {
+              incomingReward: {
+                producerLifecycleKey: 'RoomReward',
+                resolvedStoreKey: 'HubRewards',
+              },
+            },
+          },
+        ],
+      },
+    } as unknown as CanonicalHubDecision;
+    expectCoverageMissing(() => executionHubRerolls(hub), /Hub reroll r1 lacks its result/);
   });
 });

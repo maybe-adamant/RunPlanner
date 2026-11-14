@@ -600,9 +600,8 @@ describe('live interactions at a gap', () => {
       choose,
       wheel,
     ]);
-    // Choosing a target places the press with its drawn result.
+    // Choosing a target places the press, its result unset.
     const drawn = rerollPressForProjectEvaluationAssembly(
-      catalog,
       simulateProjectAssembly(catalog, o),
       { kind: 'rewardWheel', wheel },
       { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
@@ -614,7 +613,7 @@ describe('live interactions at a gap', () => {
     expect(verbAccepted(o, ship, press!.verb, press!.gap, picked)).toBe(true);
   });
 
-  it('places a press with a stable legal draw, then opens its result on the row', () => {
+  it('places a press with its result unset, which the walk stops at until its row sets it', () => {
     const doorRoom = fRoom('golden-f-b2-e1');
     const held = withArcana(throughBiome(loadUnderworldFGCheckpoint(), 'F'), ['DoorReroll']);
     const surface = { kind: 'doors' as const, occurrence: doorRoom };
@@ -622,33 +621,21 @@ describe('live interactions at a gap', () => {
     const target = rerollSurfaceForProjectEvaluationAssembly(assembly, surface)!.targets.find(
       (candidate) => candidate.unavailable === undefined,
     )!.target;
-    const drawn = rerollPressForProjectEvaluationAssembly(catalog, assembly, surface, target);
-    expect(drawn).toMatchObject({
+    const press = rerollPressForProjectEvaluationAssembly(assembly, surface, target);
+    expect(press).toEqual({
       kind: 'InsertReroll',
       occurrence: doorRoom,
       target,
       index: roomOrder(held, doorRoom).length,
     });
-    // The draw is the plan's own: evaluated again, it draws the same reward.
-    expect(
-      rerollPressForProjectEvaluationAssembly(
-        catalog,
-        simulateProjectAssembly(
-          catalog,
-          decodeProjectDocument(JSON.parse(encodeProjectDocument(held)), catalog),
-        ),
-        surface,
-        target,
-      ),
-    ).toEqual(drawn);
-    const [press] = roomVerbs(interactions(held, doorRoom)).filter(
+    const [verb] = roomVerbs(interactions(held, doorRoom)).filter(
       ({ verb }) => verb.choice?.picker === 'rerollPress',
     );
-    expect(verbAccepted(held, doorRoom, press!.verb, press!.gap, [drawn!])).toBe(true);
+    expect(verbAccepted(held, doorRoom, verb!.verb, verb!.gap, [press!])).toBe(true);
 
-    // Placed, the press stands with its result's picker, which overrides the draw.
-    const placed = applyProjectCommand(held, catalog, drawn!);
-    const reroll = roomOrder(placed, doorRoom)[press!.gap]!;
+    // Placed, the press stands with its result's picker, and its unset result stops the walk.
+    const placed = applyProjectCommand(held, catalog, press!);
+    const reroll = roomOrder(placed, doorRoom)[verb!.gap]!;
     const key = roomActionKey(reroll);
     const standing = roomVerbs(interactions(placed, doorRoom)).find(
       ({ verb }) =>
@@ -657,24 +644,32 @@ describe('live interactions at a gap', () => {
         roomActionKey(verb.reference) === key,
     );
     expect(standing?.verb.choice).toEqual({ picker: 'rerollResult', timing: 'after' });
+    // A saved plan keeps the unset result.
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(placed)), catalog)).toEqual(
+      placed,
+    );
     const action = createRoomActionAddress(fBiome, doorRoom.occurrenceId, key);
-    const other = supportedRerollRewards(placed, action, [
+    const evaluation = simulateProjectAssembly(catalog, placed).evaluation;
+    expect(evaluation.status).toBe('incomplete');
+    expect(evaluation.issue).toMatchObject({
+      kind: 'incomplete',
+      reasons: [expect.objectContaining({ code: 'rerollResultMissing', origin: action })],
+    });
+    // The row's picker offers the legal results there; setting one completes the press.
+    const reward = supportedRerollRewards(placed, action, [
       'Boon',
       'RoomMoneyDrop',
       'MaxHealthDrop',
-    ]).find((reward) => JSON.stringify(reward) !== JSON.stringify(drawn!.reward))!;
-    expect(other).toBeDefined();
-    const overridden = applyProjectCommand(placed, catalog, {
+    ])[0]!;
+    expect(reward).toBeDefined();
+    const set = applyProjectCommand(placed, catalog, {
       kind: 'ReplaceRerollReward',
       action,
-      reward: other,
+      reward,
     });
-    expect(placementFindings(simulateProjectAssembly(catalog, overridden), doorRoom)).toEqual(
-      placementFindings(simulateProjectAssembly(catalog, placed), doorRoom),
-    );
-    expect(rerollPressForProjectEvaluationAssembly(catalog, assembly, surface, target)).toEqual(
-      drawn,
-    );
+    expect(
+      simulateProjectAssembly(catalog, set).evaluation.findings.map((finding) => finding.code),
+    ).not.toContain('rerollResultMissing');
   });
 
   it("places a wheel's choice with the offer it takes, one edit per offer", () => {

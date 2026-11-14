@@ -808,6 +808,26 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('O', 'surface-o-combat04'),
   },
   {
+    id: 'ship-select-wheel-open',
+    roomTab: 'shipIntroActions',
+    label: 'Ship room Intro: Select wheel between two offers, its list open',
+    shows: ['ship phase', 'select wheel'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceRewardWheelOfferCount',
+        wheel: createRewardWheelAddress(
+          createBiomeAddress('Surface', 'O'),
+          createOccurrenceId('surface-o-combat04'),
+          'wheel1',
+        ),
+        offerCount: 2,
+      },
+    ],
+    target: room('O', 'surface-o-combat04'),
+    openPicker: 'Combat 1 reward offer',
+  },
+  {
     id: 'ship-two-phase-intro',
     roomTab: 'shipIntroActions',
     label: 'Ship room Intro: its fight, then the wheel Combat 1 is chosen at',
@@ -2038,6 +2058,51 @@ export const galleryCases: readonly GalleryCase[] = [
       },
     ],
     target: hub('N', 1),
+  },
+  {
+    id: 'hub-rerolls',
+    overview: true,
+    label: 'Hub Timeline with a visit holding several rerolls, and its Overview',
+    shows: ['Hub reroll rows', 'Hub door reward chips'],
+    project: loadSurfaceNCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceManualArcanaSelection',
+        route: createRouteAddress('Surface'),
+        arcanaKeys: ['DoorReroll'],
+      },
+      ...(['combat03', 'combat05', 'combat23'] as const).map(
+        (hubSlotKey): GalleryStep =>
+          (project) => {
+            const surfaceHub = createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub');
+            const index = rerollAppendIndex(project, {
+              kind: 'hubStay',
+              hub: surfaceHub,
+              precedingVisitCount: 1,
+            });
+            if (index === undefined) throw new Error('the N Hub has no reroll position');
+            return {
+              kind: 'InsertHubReroll',
+              hub: surfaceHub,
+              hubSlotKey,
+              reward: {
+                rewardType: 'Boon',
+                payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+              },
+              index,
+            };
+          },
+      ),
+    ],
+    target: hub('N', 1),
+  },
+  {
+    id: 'hub-visit-picker',
+    label: 'Hub Timeline: a visit’s room list, each room with its number',
+    shows: ['Hub segments', 'visit room picker'],
+    project: loadSurfaceNCheckpoint,
+    target: hub('N', 2),
+    openPicker: 'Visit 2 room',
   },
   // Progressive Timeline: a room's Timeline ends where its walk stops.
   {

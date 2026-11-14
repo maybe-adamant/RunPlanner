@@ -25,7 +25,7 @@ import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CandidateOptionProjection } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceMarker } from './navigation';
-import type { WorkspaceDoorContract } from './structure';
+import type { WorkspaceDoorContract, WorkspacePlanEndAvailability } from './structure';
 import type { WorkspaceTraitOfferControl } from './traits';
 import type { WorkspaceCountedRewardControl, WorkspaceExplicitRewardControl } from './rewards';
 import type { WorkspaceShopOfferDescriptor, WorkspaceShopSupplementalDescriptor } from './commerce';
@@ -33,6 +33,7 @@ import type { WorkspaceRoomMapPoint } from './features';
 import type {
   WorkspaceNativeCandidateInteraction,
   WorkspaceCommandIntent,
+  WorkspaceCommandsIntent,
   WorkspacePickerCandidateInteraction,
   WorkspaceInteractionChoice,
   WorkspaceRoomSummary,
@@ -68,6 +69,10 @@ export interface WorkspaceLocalVisitOrderInteraction extends WorkspaceNativeCand
   readonly intentFor: (
     occurrenceIds: readonly OccurrenceId[],
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceLocalVisitOrder' }>>;
+  /** Returns to the Hub at this exit and ends the plan in the main room, as one edit. */
+  readonly endPlanIntent: WorkspaceCommandsIntent;
+  /** Whether that edit leaves a plan that can end there; one engine evaluation, on first read. */
+  readonly endPlanAvailability: () => WorkspacePlanEndAvailability;
   readonly owner: LocalVisitOrderAddress;
 }
 

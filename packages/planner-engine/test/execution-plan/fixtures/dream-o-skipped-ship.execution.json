@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 2,
+  "schemaRevision": 3,
   "projectId": "dream-o-skipped-ship",
   "routeKey": "Dream",
   "startingLoadout": {
@@ -253,7 +253,11 @@
         "unmodeledEncounterKeys": ["Empty"],
         "encounterPhases": [],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -585,7 +589,12 @@
             "pickedOfferKey": "offer1"
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 691379, "endPointId": 691376 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -755,7 +764,12 @@
             "pickedOfferKey": "offer1"
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 691379, "endPointId": 691376 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -916,7 +930,12 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "MiniBossCaptain", "kind": "miniboss" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 793044, "endPointId": 793045 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -1106,7 +1125,11 @@
             }
           ]
         },
-        "layout": { "flipped": false },
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 558034 },
+          "derived": ["entry"]
+        },
         "additional": [
           {
             "kind": "zagreusContract",
@@ -1193,7 +1216,11 @@
           { "slotKey": "Encounter", "encounterKey": "BossZagreus01", "kind": "boss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -1326,7 +1353,12 @@
             "pickedOfferKey": "offer1"
           }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 693116, "endPointId": 693117 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -1514,7 +1546,11 @@
           "sourceOwner": "[\"infernalContractPedestal\",\"Dream\",\"O\",\"dream-o-preboss\"]",
           "rewardType": "StackUpgrade"
         },
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 558034 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -1562,7 +1598,12 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "BossEris01", "kind": "boss" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -1606,5 +1647,5 @@
       }
     }
   ],
-  "planFingerprint": "6d5587d3"
+  "planFingerprint": "a8ba23be"
 }

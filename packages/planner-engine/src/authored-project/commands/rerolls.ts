@@ -21,6 +21,7 @@ import {
   hubRerollOwner,
   nextRerollId,
   rerolledRecordOf,
+  rerollPressHeld,
   rerollPressNeedsResult,
   rerollResult,
   rerollTargetOwner,
@@ -65,16 +66,22 @@ function withUnresolvedItem(
   routePosition: ResolvedRoutePosition,
   occurrence: RoomOccurrence,
   owner: RerolledRewardOwner,
-  results: Readonly<Record<string, ResolvedRewardOffer>>,
+  results: Readonly<Record<string, ResolvedRewardOffer | null>>,
   pressId: string,
   effective: boolean,
 ): RerolledRewardState {
+  const offer = results[pressId];
   return withRerolledAcquisition(
     Object.freeze({ results, pressId }),
-    effective
-      ? unresolvedRerolledReward(catalog, routePosition, occurrence, owner, results[pressId]!)
+    effective && offer != null
+      ? unresolvedRerolledReward(catalog, routePosition, occurrence, owner, offer)
       : undefined,
   );
+}
+
+/** Whether two press results are the same, an unset one only to another. */
+function sameResult(left: ResolvedRewardOffer | null, right: ResolvedRewardOffer | null): boolean {
+  return left === null || right === null ? left === right : sameRewardOffer(left, right);
 }
 
 /** Whether the record's effective item holds only its unresolved defaults. */
@@ -86,7 +93,7 @@ function rerolledOutcomesUnauthored(
   record: RerolledRewardState,
 ): boolean {
   const offer = record.results[record.pressId];
-  if (offer === undefined || record.acquisition === undefined) return true;
+  if (offer == null || record.acquisition === undefined) return true;
   const unresolved = unresolvedRerolledReward(catalog, routePosition, occurrence, owner, offer);
   const { offer: _offer, ...defaults } = unresolved ?? { offer };
   void _offer;
@@ -132,12 +139,12 @@ function hubRerolls(hub: HubDecision) {
   return hub.actions.flatMap((action) => (action.kind === 'reroll' ? [action] : []));
 }
 
-/** The topology with the owner's room holding this press's result. */
+/** The topology with the owner's room holding this press's result, null while unset. */
 function withPressResult(
   topology: BiomeTopology,
   owner: RerolledRewardOwner,
   rerollId: string,
-  reward: ResolvedRewardOffer,
+  reward: ResolvedRewardOffer | null,
 ): BiomeTopology {
   const occurrence = topology.occurrences.find(
     (candidate) => candidate.occurrenceId === owner.occurrenceId,
@@ -208,7 +215,7 @@ export function applyRerollCommand(
           ),
           rerollTargetOwner(biome, source.occurrenceId, command.target),
           reroll.rerollId,
-          command.reward,
+          command.reward ?? null,
         ),
       );
     }
@@ -237,7 +244,8 @@ export function applyRerollCommand(
       if (hub === undefined) failCommand(command, `unknown Hub ${hubKey}`);
       let actions: HubAction[] = [...hub.actions];
       let result:
-        { owner: RerolledRewardOwner; rerollId: string; reward: ResolvedRewardOffer } | undefined;
+        | { owner: RerolledRewardOwner; rerollId: string; reward: ResolvedRewardOffer | null }
+        | undefined;
       if (command.kind === 'InsertHubReroll') {
         requireIndex(command, command.index, hub.actions.length);
         const press: HubRerollAction = Object.freeze({
@@ -248,7 +256,7 @@ export function applyRerollCommand(
         const owner = hubRerollOwner(biome, hub, press);
         if (owner === undefined) failCommand(command, `${command.hubSlotKey} is not open`);
         actions.splice(command.index, 0, press);
-        result = { owner, rerollId: press.rerollId, reward: command.reward };
+        result = { owner, rerollId: press.rerollId, reward: command.reward ?? null };
       } else {
         const rerollId = command.reroll.rerollId;
         const index = hub.actions.findIndex(
@@ -289,8 +297,8 @@ export function applyRerollCommand(
 
 /**
  * The topology without the presses whose target can hold a result but holds
- * none: the item they redrew went with an edit that did not keep it, so they
- * go with it. The same topology when none is.
+ * none, set or not: the item they redrew went with an edit that did not keep
+ * it, so they go with it. The same topology when none is.
  */
 function withoutPressesOffTheirItem(biome: BiomeAddress, topology: BiomeTopology): BiomeTopology {
   let changed = false;
@@ -299,11 +307,11 @@ function withoutPressesOffTheirItem(biome: BiomeAddress, topology: BiomeTopology
       (action) =>
         action.kind !== 'reroll' ||
         !rerollPressNeedsResult(topology, source, action) ||
-        rerollResult(
+        rerollPressHeld(
           topology,
           roomRerollOwner(biome, topology, source.occurrenceId, action),
           action.rerollId,
-        ) !== undefined,
+        ),
     );
     if (order.length === source.roomActions.order.length) return source;
     changed = true;
@@ -317,7 +325,7 @@ function withoutPressesOffTheirItem(biome: BiomeAddress, topology: BiomeTopology
     const actions = decision.actions.filter((action) => {
       if (action.kind !== 'reroll') return true;
       const owner = hubRerollOwner(biome, decision, action);
-      return owner === undefined || rerollResult(topology, owner, action.rerollId) !== undefined;
+      return owner === undefined || rerollPressHeld(topology, owner, action.rerollId);
     });
     if (actions.length === decision.actions.length) return decision;
     changed = true;
@@ -421,7 +429,7 @@ export function closeRerolledRecords(
       const changedInPlace =
         priorResult !== undefined &&
         results[record.pressId] !== undefined &&
-        !sameRewardOffer(priorResult, results[record.pressId]!);
+        !sameResult(priorResult, results[record.pressId]!);
       const follows =
         touched &&
         latest !== record.pressId &&
@@ -447,13 +455,14 @@ export function closeRerolledRecords(
               (effectivePress !== undefined && record.acquisition === undefined) ||
               // A rebuilt room that kept the item may no longer draw its reward.
               (record.acquisition !== undefined &&
-                unresolvedRerolledReward(
-                  catalog,
-                  located.routePosition,
-                  occurrence,
-                  owner,
-                  results[record.pressId]!,
-                ) === undefined)
+                (results[record.pressId] == null ||
+                  unresolvedRerolledReward(
+                    catalog,
+                    located.routePosition,
+                    occurrence,
+                    owner,
+                    results[record.pressId]!,
+                  ) === undefined))
             ? item(record.pressId)
             : Object.freeze({ ...record, results });
       if (canonicalJson(closedRecord) === canonicalJson(record)) continue;
@@ -528,8 +537,8 @@ export function rerolledItemsReplacedBetween(
     const sameItem =
       next?.acquisition !== undefined &&
       next.pressId === record.pressId &&
-      result !== undefined &&
-      nextResult !== undefined &&
+      result != null &&
+      nextResult != null &&
       sameRewardOffer(result, nextResult);
     return sameItem || unauthored() ? [] : [owner];
   });

@@ -24,6 +24,11 @@ export function executionReroll(
   const press = room.rerollPresses?.get(reroll.rerollId);
   if (press === undefined) return missing();
   const { target, result } = press;
+  if (result === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} reroll ${reroll.rerollId} lacks its result`,
+    );
   if (target.kind === 'wheelOffer') {
     const wheel = room.rewardWheels?.find((candidate) => candidate.wheelKey === target.wheelKey);
     if (wheel === undefined) return missing();
@@ -97,10 +102,15 @@ export function executionHubRerolls(
     hub.rerolls.map((reroll) => {
       const incoming = hub.board.targets.find((target) => target.hubSlotKey === reroll.hubSlotKey)
         ?.room.incomingReward;
-      if (incoming === undefined || reroll.reward === undefined)
+      if (incoming === undefined)
         throw new CompilerError(
           'executionCoverageMissing',
           `Hub reroll ${reroll.origin.rerollId} lacks its slot`,
+        );
+      if (reroll.reward === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `Hub reroll ${reroll.origin.rerollId} lacks its result`,
         );
       return Object.freeze({
         owner: semanticAddressKey(reroll.origin),

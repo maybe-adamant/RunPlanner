@@ -45,7 +45,7 @@ export interface GalleryCase {
   readonly doorsExpanded?: true;
   /** A room case opens its Not reached yet rows. */
   readonly notReachedExpanded?: true;
-  /** A room case opens the verbs of the live thing of this name on its Timeline. */
+  /** A room case opens the verbs of the live thing, or the Leave row picker, of this name on its Timeline. */
   readonly openPicker?: string;
   /** With `openPicker`, the verb whose values the list then shows. */
   readonly openVerb?: string;

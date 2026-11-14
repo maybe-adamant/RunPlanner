@@ -1326,7 +1326,6 @@
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1367,7 +1366,6 @@
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1405,7 +1403,6 @@
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1443,7 +1440,6 @@
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1481,7 +1477,6 @@
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1514,7 +1509,6 @@
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1547,7 +1541,6 @@
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1580,7 +1573,6 @@
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1613,7 +1605,6 @@
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1640,7 +1631,6 @@
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
         "fresh-file/withRetainedFreshFilePostboss(all)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -1666,7 +1656,6 @@
         "execution/fresh-file-fghi",
         "fresh-file/createFreshFileFProject",
         "fresh-file/withNewHFieldsRoom(min)",
-        "fresh-file/withRetainedFreshFilePostboss(emptyPool)",
         "fresh-file/hFieldsIssues/00",
         "fresh-file/hFieldsIssues/01",
         "fresh-file/hFieldsIssues/02",
@@ -3594,19 +3583,13 @@
   ],
   "F/c6f79692-8463-41bd-97cd-59c2e7fc96b2 F_Opening02": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard beforeCombat" }
     }
   ],
   "F/e9c1775e-a04b-4ed2-b749-7ef344614cbe F_Combat02": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
         "#2 interactAcquisitionEntry:[acquisitionSite,Underworld,F,[occurrence,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe],artificerSource:[incomingReward,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe]]:artificer:[incomingReward,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe]:self": "standard afterCombat"
@@ -3615,19 +3598,13 @@
   ],
   "F/230689a9-dea8-42c6-b04f-8ec9102223fd F_Combat03": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
   ],
   "F/8bf76f54-d35c-44dc-a243-4e3d1f37300c F_Combat08": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat",
         "#2 purchaseStygianWellOffer:initial:secondLeft": "postOutgoing"
@@ -3636,10 +3613,7 @@
   ],
   "F/62f19ad0-cfb9-4126-92b6-f810aa586612 F_Combat16": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
         "#2 interactEncounter:Encounter": "standard afterCombat"
@@ -3648,19 +3622,13 @@
   ],
   "F/38689388-fd7d-4262-bc0c-c0951542cc3e F_MiniBoss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:source": "standard afterCombat" }
     }
   ],
   "F/f4adb787-5267-4ce6-8712-e53744e505ff F_Reprieve01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "#1 useFountain": "standard afterCombat",
         "#2 interactIncomingReward:roomRewardPickup:self": "standard afterCombat",
@@ -3670,10 +3638,7 @@
   ],
   "F/c8e56805-e89c-407a-b916-ae40eaf9d710 F_Shop01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "#1 interactShopOffer:Boon": "postOutgoing",
         "#2 interactAcquisitionEntry:roomExit:travelDealRefill": "postOutgoing"
@@ -3682,10 +3647,7 @@
   ],
   "F/52dace01-83e9-49da-a9d3-75d6fadfaf68 C_Boss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "#1 collectRequiredReward": "standard afterCombat",
         "#2 interactIncomingReward:roomRewardPickup:self": "standard afterCombat"
@@ -3694,10 +3656,7 @@
   ],
   "F/4fcb700b-b26a-49bf-8f93-5ec021de7235 F_Combat12": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": { "#1 interactIncomingReward:roomRewardPickup:self": "standard afterCombat" }
     }
   ],
@@ -3711,21 +3670,11 @@
         "#4 purchaseStygianWellOffer:travelDealRefill": "postOutgoing",
         "#5 purchaseStygianWellOffer:initial:secondLeft": "postOutgoing"
       }
-    },
-    {
-      "entries": ["checkpoint/underworld-f-duo-exchange-order"],
-      "rows": {
-        "#1 interactIncomingReward:beforeCombat:chosenSource": "standard beforeCombat",
-        "#2 interactIncomingReward:afterCombat:spurnedSource": "standard afterCombat"
-      }
     }
   ],
   "F/e157e3cb-37ae-40d9-92b0-f22621b672c3 F_PreBoss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "#1 interactInfernalContractPedestal": "standard afterCombat",
         "#2 interactShopOffer:Boon": "standard afterCombat",
@@ -3735,19 +3684,13 @@
   ],
   "F/e157e3cb-37ae-40d9-92b0-f22621b672c3:boss F_Boss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
   ],
   "F/e157e3cb-37ae-40d9-92b0-f22621b672c3:postboss F_PostBoss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "#1 useFountain": "standard afterCombat",
         "#2 interactKeepsakeRack": "postOutgoing"

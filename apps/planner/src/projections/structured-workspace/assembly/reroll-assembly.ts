@@ -4,6 +4,7 @@ import {
   createRoomActionAddress,
   hubRerollOwner,
   roomActionKey,
+  rerollPressHeld,
   rerollResult,
   rerollTargetOwner,
   resolveRerollTarget,
@@ -65,7 +66,8 @@ export function workspaceRoomPress(
   | {
       readonly target: ResolvedRerollTarget;
       readonly owner: RerolledRewardOwner;
-      readonly reward: ResolvedRewardOffer;
+      /** Absent while the owner has not set the press's result. */
+      readonly reward?: ResolvedRewardOffer;
     }
   | undefined {
   const topology = source.plan.topology;
@@ -73,8 +75,9 @@ export function workspaceRoomPress(
   const target = resolveRerollTarget(topology, press);
   if (target === undefined) return undefined;
   const owner = rerollTargetOwner(source.biome, sourceOccurrenceId, target);
+  if (!rerollPressHeld(topology, owner, press.rerollId)) return undefined;
   const reward = rerollResult(topology, owner, press.rerollId);
-  return reward === undefined ? undefined : Object.freeze({ target, owner, reward });
+  return Object.freeze(reward === undefined ? { target, owner } : { target, owner, reward });
 }
 
 /** A door reroll target as the room's doors name it: its door, and its cage in Fields. */
@@ -186,7 +189,7 @@ interface WorkspacePreparedRerollRow {
   readonly address: RoomActionAddress | HubRerollAddress;
   readonly key: string;
   readonly marker: WorkspaceMarker;
-  readonly reward: ResolvedRewardOffer;
+  readonly reward?: ResolvedRewardOffer;
   readonly rewardTypes: WorkspaceRerollRewardTypes;
   readonly targetLabel: string;
   readonly targetRoom?: WorkspaceRerollRow['targetRoom'];
@@ -249,7 +252,7 @@ function assembleRerollList(input: {
             address,
             key,
             marker,
-            reward,
+            ...(reward === undefined ? {} : { reward }),
             targetLabel,
             ...(targetRoom === undefined ? {} : { targetRoom }),
           }),
@@ -265,7 +268,7 @@ function assembleRerollList(input: {
       targets: Object.freeze(targets),
       rows: Object.freeze(
         rows.map(({ address, key, reward, rewardTypes }) =>
-          Object.freeze({ address, key, reward, rewardTypes }),
+          Object.freeze({ address, key, ...(reward === undefined ? {} : { reward }), rewardTypes }),
         ),
       ),
     }),
@@ -301,7 +304,7 @@ function roomRerollRows(input: {
         address,
         key,
         marker,
-        reward: press.reward,
+        ...(press.reward === undefined ? {} : { reward: press.reward }),
         rewardTypes: input.rewardTypes(press.owner),
         targetLabel: input.targetLabel(press.target),
       }),
@@ -407,17 +410,21 @@ export function assembleHubStayRerolls(input: {
     const target = hub.openTargets.find((candidate) => candidate.hubSlotKey === action.hubSlotKey);
     const room = input.slots.get(action.hubSlotKey)?.door?.room;
     const topology = input.source.plan.topology;
-    const reward =
-      topology === null || topology === undefined
-        ? undefined
-        : rerollResult(topology, hubRerollOwner(biome, hub, action), action.rerollId);
-    if (reward === undefined) continue;
+    const rewardOwner = hubRerollOwner(biome, hub, action);
+    // A press of a closed slot holds no result; an open slot's may be unset.
+    if (
+      topology === null ||
+      topology === undefined ||
+      !rerollPressHeld(topology, rewardOwner, action.rerollId)
+    )
+      continue;
+    const reward = rerollResult(topology, rewardOwner, action.rerollId);
     rows.push(
       Object.freeze({
         address,
         key: action.rerollId,
         marker,
-        reward,
+        ...(reward === undefined ? {} : { reward }),
         rewardTypes:
           target === undefined
             ? noRewardTypes
@@ -559,7 +566,7 @@ export function assembleRoomRerolls(input: {
                 rowKey: roomActionKey(reference),
                 ownerKey: semanticAddressKey(press.owner),
                 label: index === undefined ? 'Door' : `Door ${index}`,
-                reward: press.reward,
+                ...(press.reward === undefined ? {} : { reward: press.reward }),
                 locked: lockedAt.get(roomActionKey(reference)) ?? [],
               },
             ];
@@ -638,7 +645,8 @@ export interface WorkspaceSurfacePress {
   readonly rowKey: string;
   readonly ownerKey: string;
   readonly label: string;
-  readonly reward: ResolvedRewardOffer;
+  /** Absent while the press's result is unset: it leaves its target as it was. */
+  readonly reward?: ResolvedRewardOffer;
   /** The entries still locked once the press lands, by key. */
   readonly locked?: readonly string[];
 }
@@ -670,7 +678,7 @@ export function workspacePressSurfaceStates(input: {
       const before = hidden.has(press.ownerKey) ? null : (current.get(press.ownerKey) ?? null);
       const settled =
         lastPress.get(press.ownerKey) === index ? input.settled.get(press.ownerKey) : undefined;
-      current.set(press.ownerKey, settled ?? press.reward);
+      current.set(press.ownerKey, settled ?? press.reward ?? current.get(press.ownerKey) ?? null);
       return [
         press.rowKey,
         Object.freeze({
@@ -816,7 +824,7 @@ export function assembleWheelRerolls(input: {
               rowKey: roomActionKey(reference),
               ownerKey: semanticAddressKey(press.owner),
               label: targetLabel(press.target),
-              reward: press.reward,
+              ...(press.reward === undefined ? {} : { reward: press.reward }),
             },
           ];
     }),

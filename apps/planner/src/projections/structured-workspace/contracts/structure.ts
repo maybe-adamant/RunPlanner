@@ -211,7 +211,8 @@ export interface WorkspaceRerollRow {
   readonly targetLabel: string;
   /** A Hub board press's door, by its room's icon and shared-icon number. */
   readonly targetRoom?: { readonly roomIcon: WorkspaceRoomIcon; readonly roomNumber?: string };
-  readonly reward: ResolvedRewardOffer;
+  /** Absent while the owner has not set the press's result. */
+  readonly reward?: ResolvedRewardOffer;
   /** A press's view of its doors or wheel offers: present on door, cage and wheel presses. */
   readonly doors?: {
     /** The pressed door or offer, without its cage: a cage is known by its reward. */
@@ -276,8 +277,8 @@ export interface WorkspaceRoomRerollsInteraction {
     Extract<ProjectCommand, { readonly kind: 'RemoveRoomAction' | 'RemoveHubReroll' }>
   >;
   /**
-   * Appends a press of one target, its result the engine's stable legal draw,
-   * which its row then lets the owner change; undefined when none is legal.
+   * Appends a press of one target, its result unset for its row to choose;
+   * undefined where the game refuses that press.
    */
   readonly pressIntent: (
     targetKey: string,

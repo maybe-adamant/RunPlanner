@@ -164,6 +164,14 @@ type EncounterUser = ReturnType<typeof renderOccurrenceWorkbench>['user'];
 async function saveEncounter(user: EncounterUser, dialog: HTMLElement) {
   await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 }
+/** Opens the Select wheel list of Combat 1's wheel. */
+async function openWheelPicks(user: EncounterUser): Promise<HTMLElement> {
+  await user.click(screen.getByRole('button', { name: 'Combat 1 reward offer' }));
+  return screen.findByRole('listbox');
+}
+async function pickWheelOffer(user: EncounterUser, offer: string) {
+  await user.click(within(await openWheelPicks(user)).getByRole('option', { name: offer }));
+}
 async function reopenEncounter(user: EncounterUser): Promise<HTMLElement> {
   await user.click(screen.getByRole('button', { name: 'Customize encounter' }));
   return screen.findByRole('dialog');
@@ -2722,7 +2730,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     expect(offerRows()).toHaveLength(2);
     expect(offerRows()[1]?.getAttribute('data-picked')).not.toBe('true');
-    expect(screen.getByRole('group', { name: 'Combat 1 reward offer' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Combat 1 reward offer' })).toBeTruthy();
 
     act(() =>
       view.application.store.dispatch(
@@ -2733,11 +2741,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       ),
     );
-    await view.user.click(
-      within(screen.getByRole('group', { name: 'Combat 1 reward offer' })).getByRole('button', {
-        name: 'R Offer',
-      }),
-    );
+    await pickWheelOffer(view.user, 'R Offer');
     expect(
       shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
         .pickedOfferIndex,
@@ -2790,9 +2794,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     expect(screen.queryByRole('combobox', { name: 'Picked offer' })).toBeNull();
     expect(
-      within(screen.getByRole('group', { name: 'Combat 1 reward offer' }))
-        .getAllByRole('button')
-        .map((chip) => chip.getAttribute('aria-label')),
+      within(await openWheelPicks(view.user))
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('aria-label')),
     ).toEqual(['L Offer', 'R Offer']);
   });
 
@@ -2850,11 +2854,7 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     await authorOffer('L Offer', 'Big Bones');
     await authorOffer('R Offer', 'Big Ashes');
-    await view.user.click(
-      within(screen.getByRole('group', { name: 'Combat 1 reward offer' })).getByRole('button', {
-        name: 'R Offer',
-      }),
-    );
+    await pickWheelOffer(view.user, 'R Offer');
     await waitFor(() =>
       expect(
         shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')

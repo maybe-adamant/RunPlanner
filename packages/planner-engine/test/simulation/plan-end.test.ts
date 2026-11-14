@@ -16,8 +16,10 @@ import {
   createLocalVisitSlotAddress,
   createOccurrenceAddress,
   createPhantomExitAddress,
+  createRoomActionAddress,
   createRouteAddress,
   createTargetAddress,
+  roomActionKey,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -584,5 +586,43 @@ describe('Plan end evaluation', () => {
       reason: 'notSettled',
     });
     expect(planEndAvailability(catalog, placed, room('golden-f-b5-e1')).available).toBe(true);
+  });
+
+  it('answers for a main room ended at an earlier exit with the cut applied', () => {
+    // Combat 05 visits sideDoor2 then sideDoor1; its second exit returns to the Hub after sideDoor2.
+    const n = createBiomeAddress('Surface', 'N');
+    const main = 'surface-n-combat05' as OccurrenceId;
+    const room = createOccurrenceAddress(n, main);
+    const cut = {
+      kind: 'ReplaceLocalVisitOrder' as const,
+      order: createLocalVisitOrderAddress(n, main, 'sideRooms'),
+      occurrenceIds: ['surface-n-combat05-sideDoor2' as OccurrenceId],
+    };
+    // Leaves the room's reward unpicked: the room is unfinished.
+    const unpicked = (project: ProjectDocument, occurrenceId: string) => {
+      const action = project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)!
+        .roomActions.order[0]!;
+      return applyProjectCommand(project, catalog, {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(n, occurrenceId as OccurrenceId, roomActionKey(action)),
+      });
+    };
+    const at = (project: ProjectDocument, visitOrder?: typeof cut) =>
+      planEndAvailability(catalog, simulateProjectAssembly(catalog, project), room, visitOrder);
+
+    expect(at(loadSurfaceNProject(), cut)).toEqual({ available: true });
+    const mainUnfinished = unpicked(loadSurfaceNProject(), main);
+    expect(at(mainUnfinished, cut)).toEqual({ available: false, reason: 'notSettled' });
+    expect(at(mainUnfinished)).toEqual({ available: false, reason: 'notSettled' });
+    // A side room the cut drops no longer stands in the way; one it keeps still does.
+    const laterSide = unpicked(loadSurfaceNProject(), 'surface-n-combat05-sideDoor1');
+    expect(at(laterSide)).toEqual({ available: false, reason: 'notSettled' });
+    expect(at(laterSide, cut)).toEqual({ available: true });
+    expect(at(unpicked(loadSurfaceNProject(), 'surface-n-combat05-sideDoor2'), cut)).toEqual({
+      available: false,
+      reason: 'notSettled',
+    });
   });
 });

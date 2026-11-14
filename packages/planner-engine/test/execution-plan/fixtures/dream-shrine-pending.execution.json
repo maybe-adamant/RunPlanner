@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 103,
-  "schemaRevision": 2,
+  "schemaRevision": 3,
   "projectId": "dream-single-q",
   "routeKey": "Dream",
   "startingLoadout": {
@@ -253,7 +253,11 @@
         "unmodeledEncounterKeys": ["Empty"],
         "encounterPhases": [],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 767996, "endPointId": 767999 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -564,7 +568,11 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedQ_Large", "kind": "combat" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 792547, "endPointId": 792548 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -613,7 +621,12 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedQ_Islands", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 789316, "endPointId": 789319 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -731,7 +744,11 @@
           { "slotKey": "Encounter", "encounterKey": "MiniBossBrute", "kind": "miniboss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -939,7 +956,11 @@
           ],
           "anchorId": 792267
         },
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 788492, "endPointId": 788494 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -1033,7 +1054,12 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedQ", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 797300, "endPointId": 797303 },
+          "derived": ["flipped", "entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -1187,7 +1213,11 @@
           { "slotKey": "Encounter", "encounterKey": "BossTyphonTail01", "kind": "miniboss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": {
         "transactions": [
@@ -1414,7 +1444,11 @@
             }
           ]
         },
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
@@ -1463,7 +1497,11 @@
           { "slotKey": "Encounter", "encounterKey": "BossTyphonHead01", "kind": "boss" }
         ],
         "requiredObjects": [],
-        "layout": { "flipped": false }
+        "layout": {
+          "flipped": false,
+          "entry": { "startPointId": 50065, "endPointId": 50059 },
+          "derived": ["entry"]
+        }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [
@@ -1542,5 +1580,5 @@
       }
     }
   ],
-  "planFingerprint": "f212611b"
+  "planFingerprint": "17f5f5d4"
 }

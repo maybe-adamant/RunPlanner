@@ -160,8 +160,7 @@ export type LiveVerbChoice =
     }
   /**
    * A press's target, from the reroll surface. Choosing one places the press
-   * with a stable legal draw as its result, which its row's `rerollResult`
-   * picker then opens on.
+   * with its result unset, which its row's `rerollResult` picker then opens on.
    */
   | { readonly picker: 'rerollPress'; readonly timing: 'before'; readonly surface: RerollSurface }
   /** The reward a placed door, cage or wheel press draws. */

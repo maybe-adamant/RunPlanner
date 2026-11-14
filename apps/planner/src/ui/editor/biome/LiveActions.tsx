@@ -305,10 +305,7 @@ function LiveItemChip({
           setChoosing(undefined);
           if (choosing.action.kind === 'rerollPress') {
             const intent = press?.pressIntent(value);
-            if (intent === undefined) {
-              announce('No reward can be drawn there.');
-              return;
-            }
+            if (intent === undefined) return;
             executeIntent(intent);
             announce(`${choosing.label} added to the timeline.`);
             onApplied?.();
