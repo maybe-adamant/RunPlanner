@@ -91,7 +91,8 @@ export function workspaceRoomIcon(input: {
 /**
  * A room's number where many rooms share its icon, such as 13 for Combat 13 or
  * 01 for Chaos 01; rooms with an icon of their own need none. The catalog
- * declares the number only as its name's numeric word.
+ * declares the number only as its name's numeric word. Side rooms share their
+ * main rooms' icon, so an S tells their numbers apart.
  */
 export function sharedRoomIconNumber(
   icon: WorkspaceRoomIcon,
@@ -99,7 +100,10 @@ export function sharedRoomIconNumber(
 ): string | undefined {
   if (icon.kind !== 'combat' && icon.kind !== 'chaos' && icon.kind !== 'fountain') return undefined;
   const number = declaration.label.split(' ').at(-1);
-  return number !== undefined && /^\d+$/.test(number) ? number : undefined;
+  if (number === undefined || !/^\d+$/.test(number)) return undefined;
+  const side =
+    declaration.mode.kind === 'authored' && declaration.mode.templateKey === 'EphyraSideRoom';
+  return side ? `S${number}` : number;
 }
 
 /** The icon of a room a picker offers by game name, before any occurrence exists. */
@@ -115,6 +119,15 @@ export function candidateRoomIcon(
     // A room whose incoming reward is a shop hosts one before any occurrence exists.
     shop: declaration.incomingReward.kind === 'shop',
   });
+}
+
+/** The number of a room a picker offers by game name, where it shares its icon. */
+export function candidateRoomNumber(
+  catalog: Catalog,
+  biomeKey: string,
+  declaration: RoomDeclaration,
+): string | undefined {
+  return sharedRoomIconNumber(candidateRoomIcon(catalog, biomeKey, declaration), declaration);
 }
 
 /** An occurrence's icon: its selected encounter and whether it hosts a shop. */

@@ -59,6 +59,7 @@ import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSu
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import {
   candidateRoomIcon,
+  candidateRoomNumber,
   occurrenceRoomIcon,
   sharedRoomIconNumber,
 } from '../presentation/room-icon';
@@ -948,9 +949,11 @@ export function assembleWorkspaceOccurrence(
               mapChoices: Object.freeze(
                 input.anomalyReplacementRoomGameNames.map((gameName) => {
                   const map = requireRoom(input.catalog, gameName);
+                  const roomNumber = candidateRoomNumber(input.catalog, address.biomeKey, map);
                   return Object.freeze({
                     label: map.label,
                     roomIcon: candidateRoomIcon(input.catalog, address.biomeKey, map),
+                    ...(roomNumber === undefined ? {} : { roomNumber }),
                     value: map.gameName,
                   });
                 }),

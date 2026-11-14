@@ -1,6 +1,6 @@
 import type { WorkspaceLocalVisitDecision } from '@planner/projections/structured-workspace';
 import { DoorChipFace } from '../DecisionWorkbench';
-import { doorRewardIcons } from '../doorSummary';
+import { doorRewardIcons, roomNumberOf } from '../doorSummary';
 import type { RoomMapSideDoor } from '../room-map/RoomMapPoints';
 
 /** The main room's side doors as its map shows them: shut, or open on its side room and visit. */
@@ -18,6 +18,7 @@ export function sideDoorMapDoors(
                 key: slot.key,
                 label: slot.label,
                 roomIcon: slot.roomIcon,
+                ...roomNumberOf(slot),
                 rewards: doorRewardIcons(slot, 'final'),
               }}
             />

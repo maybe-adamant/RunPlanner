@@ -40,7 +40,7 @@ import {
   appendUniqueWorkspaceNodes,
 } from './assembly-products';
 import { requireWorkspaceRoom } from './catalog-room';
-import { candidateRoomIcon } from '../presentation/room-icon';
+import { candidateRoomIcon, candidateRoomNumber } from '../presentation/room-icon';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceAssessment,
@@ -994,6 +994,10 @@ export function assembleWorkspaceBiomeSemantics(
                       requireWorkspaceRoom(catalog, target.gameName),
                       biome.routeKey,
                     );
+              const roomNumber =
+                declaration === undefined
+                  ? undefined
+                  : candidateRoomNumber(catalog, biome.biomeKey, declaration);
               return Object.freeze({
                 kind: 'room' as const,
                 label: declaration?.label ?? 'Fixed room',
@@ -1002,6 +1006,7 @@ export function assembleWorkspaceBiomeSemantics(
                   : {
                       gameName: target.gameName,
                       roomIcon: candidateRoomIcon(catalog, biome.biomeKey, declaration),
+                      ...(roomNumber === undefined ? {} : { roomNumber }),
                       continuation: Object.freeze({
                         marker: markerDestinations.marker(
                           createOccurrenceAddress(biome, target.occurrenceId),

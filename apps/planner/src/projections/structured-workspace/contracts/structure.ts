@@ -624,6 +624,8 @@ export interface WorkspacePhantomExitControl {
     readonly summary: string;
     /** The effective room's icon; absent while the room is automatic and unsettled. */
     readonly icon?: WorkspaceRoomIcon;
+    /** The effective room's number where many rooms share its icon. */
+    readonly number?: string;
     /** `pastEnd`: the hidden door belongs to doors past the plan's end. */
     readonly locked?: 'unreached' | 'pastEnd';
   };
@@ -644,6 +646,8 @@ export interface WorkspacePhantomExitInteraction {
     readonly load: () => ContextualPickerModel<string>;
     /** The icon of an offered placeholder room, by game name. */
     readonly roomIcon: (gameName: string) => WorkspaceRoomIcon;
+    /** That room's number where many rooms share its icon. */
+    readonly roomNumber: (gameName: string) => string | undefined;
   };
   readonly rewards: { readonly load: () => Promise<ContextualPickerModel<string>> };
   readonly roomIntent: (
@@ -700,6 +704,8 @@ export type WorkspaceOccurrenceStageOutgoing =
             readonly label: string;
             readonly gameName?: string;
             readonly roomIcon?: WorkspaceRoomIcon;
+            /** The room's number where many rooms share its icon. */
+            readonly roomNumber?: string;
             /** The fixed room's occurrence, opened as the way on. */
             readonly continuation?: { readonly marker: WorkspaceMarker };
           }

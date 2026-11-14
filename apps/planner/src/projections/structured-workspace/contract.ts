@@ -291,6 +291,8 @@ export interface WorkspaceInteractionChoice<T> {
 /** A room offered by game name, with the icon the rail shows for it. */
 export interface WorkspaceRoomChoice extends WorkspaceInteractionChoice<string> {
   readonly roomIcon: WorkspaceRoomIcon;
+  /** The room's number where many rooms share its icon. */
+  readonly roomNumber?: string;
 }
 
 export interface WorkspaceCandidateInteraction<T> {
@@ -332,6 +334,8 @@ interface WorkspaceRoomInteractionBase {
   readonly load: () => ContextualPickerModel<RoomDeclaration>;
   /** The icon of a room this picker offers or holds, as the rail shows it. */
   readonly roomIcon: (room: RoomDeclaration) => WorkspaceRoomIcon;
+  /** That room's number where many rooms share its icon. */
+  readonly roomNumber: (room: RoomDeclaration) => string | undefined;
   readonly selected?: RoomDeclaration;
 }
 

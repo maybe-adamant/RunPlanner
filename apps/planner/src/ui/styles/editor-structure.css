@@ -1385,6 +1385,12 @@ select {
   height: 1.3rem;
 }
 
+.fixed-value-chip-badged {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
 /*
  * A table wider than its space gives each exit two lines: identity and room, then reward,
  * actions and map. Each table measures its own fit, so a short one stays on one line. Its

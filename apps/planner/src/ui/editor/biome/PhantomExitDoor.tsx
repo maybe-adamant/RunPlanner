@@ -16,6 +16,7 @@ import { useFindingMark, useFindingTarget } from '@planner/ui/feedback/useFindin
 import { DoorRow } from './DecisionWorkbench';
 import { NotedText } from '@planner/ui/controls/NotedText';
 import { roomKindIcon } from './roomIcon';
+import { RoomOptionFace } from './RoomNumberIcon';
 
 const emptyModel: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
@@ -80,7 +81,13 @@ export function PhantomExitDoor({
               (finding) => !rewardFinding(finding),
             )}
             id={roomId}
-            itemIcon={(item) => roomKindIcon(interaction.rooms.roomIcon(item.value))}
+            itemFace={(item) => (
+              <RoomOptionFace
+                label={item.label}
+                number={interaction.rooms.roomNumber(item.value)}
+                room={interaction.rooms.roomIcon(item.value)}
+              />
+            )}
             label=""
             layout="inline"
             {...(control.room.locked === 'unreached'
@@ -95,6 +102,7 @@ export function PhantomExitDoor({
             }}
             onSelect={(value) => executeIntent(interaction.roomIntent(value))}
             placeholder={control.room.summary}
+            {...(control.room.number === undefined ? {} : { triggerBadge: control.room.number })}
             triggerIcon={
               control.room.icon === undefined ? undefined : roomKindIcon(control.room.icon)
             }
@@ -102,6 +110,7 @@ export function PhantomExitDoor({
           />
         ) : (
           <FixedValueChip
+            badge={control.room.number}
             icon={control.room.icon === undefined ? undefined : roomKindIcon(control.room.icon)}
             label={control.room.summary}
           />

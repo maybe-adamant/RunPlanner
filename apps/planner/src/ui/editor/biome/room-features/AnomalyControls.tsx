@@ -4,7 +4,8 @@ import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
-import { roomChoiceIcon } from '../roomIcon';
+import { roomKindIcon } from '../roomIcon';
+import { RoomOptionFace } from '../RoomNumberIcon';
 import { WordOutcomePicker } from '../NemesisEventEditor';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
@@ -29,6 +30,7 @@ export function AnomalyRoomControl({
   const dispatch = useAppDispatch();
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
+  const picked = anomaly.mapChoices.find((choice) => choice.value === room.gameName);
   return (
     <ContextualPicker
       ariaLabel={ariaLabel}
@@ -40,8 +42,14 @@ export function AnomalyRoomControl({
         room.gameName,
       )}
       id={`anomaly-map-${room.occurrenceId}`}
-      itemIcon={(item) => roomChoiceIcon(anomaly.mapChoices, item.value)}
-      triggerIcon={roomChoiceIcon(anomaly.mapChoices, room.gameName)}
+      itemFace={(item) => {
+        const choice = anomaly.mapChoices.find((candidate) => candidate.value === item.value);
+        return (
+          <RoomOptionFace label={item.label} number={choice?.roomNumber} room={choice?.roomIcon} />
+        );
+      }}
+      {...(picked?.roomNumber === undefined ? {} : { triggerBadge: picked.roomNumber })}
+      triggerIcon={picked === undefined ? undefined : roomKindIcon(picked.roomIcon)}
       onSelect={(gameName) =>
         dispatch(
           authoredProjectCommandDispatched({

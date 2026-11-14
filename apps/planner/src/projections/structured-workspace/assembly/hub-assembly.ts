@@ -41,7 +41,7 @@ import type {
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 
 import { requireWorkspaceRoom } from './catalog-room';
-import { candidateRoomIcon } from '../presentation/room-icon';
+import { candidateRoomIcon, candidateRoomNumber } from '../presentation/room-icon';
 import {
   StructuredWorkspaceProjectionContractError,
   workspaceLocalVisitLeaveKey,
@@ -370,6 +370,7 @@ function projectHubNode(
           requireWorkspaceRoom(catalog, localOccurrence.gameName),
           address.routeKey,
         );
+        const roomNumber = candidateRoomNumber(catalog, address.biomeKey, room);
         const descriptor = {
           address,
           availabilityRank: slot.availabilityRank,
@@ -379,6 +380,7 @@ function projectHubNode(
           key: slot.slotKey,
           label: room.label,
           roomIcon: candidateRoomIcon(catalog, address.biomeKey, room),
+          ...(roomNumber === undefined ? {} : { roomNumber }),
           marker: markerDestinations.marker(address),
           occurrenceId: localOccurrence.occurrenceId,
           physicalDoorId: slot.physicalDoorId,

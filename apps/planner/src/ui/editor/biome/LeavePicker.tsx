@@ -29,7 +29,7 @@ import {
   type FindingMarkProps,
 } from '@planner/ui/feedback/useFindingTarget';
 import { DoorChipFace } from './DecisionWorkbench';
-import { doorChipMapLink, doorRewardIcons, type DoorChip } from './doorSummary';
+import { doorChipMapLink, doorRewardIcons, roomNumberOf, type DoorChip } from './doorSummary';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import {
   highlightOwner,
@@ -387,6 +387,7 @@ export function BatchExitPicker({
             doorIndex: target.index,
             label,
             roomIcon: target.door.room.roomIcon,
+            ...roomNumberOf(target.door.room),
             rewards: doorRewardIcons(target, 'final'),
             ...(unavailable ? { unavailable: true } : {}),
           },
@@ -415,6 +416,7 @@ export function BatchExitPicker({
           additionalExit: 'kind' in control ? 'chaos' : 'zagreusContract',
           label: control.exitTypeLabel,
           roomIcon: control.door.room.roomIcon,
+          ...roomNumberOf(control.door.room),
           rewards: [rewardIcon(control.fixedRewardType)],
         },
         disabledHint: waitsOnDoors,
