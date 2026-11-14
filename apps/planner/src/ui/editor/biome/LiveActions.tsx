@@ -451,13 +451,18 @@ export function LiveRow({
       data-live-gap={live.frontier}
       kind="insertion"
       label={
-        <LiveGroups
-          announce={announce}
-          biomeKey={biomeKey}
-          interactions={interactions}
-          items={live.items}
-          label="Next"
-        />
+        <>
+          <span aria-hidden="true" className="live-row-lead">
+            Next
+          </span>
+          <LiveGroups
+            announce={announce}
+            biomeKey={biomeKey}
+            interactions={interactions}
+            items={live.items}
+            label="Next"
+          />
+        </>
       }
     />
   );
