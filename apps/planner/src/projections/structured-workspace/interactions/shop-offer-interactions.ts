@@ -12,6 +12,7 @@ import type { RewardPickerProjectionService } from '@planner/projections/rewards
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceShopOfferInteraction } from '../contracts/commerce';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
+import { offerConditionProp, selectedCondition } from './unmodeled-offer-conditions';
 
 function selectionKey(selection: ShopOptionSelection | null): string {
   return selection === null ? 'clear' : JSON.stringify(selection);
@@ -120,6 +121,10 @@ export function bindShopOfferInteractions(input: {
     const optionLabelByKey = new Map(
       control.shopOption.options.map((option) => [option.key, option.label] as const),
     );
+    const conditionFor = (optionKey: string) =>
+      offerConditionProp(
+        control.shopOption?.options.find((option) => option.key === optionKey)?.offerCondition,
+      );
     const summary =
       selected === null
         ? ''
@@ -134,6 +139,7 @@ export function bindShopOfferInteractions(input: {
         key,
         owner,
         selected,
+        ...(selected === null ? {} : selectedCondition(conditionFor(selected.optionKey))),
         // The walk stocks a reached item; one left blank has its finding.
         contextReached: selected !== null || control.marker.findingCount > 0,
         summary,

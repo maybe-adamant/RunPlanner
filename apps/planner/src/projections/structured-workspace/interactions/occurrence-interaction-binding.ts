@@ -77,6 +77,12 @@ import type {
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
 import {
+  nemesisFreeItemOfferCondition,
+  offerConditionProp,
+  selectedCondition,
+  shopOptionOfferCondition,
+} from './unmodeled-offer-conditions';
+import {
   createMemoizedStableIdentityPickerLoad,
   projectStableIdentityPicker,
 } from './room-feature-picker-model';
@@ -337,6 +343,11 @@ export function bindOccurrenceLocalInteractions(
   >();
   const purgingPoolSlots = new Map<string, WorkspacePurgingPoolSlotInteraction>();
   const hermesShrineOffers = new Map<string, WorkspaceHermesShrineOfferInteraction>();
+  // The Shrine stocks the Surface Shop's items; the Well, the Room Shop's.
+  const shrineCondition = (rewardType: string) =>
+    offerConditionProp(shopOptionOfferCondition(catalog, 'SurfaceShop', { rewardType }));
+  const wellCondition = (optionKey: string) =>
+    offerConditionProp(shopOptionOfferCondition(catalog, 'RoomShop', { optionKey }));
   const stygianWellOffers = new Map<string, WorkspaceStygianWellOfferInteraction>();
   const stygianWellTwistResults = new Map<string, WorkspaceStygianWellTwistResultInteraction>();
   const localVisitOrders = new Map<string, WorkspaceLocalVisitOrderInteraction>();
@@ -698,6 +709,13 @@ export function bindOccurrenceLocalInteractions(
                 ...(event.value === null || event.value.kind === 'freeItem'
                   ? {}
                   : { outcome: nemesisEventOutcome(event.owner, event.value, event.reward) }),
+                ...(event.value?.kind !== 'freeItem' || event.reward === null
+                  ? {}
+                  : selectedCondition(
+                      offerConditionProp(
+                        nemesisFreeItemOfferCondition(catalog, event.reward.rewardType),
+                      ),
+                    )),
                 ...(event.reward === null
                   ? {}
                   : {
@@ -966,6 +984,9 @@ export function bindOccurrenceLocalInteractions(
               owner: requirement.owner,
               slotKey: slot.slotKey,
               rewardType: slot.rewardType,
+              ...(slot.rewardType === null
+                ? {}
+                : selectedCondition(shrineCondition(slot.rewardType))),
               candidateRewardTypes: slot.candidateRewardTypes,
               delay: slot.delay,
               delayIntentFor: (
@@ -1019,6 +1040,7 @@ export function bindOccurrenceLocalInteractions(
               owner: requirement.owner,
               generationKey: slot.generationKey,
               itemKey: slot.itemKey,
+              ...(slot.itemKey === null ? {} : selectedCondition(wellCondition(slot.itemKey))),
               candidateItemKeys: slot.candidateItemKeys,
               intentFor: (itemKey: string) =>
                 Object.freeze({
@@ -1062,6 +1084,7 @@ export function bindOccurrenceLocalInteractions(
               owner: requirement.owner,
               generationKey: twist.generationKey,
               itemKey: twist.itemKey,
+              ...(twist.itemKey === null ? {} : selectedCondition(wellCondition(twist.itemKey))),
               candidateItemKeys: twist.candidateItemKeys,
               intentFor: (itemKey: string) =>
                 Object.freeze({

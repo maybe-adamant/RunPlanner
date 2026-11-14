@@ -67,6 +67,8 @@ export interface WorkspaceShopOfferInteraction {
   readonly key: string;
   readonly owner: ShopOfferAddress | InfernalContractPedestalAddress;
   readonly selected: import('@run-planner/engine/reward-kernel').ShopOptionSelection | null;
+  /** The chosen item's game offer condition on hero state the plan does not track. */
+  readonly selectedOfferCondition?: import('@run-planner/engine/reward-kernel').ShopOptionEntry['unmodeledOfferCondition'];
   /** A reached item is stocked; a blank one without a finding waits on an earlier choice. */
   readonly contextReached: boolean;
   /** A null value clears a Shop slot whose current item nothing can replace. */
@@ -107,6 +109,8 @@ export interface WorkspaceHermesShrineOfferInteraction {
   readonly slotKey:
     import('@run-planner/engine/authored-project').HermesShrineSlotKey | 'travelDealRefill';
   readonly rewardType: string | null;
+  /** The chosen item's game offer condition on hero state the plan does not track. */
+  readonly selectedOfferCondition?: import('@run-planner/engine/reward-kernel').ShopOptionEntry['unmodeledOfferCondition'];
   readonly candidateRewardTypes: readonly string[];
   /** The delay rolled with the stocked item; null while unstocked. */
   readonly delay: import('@run-planner/engine/authored-project').HermesShrineDelay | null;
@@ -132,6 +136,8 @@ export interface WorkspaceStygianWellOfferInteraction {
   readonly owner: OccurrenceAddress;
   readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
   readonly itemKey: string | null;
+  /** The chosen item's game offer condition on hero state the plan does not track. */
+  readonly selectedOfferCondition?: import('@run-planner/engine/reward-kernel').ShopOptionEntry['unmodeledOfferCondition'];
   readonly candidateItemKeys: readonly string[];
   /** The walk reached the Well: its items are stocked and can be overridden. */
   readonly contextReached: boolean;
@@ -149,6 +155,8 @@ export interface WorkspaceStygianWellTwistResultInteraction {
   readonly owner: OccurrenceAddress;
   readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
   readonly itemKey: string | null;
+  /** The chosen item's game offer condition on hero state the plan does not track. */
+  readonly selectedOfferCondition?: import('@run-planner/engine/reward-kernel').ShopOptionEntry['unmodeledOfferCondition'];
   readonly candidateItemKeys: readonly string[];
   /** The walk reached the Well: the result is stocked and can be overridden. */
   readonly contextReached: boolean;

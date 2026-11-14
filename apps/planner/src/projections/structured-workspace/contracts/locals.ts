@@ -313,6 +313,8 @@ export interface WorkspaceNemesisEventInteraction extends WorkspaceNemesisEventS
   readonly fixedResultRewardType?: string;
   readonly selectedRewardLabel?: string;
   readonly selectedTraitLabel?: string;
+  /** The free item's game offer condition on hero state the plan does not track. */
+  readonly selectedOfferCondition?: import('@run-planner/engine/reward-kernel').ShopOptionEntry['unmodeledOfferCondition'];
   /** How the interaction ended its encounter: a trade's answer or the contest's result. */
   readonly outcome?: WorkspaceNemesisEventOutcome;
 }

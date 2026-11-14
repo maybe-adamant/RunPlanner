@@ -11,6 +11,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
+import { OfferConditionMark } from '@planner/ui/feedback/OfferConditionMark';
 import { RowChoice } from '../RowChoice';
 import { StygianWellSlotPicker } from './RoomInventoryPanel';
 
@@ -75,6 +76,8 @@ export function StygianWellTwistChips({
           {...(interaction.contextReached ? {} : { disabledHint: candidateWaitingHint })}
         />
       </RowChoice>
+      {/* The result is decided at use, so its condition is marked on the result itself. */}
+      <OfferConditionMark conditions={[interaction.selectedOfferCondition]} />
     </>
   );
 }

@@ -10,6 +10,7 @@ import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEdi
 import { RowChoice } from '../RowChoice';
 import { TimelineRow } from '../TimelineRow';
 import { HermesShrineSlotEditor, StygianWellSlotEditor } from './RoomInventoryPanel';
+import { OfferConditionMark } from '@planner/ui/feedback/OfferConditionMark';
 
 /**
  * The Travel Deal item authored as the continuation of the purchase that
@@ -31,9 +32,12 @@ export function TravelDealLine({
       hooked
       notice
       editors={
-        <RowChoice choice="travelDealRefill" rowKey={rowKey}>
-          {travelDealLineEditor(interactions, line)}
-        </RowChoice>
+        <span className="offer-condition-line">
+          <RowChoice choice="travelDealRefill" rowKey={rowKey}>
+            {travelDealLineEditor(interactions, line)}
+          </RowChoice>
+          <OfferConditionMark conditions={[travelDealLineCondition(interactions, line)]} />
+        </span>
       }
       data-travel-deal-line=""
       kind="continuation"
@@ -45,6 +49,29 @@ export function TravelDealLine({
       }
     />
   );
+}
+
+function travelDealLineCondition(
+  interactions: WorkspaceInteractionCatalog,
+  line: NonNullable<WorkspaceRoomActionRow['travelDealLine']>,
+) {
+  switch (line.kind) {
+    case 'hermesShrine':
+      return interactions.hermesShrineOffers.get(line.refill.offerInteractionKey)
+        ?.selectedOfferCondition;
+    case 'stygianWell':
+      return interactions.stygianWellOffers.get(line.refill.offerInteractionKey)
+        ?.selectedOfferCondition;
+    case 'worldShop': {
+      const shopOption = line.offer.rewardControl.shopOption;
+      return shopOption?.options.find((option) => option.key === shopOption.selectedOptionKey)
+        ?.offerCondition;
+    }
+    default: {
+      const unreachable: never = line;
+      return unreachable;
+    }
+  }
 }
 
 function travelDealLineEditor(

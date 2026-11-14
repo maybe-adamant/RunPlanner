@@ -712,6 +712,9 @@ export function controlsForOccurrence(
                     key: option.key,
                     label: option.label,
                     rewardType: option.rewardType,
+                    ...(option.unmodeledOfferCondition === undefined
+                      ? {}
+                      : { offerCondition: option.unmodeledOfferCondition }),
                   }),
                 ),
               ),
@@ -802,7 +805,14 @@ function infernalContractPedestalControl(
       selectedOptionKey: pedestal.optionKey,
       options: Object.freeze(
         group.options.values.map((option) =>
-          Object.freeze({ key: option.key, label: option.label, rewardType: option.rewardType }),
+          Object.freeze({
+            key: option.key,
+            label: option.label,
+            rewardType: option.rewardType,
+            ...(option.unmodeledOfferCondition === undefined
+              ? {}
+              : { offerCondition: option.unmodeledOfferCondition }),
+          }),
         ),
       ),
     }),

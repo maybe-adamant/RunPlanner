@@ -1054,3 +1054,20 @@ button.hex-column-deal[data-has-findings='true'] {
   padding: 0.15rem 0.25rem;
   text-align: center;
 }
+
+.offer-condition-mark {
+  align-self: center;
+  cursor: default;
+}
+
+.offer-condition-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The line's item keeps its own width so the mark follows it. */
+.offer-condition-line > .row-choice > .shop-family-offer-row {
+  grid-template-columns: auto auto;
+}
