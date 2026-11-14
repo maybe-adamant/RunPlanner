@@ -430,9 +430,8 @@ function LiveGroups({
 }
 
 // A preview switch between candidate live row looks; unset keeps the default.
-const liveRowStyle = ((style) => (style === 'card' || style === 'divider' ? style : undefined))(
-  import.meta.env.VITE_LIVE_ROW_STYLE,
-);
+const liveRowStyles = ['card', 'card2', 'card3', 'divider'] as const;
+const liveRowStyle = liveRowStyles.find((style) => style === import.meta.env.VITE_LIVE_ROW_STYLE);
 
 /**
  * The live row at the walk's frontier: the things the room has live there, by group. A
@@ -472,7 +471,7 @@ export function LiveRow({
           <>
             <span
               aria-hidden="true"
-              className={liveRowStyle === 'card' ? 'live-row-lead' : 'live-row-divider'}
+              className={liveRowStyle === 'divider' ? 'live-row-divider' : 'live-row-lead'}
             >
               Next
             </span>

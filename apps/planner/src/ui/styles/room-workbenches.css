@@ -3712,13 +3712,56 @@ span.hub-board-status-line {
   letter-spacing: 0.02em;
 }
 
-.timeline-live-row[data-live-style='card'] .live-row-groups {
+.timeline-live-row[data-live-style^='card'] .live-row-groups {
   opacity: 0.75;
   transition: opacity 120ms ease;
 }
 
-.timeline-live-row[data-live-style='card']:is(:hover, :focus-within) .live-row-groups {
+.timeline-live-row[data-live-style^='card']:is(:hover, :focus-within) .live-row-groups {
   opacity: 1;
+}
+
+/* Stronger card: a heavier neutral ivory outline, a brighter "Next", more room above. */
+.timeline-row.timeline-live-row:is([data-live-style='card2'], [data-live-style='card3']) {
+  --timeline-row-lead: 10px;
+  outline: 1.5px dashed #a59f8f;
+  outline-offset: -1.5px;
+  border-radius: 4px;
+}
+
+.timeline-row.timeline-live-row:is([data-live-style='card2'], [data-live-style='card3']):is(
+    :hover,
+    :focus-within
+  ) {
+  outline-color: #cfc8b6;
+}
+
+.timeline-live-row:is([data-live-style='card2'], [data-live-style='card3']) .live-row-lead {
+  color: #c9c3b4;
+  font-weight: 600;
+}
+
+.timeline-live-row:is([data-live-style='card2'], [data-live-style='card3']) .live-row-groups {
+  opacity: 0.7;
+}
+
+.timeline-live-row:is([data-live-style='card2'], [data-live-style='card3']):is(
+    :hover,
+    :focus-within
+  )
+  .live-row-groups {
+  opacity: 1;
+}
+
+/* Placeholder card: a faint hatch inside the outline, for what is not authored yet. */
+.timeline-row.timeline-live-row[data-live-style='card3'] {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(232 226 210 / 5%) 0 1.5px,
+    transparent 1.5px 7px
+  );
+  background-size: auto;
+  background-repeat: repeat;
 }
 
 /* Divider look: a dashed "Next" rule over the chips; the dot sits on the rule. */
