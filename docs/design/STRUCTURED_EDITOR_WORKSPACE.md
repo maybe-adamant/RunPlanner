@@ -561,9 +561,11 @@ inactive). One pick appends one action at its last legal position, which its
 reorder handle then moves. A reroll row carries an optional picker for each restocked
 slot, pinned or native.
 
-Where the game spawns loot, a read-only spawn row follows the moment (room
-entry, an encounter's end, an O phase's wheel reward, the Preboss delivery
-flush, read as Delivered) or sits under the action whose settlement spawns it.
+Where the game spawns loot, a read-only spawn row follows the entry the
+engine names as the moment's cause (room entry, an encounter's end, an O
+phase's wheel reward, the Preboss delivery flush, read as Delivered; an
+encounter's begin shown with its Combat follows that one marker) or sits under
+the action whose settlement spawns it.
 It lists the items in spawn order as chips, grouped by what spawned them (a
 boon, keepsake, NPC, the Hermes Shrine, the Artificer, Sea Star or a switch);
 the room's own reward and Fields slots stand alone. It shows exactly the
