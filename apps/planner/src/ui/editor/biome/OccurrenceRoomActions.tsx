@@ -69,6 +69,7 @@ import {
   DoorsOpenDetailRow,
   type TimelineDoors,
 } from './TimelineDoors';
+import { TextGlyph } from '@planner/ui/controls/TextGlyph';
 /** Room-owned boundary additions: editors on the boundary row and rows that follow it. */
 export interface TimelineBoundaryContent {
   readonly editors?: ReactNode;
@@ -136,7 +137,7 @@ function NotReachedGroup({
             type="button"
           >
             <span aria-hidden="true" className="timeline-banner-toggle-caret">
-              {expanded ? '▾' : '▸'}
+              <TextGlyph name={expanded ? 'expanded' : 'collapsed'} />
             </span>
             Not reached yet
             <span className="room-action-not-reached-count">{count}</span>

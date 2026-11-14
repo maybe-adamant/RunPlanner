@@ -26,6 +26,7 @@ import {
   useLibrarySlotLinks,
 } from '../home/useLibrarySlotLinks';
 import { useSendActivity } from './useSendActivity';
+import { TextGlyph } from '@planner/ui/controls/TextGlyph';
 
 function sendProjectId(state: RootState): string | null {
   const workspace = state.projectWorkspace;
@@ -302,7 +303,7 @@ export function GameSendSplit({
           </button>
           <Popover.Trigger asChild>
             <button aria-label="Choose slot" className="send-split-toggle" type="button">
-              <span aria-hidden="true">▾</span>
+              <TextGlyph name="expanded" />
             </button>
           </Popover.Trigger>
         </div>

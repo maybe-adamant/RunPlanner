@@ -1586,7 +1586,7 @@
   gap: 8px;
 }
 
-.room-action-drag-header > span {
+.room-action-drag-header > .text-glyph {
   color: var(--selection-accent);
   flex: 0 0 auto;
 }

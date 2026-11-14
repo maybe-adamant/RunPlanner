@@ -387,8 +387,8 @@ describe('Library screen', () => {
       within(rowOf(name)).getByRole('group', { name: `Send ${name} to game` });
 
     // The default slot, up to date, with the other slot counted; the main part opens the picker.
-    await waitFor(() => expect(cell('Erebus opener').textContent).toBe('Slot 2 · up to date+1▾'));
-    expect(cell('Not sent yet').textContent).toBe('Send to game…▾');
+    await waitFor(() => expect(cell('Erebus opener').textContent).toBe('Slot 2 · up to date+1'));
+    expect(cell('Not sent yet').textContent).toBe('Send to game…');
     // A file the planner cannot open has nothing to send.
     expect(within(rowOf('Future')).queryByRole('group')).toBeNull();
     await user.click(within(cell('Erebus opener')).getByText('Slot 2 · up to date'));
