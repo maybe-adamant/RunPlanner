@@ -786,10 +786,13 @@
 }
 
 .room-actions-workbench {
-  /* Spine gutter and the inset of a row's first column; headings start there too. */
+  /* Spine gutter, the spine's centre in it, and the inset of a row's first column; headings start there too. */
   --timeline-gutter: 18px;
+  --timeline-spine-x: 9px;
   --timeline-row-start: 6px;
   --timeline-title-x: calc(var(--timeline-gutter) + 3px + var(--timeline-row-start));
+  /* The spine's centre from a row's edge, where its ticks, nodes and gap controls centre. */
+  --timeline-row-spine-x: calc(var(--timeline-spine-x) - var(--timeline-gutter));
   --timeline-banner-title-width: 8.75rem;
 }
 
@@ -822,12 +825,13 @@
   /* The Timeline fills its column up to the readable width (see responsive.css). */
   --timeline-working-width: min(60rem, 100%);
   --timeline-columns: 28px minmax(0, 1fr) var(--timeline-money-width) var(--timeline-control-height);
+  --timeline-row-gap: 2px;
   width: var(--timeline-working-width);
   max-width: 100%;
   position: relative;
   display: grid;
   grid-template-columns: var(--timeline-columns);
-  gap: 2px 8px;
+  gap: var(--timeline-row-gap) 8px;
   margin: 0;
   padding: 0 0 0 var(--timeline-gutter);
   list-style: none;
@@ -838,7 +842,7 @@
   position: absolute;
   top: 16px;
   bottom: 16px;
-  left: 8px;
+  left: calc(var(--timeline-spine-x) - 1px);
   width: 2px;
   border-radius: 999px;
   background: var(--timeline-spine);
@@ -852,6 +856,15 @@
 }
 
 .timeline-row {
+  /* Space above the row, past the list's row gap. */
+  --timeline-row-lead: 0px;
+  --timeline-row-stripe: var(--timeline-stripe);
+  /* A dashed stripe, for the rows that paint it as their background image. */
+  --timeline-dashed-stripe: repeating-linear-gradient(
+    to bottom,
+    var(--timeline-row-stripe) 0 6px,
+    transparent 6px 10px
+  );
   position: relative;
   z-index: 1;
   display: grid;
@@ -859,22 +872,26 @@
   align-items: center;
   gap: 4px 8px;
   min-width: 0;
-  padding: 3px 8px 3px var(--timeline-row-start);
+  margin-top: var(--timeline-row-lead);
+  padding: 3px 8px 3px calc(3px + var(--timeline-row-start));
   border: 0;
-  border-left: 3px solid var(--timeline-stripe);
   border-radius: 0 4px 4px 0;
-  background: transparent;
+  /* The stripe is painted, not a border, so the row's edge stays where the spine measures it. */
+  box-shadow: inset 3px 0 0 var(--timeline-row-stripe);
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-size: 3px 100%;
   scroll-margin-block: 24px;
 }
 
 /* Rows are plain lines; hover and focus lift them slightly. */
 .timeline-row:not([data-timeline-row-kind='boundary']):is(:hover, :focus-within) {
-  background: rgb(255 255 255 / 3.5%);
+  background-color: rgb(255 255 255 / 3.5%);
 }
 
 /* The row the room map shows, like a Hub segment's pressed label. */
 .room-action-list > .timeline-row[data-map-shown] {
-  background: rgb(245 211 134 / 7%);
+  background-color: rgb(245 211 134 / 7%);
 }
 
 .room-action-list > .timeline-row[data-map-shown] [data-timeline-cell='label'] {
@@ -885,8 +902,8 @@
 .timeline-row::before {
   position: absolute;
   top: calc(50% - 1px);
-  left: -12px;
-  width: 9px;
+  left: var(--timeline-row-spine-x);
+  width: calc(-1 * var(--timeline-row-spine-x));
   height: 2px;
   background: var(--timeline-spine);
   content: '';
@@ -1180,9 +1197,9 @@
  * drawn dashed, and a dot where an action has its handle.
  */
 .timeline-row.timeline-row-notice {
-  border-left-style: dashed;
-  border-left-color: var(--timeline-notice-line);
-  background: transparent;
+  box-shadow: none;
+  background-image: var(--timeline-dashed-stripe);
+  --timeline-row-stripe: var(--timeline-notice-line);
 }
 
 .timeline-notice-dot {
@@ -1318,20 +1335,19 @@
 
 /* Row kinds differ only in border, background and type. */
 .timeline-row[data-timeline-row-kind='boundary'] {
+  --timeline-row-lead: 4px;
   min-height: 30px;
-  margin-top: 4px;
-  padding-block: 1px;
-  border-left-color: transparent;
-  border-top: 1px solid var(--timeline-band-divider);
+  padding-block: 2px 1px;
   border-radius: 0;
-  background: transparent;
+  box-shadow: inset 0 1px 0 var(--timeline-band-divider);
+  background-color: transparent;
   color: #cfcad6;
 }
 
 /* A lifecycle band is a quiet time marker: a node on the spine instead of a tick. */
 .timeline-row[data-timeline-row-kind='boundary']::before {
-  top: calc(50% - 4px);
-  left: -16px;
+  top: calc(50% - 3.5px);
+  left: calc(var(--timeline-row-spine-x) - 4px);
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -1342,14 +1358,9 @@
   min-block-size: 0;
 }
 
-.timeline-row[data-timeline-row-kind='effect'] {
-  border-color: transparent;
-  border-left-color: var(--timeline-stripe);
-}
-
 .timeline-row[data-timeline-row-kind='insertion'] {
-  border-color: transparent;
-  background: transparent;
+  --timeline-row-stripe: transparent;
+  background-color: transparent;
 }
 
 .timeline-row[data-timeline-row-kind='insertion']::before {
@@ -1357,7 +1368,7 @@
 }
 
 .timeline-row[data-action-accent] {
-  border-left-color: var(--timeline-accent);
+  --timeline-row-stripe: var(--timeline-accent);
 }
 
 .room-action-placement-picker .contextual-picker > label {
@@ -2058,24 +2069,24 @@
 
 /* An encounter phase reads as one light group: its rows share a tint. */
 .timeline-row[data-phase] {
-  background: rgb(255 255 255 / 2%);
+  background-color: rgb(255 255 255 / 2%);
 }
 
 /* Every banner shares one band: start, end and lifecycle banners alike. */
 .timeline-row[data-timeline-row-kind='boundary'] {
-  border-top-color: rgb(255 255 255 / 16%);
-  background: rgb(255 255 255 / 4.5%);
+  --timeline-band-divider: rgb(255 255 255 / 16%);
+  background-color: rgb(255 255 255 / 4.5%);
   color: var(--text);
 }
 
 /* A phase starts with a little space above its first banner. */
 .timeline-row[data-phase-start] {
-  margin-top: 8px;
+  --timeline-row-lead: 8px;
 }
 
 /* The first phase needs no space above it. */
 .room-action-list > .timeline-row[data-phase-start]:first-child {
-  margin-top: 0;
+  --timeline-row-lead: 0px;
 }
 
 /* Timeline repairs share the timeline's width and its content edge. */
@@ -2101,7 +2112,8 @@
  */
 .timeline-row[data-timeline-row-kind='boundary'] {
   align-items: center;
-  padding-block: 4px;
+  /* The top pixel carries the band's divider. */
+  padding-block: 5px 4px;
 }
 
 .timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='sentence'] {
@@ -3300,7 +3312,7 @@ span.hub-board-status-line {
 
 /* A Timeline row holding the control whose map point is under the pointer takes the map row's tint. */
 .room-action-list > .timeline-row:has([data-map-pointed]) {
-  background: rgb(245 211 134 / 7%);
+  background-color: rgb(245 211 134 / 7%);
 }
 
 /* A point under the pointer rings like a previewed one. */
@@ -3440,8 +3452,10 @@ span.hub-board-status-line {
 
 /* The live row: what can be done next, in its groups. */
 .timeline-row.timeline-live-row {
-  margin-top: 4px;
-  border-left: 3px dashed var(--border);
+  --timeline-row-lead: 4px;
+  --timeline-row-stripe: var(--border);
+  box-shadow: none;
+  background-image: var(--timeline-dashed-stripe);
 }
 
 .live-row-groups {
@@ -3505,11 +3519,11 @@ span.hub-board-status-line {
   white-space: nowrap;
 }
 
-/* A gap's `+` sits on the spine above its row, shown on hover or keyboard focus. */
+/* A gap's `+` centres on the spine, midway between its row and the one above. */
 .timeline-gap-control {
   position: absolute;
-  top: -9px;
-  left: -21px;
+  top: calc(-0.5 * (var(--timeline-row-gap) + var(--timeline-row-lead)) - 9px);
+  left: calc(var(--timeline-row-spine-x) - 9px);
   z-index: 3;
   display: grid;
   width: 18px;

@@ -232,7 +232,7 @@ function OpenedCase({
       window.clearTimeout(stop);
     };
   }, [entry, view]);
-  // A case showing a live thing's verbs opens its chip's list, then a verb's values, as a user would.
+  // A case showing a live thing's verbs, or a Leave row's picker, opens its list, then a verb's values, as a user would.
   const pickerOpened = useRef(false);
   useEffect(() => {
     if (view !== 'timeline' || pickersClosed || entry.openPicker === undefined) return;
@@ -242,7 +242,7 @@ function OpenedCase({
     const timer = window.setInterval(() => {
       if (!pickerOpened.current) {
         const trigger = frame.current?.querySelector<HTMLButtonElement>(
-          `.timeline-live-row button[aria-label="${CSS.escape(name)}"]`,
+          `:is(.timeline-live-row, .timeline-leave-row) button[aria-label="${CSS.escape(name)}"]`,
         );
         if (trigger === null || trigger === undefined) return;
         pickerOpened.current = true;

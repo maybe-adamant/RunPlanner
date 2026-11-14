@@ -808,6 +808,26 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('O', 'surface-o-combat04'),
   },
   {
+    id: 'ship-select-wheel-open',
+    roomTab: 'shipIntroActions',
+    label: 'Ship room Intro: Select wheel between two offers, its list open',
+    shows: ['ship phase', 'select wheel'],
+    project: loadSurfaceEncounterShowcaseCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceRewardWheelOfferCount',
+        wheel: createRewardWheelAddress(
+          createBiomeAddress('Surface', 'O'),
+          createOccurrenceId('surface-o-combat04'),
+          'wheel1',
+        ),
+        offerCount: 2,
+      },
+    ],
+    target: room('O', 'surface-o-combat04'),
+    openPicker: 'Combat 1 reward offer',
+  },
+  {
     id: 'ship-two-phase-intro',
     roomTab: 'shipIntroActions',
     label: 'Ship room Intro: its fight, then the wheel Combat 1 is chosen at',
