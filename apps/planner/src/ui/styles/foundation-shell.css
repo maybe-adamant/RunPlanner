@@ -22,6 +22,16 @@
     U+A720-A7FF;
 }
 
+/* The arrows, marks and shapes the UI sets in text, subset from the same Inter (OFL, see ../fonts). */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../fonts/inter-symbols-wght-normal.woff2') format('woff2');
+  unicode-range: U+2190, U+2192, U+2194, U+21B3, U+21E4-21E5, U+25B2, U+25BC, U+2605, U+2713;
+}
+
 :root {
   /* Layout breakpoints and viewport lengths use the available unscaled space. */
   --app-vw: calc(1vw / var(--app-scale, 1));
@@ -464,6 +474,24 @@ input[type='checkbox']:checked:disabled {
 .danger-action,
 .quiet-action {
   gap: 6px;
+}
+
+/* A symbol drawn in running text: the text's size and colour, on its baseline. */
+.text-glyph {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.5;
+  vertical-align: -0.125em;
+}
+
+.text-glyph-fill {
+  fill: currentColor;
+  stroke: none;
 }
 
 .action-icon {

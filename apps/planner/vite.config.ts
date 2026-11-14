@@ -80,8 +80,9 @@ export default defineConfig({
     __RUN_PLANNER_BUILD_IDENTITY__: JSON.stringify(buildIdentity),
   },
   build: {
-    // Icons ship as files the browser fetches when shown, never as base64 inside the JS.
-    assetsInlineLimit: (file) => (file.endsWith('.webp') ? false : undefined),
+    // Icons ship as files the browser fetches when shown, never as base64 inside the JS; fonts
+    // ship as files because the desktop app's content policy loads fonts only from the app.
+    assetsInlineLimit: (file) => (/\.(webp|woff2)$/.test(file) ? false : undefined),
   },
   plugins: [react(), browserErrorRelay()],
   resolve: {
