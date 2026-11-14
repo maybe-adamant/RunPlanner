@@ -2206,14 +2206,14 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(count);
     await waitFor(() => {
       expect(count.dataset.candidateState).toBe('forced');
-      expect(screen.getByRole('option', { name: /^Intro \+ 1 combat/ })).toBeTruthy();
+      expect(screen.getByRole('option', { name: /^Intro \+ 1 phase/ })).toBeTruthy();
     });
     await view.user.click(screen.getByRole('button', { name: /^Unavailable/ }));
     expect(
-      screen.getByRole('option', { name: /^Intro \+ 2 combats/ }).getAttribute('aria-disabled'),
+      screen.getByRole('option', { name: /^Intro \+ 2 phases/ }).getAttribute('aria-disabled'),
     ).toBe('true');
     expect(
-      screen.getByText('Intro + 2 combats is unavailable at this point in the route.'),
+      screen.getByText('Intro + 2 phases is unavailable at this point in the route.'),
     ).toBeTruthy();
     await view.user.keyboard('{Escape}');
     expect(screen.getByRole('tab', { name: 'Room Overview' })).toBeTruthy();
@@ -2387,7 +2387,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       )?.roomTab,
     ).toBe('shipCombat1Actions');
     openRoomTab('Intro Timeline');
-    const ship = screen.getByLabelText('Ship combat structure');
+    const ship = screen.getByLabelText('Ship phase structure');
     expect(within(ship).queryByText('Choose Phase 1 wheel')).toBeNull();
     expect(
       occurrenceRoomActionOrder(
@@ -2642,16 +2642,16 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(count);
     await waitFor(() => {
       expect(
-        screen.getByRole('option', { name: 'Intro + 2 combats' }).getAttribute('aria-disabled'),
+        screen.getByRole('option', { name: 'Intro + 2 phases' }).getAttribute('aria-disabled'),
       ).not.toBe('true');
       expect(
         screen
-          .getByRole('option', { name: 'Intro + 2 combats' })
+          .getByRole('option', { name: 'Intro + 2 phases' })
           .getAttribute('data-candidate-state'),
       ).toBe('possible');
     });
 
-    await view.user.click(screen.getByRole('option', { name: 'Intro + 2 combats' }));
+    await view.user.click(screen.getByRole('option', { name: 'Intro + 2 phases' }));
     openRoomTab('Phase 2 Timeline');
     await waitFor(() => expect(screen.getByLabelText('Phase 2 ship phase')).toBeTruthy());
     expect(
@@ -2987,9 +2987,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(line().previousElementSibling?.textContent).toContain('slot 1');
     // The Restock line is a notice under the purchase, which stays an action.
     expect(line().classList).toContain('timeline-row-notice');
-    expect(line().querySelector('.timeline-notice-dot')).not.toBeNull();
+    expect(line().hasAttribute('data-timeline-hook')).toBe(true);
     expect(line().previousElementSibling?.classList).not.toContain('timeline-row-notice');
-    expect(line().previousElementSibling?.querySelector('.timeline-notice-dot')).toBeNull();
     // The line reads Restock beside the Travel Deal icon; its picker shows no label of its own.
     expect(within(line()).getByText('Restock').tagName).toBe('STRONG');
     expect(within(line()).queryByText('Item', { selector: 'label' })).toBeNull();

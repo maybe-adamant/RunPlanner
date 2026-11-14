@@ -207,7 +207,11 @@ function attachNotices(
     out.push(entry);
     const key = entryKey(entry);
     if (key !== undefined)
-      out.push(...keyed.flatMap(([at, notice]) => (at === key ? [notice] : [])));
+      out.push(
+        ...keyed.flatMap(([at, notice]) =>
+          at === key ? [Object.freeze({ ...notice, underCause: true as const })] : [],
+        ),
+      );
   }
   out.push(...keyed.flatMap(([at, notice]) => (at !== undefined && shown.has(at) ? [] : [notice])));
   return Object.freeze(out);

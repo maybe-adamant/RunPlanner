@@ -28,6 +28,7 @@ export function TravelDealLine({
   return (
     <TimelineRow
       aria-label="Restock"
+      hooked
       notice
       editors={
         <RowChoice choice="travelDealRefill" rowKey={rowKey}>

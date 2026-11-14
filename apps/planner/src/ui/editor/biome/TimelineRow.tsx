@@ -7,8 +7,8 @@ export type TimelineRowKind = 'action' | 'boundary' | 'continuation' | 'effect' 
  * One Room Timeline row: handle, one sentence (its label, then its decisions),
  * money and the trash. A placement control stands in the money zone of a row
  * outside the order. Every cell stays mounted so the money
- * and trash columns align down the Timeline. A notice tells what the game did:
- * it wears a dot where an action has its handle.
+ * and trash columns align down the Timeline. A notice tells what the game did. A row
+ * with a cause hangs under its cause's row.
  */
 export function TimelineRow({
   kind,
@@ -21,6 +21,7 @@ export function TimelineRow({
   removal,
   notice = false,
   gap,
+  hooked = false,
   marker,
   ...item
 }: Omit<LiHTMLAttributes<HTMLLIElement>, 'children'> & {
@@ -35,8 +36,10 @@ export function TimelineRow({
   readonly notice?: boolean;
   /** The control of the gap above this row, drawn on the spine. */
   readonly gap?: ReactNode;
-  /** A room event's icon, drawn on the spine in place of the row's tick. */
+  /** A room event's icon, drawn where an action has its handle. */
   readonly marker?: ReactNode;
+  /** The row follows from the row above it, so it hangs under that row. */
+  readonly hooked?: boolean;
 }) {
   const classes = ['timeline-row', notice ? 'timeline-row-notice' : undefined, className];
   const mapStage = useContext(TimelineMapStageContext);
@@ -46,11 +49,12 @@ export function TimelineRow({
       className={classes.filter((name) => name !== undefined).join(' ')}
       {...(mapStage === undefined ? {} : { 'data-map-stage': mapStage })}
       data-timeline-row-kind={kind}
+      {...(hooked ? { 'data-timeline-hook': '' } : {})}
     >
       {gap}
       {marker === undefined ? null : <span className="timeline-event-node">{marker}</span>}
       <span className="timeline-cell-handle" data-timeline-cell="handle">
-        {notice ? <span aria-hidden="true" className="timeline-notice-dot" /> : handle}
+        {handle}
       </span>
       <div className="timeline-cell-sentence" data-timeline-cell="sentence">
         <div className="timeline-cell-label" data-timeline-cell="label">

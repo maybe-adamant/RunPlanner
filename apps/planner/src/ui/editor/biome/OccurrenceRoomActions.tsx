@@ -501,6 +501,7 @@ export function RoomActionsWorkbench({
       key={`spawned:${entry.key}`}
       label={entry.label}
       rows={actions?.rows ?? []}
+      {...(entry.underCause ? { underCause: true } : {})}
       {...(entry.unlocks ? { unlocks: true } : {})}
     />
   );
@@ -966,7 +967,7 @@ export function RoomActionsWorkbench({
     );
   if (mode.kind !== 'roomTimeline') {
     return (
-      <section aria-label="Ship combat structure" className="ship-combat-editor">
+      <section aria-label="Ship phase structure" className="ship-combat-editor">
         <section
           aria-label={actions === undefined ? undefined : 'Room Timeline'}
           className="room-actions-workbench"

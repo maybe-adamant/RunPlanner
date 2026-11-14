@@ -794,7 +794,6 @@
   --timeline-title-x: calc(var(--timeline-gutter) + 3px + var(--timeline-row-start));
   /* The spine's centre from a row's edge, where its ticks, nodes and gap controls centre. */
   --timeline-row-spine-x: calc(var(--timeline-spine-x) - var(--timeline-gutter));
-  --timeline-banner-title-width: 8.75rem;
 }
 
 /*
@@ -932,9 +931,12 @@
   min-height: 32px;
 }
 
-/* A banner's title starts at the handle column; its gold keeps the money column. */
+/*
+ * A marker's name starts at the action indent, its icon where an action has its handle;
+ * its gold keeps the money column.
+ */
 .timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='sentence'] {
-  grid-column: 1 / 3;
+  grid-column: 2 / 3;
 }
 
 .timeline-row[data-timeline-row-kind='boundary']
@@ -942,10 +944,10 @@
   display: none;
 }
 
-/* A banner without gold runs its sentence to the row's end. */
+/* A marker without gold runs its sentence to the row's end. */
 .timeline-row[data-timeline-row-kind='boundary']:has(> [data-timeline-cell='money']:empty)
   > [data-timeline-cell='sentence'] {
-  grid-column: 1 / -1;
+  grid-column: 2 / -1;
 }
 
 .timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='money']:empty {
@@ -958,16 +960,12 @@
 }
 
 /*
- * A banner is one sentence: its title, then its controls. The identity is the
+ * A marker is one sentence: its name, then its controls. The identity is the
  * one part that gives way, ending in an ellipsis.
- */
-/*
- * Every banner's controls start in one column after its title, wide enough for
- * the longest lifecycle title; a longer title pushes them on.
  */
 .timeline-banner-title {
   display: inline-flex;
-  min-width: min(var(--timeline-banner-title-width, 0px), 100%);
+  min-width: 0;
   max-width: 100%;
   flex: 0 1 auto;
   align-items: center;
@@ -1193,21 +1191,16 @@
   text-underline-offset: 3px;
 }
 
-/*
- * A notice tells what the game did (spawned, unlocked, delivered, restocked): an action's stripe
- * drawn dashed, and a dot where an action has its handle.
- */
+/* A notice tells what the game did (spawned, unlocked, delivered, restocked): a muted line, no spine mark. */
 .timeline-row.timeline-row-notice {
+  --timeline-row-stripe: transparent;
+  min-height: 0;
+  padding-block: 1px;
   box-shadow: none;
-  background-image: var(--timeline-dashed-stripe);
-  --timeline-row-stripe: var(--timeline-notice-line);
 }
 
-.timeline-notice-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--muted);
+.timeline-row.timeline-row-notice::before {
+  content: none;
 }
 
 .timeline-row-notice [data-timeline-cell='label'] {
@@ -1215,6 +1208,8 @@
 }
 
 .timeline-row-notice [data-timeline-cell='label'] strong {
+  color: var(--timeline-marker-text);
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
@@ -1334,71 +1329,190 @@
   gap: 6px 12px;
 }
 
-/* Row kinds differ only in border, background and type. */
-.timeline-row[data-timeline-row-kind='boundary'] {
-  --timeline-row-lead: 4px;
-  min-height: 30px;
-  padding-block: 2px 1px;
-  border-radius: 0;
-  box-shadow: inset 0 1px 0 var(--timeline-band-divider);
-  background-color: transparent;
-  color: #cfcad6;
+/*
+ * Action rows are the spine's nodes: one dot each, in their kind's colour, hollow when
+ * optional. Room events between them are quiet dividers with no dot.
+ */
+.room-action-list > .timeline-row[data-timeline-row-kind='action']::before {
+  top: calc(50% - 4.5px);
+  left: calc(var(--timeline-row-spine-x) - 4.5px);
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 2px solid var(--timeline-row-stripe);
+  border-radius: 50%;
+  background: var(--timeline-row-stripe);
 }
 
-/* A lifecycle marker is a quiet time marker: a node on the spine instead of a tick. */
-.timeline-row[data-timeline-row-kind='boundary']::before {
-  top: calc(50% - 3.5px);
-  left: calc(var(--timeline-row-spine-x) - 4px);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.room-action-list
+  > .timeline-row[data-timeline-row-kind='action']:not([data-action-accent])::before {
+  border-color: var(--timeline-node);
   background: var(--timeline-node);
 }
 
-/* A room event's icon sits on the spine, its disc masking the line behind it. */
-.timeline-row:has(> .timeline-event-node)::before {
-  content: none;
+.room-action-list > .timeline-row[data-action-accent='optional']::before {
+  background: var(--timeline-divider-mask);
+}
+
+.timeline-row[data-timeline-row-kind='action']
+  > [data-timeline-cell='sentence']
+  > [data-timeline-cell='label']
+  > strong,
+.timeline-row[data-timeline-row-kind='action'] .timeline-banner-title strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* A room event: its icon, its name, and a hairline on to its gold or the row's end. */
+.timeline-row[data-timeline-row-kind='boundary'] {
+  --timeline-row-lead: 4px;
+  min-height: 24px;
+  padding-block: 1px;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: transparent;
+  color: var(--muted);
+}
+
+/* The spine breaks briefly at each room event. */
+.room-action-list > .timeline-row[data-timeline-row-kind='boundary']::before {
+  top: calc(50% - 7px);
+  left: calc(var(--timeline-row-spine-x) - 2px);
+  width: 4px;
+  height: 14px;
+  background: var(--timeline-divider-mask);
+}
+
+.timeline-row[data-timeline-row-kind='boundary']:not(.timeline-leave-row)
+  > [data-timeline-cell='sentence']::after {
+  height: 1px;
+  flex: 1 1 24px;
+  align-self: center;
+  margin-inline-start: 4px;
+  background: rgb(255 255 255 / 10%);
+  content: '';
+}
+
+.timeline-row[data-timeline-row-kind='boundary']:not(.timeline-leave-row)
+  .timeline-banner-title
+  strong {
+  color: var(--timeline-marker-text);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .timeline-event-node {
-  position: absolute;
-  top: calc(50% - 12px);
-  left: calc(var(--timeline-row-spine-x) - 12px);
-  z-index: 1;
   display: grid;
-  width: 24px;
-  height: 24px;
+  grid-column: 1;
+  grid-row: 1;
   place-items: center;
-  border: 1px solid #4b4c58;
-  border-radius: 50%;
-  color: #cfcad6;
-  background: #17181d;
+  justify-self: center;
+  color: #aaa5b3;
   pointer-events: none;
 }
 
 .timeline-event-node > .timeline-event-icon {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   stroke-width: 1.4;
 }
 
 /* A marker of one phase of several names its phase in a small chip. */
 .timeline-phase-chip {
   display: inline-flex;
-  height: 1.25rem;
+  height: 1.1rem;
   align-items: center;
   margin-left: 6px;
   padding: 0 7px;
   border: 1px solid #4b4c58;
   border-radius: 999px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 600;
+  color: var(--timeline-marker-text);
+  font-size: 0.68rem;
+  font-weight: 500;
   white-space: nowrap;
 }
 
-.timeline-row[data-timeline-row-kind='boundary'] > .timeline-cell-handle {
-  min-block-size: 0;
+/* Leaving ends the spine: an action's weight and a square node. */
+.room-action-list > .timeline-row.timeline-leave-row[data-timeline-row-kind='boundary']::before {
+  top: calc(50% - 4.5px);
+  left: calc(var(--timeline-row-spine-x) - 4.5px);
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: #cfcad6;
+}
+
+/* A side visit's way out reads as its step; only the last way out is square. */
+.room-action-list
+  > .timeline-row.timeline-leave-row[data-timeline-row-kind='boundary']:has(
+    ~ .timeline-leave-row[data-timeline-row-kind='boundary']
+  )::before {
+  border-radius: 50%;
+  background: var(--timeline-node);
+}
+
+.timeline-leave-row .timeline-banner-title strong {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+/*
+ * A row with a cause hangs under it with a hook, one line each: an action's spawn under the
+ * action, a room event's spawn, unlock or settled outcome under its marker.
+ */
+.timeline-row[data-timeline-hook] {
+  --timeline-row-lead: -2px;
+}
+
+.timeline-row[data-timeline-hook] > [data-timeline-cell='sentence'] {
+  padding-left: 18px;
+}
+
+.timeline-row[data-timeline-hook] > [data-timeline-cell='sentence']::before {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  color: #7d7888;
+  content: '↳';
+  transform: translateY(-55%);
+}
+
+.room-action-list > .timeline-row[data-timeline-row-kind='boundary'][data-timeline-hook]::before,
+.timeline-row[data-timeline-row-kind='boundary'][data-timeline-hook]
+  > [data-timeline-cell='sentence']::after {
+  content: none;
+}
+
+.timeline-row[data-timeline-row-kind='boundary'][data-timeline-hook] > .timeline-event-node {
+  display: none;
+}
+
+.timeline-row[data-timeline-row-kind='boundary'][data-timeline-hook] {
+  min-height: 0;
+}
+
+/* A settled outcome reads with its marker: no spine mark, a quiet name, its controls inline. */
+.timeline-row[data-timeline-row-kind='effect'] {
+  --timeline-row-stripe: transparent;
+}
+
+.timeline-row[data-timeline-row-kind='effect'][data-action-accent] {
+  --timeline-row-stripe: var(--timeline-accent);
+}
+
+.room-action-list > .timeline-row[data-timeline-row-kind='effect']::before {
+  content: none;
+}
+
+.timeline-row[data-timeline-row-kind='effect']
+  > [data-timeline-cell='sentence']
+  > [data-timeline-cell='label']
+  > strong {
+  color: #b4afbd;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
 .timeline-row[data-timeline-row-kind='insertion'] {
@@ -1639,8 +1753,9 @@
   --timeline-stripe: #4b4c58;
   --timeline-spine: #4b4c58;
   --timeline-node: #8e8b97;
-  --timeline-band: rgb(255 255 255 / 7%);
-  --timeline-band-divider: rgb(255 255 255 / 10%);
+  --timeline-marker-text: #b8b3c1;
+  /* The workbench's own colour, which masks the spine where a node stands. */
+  --timeline-divider-mask: #15171d;
 }
 
 [data-action-accent='required'] {
@@ -1680,7 +1795,6 @@
    * with its badges fills a row's height inside the row's padding.
    */
   --timeline-icon-size: 23px;
-  --timeline-notice-line: rgb(255 255 255 / 22%);
   --timeline-chip-size: calc(var(--timeline-icon-size) + 9px);
   --badge-size: calc(var(--timeline-icon-size) * 2 / 3);
   --badge-small: calc(var(--timeline-icon-size) * 13 / 21);
@@ -2106,38 +2220,6 @@
   grid-template-columns: var(--overview-secondary-width);
 }
 
-/* An encounter phase reads as one light group: its rows share a tint. */
-.timeline-row[data-phase]:not([data-timeline-row-kind='boundary']) {
-  background-color: rgb(255 255 255 / 2%);
-}
-
-/* Every marker is a light line: its icon on the spine, a short name, its controls inline. */
-.timeline-row[data-timeline-row-kind='boundary'] {
-  box-shadow: none;
-  background-color: transparent;
-  color: #d8d3dd;
-}
-
-.timeline-row[data-timeline-row-kind='boundary'] .timeline-banner-title {
-  min-width: 0;
-}
-
-.timeline-row[data-timeline-row-kind='boundary'] .timeline-banner-title strong {
-  font-size: 0.86rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-/* A phase starts with a little space above its first banner. */
-.timeline-row[data-phase-start] {
-  --timeline-row-lead: 8px;
-}
-
-/* The first phase needs no space above it. */
-.room-action-list > .timeline-row[data-phase-start]:first-child {
-  --timeline-row-lead: 0px;
-}
-
 /* Timeline repairs share the timeline's width and its content edge. */
 .room-actions-workbench .room-action-repairs,
 .room-actions-workbench .room-action-not-reached {
@@ -2155,18 +2237,13 @@
   padding-left: var(--timeline-title-x);
 }
 
-/*
- * Every banner keeps its title, separators, tags and inline items on one centre
- * line, with symmetric padding; the spine dot sits at the band's centre.
- */
+/* Every marker keeps its name, chips and inline items on one centre line. */
 .timeline-row[data-timeline-row-kind='boundary'] {
   align-items: center;
-  /* The top pixel carries the band's divider. */
-  padding-block: 5px 4px;
 }
 
 .timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='sentence'] {
-  /* A title line is as tall as one control, so every banner title sits alike. */
+  /* A name line is as tall as one control, so every marker sits alike. */
   min-height: var(--timeline-control-height, 26px);
   gap: 4px 10px;
   line-height: 1.25;
@@ -2626,10 +2703,9 @@ button.timeline-chip {
   text-align: center;
 }
 
+/* A marker's bigger content sits under it at the action indent, unbordered. */
 .timeline-doors-detail-row {
-  padding: 4px 8px 10px calc(var(--timeline-row-start) + 3px);
-  border-radius: 0 0 6px 6px;
-  background: rgb(255 255 255 / 2.5%);
+  padding: 4px 8px 10px calc(var(--timeline-row-start) + 3px + 36px);
 }
 
 .timeline-doors-detail-row > .timeline-doors-detail {
@@ -3195,13 +3271,6 @@ span.hub-board-status-line {
   line-height: 1;
 }
 
-/* A Fields cage's slot is subscripted on its encounter's name. */
-.fields-cage-slot {
-  font-size: 0.7em;
-  vertical-align: sub;
-  line-height: 0;
-}
-
 /* Slot chips keep their own width; the Overview's label-column layout does not apply. */
 .numbered-slot > .field-control-inline,
 .numbered-slot-chip > .field-control-inline,
@@ -3542,9 +3611,21 @@ span.hub-board-status-line {
 /* The live row: what can be done next, in its groups. */
 .timeline-row.timeline-live-row {
   --timeline-row-lead: 4px;
-  --timeline-row-stripe: var(--border);
+  --timeline-row-stripe: transparent;
   box-shadow: none;
-  background-image: var(--timeline-dashed-stripe);
+}
+
+/* The live row is the spine's last slot: a hollow dashed dot. */
+.room-action-list > .timeline-row.timeline-live-row::before {
+  top: calc(50% - 4.5px);
+  left: calc(var(--timeline-row-spine-x) - 4.5px);
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 1.5px dashed var(--timeline-node);
+  border-radius: 50%;
+  background: var(--timeline-divider-mask);
+  content: '';
 }
 
 .live-row-groups {

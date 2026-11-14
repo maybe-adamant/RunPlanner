@@ -13,6 +13,17 @@ import { TimelineEventIcon } from './TimelineEventIcon';
 import type { BannerToggle } from './doorSummary';
 import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 
+/** A Fields cage's encounter starts as its Unlock row is taken, so it hangs under that row. */
+function startsWithItsUnlock(
+  boundary: WorkspaceRoomLifecycleBoundary,
+  fieldsCage: WorkspaceFieldsCageLabel | undefined,
+): boolean {
+  return (
+    fieldsCage !== undefined &&
+    (boundary.kind === 'encounterBegun' || boundary.kind === 'encounterStarted')
+  );
+}
+
 /** Render-only boundary row; timeline placement remains the projection's authority. */
 export function LifecycleBoundaryRow({
   boundary,
@@ -45,6 +56,7 @@ export function LifecycleBoundaryRow({
   readonly toggle?: BannerToggle | undefined;
 }) {
   const dispatch = useAppDispatch();
+  const hooked = startsWithItsUnlock(boundary, fieldsCage);
   const accessibleLabel = boundarySpokenLabel(label, fieldsCage);
   // One hint tells the whole title: its cage, then its encounter's identity.
   const titleHint = [fieldsCage?.cage, identity?.label]
@@ -64,6 +76,7 @@ export function LifecycleBoundaryRow({
           ? ''
           : undefined
       }
+      hooked={hooked}
       kind="boundary"
       marker={<TimelineEventIcon name={boundary.kind} />}
       money={money}

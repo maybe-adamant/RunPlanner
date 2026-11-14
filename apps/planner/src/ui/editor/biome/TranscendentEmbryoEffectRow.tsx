@@ -139,6 +139,7 @@ export function TranscendentEmbryoEffectRow({
           )}
         </div>
       }
+      hooked
       kind="effect"
       placement={
         selected !== '' ? (

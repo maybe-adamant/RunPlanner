@@ -497,6 +497,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly label: string;
       /** Lists locked loot as it becomes takeable rather than as it spawns. */
       readonly unlocks?: true;
+      /** Stands right under the entry of its cause; without, it ends the Timeline. */
+      readonly underCause?: true;
       readonly groups: readonly WorkspaceSpawnGroup[];
     };
 

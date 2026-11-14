@@ -7,7 +7,6 @@ export type TimelineEventName =
   | 'bossDefeated'
   | 'wheelsOpen'
   | 'doorsOpened'
-  | 'leave'
   | 'returned';
 
 export function TimelineEventIcon({ name }: { readonly name: TimelineEventName }) {
@@ -53,13 +52,6 @@ export function TimelineEventIcon({ name }: { readonly name: TimelineEventName }
         );
       case 'doorsOpened':
         return <path d="M1.5 13.5h13M3.5 13.5V7a4.5 4.5 0 0 1 9 0v6.5M8 13.5V8.5" />;
-      case 'leave':
-        return (
-          <>
-            <path d="M6.5 2.5H3v11h3.5" />
-            <path d="M6.5 8h7M11 5.5 13.5 8 11 10.5" />
-          </>
-        );
       case 'returned':
         return (
           <>

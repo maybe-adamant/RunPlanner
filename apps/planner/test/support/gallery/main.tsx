@@ -4,16 +4,11 @@ import { createRoot } from 'react-dom/client';
 import '@planner/ui/styles.css';
 import { HintLayer } from '@planner/ui/controls/HintLayer';
 import './gallery.css';
-import './timeline-variants.css';
 import { GalleryCaseView } from './GalleryCaseView';
 import { galleryCases } from './cases';
 import { filterGalleryCases } from './galleryCase';
 
 const search = new URLSearchParams(globalThis.location.search);
-// A preview of Timeline emphasis variants, picked at capture time.
-const timelineVariant = import.meta.env['VITE_TIMELINE_VARIANT'] as string | undefined;
-if (timelineVariant !== undefined && timelineVariant !== '')
-  document.body.dataset.timelineVariant = timelineVariant;
 const filter = search.get('case');
 const shown = filterGalleryCases(galleryCases, filter);
 // Layout measurement opens every case's Overview too, with no picker opened.

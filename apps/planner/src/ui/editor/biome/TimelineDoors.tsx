@@ -10,7 +10,7 @@ import { DoorChips } from './DecisionWorkbench';
 import { TimelineRow } from './TimelineRow';
 import { TimelineMapStageContext } from './timelineMapStage';
 import { doorsOpenToggle, type BannerToggle } from './doorSummary';
-import { TimelineEventIcon, type TimelineEventName } from './TimelineEventIcon';
+import { TimelineEventIcon } from './TimelineEventIcon';
 
 /**
  * A room's doors on its Timeline: the Doors open row (a compact state that
@@ -169,7 +169,7 @@ export function LeaveRow({
   actions,
   anchorOwner,
   children,
-  event = 'leave',
+  choice = false,
   gap,
   heroDoor,
   label,
@@ -182,8 +182,8 @@ export function LeaveRow({
   /** The owner the row repairs, such as the exit selection; navigation lands on its picker. */
   readonly anchorOwner?: SemanticAddress;
   readonly children?: ReactNode;
-  /** The event its spine marker draws: leaving, unless the row picks something else. */
-  readonly event?: TimelineEventName;
+  /** The row is an action of the room, such as picking a wheel's offer, not its way out. */
+  readonly choice?: boolean;
   /** Where Melinoë stands on the room's map from this row: a side door's slot key, empty for the entry. */
   readonly heroDoor?: string | undefined;
   readonly label: string;
@@ -220,9 +220,7 @@ export function LeaveRow({
         gap={gap}
         {...(heroDoor === undefined ? {} : { 'data-hero-door': heroDoor })}
         {...(pastEnd ? { 'data-plan-end': 'pastEnd' } : {})}
-        data-timeline-event={event}
-        kind="boundary"
-        marker={<TimelineEventIcon name={event} />}
+        kind={choice ? 'action' : 'boundary'}
         label={
           <>
             <span className="timeline-banner-title">

@@ -243,7 +243,7 @@ export function SelectWheelRow({
     };
   });
   return (
-    <LeaveRow event="wheelsOpen" gap={gap} label="Select wheel">
+    <LeaveRow choice gap={gap} label="Select wheel">
       {offers.length > 1 ? (
         <LeavePicker
           choiceLabel="Select wheel"
