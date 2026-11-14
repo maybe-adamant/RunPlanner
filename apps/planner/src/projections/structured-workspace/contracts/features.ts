@@ -374,6 +374,10 @@ export interface WorkspaceRoomMap {
   /** Fields cage and optional reward points. */
   readonly fieldsCagePoints: readonly WorkspaceRoomMapPoint[];
   readonly fieldsOptionalPoints: readonly WorkspaceRoomMapPoint[];
+  /** The point each stocked World Shop item stands on; a Travel Deal refill takes its source's. */
+  readonly shopItems: readonly (WorkspaceRoomMapPoint & { readonly offerKey: string })[];
+  /** Where the Infernal Contract pedestal's item stands, in a room holding one. */
+  readonly contractPedestal?: WorkspaceRoomMapPoint;
   /** A Ship's wheel: one offer stands on it, two on its left and right spots. */
   readonly wheel?: WorkspaceRoomMapPoint & {
     readonly leftOffer: { readonly x: number; readonly y: number };

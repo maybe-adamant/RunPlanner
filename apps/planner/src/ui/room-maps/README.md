@@ -48,6 +48,12 @@ A Ship's wheel is a catalog map point too: each phase a wheel follows shows its
 offers there (one on the wheel, two on its left and right spots), and the last
 phase shows the exit doors.
 
+World Shop items stand on the room's catalog Shop points (its `LootPoint`s,
+ascending by ObjectId): the engine pairs the k-th stocked item, empty slots
+left out, with the k-th point, and a Travel Deal refill takes its bought
+item's point. The Contract pedestal's item stands on its RoomData pedestal
+point.
+
 Ephyra side doors and Hub board doors are catalog map doors too: a side door
 stands at its local slot's physical door, each Hub slot at its door on the
 `N_Hub` map. Only the Hub board's quality rating of each slot's room is

@@ -734,6 +734,7 @@ function roomLocalForOccurrence(
           purchase: Object.freeze({
             address: purchaseAddress,
             marker: input.markerDestinations.marker(purchaseAddress),
+            purchased: selectedActionKeys.includes(slot.key),
           }),
           rewardControl: requireProjectedRewardControl(controls, offerAddress, 'explicitReward'),
         });

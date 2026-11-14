@@ -237,7 +237,7 @@ describe('timeline action labels', () => {
     });
     const entry = control.owner.address;
     if (entry.kind !== 'acquisitionEntry') throw new Error('Expected an acquisition entry');
-    const purchase = { address: entry, marker: control.marker };
+    const purchase = { address: entry, marker: control.marker, purchased: false };
     const roomLocal: WorkspaceRoomLocal = {
       kind: 'shop',
       materialized: true,

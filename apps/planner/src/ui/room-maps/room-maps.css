@@ -483,6 +483,41 @@
   border-color: #8fd3ff;
 }
 
+/* World Shop items ring in rose, the Contract pedestal in lime; a bought item rings solid. */
+.room-map-point[data-point='shop'] {
+  border-color: #ff8fc8;
+}
+
+.room-map-point[data-point='pedestal'] {
+  border-color: #c6ef6a;
+}
+
+.room-map-point[data-taken] {
+  z-index: 2;
+  outline: 2px solid rgb(255 244 199 / 85%);
+  outline-offset: 2px;
+}
+
+/* A Travel Deal refill on its bought item's corner. */
+.room-map-point-refill {
+  position: absolute;
+  right: -30%;
+  bottom: -30%;
+  display: grid;
+  width: 62%;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 2px solid #ff8fc8;
+  border-radius: 50%;
+  background: rgb(17 25 35 / 92%);
+}
+
+.room-map-point-refill > .artwork-label-icon {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+}
+
 /* A free point numbered while a Fields slot is placed; one the slot cannot take dims. */
 .room-map-point[data-marked] {
   display: grid;
@@ -781,6 +816,14 @@
 
 .room-map-legend > li[data-kind='pickup'] > .room-map-legend-swatch {
   border-color: #8fd3ff;
+}
+
+.room-map-legend > li[data-kind='shop'] > .room-map-legend-swatch {
+  border-color: #ff8fc8;
+}
+
+.room-map-legend > li[data-kind='pedestal'] > .room-map-legend-swatch {
+  border-color: #c6ef6a;
 }
 
 .room-map-legend-entry {
