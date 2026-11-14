@@ -1808,25 +1808,6 @@
   text-transform: uppercase;
 }
 
-/*
- * The map fills its frame, so overlays pinned to the frame sit on the image.
- * Its width is capped so its height fits the window under the header and room
- * heading: extra width never makes the room scroll.
- */
-.hub-map-overview > .room-map-viewport > .room-map-canvas {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  max-width: max(24rem, calc((100 * var(--app-vh) - 18rem) * 16 / 9));
-  margin-inline: auto;
-}
-
-.hub-map-overview > .room-map-viewport > .room-map-canvas > .room-map-scroll {
-  position: absolute;
-  inset: 0;
-  height: 100%;
-  min-height: 0;
-}
-
 .frontier-actions {
   display: flex;
   align-items: center;
@@ -2731,33 +2712,6 @@ button.timeline-chip {
   color: #f2ede5;
 }
 
-/* Hub Overview and Timeline: the list beside the map, the map on top when narrow. */
-.hub-overview-layout {
-  display: grid;
-  /* One compact list width on both tabs, so switching tabs never moves the map. */
-  grid-template-columns: 24rem minmax(0, 1fr);
-  gap: 12px;
-  min-width: 0;
-  margin-top: 12px;
-}
-
-.hub-overview-layout > .hub-board-map {
-  position: sticky;
-  top: 12px;
-  align-self: start;
-}
-
-@container (max-width: 44rem) {
-  .hub-overview-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hub-overview-layout > .hub-board-map {
-    position: static;
-    order: -1;
-  }
-}
-
 .hub-overview-rewards,
 .hub-timeline-column {
   display: grid;
@@ -2787,19 +2741,6 @@ button.timeline-chip {
   margin: 0;
   font: inherit;
   letter-spacing: inherit;
-}
-
-.hub-door-order-note {
-  margin: 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 0.78rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hub-board-map > .room-map-viewport > .room-map-canvas {
-  max-width: max(16rem, calc(var(--hub-map-height-cap, 100 * var(--app-vh) - 18rem) * 16 / 9));
 }
 
 .hub-board-status-line {

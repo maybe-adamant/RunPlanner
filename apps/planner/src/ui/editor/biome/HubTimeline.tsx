@@ -712,60 +712,68 @@ export function HubTimeline({
       ...(view.picking && door.hubSlotKey === hovered ? (['linked'] as const) : []),
     ] as const;
   return (
-    <div className="hub-overview-layout hub-timeline-layout">
-      <section aria-label="Ephyra Hub timeline" className="hub-timeline-column" ref={attachRoot}>
-        <TimelineReorderStatus session={reorder} />
-        <header className="room-feature-category-heading hub-column-title">
-          <h5>Visits</h5>
-          {resetControl}
-        </header>
-        <ol className="hub-segments">{node.stays.map(segment)}</ol>
-        {node.fountain.useIn === undefined ? null : (
-          <div
-            {...findingAnchor(node.fountain.address)}
-            className="hub-timeline-row hub-timeline-fountain"
-            data-used="false"
-            tabIndex={-1}
+    <div className="room-map-workbench">
+      <div className="room-map-columns">
+        <div className="room-map-controls-column">
+          <section
+            aria-label="Ephyra Hub timeline"
+            className="hub-timeline-column"
+            ref={attachRoot}
           >
-            <span className="hub-timeline-step">
-              <ArtworkIcon
-                className="artwork-label-icon"
-                source={hubFountainIcon(node.fountain.address.biomeKey)}
+            <TimelineReorderStatus session={reorder} />
+            <header className="room-feature-category-heading hub-column-title">
+              <h5>Visits</h5>
+              {resetControl}
+            </header>
+            <ol className="hub-segments">{node.stays.map(segment)}</ol>
+            {node.fountain.useIn === undefined ? null : (
+              <div
+                {...findingAnchor(node.fountain.address)}
+                className="hub-timeline-row hub-timeline-fountain"
+                data-used="false"
+                tabIndex={-1}
+              >
+                <span className="hub-timeline-step">
+                  <ArtworkIcon
+                    className="artwork-label-icon"
+                    source={hubFountainIcon(node.fountain.address.biomeKey)}
+                  />
+                </span>
+                <strong className="hub-timeline-room">Fountain</strong>
+                <HubRowPlacement
+                  findingMark={findingMark(node.fountain.address)}
+                  label="Use Fountain"
+                  locked={locked}
+                  moves={node.fountain.useIn}
+                  onApply={replaceActions}
+                  trigger="Use…"
+                  waiting={waiting}
+                />
+              </div>
+            )}
+            {node.requirements.visits.planned < node.requiredVisitCount ? null : (
+              <HubLeaveSegment node={node} />
+            )}
+          </section>
+        </div>
+        <HubBoardMap
+          door={(spot) => {
+            const door = shownDoors.get(spot.hubSlotKey);
+            return door === undefined ? null : (
+              <TimelineDoor
+                door={door}
+                emphasis={emphasisOf(door)}
+                key={spot.hubSlotKey}
+                spot={spot}
               />
-            </span>
-            <strong className="hub-timeline-room">Fountain</strong>
-            <HubRowPlacement
-              findingMark={findingMark(node.fountain.address)}
-              label="Use Fountain"
-              locked={locked}
-              moves={node.fountain.useIn}
-              onApply={replaceActions}
-              trigger="Use…"
-              waiting={waiting}
-            />
-          </div>
-        )}
-        {node.requirements.visits.planned < node.requiredVisitCount ? null : (
-          <HubLeaveSegment node={node} />
-        )}
-      </section>
-      <HubBoardMap
-        door={(spot) => {
-          const door = shownDoors.get(spot.hubSlotKey);
-          return door === undefined ? null : (
-            <TimelineDoor
-              door={door}
-              emphasis={emphasisOf(door)}
-              key={spot.hubSlotKey}
-              spot={spot}
-            />
-          );
-        }}
-        gameName={node.gameName}
-        hubIdentity={hubIdentity}
-        label={`Hub at ${segmentLabel(view.stay)}`}
-        slots={node.slots}
-      />
+            );
+          }}
+          gameName={node.gameName}
+          hubIdentity={hubIdentity}
+          label={`Hub at ${segmentLabel(view.stay)}`}
+          slots={node.slots}
+        />
+      </div>
     </div>
   );
 }
