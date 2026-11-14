@@ -7,10 +7,15 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
   createProjectDocument,
+  createRoomFeatureAddress,
+  createShopOfferAddress,
   createRouteAddress,
   type AuthoredTraitOfferTraits,
+  type ProjectCommand,
   type ProjectDocument,
+  type SemanticAddress,
   selectedExitTarget,
 } from '@run-planner/engine/authored-project';
 import {
@@ -24,7 +29,11 @@ import { DEFAULT_DRAFT_BUDGET } from '../src/generator';
 import { draftReport } from '../src/report';
 import { startDraftWalk } from './support/draft-walk';
 import { draftBasket } from './support/draft-basket';
-import { loadUnderworldWorldShopTravelDealCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFGHICheckpoint,
+  loadUnderworldWorldShopTravelDealCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadCheckpoint } from '@run-planner/test-fixtures/checkpoints/registry';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -449,6 +458,79 @@ describe('a Travel Deal refill', () => {
       (occurrence) => occurrence.state.kind === 'shop',
     )!.state;
     expect(shop.kind === 'shop' ? shop.shop?.travelDealRefill : undefined).toBeDefined();
+  });
+});
+
+describe('an item offered only while the hero is missing a Last Stand', () => {
+  // The planner does not model held Last Stands: Draft never steers to Death Defiance.
+  const spec: DraftSpec = {
+    loadout,
+    world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+    basketByGiver: {},
+    rackKeepsakeKeys: [null, null, null],
+  };
+
+  it('never steers a Shop slot to Death Defiance', () => {
+    const i = createBiomeAddress('Underworld', 'I');
+    const survival = createShopOfferAddress(i, createOccurrenceId('golden-i-preboss'), 'Survival');
+    const blank = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
+      kind: 'ClearShopOffer',
+      offer: survival,
+    });
+    const tried: string[] = [];
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const walk = startDraftWalk(blank, spec, seed, {
+        from: simulateProjectAssembly(catalog, blank),
+      });
+      // Refusing every pick makes the walk try each value it would steer to.
+      (
+        walk as unknown as {
+          steerShopOffer: (
+            origin: typeof survival,
+            apply: (command: ProjectCommand) => boolean,
+          ) => unknown;
+        }
+      ).steerShopOffer(survival, (command) => {
+        if (command.kind === 'ReplaceShopOfferOption') tried.push(command.value.optionKey);
+        return false;
+      });
+    }
+    expect(tried.length).toBeGreaterThan(0);
+    expect(tried).not.toContain('LastStandDrop');
+  });
+
+  it('never redraws a Shrine item to Death Defiance', () => {
+    const shrine = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    const project = loadCheckpoint('surface-shrine-travel-deal');
+    const walk = startDraftWalk(project, spec, 1, {
+      from: simulateProjectAssembly(catalog, project),
+    });
+    const tried: string[] = [];
+    const apply = vi.spyOn(walk, 'apply').mockImplementation((command) => {
+      if (command.kind === 'ReplaceHermesShrineOffer') tried.push(command.value.rewardType);
+      return false;
+    });
+    try {
+      (
+        walk as unknown as {
+          hermesShrineOffer: (
+            feature: Extract<SemanticAddress, { kind: 'roomFeature' }>,
+          ) => boolean;
+        }
+      ).hermesShrineOffer(
+        createRoomFeatureAddress(shrine, {
+          kind: 'hermesShrineOffer',
+          generationKey: 'initial:first',
+        }),
+      );
+    } finally {
+      apply.mockRestore();
+    }
+    expect(tried.length).toBeGreaterThan(0);
+    expect(tried).not.toContain('LastStandDrop');
   });
 });
 

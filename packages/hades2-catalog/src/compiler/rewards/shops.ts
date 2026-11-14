@@ -29,6 +29,7 @@ import { normalizeAndValidateRequirement } from './requirements';
 import { normalizeAcquisitionLifecycle } from './lifecycles';
 
 const STYGIAN_WELL_OFFER_REQUIREMENTS = ['inactive', 'emptyAttackOrSpecial'] as const;
+const UNMODELED_OFFER_CONDITIONS = ['missingLastStand'] as const;
 
 function requireClosedValue<const Values extends readonly string[]>(
   value: unknown,
@@ -317,6 +318,15 @@ function normalizeShopOption(
               `${path}.goldPayout.goldPerHealthHundredths`,
             ),
           }),
+        }),
+    ...(raw.unmodeledOfferCondition === undefined
+      ? {}
+      : {
+          unmodeledOfferCondition: requireClosedValue(
+            raw.unmodeledOfferCondition,
+            UNMODELED_OFFER_CONDITIONS,
+            `${path}.unmodeledOfferCondition`,
+          ),
         }),
   });
 }

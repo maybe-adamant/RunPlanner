@@ -590,9 +590,12 @@ edit whose settlement first reaches it stocks it as part of that edit, so one
 Undo reverts both. The stock is a stable legal draw: each slot scores its
 legal values, those the slot's generation contact admits there, by a stable
 hash of its semantic identity and the value, and takes its best value that no
-stored slot or earlier claim of the same group holds. Slots claim in slot
-order; a reroll's last drawn slot avoids repeating every item on show before
-it, which the game's ban rules out. A World Shop stocks one slot at a time,
+stored slot or earlier claim of the same group holds. A draw never takes an
+item the game offers only on live hero state the planner does not model, such
+as a Last Stand item, offered only while the hero is missing a Last Stand; the
+owner may still choose one. Slots claim in slot order; a reroll's last drawn
+slot avoids repeating every item on show before it, which the game's ban rules
+out. A World Shop stocks one slot at a time,
 each from the values its joint inventory admits beside its stocked peers. A
 Travel Deal restock draws under its triggering purchase's identity, a World
 Shop's from the restocked slot's values. A Contract pedestal, spawned once the

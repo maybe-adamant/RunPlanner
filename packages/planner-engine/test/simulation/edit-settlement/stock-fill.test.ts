@@ -17,6 +17,7 @@ import {
   encodeProjectDocument,
   roomActionKey,
   semanticAddressKey,
+  shopOfferOptionValues,
   type OccurrenceAddress,
   type ProjectCommand,
   type ProjectDocument,
@@ -34,6 +35,10 @@ import { loadCheckpoint } from '@run-planner/test-fixtures/checkpoints/registry'
 import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { stockFills } from '../../../src/simulation/stock-fill';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/project-evaluation-assembly';
+import type {
+  BiomeCandidateArtifacts,
+  ProjectCandidateArtifacts,
+} from '../../../src/simulation/evaluation/candidate-artifacts';
 
 const f = createBiomeAddress('Underworld', 'F');
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
@@ -469,6 +474,246 @@ describe('stock filled on first reach', () => {
           createOccurrenceAddress(g, peer),
         ).infernalContractPedestal,
       ).toEqual(stocked);
+    });
+  });
+
+  describe('an item offered only while the hero is missing a Last Stand', () => {
+    // The planner does not model held Last Stands: no draw takes Kiss of Styx or Death Defiance.
+    const artifactsOf = (project: ProjectDocument) =>
+      candidateArtifactsForProjectEvaluationAssembly(evaluate(project));
+    const inBiome = (
+      artifacts: ProjectCandidateArtifacts,
+      biomeKey: string,
+      override: (reached: BiomeCandidateArtifacts) => BiomeCandidateArtifacts,
+    ) =>
+      ({
+        ...artifacts,
+        biomeAt: (biome: Parameters<typeof artifacts.biomeAt>[0]) => {
+          const reached = artifacts.biomeAt(biome);
+          return reached === undefined || biome.biomeKey !== biomeKey ? reached : override(reached);
+        },
+      }) as ProjectCandidateArtifacts;
+    const fillKeys = (project: ProjectDocument, artifacts: ProjectCandidateArtifacts) =>
+      stockFills(catalog, project, artifacts, () => false).map((fill) => fill.key);
+    const wellFeature = (generationKey: string) =>
+      semanticAddressKey(
+        createRoomFeatureAddress(well, {
+          kind: 'stygianWellOffer',
+          generationKey: generationKey as never,
+        }),
+      );
+
+    it('never stocks a Well slot, Travel Deal restock or Fateful Twist with Kiss of Styx', () => {
+      let blank = loadCheckpoint('underworld-f-stygian-well');
+      for (const slotKey of ['healing', 'secondLeft', 'secondRight'] as const)
+        blank = applyProjectCommand(blank, catalog, {
+          kind: 'ReplaceStygianWellOffer',
+          occurrence: well,
+          slotKey,
+          itemKey: null,
+        });
+      blank = applyProjectCommand(blank, catalog, {
+        kind: 'ReplaceStygianWellTravelDealRefill',
+        occurrence: well,
+        itemKey: null,
+      });
+      const artifacts = artifactsOf(blank);
+      const real = artifacts.biomeAt(f)!.stygianWells.at(well)!;
+      expect(real.candidateItemKeysBySlot.healing).toContain('LastStandShopItem');
+      // Kiss of Styx is the only legal value of the healing slot, the restock and a Twist.
+      const onlyKiss = inBiome(artifacts, 'F', (reached) => ({
+        ...reached,
+        stygianWells: {
+          ...reached.stygianWells,
+          at: (owner: OccurrenceAddress) =>
+            semanticAddressKey(owner) === semanticAddressKey(well)
+              ? {
+                  ...real,
+                  candidateItemKeysBySlot: {
+                    ...real.candidateItemKeysBySlot,
+                    healing: ['LastStandShopItem'],
+                  },
+                  travelDealRefill: {
+                    sourceGenerationKey: 'initial:secondLeft',
+                    candidateItemKeys: ['LastStandShopItem'],
+                  } as never,
+                  twistCandidateItemKeysByGeneration: {
+                    ...real.twistCandidateItemKeysByGeneration,
+                    'initial:secondRight': ['LastStandShopItem'],
+                  },
+                }
+              : reached.stygianWells.at(owner),
+        },
+      }));
+      const keys = fillKeys(blank, onlyKiss);
+      expect(keys).toContain(wellFeature('initial:secondLeft'));
+      expect(keys).not.toContain(wellFeature('initial:healing'));
+      expect(keys).not.toContain(wellFeature('travelDealRefill'));
+      expect(keys).not.toContain(
+        semanticAddressKey(
+          createRoomFeatureAddress(well, {
+            kind: 'stygianWellTwist',
+            generationKey: 'initial:secondRight',
+          }),
+        ),
+      );
+    });
+
+    it('keeps Kiss of Styx chosen for a Well slot, legal', () => {
+      const settled = settle(loadCheckpoint('underworld-f-stygian-well'), {
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: well,
+        slotKey: 'healing',
+        itemKey: 'LastStandShopItem',
+      });
+      expect(settled.fault).toBeUndefined();
+      const project = settled.assembly.project;
+      expect(occurrenceOf(project, well).stygianWell!.offerKeyBySlot.healing).toBe(
+        'LastStandShopItem',
+      );
+      expect(
+        findingCodes(project).filter(
+          (finding) => finding.origin === wellFeature('initial:healing'),
+        ),
+      ).toEqual([]);
+    });
+
+    describe('at a Hermes Shrine', () => {
+      const n = createBiomeAddress('Surface', 'N');
+      const o = createBiomeAddress('Surface', 'O');
+      const shrine = createOccurrenceAddress(n, createOccurrenceId('surface-n-preboss:postboss'));
+      const oShrine = createOccurrenceAddress(o, createOccurrenceId('surface-o-preboss:postboss'));
+      const shrineFeature = (generationKey: string) =>
+        semanticAddressKey(
+          createRoomFeatureAddress(oShrine, {
+            kind: 'hermesShrineOffer',
+            generationKey: generationKey as never,
+          }),
+        );
+
+      it('never stocks a Shrine item or its Travel Deal restock with Death Defiance', () => {
+        const raw = JSON.parse(encodeProjectDocument(loadCheckpoint('surface-shrine-travel-deal')));
+        for (const plan of raw.route.biomes)
+          for (const room of plan.topology?.occurrences ?? [])
+            if (room.occurrenceId === oShrine.occurrenceId)
+              room.hermesShrine.offerBySlot = { first: null, secondLeft: null, secondRight: null };
+        const blank = decodeProjectDocument(raw, catalog);
+        const artifacts = artifactsOf(blank);
+        const real = artifacts.biomeAt(o)!.hermesShrines.at(oShrine)!;
+        expect(real.candidateRewardTypesBySlot.first).toContain('LastStandDrop');
+        const onlyDeathDefiance = inBiome(artifacts, 'O', (reached) => ({
+          ...reached,
+          hermesShrines: {
+            ...reached.hermesShrines,
+            at: (owner: OccurrenceAddress) =>
+              semanticAddressKey(owner) === semanticAddressKey(oShrine)
+                ? {
+                    ...real,
+                    candidateRewardTypesBySlot: {
+                      ...real.candidateRewardTypesBySlot,
+                      first: ['LastStandDrop'],
+                    },
+                    travelDealRefill: {
+                      sourceGenerationKey: 'initial:first',
+                      candidateRewardTypes: ['LastStandDrop'],
+                    } as never,
+                  }
+                : reached.hermesShrines.at(owner),
+          },
+        }));
+        const keys = fillKeys(blank, onlyDeathDefiance);
+        expect(keys).toContain(shrineFeature('initial:secondLeft'));
+        expect(keys).not.toContain(shrineFeature('initial:first'));
+        expect(keys).not.toContain(shrineFeature('travelDealRefill'));
+      });
+
+      it('keeps Death Defiance chosen for a Shrine item, legal', () => {
+        const settled = settle(loadCheckpoint('surface-shrine-travel-deal'), {
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: shrine,
+          slotKey: 'first',
+          value: { rewardType: 'LastStandDrop' },
+        });
+        expect(settled.fault).toBeUndefined();
+        const project = settled.assembly.project;
+        expect(occurrenceOf(project, shrine).hermesShrine!.offerBySlot.first?.rewardType).toBe(
+          'LastStandDrop',
+        );
+        const first = semanticAddressKey(
+          createRoomFeatureAddress(shrine, {
+            kind: 'hermesShrineOffer',
+            generationKey: 'initial:first',
+          }),
+        );
+        expect(findingCodes(project).filter((finding) => finding.origin === first)).toEqual([]);
+      });
+    });
+
+    describe('at an Erebus World Shop', () => {
+      const i = createBiomeAddress('Underworld', 'I');
+      const shop = createOccurrenceAddress(i, createOccurrenceId('golden-i-preboss'));
+      const survival = createShopOfferAddress(i, shop.occurrenceId, 'Survival');
+
+      it('never stocks a Shop slot with Death Defiance', () => {
+        const blank = applyProjectCommand(loadCheckpoint('underworld-fghi'), catalog, {
+          kind: 'ClearShopOffer',
+          offer: survival,
+        });
+        const artifacts = artifactsOf(blank);
+        const reached = artifacts.biomeAt(i)!;
+        const evaluate = reached.rewardProducers.at(survival)!.evaluateShopOption!;
+        const deathDefiance = shopOfferOptionValues(catalog, 'I_WorldShop', 'Survival').find(
+          (value) => value.optionKey === 'LastStandDrop',
+        )!;
+        expect(evaluate(survival, deathDefiance).supported).toBe(true);
+        expect(fillKeys(blank, artifacts)).toContain(semanticAddressKey(survival));
+        // Death Defiance is the slot's only legal value: the slot stays blank.
+        const onlyDeathDefiance = inBiome(artifacts, 'I', (biome) => ({
+          ...biome,
+          rewardProducers: {
+            ...biome.rewardProducers,
+            at: (owner: Parameters<typeof biome.rewardProducers.at>[0]) => {
+              const producer = biome.rewardProducers.at(owner);
+              if (
+                producer === undefined ||
+                semanticAddressKey(owner) !== semanticAddressKey(survival)
+              )
+                return producer;
+              return {
+                ...producer,
+                evaluateShopOption: (
+                  ...input: Parameters<NonNullable<typeof producer.evaluateShopOption>>
+                ) => ({
+                  ...producer.evaluateShopOption!(...input),
+                  supported: input[1].optionKey === 'LastStandDrop',
+                }),
+              };
+            },
+          },
+        }));
+        expect(fillKeys(blank, onlyDeathDefiance)).not.toContain(semanticAddressKey(survival));
+      });
+
+      it('keeps Death Defiance chosen for a Shop slot, legal', () => {
+        const value = shopOfferOptionValues(catalog, 'I_WorldShop', 'Survival').find(
+          (candidate) => candidate.optionKey === 'LastStandDrop',
+        )!;
+        const settled = settle(loadCheckpoint('underworld-fghi'), {
+          kind: 'ReplaceShopOfferOption',
+          offer: survival,
+          value,
+        });
+        expect(settled.fault).toBeUndefined();
+        const state = occurrenceOf(settled.assembly.project, shop).state;
+        expect(state.kind === 'shop' ? state.shop?.offers.Survival?.optionKey : undefined).toBe(
+          'LastStandDrop',
+        );
+        expect(
+          findingCodes(settled.assembly.project).filter(
+            (finding) => finding.origin === semanticAddressKey(survival),
+          ),
+        ).toEqual([]);
+      });
     });
   });
 });

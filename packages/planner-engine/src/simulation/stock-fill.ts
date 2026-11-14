@@ -62,6 +62,24 @@ function draw(identity: string, legal: readonly string[], claimed: ReadonlySet<s
   );
 }
 
+/**
+ * A profile's options no automatic draw takes, by `key` or `rewardType`: those
+ * the game offers only on a live hero condition the planner does not model.
+ */
+function undrawnOptions(
+  catalog: Catalog,
+  profileKey: string,
+  by: 'key' | 'rewardType',
+): ReadonlySet<string> {
+  return new Set(
+    (catalog.rewards.shops.byKey[profileKey]?.groups.values ?? []).flatMap((group) =>
+      group.options.values.flatMap((option) =>
+        option.unmodeledOfferCondition === undefined ? [] : [option[by]],
+      ),
+    ),
+  );
+}
+
 function rooms(project: ProjectDocument) {
   return project.route.biomes.flatMap((plan) =>
     (plan.topology?.occurrences ?? []).map((occurrence) => ({
@@ -85,6 +103,7 @@ function rooms(project: ProjectDocument) {
  * rules out.
  */
 function stygianWellFills(
+  catalog: Catalog,
   artifacts: BiomeCandidateArtifacts,
   owner: OccurrenceAddress,
   occurrence: RoomOccurrence,
@@ -93,6 +112,8 @@ function stygianWellFills(
   const capability = artifacts.stygianWells.at(owner);
   if (well === undefined || capability === undefined || !capability.present) return [];
   const fills: StockFill[] = [];
+  const undrawn = undrawnOptions(catalog, 'RoomShop', 'key');
+  const drawable = (legal: readonly string[]) => legal.filter((itemKey) => !undrawn.has(itemKey));
   const identity = (generationKey: string) =>
     `${occurrence.occurrenceId}|stygianWell|${generationKey}`;
   const feature = (generationKey: StygianWellGenerationKey) =>
@@ -114,7 +135,7 @@ function stygianWellFills(
     const generationKey = stygianWellGenerationKey(INITIAL_ROLL_KEY, slotKey);
     const itemKey = draw(
       identity(generationKey),
-      capability.candidateItemKeysBySlot[slotKey],
+      drawable(capability.candidateItemKeysBySlot[slotKey]),
       initialClaimed,
     );
     if (itemKey === undefined) continue;
@@ -142,7 +163,11 @@ function stygianWellFills(
         index === blank.length - 1 && unclaimedShown.length === 1
           ? new Set([...claimed, ...unclaimedShown])
           : claimed;
-      const itemKey = draw(identity(generationKey), roll.candidateItemKeysBySlot[slotKey], banned);
+      const itemKey = draw(
+        identity(generationKey),
+        drawable(roll.candidateItemKeysBySlot[slotKey]),
+        banned,
+      );
       if (itemKey === undefined) return;
       claimed.add(itemKey);
       push(generationKey, {
@@ -165,7 +190,7 @@ function stygianWellFills(
   ) {
     const itemKey = draw(
       identity(`travelDealRefill|${refill.sourceGenerationKey}`),
-      refill.candidateItemKeys,
+      drawable(refill.candidateItemKeys),
       new Set(),
     );
     if (itemKey !== undefined)
@@ -181,7 +206,7 @@ function stygianWellFills(
   ) as [StygianWellGenerationKey, readonly string[]][]) {
     const result = stygianWellGenerationTwistResultKey(occurrence, generationKey);
     if (result !== undefined && result !== null) continue;
-    const itemKey = draw(identity(`twist|${generationKey}`), legal, new Set());
+    const itemKey = draw(identity(`twist|${generationKey}`), drawable(legal), new Set());
     if (itemKey === undefined) continue;
     const twist = createRoomFeatureAddress(owner, { kind: 'stygianWellTwist', generationKey });
     fills.push(
@@ -208,6 +233,7 @@ const SHRINE_SLOT_KEYS = ['first', 'secondLeft', 'secondRight'] as const;
  * restock of its first rush.
  */
 function hermesShrineFills(
+  catalog: Catalog,
   artifacts: BiomeCandidateArtifacts,
   owner: OccurrenceAddress,
   occurrence: RoomOccurrence,
@@ -216,6 +242,9 @@ function hermesShrineFills(
   const capability = artifacts.hermesShrines.at(owner);
   if (shrine === undefined || capability === undefined || !capability.present) return [];
   const fills: StockFill[] = [];
+  const undrawn = undrawnOptions(catalog, 'SurfaceShop', 'rewardType');
+  const drawable = (legal: readonly string[]) =>
+    legal.filter((rewardType) => !undrawn.has(rewardType));
   const identity = (generationKey: string) =>
     `${occurrence.occurrenceId}|hermesShrine|${generationKey}`;
   const push = (generationKey: HermesShrineGenerationKey, command: ProjectCommand) => {
@@ -234,7 +263,7 @@ function hermesShrineFills(
     const generationKey = hermesShrineInitialGenerationKey(slotKey);
     const rewardType = draw(
       identity(generationKey),
-      capability.candidateRewardTypesBySlot[slotKey],
+      drawable(capability.candidateRewardTypesBySlot[slotKey]),
       slotKey === 'first' ? new Set() : claimed,
     );
     if (rewardType === undefined) continue;
@@ -250,7 +279,7 @@ function hermesShrineFills(
   if (refill !== undefined && (shrine.travelDealRefill?.offer ?? null) === null) {
     const rewardType = draw(
       identity(`travelDealRefill|${refill.sourceGenerationKey}`),
-      refill.candidateRewardTypes,
+      drawable(refill.candidateRewardTypes),
       new Set(),
     );
     if (rewardType !== undefined)
@@ -537,12 +566,13 @@ function worldShopFills(
   if (shop === undefined) return [];
   const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
   const profile = catalog.rewards.shops.byKey[shop.profileKey];
+  const undrawn = undrawnOptions(catalog, shop.profileKey, 'key');
   const draw = (offer: ShopOfferAddress, valuesSlotKey: string): StockFill | undefined => {
     const producer = artifacts.rewardProducers.at(offer);
     const evaluate = producer?.evaluateShopOption;
     if (evaluate === undefined) return undefined;
     const legal = shopOfferOptionValues(catalog, shop.profileKey, valuesSlotKey).filter(
-      (value) => evaluate(offer, value).supported,
+      (value) => !undrawn.has(value.optionKey) && evaluate(offer, value).supported,
     );
     const key = stableChoice(
       `${occurrence.occurrenceId}|worldShop|${offer.offerKey}`,
@@ -635,8 +665,10 @@ export function stockFills(
     return biomeArtifacts === undefined ? [] : [{ artifacts: biomeArtifacts, owner, occurrence }];
   });
   const fills = [
-    stygianWellFills,
-    hermesShrineFills,
+    (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
+      stygianWellFills(catalog, room, owner, occurrence),
+    (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
+      hermesShrineFills(catalog, room, owner, occurrence),
     (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>
       purgingPoolFills(room, owner, occurrence, poolValuesBefore),
     (room: BiomeCandidateArtifacts, owner: OccurrenceAddress, occurrence: RoomOccurrence) =>

@@ -222,6 +222,12 @@ export interface ShopOptionEntry {
     readonly healthCost: { readonly min: number; readonly max: number };
     readonly goldPerHealthHundredths: { readonly min: number; readonly max: number };
   };
+  /**
+   * A native offer condition on live hero state the planner does not model
+   * (`missingLastStand`: offered only while the hero is missing a Last Stand).
+   * No automatic stock draw takes the option; a chosen one stays legal.
+   */
+  readonly unmodeledOfferCondition?: 'missingLastStand';
 }
 
 /**

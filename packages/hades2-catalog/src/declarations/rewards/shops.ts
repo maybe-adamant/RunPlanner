@@ -86,6 +86,12 @@ function ordinaryRouteOption(
   return routeOption({ kind: 'not', requirement: dreamRoute }, declaration);
 }
 
+/**
+ * ConsumableData LastStandDrop and LastStandShopItem: `GameStateRequirements`
+ * and `PurchaseRequirements` both `MissingLastStand`, checked at stock generation.
+ */
+const missingLastStand = { unmodeledOfferCondition: 'missingLastStand' } as const;
+
 /** An item whose native gate needs progression a fresh profile's first attempt cannot reach. */
 function matureSaveOption(
   declaration: RawShopOptionEntryDeclaration,
@@ -389,11 +395,18 @@ export const shops = [
             gold(115),
             timedTrait('TemporaryHealExpirationTrait', 4, 'encounters'),
           ),
-          wellOption('LastStandShopItem', 'Kiss of Styx', 'LastStandDrop', gold(200), {
-            kind: 'consumable',
-            acquisitionGameName: 'LastStandShopItem',
-            publishedEffect: 'lastStand',
-          }),
+          wellOption(
+            'LastStandShopItem',
+            'Kiss of Styx',
+            'LastStandDrop',
+            gold(200),
+            {
+              kind: 'consumable',
+              acquisitionGameName: 'LastStandShopItem',
+              publishedEffect: 'lastStand',
+            },
+            missingLastStand,
+          ),
         ],
       },
       {
@@ -531,7 +544,12 @@ export const shops = [
           option({ key: 'RoomRewardHealDrop', cost: gold(50), rewardType: 'RoomRewardHealDrop' }),
           option({ key: 'ArmorBigBoost', cost: gold(80), rewardType: 'ArmorBigBoost' }),
           option({ key: 'ArmorBoost', cost: gold(40), rewardType: 'ArmorBoost' }),
-          option({ key: 'LastStandDrop', cost: gold(200), rewardType: 'LastStandDrop' }),
+          option({
+            key: 'LastStandDrop',
+            cost: gold(200),
+            rewardType: 'LastStandDrop',
+            ...missingLastStand,
+          }),
           option({ key: 'GiftDrop', cost: gold(75), rewardType: 'GiftDrop' }),
         ],
       },
@@ -700,7 +718,12 @@ export const shops = [
             requirement: notFreshFileRoute,
           }),
           // A fresh profile has no Death Defiance to refill.
-          matureSaveOption({ key: 'LastStandDrop', cost: gold(200), rewardType: 'LastStandDrop' }),
+          matureSaveOption({
+            key: 'LastStandDrop',
+            cost: gold(200),
+            rewardType: 'LastStandDrop',
+            ...missingLastStand,
+          }),
         ],
       },
       {
@@ -909,7 +932,12 @@ export const shops = [
             cost: gold(80),
             rewardType: 'ArmorBigBoost',
           }),
-          option({ key: 'LastStandDrop', cost: gold(200), rewardType: 'LastStandDrop' }),
+          option({
+            key: 'LastStandDrop',
+            cost: gold(200),
+            rewardType: 'LastStandDrop',
+            ...missingLastStand,
+          }),
         ],
       },
       {
