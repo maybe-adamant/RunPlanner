@@ -10,11 +10,15 @@ import {
   createAllTogetherSetAddress,
   createEchoLastRunBoonAddress,
   createNaturalSelectionResultAddress,
+  createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   semanticAddressKey,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
 import { expect, it } from 'vitest';
+import { catalog } from '@run-planner/hades2-catalog';
+import { catalogFindingLabels, presentFinding } from '@planner/projections/evaluationProjection';
 import type { WorkspaceInspectorDestination } from '@planner/projections/structured-workspace/contracts/navigation';
 import {
   echoLastRunOptionControl,
@@ -263,4 +267,47 @@ it('marks a Path of Stars screen finding on its launcher, apart from the row pic
   expect(findingRepairTarget(finding('rewardAcquisitionUnavailable'), destinations)).toBe(
     findingControlKey(role, 'pickupOutcome'),
   );
+});
+
+it('marks a refused Nemesis family at its type picker, and her row by its move control', () => {
+  const biome = createBiomeAddress('Underworld', 'F');
+  const id = createOccurrenceId('nemesis-room');
+  const event = createNemesisRandomEventAddress(
+    createEncounterPhaseAddress(biome, { kind: 'occurrence', occurrenceId: id }, 'Encounter'),
+  );
+  const row = createRoomActionAddress(biome, id, 'interact-nemesis');
+  const evidence = {
+    kind: 'damageTrade',
+    reason: 'heldTrait',
+    traitKey: 'ReserveManaHitShieldBoon',
+  };
+  const entry: SemanticFinding = {
+    code: 'nemesisEventUnavailable',
+    origin: event,
+    evidence,
+    phase: 'rewardGeneration',
+  };
+  const interaction: SemanticFinding = { ...entry, origin: row };
+  const destinations = new Map<string, WorkspaceInspectorDestination>(
+    [event, row].map((address) => [
+      semanticAddressKey(address),
+      {
+        biomeKey: 'F',
+        routeKey: 'Underworld',
+        ownerAddress: address,
+        focusAddress: address,
+        focusKey: semanticAddressKey(address),
+        region: 'structure',
+        nodeKey: 'room',
+        inspectorSubject: { kind: 'node', nodeKey: 'room' },
+      },
+    ]),
+  );
+  expect(findingRepairTarget(entry, destinations)).toBe(findingControlKey(event));
+  expect(findingRepairTarget(interaction, destinations)).toBe(findingControlKey(row, 'move'));
+  const labels = catalogFindingLabels(catalog);
+  expect(presentFinding(interaction, labels)).toEqual({
+    title: `Talk to Nemesis before taking ${catalog.traits.byKey.ReserveManaHitShieldBoon!.label}`,
+  });
+  expect(presentFinding(entry, labels).title).toBe('Nemesis cannot offer this event type here');
 });

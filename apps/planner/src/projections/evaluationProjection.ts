@@ -1185,6 +1185,17 @@ export function presentFinding(
         ]),
       });
   }
+  // Her row's own finding is repaired by order: talk to her before the shield is taken.
+  if (finding.code === 'nemesisEventUnavailable' && finding.origin.kind === 'roomAction') {
+    const traitKey = evidenceString(finding.evidence.traitKey);
+    const trait = traitKey === undefined ? undefined : labels?.trait(traitKey);
+    return Object.freeze({
+      title: fittingTitle([
+        trait === undefined ? undefined : `Talk to Nemesis before taking ${trait}`,
+        'Talk to Nemesis before taking that boon',
+      ]),
+    });
+  }
   if (finding.code === 'roomAlreadyVisited') {
     const occurrenceId = evidenceString(finding.evidence.occurrenceId);
     const room =

@@ -36,6 +36,9 @@ function roomActionControl(finding: SemanticFinding): WorkspaceFindingControl | 
     case 'nemesisOutcomeMissing':
     case 'nemesisOutcomeUnavailable':
       return finding.evidence.kind === 'traitTrade' ? 'nemesisTrait' : 'nemesisReward';
+    // Her row stands after a pickup that turns her event ineligible: it is repaired by order.
+    case 'nemesisEventUnavailable':
+      return 'move';
     default:
       return undefined;
   }
