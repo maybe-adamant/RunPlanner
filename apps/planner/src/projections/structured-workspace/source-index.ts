@@ -1309,6 +1309,27 @@ export function createWorkspaceProjectSourceIndex(
         : [],
     ),
   );
+  // A Ship room publishes its state at its first encounter rather than on entry.
+  const firstEncounterRunDepths = new Map<string, number>();
+  for (const biome of routeEvaluation?.biomes ?? []) {
+    if (!('rewards' in biome)) continue;
+    for (const snapshot of biome.rewards.runStateSnapshots) {
+      const owner = snapshot.owner;
+      if (
+        owner.kind !== 'roomRunStateCheckpoint' ||
+        owner.checkpoint.kind !== 'beforeEncounterStart'
+      )
+        continue;
+      const room = semanticAddressKey(
+        createOccurrenceAddress(
+          createBiomeAddress(owner.routeKey, owner.biomeKey),
+          owner.occurrenceId,
+        ),
+      );
+      if (!firstEncounterRunDepths.has(room))
+        firstEncounterRunDepths.set(room, snapshot.counters.runDepthCache);
+    }
+  }
   const horizon = evaluation.authoringHorizon;
   const planEnd: WorkspaceRoutePlanEndSource = Object.freeze({
     ...(horizon.kind === 'ended' && horizon.blockedAfter.routeKey === route.routeKey
@@ -1331,9 +1352,9 @@ export function createWorkspaceProjectSourceIndex(
       (planEnd.endRoom?.biomeKey === room.biomeKey && planEnd.readiness(room) === 'locked');
     const runDepth = pastEnd
       ? undefined
-      : enteredRunDepths.get(
+      : (enteredRunDepths.get(
           semanticAddressKey(createRoomRunStateCheckpointAddress(room, { kind: 'roomEntered' })),
-        );
+        ) ?? firstEncounterRunDepths.get(semanticAddressKey(room)));
     return Object.freeze({ gameName, ...(runDepth === undefined ? {} : { runDepth }) });
   };
   const hubRunDepth = (hub: HubRoomAddress) =>
