@@ -37,6 +37,13 @@ import type {
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import { galleryCases } from '@planner-test/support/gallery/cases';
 import { buildGalleryProject } from '@planner-test/support/gallery/galleryCase';
+import type {
+  RoomSpawnedLoot,
+  SpawnCause,
+  SpawnMoment,
+  SpawnMomentKind,
+} from '@run-planner/engine/simulation';
+import { projectSpawnedLoot } from '@planner/projections/structured-workspace/assembly/occurrence-spawned-loot-projection';
 
 function roomOf(project: ProjectDocument, biomeKey: string, occurrenceId: OccurrenceId) {
   const node = projectStructuredWorkspaceFixture(project)
@@ -169,6 +176,76 @@ describe('spawn notices', () => {
       'action interactIncomingReward',
       'doorsOpened',
     ]);
+  });
+
+  it('attaches each notice after its cause, unlocks first, a Ship begin at its Combat', () => {
+    const room = roomOf(surfaceShrineDeliveriesProject(), 'O', oOccurrenceIds.combat04);
+    const entries = room.roomActions!.timeline.entries.filter((entry) => entry.kind !== 'spawned');
+    const rows = room.roomActions!.rows;
+    const reward = rows.find((row) => row.reference.kind === 'interactWheelReward')!;
+    const automatic = { kind: 'automatic' } as const;
+    const event = (kind: 'encounterEnd' | 'encounterBegun'): SpawnCause => ({
+      kind: 'event',
+      event:
+        kind === 'encounterEnd'
+          ? { kind, key: 'encounterEnd:Combat1', phaseKey: 'Combat1', trigger: automatic }
+          : {
+              kind,
+              key: 'encounterBegun:Combat1',
+              phaseKey: 'Combat1',
+              trigger: automatic,
+              markers: 'merged',
+            },
+    });
+    const moment = (kind: SpawnMomentKind, cause: SpawnCause): SpawnMoment => ({
+      key: `${kind}:Combat1`,
+      kind,
+      phaseKey: 'Combat1',
+      cause,
+      items: [],
+    });
+    const loot: RoomSpawnedLoot = {
+      owner: room.roomActions!.owner,
+      unlocks: [
+        {
+          key: 'encounterEnd:Combat1',
+          kind: 'encounterEnd',
+          phaseKey: 'Combat1',
+          cause: event('encounterEnd'),
+          items: [],
+        },
+      ],
+      moments: [
+        // An H-style begin: in a Ship its Encounter hides behind Wheels open and shows at Combat.
+        moment('encounterBegun', event('encounterBegun')),
+        moment('encounterEnd', event('encounterEnd')),
+        moment('afterEncounterReward', { kind: 'action', action: reward.address }),
+        moment('wheelsOpen', { kind: 'timelineEnd' }),
+      ],
+      actionSpawns: [],
+    };
+    const placed = sequence(
+      projectSpawnedLoot(catalog, loot, entries, rows, { kind: 'none' }).entries,
+    );
+    const after = (key: string, count: number) =>
+      placed.slice(placed.indexOf(key), placed.indexOf(key) + count);
+    expect(placed).not.toContain('encounterBegun:Combat1');
+    expect(after('encounterStarted:Combat1', 2)).toEqual([
+      'encounterStarted:Combat1',
+      'spawned encounterBegun:Combat1',
+    ]);
+    expect(after('encounterEnd:Combat1', 4)).toEqual([
+      'encounterEnd:Combat1',
+      'spawned unlock:encounterEnd:Combat1',
+      'spawned encounterEnd:Combat1',
+      'action interactWheelReward',
+    ]);
+    expect(after('action interactWheelReward', 2)).toEqual([
+      'action interactWheelReward',
+      'spawned afterEncounterReward:Combat1',
+    ]);
+    // The Timeline's end follows everything, its last entry included.
+    expect(placed.at(-1)).toBe('spawned wheelsOpen:Combat1');
   });
 
   it('notifies Fields cage and optional rewards on entry, each marked by its slot', () => {

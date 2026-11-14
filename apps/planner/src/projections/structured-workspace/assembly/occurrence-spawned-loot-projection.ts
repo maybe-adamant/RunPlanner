@@ -169,25 +169,33 @@ function entryKey(entry: TimelineEntry): string | undefined {
   }
 }
 
-/** The entry a notice follows: its cause's, an encounter's begin shown on the marker that begins it. */
-function causeKey(cause: SpawnCause, entries: readonly TimelineEntry[]): string {
-  if (cause.kind === 'action') return `action:${cause.action.actionKey}`;
-  const event = cause.event;
-  if (event.kind === 'encounterBegun') {
-    const marker = entries.find(
-      (entry) =>
-        entry.kind === 'boundary' &&
-        (entry.boundary.key === event.key ||
-          (entry.beginsEncounter === true &&
-            'phaseKey' in entry.boundary &&
-            entry.boundary.phaseKey === event.phaseKey)),
-    );
-    if (marker !== undefined) return entryKey(marker)!;
+/**
+ * The entry a notice follows: its cause's; an encounter's begin the Timeline
+ * shows as one marker with its Combat follows that Combat, else Room entered.
+ * Undefined after the whole Timeline.
+ */
+function causeKey(cause: SpawnCause, entries: readonly TimelineEntry[]): string | undefined {
+  switch (cause.kind) {
+    case 'action':
+      return `action:${cause.action.actionKey}`;
+    case 'timelineEnd':
+      return undefined;
+    case 'event': {
+      const event = cause.event;
+      if (event.kind !== 'encounterBegun') return `event:${event.key}`;
+      const marker = entries.find(
+        (entry) =>
+          entry.kind === 'boundary' &&
+          (entry.boundary.key === event.key ||
+            (entry.boundary.kind === 'encounterStarted' &&
+              entry.boundary.phaseKey === event.phaseKey)),
+      );
+      return marker === undefined ? 'event:roomEntered' : entryKey(marker);
+    }
   }
-  return `event:${event.key}`;
 }
 
-/** Each notice right after its cause's entry, in notice order; one whose entry is not shown ends the list. */
+/** Each notice right after its cause's entry, in notice order; the rest end the list. */
 function attachNotices(
   entries: readonly TimelineEntry[],
   notices: readonly (readonly [SpawnCause, SpawnedEntry])[],
@@ -201,7 +209,7 @@ function attachNotices(
     if (key !== undefined)
       out.push(...keyed.flatMap(([at, notice]) => (at === key ? [notice] : [])));
   }
-  out.push(...keyed.flatMap(([at, notice]) => (shown.has(at) ? [] : [notice])));
+  out.push(...keyed.flatMap(([at, notice]) => (at !== undefined && shown.has(at) ? [] : [notice])));
   return Object.freeze(out);
 }
 

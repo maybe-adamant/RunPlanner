@@ -84,6 +84,11 @@ import {
   editTestRoomActionOrder,
   purchaseTestHermesShrineOffer,
 } from '@run-planner/test-fixtures/shared';
+import { authoredRoom } from '../../src/simulation/evaluation/evaluated-room';
+import {
+  spawnMomentBoundaryCause,
+  spawnMomentEntryIndex,
+} from '../../src/simulation/evaluation/spawned-loot';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
 
@@ -135,7 +140,11 @@ function momentRewards(spawned: RoomSpawnedLoot) {
 /** What each unlock and moment follows on the Timeline: an event's key or an action's. */
 function causes(spawned: RoomSpawnedLoot) {
   const follows = (cause: SpawnCause) =>
-    cause.kind === 'event' ? cause.event.key : `action:${cause.action.actionKey}`;
+    cause.kind === 'event'
+      ? cause.event.key
+      : cause.kind === 'action'
+        ? `action:${cause.action.actionKey}`
+        : cause.kind;
   return [
     ...spawned.unlocks.map((unlock) => [`unlock:${unlock.key}`, follows(unlock.cause)]),
     ...spawned.moments.map((moment) => [moment.key, follows(moment.cause)]),
@@ -890,6 +899,34 @@ describe('spawned loot', () => {
       expect(
         causes(loot(loadUnderworldFGHCheckpoint(), 'F', 'golden-f-preboss-shop:boss').spawned),
       ).toEqual([['encounterEnd:Encounter', 'encounterEnd:Encounter']]);
+    });
+
+    it('follows Boss defeated where the Timeline shows no encounter end, else the Timeline’s end', () => {
+      // Every Boss phase's graph ends with its encounter end; drop it to reach the fallbacks.
+      const { assembly, spawned } = loot(
+        loadUnderworldFGHCheckpoint(),
+        'F',
+        'golden-f-preboss-shop:boss',
+      );
+      const entries = authoredRoom(assembly, spawned.owner)!.roomLifecycleTimeline.entries;
+      const without = (...kinds: readonly string[]) =>
+        entries.filter(
+          (entry) => entry.kind !== 'boundary' || !kinds.includes(entry.boundary.kind),
+        );
+      const follows = (cause: SpawnCause) =>
+        cause.kind === 'event' ? cause.event.key : cause.kind;
+      expect(
+        follows(spawnMomentBoundaryCause(without('encounterEnd'), 'encounterEnd', 'Encounter')),
+      ).toBe('bossDefeated:Encounter');
+      const bare = without('encounterEnd', 'bossDefeated');
+      expect(follows(spawnMomentBoundaryCause(bare, 'encounterEnd', 'Encounter'))).toBe(
+        'timelineEnd',
+      );
+      // The walk judges such a moment at the last entry, after everything the Timeline shows.
+      expect(spawnMomentEntryIndex(bare, 'encounterEnd', 'Encounter')).toBe(bare.length - 1);
+      expect(
+        follows(spawnMomentBoundaryCause(entries, 'wheelsOpen', 'Encounter', 'absentWheel')),
+      ).toBe('timelineEnd');
     });
 
     it('follows the wheel reward’s collection for an O phase’s end effects, and the next Wheels open for an earlier phase’s', () => {
