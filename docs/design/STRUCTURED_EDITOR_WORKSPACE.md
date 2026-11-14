@@ -944,8 +944,8 @@ row per exit: its door name (a door number, with any door
 type such as Indoor muted beneath it, or Contract or Chaos Gate), its room, its
 reward, an action zone, and its map, pinned last at the table's right edge.
 The zone holds the row's actions and notices (an Anomaly replacement or
-restoration, a reroll repair, a hidden reward's tag) without moving the reward
-or the map. Normal doors, takeover doors and additional exits (Chaos Gate,
+restoration, each an icon of what the door becomes with an action badge, a
+reroll repair, a hidden reward's tag) without moving the reward or the map. Normal doors, takeover doors and additional exits (Chaos Gate,
 Infernal Contract) share these columns, and the table keeps a working width
 rather than stretching across the panel. Each row names its room once; a value
 the declaration fixes (a takeover room, an additional exit's room or reward,

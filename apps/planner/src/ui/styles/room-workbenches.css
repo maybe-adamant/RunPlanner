@@ -237,6 +237,26 @@
   filter: none;
 }
 
+/* A door's one-press change, sized as an icon toggle: what the door becomes, badged as an action. */
+.door-change-action {
+  position: relative;
+  display: inline-grid;
+  width: var(--timeline-control-height, 26px);
+  height: var(--timeline-control-height, 26px);
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.door-change-action:hover,
+.door-change-action:focus-visible {
+  border-color: var(--border);
+  background: rgb(255 255 255 / 5%);
+}
+
 /* Aetos is one compact picker: his icon, the wave and the caret. */
 .encounter-aetos-picker {
   display: inline-flex;

@@ -2138,21 +2138,15 @@ describe('DecisionWorkbench', () => {
       await pickExit(view.user, `Door ${target.index}`);
       expandDoors();
       await waitFor(() =>
-        expect(
-          screen.getAllByRole('button', { name: /^Replace Door \d+ with Anomaly$/ }),
-        ).toHaveLength(1),
+        expect(screen.getAllByRole('button', { name: 'Make Anomaly' })).toHaveLength(1),
       );
     }
     const targetCard = doorRow(`Door ${target.index}`);
-    expect(screen.getAllByRole('button', { name: /^Replace Door \d+ with Anomaly$/ })).toHaveLength(
-      1,
-    );
-    await view.user.click(
-      within(targetCard).getByRole('button', { name: /^Replace Door \d+ with Anomaly$/ }),
-    );
+    expect(screen.getAllByRole('button', { name: 'Make Anomaly' })).toHaveLength(1);
+    await view.user.click(within(targetCard).getByRole('button', { name: 'Make Anomaly' }));
     const anomalyCard = screen
       .getAllByLabelText(/ room offer$/)
-      .find((card) => within(card).queryByRole('button', { name: /^Restore / }));
+      .find((card) => within(card).queryByRole('button', { name: 'Restore door' }));
     if (anomalyCard === undefined) throw new Error('Authored Anomaly target card is missing');
     expect(within(anomalyCard).getByRole('button', { name: /^Door \d+ room$/ })).toBeTruthy();
     const commands = dispatch.mock.calls

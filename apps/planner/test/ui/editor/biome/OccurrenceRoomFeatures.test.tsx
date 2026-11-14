@@ -135,7 +135,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(screen.getByRole('heading', { level: 3 })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' })).toBeTruthy();
     expect(screen.queryByLabelText('Room')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Restore Combat 01/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Restore door' })).toBeNull();
     view.unmount();
     cleanup();
 
@@ -148,11 +148,7 @@ describe('OccurrenceRoomFeatures', () => {
     );
     expect(screen.getByLabelText('Reward')).toBeTruthy();
     const map = screen.getByRole('button', { name: /^Door \d+ room$/ });
-    // Restore names the door it acts on, as Replace with Anomaly does.
-    const doorNumber = /^Door (\d+) room$/.exec(map.getAttribute('aria-label') ?? '')?.[1];
-    const restore = screen.getByRole('button', {
-      name: `Restore Combat 01 on Door ${doorNumber}`,
-    });
+    const restore = screen.getByRole('button', { name: 'Restore door' });
     expect(map.textContent).toContain('Anomaly 01');
     expect(screen.queryByRole('button', { name: /^Anomaly outcome/ })).toBeNull();
     await door.user.click(map);
@@ -235,11 +231,11 @@ describe('OccurrenceRoomFeatures', () => {
     });
     renderOccurrenceWorkbench(invalid, 'Underworld', 'G', occurrenceById(occurrenceId));
     expect(screen.queryByLabelText('Room')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Restore Combat 01/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Restore door' })).toBeNull();
     cleanup();
     renderDecisionWorkbench(invalid, 'Underworld', 'G', decisionContainingOccurrence(occurrenceId));
     expect(screen.getByRole('button', { name: /^Door \d+ room$/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^Restore Combat 01 on Door \d+$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Restore door' })).toBeTruthy();
   });
   it('authors a Gold trade immediately from Event through its action-row interaction and Undo', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);

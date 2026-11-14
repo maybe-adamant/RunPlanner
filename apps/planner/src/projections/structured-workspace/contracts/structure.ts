@@ -54,7 +54,6 @@ import type { WorkspaceFountainRarityControl } from './timeline';
 
 export interface WorkspaceAnomalyControl {
   readonly mapChoices: readonly WorkspaceRoomChoice[];
-  readonly rememberedRoomLabel: string;
   readonly success: boolean;
 }
 

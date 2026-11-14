@@ -943,10 +943,6 @@ export function assembleWorkspaceOccurrence(
               `${semanticAddressKey(address)} Anomaly has no replacement provenance`,
             );
           }
-          const remembered = requireRoom(
-            input.catalog,
-            occurrence.anomalyReplacement.replacedRoomGameName,
-          );
           return {
             anomaly: Object.freeze({
               mapChoices: Object.freeze(
@@ -959,7 +955,6 @@ export function assembleWorkspaceOccurrence(
                   });
                 }),
               ),
-              rememberedRoomLabel: remembered.label,
               success: occurrence.state.success,
             }),
           };

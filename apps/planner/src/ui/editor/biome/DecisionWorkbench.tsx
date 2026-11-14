@@ -35,7 +35,11 @@ import { RoomFeatureMapLegend, RoomFeatureMapPoints } from './room-map/RoomMapPo
 import { useRoomMapLinks, type RoomMapHighlight } from './room-map/roomMapHighlight';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { CandidatePicker } from './CandidatePicker';
-import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
+import {
+  AnomalyRoomControl,
+  MakeAnomalyAction,
+  RevertAnomalyAction,
+} from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
 import { roomKindIcon } from './roomIcon';
 import { DoorRewardEditor, DoorRewardHiddenTag, FixedRewardChip } from './DoorRewardEditor';
@@ -383,11 +387,8 @@ function TargetRow({
     door.room.anomaly === undefined;
   const replaceWithAnomaly =
     !target.selected || target.anomalyTakeover === undefined ? null : (
-      <button
-        aria-label={`Replace Door ${target.index} with Anomaly`}
-        className="quiet-action action-compact"
-        data-command="SwitchTargetToAnomaly"
-        onClick={() =>
+      <MakeAnomalyAction
+        onMake={() =>
           dispatch(
             authoredProjectCommandDispatched({
               kind: 'SwitchTargetToAnomaly',
@@ -395,10 +396,7 @@ function TargetRow({
             }),
           )
         }
-        type="button"
-      >
-        {target.anomalyTakeover.label}
-      </button>
+      />
     );
   return (
     <DoorRow
@@ -442,9 +440,7 @@ function TargetRow({
         <>
           <DoorRewardHiddenTag door={door} />
           {replaceWithAnomaly}
-          {door.room.anomaly === undefined ? null : (
-            <RevertAnomalyAction doorIndex={target.index} room={door.room} />
-          )}
+          {door.room.anomaly === undefined ? null : <RevertAnomalyAction room={door.room} />}
         </>
       }
       state={{
