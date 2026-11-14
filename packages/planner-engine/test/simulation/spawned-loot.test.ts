@@ -28,6 +28,7 @@ import {
   encounterOutcomesForProjectEvaluationAssembly,
   spawnedLootForProjectEvaluationAssembly,
   type RoomSpawnedLoot,
+  type SpawnCause,
   type SpawnedLootItem,
 } from '@run-planner/engine/simulation';
 import {
@@ -129,6 +130,16 @@ function unlocks(spawned: RoomSpawnedLoot) {
 /** What each moment's items spawn as. */
 function momentRewards(spawned: RoomSpawnedLoot) {
   return spawned.moments.map((moment) => [moment.key, moment.items.map((item) => item.reward)]);
+}
+
+/** What each unlock and moment follows on the Timeline: an event's key or an action's. */
+function causes(spawned: RoomSpawnedLoot) {
+  const follows = (cause: SpawnCause) =>
+    cause.kind === 'event' ? cause.event.key : `action:${cause.action.actionKey}`;
+  return [
+    ...spawned.unlocks.map((unlock) => [`unlock:${unlock.key}`, follows(unlock.cause)]),
+    ...spawned.moments.map((moment) => [moment.key, follows(moment.cause)]),
+  ];
 }
 
 const offer = (rewardType: string) => ({ kind: 'offer', offer: { rewardType } });
@@ -844,5 +855,61 @@ describe('spawned loot', () => {
     expect(actionSpawns(loot(project, 'O', combat02).spawned)).toEqual([
       ['rushHermesShrineOffer', ['hermesShrineDelivery optional unplaced:InsertRoomAction']],
     ]);
+  });
+
+  describe('causes', () => {
+    it('follows Room entered for entry loot and the fourth-biome delivery flush', () => {
+      expect(causes(loot(loadSurfaceNCheckpoint(), 'N', nOccurrenceIds.opening).spawned)).toEqual([
+        ['roomEntered', 'roomEntered'],
+      ]);
+      expect(
+        causes(loot(surfaceShrineDeliveriesProject(), 'Q', qOccurrenceIds.preboss).spawned),
+      ).toEqual([['deliveryFlush', 'roomEntered']]);
+    });
+
+    it('follows an encounter’s begin for a caged miniboss reward and its end for the unlock', () => {
+      expect(
+        causes(loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-miniboss01').spawned),
+      ).toEqual([
+        ['unlock:encounterEnd:Encounter', 'encounterEnd:Encounter'],
+        ['encounterBegun:Encounter', 'encounterBegun:Encounter'],
+      ]);
+    });
+
+    it('follows each Fields cage’s end for its unlock', () => {
+      expect(causes(loot(loadUnderworldFGHCheckpoint(), 'H', 'golden-h-combat02').spawned)).toEqual(
+        [
+          ['unlock:encounterEnd:Cage02', 'encounterEnd:Cage02'],
+          ['unlock:encounterEnd:Cage01', 'encounterEnd:Cage01'],
+          ['roomEntered', 'roomEntered'],
+        ],
+      );
+    });
+
+    it('follows the encounter’s end, never Boss defeated, in a Boss room', () => {
+      expect(
+        causes(loot(loadUnderworldFGHCheckpoint(), 'F', 'golden-f-preboss-shop:boss').spawned),
+      ).toEqual([['encounterEnd:Encounter', 'encounterEnd:Encounter']]);
+    });
+
+    it('follows the wheel reward’s collection for an O phase’s end effects, and the next Wheels open for an earlier phase’s', () => {
+      const project = surfaceShrineDeliveriesProject();
+      const combat04 = loot(project, 'O', oOccurrenceIds.combat04).spawned;
+      const reward = (spawned: RoomSpawnedLoot) =>
+        spawned.moments
+          .flatMap((moment) => moment.items)
+          .find((item) => item.source.kind === 'rewardWheel')!.reference;
+      expect(causes(combat04)).toEqual([
+        ['encounterEnd:Combat1', 'encounterEnd:Combat1'],
+        ['afterEncounterReward:Combat1', `action:${roomActionKey(reward(combat04))}`],
+      ]);
+      const combat01 = loot(project, 'O', oOccurrenceIds.combat01).spawned;
+      // The Intro phase's end effects spawn as wheel1 opens, which the moment names.
+      expect(causes(combat01)).toEqual([
+        ['wheelsOpen:Intro', 'wheelsOpen:wheel1'],
+        ['encounterEnd:Combat1', 'encounterEnd:Combat1'],
+        ['afterEncounterReward:Combat1', `action:${roomActionKey(reward(combat01))}`],
+      ]);
+    });
   });
 });

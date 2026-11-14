@@ -806,7 +806,13 @@ offer's earlier screens settle with the offer.
 
 An engine-owned read-only query publishes, for each entered room, the loot
 the game spawns on its own, grouped by the moment it appears, each moment
-keyed by its kind and phase and listing its items in spawn order. The room
+keyed by its kind and phase and listing its items in spawn order. Each moment
+and unlock names its cause, the Timeline entry it follows: the boundary it
+happens at (a Boss room's encounter end, not Boss defeated; an earlier Ship
+phase's end effects at the Wheels open they share; the Preboss flush at Room
+entered; a moment whose boundary the Timeline does not show at its last entry),
+or, for a Ship phase's end effects after the wheel reward, that reward's
+collect row, which they wait on. The room
 reward spawns at the encounter's end; on entry for a role taken before combat
 (an Opening reward, Devotion's choice) or a room without combat; and at the
 start of an encounter that spawns it first (the H minibosses). Arachne's

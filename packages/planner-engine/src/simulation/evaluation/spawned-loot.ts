@@ -38,6 +38,7 @@ import {
   asUnplacedWhenReplaced,
   type RoomActionParticipation,
   type RoomActionRow,
+  type RoomLifecycleBoundary,
   type RoomLifecycleTimelineEntry,
 } from '../room-actions';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
@@ -129,13 +130,23 @@ export interface SpawnedLootItem {
 export type PickupOutcomeChoice =
   'levelResolution' | 'traitOffer' | 'anvilResult' | 'hexActivation';
 
+/**
+ * The Timeline entry a moment or unlock follows: the boundary it happens at,
+ * or the ranked action whose settlement releases it.
+ */
+export type SpawnCause =
+  | { readonly kind: 'event'; readonly event: RoomLifecycleBoundary }
+  | { readonly kind: 'action'; readonly action: RoomActionAddress };
+
 export interface SpawnMoment {
   /** Stable within the room: the kind, plus the phase where it has one. */
   readonly key: string;
   readonly kind: SpawnMomentKind;
+  /** The phase it belongs to; for `wheelsOpen`, the phase whose end effects spawn it. */
   readonly phaseKey?: string;
   /** The wheel a `wheelsOpen` moment opens with. */
   readonly wheelKey?: string;
+  readonly cause: SpawnCause;
   /** In the game's spawn order. */
   readonly items: readonly SpawnedLootItem[];
 }
@@ -146,6 +157,7 @@ export interface SpawnUnlock {
   readonly key: string;
   readonly kind: 'encounterEnd';
   readonly phaseKey: string;
+  readonly cause: SpawnCause;
   /** The same items as their spawn moments list, in spawn order. */
   readonly items: readonly SpawnedLootItem[];
 }
@@ -473,6 +485,25 @@ export function spawnMomentEntryIndex(
 }
 
 /**
+ * The cause of a moment at its Timeline index: that boundary's event, or,
+ * where the Timeline does not show its boundary and the index is the last
+ * entry, the last action or boundary at or before it.
+ */
+function causeAt(
+  entries: readonly RoomLifecycleTimelineEntry[],
+  index: number,
+  actionAddress: (reference: RoomActionReference) => RoomActionAddress,
+): SpawnCause {
+  for (let at = index; at >= 0; at -= 1) {
+    const entry = entries[at]!;
+    if (entry.kind === 'boundary') return frozen({ kind: 'event', event: entry.boundary });
+    if (entry.kind === 'action')
+      return frozen({ kind: 'action', action: actionAddress(entry.action.reference) });
+  }
+  throw new Error('a room lifecycle timeline starts with Room entered');
+}
+
+/**
  * The loot the game spawns in one entered room, grouped by the
  * moment it appears or the action whose settlement spawns it. Items are what
  * spawned, from the active action domain and the reached due contacts, placed
@@ -645,6 +676,13 @@ export function spawnedLootForProjectEvaluationAssembly(
   /** The wheel that opens right after this phase's end, when one does. */
   const nextWheelKey = (phaseKey: string): string | undefined =>
     nextWheelsOpen(structure, phaseKey)?.wheelKey;
+  /** The collect row of a Ship phase's wheel reward. */
+  const wheelReward = (phaseKey: string | undefined): RoomActionReference | undefined => {
+    const wheelKey = structure.phases.find((phase) => phase.phaseKey === phaseKey)?.rewardWheelKey;
+    return wheelKey === undefined
+      ? undefined
+      : frozen({ kind: 'interactWheelReward' as const, wheelKey });
+  };
   const momentState = (kind: SpawnMomentKind, phaseKey: string | undefined): EntryState => {
     switch (kind) {
       case 'roomEntered':
@@ -662,15 +700,21 @@ export function spawnedLootForProjectEvaluationAssembly(
       case 'afterEncounterReward': {
         const end = walk.entry(spawnMomentEntryIndex(entries, kind, phaseKey));
         // A Ship wheel's end effects spawn only once its reward is collected.
-        const wheelKey = structure.phases.find(
-          (phase) => phase.phaseKey === phaseKey,
-        )?.rewardWheelKey;
-        const collected =
-          wheelKey !== undefined &&
-          actionSettled(frozen({ kind: 'interactWheelReward' as const, wheelKey }));
-        return collected ? end : 'unreached';
+        const reward = wheelReward(phaseKey);
+        return reward !== undefined && actionSettled(reward) ? end : 'unreached';
       }
     }
+  };
+  const momentCause = (
+    kind: SpawnMomentKind,
+    phaseKey: string | undefined,
+    wheelKey: string | undefined,
+  ): SpawnCause => {
+    // Its end effects wait on the wheel reward, so they follow that row's collection.
+    const reward = kind === 'afterEncounterReward' ? wheelReward(phaseKey) : undefined;
+    return reward !== undefined
+      ? frozen({ kind: 'action', action: actionAddress(reward) })
+      : causeAt(entries, spawnMomentEntryIndex(entries, kind, phaseKey, wheelKey), actionAddress);
   };
   /** Everything a moment spawns spawns together once the walk reaches it. */
   const reached = (state: EntryState): boolean => state !== 'unreached';
@@ -941,7 +985,15 @@ export function spawnedLootForProjectEvaluationAssembly(
     const items = spawnOrder.filter((item) => item.lockedUntil === key);
     return items.length === 0
       ? []
-      : [frozen({ key, kind: 'encounterEnd' as const, phaseKey, items: frozen(items) })];
+      : [
+          frozen({
+            key,
+            kind: 'encounterEnd' as const,
+            phaseKey,
+            cause: momentCause('encounterEnd', phaseKey, undefined),
+            items: frozen(items),
+          }),
+        ];
   });
   const rosterOrder = new Map(roster.rows.map((row, index) => [row.key, index]));
   return frozen({
@@ -954,6 +1006,7 @@ export function spawnedLootForProjectEvaluationAssembly(
           frozen({
             key,
             ...moment,
+            cause: momentCause(moment.kind, moment.phaseKey, moment.wheelKey),
             items: frozen(momentItems.get(key) ?? []),
           }),
         ];
