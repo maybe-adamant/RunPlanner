@@ -50,7 +50,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
-import { expandDoors } from '@planner-test/support/biome-workbench';
+import { doorsEditor, expandDoors } from '@planner-test/support/biome-workbench';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 import { takeLive } from '@planner-test/support/live-row';
@@ -651,8 +651,11 @@ describe('underworld product loop', () => {
           decision.source.occurrenceId === chaosOccurrenceId,
       ),
     ).toBe(false);
-    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const rewardPool = within(expandDoors()).getByRole('button', { name: /Reward Pool/ });
+    // The next step opens its source room's doors on its Timeline.
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const rewardPool = within(doorsEditor()).getByRole('button', { name: /Reward Pool/ });
     await view.user.click(rewardPool);
     const nextPool = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
