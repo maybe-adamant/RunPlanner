@@ -14,7 +14,12 @@ import {
 } from '@planner/projections/structured-workspace';
 import { BatchDoorsDetail, BatchDoorsRepair, DoorRowsHeader } from './DecisionWorkbench';
 import { DoorRows } from './DoorRows';
-import { batchDoorChips, batchDoorFindingOwners, batchDoorsStatus } from './doorSummary';
+import {
+  batchDoorChips,
+  batchDoorFindingOwners,
+  batchDoorsStatus,
+  type DoorsPart,
+} from './doorSummary';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { PhantomExitDoor } from './PhantomExitDoor';
@@ -205,6 +210,18 @@ function roomTimelineDoors({
     door.locked ? [door.exitKey] : [],
   );
   if (batch !== undefined) {
+    const batchDetail = (show?: DoorsPart) => (
+      <BatchDoorsDetail
+        interactions={interactions}
+        lockedDoors={lockedDoors}
+        noteFor={noteFor}
+        node={batch}
+        show={show}
+        {...(batch.persistence === 'authored'
+          ? { repair: <BatchDoorsRepair interactions={interactions} node={batch} /> }
+          : {})}
+      />
+    );
     return {
       summary: { chips: batchDoorChips(batch, lockedAsOpened) },
       findingOwners: [...batchDoorFindingOwners(batch), ...unlockOwners],
@@ -213,17 +230,15 @@ function roomTimelineDoors({
         : {
             attentionFindings: [{ owner: batch.selection.address, code: 'lockedExitSelected' }],
           }),
-      detail: (
-        <BatchDoorsDetail
-          interactions={interactions}
-          lockedDoors={lockedDoors}
-          noteFor={noteFor}
-          node={batch}
-          {...(batch.persistence === 'authored'
-            ? { repair: <BatchDoorsRepair interactions={interactions} node={batch} /> }
-            : {})}
-        />
-      ),
+      detail: batchDetail(),
+      part: (part) =>
+        part.kind === 'rules' &&
+        batch.rewardPool === undefined &&
+        batch.fieldsCageOutcome === undefined &&
+        batch.fields === undefined &&
+        batch.persistence !== 'authored'
+          ? undefined
+          : batchDetail(part),
       leave: leaveRow(
         <BatchExitPicker
           interactions={interactions}

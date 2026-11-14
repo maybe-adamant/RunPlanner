@@ -2382,6 +2382,71 @@
   opacity: 0.5;
 }
 
+/* A door chip that opens its editor in a popover; an unset door asks for input. */
+button.timeline-door-chip-button {
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.timeline-door-chip-button:hover,
+button.timeline-door-chip-button[data-state='open'] {
+  border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--selection-accent) 14%, transparent);
+}
+
+button.timeline-door-chip-button[data-missing] {
+  border-color: color-mix(in srgb, var(--attention) 60%, transparent);
+  background: color-mix(in srgb, var(--attention) 9%, transparent);
+}
+
+button.timeline-door-chip-button[data-missing] .timeline-door-chip-blank {
+  color: var(--attention);
+  font-weight: 700;
+}
+
+.doors-moment-settings {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--muted);
+  background: none;
+  cursor: pointer;
+}
+
+.doors-moment-settings > svg {
+  width: 15px;
+  height: 15px;
+}
+
+.doors-moment-settings:hover,
+.doors-moment-settings[data-state='open'] {
+  border-color: var(--border);
+  color: var(--text);
+  background: rgb(255 255 255 / 5%);
+}
+
+.doors-moment-popover {
+  z-index: 50;
+  /* The doors' editor sizes to its container, so the popover gives it a definite width. */
+  width: min(500px, calc(100 * var(--app-vw) - 24px));
+  max-height: var(--radix-popover-content-available-height);
+  overflow: auto;
+  padding: 8px 10px 10px;
+  border: 1px solid #484954;
+  border-radius: 10px;
+  background: #1b1c22;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+}
+
+.doors-part-repair {
+  margin-top: 6px;
+}
+
 /* A door chip to pick: the picked one lit, the others dim until hovered. */
 button.timeline-door-option {
   color: inherit;

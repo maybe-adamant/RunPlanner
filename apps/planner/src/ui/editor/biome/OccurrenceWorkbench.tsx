@@ -44,6 +44,7 @@ import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { RoomMapColumn, type RoomMapStage } from './room-map/RoomMapColumn';
 import { RoomMapHighlightScope } from './room-map/RoomMapHighlightScope';
 import { roomMapPlacements } from './room-map/roomMapPlacements';
+import { doorsDetailInline } from './doorsMomentVariant';
 
 /**
  * The Timeline row a map stage is read from: a row of the room's (or a Ship
@@ -177,13 +178,17 @@ export function OccurrenceWorkbench({
   );
   const doorAttention = [...doorFindingKeys, ...(doorsFrontier ? ['frontier'] : [])];
   const currentNavigation = navigationRevision ?? -1;
-  const doorsExpanded =
-    (doorsRequested &&
-      (doorChoice === undefined || doorChoice.navigationRevision !== currentNavigation)) ||
-    (doorChoice === undefined
-      ? doorAttention.length > 0
-      : doorChoice.expanded ||
-        doorAttention.some((attention) => !doorChoice.attention.includes(attention)));
+  const doorsExpanded = !doorsDetailInline
+    ? // A popover opens only when asked: by the user or by navigation to a door.
+      (doorsRequested &&
+        (doorChoice === undefined || doorChoice.navigationRevision !== currentNavigation)) ||
+      (doorChoice?.expanded === true && doorChoice.navigationRevision === currentNavigation)
+    : (doorsRequested &&
+        (doorChoice === undefined || doorChoice.navigationRevision !== currentNavigation)) ||
+      (doorChoice === undefined
+        ? doorAttention.length > 0
+        : doorChoice.expanded ||
+          doorAttention.some((attention) => !doorChoice.attention.includes(attention)));
   const doors: TimelineDoors | undefined =
     timelineDoors === undefined
       ? undefined

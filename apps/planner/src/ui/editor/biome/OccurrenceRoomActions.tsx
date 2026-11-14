@@ -50,7 +50,8 @@ import { DoorRerollRowReward } from './RoomRerolls';
 import { UnlockedDoor } from './DecisionWorkbench';
 import { UnlockExitFightControl } from './UnlockExitFightControl';
 import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
-import { doorsOpenToggle, wheelOfferChips } from './doorSummary';
+import { doorsOpenToggle, wheelOfferChips, type DoorsPart } from './doorSummary';
+import { doorsDetailInline } from './doorsMomentVariant';
 import { NemesisEventPending, NemesisInteractionSentence } from './NemesisEventEditor';
 import { StygianWellTwistChips } from './commerce/StygianWellTwist';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
@@ -203,7 +204,9 @@ export function RoomActionsWorkbench({
       : undefined;
   // A Ship phase that a wheel follows opens it like doors: its offers, then its pick.
   const phaseWheel = mode.kind === 'shipPhase' ? mode.phase.wheel : undefined;
-  const [collapsedWheels, setCollapsedWheels] = useState<ReadonlySet<string>>(() => new Set());
+  // Wheels whose offers stand opposite their default: shown inline, or shut in a popover.
+  const [toggledWheels, setToggledWheels] = useState<ReadonlySet<string>>(() => new Set());
+  const wheelsOpenByDefault = doorsDetailInline;
   const wheelHoldsFindings =
     phaseWheel !== undefined &&
     [phaseWheel.marker, ...phaseWheel.offers.map((offer) => offer.control.marker)].some(
@@ -224,14 +227,25 @@ export function RoomActionsWorkbench({
               wheel={phaseWheel}
             />
           ),
-          expanded: wheelHoldsFindings || !collapsedWheels.has(phaseWheel.key),
-          ...(wheelHoldsFindings
+          part: (part: DoorsPart) => (
+            <RewardWheelWorkbench
+              inTimeline
+              interactions={interactions}
+              occurrence={actions.owner}
+              show={part}
+              wheel={phaseWheel}
+            />
+          ),
+          expanded:
+            (wheelsOpenByDefault && wheelHoldsFindings) ||
+            toggledWheels.has(phaseWheel.key) !== wheelsOpenByDefault,
+          ...(wheelHoldsFindings && wheelsOpenByDefault
             ? {}
             : {
                 onExpandedChange: (expanded: boolean) =>
-                  setCollapsedWheels((collapsed) => {
-                    const next = new Set(collapsed);
-                    if (expanded) next.delete(phaseWheel.key);
+                  setToggledWheels((toggled) => {
+                    const next = new Set(toggled);
+                    if (expanded === wheelsOpenByDefault) next.delete(phaseWheel.key);
                     else next.add(phaseWheel.key);
                     return next;
                   }),
@@ -471,7 +485,7 @@ export function RoomActionsWorkbench({
             : {})}
         />
         {content?.rows}
-        {doorsOpen?.expanded === true && doorsOpen.detail !== undefined ? (
+        {doorsDetailInline && doorsOpen?.expanded === true && doorsOpen.detail !== undefined ? (
           <DoorsOpenDetailRow id={doorsOpen.detailId}>{doorsOpen.detail}</DoorsOpenDetailRow>
         ) : null}
       </Fragment>

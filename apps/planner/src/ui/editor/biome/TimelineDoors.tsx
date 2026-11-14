@@ -1,15 +1,24 @@
-import { useContext, type ReactNode } from 'react';
+import * as Popover from '@radix-ui/react-popover';
+import { useContext, useState, type ButtonHTMLAttributes, type ReactNode, type Ref } from 'react';
 import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceDoorStep,
   WorkspaceRoomRerolls,
 } from '@planner/projections/structured-workspace';
-import type { DoorChip } from './doorSummary';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
-import { DoorChips } from './DecisionWorkbench';
+import { DoorChipFace, DoorChips } from './DecisionWorkbench';
+import { hintProps } from '@planner/ui/controls/hint';
+import { useRoomMapLinks } from './room-map/roomMapHighlight';
+import { doorsDetailInline, doorsMomentVariant } from './doorsMomentVariant';
 import { TimelineRow } from './TimelineRow';
 import { TimelineMapStageContext } from './timelineMapStage';
-import { doorsOpenToggle, type BannerToggle } from './doorSummary';
+import {
+  doorChipMapLink,
+  doorsOpenToggle,
+  type BannerToggle,
+  type DoorChip,
+  type DoorsPart,
+} from './doorSummary';
 import { TimelineEventIcon } from './TimelineEventIcon';
 
 /**
@@ -33,6 +42,8 @@ export interface TimelineDoorsContent {
   }[];
   /** The doors' editor, shown while the row is expanded. */
   readonly detail?: ReactNode;
+  /** One part of the doors' editor alone, where it splits; undefined where that part has nothing. */
+  readonly part?: (part: DoorsPart) => ReactNode;
   /** The room's last row: how the room is left, or where the plan ends. */
   readonly leave?: ReactNode;
   /** The plan's saved end: its last row stays, to continue from, while the room is unsettled. */
@@ -59,6 +70,182 @@ export interface TimelineDoors extends TimelineDoorsContent {
 
 /** The Doors open row's own controls: the door chips. */
 export function DoorsOpenControls({ doors }: { readonly doors: TimelineDoors }) {
+  if (doorsMomentVariant === 'chips') return <DoorsChipControls doors={doors} />;
+  if (doorsMomentVariant === 'moment') return <DoorsMomentControls doors={doors} />;
+  return (
+    <span className="timeline-doors-open-controls">
+      {doors.summary === undefined ? null : (
+        <DoorChips chips={doors.summary.chips} label={doors.summary.label} />
+      )}
+    </span>
+  );
+}
+
+/** A chip as a button: its door's face, its map link and its name. */
+function DoorChipButton({
+  chip,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  readonly chip: DoorChip;
+  readonly ref?: Ref<HTMLButtonElement>;
+}) {
+  const mapLinks = useRoomMapLinks();
+  const name = chip.locked === true ? `${chip.label} · Locked` : chip.label;
+  return (
+    <button
+      {...mapLinks(doorChipMapLink(chip))}
+      {...hintProps(chip.label, undefined, name)}
+      aria-label={name}
+      className="timeline-door-chip timeline-door-chip-button"
+      data-missing={chip.missing}
+      data-unavailable={chip.unavailable || undefined}
+      type="button"
+      {...props}
+    >
+      <DoorChipFace chip={chip} />
+    </button>
+  );
+}
+
+function SettingsGlyph() {
+  return (
+    <svg aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 16 16">
+      <path d="M2 4.5h7M13 4.5h1M2 11.5h2M8 11.5h6" strokeLinecap="round" />
+      <circle cx="11" cy="4.5" r="1.7" />
+      <circle cx="6" cy="11.5" r="1.7" />
+    </svg>
+  );
+}
+
+/** A popover holding one part of the doors' editor, opened from a chip or the settings button. */
+function DoorsPartPopover({
+  children,
+  content,
+  label,
+}: {
+  readonly children: ReactNode;
+  readonly content: ReactNode;
+  readonly label: string;
+}) {
+  return (
+    <Popover.Root>
+      <Popover.Trigger asChild>{children}</Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          aria-label={label}
+          className="doors-moment-popover"
+          collisionPadding={12}
+          sideOffset={6}
+        >
+          {content}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+/** Variant A: each chip opens its own door's row; the batch rules sit behind a settings button. */
+function DoorsChipControls({ doors }: { readonly doors: TimelineDoors }) {
+  const chips = doors.summary?.chips ?? [];
+  const partOf = (part: DoorsPart): ReactNode =>
+    doors.part === undefined ? doors.detail : doors.part(part);
+  const rules =
+    doors.part === undefined
+      ? chips.length === 0
+        ? doors.detail
+        : undefined
+      : doors.part({ kind: 'rules' });
+  const rulesLabel = doors.noun === 'door' ? 'Door rules' : 'Wheel settings';
+  return (
+    <span className="timeline-doors-open-controls">
+      {chips.length === 0 ? null : (
+        <span
+          aria-label={doors.summary?.label ?? 'Door summary'}
+          className="timeline-door-chips"
+          role="list"
+        >
+          {chips.map((chip) => {
+            const content = partOf({ kind: 'door', key: chip.key });
+            return (
+              <span key={chip.key} role="listitem">
+                {content === undefined || content === null ? (
+                  <DoorChips chips={[chip]} />
+                ) : (
+                  <DoorsPartPopover content={content} label={chip.label}>
+                    <DoorChipButton chip={chip} />
+                  </DoorsPartPopover>
+                )}
+              </span>
+            );
+          })}
+        </span>
+      )}
+      {rules === undefined || rules === null ? null : (
+        <DoorsPartPopover content={rules} label={rulesLabel}>
+          <button aria-label={rulesLabel} className="doors-moment-settings" type="button">
+            <SettingsGlyph />
+          </button>
+        </DoorsPartPopover>
+      )}
+    </span>
+  );
+}
+
+/** Variant B: the title or any chip opens one popover holding the whole moment. */
+function DoorsMomentControls({ doors }: { readonly doors: TimelineDoors }) {
+  const [localOpen, setLocalOpen] = useState(false);
+  const open = doors.onExpandedChange === undefined ? localOpen : doors.expanded;
+  const setOpen = doors.onExpandedChange ?? setLocalOpen;
+  const chips = doors.summary?.chips ?? [];
+  if (doors.detail === undefined) return <DoorsOpenTableControls doors={doors} />;
+  return (
+    <Popover.Root onOpenChange={setOpen} open={open}>
+      <Popover.Anchor asChild>
+        <span className="timeline-doors-open-controls">
+          {chips.length === 0 ? (
+            doors.onExpandedChange === undefined ? (
+              <button
+                aria-label={doors.noun === 'door' ? 'Edit doors' : 'Edit offers'}
+                className="doors-moment-settings"
+                onClick={() => setOpen(true)}
+                type="button"
+              >
+                <SettingsGlyph />
+              </button>
+            ) : null
+          ) : (
+            <span
+              aria-label={doors.summary?.label ?? 'Door summary'}
+              className="timeline-door-chips"
+              role="list"
+            >
+              {chips.map((chip) => (
+                <span key={chip.key} role="listitem">
+                  <DoorChipButton chip={chip} onClick={() => setOpen(true)} />
+                </span>
+              ))}
+            </span>
+          )}
+        </span>
+      </Popover.Anchor>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          aria-label={doors.noun === 'door' ? 'Doors' : 'Offers'}
+          className="doors-moment-popover"
+          collisionPadding={12}
+          id={doors.detailId}
+          sideOffset={6}
+        >
+          {doors.detail}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+function DoorsOpenTableControls({ doors }: { readonly doors: TimelineDoors }) {
   return (
     <span className="timeline-doors-open-controls">
       {doors.summary === undefined ? null : (
@@ -95,9 +282,11 @@ export function BannerTitle({
       onClick={toggle.onToggle}
       type="button"
     >
-      <span aria-hidden="true" className="timeline-banner-toggle-caret">
-        {toggle.expanded ? '▾' : '▸'}
-      </span>
+      {toggle.caret === false ? null : (
+        <span aria-hidden="true" className="timeline-banner-toggle-caret">
+          {toggle.expanded ? '▾' : '▸'}
+        </span>
+      )}
       {name}
     </button>
   );
@@ -157,7 +346,7 @@ export function DoorsOpenBanner({
           </>
         }
       />
-      {doors.expanded && doors.detail !== undefined ? (
+      {doorsDetailInline && doors.expanded && doors.detail !== undefined ? (
         <DoorsOpenDetailRow id={doors.detailId}>{doors.detail}</DoorsOpenDetailRow>
       ) : null}
     </TimelineMapStageContext.Provider>

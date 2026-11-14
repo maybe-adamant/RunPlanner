@@ -16,6 +16,7 @@ import {
 import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import type { TimelineDoors } from './TimelineDoors';
+import { doorsMomentVariant } from './doorsMomentVariant';
 import type { RoomMapHighlight } from './room-map/roomMapHighlight';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
@@ -191,6 +192,16 @@ export function wheelOfferChips(
 export function doorsOpenToggle(doors: TimelineDoors): BannerToggle | undefined {
   const toggle = doors.onExpandedChange;
   if (doors.detail === undefined || toggle === undefined) return undefined;
+  if (doorsMomentVariant === 'chips') return undefined;
+  // The moment's title opens its one popover; the popover closes itself.
+  if (doorsMomentVariant === 'moment')
+    return {
+      caret: false,
+      controls: doors.detailId,
+      expanded: doors.expanded,
+      label: doors.noun === 'door' ? 'Edit doors' : 'Edit offers',
+      onToggle: () => toggle(true),
+    };
   return {
     controls: doors.detailId,
     expanded: doors.expanded,
@@ -199,8 +210,14 @@ export function doorsOpenToggle(doors: TimelineDoors): BannerToggle | undefined 
   };
 }
 
+/** One part of a Doors open moment: its batch rules, or one door or offer by its chip key. */
+export type DoorsPart =
+  { readonly kind: 'rules' } | { readonly kind: 'door'; readonly key: string };
+
 /** A banner whose whole title shows or hides the editor under it. */
 export interface BannerToggle {
+  /** False where the title opens a popover rather than an editor under it. */
+  readonly caret?: false;
   readonly controls: string;
   readonly expanded: boolean;
   readonly label: string;
