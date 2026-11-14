@@ -361,6 +361,7 @@ export {
   spawnedLootForProjectEvaluationAssembly,
   type ActionSpawn,
   type RoomSpawnedLoot,
+  type SpawnCause,
   type SpawnMoment,
   type SpawnUnlock,
   type SpawnMomentKind,

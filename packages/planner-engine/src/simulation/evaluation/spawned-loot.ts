@@ -38,6 +38,7 @@ import {
   asUnplacedWhenReplaced,
   type RoomActionParticipation,
   type RoomActionRow,
+  type RoomLifecycleBoundary,
   type RoomLifecycleTimelineEntry,
 } from '../room-actions';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
@@ -129,13 +130,25 @@ export interface SpawnedLootItem {
 export type PickupOutcomeChoice =
   'levelResolution' | 'traitOffer' | 'anvilResult' | 'hexActivation';
 
+/**
+ * The Timeline entry a moment or unlock follows: the boundary it happens at,
+ * the ranked action whose settlement releases it, or, where the Timeline
+ * shows no boundary for it, the end of the Timeline.
+ */
+export type SpawnCause =
+  | { readonly kind: 'event'; readonly event: RoomLifecycleBoundary }
+  | { readonly kind: 'action'; readonly action: RoomActionAddress }
+  | { readonly kind: 'timelineEnd' };
+
 export interface SpawnMoment {
   /** Stable within the room: the kind, plus the phase where it has one. */
   readonly key: string;
   readonly kind: SpawnMomentKind;
+  /** The phase it belongs to; for `wheelsOpen`, the phase whose end effects spawn it. */
   readonly phaseKey?: string;
   /** The wheel a `wheelsOpen` moment opens with. */
   readonly wheelKey?: string;
+  readonly cause: SpawnCause;
   /** In the game's spawn order. */
   readonly items: readonly SpawnedLootItem[];
 }
@@ -146,6 +159,7 @@ export interface SpawnUnlock {
   readonly key: string;
   readonly kind: 'encounterEnd';
   readonly phaseKey: string;
+  readonly cause: SpawnCause;
   /** The same items as their spawn moments list, in spawn order. */
   readonly items: readonly SpawnedLootItem[];
 }
@@ -420,10 +434,48 @@ function insertion(
 }
 
 /**
- * The Timeline entry at which a moment's loot spawns: its boundary, an
- * encounter's end standing at Boss defeated in a Boss room, a Wheels open
- * moment at the opening of the wheel it carries; a boundary the room lacks
- * stands at its last entry.
+ * The boundary at which a moment's loot spawns: its own, an encounter's end
+ * standing at Boss defeated where the Timeline shows no end, a Wheels open
+ * moment at the opening of the wheel it carries; undefined where the
+ * Timeline shows none of them.
+ */
+function spawnMomentBoundaryIndex(
+  entries: readonly RoomLifecycleTimelineEntry[],
+  kind: SpawnMomentKind,
+  phaseKey: string | undefined,
+  wheelKey?: string,
+): number | undefined {
+  const boundary = (matches: (boundary: RoomLifecycleBoundary) => boolean): number | undefined => {
+    const index = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && matches(entry.boundary),
+    );
+    return index >= 0 ? index : undefined;
+  };
+  const ofPhase = (boundaryKind: RoomLifecycleBoundary['kind']) =>
+    boundary(
+      (point) => point.kind === boundaryKind && 'phaseKey' in point && point.phaseKey === phaseKey,
+    );
+  switch (kind) {
+    case 'roomEntered':
+    case 'deliveryFlush':
+      return boundary((point) => point.kind === 'roomEntered');
+    case 'encounterBegun':
+      return phaseKey === undefined
+        ? boundary((point) => point.kind === 'roomEntered')
+        : ofPhase('encounterBegun');
+    case 'encounterEnd':
+    case 'afterEncounterReward':
+      return phaseKey === undefined
+        ? undefined
+        : (ofPhase('encounterEnd') ?? ofPhase('bossDefeated'));
+    case 'wheelsOpen':
+      return boundary((point) => point.kind === 'wheelsOpen' && point.wheelKey === wheelKey);
+  }
+}
+
+/**
+ * The Timeline entry at which a moment's loot spawns: its boundary, or the
+ * room's last entry where the Timeline shows none.
  */
 export function spawnMomentEntryIndex(
   entries: readonly RoomLifecycleTimelineEntry[],
@@ -431,45 +483,24 @@ export function spawnMomentEntryIndex(
   phaseKey: string | undefined,
   wheelKey?: string,
 ): number {
-  const boundary = (boundaryKind: string, boundaryPhaseKey?: string): number => {
-    const index = entries.findIndex(
-      (entry) =>
-        entry.kind === 'boundary' &&
-        entry.boundary.kind === boundaryKind &&
-        (boundaryPhaseKey === undefined ||
-          ('phaseKey' in entry.boundary && entry.boundary.phaseKey === boundaryPhaseKey)),
-    );
-    return index >= 0 ? index : entries.length - 1;
-  };
-  switch (kind) {
-    case 'roomEntered':
-    case 'deliveryFlush':
-      return boundary('roomEntered');
-    case 'encounterBegun':
-      return phaseKey === undefined
-        ? boundary('roomEntered')
-        : boundary('encounterBegun', phaseKey);
-    case 'encounterEnd':
-    case 'afterEncounterReward':
-      if (phaseKey === undefined) return entries.length - 1;
-      return entries.some(
-        (entry) =>
-          entry.kind === 'boundary' &&
-          entry.boundary.kind === 'encounterEnd' &&
-          entry.boundary.phaseKey === phaseKey,
-      )
-        ? boundary('encounterEnd', phaseKey)
-        : boundary('bossDefeated', phaseKey);
-    case 'wheelsOpen': {
-      const index = entries.findIndex(
-        (entry) =>
-          entry.kind === 'boundary' &&
-          entry.boundary.kind === 'wheelsOpen' &&
-          entry.boundary.wheelKey === wheelKey,
-      );
-      return index >= 0 ? index : entries.length - 1;
-    }
-  }
+  return spawnMomentBoundaryIndex(entries, kind, phaseKey, wheelKey) ?? entries.length - 1;
+}
+
+/**
+ * A moment's cause where its boundary spawns it: that boundary's event, or
+ * the Timeline's end where the Timeline shows no such boundary.
+ */
+export function spawnMomentBoundaryCause(
+  entries: readonly RoomLifecycleTimelineEntry[],
+  kind: SpawnMomentKind,
+  phaseKey: string | undefined,
+  wheelKey?: string,
+): SpawnCause {
+  const index = spawnMomentBoundaryIndex(entries, kind, phaseKey, wheelKey);
+  const entry = index === undefined ? undefined : entries[index];
+  return entry?.kind === 'boundary'
+    ? frozen({ kind: 'event', event: entry.boundary })
+    : frozen({ kind: 'timelineEnd' });
 }
 
 /**
@@ -645,6 +676,13 @@ export function spawnedLootForProjectEvaluationAssembly(
   /** The wheel that opens right after this phase's end, when one does. */
   const nextWheelKey = (phaseKey: string): string | undefined =>
     nextWheelsOpen(structure, phaseKey)?.wheelKey;
+  /** The collect row of a Ship phase's wheel reward. */
+  const wheelReward = (phaseKey: string | undefined): RoomActionReference | undefined => {
+    const wheelKey = structure.phases.find((phase) => phase.phaseKey === phaseKey)?.rewardWheelKey;
+    return wheelKey === undefined
+      ? undefined
+      : frozen({ kind: 'interactWheelReward' as const, wheelKey });
+  };
   const momentState = (kind: SpawnMomentKind, phaseKey: string | undefined): EntryState => {
     switch (kind) {
       case 'roomEntered':
@@ -662,15 +700,21 @@ export function spawnedLootForProjectEvaluationAssembly(
       case 'afterEncounterReward': {
         const end = walk.entry(spawnMomentEntryIndex(entries, kind, phaseKey));
         // A Ship wheel's end effects spawn only once its reward is collected.
-        const wheelKey = structure.phases.find(
-          (phase) => phase.phaseKey === phaseKey,
-        )?.rewardWheelKey;
-        const collected =
-          wheelKey !== undefined &&
-          actionSettled(frozen({ kind: 'interactWheelReward' as const, wheelKey }));
-        return collected ? end : 'unreached';
+        const reward = wheelReward(phaseKey);
+        return reward !== undefined && actionSettled(reward) ? end : 'unreached';
       }
     }
+  };
+  const momentCause = (
+    kind: SpawnMomentKind,
+    phaseKey: string | undefined,
+    wheelKey: string | undefined,
+  ): SpawnCause => {
+    // Its end effects wait on the wheel reward, so they follow that row's collection.
+    const reward = kind === 'afterEncounterReward' ? wheelReward(phaseKey) : undefined;
+    return reward !== undefined
+      ? frozen({ kind: 'action', action: actionAddress(reward) })
+      : spawnMomentBoundaryCause(entries, kind, phaseKey, wheelKey);
   };
   /** Everything a moment spawns spawns together once the walk reaches it. */
   const reached = (state: EntryState): boolean => state !== 'unreached';
@@ -941,7 +985,15 @@ export function spawnedLootForProjectEvaluationAssembly(
     const items = spawnOrder.filter((item) => item.lockedUntil === key);
     return items.length === 0
       ? []
-      : [frozen({ key, kind: 'encounterEnd' as const, phaseKey, items: frozen(items) })];
+      : [
+          frozen({
+            key,
+            kind: 'encounterEnd' as const,
+            phaseKey,
+            cause: momentCause('encounterEnd', phaseKey, undefined),
+            items: frozen(items),
+          }),
+        ];
   });
   const rosterOrder = new Map(roster.rows.map((row, index) => [row.key, index]));
   return frozen({
@@ -954,6 +1006,7 @@ export function spawnedLootForProjectEvaluationAssembly(
           frozen({
             key,
             ...moment,
+            cause: momentCause(moment.kind, moment.phaseKey, moment.wheelKey),
             items: frozen(momentItems.get(key) ?? []),
           }),
         ];
