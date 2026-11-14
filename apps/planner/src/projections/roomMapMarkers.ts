@@ -72,8 +72,8 @@ export function roomMapPosition(
   };
 }
 
-/** How far inside the frame, in percent, an off-frame entry is drawn. */
-const offFrameInset = { x: 3, y: 5 } as const;
+/** How far inside the frame, in percent, an off-frame entry is anchored. */
+const offFrameInset = { x: 0.5, y: 0.5 } as const;
 
 /** Keeps a position on the frame, naming the sides it lay beyond. */
 function inFrame(marker: RoomMapMarkerPosition): RoomMapMarkerPosition & {

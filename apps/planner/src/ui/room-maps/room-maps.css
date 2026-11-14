@@ -567,42 +567,65 @@
   outline-offset: 3px;
 }
 
-/* An entry beyond the captured frame: at its edge, an arrow pointing out toward it. */
+/*
+ * An entry beyond the captured frame: anchored at the edge, drawn inside it,
+ * with an arrow pointing out toward it.
+ */
+.room-map-entry:is([data-off-frame-x], [data-off-frame-y]) {
+  transform: translate(var(--off-frame-x, -50%), var(--off-frame-y, -50%));
+}
+
+.room-map-entry[data-off-frame-x='left'] {
+  --off-frame-x: 12px;
+}
+
+.room-map-entry[data-off-frame-x='right'] {
+  --off-frame-x: calc(-100% - 12px);
+}
+
+.room-map-entry[data-off-frame-y='above'] {
+  --off-frame-y: 12px;
+}
+
+.room-map-entry[data-off-frame-y='below'] {
+  --off-frame-y: calc(-100% - 12px);
+}
+
 .room-map-entry:is([data-off-frame-x], [data-off-frame-y])::after {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 50%;
   width: 0;
   height: 0;
-  border: 7px solid transparent;
+  border: 6px solid transparent;
   filter: drop-shadow(0 1px 1px rgb(0 0 0 / 80%));
 }
 
 .room-map-entry[data-off-frame-y='below']::after {
   top: 100%;
+  left: 50%;
   border-top-color: #fff4c7;
-  transform: translate(-50%, 2px);
+  transform: translateX(-50%);
 }
 
 .room-map-entry[data-off-frame-y='above']::after {
-  top: auto;
   bottom: 100%;
+  left: 50%;
   border-bottom-color: #fff4c7;
-  transform: translate(-50%, -2px);
+  transform: translateX(-50%);
 }
 
 .room-map-entry[data-off-frame-x='right']:not([data-off-frame-y])::after {
   left: 100%;
+  top: 50%;
   border-left-color: #fff4c7;
-  transform: translate(2px, -50%);
+  transform: translateY(-50%);
 }
 
 .room-map-entry[data-off-frame-x='left']:not([data-off-frame-y])::after {
-  left: auto;
   right: 100%;
+  top: 50%;
   border-right-color: #fff4c7;
-  transform: translate(-2px, -50%);
+  transform: translateY(-50%);
 }
 
 /* A door: its chip once open, a dashed ring while closed. */
