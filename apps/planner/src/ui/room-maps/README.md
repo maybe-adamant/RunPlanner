@@ -35,9 +35,13 @@ An entry the capture leaves out of frame (the Q Preboss's, far below) is drawn
 at the frame's edge with an arrow toward it.
 
 Every map is a clean capture: `roomMapCalibration.ts` records each image's capture camera and the
-editor draws their points from the catalog's map points. Regenerate it from the
-capture manifests with `npm run planner:room-map-calibration` whenever one of
-those images is replaced; an image without calibration shows no points.
+editor draws their points from the catalog's map points. It is generated from
+`scripts/data/room-map-captures.json`, the capture record of every calibrated
+image. When images are replaced, pass their capture manifests to
+`npm run planner:room-map-calibration -- <manifest.json>...`: their rooms replace
+the checked-in records and the calibration is regenerated. Without arguments it
+regenerates from the checked-in records alone. An image without calibration shows
+no points.
 
 A room too large for one screen is stitched from tiles; its manifest entry
 carries the stitched image's own calibration. Package it at most 2560 wide
