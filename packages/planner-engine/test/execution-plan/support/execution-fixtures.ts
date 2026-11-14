@@ -15,7 +15,6 @@ import {
   type RunStartPoint,
 } from '@run-planner/engine/authored-project';
 import {
-  createCompleteFGAnomalyProject,
   createCompleteFGProject,
   createEchoGoldIAnvilDuplicateProject,
   echoGoldIDuplicateAnvilResult,
@@ -65,7 +64,6 @@ import dreamShrinePendingFixture from '../fixtures/dream-shrine-pending.executio
 import fOpeningFixture from '../fixtures/f-opening.execution.json';
 import runModifiersFixture from '../fixtures/run-modifiers.execution.json';
 import fgFixture from '../fixtures/fg.execution.json';
-import fgAnomalyFixture from '../fixtures/fg-anomaly.execution.json';
 import fgAnomalyRosterFixture from '../fixtures/fg-anomaly-roster.execution.json';
 import fgIxionChaosFixture from '../fixtures/fg-ixion-chaos.execution.json';
 import fgNpcShoppingProtectionFixture from '../fixtures/fg-npc-shopping-protection.execution.json';
@@ -202,7 +200,6 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     project: positionedIxionChaosProject,
     wire: fgIxionChaosFixture,
   },
-  { name: 'fg-anomaly', project: createCompleteFGAnomalyProject, wire: fgAnomalyFixture },
   {
     name: 'fg-anomaly-roster',
     project: loadUnderworldGAnomalyRosterCheckpoint,

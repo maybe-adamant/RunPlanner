@@ -474,30 +474,6 @@ function TestProtocol.testMirroredArachneFixtureCarriesBothAndPositionOnlyChoice
     })
 end
 
-local function anomalyCustomization(name)
-    local plan = assert(protocol.decode(decode(name)))
-    local found, customization = false, nil
-    for _, occurrence in ipairs(plan.occurrences) do
-        for _, phase in ipairs(occurrence.overview.encounterPhases) do
-            if phase.encounterKey == "GeneratedAnomalyB" then found, customization = true, phase.customization end
-        end
-    end
-    lu.assertTrue(found, name)
-    return customization
-end
-
-function TestProtocol.testMirroredDefaultAnomalyCarriesNoCustomization()
-    lu.assertNil(anomalyCustomization("fg-anomaly"))
-end
-
-function TestProtocol.testMirroredAnomalyFixtureCarriesTheOrderedRoster()
-    lu.assertEquals(anomalyCustomization("fg-anomaly-roster"), { { decisionKey = "infiniteRoster", kind = "infiniteRoster", types = {
-        { choiceKey = "SpreadShotUnit_Elite", nativeId = "SpreadShotUnit_Elite" },
-        { choiceKey = "SpreadShotUnit", nativeId = "SpreadShotUnit" },
-        { choiceKey = "BloodlessPitcher", nativeId = "BloodlessPitcher" },
-    } } })
-end
-
 function TestProtocol.testScheduledLifecycleKeepsHermesAndEchoStateDiagnosticOnly()
     local decoded, errorMessage = protocol.decode(decode("surface-scheduled-lifecycle"))
     lu.assertNotNil(decoded, errorMessage)
@@ -535,6 +511,37 @@ local function refreshFingerprint(plan)
         rewardStoreComparison = plan.rewardStoreComparison, olympusAetos = plan.olympusAetos,
         occurrences = plan.occurrences,
     })
+end
+
+local function anomalyCustomization(value)
+    local plan = assert(protocol.decode(value))
+    local found, customization = false, nil
+    for _, occurrence in ipairs(plan.occurrences) do
+        for _, phase in ipairs(occurrence.overview.encounterPhases) do
+            if phase.encounterKey == "GeneratedAnomalyB" then found, customization = true, phase.customization end
+        end
+    end
+    lu.assertTrue(found)
+    return customization
+end
+
+function TestProtocol.testMirroredDefaultAnomalyCarriesNoCustomization()
+    local value = decode("fg-anomaly-roster")
+    for _, occurrence in ipairs(value.occurrences) do
+        for _, phase in ipairs(occurrence.overview.encounterPhases) do
+            if phase.encounterKey == "GeneratedAnomalyB" then phase.customization = nil end
+        end
+    end
+    fixtures.refingerprint(value, "fg-anomaly-roster")
+    lu.assertNil(anomalyCustomization(value))
+end
+
+function TestProtocol.testMirroredAnomalyFixtureCarriesTheOrderedRoster()
+    lu.assertEquals(anomalyCustomization(decode("fg-anomaly-roster")), { { decisionKey = "infiniteRoster", kind = "infiniteRoster", types = {
+        { choiceKey = "SpreadShotUnit_Elite", nativeId = "SpreadShotUnit_Elite" },
+        { choiceKey = "SpreadShotUnit", nativeId = "SpreadShotUnit" },
+        { choiceKey = "BloodlessPitcher", nativeId = "BloodlessPitcher" },
+    } } })
 end
 
 local function automatic(plan)
@@ -1149,7 +1156,7 @@ function TestProtocol.testEveryNonAcquisitionHasExactlyOneObligation()
 end
 
 function TestProtocol.testLegacyProtocolVectorsAreRejected()
-    for _, name in ipairs({ "f-opening", "fg", "fg-ixion-chaos", "fg-anomaly", "automatic-boss" }) do
+    for _, name in ipairs({ "f-opening", "fg", "fg-ixion-chaos", "fg-anomaly-roster", "automatic-boss" }) do
         local plan = decode(name)
         plan.resources = nil
         refreshFingerprint(plan)

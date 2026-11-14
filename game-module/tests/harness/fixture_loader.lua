@@ -62,6 +62,19 @@ function loader.raw(fileName)
     return restamped[fileName]
 end
 
+local function copy(value)
+    if type(value) ~= "table" then return value end
+    local result = setmetatable({}, getmetatable(value))
+    for key, item in pairs(value) do result[key] = copy(item) end
+    return result
+end
+
+-- Stamps a fixture's wire table, edited in a test, with the fingerprint of its new
+-- contents; decoding normalizes the table it reads, so a copy is decoded.
+function loader.refingerprint(plan, fileName)
+    plan.planFingerprint = decoderFingerprint(copy(plan), fileName)
+end
+
 -- The fixture's wire table under this module's schema pair.
 function loader.decode(fileName)
     local value, errorMessage = json.decode(loader.raw(fileName))

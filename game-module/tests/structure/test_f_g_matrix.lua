@@ -87,7 +87,7 @@ function TestFGStructureMatrix.testDecodedFixturesCoverFAndGRoomFamilies()
     local names = {}
     collectNames(fixture("f-opening"), names)
     collectNames(fixture("fg"), names)
-    collectNames(fixture("fg-anomaly"), names)
+    collectNames(fixture("fg-anomaly-roster"), names)
     collectNames(fixture("fg-ixion-chaos"), names)
 
     for _, gameName in ipairs({

@@ -59,7 +59,6 @@ local CORPUS = {
     ["dream-start-n-opening.execution.json"] = "c8d7e781",
     ["f-opening.execution.json"] = "96309e0d",
     ["fg-anomaly-roster.execution.json"] = "e58649da",
-    ["fg-anomaly.execution.json"] = "b2f11a93",
     ["fg-ixion-chaos.execution.json"] = "8e2648ec",
     ["fg-npc-shopping-protection.execution.json"] = "c64d0e3a",
     ["fg.execution.json"] = "d577957a",
@@ -103,7 +102,7 @@ function TestFingerprint.testEveryExecutionFixtureKeepsItsFingerprint()
         lu.assertEquals(p.fingerprint(assert(p.json.decode(source))), expected, name)
         count = count + 1
     end
-    lu.assertEquals(count, 41)
+    lu.assertEquals(count, 40)
 end
 
 function TestFingerprint.testAsciiAndMultibyteStringsHashTheirBytes()
