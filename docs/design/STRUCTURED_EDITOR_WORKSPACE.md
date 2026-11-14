@@ -765,7 +765,8 @@ navigation, and its remaining door-specific identity controls; Anomaly
 identity/revert remains on its door. The Nemesis random event is an encounter
 choice of its phase's identity picker, the H Passive phase included, where it
 replaces the passive encounter as in the game. Once selected, its family is
-chosen beside that picker in the Overview and its outcome on the Timeline
+chosen beside that picker in the Overview, a family the engine refuses on entry
+shown disabled with its reason, and its outcome on the Timeline
 interaction row; H projects the outcome editor at the required Passive event
 row and uses the engine-derived optional-count maximum. Incoming room identity
 and door-visible reward are read-only context in an entered occurrence; their

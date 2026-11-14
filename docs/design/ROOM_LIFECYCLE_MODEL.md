@@ -378,7 +378,11 @@ Every phase's encounter identity and composition are fixed on entry from
 predecessor state and earlier phases' records, including Ship phases (whether
 the optional Combat 2 plays), P's two phases, Fields Passive and cages, NPC
 encounters and introductions; the Nemesis random-event family is part of that
-identity. The Timeline keeps each phase read-only at its start and end, the
+identity. Her family is read from the state she spawns in: a family that state
+cannot queue (her damage trade while the hero holds the Demeter hit shield,
+her boon trade without a sellable god boon) is the event's Overview finding,
+and a damage trade whose shield is picked up before she is answered is her
+interaction's finding, since the game draws her event again there. The Timeline keeps each phase read-only at its start and end, the
 order it controls (Fields cage order, Ship phase seams and wheel picks) and the
 events decided in the encounter: Fig Leaf at its start (including P's
 pre-combat cascade, which suppresses execution without changing the recorded
