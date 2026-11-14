@@ -78,7 +78,7 @@ import {
 import {
   rewardOutcome,
   spawnedLootForProjectEvaluationAssembly,
-  spawnMomentEntryIndex,
+  type SpawnCause,
   type SpawnedLootItem,
   type SpawnedLootReward,
   type SpawnedLootSource,
@@ -1281,22 +1281,25 @@ export function liveRoomForProjectEvaluationAssembly(
     readonly moment?: string;
     readonly sourceAction?: RoomActionAddress;
   }
+  /** The gap a spawn's cause releases it at: its boundary's stretch, or right after its row. */
+  const gapOfCause = (cause: SpawnCause): number | undefined => {
+    switch (cause.kind) {
+      case 'event':
+        return gapOfEntry(
+          entries.findIndex(
+            (entry) => entry.kind === 'boundary' && entry.boundary.key === cause.event.key,
+          ),
+        );
+      case 'action':
+        return rowByKey.get(cause.action.actionKey)?.rank ?? undefined;
+      case 'timelineEnd':
+        return gapOfEntry(entries.length - 1);
+    }
+  };
   const spawns: PickupSpawn[] = [];
   for (const moment of loot.moments) {
-    let gap = gapOfEntry(
-      spawnMomentEntryIndex(entries, moment.kind, moment.phaseKey, moment.wheelKey),
-    );
-    if (moment.kind === 'afterEncounterReward') {
-      // A Ship wheel's end effects spawn once its reward is collected.
-      const wheelKey = roster.eventGraph.phases.find(
-        (phase) => phase.phaseKey === moment.phaseKey,
-      )?.rewardWheelKey;
-      const reward = liveRows.find(
-        (row) =>
-          row.reference.kind === 'interactWheelReward' && row.reference.wheelKey === wheelKey,
-      );
-      if (reward?.rank !== null && reward?.rank !== undefined) gap = Math.max(gap, reward.rank);
-    }
+    const gap = gapOfCause(moment.cause);
+    if (gap === undefined) continue;
     for (const item of moment.items) spawns.push({ item, gap, moment: moment.key });
   }
   for (const spawn of loot.actionSpawns) {
@@ -1306,10 +1309,10 @@ export function liveRoomForProjectEvaluationAssembly(
       spawns.push({ item, gap: source.rank, sourceAction: spawn.sourceAction });
   }
   const unlockGaps = new Map(
-    loot.unlocks.map((unlock) => [
-      unlock.key,
-      gapOfEntry(spawnMomentEntryIndex(entries, 'encounterEnd', unlock.phaseKey)),
-    ]),
+    loot.unlocks.flatMap((unlock) => {
+      const gap = gapOfCause(unlock.cause);
+      return gap === undefined ? [] : [[unlock.key, gap] as const];
+    }),
   );
   // A required object on the ground holds back every row that waits for it.
   const ordered = roster.rows
