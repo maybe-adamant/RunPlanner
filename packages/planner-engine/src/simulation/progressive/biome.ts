@@ -60,7 +60,6 @@ import { assessmentRepairOwner, findingRegion, type FindingRegionEntry } from '.
 import { createAssessmentIssue } from '../assessment-issue';
 import { evaluateBiomeRewardsAssemblyInternal } from '../rewards/biome';
 import type { BiomeRewardSimulation, RewardBranch } from '../rewards';
-import type { RerollSurfaceCandidateArtifacts } from '../rewards/biome/reroll-surfaces';
 import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import { initialFigLeafState } from '../keepsakes/state';
@@ -269,7 +268,6 @@ function generation(
   stygianWells: StygianWellCandidateArtifacts,
   transcendentEmbryo: TranscendentEmbryoCandidateArtifacts,
   fountainRarity: FountainRarityCandidateArtifacts,
-  rerollSurfaces: RerollSurfaceCandidateArtifacts,
   objectInteractions: import('../commerce/object-interactions').RoomObjectInteractionArtifacts,
   encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>,
   forcedChaosOccurrenceKeys?: ReadonlySet<string>,
@@ -339,7 +337,6 @@ function generation(
       transcendentEmbryo,
       ordinary.chaos,
       ordinary.zagreusContracts,
-      rerollSurfaces,
       objectInteractions,
     ),
     findingRegions: Object.freeze([
@@ -420,7 +417,6 @@ function products(
     rewards.stygianWellArtifacts,
     rewards.transcendentEmbryoArtifacts,
     rewards.fountainRarityArtifacts,
-    rewards.rerollSurfaceArtifacts,
     rewards.objectInteractionArtifacts,
     rewards.encounterEntryVowRanks,
     context.forcedChaosOccurrenceKeys,
