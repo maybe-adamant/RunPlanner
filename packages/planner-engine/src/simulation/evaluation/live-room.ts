@@ -757,13 +757,17 @@ function frontierDispositionVerbs(
   const authored = authoredOccurrence(assembly.project, occurrence);
   const pickup = unsettledPickupSource(room, reference);
   if (authored === undefined || pickup === undefined) return undefined;
-  // An unplaced row's source names no action yet: its role is the pickup's owner.
+  // An unplaced row's source names no action yet: the pickup's owner is its
+  // role, or the reward owner (a cage, optional reward, wheel offer or entry) holding it.
   const key = semanticAddressKey(owner);
   const sources = authoredAcquisitionSources(
     createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
     authored,
     routeStartIncoming(assembly.project, occurrence, authored),
-  ).filter((source) => semanticAddressKey(source.acquisition) === key);
+  ).filter(
+    ({ acquisition }) =>
+      semanticAddressKey(acquisition) === key || semanticAddressKey(acquisition.owner) === key,
+  );
   const [source] = sources;
   if (source === undefined || sources.length > 1) return undefined;
   const dispositions = source.reward.dispositionByAcquisitionRole;
