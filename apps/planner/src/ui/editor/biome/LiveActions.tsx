@@ -446,9 +446,7 @@ export function TimelineGapControl({
           data-live-gap={gap.index}
           type="button"
         >
-          <svg aria-hidden="true" height="10" viewBox="0 0 10 10" width="10">
-            <path d="M5 1v8M1 5h8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
-          </svg>
+          <span aria-hidden="true">+</span>
         </button>
       </Popover.Trigger>
       <Popover.Portal>

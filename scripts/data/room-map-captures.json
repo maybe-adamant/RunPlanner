@@ -1,0 +1,2455 @@
+{
+  "B_Combat01": {
+    "rcmap": {
+      "room": "B_Combat01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 3832.45361328125, "targetY": 7376.509765625 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "B_Combat05": {
+    "rcmap": {
+      "room": "B_Combat05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4200.7626953125, "targetY": 7331.9833984375 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "B_Combat06": {
+    "rcmap": {
+      "room": "B_Combat06",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4204.6923828125, "targetY": 6820.986328125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "B_Combat07": {
+    "rcmap": {
+      "room": "B_Combat07",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4787.01904296875, "targetY": 7627.8125 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "B_Combat08": {
+    "rcmap": {
+      "room": "B_Combat08",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5881.61328125, "targetY": 6831.59814453125 },
+      "zoom": { "applied": 0.32 }
+    }
+  },
+  "B_Combat10": {
+    "rcmap": {
+      "room": "B_Combat10",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7694.58544921875, "targetY": 8321.291015625 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "B_Combat21": {
+    "rcmap": {
+      "room": "B_Combat21",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4151.080078125, "targetY": 7550.984375 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "C_Boss01": {
+    "rcmap": {
+      "room": "C_Boss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6089.40771484375, "targetY": 9132.501953125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Chaos_01": {
+    "rcmap": {
+      "room": "Chaos_01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7869.47607421875, "targetY": 5036.06591796875 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Chaos_02": {
+    "rcmap": {
+      "room": "Chaos_02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6936.6064453125, "targetY": 5637.6298828125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Chaos_03": {
+    "rcmap": {
+      "room": "Chaos_03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8452.90625, "targetY": 5788.1357421875 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Chaos_04": {
+    "rcmap": {
+      "room": "Chaos_04",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 12973.791015625, "targetY": 9779.197265625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Chaos_05": {
+    "rcmap": {
+      "room": "Chaos_05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 16511.994140625, "targetY": 10330.2646484375 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Chaos_06": {
+    "rcmap": {
+      "room": "Chaos_06",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 19582.14453125, "targetY": 11029.66015625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Dream_PostBoss01": {
+    "rcmap": {
+      "room": "Dream_PostBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 18460.24609375, "targetY": 11407.4091796875 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Dream_PostBoss02": {
+    "rcmap": {
+      "room": "Dream_PostBoss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 20064.0390625, "targetY": 11329.00390625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Dream_PostBoss03": {
+    "rcmap": {
+      "room": "Dream_PostBoss03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 20848.806640625, "targetY": 11187.2001953125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "F_Boss01": {
+    "rcmap": {
+      "room": "F_Boss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7132.39453125, "targetY": 8499.3427734375 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "F_Boss02": {
+    "rcmap": {
+      "room": "F_Boss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6539.412109375, "targetY": 9278.4580078125 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "F_Combat01": {
+    "rcmap": {
+      "room": "F_Combat01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6716.953125, "targetY": 9027.998046875 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "F_Combat02": {
+    "rcmap": {
+      "room": "F_Combat02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7614.462890625, "targetY": 8682.91796875 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "F_Combat03": {
+    "rcmap": {
+      "room": "F_Combat03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7524.86328125, "targetY": 8703.689453125 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "F_Combat04": {
+    "rcmap": {
+      "room": "F_Combat04",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6934.89453125, "targetY": 8804.978515625 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "F_Combat05": {
+    "rcmap": {
+      "room": "F_Combat05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7144.64990234375, "targetY": 8825.634765625 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "F_Combat06": {
+    "rcmap": {
+      "room": "F_Combat06",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7298.60693359375, "targetY": 8885.8232421875 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "F_Combat07": {
+    "rcmap": {
+      "room": "F_Combat07",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6893.3251953125, "targetY": 8334.140625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "F_Combat08": {
+    "rcmap": {
+      "room": "F_Combat08",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6959.7998046875, "targetY": 8695.416015625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "F_Combat09": {
+    "rcmap": {
+      "room": "F_Combat09",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7031.09130859375, "targetY": 8856.154296875 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "F_Combat10": {
+    "rcmap": {
+      "room": "F_Combat10",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7395.142578125, "targetY": 8802.6953125 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "F_Combat11": {
+    "rcmap": {
+      "room": "F_Combat11",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5865.3798828125, "targetY": 11438.04296875 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "F_Combat12": {
+    "rcmap": {
+      "room": "F_Combat12",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6467.5791015625, "targetY": 13800.943359375 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "F_Combat13": {
+    "rcmap": {
+      "room": "F_Combat13",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 10289.50390625, "targetY": 16417.984375 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "F_Combat14": {
+    "rcmap": {
+      "room": "F_Combat14",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9956.2939453125, "targetY": 16295.5166015625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "F_Combat15": {
+    "rcmap": {
+      "room": "F_Combat15",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 11828.58984375, "targetY": 16240.5380859375 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "F_Combat16": {
+    "rcmap": {
+      "room": "F_Combat16",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 15317.701171875, "targetY": 18098.66015625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "F_Combat17": {
+    "rcmap": {
+      "room": "F_Combat17",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8398.8037109375, "targetY": 10251.546875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "F_Combat18": {
+    "rcmap": {
+      "room": "F_Combat18",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 11523.947265625, "targetY": 12755.318359375 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "F_Combat19": {
+    "rcmap": {
+      "room": "F_Combat19",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6650.64404296875, "targetY": 8837.263671875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "F_Combat20": {
+    "rcmap": {
+      "room": "F_Combat20",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7416.794921875, "targetY": 8549.39453125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "F_Combat21": {
+    "rcmap": {
+      "room": "F_Combat21",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7159.7763671875, "targetY": 9058.0341796875 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "F_Combat22": {
+    "rcmap": {
+      "room": "F_Combat22",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6630.38623046875, "targetY": 8414.93359375 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "F_MiniBoss01": {
+    "rcmap": {
+      "room": "F_MiniBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7280.90087890625, "targetY": 8782.6943359375 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "F_MiniBoss02": {
+    "rcmap": {
+      "room": "F_MiniBoss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7212.4580078125, "targetY": 8839.865234375 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "F_MiniBoss03": {
+    "rcmap": {
+      "room": "F_MiniBoss03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6984.64306640625, "targetY": 8918.150390625 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "F_Opening01": {
+    "rcmap": {
+      "room": "F_Opening01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6939.283203125, "targetY": 8809.908203125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "F_Opening02": {
+    "rcmap": {
+      "room": "F_Opening02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 3047.21435546875, "targetY": 11386.763671875 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "F_Opening03": {
+    "rcmap": {
+      "room": "F_Opening03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": -24.386962890625, "targetY": 13494.888671875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "F_PostBoss01": {
+    "rcmap": {
+      "room": "F_PostBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9718.4970703125, "targetY": 10847.0810546875 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "F_PreBoss01": {
+    "rcmap": {
+      "room": "F_PreBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6823.9775390625, "targetY": 8696.1171875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "F_PreBoss01_Shop": {
+    "rcmap": {
+      "room": "F_PreBoss01",
+      "shopVariant": true,
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6823.9775390625, "targetY": 8696.1171875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "F_Reprieve01": {
+    "rcmap": {
+      "room": "F_Reprieve01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8143.04345703125, "targetY": 9212.3603515625 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "F_Shop01": {
+    "rcmap": {
+      "room": "F_Shop01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 10646.8115234375, "targetY": 9497.365234375 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "F_Story01": {
+    "rcmap": {
+      "room": "F_Story01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7353.81884765625, "targetY": 9540.826171875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "G_Boss01": {
+    "rcmap": {
+      "room": "G_Boss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6417.6044921875, "targetY": 8576.943359375 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "G_Boss02": {
+    "rcmap": {
+      "room": "G_Boss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6765.15673828125, "targetY": 8844.548828125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "G_Combat01": {
+    "rcmap": {
+      "room": "G_Combat01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6994.8037109375, "targetY": 9056.87890625 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "G_Combat02": {
+    "rcmap": {
+      "room": "G_Combat02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6989.7138671875, "targetY": 8957.98828125 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "G_Combat03": {
+    "rcmap": {
+      "room": "G_Combat03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7307.0078125, "targetY": 9067.181640625 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "G_Combat04": {
+    "rcmap": {
+      "room": "G_Combat04",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7521.9970703125, "targetY": 9289.404296875 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "G_Combat05": {
+    "rcmap": {
+      "room": "G_Combat05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7681.54296875, "targetY": 9252.19921875 },
+      "zoom": { "applied": 0.85 }
+    }
+  },
+  "G_Combat06": {
+    "rcmap": {
+      "room": "G_Combat06",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7280.87109375, "targetY": 8737.755859375 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "G_Combat07": {
+    "rcmap": {
+      "room": "G_Combat07",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7871.1044921875, "targetY": 9449.302734375 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "G_Combat08": {
+    "rcmap": {
+      "room": "G_Combat08",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7878.0947265625, "targetY": 9331.828125 },
+      "zoom": { "applied": 0.75 }
+    }
+  },
+  "G_Combat09": {
+    "rcmap": {
+      "room": "G_Combat09",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 11384.328125, "targetY": 10171.228515625 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "G_Combat10": {
+    "rcmap": {
+      "room": "G_Combat10",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9059.5849609375, "targetY": 10969.109375 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "G_Combat11": {
+    "rcmap": {
+      "room": "G_Combat11",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9719.185546875, "targetY": 13589.369140625 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "G_Combat12": {
+    "rcmap": {
+      "room": "G_Combat12",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8064.06005859375, "targetY": 9043.7109375 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "G_Combat13": {
+    "rcmap": {
+      "room": "G_Combat13",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8096.55712890625, "targetY": 8551.296875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "G_Combat14": {
+    "rcmap": {
+      "room": "G_Combat14",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 10661.572265625, "targetY": 12236.369140625 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "G_Combat15": {
+    "rcmap": {
+      "room": "G_Combat15",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 10047.44140625, "targetY": 11294.5615234375 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "G_Combat16": {
+    "rcmap": {
+      "room": "G_Combat16",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6842.8408203125, "targetY": 9079.609375 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "G_Combat17": {
+    "rcmap": {
+      "room": "G_Combat17",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6661.4892578125, "targetY": 8874.7158203125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "G_Combat18": {
+    "rcmap": {
+      "room": "G_Combat18",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7440.1533203125, "targetY": 8588.1865234375 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "G_Combat19": {
+    "rcmap": {
+      "room": "G_Combat19",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4995.474609375, "targetY": 8783.65625 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "G_Combat20": {
+    "rcmap": {
+      "room": "G_Combat20",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6267.03271484375, "targetY": 10853.408203125 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "G_Intro": {
+    "rcmap": {
+      "room": "G_Intro",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4058.294921875, "targetY": 13935.6103515625 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "G_MiniBoss01": {
+    "rcmap": {
+      "room": "G_MiniBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7451.29296875, "targetY": 9285.39453125 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "G_MiniBoss02": {
+    "rcmap": {
+      "room": "G_MiniBoss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7885.3837890625, "targetY": 9598.095703125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "G_MiniBoss03": {
+    "rcmap": {
+      "room": "G_MiniBoss03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6950.04150390625, "targetY": 8971.044921875 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "G_PostBoss01": {
+    "rcmap": {
+      "room": "G_PostBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 14508.4306640625, "targetY": 8944.3369140625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "G_PreBoss01": {
+    "rcmap": {
+      "room": "G_PreBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6101.9130859375, "targetY": 12595.1806640625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "G_PreBoss01_Shop": {
+    "rcmap": {
+      "room": "G_PreBoss01",
+      "shopVariant": true,
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6101.9130859375, "targetY": 12595.1806640625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "G_Reprieve01": {
+    "rcmap": {
+      "room": "G_Reprieve01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6711.7861328125, "targetY": 8878.9208984375 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "G_Shop01": {
+    "rcmap": {
+      "room": "G_Shop01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6843.48046875, "targetY": 8556.6259765625 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "G_Story01": {
+    "rcmap": {
+      "room": "G_Story01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9019.6708984375, "targetY": 10843.0556640625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "H_Boss01": {
+    "rcmap": {
+      "room": "H_Boss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6608.203125, "targetY": 9377.4091796875 },
+      "zoom": { "applied": 0.3 }
+    }
+  },
+  "H_Boss02": {
+    "rcmap": {
+      "room": "H_Boss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 12077.263671875, "targetY": 9026.6064453125 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "H_Bridge01": {
+    "rcmap": {
+      "room": "H_Bridge01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 14504.828125, "targetY": 8903.5283203125 },
+      "zoom": { "applied": 0.22 }
+    }
+  },
+  "H_Bridge01_Shop": {
+    "rcmap": {
+      "room": "H_Bridge01",
+      "shopVariant": true,
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 14504.828125, "targetY": 8903.5283203125 },
+      "zoom": { "applied": 0.22 }
+    }
+  },
+  "H_Combat01": {
+    "stitched": true,
+    "calibration": {
+      "width": 3797,
+      "height": 2136,
+      "scale": 0.26666666666666666,
+      "pixelX": 1678,
+      "pixelY": 66,
+      "worldX": 8120.435546875,
+      "worldY": 4153.2021484375
+    },
+    "rcmap": { "room": "H_Combat01", "flipped": false }
+  },
+  "H_Combat02": {
+    "rcmap": {
+      "room": "H_Combat02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 14104.42578125, "targetY": 8994.8125 },
+      "zoom": { "applied": 0.19 }
+    }
+  },
+  "H_Combat03": {
+    "rcmap": {
+      "room": "H_Combat03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9697.64453125, "targetY": 7796.38720703125 },
+      "zoom": { "applied": 0.19 }
+    }
+  },
+  "H_Combat04": {
+    "stitched": true,
+    "calibration": {
+      "width": 3966,
+      "height": 2231,
+      "scale": 0.26666666666666666,
+      "pixelX": 1280,
+      "pixelY": 651,
+      "worldX": 5312.71728515625,
+      "worldY": 6551.3525390625
+    },
+    "rcmap": { "room": "H_Combat04", "flipped": false }
+  },
+  "H_Combat05": {
+    "stitched": true,
+    "calibration": {
+      "width": 4505,
+      "height": 2534,
+      "scale": 0.2533333333333333,
+      "pixelX": 1280,
+      "pixelY": 720,
+      "worldX": 10856.7216796875,
+      "worldY": 6527.0380859375
+    },
+    "rcmap": { "room": "H_Combat05", "flipped": false }
+  },
+  "H_Combat06": {
+    "stitched": true,
+    "calibration": {
+      "width": 3589,
+      "height": 2019,
+      "scale": 0.2533333333333333,
+      "pixelX": 1280,
+      "pixelY": 359,
+      "worldX": 6841.865234375,
+      "worldY": 3888.04052734375
+    },
+    "rcmap": { "room": "H_Combat06", "flipped": false }
+  },
+  "H_Combat07": {
+    "rcmap": {
+      "room": "H_Combat07",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 12619.037109375, "targetY": 7194.1533203125 },
+      "zoom": { "applied": 0.17 }
+    }
+  },
+  "H_Combat08": {
+    "rcmap": {
+      "room": "H_Combat08",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 12009.6806640625, "targetY": 7292.3154296875 },
+      "zoom": { "applied": 0.19 }
+    }
+  },
+  "H_Combat09": {
+    "rcmap": {
+      "room": "H_Combat09",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 13139.34765625, "targetY": 9095.630859375 },
+      "zoom": { "applied": 0.26 }
+    }
+  },
+  "H_Combat10": {
+    "rcmap": {
+      "room": "H_Combat10",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 21768.47265625, "targetY": 15450.439453125 },
+      "zoom": { "applied": 0.16 }
+    }
+  },
+  "H_Combat11": {
+    "rcmap": {
+      "room": "H_Combat11",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 16761.4296875, "targetY": 14688.544921875 },
+      "zoom": { "applied": 0.17 }
+    }
+  },
+  "H_Combat12": {
+    "rcmap": {
+      "room": "H_Combat12",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 18353.119140625, "targetY": 24002.94921875 },
+      "zoom": { "applied": 0.18 }
+    }
+  },
+  "H_Combat13": {
+    "rcmap": {
+      "room": "H_Combat13",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 12728.171875, "targetY": 7647.63525390625 },
+      "zoom": { "applied": 0.2 }
+    }
+  },
+  "H_Combat14": {
+    "rcmap": {
+      "room": "H_Combat14",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 12436.078125, "targetY": 7356.49609375 },
+      "zoom": { "applied": 0.2 }
+    }
+  },
+  "H_Combat15": {
+    "rcmap": {
+      "room": "H_Combat15",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 13293.51953125, "targetY": 8242.4306640625 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "H_Intro": {
+    "rcmap": {
+      "room": "H_Intro",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 16533.59375, "targetY": 12191.7001953125 },
+      "zoom": { "applied": 0.2 }
+    }
+  },
+  "H_MiniBoss01": {
+    "rcmap": {
+      "room": "H_MiniBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 11088.181640625, "targetY": 8097.6337890625 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "H_MiniBoss02": {
+    "rcmap": {
+      "room": "H_MiniBoss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 12159.9130859375, "targetY": 8175.70703125 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "H_PostBoss01": {
+    "rcmap": {
+      "room": "H_PostBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6105.0849609375, "targetY": 4143.3642578125 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "H_PreBoss01": {
+    "rcmap": {
+      "room": "H_PreBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8785.2431640625, "targetY": 15429.970703125 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "H_PreBoss01_Shop": {
+    "rcmap": {
+      "room": "H_PreBoss01",
+      "shopVariant": true,
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8785.2431640625, "targetY": 15429.970703125 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "I_Boss01": {
+    "rcmap": {
+      "room": "I_Boss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 3958.228759765625, "targetY": 4173.9873046875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "I_Combat01": {
+    "rcmap": {
+      "room": "I_Combat01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5877.7216796875, "targetY": 8767.005859375 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "I_Combat02": {
+    "rcmap": {
+      "room": "I_Combat02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6278.1337890625, "targetY": 4141.66162109375 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "I_Combat03": {
+    "rcmap": {
+      "room": "I_Combat03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7461.8818359375, "targetY": 9344.060546875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "I_Combat04": {
+    "rcmap": {
+      "room": "I_Combat04",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8392.6826171875, "targetY": 9814.6279296875 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "I_Combat05": {
+    "rcmap": {
+      "room": "I_Combat05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7833.46923828125, "targetY": 9209.376953125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "I_Combat06": {
+    "rcmap": {
+      "room": "I_Combat06",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5010.3359375, "targetY": 6269.841796875 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "I_Combat07": {
+    "rcmap": {
+      "room": "I_Combat07",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7889.841796875, "targetY": 9685.53125 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "I_Combat08": {
+    "rcmap": {
+      "room": "I_Combat08",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8242.111328125, "targetY": 9763.0712890625 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "I_Combat09": {
+    "rcmap": {
+      "room": "I_Combat09",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8908.740234375, "targetY": 9695.2919921875 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "I_Combat10": {
+    "rcmap": {
+      "room": "I_Combat10",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 16853.412109375, "targetY": 12291.998046875 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "I_Combat11": {
+    "rcmap": {
+      "room": "I_Combat11",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 14552.4375, "targetY": 16720.130859375 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "I_Combat12": {
+    "rcmap": {
+      "room": "I_Combat12",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 18810.328125, "targetY": 20287.6875 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "I_Combat13": {
+    "rcmap": {
+      "room": "I_Combat13",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 21619.34765625, "targetY": 23738.78125 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "I_Combat14": {
+    "rcmap": {
+      "room": "I_Combat14",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 23865.89453125, "targetY": 16698.4140625 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "I_Combat15": {
+    "rcmap": {
+      "room": "I_Combat15",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6452.9052734375, "targetY": 4273.6259765625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "I_Combat16": {
+    "rcmap": {
+      "room": "I_Combat16",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4765.13916015625, "targetY": 7538.6416015625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "I_Combat17": {
+    "rcmap": {
+      "room": "I_Combat17",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4692.6962890625, "targetY": 7989.931640625 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "I_Combat18": {
+    "rcmap": {
+      "room": "I_Combat18",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4198.021484375, "targetY": 6240.9013671875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "I_Combat19": {
+    "rcmap": {
+      "room": "I_Combat19",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5023.38623046875, "targetY": 4898.46435546875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "I_Combat20": {
+    "rcmap": {
+      "room": "I_Combat20",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5997.95166015625, "targetY": 8968.732421875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "I_Combat21": {
+    "rcmap": {
+      "room": "I_Combat21",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4151.42041015625, "targetY": 4844.06689453125 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "I_Combat22": {
+    "rcmap": {
+      "room": "I_Combat22",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4827.2431640625, "targetY": 5474.732421875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "I_Combat23": {
+    "rcmap": {
+      "room": "I_Combat23",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5899.052734375, "targetY": 8223.625 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "I_Combat24": {
+    "rcmap": {
+      "room": "I_Combat24",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5029.86767578125, "targetY": 4291.78759765625 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "I_Intro": {
+    "rcmap": {
+      "room": "I_Intro",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 13465.6494140625, "targetY": 11578.8134765625 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "I_MiniBoss01": {
+    "rcmap": {
+      "room": "I_MiniBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7316.49658203125, "targetY": 9411.716796875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "I_MiniBoss02": {
+    "rcmap": {
+      "room": "I_MiniBoss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7923.6845703125, "targetY": 9651.044921875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "I_PreBoss01": {
+    "rcmap": {
+      "room": "I_PreBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 3554.365966796875, "targetY": 4694.41845703125 },
+      "zoom": { "applied": 0.47 }
+    }
+  },
+  "I_PreBoss02": {
+    "rcmap": {
+      "room": "I_PreBoss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 3554.365966796875, "targetY": 4694.41845703125 },
+      "zoom": { "applied": 0.47 }
+    }
+  },
+  "I_Reprieve01": {
+    "rcmap": {
+      "room": "I_Reprieve01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5736.85595703125, "targetY": 3685.25732421875 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "I_Story01": {
+    "rcmap": {
+      "room": "I_Story01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5454.716796875, "targetY": 5383.89013671875 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "N_Boss01": {
+    "rcmap": {
+      "room": "N_Boss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6169.650390625, "targetY": 9024.4248046875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Boss02": {
+    "rcmap": {
+      "room": "N_Boss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6946.5380859375, "targetY": 8734.26953125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat01": {
+    "rcmap": {
+      "room": "N_Combat01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7625.91748046875, "targetY": 8669.626953125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat02": {
+    "rcmap": {
+      "room": "N_Combat02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6681.166015625, "targetY": 8543.20703125 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "N_Combat03": {
+    "rcmap": {
+      "room": "N_Combat03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6983.857421875, "targetY": 8617.35546875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "N_Combat04": {
+    "rcmap": {
+      "room": "N_Combat04",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7171.21240234375, "targetY": 8994.435546875 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "N_Combat05": {
+    "rcmap": {
+      "room": "N_Combat05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6756.490234375, "targetY": 8655.697265625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "N_Combat06": {
+    "rcmap": {
+      "room": "N_Combat06",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6314.72900390625, "targetY": 8820.978515625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "N_Combat07": {
+    "rcmap": {
+      "room": "N_Combat07",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6932.01220703125, "targetY": 8681.072265625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "N_Combat08": {
+    "rcmap": {
+      "room": "N_Combat08",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6372.48388671875, "targetY": 8851.533203125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "N_Combat09": {
+    "rcmap": {
+      "room": "N_Combat09",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7089.89990234375, "targetY": 8849.3759765625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat10": {
+    "rcmap": {
+      "room": "N_Combat10",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7290.5126953125, "targetY": 8382.6123046875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat11": {
+    "rcmap": {
+      "room": "N_Combat11",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6718.10107421875, "targetY": 8984.134765625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat12": {
+    "rcmap": {
+      "room": "N_Combat12",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6991.09375, "targetY": 8007.3681640625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat13": {
+    "rcmap": {
+      "room": "N_Combat13",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7160.4130859375, "targetY": 8104.90625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat14": {
+    "rcmap": {
+      "room": "N_Combat14",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6621.7060546875, "targetY": 8541 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "N_Combat15": {
+    "rcmap": {
+      "room": "N_Combat15",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7168.9599609375, "targetY": 6991.0107421875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat16": {
+    "rcmap": {
+      "room": "N_Combat16",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9719.619140625, "targetY": 13611.876953125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat17": {
+    "rcmap": {
+      "room": "N_Combat17",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7320.6025390625, "targetY": 11461.4140625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "N_Combat18": {
+    "rcmap": {
+      "room": "N_Combat18",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9392.5751953125, "targetY": 13285.625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat19": {
+    "rcmap": {
+      "room": "N_Combat19",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7465.7177734375, "targetY": 15246.568359375 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat20": {
+    "rcmap": {
+      "room": "N_Combat20",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8702.806640625, "targetY": 15686.013671875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_Combat21": {
+    "rcmap": {
+      "room": "N_Combat21",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 10038.923828125, "targetY": 15721.80859375 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "N_Combat22": {
+    "rcmap": {
+      "room": "N_Combat22",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9869.8935546875, "targetY": 15895.33984375 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "N_Combat23": {
+    "rcmap": {
+      "room": "N_Combat23",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7446.767578125, "targetY": 8517.771484375 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "N_Hub": {
+    "rcmap": {
+      "room": "N_Hub",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7083.759765625, "targetY": 8758.630859375 },
+      "zoom": { "applied": 0.25 }
+    }
+  },
+  "N_MiniBoss01": {
+    "rcmap": {
+      "room": "N_MiniBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7276.03173828125, "targetY": 9205.9892578125 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "N_MiniBoss02": {
+    "rcmap": {
+      "room": "N_MiniBoss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6919.72119140625, "targetY": 8901.64453125 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "N_Opening01": {
+    "rcmap": {
+      "room": "N_Opening01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5349.9716796875, "targetY": 9924.048828125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_PostBoss01": {
+    "rcmap": {
+      "room": "N_PostBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9171.490234375, "targetY": 10989.728515625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "N_PreBoss01": {
+    "rcmap": {
+      "room": "N_PreBoss01",
+      "shopVariant": true,
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6301.87109375, "targetY": 9004.6259765625 },
+      "zoom": { "applied": 0.51 }
+    }
+  },
+  "N_PreHub01": {
+    "rcmap": {
+      "room": "N_PreHub01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9909.189453125, "targetY": 7135.51171875 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "N_Shop01": {
+    "rcmap": {
+      "room": "N_Shop01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7089.822265625, "targetY": 8961.185546875 },
+      "zoom": { "applied": 0.52 }
+    }
+  },
+  "N_Story01": {
+    "rcmap": {
+      "room": "N_Story01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7087.6748046875, "targetY": 9274.5537109375 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "N_Sub01": {
+    "rcmap": {
+      "room": "N_Sub01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7198.91015625, "targetY": 8847.2119140625 },
+      "zoom": { "applied": 0.8 }
+    }
+  },
+  "N_Sub02": {
+    "rcmap": {
+      "room": "N_Sub02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6961.87060546875, "targetY": 8828.79296875 },
+      "zoom": { "applied": 0.8 }
+    }
+  },
+  "N_Sub03": {
+    "rcmap": {
+      "room": "N_Sub03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6074.1669921875, "targetY": 8183.052734375 },
+      "zoom": { "applied": 0.8 }
+    }
+  },
+  "N_Sub04": {
+    "rcmap": {
+      "room": "N_Sub04",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6217.06884765625, "targetY": 8277.0927734375 },
+      "zoom": { "applied": 0.8 }
+    }
+  },
+  "N_Sub05": {
+    "rcmap": {
+      "room": "N_Sub05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6304.49560546875, "targetY": 8357.1953125 },
+      "zoom": { "applied": 0.8 }
+    }
+  },
+  "N_Sub06": {
+    "rcmap": {
+      "room": "N_Sub06",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6009.29443359375, "targetY": 8237.9443359375 },
+      "zoom": { "applied": 0.8 }
+    }
+  },
+  "N_Sub07": {
+    "rcmap": {
+      "room": "N_Sub07",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6248.119140625, "targetY": 8508.87109375 },
+      "zoom": { "applied": 0.75 }
+    }
+  },
+  "N_Sub08": {
+    "rcmap": {
+      "room": "N_Sub08",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5010.50439453125, "targetY": 12388.771484375 },
+      "zoom": { "applied": 0.75 }
+    }
+  },
+  "N_Sub09": {
+    "rcmap": {
+      "room": "N_Sub09",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 1881.010498046875, "targetY": 10879.15625 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "N_Sub10": {
+    "rcmap": {
+      "room": "N_Sub10",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8355.8486328125, "targetY": 13153.2890625 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "N_Sub11": {
+    "rcmap": {
+      "room": "N_Sub11",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 9434.3720703125, "targetY": 14816.7275390625 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "N_Sub12": {
+    "rcmap": {
+      "room": "N_Sub12",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6509.57958984375, "targetY": 8435.2578125 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "N_Sub13": {
+    "rcmap": {
+      "room": "N_Sub13",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6453.765625, "targetY": 8483.322265625 },
+      "zoom": { "applied": 0.75 }
+    }
+  },
+  "N_Sub14": {
+    "rcmap": {
+      "room": "N_Sub14",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 17149.24609375, "targetY": 19629.15625 },
+      "zoom": { "applied": 0.75 }
+    }
+  },
+  "N_Sub15": {
+    "rcmap": {
+      "room": "N_Sub15",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6393.73828125, "targetY": 8610.71875 },
+      "zoom": { "applied": 0.75 }
+    }
+  },
+  "O_Boss01": {
+    "rcmap": {
+      "room": "O_Boss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6700.10791015625, "targetY": 9336.349609375 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "O_Boss02": {
+    "rcmap": {
+      "room": "O_Boss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6478.033203125, "targetY": 9231.9892578125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "O_Combat01": {
+    "rcmap": {
+      "room": "O_Combat01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7196.35498046875, "targetY": 8953.771484375 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "O_Combat02": {
+    "rcmap": {
+      "room": "O_Combat02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6812.13330078125, "targetY": 8965.7861328125 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "O_Combat03": {
+    "rcmap": {
+      "room": "O_Combat03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8262.6669921875, "targetY": 8939.001953125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "O_Combat04": {
+    "rcmap": {
+      "room": "O_Combat04",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6903.6953125, "targetY": 8760.8994140625 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "O_Combat05": {
+    "rcmap": {
+      "room": "O_Combat05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6968.3994140625, "targetY": 8833.654296875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "O_Combat06": {
+    "rcmap": {
+      "room": "O_Combat06",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6728.81298828125, "targetY": 8765.33984375 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "O_Combat07": {
+    "rcmap": {
+      "room": "O_Combat07",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6925.58740234375, "targetY": 8803.4013671875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "O_Combat08": {
+    "rcmap": {
+      "room": "O_Combat08",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8074.1357421875, "targetY": 8740.0791015625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "O_Combat09": {
+    "rcmap": {
+      "room": "O_Combat09",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8162.6669921875, "targetY": 8839.001953125 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "O_Combat10": {
+    "rcmap": {
+      "room": "O_Combat10",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7267.38720703125, "targetY": 8679.685546875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "O_Combat11": {
+    "rcmap": {
+      "room": "O_Combat11",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7003.6953125, "targetY": 8760.8994140625 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "O_Combat12": {
+    "rcmap": {
+      "room": "O_Combat12",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6988.322265625, "targetY": 8885.234375 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "O_Combat13": {
+    "rcmap": {
+      "room": "O_Combat13",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8174.1357421875, "targetY": 8740.0791015625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "O_Combat14": {
+    "rcmap": {
+      "room": "O_Combat14",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7179.447265625, "targetY": 8868.62890625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "O_Combat15": {
+    "rcmap": {
+      "room": "O_Combat15",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7901.9375, "targetY": 8830.6953125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "O_Devotion01": {
+    "rcmap": {
+      "room": "O_Devotion01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7441.21240234375, "targetY": 8615.2041015625 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "O_Intro": {
+    "rcmap": {
+      "room": "O_Intro",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8099.73828125, "targetY": 12291.5390625 },
+      "zoom": { "applied": 0.3 }
+    }
+  },
+  "O_MiniBoss01": {
+    "rcmap": {
+      "room": "O_MiniBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6062.61962890625, "targetY": 8447.283203125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "O_MiniBoss02": {
+    "rcmap": {
+      "room": "O_MiniBoss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 8046.36572265625, "targetY": 8732.4912109375 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "O_PostBoss01": {
+    "rcmap": {
+      "room": "O_PostBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 10276.43359375, "targetY": 6394.88427734375 },
+      "zoom": { "applied": 0.3 }
+    }
+  },
+  "O_PreBoss01": {
+    "rcmap": {
+      "room": "O_PreBoss01",
+      "shopVariant": true,
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 11552.8447265625, "targetY": 12846.98828125 },
+      "zoom": { "applied": 0.49 }
+    }
+  },
+  "O_Reprieve01": {
+    "rcmap": {
+      "room": "O_Reprieve01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 13009.392578125, "targetY": 17964.5078125 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "O_Shop01": {
+    "rcmap": {
+      "room": "O_Shop01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 11598.384765625, "targetY": 12966.9541015625 },
+      "zoom": { "applied": 0.49 }
+    }
+  },
+  "O_Story01": {
+    "rcmap": {
+      "room": "O_Story01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 14072.9453125, "targetY": 17745.39453125 },
+      "zoom": { "applied": 0.3 }
+    }
+  },
+  "P_Boss01": {
+    "rcmap": {
+      "room": "P_Boss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7720.09716796875, "targetY": 8655.2109375 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "P_Combat01": {
+    "rcmap": {
+      "room": "P_Combat01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5683.6474609375, "targetY": 8826.8623046875 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "P_Combat02": {
+    "rcmap": {
+      "room": "P_Combat02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6299.3525390625, "targetY": 8503.1669921875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "P_Combat03": {
+    "rcmap": {
+      "room": "P_Combat03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5711.2431640625, "targetY": 8757.966796875 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "P_Combat04": {
+    "rcmap": {
+      "room": "P_Combat04",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5669.734375, "targetY": 8643.9248046875 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "P_Combat05": {
+    "rcmap": {
+      "room": "P_Combat05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6050.98974609375, "targetY": 8307.19140625 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "P_Combat06": {
+    "rcmap": {
+      "room": "P_Combat06",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6506.0634765625, "targetY": 9524.490234375 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "P_Combat07": {
+    "rcmap": {
+      "room": "P_Combat07",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7094.57177734375, "targetY": 8613.45703125 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "P_Combat08": {
+    "rcmap": {
+      "room": "P_Combat08",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5830.4990234375, "targetY": 8848.6201171875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "P_Combat09": {
+    "rcmap": {
+      "room": "P_Combat09",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6001.66748046875, "targetY": 8433.4921875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "P_Combat10": {
+    "rcmap": {
+      "room": "P_Combat10",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6846.22314453125, "targetY": 8169.140625 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "P_Combat11": {
+    "rcmap": {
+      "room": "P_Combat11",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6526.7900390625, "targetY": 8275.51171875 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "P_Combat12": {
+    "rcmap": {
+      "room": "P_Combat12",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6229.724609375, "targetY": 8746.3447265625 },
+      "zoom": { "applied": 0.5 }
+    }
+  },
+  "P_Combat13": {
+    "rcmap": {
+      "room": "P_Combat13",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6235.7294921875, "targetY": 8917.9736328125 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "P_Combat14": {
+    "rcmap": {
+      "room": "P_Combat14",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 17279.427734375, "targetY": 15810.029296875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "P_Combat15": {
+    "rcmap": {
+      "room": "P_Combat15",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 14240.1533203125, "targetY": 13748 },
+      "zoom": { "applied": 0.35 }
+    }
+  },
+  "P_Combat16": {
+    "rcmap": {
+      "room": "P_Combat16",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 13385.251953125, "targetY": 13259.8046875 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "P_Combat17": {
+    "rcmap": {
+      "room": "P_Combat17",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6741.53857421875, "targetY": 9401.099609375 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "P_Combat18": {
+    "rcmap": {
+      "room": "P_Combat18",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5676.72412109375, "targetY": 8839.740234375 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "P_Combat19": {
+    "rcmap": {
+      "room": "P_Combat19",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6206.95068359375, "targetY": 7912.029296875 },
+      "zoom": { "applied": 0.3 }
+    }
+  },
+  "P_Intro": {
+    "rcmap": {
+      "room": "P_Intro",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 10110.3388671875, "targetY": 14534.306640625 },
+      "zoom": { "applied": 0.25 }
+    }
+  },
+  "P_MiniBoss01": {
+    "rcmap": {
+      "room": "P_MiniBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5883.029296875, "targetY": 9131.5048828125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "P_MiniBoss02": {
+    "rcmap": {
+      "room": "P_MiniBoss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6031.31005859375, "targetY": 9007.955078125 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "P_PostBoss01": {
+    "rcmap": {
+      "room": "P_PostBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 10636.7607421875, "targetY": 6970.4814453125 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "P_PreBoss01": {
+    "rcmap": {
+      "room": "P_PreBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 23183.029296875, "targetY": 20961.53515625 },
+      "zoom": { "applied": 0.3 }
+    }
+  },
+  "P_PreBoss01_Shop": {
+    "rcmap": {
+      "room": "P_PreBoss01",
+      "shopVariant": true,
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 23283.029296875, "targetY": 20961.53515625 },
+      "zoom": { "applied": 0.31 }
+    }
+  },
+  "P_Reprieve01": {
+    "rcmap": {
+      "room": "P_Reprieve01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 24425.330078125, "targetY": 21645.3828125 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "P_Shop01": {
+    "rcmap": {
+      "room": "P_Shop01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 19516.623046875, "targetY": 18529.2265625 },
+      "zoom": { "applied": 0.38 }
+    }
+  },
+  "P_Story01": {
+    "rcmap": {
+      "room": "P_Story01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 19646.25390625, "targetY": 16572.29296875 },
+      "zoom": { "applied": 0.3 }
+    }
+  },
+  "Q_Boss01": {
+    "rcmap": {
+      "room": "Q_Boss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5021.72998046875, "targetY": 8495.5078125 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "Q_Boss02": {
+    "rcmap": {
+      "room": "Q_Boss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5021.72998046875, "targetY": 8495.5078125 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "Q_Combat01": {
+    "rcmap": {
+      "room": "Q_Combat01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5442.4482421875, "targetY": 8918.8056640625 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "Q_Combat02": {
+    "rcmap": {
+      "room": "Q_Combat02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5353.4072265625, "targetY": 8782.794921875 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "Q_Combat03": {
+    "rcmap": {
+      "room": "Q_Combat03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5610.462890625, "targetY": 8680.814453125 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "Q_Combat04": {
+    "rcmap": {
+      "room": "Q_Combat04",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5418.21728515625, "targetY": 8906.03515625 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "Q_Combat05": {
+    "rcmap": {
+      "room": "Q_Combat05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5962.111328125, "targetY": 8536.69921875 },
+      "zoom": { "applied": 0.52 }
+    }
+  },
+  "Q_Combat06": {
+    "rcmap": {
+      "room": "Q_Combat06",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5719.52099609375, "targetY": 8683.7099609375 },
+      "zoom": { "applied": 0.65 }
+    }
+  },
+  "Q_Combat07": {
+    "rcmap": {
+      "room": "Q_Combat07",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6106.33447265625, "targetY": 9014.884765625 },
+      "zoom": { "applied": 0.75 }
+    }
+  },
+  "Q_Combat08": {
+    "rcmap": {
+      "room": "Q_Combat08",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5648.8388671875, "targetY": 8830.2421875 },
+      "zoom": { "applied": 0.7 }
+    }
+  },
+  "Q_Combat09": {
+    "rcmap": {
+      "room": "Q_Combat09",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5981.56396484375, "targetY": 9068.099609375 },
+      "zoom": { "applied": 0.8 }
+    }
+  },
+  "Q_Combat10": {
+    "rcmap": {
+      "room": "Q_Combat10",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6008.31298828125, "targetY": 8670.4921875 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "Q_Combat11": {
+    "rcmap": {
+      "room": "Q_Combat11",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6339.7890625, "targetY": 8993.18359375 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Q_Combat12": {
+    "rcmap": {
+      "room": "Q_Combat12",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5692.681640625, "targetY": 9006.43359375 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "Q_Combat13": {
+    "rcmap": {
+      "room": "Q_Combat13",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 4748.3056640625, "targetY": 8843.24609375 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "Q_Combat14": {
+    "rcmap": {
+      "room": "Q_Combat14",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5778.54248046875, "targetY": 9430.5302734375 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "Q_Combat15": {
+    "rcmap": {
+      "room": "Q_Combat15",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6062.755859375, "targetY": 9186.1015625 },
+      "zoom": { "applied": 0.6 }
+    }
+  },
+  "Q_Combat16": {
+    "rcmap": {
+      "room": "Q_Combat16",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 3727.966552734375, "targetY": 9216.0400390625 },
+      "zoom": { "applied": 0.52 }
+    }
+  },
+  "Q_Intro": {
+    "rcmap": {
+      "room": "Q_Intro",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 2149.6376953125, "targetY": 10713.259765625 },
+      "zoom": { "applied": 0.25 }
+    }
+  },
+  "Q_MiniBoss02": {
+    "rcmap": {
+      "room": "Q_MiniBoss02",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 6092.2294921875, "targetY": 8271.2509765625 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Q_MiniBoss03": {
+    "rcmap": {
+      "room": "Q_MiniBoss03",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7806.1591796875, "targetY": 8952.1904296875 },
+      "zoom": { "applied": 0.4 }
+    }
+  },
+  "Q_MiniBoss04": {
+    "rcmap": {
+      "room": "Q_MiniBoss04",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 7027.060546875, "targetY": 8608.62109375 },
+      "zoom": { "applied": 0.45 }
+    }
+  },
+  "Q_MiniBoss05": {
+    "rcmap": {
+      "room": "Q_MiniBoss05",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 5640.36083984375, "targetY": 8988.3671875 },
+      "zoom": { "applied": 0.55 }
+    }
+  },
+  "Q_PreBoss01": {
+    "rcmap": {
+      "room": "Q_PreBoss01",
+      "flipped": false,
+      "screen": { "renderWidth": 2560, "renderHeight": 1440 },
+      "camera": { "targetX": 25256.76171875, "targetY": 17998.18359375 },
+      "zoom": { "applied": 0.31 }
+    }
+  }
+}

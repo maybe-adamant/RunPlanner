@@ -295,6 +295,43 @@ describe('Nemesis interaction family', () => {
   });
 });
 
+describe('encounter marker triggers', () => {
+  it("hangs each Fields cage's marker on the Unlock row that starts it", () => {
+    const { room } = projectedWhere(loadNemesisFieldsCheckpoint(), (candidate) =>
+      candidate.encounterPhases.some(
+        (phase) => phase.address.phaseKey === 'Passive' && phase.nemesisEvent !== undefined,
+      ),
+    );
+    const entries = room.roomActions?.timeline.entries ?? [];
+    const markers = beginMarkers(room);
+    expect(markers).toHaveLength(3);
+    for (const marker of markers) {
+      if (marker.boundary.kind !== 'encounterStarted') throw new Error('a cage shows its Combat');
+      const unlock = roomActionKey({
+        kind: 'completeFieldsCage',
+        phaseKey: marker.boundary.phaseKey,
+      });
+      expect(marker.triggerActionKey).toBe(unlock);
+      expect(entries[entries.indexOf(marker) - 1]).toMatchObject({
+        kind: 'action',
+        actionKey: unlock,
+      });
+    }
+    expect(
+      banners(room, 'encounterEnd').filter((entry) => entry.triggerActionKey !== undefined),
+    ).toEqual([]);
+  });
+
+  it('names no trigger for a fight that starts with its room', () => {
+    const room = roomOf(createCompleteFGProject(), goldenGOccurrenceId(2, 1));
+    const boundaries = (room.roomActions?.timeline.entries ?? []).filter(
+      (entry): entry is BoundaryEntry => entry.kind === 'boundary',
+    );
+    expect(boundaries.some((entry) => entry.boundary.kind === 'encounterStarted')).toBe(true);
+    expect(boundaries.filter((entry) => entry.triggerActionKey !== undefined)).toEqual([]);
+  });
+});
+
 describe('encounter banner identity', () => {
   it('always names the encounter and omits the role in a single-phase room', () => {
     expect(

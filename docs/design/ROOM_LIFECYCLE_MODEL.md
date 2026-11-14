@@ -290,7 +290,11 @@ the fight. A challenge switch press and a locked-door press begin and start
 their fight, a press fight outside the room's envelope, at once: its merged
 Encounter and Combat marker stands right after the press, after Doors open. A
 press fight never runs end effects, and the walk runs it as the press's own
-phase events. Eris's talk starts no fight.
+phase events. Eris's talk starts no fight. The Timeline names that row as the
+trigger of each marker it starts and that stands right after it; a marker
+whose row is unplaced, or ranked where the marker cannot follow it, names
+none, and an automatic start, an encounter's end, Wheels open and Doors open
+never do.
 
 **Noncombat and Story encounters.** The game still records and runs a Story
 encounter through `StartEncounter`, but its `EncounterType = NonCombat` skips

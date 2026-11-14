@@ -67,10 +67,6 @@ import {
   type HermesShrineCandidateArtifacts,
 } from '../commerce/hermes-shrine';
 import {
-  createEmptyRerollSurfaceCandidateArtifacts,
-  type RerollSurfaceCandidateArtifacts,
-} from '../rewards/biome/reroll-surfaces';
-import {
   createEmptyStygianWellCandidateArtifacts,
   type StygianWellCandidateArtifacts,
 } from '../commerce/stygian-well';
@@ -101,7 +97,6 @@ export interface BiomeCandidateArtifacts {
   readonly stygianWells: StygianWellCandidateArtifacts;
   readonly chaos: ChaosCandidateArtifacts;
   readonly zagreusContracts: ZagreusContractCandidateArtifacts;
-  readonly rerollSurfaces: RerollSurfaceCandidateArtifacts;
   readonly objectInteractions: RoomObjectInteractionArtifacts;
 }
 
@@ -151,7 +146,6 @@ export function createBiomeCandidateArtifacts(
   transcendentEmbryo: TranscendentEmbryoCandidateArtifacts = createEmptyTranscendentEmbryoCandidateArtifacts(),
   chaos: ChaosCandidateArtifacts = createEmptyChaosCandidateArtifacts(),
   zagreusContracts: ZagreusContractCandidateArtifacts = createEmptyZagreusContractCandidateArtifacts(),
-  rerollSurfaces: RerollSurfaceCandidateArtifacts = createEmptyRerollSurfaceCandidateArtifacts(),
   objectInteractions: RoomObjectInteractionArtifacts = createEmptyRoomObjectInteractionArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
@@ -176,7 +170,6 @@ export function createBiomeCandidateArtifacts(
     stygianWells,
     chaos,
     zagreusContracts,
-    rerollSurfaces,
     objectInteractions,
   });
 }

@@ -32,11 +32,7 @@ import {
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
-import {
-  locallyValidRewardOffers,
-  storeEntryOnRoute,
-  type ResolvedRewardOffer,
-} from '@run-planner/engine/reward-kernel';
+import { storeEntryOnRoute, type ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   loadNemesisFieldsCheckpoint,
   loadUnderworldFGCheckpoint,
@@ -49,6 +45,7 @@ import {
   forceApolloRerolledStartProject,
   forceApolloStartTrait,
   firstSupportedReroll,
+  placedPressRewards,
   supportedRerollRewards,
   withArcana,
   withGoldenUnderworldJudgments,
@@ -416,19 +413,13 @@ describe('reroll settlement', () => {
     expect(countedRewardTypeDomain(catalog, assembly, owner, binding)).not.toContain(
       fallback.rewardType,
     );
-    const session = createPreparedProjectCandidateSession(catalog, assembly);
-    const pendingSupported = countedRewardTypeDomain(catalog, assembly, owner, binding, 'reroll')
-      .flatMap((type) => locallyValidRewardOffers(catalog.rewards, type))
-      .filter((value) => {
-        const result = session.evaluate({
-          kind: 'pendingRerollReward',
-          surface,
-          target: exit1,
-          value,
-        });
-        return result.kind === 'rerollReward' && result.result.supported;
-      });
-    expect(pendingSupported).toEqual([fallback]);
+    const placed = placedPressRewards(
+      gift,
+      surface,
+      exit1,
+      countedRewardTypeDomain(catalog, assembly, owner, binding, 'reroll'),
+    );
+    expect(placed?.rewards).toEqual([fallback]);
 
     const pressed = collectTestRequiredItems(
       settle(gift, insertReroll(gift, exit1, fallback, from)),
@@ -834,21 +825,15 @@ describe('Hub board rerolls', () => {
     expect(rerolledDoor(later.project, 'surface-n-combat09', n)?.offer).toEqual(later.reward);
   });
 
-  /** Appends a press of one slot to a stay with the first reward the session accepts there. */
+  /** Appends a press of one slot to a stay with the first reward a placed press accepts there. */
   function pressInStay(project: ProjectDocument, hubSlotKey: string, precedingVisitCount: number) {
     const surface = { kind: 'hubStay', hub, precedingVisitCount } as const;
-    const session = createPreparedProjectCandidateSession(catalog, evaluate(project));
-    const reward = ['MaxHealthDropBig', 'MaxManaDropBig', 'Boon']
-      .flatMap((type) => locallyValidRewardOffers(catalog.rewards, type))
-      .find((value) => {
-        const result = session.evaluate({
-          kind: 'pendingRerollReward',
-          surface,
-          target: { kind: 'hubSlot', hubSlotKey },
-          value,
-        });
-        return result.kind === 'rerollReward' && result.result.supported;
-      });
+    const [reward] =
+      placedPressRewards(project, surface, { kind: 'hubSlot', hubSlotKey }, [
+        'MaxHealthDropBig',
+        'MaxManaDropBig',
+        'Boon',
+      ])?.rewards ?? [];
     if (reward === undefined) throw new Error(`no reward is supported for ${hubSlotKey}`);
     return {
       reward,

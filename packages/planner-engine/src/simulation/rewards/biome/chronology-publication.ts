@@ -30,7 +30,6 @@ import { BiomeRewardSimulationContractError } from './biome-contract';
 import { isRoomLifecycleOwner, publishRunStateThroughCoverage } from '../run-state';
 import { createRoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';
 import { selectedTraitOfferProducts } from './selected-trait-products';
-import { createRerollSurfaceCandidateArtifacts } from './reroll-surfaces';
 import type { ChronologyAccumulation } from './chronology-accumulator';
 import { type ChronologyWalkContext, type ChronologyWalkState } from './chronology-walk';
 import {
@@ -406,9 +405,6 @@ export function publishChronology(
           assessment,
         ]),
       ),
-    ),
-    rerollSurfaceArtifacts: createRerollSurfaceCandidateArtifacts(
-      accumulation.rerollSurfaceCapabilities,
     ),
     stygianWellArtifacts: createStygianWellCandidateArtifacts(
       new Map(

@@ -27,14 +27,12 @@ import {
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import {
-  locallyValidRewardOffers,
-  type ResolvedRewardOffer,
-} from '@run-planner/engine/reward-kernel';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 import {
+  placedPressRewards,
   supportedRerollRewards,
   withArcana,
   withGoldenUnderworldJudgments,
@@ -94,20 +92,14 @@ const HUB_REWARDS = [
 
 const key = (offer: ResolvedRewardOffer) => JSON.stringify(offer);
 
-/** Every reward the candidate session accepts for a press not yet authored. */
+/** Every reward a press placed on the surface with its result unset accepts. */
 function pendingRewards(
   project: ProjectDocument,
   surface: RerollSurface,
   target: RerollPressTarget,
   rewardTypes: readonly string[],
 ): readonly ResolvedRewardOffer[] {
-  const session = createPreparedProjectCandidateSession(catalog, evaluate(project));
-  return rewardTypes
-    .flatMap((type) => locallyValidRewardOffers(catalog.rewards, type))
-    .filter((value) => {
-      const result = session.evaluate({ kind: 'pendingRerollReward', surface, target, value });
-      return result.kind === 'rerollReward' && result.result.supported;
-    });
+  return placedPressRewards(project, surface, target, rewardTypes)?.rewards ?? [];
 }
 
 /** The command that appends a press to the surface. */
@@ -144,7 +136,7 @@ function appendPress(
   };
 }
 
-/** Appends a press with the first reward a press not yet authored accepts. */
+/** Appends a press with the first reward a placed press accepts. */
 function press(
   project: ProjectDocument,
   surface: RerollSurface,
@@ -229,13 +221,12 @@ describe('room door surfaces', () => {
       false,
     );
     expect(
-      createPreparedProjectCandidateSession(catalog, evaluate(plain)).evaluate({
-        kind: 'pendingRerollReward',
-        surface: doors(source),
-        target: door('exit2', 'golden-f-b3-e2'),
-        value: { rewardType: 'RoomMoneyDrop' },
-      }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'targetNotReachable' });
+      rerollPressForProjectEvaluationAssembly(
+        evaluate(plain),
+        doors(source),
+        door('exit2', 'golden-f-b3-e2'),
+      ),
+    ).toBeUndefined();
   });
 
   it('name the doors the game never rerolls', () => {
@@ -247,16 +238,15 @@ describe('room door surfaces', () => {
       surface?.targets.map((target) => [target.target, target.unavailable ?? null]),
     ).toContainEqual([door('exit1', 'golden-f-preboss-shop'), 'notRerollable']);
     expect(
-      createPreparedProjectCandidateSession(catalog, evaluate(base)).evaluate({
-        kind: 'pendingRerollReward',
-        surface: doors('golden-f-b10-e1'),
-        target: door('exit1', 'golden-f-preboss-shop'),
-        value: { rewardType: 'RoomMoneyDrop' },
-      }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'targetNotReachable' });
+      rerollPressForProjectEvaluationAssembly(
+        evaluate(base),
+        doors('golden-f-b10-e1'),
+        door('exit1', 'golden-f-preboss-shop'),
+      ),
+    ).toBeUndefined();
   });
 
-  it('evaluate a press not yet authored as the same press once appended', () => {
+  it('judge a placed press the same before and after its result is set', () => {
     const target = door('exit1', 'golden-f-b3-e1');
     const pending = pendingRewards(base, doors(source), target, ROOM_REWARDS).map(key);
     expect(pending.length).toBeGreaterThan(0);
@@ -697,7 +687,7 @@ describe('Hub stays', () => {
     });
   });
 
-  it('evaluate a press not yet authored as the same press once appended', () => {
+  it('judge a placed press the same before and after its result is set', () => {
     const pending = pendingRewards(base(), stay(3), slot('combat09'), HUB_REWARDS).map(key);
     expect(pending.length).toBeGreaterThan(0);
     const inserted = applyProjectCommand(
@@ -710,19 +700,9 @@ describe('Hub stays', () => {
         key,
       ),
     ).toEqual(pending);
-    // A door whose room was entered is closed.
-    expect(
-      createPreparedProjectCandidateSession(catalog, evaluate(base())).evaluate({
-        kind: 'pendingRerollReward',
-        surface: stay(1),
-        target: slot('combat05'),
-        value: { rewardType: 'MaxHealthDropBig' },
-      }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'targetNotReachable' });
   });
 
-  it('place a press with its result unset, its picker offering the pending rewards', () => {
-    const pending = pendingRewards(base(), stay(3), slot('combat09'), HUB_REWARDS).map(key);
+  it('place a press with its result unset, its picker offering rewards', () => {
     const press = rerollPressForProjectEvaluationAssembly(
       evaluate(base()),
       stay(3),
@@ -740,7 +720,7 @@ describe('Hub stays', () => {
       kind: 'incomplete',
       reasons: [expect.objectContaining({ code: 'rerollResultMissing', origin: reroll })],
     });
-    expect(supportedRerollRewards(placed, reroll, HUB_REWARDS).map(key)).toEqual(pending);
+    expect(supportedRerollRewards(placed, reroll, HUB_REWARDS).length).toBeGreaterThan(0);
     // A closed door takes none.
     expect(
       rerollPressForProjectEvaluationAssembly(evaluate(base()), stay(1), slot('combat05')),
@@ -796,7 +776,7 @@ describe('Hub stays', () => {
 });
 
 describe('ship wheel surfaces', () => {
-  it('evaluate a press not yet authored as the same press once appended', () => {
+  it('judge a placed press the same before and after its result is set', () => {
     const base = withJudgment(
       withArcana(loadSurfaceNOCheckpoint(), ['DoorReroll']),
       'N',

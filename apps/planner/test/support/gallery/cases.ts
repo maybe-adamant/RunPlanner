@@ -1641,6 +1641,21 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('H', 'golden-h-combat05'),
   },
   {
+    id: 'live-row-fields-optional-menu',
+    label: 'Live row: a Fields optional reward’s verbs, with Time Piece held',
+    shows: ['live row', 'pickup menu', 'Goldify'],
+    project: loadUnderworldFGHCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        keepsakeKey: 'GoldifyKeepsake',
+      },
+    ],
+    target: room('H', 'golden-h-combat02'),
+    openPicker: 'Small Max Magick · Optional 1',
+  },
+  {
     id: 'live-row-fields-locked',
     label: 'Live row: a Fields room one cage in, the other cages’ rewards locked',
     shows: ['live row', 'locked chip', 'cage unlock'],

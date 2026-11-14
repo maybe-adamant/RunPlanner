@@ -418,11 +418,10 @@ the number of open doors and never searches peer subsets or future Hub visits;
 it authorizes one edit without publishing a valid board or exposing Hub visit
 candidates.
 
-Rerolls and hidden draws use the same frontiers. A reroll surface captured at
-its append point (a room's doors after they unlock, a wheel among its offers,
-an open Hub stay) evaluates rewards for a press not yet inserted against the
-target's store, its first draw and every target's current reward there, with
-the pool at that point. A hidden return door's placeholder and reward
+Rerolls and hidden draws use the same frontiers. A press, placed with its
+result unset, evaluates rewards at its own point against the target's store,
+its first draw and every target's current reward there, with the pool at that
+point. A hidden return door's placeholder and reward
 candidates come from its room's first outgoing generation, under the creation
 caps and the placeholder's own store. When a bag entry is unavailable, the
 finding names earlier hidden return doors of the biome that drew from the same

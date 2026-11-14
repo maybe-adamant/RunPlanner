@@ -422,6 +422,7 @@ function projectRoomLifecycleTimeline(
           ...(runState === undefined ? {} : { runState }),
           ...(cage === undefined ? {} : { fieldsCage: cage }),
           ...(supplement === undefined ? {} : { supplement }),
+          ...(entry.trigger === undefined ? {} : { triggerActionKey: entry.trigger.actionKey }),
         }),
       );
       continue;

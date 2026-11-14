@@ -36,6 +36,7 @@ import { checkpointRegistry } from '@run-planner/test-fixtures/checkpoints/regis
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   loadUnderworldFGCheckpoint,
+  loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
   loadUnderworldFStygianWellCheckpoint,
   loadUnderworldWorldShopTravelDealCheckpoint,
@@ -498,6 +499,46 @@ describe('live interactions at a gap', () => {
       simulateProjectAssembly(catalog, stopped).evaluation.findings.map(({ code }) => code),
     ).toContain('roomLayoutFlipUnavailable');
     expect(conversion(stopped)).toBeUndefined();
+  });
+
+  it("offers a Fields optional reward's conversions at the frontier as its placed row does", () => {
+    // The plan leaves this Fields room's optional rewards behind; with Time Piece, each can
+    // be placed goldified in one edit, as the row would offer once placed.
+    const project = withTimePiece(loadUnderworldFGHCheckpoint());
+    const fields = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'H'),
+      createOccurrenceId('golden-h-combat02'),
+    );
+    const live = interactions(project, fields);
+    const optional = live.leftBehind!.filter(
+      (item) => item.reference.kind === 'interactLocalReward',
+    );
+    expect(optional.length).toBeGreaterThan(0);
+    for (const item of optional) {
+      const offered = item.verbs.map((verb) => [
+        verb.verb,
+        verb.commands?.map((command) => command.kind),
+      ]);
+      expect(offered).toEqual([
+        ['pickUp', ['InsertRoomAction']],
+        ['goldify', ['InsertRoomAction', 'ReplaceAcquisitionDisposition']],
+      ]);
+      for (const verb of item.verbs)
+        expect(verbAccepted(project, fields, verb, live.frontier), verb.verb).toBe(true);
+      // Placed, the row stands picked up with the same goldify alternative at its own gap.
+      const placed = applyProjectCommand(project, catalog, item.verbs[0]!.commands![0]!);
+      const key = roomActionKey(item.reference);
+      const standing = roomVerbs(interactions(placed, fields)).filter(
+        ({ gap, verb }) =>
+          gap === live.frontier &&
+          verb.reference !== undefined &&
+          roomActionKey(verb.reference) === key,
+      );
+      expect(standing.map(({ verb }) => [verb.verb, verb.standing])).toEqual([
+        ['pickUp', true],
+        ['goldify', undefined],
+      ]);
+    }
   });
 
   it('withholds goldify without a Time Piece charge, and while Unfated', () => {
