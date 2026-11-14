@@ -2201,6 +2201,14 @@ export const galleryCases: readonly GalleryCase[] = [
     openPicker: 'Exit door',
   },
   {
+    id: 'room-number-side-leave-picker',
+    label: 'Leave room list in an Ephyra main room: each side room by its numbered icon',
+    shows: ['side-visit Leave room picker'],
+    project: loadSurfaceNOPQCheckpoint,
+    target: room('N', 'surface-n-combat05'),
+    openPicker: 'Exit door',
+  },
+  {
     id: 'hub-visit-picker',
     label: 'Hub Timeline: a visit’s room list, each room with its number',
     shows: ['Hub segments', 'visit room picker'],

@@ -147,7 +147,6 @@ function SideVisitLeaveRow({
       {
         key: option.key,
         label: slot.label,
-        name: sideRoomName(slot.label),
         mapLink: { kind: 'sideDoor', slotKey: slot.key },
         chip: {
           key: option.key,
