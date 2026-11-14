@@ -19,8 +19,12 @@ const point = ({ id, x, y }: { readonly id: number; readonly x: number; readonly
 export function assembleRoomMap(
   catalog: Pick<Catalog, 'rooms' | 'exitTypes'>,
   room: RoomDeclaration,
-  /** The authored Chaos gate's one-based spawn point, chosen or default. */
-  chaosGateSpawnPointIndex: number | undefined,
+  exits: {
+    /** The authored Chaos gate's one-based spawn point, chosen or default. */
+    readonly chaosGateSpawnPointIndex: number | undefined;
+    /** The room authors its Contract door. */
+    readonly contractExit: boolean;
+  },
   stock: {
     /** The World Shop's stocked offers in native order, its empty slots left out. */
     readonly shopOfferKeys: readonly string[];
@@ -47,9 +51,9 @@ export function assembleRoomMap(
           exitDoors.map((door) => ({ doorId: door.id })),
         );
   const chaosGate =
-    chaosGateSpawnPointIndex === undefined
+    exits.chaosGateSpawnPointIndex === undefined
       ? undefined
-      : points.secretPoints[chaosGateSpawnPointIndex - 1];
+      : points.secretPoints[exits.chaosGateSpawnPointIndex - 1];
   return Object.freeze({
     doors: Object.freeze(
       exitDoors.map((door) => {
@@ -77,6 +81,9 @@ export function assembleRoomMap(
       ? { contractPedestal: point(points.contractPedestalPoint) }
       : {}),
     ...(chaosGate === undefined ? {} : { chaosGate: point(chaosGate) }),
+    ...(exits.contractExit && points.contractExitPoint !== undefined
+      ? { contractExit: point(points.contractExitPoint) }
+      : {}),
     ...(points.shipWheel === undefined
       ? {}
       : {

@@ -56,6 +56,7 @@ World Shop items stand on the room's catalog Shop points (its `LootPoint`s,
 ascending by ObjectId): the engine pairs the k-th stocked item, empty slots
 left out, with the k-th point, and a Travel Deal refill takes its bought
 item's point. The Contract pedestal's item stands on its RoomData pedestal
+point, and a Midshop's Contract door on its RoomData `ZagContractDestinationId`
 point.
 
 Ephyra side doors and Hub board doors are catalog map doors too: a side door

@@ -304,6 +304,24 @@ function OpenedCase({
       window.clearTimeout(stop);
     };
   }, [entry, pickersClosed, view]);
+  // A case showing its map at a Timeline row focuses that row as working on it does.
+  useEffect(() => {
+    if (view !== 'timeline' || entry.mapRow === undefined) return;
+    const index = entry.mapRow;
+    const timer = window.setInterval(() => {
+      const row = frame.current?.querySelectorAll<HTMLElement>(
+        '.room-action-list > li[data-room-action-key]',
+      )[index];
+      if (row === undefined) return;
+      window.clearInterval(timer);
+      row.focus();
+    }, 50);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [entry, view]);
   // A case showing an Overview list opens that picker once the Overview shows it.
   const overviewPickerOpened = useRef(false);
   useEffect(() => {

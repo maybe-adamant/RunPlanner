@@ -3,7 +3,10 @@ import type { ReactNode } from 'react';
 import type { WorkspaceRoomMap } from '@planner/projections/structured-workspace';
 import { roomMapMarkers, type RoomMapMarkers } from '@planner/projections/roomMapMarkers';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
+import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
 import { melinoeIcon } from '@planner/ui/artwork/player/playerArtwork';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { roomMapCalibrations } from '@planner/ui/room-maps/roomMapCalibration';
 import { useRoomMapHighlight, useRoomMapPointers, type RoomMapPointMark } from './roomMapHighlight';
 import { markerPlacement, position } from './roomMapPosition';
@@ -13,14 +16,6 @@ export interface RoomMapOccupant {
   readonly label: string;
   readonly icon?: ArtworkSource | undefined;
   readonly badge?: string | undefined;
-}
-
-/** A World Shop item on its point: what it is, whether it is bought, and its Travel Deal refill. */
-export interface RoomMapShopItem extends Partial<RoomMapOccupant> {
-  /** The Shop slot, named while the item is unset. */
-  readonly slotLabel: string;
-  readonly purchased: boolean;
-  readonly refill?: RoomMapOccupant | undefined;
 }
 
 /**
@@ -36,9 +31,9 @@ export interface RoomMapPlacements {
   readonly anchors: ReadonlyMap<number, RoomMapOccupant>;
   readonly anchorNumbers: ReadonlyMap<number, number>;
   readonly fieldsPoints: ReadonlyMap<number, RoomMapOccupant>;
-  /** The Shop's stock by offer key. */
-  readonly shopItems: ReadonlyMap<string, RoomMapShopItem>;
-  /** The Infernal Contract pedestal's item. */
+  /** The Shop item standing on each offer's point at the map's stage; none once bought. */
+  readonly shopItems: ReadonlyMap<string, RoomMapOccupant>;
+  /** The Infernal Contract pedestal's item while it stands. */
   readonly contractPedestal?: RoomMapOccupant | undefined;
   /**
    * The point a control previews; an entry without one while the entry is
@@ -69,19 +64,16 @@ const unplanned: RoomMapPlacements = Object.freeze({
  * stands there, and Melinoë at the entry. While the entry is picked, each
  * entry it can pick shows its number; while the game picks among several,
  * each shows `?`. While a Fields slot is placed, each free point it can take
- * shows its number. Each Shop item stands on its point, ringed once bought,
- * with its Travel Deal refill on its corner.
+ * shows its number. Each standing Shop or pedestal item stands plainly on its
+ * point, marked Shop or Contract where the room holds both.
  */
 export function RoomMapSpots({
   away = false,
-  bought = true,
   markers,
   placements = unplanned,
 }: {
   /** Melinoë stands elsewhere in the room, so no entry shows her. */
   readonly away?: boolean;
-  /** The plan's purchases have been made. */
-  readonly bought?: boolean;
   readonly markers: RoomMapMarkers;
   readonly placements?: RoomMapPlacements;
 }) {
@@ -99,6 +91,8 @@ export function RoomMapSpots({
         )}
       </>
     );
+  // Only a room holding both a Shop and the pedestal marks which item is whose.
+  const bothStocks = markers.shopItems.length > 0 && markers.contractPedestal !== undefined;
   const picking = placements.preview?.kind === 'entry' ? placements.preview : undefined;
   const pointMarks = new Map(
     (placements.preview?.kind === 'fieldsPoint' ? (placements.preview.marks ?? []) : []).map(
@@ -179,44 +173,37 @@ export function RoomMapSpots({
       })}
       {markers.shopItems.map((item) => {
         const stock = placements.shopItems.get(item.offerKey);
-        const taken = bought && stock?.purchased === true;
-        const name = stock?.label ?? stock?.slotLabel ?? 'Shop item';
-        return (
+        return stock === undefined ? null : (
           <span
-            aria-label={`${name}${taken ? ' · Bought' : ''}${
-              stock?.refill === undefined ? '' : ` · Refilled with ${stock.refill.label}`
-            }`}
+            aria-label={bothStocks ? `${stock.label} · Shop` : stock.label}
             className="room-map-point"
-            data-occupied={stock?.label !== undefined || undefined}
-            data-point="shop"
-            data-taken={taken || undefined}
+            data-occupied
+            data-point="stock"
             key={`shop:${item.id}`}
             role="img"
             style={position(item)}
           >
-            {stock?.label === undefined ? null : (
-              <ArtworkIcon className="artwork-label-icon" source={stock.icon} />
-            )}
-            {stock?.refill === undefined ? null : (
-              <span aria-hidden="true" className="room-map-point-refill">
-                <ArtworkIcon className="artwork-label-icon" source={stock.refill.icon} />
-              </span>
-            )}
+            <ArtworkIcon className="artwork-label-icon" source={stock.icon} />
+            {bothStocks ? stockBadge(shopBadgeIcon) : null}
           </span>
         );
       })}
-      {markers.contractPedestal === undefined ? null : (
+      {markers.contractPedestal === undefined ||
+      placements.contractPedestal === undefined ? null : (
         <span
-          aria-label={placements.contractPedestal?.label ?? 'Contract pedestal'}
+          aria-label={
+            bothStocks
+              ? `${placements.contractPedestal.label} · Contract`
+              : placements.contractPedestal.label
+          }
           className="room-map-point"
-          data-occupied={placements.contractPedestal?.icon !== undefined || undefined}
-          data-point="pedestal"
+          data-occupied
+          data-point="stock"
           role="img"
           style={position(markers.contractPedestal)}
         >
-          {placements.contractPedestal?.icon === undefined
-            ? null
-            : occupantMark(placements.contractPedestal)}
+          <ArtworkIcon className="artwork-label-icon" source={placements.contractPedestal.icon} />
+          {bothStocks ? stockBadge(contractBadgeIcon) : null}
         </span>
       )}
       {markers.entries.map((entry) => {
@@ -252,6 +239,22 @@ export function RoomMapSpots({
     </>
   );
 }
+
+const shopBadgeIcon = rewardIcon('Shop');
+const contractBadgeIcon = traitIcon('InfernalContractBoon');
+
+/** The Contract door's icon in its exit ring while it is shut. */
+export function ContractDoorMark() {
+  return (
+    <ArtworkIcon className="artwork-label-icon" source={doorArtwork.ZagContract ?? undefined} />
+  );
+}
+
+const stockBadge = (icon: ArtworkSource | undefined) => (
+  <span aria-hidden="true" className="room-map-point-badge">
+    <ArtworkIcon className="artwork-label-icon" source={icon} />
+  </span>
+);
 
 /**
  * A number on a marker's corner: a door's, as its Door row and Timeline name
@@ -351,12 +354,11 @@ export function RoomMapLegend({
     ...(wheel ? (['wheel'] as const) : []),
     ...(markers.sideDoors.length > 0 ? (['side'] as const) : []),
     ...(chaos ? (['chaos'] as const) : []),
+    ...(markers.contractExit === undefined ? [] : (['contract'] as const)),
     ...(markers.entries.length > 0 ? (['entry'] as const) : []),
     ...(markers.anchors.length > 0 ? (['anchor'] as const) : []),
     ...(markers.fieldsCagePoints.length > 0 ? (['cage'] as const) : []),
     ...(markers.fieldsOptionalPoints.length > 0 ? (['pickup'] as const) : []),
-    ...(markers.shopItems.length > 0 ? (['shop'] as const) : []),
-    ...(markers.contractPedestal === undefined ? [] : (['pedestal'] as const)),
   ];
   if (kinds.length === 0) return null;
   const names = {
@@ -364,12 +366,11 @@ export function RoomMapLegend({
     wheel: 'Wheel offer',
     side: 'Side door',
     chaos: 'Chaos',
+    contract: 'Infernal Contract',
     entry: 'Entry',
     anchor: 'Object spot',
     cage: 'Cage point',
     pickup: 'Pickup point',
-    shop: 'Shop item',
-    pedestal: 'Contract pedestal',
   } as const;
   return (
     <ul aria-label="Map key" className="room-map-legend">
@@ -378,7 +379,9 @@ export function RoomMapLegend({
           {kind === 'entry' ? (
             <img alt="" className="room-map-legend-entry" draggable={false} src={melinoeIcon} />
           ) : (
-            <span aria-hidden="true" className="room-map-legend-swatch" />
+            <span aria-hidden="true" className="room-map-legend-swatch">
+              {kind === 'contract' ? <ContractDoorMark /> : null}
+            </span>
           )}
           {names[kind]}
         </li>
@@ -450,6 +453,18 @@ export function RoomFeatureMapPoints({
           ))
         : null}
       {sideDoors === undefined ? null : <RoomMapSideDoors doors={sideDoors} markers={markers} />}
+      {markers.contractExit === undefined ? null : (
+        <span
+          aria-label="Contract door"
+          className="room-map-door"
+          data-closed
+          data-contract
+          role="img"
+          style={position(markers.contractExit)}
+        >
+          <ContractDoorMark />
+        </span>
+      )}
       {markers.doors.map((door) => (
         <span
           aria-label={door.doorIndex === undefined ? 'Door' : `Door ${door.doorIndex}`}

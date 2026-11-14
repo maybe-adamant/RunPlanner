@@ -371,6 +371,8 @@ export interface WorkspaceRoomMap {
   readonly chaosPoints: readonly WorkspaceRoomMapPoint[];
   /** The SecretPoint an authored Chaos gate is placed at. */
   readonly chaosGate?: WorkspaceRoomMapPoint;
+  /** Where an authored Midshop Contract door spawns. */
+  readonly contractExit?: WorkspaceRoomMapPoint;
   /** Fields cage and optional reward points. */
   readonly fieldsCagePoints: readonly WorkspaceRoomMapPoint[];
   readonly fieldsOptionalPoints: readonly WorkspaceRoomMapPoint[];

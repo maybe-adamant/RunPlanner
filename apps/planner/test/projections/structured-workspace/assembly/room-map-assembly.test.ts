@@ -15,6 +15,7 @@ import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { assembleRoomMap } from '@planner/projections/structured-workspace/assembly/room-map-assembly';
 
 const noStock = { shopOfferKeys: [], contractPedestal: false };
+const noExits = { chaosGateSpawnPointIndex: undefined, contractExit: false };
 const host = createOccurrenceId('golden-f-b2-e1');
 const gate = createAdditionalExitAddress(createBiomeAddress('Underworld', 'F'), host, 'chaos');
 
@@ -45,7 +46,12 @@ describe('room map assembly', () => {
     expect(position?.spawnPointIndex).toBeDefined();
     const at = room.mapPoints!.secretPoints[position!.spawnPointIndex! - 1]!;
 
-    const map = assembleRoomMap(catalog, room, position?.spawnPointIndex, noStock);
+    const map = assembleRoomMap(
+      catalog,
+      room,
+      { chaosGateSpawnPointIndex: position?.spawnPointIndex, contractExit: false },
+      noStock,
+    );
 
     expect(map?.chaosGate).toEqual({ id: at.id, x: at.x, y: at.y });
     expect(map?.chaosPoints).toHaveLength(room.mapPoints!.secretPoints.length);
@@ -55,7 +61,7 @@ describe('room map assembly', () => {
     const room = catalog.rooms.byKey.F_Shop01!;
     const loot = room.mapPoints!.shopPoints!;
     // An empty first slot shifts the second item onto the first point.
-    const map = assembleRoomMap(catalog, room, undefined, {
+    const map = assembleRoomMap(catalog, room, noExits, {
       shopOfferKeys: ['Slot2', 'Slot3'],
       contractPedestal: false,
     });
@@ -71,9 +77,17 @@ describe('room map assembly', () => {
     const room = catalog.rooms.byKey.F_PreBoss01!;
     const pedestal = room.mapPoints!.contractPedestalPoint!;
     expect(
-      assembleRoomMap(catalog, room, undefined, { shopOfferKeys: [], contractPedestal: true })
+      assembleRoomMap(catalog, room, noExits, { shopOfferKeys: [], contractPedestal: true })
         ?.contractPedestal,
     ).toEqual(pedestal);
-    expect(assembleRoomMap(catalog, room, undefined, noStock)?.contractPedestal).toBeUndefined();
+    expect(assembleRoomMap(catalog, room, noExits, noStock)?.contractPedestal).toBeUndefined();
+  });
+
+  it('places the Contract door only where the room authors it', () => {
+    const room = catalog.rooms.byKey.F_Shop01!;
+    expect(
+      assembleRoomMap(catalog, room, { ...noExits, contractExit: true }, noStock)?.contractExit,
+    ).toEqual(room.mapPoints!.contractExitPoint);
+    expect(assembleRoomMap(catalog, room, noExits, noStock)?.contractExit).toBeUndefined();
   });
 });

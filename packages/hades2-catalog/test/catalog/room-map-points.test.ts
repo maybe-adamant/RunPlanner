@@ -185,6 +185,19 @@ describe('room map points', () => {
     });
   });
 
+  it('places the Contract door in the rooms that declare a Zagreus Contract exit', () => {
+    for (const room of catalog.rooms.values)
+      expect([room.gameName, mapPoints(room).contractExitPoint !== undefined]).toEqual([
+        room.gameName,
+        room.additionalExits.some((exit) => exit.kind === 'zagreusContract'),
+      ]);
+    expect(catalog.rooms.byKey.F_Shop01?.mapPoints?.contractExitPoint).toEqual({
+      id: 776331,
+      x: 11983.86,
+      y: 9577.44,
+    });
+  });
+
   it.each([
     [
       'an undeclared room',

@@ -5,6 +5,7 @@ import { roomMapImageFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorChipFace } from '../DecisionWorkbench';
 import type { DoorChip } from '../doorSummary';
 import {
+  ContractDoorMark,
   RoomMapNumber,
   RoomMapLegend,
   RoomMapSideDoors,
@@ -26,7 +27,7 @@ const chipName = (chip: DoorChip): string =>
   chip.locked === true ? `${chip.label} · Locked` : chip.label;
 
 /**
- * The room's map beside its controls: its doors, Chaos gate, entries, anchors,
+ * The room's map beside its controls: its doors, Chaos gate, Contract door, entries, anchors,
  * Fields points and Shop stock, mirrored when the room is flipped. A Ship phase a wheel
  * follows shows the wheel's offers in place of the doors.
  */
@@ -101,6 +102,7 @@ export function RoomMapColumn({
       ? undefined
       : chips.find((chip) => chip.additionalExit === undefined && chip.doorIndex === doorIndex);
   const chaosChip = chips.find((chip) => chip.additionalExit === 'chaos');
+  const contractChip = chips.find((chip) => chip.additionalExit === 'zagreusContract');
   const wheel = markers.wheel;
   const wheelSpots =
     wheelChips === undefined
@@ -129,7 +131,6 @@ export function RoomMapColumn({
           <div aria-label={`${title} map points`} className="room-map-marker-layer" role="group">
             <RoomMapSpots
               {...(heroAtSideDoor ? { away: true } : {})}
-              bought={taken}
               markers={markers}
               {...(placements === undefined
                 ? {}
@@ -182,6 +183,28 @@ export function RoomMapColumn({
                   </span>
                 )}
                 <RoomMapNumber value={gatePosition} />
+              </span>
+            )}
+            {markers.contractExit === undefined ? null : (
+              <span
+                aria-label={contractChip === undefined ? 'Contract door' : chipName(contractChip)}
+                className="room-map-door"
+                data-closed={!open || undefined}
+                data-contract
+                data-preview={highlight?.kind === 'contractExit' || undefined}
+                data-ring={(open && contractChip === undefined) || undefined}
+                data-taken={(taken && contractChip?.picked) || undefined}
+                role="img"
+                {...markerPlacement(markers.contractExit, open && contractChip !== undefined)}
+                {...pointers({ kind: 'contractExit' })}
+              >
+                {!open || contractChip === undefined ? (
+                  <ContractDoorMark />
+                ) : (
+                  <span aria-hidden="true" className="room-map-door-face">
+                    <DoorChipFace chip={contractChip} />
+                  </span>
+                )}
               </span>
             )}
             {(wheelSpots ?? []).map(({ at, chip }) => (
