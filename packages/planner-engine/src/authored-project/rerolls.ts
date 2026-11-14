@@ -387,7 +387,10 @@ export function resolvedRoomRerollPresses(
   return presses;
 }
 
-/** One owner's rerolls in authored order: its effective offer is the last one's result. */
+/**
+ * One owner's set rerolls in authored order: its effective offer is the last
+ * set one's result, the reward it holds before any later unset press.
+ */
 export interface OwnerRerolls {
   readonly owner: RerolledRewardOwner;
   readonly rerolls: readonly RerollPress[];
@@ -403,7 +406,8 @@ function collectOwners(
     { owner: RerolledRewardOwner; rerolls: RerollPress[]; effectiveOffer: ResolvedRewardOffer }
   >();
   for (const { owner, reroll } of entries) {
-    // A press whose result is not held or not set redraws nothing the walk reads.
+    // An unset press stops the walk before anything reads this owner past it, so
+    // the owner keeps its last set result; setting the press then replaces the item.
     const result = rerollResult(topology, owner, reroll.rerollId);
     if (result === undefined) continue;
     const key = semanticAddressKey(owner);
