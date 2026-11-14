@@ -181,7 +181,7 @@ describe('Hermes Shrine workbench', () => {
     expect(
       screen.getByRole('button', { name: 'Hermes Shrine Offer 1 delivery delay' }).textContent,
     ).toContain('8');
-    fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Phase 1 Timeline' }));
     // A bought item is rushed with a second pick, its own row.
     await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Buy Big Heal');
     await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Big Heal');
@@ -217,7 +217,7 @@ describe('Hermes Shrine workbench', () => {
     expect(deliveryRow?.rewardPayload?.control.offer).toMatchObject({ rewardType: 'HealBigDrop' });
     // A rushed item is optional loot left on the ground: picked up, removed and re-added.
     expect(deliveryRow).toMatchObject({ participation: 'optional', rank: null });
-    fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Phase 1 Timeline' }));
     await takeLive(view.user, 'Big Heal', 'Pick up');
     const deliveryTimelineRow = await findTimelineRow('Collect Big Heal');
     expect(within(deliveryTimelineRow).queryByText('required')).toBeNull();
@@ -792,7 +792,7 @@ describe('Hermes Shrine workbench', () => {
     openOverview();
     expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Phase 1 Timeline' }));
     expect(screen.queryByRole('listitem', { name: 'Restock' })).toBeNull();
     const refillRow = () => timelineRow(/Travel Deal Offer$/);
     expect(within(refillRow()).queryByRole('checkbox')).toBeNull();

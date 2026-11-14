@@ -154,9 +154,12 @@ describe('Encounter banners', () => {
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(skipped));
     openRoomTab('Room Timeline');
     // A fight with no gate shows as one marker, which hosts the encounter's condition.
-    const events = within(within(timeline()).getByLabelText('Encounter')).getByRole('group', {
-      name: 'Encounter outcome choices',
-    });
+    const events = within(within(timeline()).getByLabelText('Encounter started')).getByRole(
+      'group',
+      {
+        name: 'Encounter outcome choices',
+      },
+    );
     const condition = within(events).getByRole('button', {
       name: 'No Death Defiance',
     }) as HTMLButtonElement;

@@ -584,6 +584,7 @@
 
 .biome-rail-stop[data-step][data-plan-end='end']::after {
   color: #1c1d23;
+  content: '⚑ ' attr(data-step);
 }
 
 .biome-rail-node {

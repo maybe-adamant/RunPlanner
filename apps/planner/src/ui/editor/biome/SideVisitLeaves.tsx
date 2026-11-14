@@ -27,6 +27,7 @@ import { DoorChipFace } from './DecisionWorkbench';
 import { LeavePicker, type LeaveOption } from './LeavePicker';
 import { LeaveRow } from './TimelineDoors';
 import { TimelineRow } from './TimelineRow';
+import { TimelineEventIcon } from './TimelineEventIcon';
 
 type LocalSlot = WorkspaceLocalVisitDecision['slots'][number];
 
@@ -272,6 +273,7 @@ export function SideVisitLeaves({
         {...(leave.returnPastPlanEnd ? { 'data-plan-end': 'pastEnd' } : {})}
         key={`return-${leave.position}`}
         kind="boundary"
+        marker={<TimelineEventIcon name="returned" />}
         label={
           <>
             <span className="timeline-banner-title">

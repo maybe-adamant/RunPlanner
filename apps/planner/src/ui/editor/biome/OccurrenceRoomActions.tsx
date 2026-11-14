@@ -403,27 +403,6 @@ export function RoomActionsWorkbench({
         ]
       : [],
   );
-  // Each encounter phase groups its Encounter line, its end and the pickups that follow.
-  const phaseByKey = new Map<string, number>();
-  {
-    let phase: number | undefined;
-    let count = 0;
-    for (const entry of visibleTimeline) {
-      if (entry.kind === 'boundary') {
-        if (entry.beginsEncounter === true || entry.boundary.kind === 'roomEntered')
-          phase = count++;
-        else if (
-          entry.boundary.kind !== 'encounterStarted' &&
-          entry.boundary.kind !== 'encounterEnd' &&
-          entry.boundary.kind !== 'bossDefeated'
-        )
-          phase = undefined;
-        if (phase !== undefined) phaseByKey.set(entry.boundary.key, phase);
-      } else if (entry.kind === 'action' && phase !== undefined) {
-        phaseByKey.set(entry.actionKey, phase);
-      }
-    }
-  }
   const endedPhaseKeys = new Set(
     visibleTimeline.flatMap((entry) =>
       entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd'
@@ -431,9 +410,17 @@ export function RoomActionsWorkbench({
         : [],
     ),
   );
+  // A marker hangs under the row that triggered it only where that row shows in the same list.
   const renderBoundary = (
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>,
+    list: readonly WorkspaceRoomLifecycleTimelineEntry[],
   ) => {
+    const underTrigger =
+      entry.triggerActionKey !== undefined &&
+      list.some(
+        (candidate) =>
+          candidate.kind === 'action' && candidate.actionKey === entry.triggerActionKey,
+      );
     const content = renderBoundaryContent?.(entry.boundary);
     const boundary = entry.boundary;
     const doorsOpen = boundary.kind === 'doorsOpened' && !doorsWait ? roomDoors : undefined;
@@ -457,9 +444,6 @@ export function RoomActionsWorkbench({
       <Fragment key={entry.boundary.key}>
         <LifecycleBoundaryRow
           boundary={entry.boundary}
-          {...(phaseByKey.get(entry.boundary.key) === undefined
-            ? {}
-            : { phase: phaseByKey.get(entry.boundary.key)! })}
           {...(bannerControls.length === 0
             ? {}
             : {
@@ -473,9 +457,10 @@ export function RoomActionsWorkbench({
             )
           }
           label={entry.label}
+          phaseTitle={entry.phaseTitle}
           toggle={doorsOpen === undefined ? undefined : doorsOpenToggle(doorsOpen)}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
-          {...(entry.beginsEncounter === true ? { beginsEncounter: true } : {})}
+          {...(underTrigger ? { underTrigger: true } : {})}
           {...(entry.supplement?.identityLabel !== undefined
             ? {
                 identity: {
@@ -500,6 +485,7 @@ export function RoomActionsWorkbench({
       key={`spawned:${entry.key}`}
       label={entry.label}
       rows={actions?.rows ?? []}
+      {...(entry.underCause ? { underCause: true } : {})}
       {...(entry.unlocks ? { unlocks: true } : {})}
     />
   );
@@ -591,11 +577,14 @@ export function RoomActionsWorkbench({
       reference.kind === 'unlockExit'
         ? doors?.summary?.chips.find((chip) => chip.key === reference.exitKey)
         : undefined;
+    // Both required scopes read as one kind; the row's place on the spine shows its deadline.
     const actionAccent = row.stale
       ? undefined
       : row.participation === 'optional'
         ? 'optional'
-        : row.requiredScope;
+        : row.requiredScope === undefined
+          ? undefined
+          : 'required';
     const removeRow = (): void => {
       const removable = proposals.find(
         (proposal) => proposal.kind === 'remove' || proposal.kind === 'unplace',
@@ -659,7 +648,6 @@ export function RoomActionsWorkbench({
           data-door-press={doorPress === undefined ? undefined : ''}
           data-blocking-product={row.blockingProduct}
           data-reorder-anchor={row.rank === null ? undefined : row.key}
-          data-phase={phaseByKey.get(row.key)}
           data-in-order={row.rank === null ? 'false' : 'true'}
           data-room-action-key={row.key}
           {...findingAnchor(row.address)}
@@ -962,7 +950,7 @@ export function RoomActionsWorkbench({
     );
   if (mode.kind !== 'roomTimeline') {
     return (
-      <section aria-label="Ship combat structure" className="ship-combat-editor">
+      <section aria-label="Ship phase structure" className="ship-combat-editor">
         <section
           aria-label={actions === undefined ? undefined : 'Room Timeline'}
           className="room-actions-workbench"
@@ -995,7 +983,12 @@ export function RoomActionsWorkbench({
                   wheelDoors !== undefined
                 )
                   return [
-                    <DoorsOpenBanner doors={wheelDoors} key="wheel-open" label={entry.label} />,
+                    <DoorsOpenBanner
+                      doors={wheelDoors}
+                      key="wheel-open"
+                      label={entry.label}
+                      phaseTitle={entry.phaseTitle}
+                    />,
                     ...(choiceAnchored ? [] : selectWheel),
                   ];
                 // The wheel is taken as the next phase starts.
@@ -1008,7 +1001,7 @@ export function RoomActionsWorkbench({
                       wheel={phaseWheel}
                     />,
                   ];
-                if (entry.kind === 'boundary') return [renderBoundary(entry)];
+                if (entry.kind === 'boundary') return [renderBoundary(entry, phase.timeline)];
                 if (entry.kind === 'spawned') return [renderSpawned(entry)];
                 if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);
                 if (entry.presentation !== 'row') return [];
@@ -1071,7 +1064,7 @@ export function RoomActionsWorkbench({
   const actionByKey = new Map(actions.rows.map((row) => [row.key, row]));
   const renderTimelineEntry = (entry: WorkspaceRoomLifecycleTimelineEntry): ReactNode[] => {
     if (entry.kind === 'boundary') {
-      return [renderBoundary(entry)];
+      return [renderBoundary(entry, actions.timeline.entries)];
     }
     if (entry.kind === 'spawned') return [renderSpawned(entry)];
     if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);

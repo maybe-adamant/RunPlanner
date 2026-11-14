@@ -366,8 +366,8 @@ export function occurrenceInteractionRequirements(
         Object.freeze({
           combatPhaseCount: room.roomLocal.combatPhaseCount,
           combatPhaseCountChoices: Object.freeze([
-            Object.freeze({ label: 'Intro + 1 combat', value: 2 as const }),
-            Object.freeze({ label: 'Intro + 2 combats', value: 3 as const }),
+            Object.freeze({ label: 'Intro + 1 phase', value: 2 as const }),
+            Object.freeze({ label: 'Intro + 2 phases', value: 3 as const }),
           ]),
           kind: 'shipCombatPhaseCount' as const,
           owner: room.address,

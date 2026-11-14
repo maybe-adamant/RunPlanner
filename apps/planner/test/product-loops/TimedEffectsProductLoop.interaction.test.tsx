@@ -101,7 +101,7 @@ it('leaves a purchased Hermes delivery live at its host until it is placed, then
   const view = renderPlannerForInteraction({ application });
   const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
   act(() => application.store.dispatch(semanticOwnerNavigated(source)));
-  await view.user.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
+  await view.user.click(screen.getByRole('tab', { name: 'Phase 1 Timeline' }));
   // Slot 3 holds Max Magick.
   await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Buy Max Magick');
   const history = application.store.getState().projectWorkspace.history!;

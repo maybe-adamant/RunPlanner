@@ -142,6 +142,7 @@ export function SpawnedLootRow({
   label,
   rows,
   source,
+  underCause,
   unlocks,
 }: {
   readonly groups: readonly WorkspaceSpawnGroup[];
@@ -151,12 +152,15 @@ export function SpawnedLootRow({
   readonly source?: true;
   /** Lists locked loot as it becomes takeable. */
   readonly unlocks?: true;
+  /** Stands right under the marker that caused it. */
+  readonly underCause?: true;
 }) {
   return (
     <TimelineRow
       aria-label={label}
       notice
       data-spawned-loot={source ? 'action' : unlocks ? 'unlocks' : 'moment'}
+      hooked={source === true || underCause === true}
       editors={
         <span className="timeline-chip-group spawned-loot-groups">
           {groups.map((group, index) => (

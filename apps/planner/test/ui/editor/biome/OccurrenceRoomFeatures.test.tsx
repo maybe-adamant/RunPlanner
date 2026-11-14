@@ -201,7 +201,7 @@ describe('OccurrenceRoomFeatures', () => {
     expectBefore(encounterEnd, pickup);
     // The capture point is how the fight ended: it sits among its outcome's controls.
     expect(cleared.closest('.timeline-banner-modifiers')).not.toBeNull();
-    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Combat'));
+    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Combat started'));
 
     await view.user.click(cleared);
     await view.user.click(await screen.findByRole('option', { name: 'Not cleared' }));

@@ -79,7 +79,7 @@ describe('Fresh File product loop', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     expect(
       within(screen.getByRole('region', { name: 'Room Timeline' })).getByRole('button', {
-        name: 'Encounter: Intro combat',
+        name: 'Encounter started: Intro combat',
       }),
     ).toBeTruthy();
     // The boon is live until the owner places its pickup; its offer is reached once picked up.

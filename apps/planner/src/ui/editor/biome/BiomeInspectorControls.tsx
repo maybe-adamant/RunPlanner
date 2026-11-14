@@ -202,6 +202,7 @@ function JudgmentArcanaControl({
           ) : null}
         </>
       }
+      hooked
       kind="effect"
       label={<strong>Judgment</strong>}
     />
@@ -248,6 +249,7 @@ function FigurineArcanaControl({
           ) : null}
         </>
       }
+      hooked
       kind="effect"
       label={<strong>Crystal Figurine</strong>}
     />

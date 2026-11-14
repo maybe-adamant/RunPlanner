@@ -653,7 +653,7 @@ describe('timeline finding guidance', () => {
           precedingAction: 'useFountain',
         }),
       ).description,
-    ).toBe('Move it before Doors open.');
+    ).toBe('Move it before Doors opened.');
     expect(
       presentFinding(
         finding({
@@ -678,10 +678,10 @@ describe('timeline finding guidance', () => {
         roomEventPoint: (owner, point) =>
           semanticAddressKey(owner) === semanticAddressKey(spoils.origin) &&
           point.kind === 'endEffects'
-            ? "Combat 1's end effects"
+            ? "Phase 1's end effects"
             : undefined,
       }).description,
-    ).toBe("Move it before Combat 1's end effects resolve.");
+    ).toBe("Move it before Phase 1's end effects resolve.");
   });
 
   it('moves the row ordered first past the deadline it stands after', () => {
@@ -740,7 +740,7 @@ describe('a required item left unplaced', () => {
   const rows = new Map([
     [ownKey, 'Use Fountain'],
     [roomActionKey({ kind: 'interactEris' }), 'Talk to Eris'],
-    [roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'Combat1' }), 'Choose Combat 1 wheel'],
+    [roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'Combat1' }), 'Choose Phase 1 wheel'],
     [roomActionKey({ kind: 'unlockExit', exitKey: 'Exit02' }), 'Unlock Door 2'],
   ]);
   const labels = {
@@ -772,7 +772,7 @@ describe('a required item left unplaced', () => {
         deadline: 'action',
         deadlineAction: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'Combat1' }),
       },
-      'Use Fountain before choosing the Combat 1 wheel',
+      'Use Fountain before choosing the Phase 1 wheel',
     ],
     [
       {

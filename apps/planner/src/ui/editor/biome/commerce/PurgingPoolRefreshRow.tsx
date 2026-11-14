@@ -68,6 +68,7 @@ export function PurgingPoolRefreshRow({
           </Popover.Portal>
         </Popover.Root>
       }
+      hooked
       notice
     />
   );

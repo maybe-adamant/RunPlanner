@@ -212,11 +212,11 @@ describe('OccurrenceWorkbench', () => {
       .querySelector('span')!.textContent!;
     openRoomTab('Room Timeline');
     const standardActions = screen.getByRole('region', { name: 'Room Timeline' });
-    const standardStart = within(standardActions).getByLabelText('Encounter');
+    const standardStart = within(standardActions).getByLabelText('Encounter started');
     // A phase without events shows only its banner; identity stays in Overview.
     expect(within(standardActions).queryByRole('group', { name: / (start|end)$/ })).toBeNull();
     const standardEncounter = within(standardStart).getByRole('button', {
-      name: `Encounter: ${overviewEncounterLabel}`,
+      name: `Encounter started: ${overviewEncounterLabel}`,
     });
     expect(within(standardActions).queryByRole('button', { name: 'Encounter' })).toBeNull();
     const standardEnd = within(standardActions).getByLabelText('Encounter ended');
@@ -228,7 +228,7 @@ describe('OccurrenceWorkbench', () => {
     expectBefore(standardStart, standardEncounter);
     expectBefore(standardEncounter, standardEnd);
     // The doors open on the Timeline, after the encounter.
-    expectBefore(standardEnd, within(standardActions).getByLabelText('Doors open'));
+    expectBefore(standardEnd, within(standardActions).getByLabelText('Doors opened'));
   });
 
   it('gives each H Fields slot its own point row on the Overview, with no Layout tab', () => {
@@ -394,8 +394,8 @@ describe('OccurrenceWorkbench', () => {
       openRoomTab('Room Timeline');
       const actions = screen.getByRole('region', { name: 'Room Timeline' });
       const pickup = within(actions).getByRole('button', { name: /^Reorder Collect / });
-      const begun = within(actions).getByLabelText('Encounter');
-      const combat = within(actions).getByLabelText('Combat');
+      const begun = within(actions).getByLabelText('Encounter started');
+      const combat = within(actions).getByLabelText('Combat started');
       const end = within(actions).getByLabelText('Encounter ended');
       expectBefore(begun, pickup);
       expectBefore(pickup, combat);
@@ -444,7 +444,7 @@ describe('OccurrenceWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat07),
     );
-    openRoomTab('Combat 1 Timeline');
+    openRoomTab('Phase 1 Timeline');
     const workspace = workspaceProjection(view.application);
     const biome = workspace.route.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (biome === undefined) throw new Error('O workspace is missing');

@@ -1194,6 +1194,15 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('G', 'golden-g-b4-e1'),
   },
   {
+    id: 'cocoon-reward-position',
+    overview: true,
+    label: 'G Arachne room: the cocoon reward position on its map',
+    shows: ['cocoon markers', 'Customize encounter'],
+    project: loadUnderworldArachneCocoonsCheckpoint,
+    target: room('G', 'golden-g-b4-e1'),
+    openOverviewPicker: 'Customize encounter',
+  },
+  {
     id: 'room-map-i-combat',
     overview: true,
     label: 'I combat room beside its map',
@@ -1593,6 +1602,14 @@ export const galleryCases: readonly GalleryCase[] = [
     shows: ['live row'],
     project: loadSurfaceScheduledLifecycleCheckpoint,
     target: room('P', 'surface-p-1-1-p_combat03'),
+  },
+  {
+    id: 'timeline-legend',
+    label: 'Timeline legend: the row kinds and purchase chances',
+    shows: ['legend'],
+    project: loadSurfaceScheduledLifecycleCheckpoint,
+    target: room('P', 'surface-p-1-1-p_combat03'),
+    legendOpen: true,
   },
   {
     id: 'live-row-required',
