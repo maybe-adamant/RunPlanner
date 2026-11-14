@@ -741,6 +741,22 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('O', 'surface-o-combat04'),
   },
   {
+    id: 'ship-resource-elsewhere',
+    overview: true,
+    label: 'Ship room Overview: Earth placed in an earlier Ship room, named by its Location',
+    shows: ['Resources', 'placement elsewhere'],
+    project: loadSurfaceNOPQCheckpoint,
+    commands: [
+      {
+        kind: 'ReplaceResourcePlacement',
+        route: createRouteAddress('Surface'),
+        family: 'Pickaxe',
+        value: { biomeKey: 'O', occurrenceId: createOccurrenceId('surface-o-combat04') },
+      },
+    ],
+    target: room('O', 'surface-o-combat02'),
+  },
+  {
     id: 'spawned-fields-entry',
     label: 'Fields room: cage rewards locked on entry, each unlocked at its cage fight’s end',
     shows: ['spawn notice', 'Fields slot marks', 'locked loot', 'unlocks row'],
