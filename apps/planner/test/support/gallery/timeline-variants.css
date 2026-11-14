@@ -1,17 +1,163 @@
 /*
- * Preview only: Timeline emphasis variants, picked by VITE_TIMELINE_VARIANT. Room
- * events read as quiet transitions; action rows carry the weight.
+ * Preview only: the action-spine Timeline, picked by VITE_TIMELINE_VARIANT=spine.
+ * Action rows are the spine's only nodes; phase changes are muted divider lines
+ * between them; spawns are notices, after their divider or under their action.
  */
 
-/* Both variants: a quiet event caption and a smaller, muted spine icon. */
-body[data-timeline-variant] .timeline-row[data-timeline-row-kind='boundary'] {
-  min-height: 26px;
-  margin-top: 2px;
+/* Action rows: one indent, full weight, a dot on the spine in place of the tick. */
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row:is(
+    [data-timeline-row-kind='action'],
+    .timeline-leave-row,
+    [data-timeline-event='wheelsOpen']
+  )::before {
+  top: calc(50% - 4.5px);
+  left: calc(var(--timeline-row-spine-x) - 4.5px);
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 2px solid var(--timeline-row-stripe, var(--timeline-node));
+  border-radius: 50%;
+  background: var(--timeline-row-stripe, var(--timeline-node));
+  content: '';
+}
+
+/* An optional action's dot is hollow, as its stripe is dashed. */
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row[data-action-accent='optional']::before {
+  background: #15171d;
+}
+
+body[data-timeline-variant='spine']
+  .timeline-row[data-timeline-row-kind='action']
+  > [data-timeline-cell='sentence']
+  > [data-timeline-cell='label']
+  > strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Select wheel and Leave room read as actions: their own dot, no event icon. */
+body[data-timeline-variant='spine']
+  .timeline-row:is(.timeline-leave-row, [data-timeline-event='wheelsOpen'])
+  > .timeline-event-node {
+  display: none;
+}
+
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row:is(.timeline-leave-row, [data-timeline-event='wheelsOpen'])
+  > [data-timeline-cell='sentence'] {
+  grid-column: 2 / -1;
+}
+
+body[data-timeline-variant='spine']
+  .timeline-row:is(.timeline-leave-row, [data-timeline-event='wheelsOpen'])
+  .timeline-banner-title
+  strong {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+/* The room's last row ends the spine: its dot is a square. */
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row.timeline-leave-row:not(
+    [data-timeline-event='wheelsOpen'],
+    :has(~ .timeline-leave-row)
+  )::before {
+  border-color: #cfcad6;
+  border-radius: 2px;
+  background: #cfcad6;
+}
+
+/*
+ * Phase changes: a muted divider. Its icon stands where an action has its handle, its
+ * label at the action indent, and a hairline runs on to its gold or the column's end.
+ */
+body[data-timeline-variant='spine']
+  .timeline-row[data-timeline-row-kind='boundary']:not(
+    .timeline-leave-row,
+    [data-timeline-event='wheelsOpen']
+  ) {
+  min-height: 24px;
   color: var(--muted);
 }
 
-body[data-timeline-variant]
+body[data-timeline-variant='spine']
+  .timeline-row[data-timeline-row-kind='boundary']:not(
+    .timeline-leave-row,
+    [data-timeline-event='wheelsOpen']
+  )::before {
+  content: none;
+}
+
+body[data-timeline-variant='spine']
+  .timeline-row[data-timeline-row-kind='boundary']:not(
+    .timeline-leave-row,
+    [data-timeline-event='wheelsOpen']
+  )
+  > .timeline-event-node {
+  position: static;
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: center;
+  width: auto;
+  height: auto;
+  border: 0;
+  color: #8e8b97;
+  background: none;
+}
+
+body[data-timeline-variant='spine']
   .timeline-row[data-timeline-row-kind='boundary']
+  > .timeline-event-node
+  > .timeline-event-icon {
+  width: 14px;
+  height: 14px;
+}
+
+body[data-timeline-variant='spine']
+  .timeline-row[data-timeline-row-kind='boundary']:not(
+    .timeline-leave-row,
+    [data-timeline-event='wheelsOpen']
+  )
+  > [data-timeline-cell='sentence'] {
+  grid-column: 2 / 3;
+}
+
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row[data-timeline-row-kind='boundary']:not(
+    .timeline-leave-row,
+    [data-timeline-event='wheelsOpen']
+  ):has(> [data-timeline-cell='money']:empty)
+  > [data-timeline-cell='sentence'] {
+  grid-column: 2 / -1;
+}
+
+body[data-timeline-variant='spine']
+  .timeline-row[data-timeline-row-kind='boundary']:not(
+    .timeline-leave-row,
+    [data-timeline-event='wheelsOpen']
+  )
+  > [data-timeline-cell='sentence']::after {
+  height: 1px;
+  flex: 1 1 24px;
+  align-self: center;
+  margin-inline-start: 4px;
+  background: rgb(255 255 255 / 10%);
+  content: '';
+}
+
+body[data-timeline-variant='spine']
+  .timeline-row[data-timeline-row-kind='boundary']:not(
+    .timeline-leave-row,
+    [data-timeline-event='wheelsOpen']
+  )
   .timeline-banner-title
   strong {
   color: #9d98a6;
@@ -20,64 +166,96 @@ body[data-timeline-variant]
   letter-spacing: 0.02em;
 }
 
-body[data-timeline-variant] .timeline-row[data-timeline-row-kind='boundary'] .timeline-phase-chip {
-  height: 1.1rem;
+body[data-timeline-variant='spine']
+  .timeline-row[data-timeline-row-kind='boundary']
+  :is(.timeline-phase-chip, .fields-cage-slot) {
+  color: #9d98a6;
   font-size: 0.68rem;
   font-weight: 500;
 }
 
-body[data-timeline-variant] .timeline-row[data-timeline-row-kind='boundary'] .fields-cage-slot {
-  color: #9d98a6;
+/* Bigger hosted content sits under its divider at the action indent, unbordered. */
+body[data-timeline-variant='spine'] .room-action-list > .timeline-doors-detail-row {
+  padding-left: calc(var(--timeline-row-start) + 3px + 36px);
+  background: none;
 }
 
-body[data-timeline-variant] .timeline-event-node {
-  top: calc(50% - 10px);
-  left: -22px;
-  width: 20px;
-  height: 20px;
-  border-color: #3a3b45;
-  color: #8e8b97;
-  background: #15171d;
-}
-
-body[data-timeline-variant] .timeline-event-node > .timeline-event-icon {
-  width: 13px;
-  height: 13px;
-}
-
-/* Action rows carry the weight: a faint card behind each, their stripe kept. */
-body[data-timeline-variant]
+body[data-timeline-variant='spine']
   .room-action-list
-  > .timeline-row:is([data-timeline-row-kind='action'], [data-timeline-row-kind='effect']):not(
-    .timeline-row-notice,
-    .timeline-live-row
-  ) {
-  margin-block: 1px;
-  padding-block: 4px;
-  background: rgb(255 255 255 / 3.5%);
+  > .timeline-row[data-timeline-row-kind='effect']::before {
+  content: none;
 }
 
-body[data-timeline-variant]
-  .timeline-row[data-timeline-row-kind='action']:not(.timeline-row-notice)
-  > [data-timeline-cell='sentence']
-  > [data-timeline-cell='label']
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row[data-timeline-row-kind='effect']
+  > [data-timeline-cell='sentence'] {
+  grid-column: 2 / -1;
+}
+
+/* Spawns: notices with no spine node; a phase's after its divider, an action's under its row. */
+body[data-timeline-variant='spine'] .room-action-list > .timeline-row.timeline-row-notice {
+  min-height: 0;
+  padding-block: 1px;
+  background-image: none;
+}
+
+body[data-timeline-variant='spine'] .room-action-list > .timeline-row.timeline-row-notice::before,
+body[data-timeline-variant='spine'] .timeline-row-notice .timeline-notice-dot {
+  display: none;
+}
+
+body[data-timeline-variant='spine']
+  .timeline-row.timeline-row-notice
+  [data-timeline-cell='label']
   > strong {
-  color: var(--text);
-  font-weight: 700;
+  color: #9d98a6;
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
-/* V2: a hairline runs from the caption and its controls to the column's end, like a date divider. */
-body[data-timeline-variant='v2']
-  .timeline-row[data-timeline-row-kind='boundary']
-  > [data-timeline-cell='sentence']::after {
-  height: 1px;
-  flex: 1 1 24px;
-  align-self: center;
-  margin-inline-start: 4px;
-  background: rgb(255 255 255 / 11%);
+/* An action's spawn is a note under it: a hook from its row, pulled up against it. */
+body[data-timeline-variant='spine']
+  .room-action-list
+  > .timeline-row.timeline-row-notice[data-spawned-loot='action'] {
+  margin-top: -2px;
+}
+
+body[data-timeline-variant='spine']
+  .timeline-row.timeline-row-notice[data-spawned-loot='action']
+  > [data-timeline-cell='sentence'] {
+  padding-left: 18px;
+}
+
+body[data-timeline-variant='spine']
+  .timeline-row.timeline-row-notice[data-spawned-loot='action']
+  > [data-timeline-cell='sentence']::before {
+  position: absolute;
+  left: 2px;
+  color: #6d6878;
+  content: '↳';
+}
+
+/* The live row is the spine's last slot: a hollow dot. */
+body[data-timeline-variant='spine'] .room-action-list > .timeline-row.timeline-live-row::before {
+  top: calc(50% - 4.5px);
+  left: calc(var(--timeline-row-spine-x) - 4.5px);
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border: 1.5px dashed #8e8b97;
+  border-radius: 50%;
+  background: #15171d;
   content: '';
 }
 
-body[data-timeline-variant='v2'] .timeline-row[data-timeline-row-kind='boundary'] {
-  margin-top: 6px;
+/* An outcome its divider settles, such as Steady Growth, reads with the divider, not as an action. */
+body[data-timeline-variant='spine']
+  .timeline-row[data-timeline-row-kind='effect']
+  > [data-timeline-cell='sentence']
+  > [data-timeline-cell='label']
+  > strong {
+  color: #b4afbd;
+  font-size: 0.82rem;
+  font-weight: 500;
 }

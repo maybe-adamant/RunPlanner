@@ -220,6 +220,7 @@ export function LeaveRow({
         gap={gap}
         {...(heroDoor === undefined ? {} : { 'data-hero-door': heroDoor })}
         {...(pastEnd ? { 'data-plan-end': 'pastEnd' } : {})}
+        data-timeline-event={event}
         kind="boundary"
         marker={<TimelineEventIcon name={event} />}
         label={
