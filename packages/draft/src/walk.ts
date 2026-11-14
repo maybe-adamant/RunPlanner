@@ -1068,7 +1068,10 @@ export class DraftWalk {
     return false;
   }
 
-  /** A Shrine item that turned illegal: a declared option of the slot's group, never one already tried. */
+  /**
+   * A Shrine item that turned illegal: a declared option of the slot's group, never one already
+   * tried nor one offered on a live hero condition the planner does not model.
+   */
   private hermesShrineOffer(
     feature: Extract<SemanticAddress, { readonly kind: 'roomFeature' }>,
   ): boolean {
@@ -1084,7 +1087,10 @@ export class DraftWalk {
       createBiomeAddress(feature.routeKey, feature.biomeKey),
       feature.occurrenceId,
     );
-    for (const option of this.shuffle(group?.options.values ?? [])) {
+    const options = (group?.options.values ?? []).filter(
+      (option) => option.unmodeledOfferCondition === undefined,
+    );
+    for (const option of this.shuffle(options)) {
       const key = `shrine:${semanticAddressKey(feature)}:${option.rewardType}`;
       if (this.hooked.has(key)) continue;
       this.hooked.add(key);
@@ -1289,7 +1295,8 @@ export class DraftWalk {
 
   /**
    * Replaces one Shop slot, or its Travel Deal item, with a steered pick among the values its
-   * inventory admits beside its peers; the pick, or undefined when none applies.
+   * inventory admits beside its peers, never one offered on a live hero condition the planner
+   * does not model; the pick, or undefined when none applies.
    */
   private steerShopOffer(
     origin: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
@@ -1303,7 +1310,16 @@ export class DraftWalk {
         ? this.refilledSlotKey(origin.biomeKey, origin.occurrenceId, shop.profileKey)
         : origin.offerKey;
     if (slotKey === undefined) return undefined;
+    const profile = this.catalog.rewards.shops.byKey[shop.profileKey];
+    const undrawn = new Set(
+      (profile?.groups.values ?? []).flatMap((group) =>
+        group.options.values.flatMap((option) =>
+          option.unmodeledOfferCondition === undefined ? [] : [option.key],
+        ),
+      ),
+    );
     const values = shopOfferOptionValues(this.catalog, shop.profileKey, slotKey).filter((value) => {
+      if (undrawn.has(value.optionKey)) return false;
       const evaluation = this.evaluate({ kind: 'shopOfferOption', offer: origin, value });
       return (
         'result' in evaluation &&
