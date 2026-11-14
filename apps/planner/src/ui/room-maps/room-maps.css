@@ -483,13 +483,13 @@
   border-color: #8fd3ff;
 }
 
-/* World Shop items ring in rose, the Contract pedestal in lime; a bought item rings solid. */
+/* World Shop items ring in red, the Contract pedestal in blue; a bought item rings solid. */
 .room-map-point[data-point='shop'] {
-  border-color: #ff8fc8;
+  border-color: #ff5a5a;
 }
 
 .room-map-point[data-point='pedestal'] {
-  border-color: #c6ef6a;
+  border-color: #3d8bff;
 }
 
 .room-map-point[data-taken] {
@@ -507,7 +507,7 @@
   width: 62%;
   aspect-ratio: 1;
   place-items: center;
-  border: 2px solid #ff8fc8;
+  border: 2px solid #ff5a5a;
   border-radius: 50%;
   background: rgb(17 25 35 / 92%);
 }
@@ -819,11 +819,11 @@
 }
 
 .room-map-legend > li[data-kind='shop'] > .room-map-legend-swatch {
-  border-color: #ff8fc8;
+  border-color: #ff5a5a;
 }
 
 .room-map-legend > li[data-kind='pedestal'] > .room-map-legend-swatch {
-  border-color: #c6ef6a;
+  border-color: #3d8bff;
 }
 
 .room-map-legend-entry {
