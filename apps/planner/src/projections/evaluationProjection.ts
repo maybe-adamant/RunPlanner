@@ -585,6 +585,10 @@ export const findingCopy = {
   nemesisOutcomeUnavailable: {
     title: 'Nemesis event result unavailable',
   },
+  nemesisEventUnavailable: {
+    title: 'Nemesis cannot offer this event type here',
+    description: 'She picks her event as she appears and picks again if it no longer fits.',
+  },
   hexActivationMissing: {
     title: 'Choose the Path of Stars nodes',
   },

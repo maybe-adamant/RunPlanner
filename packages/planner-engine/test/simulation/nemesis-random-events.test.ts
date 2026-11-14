@@ -508,6 +508,62 @@ describe('Nemesis random events', () => {
     ).toBe(false);
   });
 
+  it('refuses her damage trade on entry while the hero holds the Demeter hit shield', () => {
+    const shieldRoom = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(3, 1));
+    let shielded = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: shieldRoom,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    });
+    shielded = applyProjectCommand(shielded, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(shieldRoom, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Demeter',
+        options: [
+          { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Common' },
+          { traitKey: 'DemeterCastBoon', rarity: 'Common' },
+          { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    } as never);
+    shielded = selectEvent(collectTestRequiredItems(shielded));
+    const event = createNemesisRandomEventAddress(phase);
+    const entered = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, shielded),
+      event,
+    );
+    expect(entered?.unavailableFamilies).toEqual({
+      damageTrade: { kind: 'heldTrait', traitKey: 'ReserveManaHitShieldBoon' },
+    });
+    // A retained refused family keeps its value and stops the walk at her room's Overview.
+    const refused = simulateProjectAssembly(catalog, selectFamily(shielded, 'damageTrade'));
+    expect(occurrence(refused.project).encounters.nemesisRandomEventByPhase?.Encounter?.kind).toBe(
+      'damageTrade',
+    );
+    expect(refused.evaluation.findings).toEqual([
+      expect.objectContaining({
+        code: 'nemesisEventUnavailable',
+        origin: event,
+        evidence: {
+          kind: 'damageTrade',
+          reason: 'heldTrait',
+          traitKey: 'ReserveManaHitShieldBoon',
+        },
+      }),
+    ]);
+    expect(
+      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(refused, event)?.assessment,
+    ).toBeUndefined();
+    const allowed = simulateProjectAssembly(catalog, selectFamily(shielded, 'goldTrade'));
+    expect(allowed.evaluation.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'nemesisEventUnavailable' }),
+    );
+  });
+
   it('blocks an unavailable trait trade at the event before its required child can settle', () => {
     let project = createGoldenFGHIProject();
     const unavailableTrait = catalog.traitGivers.values.find(

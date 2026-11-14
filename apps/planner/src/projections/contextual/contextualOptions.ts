@@ -802,6 +802,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'encounter', message: 'Choose the result of this Nemesis event.' };
     case 'nemesisOutcomeUnavailable':
       return { kind: 'encounter', message: 'Choose a Nemesis result legal at this interaction.' };
+    case 'nemesisEventUnavailable':
+      return { kind: 'encounter', message: 'Choose a Nemesis event type she can offer here.' };
     case 'echoLastRunBoonMissing':
       return { kind: 'trait', message: 'Choose one to three boons from the previous run.' };
     case 'echoLastRunBoonOptionUnavailable':

@@ -21,6 +21,7 @@ import {
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   planEndAvailability,
   type NemesisRandomEventCandidateSupport,
+  type NemesisRandomEventFamilyRefusal,
   type PlanEndAvailability,
   type ProjectEvaluationAssembly,
   unlockExitEncounterSupportForProjectEvaluationAssembly,
@@ -265,22 +266,29 @@ function projectNemesisEventDomain(
   }
 }
 
-/**
- * How far the engine reached this Nemesis event: its family with the room's
- * entry, its details with her interaction. A non-exact assembly reaches nothing.
- */
-function nemesisEventReached(
+/** The engine's support for this Nemesis event; a non-exact assembly reaches nothing. */
+function nemesisEventSupport(
   assembly: ProjectEvaluationAssembly,
   event: import('@run-planner/engine/authored-project').NemesisRandomEventAddress,
-): 'unreached' | 'family' | 'interaction' {
+): NemesisRandomEventCandidateSupport | undefined {
   try {
-    const support = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(assembly, event);
-    if (support === undefined) return 'unreached';
-    return support.assessment === undefined ? 'family' : 'interaction';
+    return nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(assembly, event);
   } catch (error) {
-    if (error instanceof Error && error.name === 'ProjectSimulationContractError')
-      return 'unreached';
+    if (error instanceof Error && error.name === 'ProjectSimulationContractError') return undefined;
     throw error;
+  }
+}
+
+/** Why the engine refuses one Nemesis event type where she spawns. */
+export function nemesisFamilyRefusalLabel(
+  catalog: Catalog,
+  refusal: NemesisRandomEventFamilyRefusal,
+): string {
+  switch (refusal.kind) {
+    case 'heldTrait':
+      return `Not while holding ${catalog.traits.byKey[refusal.traitKey]?.label ?? 'that boon'}`;
+    case 'noSellableGodTrait':
+      return 'Needs a god boon to trade';
   }
 }
 
@@ -486,22 +494,28 @@ export function bindOccurrenceLocalInteractions(
               : Object.freeze({
                   encounterKey: nemesisChoice.value,
                   owner: createNemesisRandomEventAddress(phase.owner),
-                  familyPicker: projectStableIdentityPicker({
+                  familyPicker: (() => {
                     // The declared families claim nothing until the room's entry is reached.
-                    assessment:
-                      nemesisEventReached(
-                        assembly,
-                        createNemesisRandomEventAddress(phase.owner),
-                      ) === 'unreached'
-                        ? 'unassessed'
-                        : 'assessed',
-                    choices: NEMESIS_RANDOM_EVENT_FAMILIES.map((family) => ({
-                      label: nemesisFamilyLabel(family),
-                      value: family,
-                    })),
-                    selected: phase.nemesisEvent?.value?.kind,
-                    selectedLabel: undefined,
-                  }),
+                    const support = nemesisEventSupport(
+                      assembly,
+                      createNemesisRandomEventAddress(phase.owner),
+                    );
+                    return projectStableIdentityPicker({
+                      assessment: support === undefined ? 'unassessed' : 'assessed',
+                      choices: NEMESIS_RANDOM_EVENT_FAMILIES.map((family) => {
+                        const refusal = support?.unavailableFamilies[family];
+                        return {
+                          label: nemesisFamilyLabel(family),
+                          value: family,
+                          ...(refusal === undefined
+                            ? {}
+                            : { unavailable: nemesisFamilyRefusalLabel(catalog, refusal) }),
+                        };
+                      }),
+                      selected: phase.nemesisEvent?.value?.kind,
+                      selectedLabel: undefined,
+                    });
+                  })(),
                   familyIntentFor: (family: AuthoredNemesisRandomEventKind) =>
                     Object.freeze({
                       command: Object.freeze({
@@ -709,7 +723,8 @@ export function bindOccurrenceLocalInteractions(
                       value,
                     }),
                   }),
-                contextReached: nemesisEventReached(assembly, event.owner) === 'interaction',
+                contextReached:
+                  nemesisEventSupport(assembly, event.owner)?.assessment !== undefined,
                 load: () =>
                   event.value === null
                     ? undefined

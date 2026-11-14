@@ -5,11 +5,14 @@ import {
   applyProjectCommand,
   createEncounterPhaseAddress,
   createFieldsSpatialAddress,
+  createIncomingRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createTraitOfferAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
+import { collectTestRequiredItems } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -92,5 +95,59 @@ describe('declared domains without a reached context', () => {
       'unassessed',
     );
     expect(interaction.contextReached).toBe(false);
+  });
+
+  it('shows a Nemesis family her spawn state refuses disabled with its reason', () => {
+    const shieldRoom = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(3, 1));
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const event = createNemesisRandomEventAddress(phase);
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: shieldRoom,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(shieldRoom, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Demeter',
+        options: [
+          { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Common' },
+          { traitKey: 'DemeterCastBoon', rarity: 'Common' },
+          { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    } as never);
+    project = applyProjectCommand(collectTestRequiredItems(project), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    const items = (selected: typeof project) =>
+      projectStructuredWorkspaceFixture(selected)
+        .workspace.interactions.nemesisEvents.get(semanticAddressKey(event))!
+        .familyPicker.sections.flatMap((section) => section.items);
+    const damage = items(project).find((item) => item.value === 'damageTrade');
+    expect(damage).toMatchObject({
+      disabled: true,
+      explanations: [`Not while holding ${catalog.traits.byKey.ReserveManaHitShieldBoon!.label}`],
+    });
+    expect(items(project).find((item) => item.value === 'goldTrade')?.disabled).toBe(false);
+    // A retained refused family stays selected for repair.
+    const retained = projectStructuredWorkspaceFixture(
+      applyProjectCommand(project, catalog, {
+        kind: 'SelectNemesisRandomEventFamily',
+        event,
+        family: 'damageTrade',
+      }),
+    ).workspace.interactions.nemesisEvents.get(semanticAddressKey(event))!.familyPicker;
+    expect(retained.selected).toMatchObject({ value: 'damageTrade', disabled: true });
   });
 });

@@ -1222,16 +1222,7 @@ function encountersThrough(
     // A phase blocked at its own start keeps its Fig Leaf support; at its outcome, its Gorgon support.
     gorgonAt: (origin: EncounterPhaseAddress) =>
       gorgon.has(key(origin)) && outcomeReached(origin) ? selected.gorgonAt(origin) : undefined,
-    // Her event is queued as she spawns on entry; its assessment waits on her interaction.
-    nemesisAt: (origin: NemesisRandomEventAddress) => {
-      const reached = nemesis.get(key(origin));
-      if (reached !== undefined || !prepared(origin.encounter)) return reached;
-      const support = selected.nemesisAt(origin);
-      if (support?.assessment === undefined) return support;
-      const { assessment: _unreached, ...family } = support;
-      void _unreached;
-      return Object.freeze(family);
-    },
+    nemesisAt: (origin: NemesisRandomEventAddress) => nemesis.get(key(origin)),
   });
 }
 

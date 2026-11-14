@@ -1401,13 +1401,13 @@ const encounterSettled: ChronologySeamHandler<
               }),
             },
           ]),
-      ...(transition.nemesisCandidate === undefined
+      ...(transition.nemesisAssessment === undefined
         ? []
         : [
             {
-              kind: 'nemesisRandomEventCandidate' as const,
-              key: transition.nemesisCandidate.key,
-              candidate: transition.nemesisCandidate.value,
+              kind: 'nemesisRandomEventAssessment' as const,
+              key: transition.nemesisAssessment.key,
+              assessment: transition.nemesisAssessment.value,
             },
           ]),
       { kind: 'bossArcanaOutcomes', outcomes: transition.bossArcanaOutcomes ?? [] },
@@ -1957,7 +1957,14 @@ const roomPrepared: ChronologySeamHandler<'roomPrepared'> = (context, state, eve
       branch,
       overviewEntry: Object.freeze({ roomKey: semanticAddressKey(event.origin), branch }),
     }),
-    emissions: [lifecycleFindings(transition.findings)],
+    emissions: [
+      lifecycleFindings(transition.findings),
+      ...transition.nemesisCandidates.map((candidate) => ({
+        kind: 'nemesisRandomEventCandidate' as const,
+        key: semanticAddressKey(candidate.origin),
+        candidate,
+      })),
+    ],
   };
 };
 

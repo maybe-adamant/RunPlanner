@@ -80,6 +80,7 @@ import type {
   FigLeafPhaseCandidateSupport,
   GorgonPhaseCandidateSupport,
   HubDepartureRunState,
+  NemesisRandomEventAssessment,
   NemesisRandomEventCandidateSupport,
   MidBiomeStartPoint,
   RewardStoreSupportEntry,
@@ -220,6 +221,11 @@ export type ChronologyEmission =
       readonly kind: 'nemesisRandomEventCandidate';
       readonly key: string;
       readonly candidate: NemesisRandomEventCandidateSupport;
+    }
+  | {
+      readonly kind: 'nemesisRandomEventAssessment';
+      readonly key: string;
+      readonly assessment: NemesisRandomEventAssessment;
     }
   | { readonly kind: 'bossArcanaOutcomes'; readonly outcomes: readonly BossArcanaOutcome[] }
   | { readonly kind: 'phantomExitSettlement'; readonly settlement: PhantomExitSettlement }
@@ -811,6 +817,16 @@ export function createChronologyAccumulator(
       case 'nemesisRandomEventCandidate':
         nemesisRandomEventCandidates.set(emission.key, emission.candidate);
         return;
+      case 'nemesisRandomEventAssessment': {
+        const entry = nemesisRandomEventCandidates.get(emission.key);
+        if (entry === undefined)
+          fail(`Nemesis event ${emission.key} reached her interaction without her spawn`);
+        nemesisRandomEventCandidates.set(
+          emission.key,
+          Object.freeze({ ...entry, assessment: emission.assessment }),
+        );
+        return;
+      }
       case 'bossArcanaOutcomes':
         for (const outcome of emission.outcomes)
           bossArcanaOutcomes.set(semanticAddressKey(outcome.owner), outcome);
