@@ -2461,6 +2461,11 @@ button.doors-moment-trigger[data-has-findings] {
   box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
 }
 
+/* The popover takes focus as it opens; its controls show focus, the popover itself does not. */
+.doors-moment-popover:focus {
+  outline: none;
+}
+
 /* A door chip to pick: the picked one lit, the others dim until hovered. */
 button.timeline-door-option {
   color: inherit;
