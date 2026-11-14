@@ -1,0 +1,83 @@
+/*
+ * Preview only: Timeline emphasis variants, picked by VITE_TIMELINE_VARIANT. Room
+ * events read as quiet transitions; action rows carry the weight.
+ */
+
+/* Both variants: a quiet event caption and a smaller, muted spine icon. */
+body[data-timeline-variant] .timeline-row[data-timeline-row-kind='boundary'] {
+  min-height: 26px;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+body[data-timeline-variant]
+  .timeline-row[data-timeline-row-kind='boundary']
+  .timeline-banner-title
+  strong {
+  color: #9d98a6;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+body[data-timeline-variant] .timeline-row[data-timeline-row-kind='boundary'] .timeline-phase-chip {
+  height: 1.1rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+body[data-timeline-variant] .timeline-row[data-timeline-row-kind='boundary'] .fields-cage-slot {
+  color: #9d98a6;
+}
+
+body[data-timeline-variant] .timeline-event-node {
+  top: calc(50% - 10px);
+  left: -22px;
+  width: 20px;
+  height: 20px;
+  border-color: #3a3b45;
+  color: #8e8b97;
+  background: #15171d;
+}
+
+body[data-timeline-variant] .timeline-event-node > .timeline-event-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* Action rows carry the weight: a faint card behind each, their stripe kept. */
+body[data-timeline-variant]
+  .room-action-list
+  > .timeline-row:is([data-timeline-row-kind='action'], [data-timeline-row-kind='effect']):not(
+    .timeline-row-notice,
+    .timeline-live-row
+  ) {
+  margin-block: 1px;
+  padding-block: 4px;
+  background: rgb(255 255 255 / 3.5%);
+}
+
+body[data-timeline-variant]
+  .timeline-row[data-timeline-row-kind='action']:not(.timeline-row-notice)
+  > [data-timeline-cell='sentence']
+  > [data-timeline-cell='label']
+  > strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* V2: a hairline runs from the caption and its controls to the column's end, like a date divider. */
+body[data-timeline-variant='v2']
+  .timeline-row[data-timeline-row-kind='boundary']
+  > [data-timeline-cell='sentence']::after {
+  height: 1px;
+  flex: 1 1 24px;
+  align-self: center;
+  margin-inline-start: 4px;
+  background: rgb(255 255 255 / 11%);
+  content: '';
+}
+
+body[data-timeline-variant='v2'] .timeline-row[data-timeline-row-kind='boundary'] {
+  margin-top: 6px;
+}
