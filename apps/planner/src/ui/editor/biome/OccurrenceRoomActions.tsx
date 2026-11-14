@@ -410,9 +410,17 @@ export function RoomActionsWorkbench({
         : [],
     ),
   );
+  // A marker hangs under the row that triggered it only where that row shows in the same list.
   const renderBoundary = (
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>,
+    list: readonly WorkspaceRoomLifecycleTimelineEntry[],
   ) => {
+    const underTrigger =
+      entry.triggerActionKey !== undefined &&
+      list.some(
+        (candidate) =>
+          candidate.kind === 'action' && candidate.actionKey === entry.triggerActionKey,
+      );
     const content = renderBoundaryContent?.(entry.boundary);
     const boundary = entry.boundary;
     const doorsOpen = boundary.kind === 'doorsOpened' && !doorsWait ? roomDoors : undefined;
@@ -452,7 +460,7 @@ export function RoomActionsWorkbench({
           phaseTitle={entry.phaseTitle}
           toggle={doorsOpen === undefined ? undefined : doorsOpenToggle(doorsOpen)}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
-          {...(entry.triggerActionKey === undefined ? {} : { underTrigger: true })}
+          {...(underTrigger ? { underTrigger: true } : {})}
           {...(entry.supplement?.identityLabel !== undefined
             ? {
                 identity: {
@@ -993,7 +1001,7 @@ export function RoomActionsWorkbench({
                       wheel={phaseWheel}
                     />,
                   ];
-                if (entry.kind === 'boundary') return [renderBoundary(entry)];
+                if (entry.kind === 'boundary') return [renderBoundary(entry, phase.timeline)];
                 if (entry.kind === 'spawned') return [renderSpawned(entry)];
                 if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);
                 if (entry.presentation !== 'row') return [];
@@ -1056,7 +1064,7 @@ export function RoomActionsWorkbench({
   const actionByKey = new Map(actions.rows.map((row) => [row.key, row]));
   const renderTimelineEntry = (entry: WorkspaceRoomLifecycleTimelineEntry): ReactNode[] => {
     if (entry.kind === 'boundary') {
-      return [renderBoundary(entry)];
+      return [renderBoundary(entry, actions.timeline.entries)];
     }
     if (entry.kind === 'spawned') return [renderSpawned(entry)];
     if (entry.kind === 'automaticEffect') return renderAutomaticEffect(entry);
