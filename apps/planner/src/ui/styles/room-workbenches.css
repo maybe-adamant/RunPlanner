@@ -3221,8 +3221,8 @@ span.hub-board-status-line {
   min-height: 30px;
 }
 
-/* A visit's room options keep a numbered room's overhang on every room, so their names align. */
-.hub-visit-option-room > .biome-rail-icons-room-slot {
+/* Room options keep a numbered room's overhang on every room, so their names align. */
+.room-option-icon > .biome-rail-icons-room-slot {
   margin-inline-end: calc(var(--badge-overhang) * var(--badge-size));
 }
 

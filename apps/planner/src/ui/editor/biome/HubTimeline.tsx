@@ -44,7 +44,7 @@ import { HubBoardMap, HubDoorFace, type HubMapDoor } from './hub-map/HubBoardMap
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
 import { RoomRerolls } from './RoomRerolls';
 import { roomKindIcon } from './roomIcon';
-import { RoomNumberIcon } from './RoomNumberIcon';
+import { RoomOptionFace } from './RoomNumberIcon';
 import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
 import {
   useTimelineReorder,
@@ -190,14 +190,7 @@ function VisitRoomPicker({
       itemFace={(item) => {
         const room = choices.find((choice) => choice.value === item.value)?.room;
         return (
-          <>
-            {room === undefined ? null : (
-              <span aria-hidden="true" className="hub-visit-option-room">
-                <RoomNumberIcon number={room.roomNumber} room={room.roomIcon} />
-              </span>
-            )}
-            <span className="contextual-picker-item-label">{item.label}</span>
-          </>
+          <RoomOptionFace label={item.label} number={room?.roomNumber} room={room?.roomIcon} />
         );
       }}
       placeholder="Choose room"

@@ -126,6 +126,7 @@ function SideDoorRow({
         <>
           <span aria-hidden="true">
             <FixedValueChip
+              badge={slot.roomNumber}
               icon={roomKindIcon(slot.roomIcon)}
               label={sideRoomShortLabel(slot.label)}
             />

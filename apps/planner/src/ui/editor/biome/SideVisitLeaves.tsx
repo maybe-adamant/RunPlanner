@@ -22,7 +22,7 @@ import {
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
-import { doorRewardIcons, hubReturnChip } from './doorSummary';
+import { doorRewardIcons, hubReturnChip, roomNumberOf } from './doorSummary';
 import { DoorChipFace } from './DecisionWorkbench';
 import { LeavePicker, type LeaveOption } from './LeavePicker';
 import { LeaveRow } from './TimelineDoors';
@@ -153,6 +153,7 @@ function SideVisitLeaveRow({
           key: option.key,
           label: slot.label,
           roomIcon: slot.roomIcon,
+          ...roomNumberOf(slot),
           rewards: doorRewardIcons(slot, 'final'),
         },
         ...base,
@@ -287,6 +288,7 @@ export function SideVisitLeaves({
                       key: visited.key,
                       label: visited.label,
                       roomIcon: visited.roomIcon,
+                      ...roomNumberOf(visited),
                       rewards: doorRewardIcons(visited, 'final'),
                     }}
                   />

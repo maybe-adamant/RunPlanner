@@ -24,6 +24,8 @@ export interface DoorChip {
   readonly key: string;
   readonly label: string;
   readonly roomIcon?: WorkspaceRoomIcon;
+  /** The room's number where many rooms share its icon. */
+  readonly roomNumber?: string;
   readonly rewards: readonly (ArtworkSource | undefined)[];
   /** The door still waits on an input: its room, or a reward it shows. */
   readonly missing?: true;
@@ -39,6 +41,13 @@ export interface DoorChip {
   readonly wheelOffer?: true;
   /** The room's hidden door: its placeholder room and reward, never entered. */
   readonly hidden?: true;
+}
+
+/** A chip's room number, where its room has one. */
+export function roomNumberOf(room: { readonly roomNumber?: string | undefined }): {
+  readonly roomNumber?: string;
+} {
+  return room.roomNumber === undefined ? {} : { roomNumber: room.roomNumber };
 }
 
 /** The way back to the Hub through the main room's Door 1, by the Hub's room icon. */
@@ -94,6 +103,7 @@ export function batchDoorChips(
       label: `Door ${target.index} · ${target.door.room.label}`,
       doorIndex: target.index,
       roomIcon: target.door.room.roomIcon,
+      ...roomNumberOf(target.door.room),
       rewards: doorRewardIcons(target, 'first'),
       ...(doorRewardUnset(target) ? { missing: true as const } : {}),
       picked: target.selected,
@@ -118,6 +128,7 @@ export function batchDoorChips(
                 control === node.chaos ? ('chaos' as const) : ('zagreusContract' as const),
               label: control.exitTypeLabel,
               roomIcon: control.door.room.roomIcon,
+              ...roomNumberOf(control.door.room),
               rewards: [],
               picked: control.selected,
             } satisfies DoorChip,

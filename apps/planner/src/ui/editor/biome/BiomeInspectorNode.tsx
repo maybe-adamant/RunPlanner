@@ -14,7 +14,12 @@ import {
 } from '@planner/projections/structured-workspace';
 import { BatchDoorsDetail, BatchDoorsRepair, DoorRowsHeader } from './DecisionWorkbench';
 import { DoorRows } from './DoorRows';
-import { batchDoorChips, batchDoorFindingOwners, batchDoorsStatus } from './doorSummary';
+import {
+  batchDoorChips,
+  batchDoorFindingOwners,
+  batchDoorsStatus,
+  roomNumberOf,
+} from './doorSummary';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { PhantomExitDoor } from './PhantomExitDoor';
@@ -275,6 +280,9 @@ function roomTimelineDoors({
                     hidden: true,
                     label: 'Hidden door',
                     ...(phantom.room.icon === undefined ? {} : { roomIcon: phantom.room.icon }),
+                    ...(phantom.room.number === undefined
+                      ? {}
+                      : { roomNumber: phantom.room.number }),
                     rewards:
                       phantom.reward.rewardType === undefined
                         ? []
@@ -334,6 +342,7 @@ function roomTimelineDoors({
               doorIndex: 1,
               label: destination.label,
               roomIcon,
+              ...(destination.kind === 'room' ? roomNumberOf(destination) : {}),
               rewards: [],
             }
           : undefined;

@@ -675,6 +675,8 @@ interface WorkspaceLocalVisitSlotBase {
   readonly physicalDoorId: number;
   /** The side room's kind icon, as room pickers show it. */
   readonly roomIcon: import('./structure').WorkspaceRoomIcon;
+  /** The side room's number, which tells it from rooms sharing its icon. */
+  readonly roomNumber?: string;
 }
 
 /** A generated local target publishes its retained ordinary occurrence workbench. */

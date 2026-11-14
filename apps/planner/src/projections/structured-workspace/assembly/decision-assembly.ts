@@ -34,6 +34,7 @@ import {
 } from '@run-planner/engine/simulation';
 
 import { requireWorkspaceRoom } from './catalog-room';
+import { candidateRoomIcon, candidateRoomNumber } from '../presentation/room-icon';
 import { olympusExitTypeLabel } from '@planner/projections/roomSelectorProjection';
 import {
   StructuredWorkspaceProjectionContractError,
@@ -1027,8 +1028,11 @@ function assembleBatchDecision(
             mapChoices: Object.freeze(
               host.roomGameNames.map((gameName) => {
                 const room = requireWorkspaceRoom(input.catalog, gameName);
+                const roomNumber = candidateRoomNumber(input.catalog, source.biome.biomeKey, room);
                 return Object.freeze({
                   label: room.label,
+                  roomIcon: candidateRoomIcon(input.catalog, source.biome.biomeKey, room),
+                  ...(roomNumber === undefined ? {} : { roomNumber }),
                   value: room.gameName,
                 });
               }),

@@ -42,6 +42,7 @@ import {
 } from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
 import { roomKindIcon } from './roomIcon';
+import { RoomNumberIcon, RoomOptionFace } from './RoomNumberIcon';
 import { DoorRewardEditor, DoorRewardHiddenTag, FixedRewardChip } from './DoorRewardEditor';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { NotedText } from '@planner/ui/controls/NotedText';
@@ -433,7 +434,11 @@ function TargetRow({
         ) : door.room.anomaly !== undefined ? (
           <AnomalyRoomControl ariaLabel={`Door ${target.index} room`} room={door.room} />
         ) : (
-          <FixedValueChip icon={roomKindIcon(door.room.roomIcon)} label={door.room.label} />
+          <FixedValueChip
+            badge={door.room.roomNumber}
+            icon={roomKindIcon(door.room.roomIcon)}
+            label={door.room.label}
+          />
         )
       }
       secondary={
@@ -543,7 +548,16 @@ function AdditionalExitRow({
             // Locked with the other doors where the room's exit is dormant.
             findingTarget={findingTarget(control.owner, `chaos-room-${room.occurrenceId}`)}
             id={`chaos-room-${room.occurrenceId}`}
-            itemIcon={() => art}
+            itemFace={(item) => {
+              const choice = control.mapChoices.find((candidate) => candidate.value === item.value);
+              return (
+                <RoomOptionFace
+                  label={item.label}
+                  number={choice?.roomNumber}
+                  room={choice?.roomIcon ?? room.roomIcon}
+                />
+              );
+            }}
             label=""
             layout="inline"
             model={declaredChoicesPicker(
@@ -552,11 +566,12 @@ function AdditionalExitRow({
             )}
             onSelect={(gameName) => executeIntent(chaos.mapIntent(gameName))}
             placeholder="Choose a room"
+            {...(room.roomNumber === undefined ? {} : { triggerBadge: room.roomNumber })}
             triggerIcon={art}
             triggerSize="content"
           />
         ) : (
-          <FixedValueChip icon={art} label={room.label} />
+          <FixedValueChip badge={room.roomNumber} icon={art} label={room.label} />
         )
       }
       state={{ available: true, picked: control.selected }}
@@ -768,7 +783,11 @@ export function DoorChipFace({ chip }: { readonly chip: DoorChip }) {
           </span>
         )
       ) : (
-        <ArtworkIcon className="artwork-label-icon" source={roomKindIcon(chip.roomIcon)} />
+        <RoomNumberIcon
+          iconClassName="artwork-label-icon"
+          number={chip.roomNumber}
+          room={chip.roomIcon}
+        />
       )}
       {chip.rewards.map((icon, index) => (
         <ArtworkIcon className="artwork-label-icon" key={index} source={icon} />

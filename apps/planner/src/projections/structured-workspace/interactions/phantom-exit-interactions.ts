@@ -13,7 +13,7 @@ import {
 
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import type { WorkspacePhantomExitInteraction } from '../contracts/structure';
-import { candidateRoomIcon } from '../presentation/room-icon';
+import { candidateRoomIcon, candidateRoomNumber } from '../presentation/room-icon';
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
 
 type PhantomExitRequirement = Extract<
@@ -68,6 +68,12 @@ export function bindPhantomExitInteraction(input: {
         )),
       roomIcon: (gameName: string) =>
         candidateRoomIcon(
+          input.catalog,
+          owner.biomeKey,
+          routeRoomDeclaration(requireWorkspaceRoom(input.catalog, gameName), owner.routeKey),
+        ),
+      roomNumber: (gameName: string) =>
+        candidateRoomNumber(
           input.catalog,
           owner.biomeKey,
           routeRoomDeclaration(requireWorkspaceRoom(input.catalog, gameName), owner.routeKey),

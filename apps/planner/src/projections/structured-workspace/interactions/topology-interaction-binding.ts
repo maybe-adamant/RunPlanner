@@ -23,7 +23,7 @@ import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import type { WorkspaceRoomIcon } from '../contracts/structure';
-import { candidateRoomIcon } from '../presentation/room-icon';
+import { candidateRoomIcon, candidateRoomNumber } from '../presentation/room-icon';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceRoomInteraction, WorkspaceRoomPickerControl } from '../contract';
 import type {
@@ -269,6 +269,8 @@ export function bindTopologyInteractions(input: {
   for (const [key, control] of roomControls) {
     const roomIcon = (room: RoomDeclaration): WorkspaceRoomIcon =>
       candidateRoomIcon(catalog, control.address.biomeKey, room);
+    const roomNumber = (room: RoomDeclaration): string | undefined =>
+      candidateRoomNumber(catalog, control.address.biomeKey, room);
     if (control.kind === 'startRoomPicker') {
       const candidateRooms = Object.freeze(
         control.candidateGameNames.map((gameName) =>
@@ -306,6 +308,7 @@ export function bindTopologyInteractions(input: {
           },
           owner: control.address,
           roomIcon,
+          roomNumber,
           selected: routeRoomDeclaration(
             requireWorkspaceRoom(catalog, control.selectedGameName),
             control.address.routeKey,
@@ -537,6 +540,7 @@ export function bindTopologyInteractions(input: {
           },
           owner: control.address,
           roomIcon,
+          roomNumber,
         }),
       );
       continue;
@@ -603,6 +607,7 @@ export function bindTopologyInteractions(input: {
         },
         owner: control.address,
         roomIcon,
+        roomNumber,
         ...(selectedGameName === undefined
           ? {}
           : {
