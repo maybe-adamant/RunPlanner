@@ -353,15 +353,11 @@ function rewardPoolForBatch(
 
 /** How a Fields batch's roll and cages read beside its doors. */
 function fieldsDoorNotes(fields: WorkspaceFieldsBatchContext): readonly WorkspaceDoorNote[] {
-  const cap = fields.priorMaxOutcomes?.maxDoorCageCeiling;
   const roll = Object.freeze({
     target: 'doorRoll' as const,
     text: [
-      'Minimum gives each combat room behind these doors 2 cages; Maximum gives 3, or 2 where the room only holds 2.',
-      'The game rolls this even when no room behind these doors has cages.',
-      ...(cap === undefined
-        ? []
-        : [`Maximum can be rolled at most ${cap === 2 ? 'twice' : `${cap} times`} per run.`]),
+      '• Cages per combat room: Minimum 2, Maximum 3 (2 if the room only holds 2).',
+      '• Rolled even when no room has cages.',
     ].join('\n'),
   });
   return fields.cageTargetCount === 0

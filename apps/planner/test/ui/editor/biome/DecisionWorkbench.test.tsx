@@ -1412,9 +1412,7 @@ describe('DecisionWorkbench', () => {
     const noteOn = (words: string) =>
       screen.getByRole('group', { name: words }).getAttribute('aria-description');
     // One hint, on the roll, tells the roll still happens without cages.
-    expect(noteOn('Fields door roll')).toContain(
-      'The game rolls this even when no room behind these doors has cages.',
-    );
+    expect(noteOn('Fields door roll')).toContain('Rolled even when no room has cages.');
     expect(screen.queryByRole('group', { name: 'Cages per combat room' })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Reward' })).toBeNull();
   });

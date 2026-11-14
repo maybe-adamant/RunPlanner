@@ -331,8 +331,8 @@ describe('structured workspace decision assembly', () => {
       {
         target: 'doorRoll',
         text: [
-          'Minimum gives each combat room behind these doors 2 cages; Maximum gives 3, or 2 where the room only holds 2.',
-          'The game rolls this even when no room behind these doors has cages.',
+          '• Cages per combat room: Minimum 2, Maximum 3 (2 if the room only holds 2).',
+          '• Rolled even when no room has cages.',
         ].join('\n'),
       },
       { target: 'rewardColumn', text: 'Cage rewards appear bottom to top on the door' },
