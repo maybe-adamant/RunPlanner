@@ -242,7 +242,7 @@ function OpenedCase({
     const timer = window.setInterval(() => {
       if (!pickerOpened.current) {
         const trigger = frame.current?.querySelector<HTMLButtonElement>(
-          `:is(.timeline-live-row, .timeline-leave-row) button[aria-label="${CSS.escape(name)}"]`,
+          `:is(.timeline-live-row, .timeline-leave-row, .hub-segment) button[aria-label="${CSS.escape(name)}"]`,
         );
         if (trigger === null || trigger === undefined) return;
         pickerOpened.current = true;

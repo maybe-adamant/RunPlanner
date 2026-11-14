@@ -44,6 +44,7 @@ import { HubBoardMap, HubDoorFace, type HubMapDoor } from './hub-map/HubBoardMap
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
 import { RoomRerolls } from './RoomRerolls';
 import { roomKindIcon } from './roomIcon';
+import { RoomNumberIcon } from './RoomNumberIcon';
 import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
 import {
   useTimelineReorder,
@@ -159,7 +160,7 @@ function VisitRoomPicker({
         key: slot.hubSlotKey,
         value: slot.hubSlotKey,
         label: slot.label,
-        icon: slotRoomIcon(slot),
+        room: slotRoom(slot),
         disabled: refusal !== undefined,
         ...(refusal === 'alreadyVisited'
           ? { explanation: 'Visited' }
@@ -169,6 +170,7 @@ function VisitRoomPicker({
       };
     });
   const picked = node.slots.find((slot) => slot.hubSlotKey === visit.hubSlotKey);
+  const pickedRoom = picked === undefined ? undefined : slotRoom(picked);
   return (
     <ContextualPicker<string>
       ariaLabel={`${segmentLabel(visit.visitIndex)} room`}
@@ -185,19 +187,31 @@ function VisitRoomPicker({
       onSelect={(hubSlotKey) => {
         if (hubSlotKey !== visit.hubSlotKey) onApply(actionsWith(hubSlotKey));
       }}
-      itemIcon={(item) => choices.find((choice) => choice.value === item.value)?.icon}
+      itemFace={(item) => {
+        const room = choices.find((choice) => choice.value === item.value)?.room;
+        return (
+          <>
+            {room === undefined ? null : (
+              <span aria-hidden="true">
+                <RoomNumberIcon number={room.roomNumber} room={room.roomIcon} />
+              </span>
+            )}
+            <span className="contextual-picker-item-label">{item.label}</span>
+          </>
+        );
+      }}
       placeholder="Choose room"
       searchable={false}
-      triggerIcon={picked === undefined ? undefined : slotRoomIcon(picked)}
+      {...(pickedRoom?.roomNumber === undefined ? {} : { triggerBadge: pickedRoom.roomNumber })}
+      triggerIcon={pickedRoom === undefined ? undefined : roomKindIcon(pickedRoom.roomIcon)}
       triggerSize="icon"
     />
   );
 }
 
-/** A Hub door's room as its icon. */
-function slotRoomIcon(slot: WorkspaceHubDecisionNode['slots'][number]): string | undefined {
-  const room = slot.room ?? slot.door?.room;
-  return room === undefined ? undefined : roomKindIcon(room.roomIcon);
+/** A Hub door's room. */
+function slotRoom(slot: WorkspaceHubDecisionNode['slots'][number]) {
+  return slot.room ?? slot.door?.room;
 }
 
 /** Opens a picked visit's room on its Timeline. */
