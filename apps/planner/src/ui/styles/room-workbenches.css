@@ -3693,6 +3693,82 @@ span.hub-board-status-line {
   content: '';
 }
 
+/* Card look: a dashed outline, a quiet "Next" where an action has its verb, chips dimmed until used. */
+.timeline-row.timeline-live-row[data-live-style='card'] {
+  outline: 1px dashed #5a5b68;
+  outline-offset: -1px;
+  border-radius: 4px;
+}
+
+.timeline-row.timeline-live-row[data-live-style='card']:is(:hover, :focus-within) {
+  outline-color: #7a7b88;
+}
+
+.live-row-lead {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.timeline-live-row[data-live-style='card'] .live-row-groups {
+  opacity: 0.75;
+  transition: opacity 120ms ease;
+}
+
+.timeline-live-row[data-live-style='card']:is(:hover, :focus-within) .live-row-groups {
+  opacity: 1;
+}
+
+/* Divider look: a dashed "Next" rule over the chips; the dot sits on the rule. */
+.timeline-row.timeline-live-row[data-live-style='divider'] {
+  --live-divider-height: 18px;
+  --timeline-row-lead: 8px;
+}
+
+.timeline-row.timeline-live-row[data-live-style='divider'] > [data-timeline-cell='sentence'] {
+  grid-column: 2 / -1;
+}
+
+.timeline-row.timeline-live-row[data-live-style='divider']
+  > :is([data-timeline-cell='money'], [data-timeline-cell='actions']) {
+  display: none;
+}
+
+.room-action-list > .timeline-row.timeline-live-row[data-live-style='divider']::before {
+  top: calc(3px + var(--live-divider-height) / 2 - 4.5px);
+}
+
+.live-row-divider {
+  display: flex;
+  height: var(--live-divider-height);
+  flex: 1 0 100%;
+  align-items: center;
+  gap: 8px;
+  color: #c9c2a8;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.live-row-divider::before,
+.live-row-divider::after {
+  height: 0;
+  border-top: 1px dashed rgb(245 211 134 / 35%);
+  content: '';
+}
+
+.live-row-divider::before {
+  width: 14px;
+  flex: 0 0 auto;
+}
+
+.live-row-divider::after {
+  flex: 1 1 auto;
+}
+
 .live-row-groups {
   display: inline-flex;
   flex-wrap: wrap;
