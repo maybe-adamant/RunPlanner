@@ -82,11 +82,6 @@ function hubOption(hub: HubDecisionAddress): LeaveOption {
   return { key: 'hub', label: 'Hub', name: 'Hub', chip: hubReturnChip(hub) };
 }
 
-/** A side room by its number alone, as SR 10. */
-function sideRoomName(label: string): string {
-  return label.replace(/^Side Room /, 'SR ');
-}
-
 /** One exit of the main room: the Hub or an open side room, picked at this place in its visits. */
 function SideVisitLeaveRow({
   anchored,
@@ -261,7 +256,6 @@ export function SideVisitLeaves({
     );
     if (last) return [row];
     const visited = localVisit.slots.find((slot) => slot.key === leave.selectedKey);
-    const name = visited === undefined ? undefined : sideRoomName(visited.label);
     return [
       row,
       <TimelineRow
@@ -288,11 +282,11 @@ export function SideVisitLeaves({
                       label: visited.label,
                       roomIcon: visited.roomIcon,
                       ...roomNumberOf(visited),
-                      rewards: doorRewardIcons(visited, 'final'),
+                      // The reward was taken in the side room; the Leave row above names it.
+                      rewards: [],
                     }}
                   />
                 </span>
-                <span className="timeline-leave-text">{name}</span>
               </span>
             )}
           </>

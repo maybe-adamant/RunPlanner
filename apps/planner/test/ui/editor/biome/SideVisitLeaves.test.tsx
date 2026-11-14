@@ -244,16 +244,15 @@ describe('main room side visits on its Timeline', () => {
     expect(pastEndRows()).toEqual([]);
   });
 
-  it('names each return Returned with its side room', async () => {
+  it('names each return Returned with its side room by its numbered icon alone', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await openTimeline(view, combat05);
     const [first] = visitOrder(view.application);
     const firstLabel = sideLabel(view.application, first!);
     const row = within(roomCard()).getByRole('listitem', { name: `Returned from ${firstLabel}` });
     expect(row.querySelector('.timeline-banner-title')?.textContent).toBe('Returned');
-    expect(row.querySelector('.timeline-leave-text')?.textContent).toBe(
-      firstLabel.replace(/^Side Room /, 'SR '),
-    );
+    expect(row.querySelector('.timeline-leave-text')).toBeNull();
+    expect(row.querySelectorAll('.timeline-return-room .artwork-label-icon')).toHaveLength(1);
   });
 
   it('puts Melinoë where the marked row finds her: the entry, then each side door she is back from', async () => {
