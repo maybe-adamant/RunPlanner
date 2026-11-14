@@ -4,6 +4,7 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceCommandIntent,
+  type WorkspaceCommandsIntent,
   type WorkspaceInteractionCatalog,
   type WorkspaceMixedBatchNode,
   type WorkspaceOrdinaryBatchNode,
@@ -118,6 +119,7 @@ function OptionFace({ option }: { readonly option: LeaveOption }) {
  */
 export function LeavePicker({
   chosenKey,
+  endThrough,
   findingMark,
   id,
   options,
@@ -128,6 +130,10 @@ export function LeavePicker({
 }: {
   /** The way out picked, kept while the plan ends here. */
   readonly chosenKey: string | undefined;
+  /** Ending the plan here by one edit that also changes the way out, and why it cannot be picked. */
+  readonly endThrough?:
+    | { readonly intent: WorkspaceCommandsIntent; readonly disabledHint?: string | undefined }
+    | undefined;
   readonly findingMark?: FindingMarkProps | undefined;
   readonly id: string;
   readonly options: readonly LeaveOption[];
@@ -163,8 +169,9 @@ export function LeavePicker({
   };
 
   const pick = (key: string) => {
-    if (planEnd !== undefined && key === endKey) {
-      if (!ended) executeIntent(planEnd.endIntent);
+    if (key === endKey) {
+      if (endThrough !== undefined) executeCommands(endThrough.intent);
+      else if (planEnd !== undefined && !ended) executeIntent(planEnd.endIntent);
       return;
     }
     const option = options.find((candidate) => candidate.key === key);
@@ -205,9 +212,11 @@ export function LeavePicker({
     const availability = planEnd === undefined || ended ? undefined : planEnd.availability();
     const items = [
       ...ways,
-      ...(planEnd === undefined
-        ? []
-        : [item(endKey, 'End plan here', ended, availability?.available === false)]),
+      ...(endThrough !== undefined
+        ? [item(endKey, 'End plan here', false, endThrough.disabledHint !== undefined)]
+        : planEnd === undefined
+          ? []
+          : [item(endKey, 'End plan here', ended, availability?.available === false)]),
     ];
     const selected = items.find((candidate) => candidate.selected);
     const section: ContextualPickerSection<string> = {
@@ -222,9 +231,11 @@ export function LeavePicker({
 
   const hint = (item: ContextualPickerItem<string>): string | undefined => {
     if (item.key === endKey)
-      return ended || planEnd === undefined
-        ? undefined
-        : planEndUnavailableHint(planEnd.availability());
+      return endThrough !== undefined
+        ? endThrough.disabledHint
+        : ended || planEnd === undefined
+          ? undefined
+          : planEndUnavailableHint(planEnd.availability());
     const option = options.find((candidate) => candidate.key === item.key);
     return option?.disabledHint;
   };

@@ -89,6 +89,7 @@ function sideRoomName(label: string): string {
 /** One exit of the main room: the Hub or an open side room, picked at this place in its visits. */
 function SideVisitLeaveRow({
   anchored,
+  endsInMainRoom,
   hub,
   id,
   interactions,
@@ -101,6 +102,8 @@ function SideVisitLeaveRow({
 }: {
   /** Navigation to the visits lands on this row. */
   readonly anchored: boolean;
+  /** Ending the plan here returns to the Hub at this exit and ends it in the main room. */
+  readonly endsInMainRoom: boolean;
   readonly hub: HubDecisionAddress;
   readonly id: string;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -108,7 +111,7 @@ function SideVisitLeaveRow({
   readonly order: LocalVisitOrderAddress;
   /** The plan ends in an earlier side visit. */
   readonly pastEnd: boolean;
-  /** The last exit ends the main room's visit; one after a side visit ends that side room's. */
+  /** The last exit ends the main room's visit; one after the side visit the plan ends in shows that end. */
   readonly planEnd: WorkspaceRoomPlanEnd | undefined;
   readonly slots: readonly LocalSlot[];
   readonly visitIndex: number;
@@ -155,6 +158,11 @@ function SideVisitLeaveRow({
       },
     ];
   });
+  const hubWay = options.find((option) => option.key === 'hub');
+  const endThrough =
+    endsInMainRoom && hubWay !== undefined
+      ? { intent: interaction.endPlanIntent, disabledHint: hubWay.disabledHint }
+      : undefined;
   const picked = slots.find((slot) => slot.key === leave.selectedKey);
   const mark = findingMark(order, sideVisitControl(leave.position));
   return (
@@ -180,6 +188,7 @@ function SideVisitLeaveRow({
       >
         <LeavePicker
           chosenKey={leave.selectedKey}
+          endThrough={endThrough}
           findingMark={mark}
           id={id}
           options={options}
@@ -195,8 +204,8 @@ function SideVisitLeaveRow({
 /**
  * The main room's exits on its Timeline: one Leave room picker per side
  * visit, the room's return from that side room after it, and a last one
- * back to the Hub. The last ends the plan in the main room; one after a
- * side visit ends it as the hero leaves that side room.
+ * back to the Hub. Each ends the plan in the main room, returning to the Hub
+ * at that exit; one after the side visit the plan ends in shows that end.
  */
 export function SideVisitLeaves({
   hub,
@@ -227,9 +236,12 @@ export function SideVisitLeaves({
   };
   return localVisit.leaves.flatMap((leave, index) => {
     const last = leave.position === localVisit.leaves.length;
+    const sideEnd = visitedBefore(index)?.planEnd;
+    const sideEnded = sideEnd?.relation === 'end';
     const row = (
       <SideVisitLeaveRow
         anchored={leave.position === anchored}
+        endsInMainRoom={!last && !sideEnded && planEnd !== undefined}
         hub={hub}
         id={`${idPrefix}-leave-${leave.position}`}
         interactions={interactions}
@@ -237,7 +249,7 @@ export function SideVisitLeaves({
         leave={leave}
         order={localVisit.order}
         pastEnd={leave.pastPlanEnd}
-        planEnd={last ? planEnd : visitedBefore(index)?.planEnd}
+        planEnd={last ? planEnd : sideEnded ? sideEnd : undefined}
         slots={localVisit.slots}
         visitIndex={visitIndex}
       />

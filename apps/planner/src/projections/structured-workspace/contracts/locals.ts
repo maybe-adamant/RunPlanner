@@ -33,6 +33,7 @@ import type { WorkspaceRoomMapPoint } from './features';
 import type {
   WorkspaceNativeCandidateInteraction,
   WorkspaceCommandIntent,
+  WorkspaceCommandsIntent,
   WorkspacePickerCandidateInteraction,
   WorkspaceInteractionChoice,
   WorkspaceRoomSummary,
@@ -68,6 +69,8 @@ export interface WorkspaceLocalVisitOrderInteraction extends WorkspaceNativeCand
   readonly intentFor: (
     occurrenceIds: readonly OccurrenceId[],
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceLocalVisitOrder' }>>;
+  /** Returns to the Hub at this exit and ends the plan in the main room, as one edit. */
+  readonly endPlanIntent: WorkspaceCommandsIntent;
   readonly owner: LocalVisitOrderAddress;
 }
 

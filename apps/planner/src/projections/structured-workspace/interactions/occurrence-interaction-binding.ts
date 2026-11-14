@@ -1,6 +1,7 @@
 import {
   createBiomeAddress,
   createNemesisRandomEventAddress,
+  createOccurrenceAddress,
   createRoomActionAddress,
   NEMESIS_BET_OUTCOMES,
   NEMESIS_RANDOM_EVENT_FAMILIES,
@@ -55,6 +56,7 @@ import type {
 } from '../contracts/locals';
 import type { WorkspaceRoomActionInteraction } from '../contracts/timeline';
 import type { WorkspacePhantomExitInteraction } from '../contracts/structure';
+import { planEndCommand } from '../assembly/plan-end-assembly';
 import { bindPhantomExitInteraction } from './phantom-exit-interactions';
 import { bindEncounterCustomizationInteraction } from './encounter-customization-binding';
 import { bindChallengeSwitchInteraction } from './challenge-switch-binding';
@@ -1087,8 +1089,17 @@ export function bindOccurrenceLocalInteractions(
             'local-visit generation',
           );
         }
+        const mainRoom = createOccurrenceAddress(
+          createBiomeAddress(requirement.order.routeKey, requirement.order.biomeKey),
+          requirement.order.sourceOccurrenceId,
+        );
         for (const leave of requirement.leaves) {
           const selected = leave.options.find((option) => option.key === leave.selectedKey);
+          const hub = leave.options.find((option) => option.occurrenceId === undefined);
+          if (hub === undefined)
+            throw new StructuredWorkspaceProjectionContractError(
+              `${leave.interactionKey} has no Hub return`,
+            );
           const choices = Object.freeze(
             leave.options.map((option) =>
               Object.freeze({ label: option.key, value: option.proposedOccurrenceIds }),
@@ -1120,6 +1131,16 @@ export function bindOccurrenceLocalInteractions(
                     occurrenceIds: Object.freeze([...occurrenceIds]),
                   }),
                 }),
+              endPlanIntent: Object.freeze({
+                commands: Object.freeze([
+                  Object.freeze({
+                    kind: 'ReplaceLocalVisitOrder' as const,
+                    order: requirement.order,
+                    occurrenceIds: hub.proposedOccurrenceIds,
+                  }),
+                  planEndCommand(mainRoom),
+                ]),
+              }),
               owner: requirement.order,
             }),
             'local-visit leave',

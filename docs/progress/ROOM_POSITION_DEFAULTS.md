@@ -19,4 +19,4 @@ Temporary plan; delete at delivery. The model lives in
 End plan on any Leave room picker in an Ephyra main room means returning to
 the Hub there and ending the plan in that room: one edit that cuts the visit
 order at that picker (as the Hub option already does) and sets the plan end
-on the main room. No schema, wire or game-module change.
+on the main room. No schema, wire or game-module change. Done.

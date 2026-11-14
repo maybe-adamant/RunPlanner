@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { applyProjectCommand, semanticAddressKey } from '@run-planner/engine/authored-project';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import {
+  authoredProjectCommandsDispatched,
+  authoredProjectReplaced,
+  authoredProjectUndoRequested,
+} from '@planner/state/projectWorkspaceSlice';
+import {
+  createPlannerStore,
+  selectPresentProject,
+  selectProjectHistory,
+} from '@planner/state/store';
 import { loadSurfaceNOPQProject, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import {
   projectStructuredWorkspaceFixture,
@@ -13,17 +24,20 @@ import {
 } from '@planner/projections/structured-workspace';
 import { presentFinding, projectFindingLabels } from '@planner/projections/evaluationProjection';
 
-function combat05(project: ReturnType<typeof loadSurfaceNOPQProject>) {
+function mainRoom(project: ReturnType<typeof loadSurfaceNOPQProject>, slotKey: string) {
   const projected = projectStructuredWorkspaceFixture(project);
   const node = requireWorkspaceBiome(projected.workspace, 'N').nodes.find(
     (candidate) =>
       candidate.kind === 'occurrenceWorkbench' &&
-      candidate.room.occurrenceId === nOccurrenceId('combat05'),
+      candidate.room.occurrenceId === nOccurrenceId(slotKey),
   );
   if (node?.kind !== 'occurrenceWorkbench' || node.localVisit === undefined)
-    throw new Error('N Combat 05 has no side visits');
-  return { localVisit: node.localVisit, workspace: projected.workspace };
+    throw new Error(`N ${slotKey} has no side visits`);
+  return { localVisit: node.localVisit, planEnd: node.planEnd, workspace: projected.workspace };
 }
+
+const combat05 = (project: ReturnType<typeof loadSurfaceNOPQProject>) =>
+  mainRoom(project, 'combat05');
 
 function optionFor(localVisit: WorkspaceLocalVisitDecision, position: number, key: string) {
   const option = localVisit.leaves[position - 1]?.options.find(
@@ -115,5 +129,32 @@ describe('main room side-visit Leave rows', () => {
       `${label} is already visited`,
     );
     expect(semanticAddressKey(marked![0]!.origin)).toBe(semanticAddressKey(after.order));
+  });
+
+  it('ends the plan in a middle Hub visit’s main room from an early exit as one edit', () => {
+    const base = loadSurfaceNOPQProject();
+    // Combat 02 is the third of the Hub's visits and visits one side room before its Hub return.
+    const { localVisit, workspace } = mainRoom(base, 'combat02');
+    expect(localVisit.visitOrder).toHaveLength(1);
+    const first = localVisit.leaves[0]!;
+    const intent = workspace.interactions.localVisitOrders.get(first.interactionKey)!.endPlanIntent;
+
+    const store = createPlannerStore({
+      assembleProjectEvaluation: (project) => simulateProjectAssembly(catalog, project),
+      catalog,
+    });
+    store.dispatch(authoredProjectReplaced(base));
+    store.dispatch(authoredProjectCommandsDispatched(intent.commands));
+    const ended = selectPresentProject(store.getState())!;
+    expect(selectProjectHistory(store.getState())!.past).toEqual([base]);
+    expect(ended.route.planEnd).toEqual({ biomeKey: 'N', occurrenceId: nOccurrenceId('combat02') });
+
+    const after = mainRoom(ended, 'combat02');
+    expect(after.localVisit.visitOrder).toEqual([]);
+    expect(after.localVisit.leaves.map((leave) => leave.selectedKey)).toEqual(['hub']);
+    expect(after.planEnd?.relation).toBe('end');
+
+    store.dispatch(authoredProjectUndoRequested());
+    expect(selectPresentProject(store.getState())).toBe(base);
   });
 });
