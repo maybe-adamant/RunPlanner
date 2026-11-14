@@ -21,10 +21,9 @@ export function TimelineLegend() {
         >
           <h3 id={headingId}>Legend</h3>
           <ul aria-label="Row colours" className="room-timeline-legend">
-            <li data-action-accent="optional">Optional actions</li>
-            <li data-action-accent="phase">Required before this phase ends</li>
-            <li data-action-accent="room">Required before leaving this room</li>
-            <li data-action-accent="automatic">Actions that trigger automatically</li>
+            <li data-action-accent="required">Required</li>
+            <li data-action-accent="optional">Optional</li>
+            <li data-action-accent="automatic">Automatic</li>
           </ul>
           <div className="timeline-legend-affordability">
             <p>Chance to afford this purchase</p>

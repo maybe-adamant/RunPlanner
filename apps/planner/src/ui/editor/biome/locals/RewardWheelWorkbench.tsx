@@ -222,7 +222,7 @@ export function SelectWheelRow({
   const chosen = offers[wheel.pickedOfferIndex - 1];
   const chosenReward = chosen === undefined ? null : (chosen.rerolledOffer ?? chosen.control.offer);
   return (
-    <LeaveRow gap={gap} label="Select wheel">
+    <LeaveRow event="wheelsOpen" gap={gap} label="Select wheel">
       <span className="timeline-leave-door">
         {offers.length > 1 ? (
           <DoorChipOptions

@@ -289,6 +289,21 @@ function OpenedCase({
       window.clearTimeout(stop);
     };
   }, [entry, pickersClosed, view]);
+  // A case showing the Timeline legend opens it as a user would.
+  useEffect(() => {
+    if (view !== 'timeline' || pickersClosed || entry.legendOpen !== true) return;
+    const timer = window.setInterval(() => {
+      const trigger = frame.current?.querySelector<HTMLButtonElement>('.timeline-legend-trigger');
+      if (trigger === null || trigger === undefined) return;
+      window.clearInterval(timer);
+      trigger.click();
+    }, 50);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 3000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [entry, pickersClosed, view]);
   // A case showing an Overview list opens that picker once the Overview shows it.
   const overviewPickerOpened = useRef(false);
   useEffect(() => {

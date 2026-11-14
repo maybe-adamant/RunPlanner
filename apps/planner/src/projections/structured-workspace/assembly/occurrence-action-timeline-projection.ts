@@ -382,6 +382,14 @@ function projectRoomLifecycleTimeline(
             boundary.kind === 'encounterStarted' && mergedPhaseKeys.has(boundary.phaseKey),
             phaseLabel(boundary),
           ),
+          ...(boundary.kind === 'wheelsOpen' && phaseLabel(boundary) !== undefined
+            ? {
+                phaseTitle: Object.freeze({
+                  marker: roomEventMarker.wheelsOpen,
+                  phase: phaseLabel(boundary)!,
+                }),
+              }
+            : {}),
           ...(beginsEncounter(boundary) ? { beginsEncounter: true as const } : {}),
           dropIndex: Math.max(0, entry.rank - (entry.placement === 'before' ? 1 : 0)),
           placement: entry.placement,

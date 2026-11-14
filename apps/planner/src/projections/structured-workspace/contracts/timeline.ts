@@ -448,6 +448,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly boundary: WorkspaceRoomLifecycleBoundary;
       /** Projection-owned text; React does not reconstruct boundary wording. */
       readonly label: string;
+      /** A phase's marker in a room of several: its marker shown with its phase as a chip. */
+      readonly phaseTitle?: { readonly marker: string; readonly phase: string };
       /** Projection-owned insertion position immediately adjacent to this boundary. */
       readonly dropIndex: number;
       readonly rank: number;

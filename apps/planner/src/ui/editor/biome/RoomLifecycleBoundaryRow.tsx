@@ -9,6 +9,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { hintProps } from '@planner/ui/controls/hint';
 import { TimelineRow } from './TimelineRow';
 import { BannerTitle } from './TimelineDoors';
+import { TimelineEventIcon } from './TimelineEventIcon';
 import type { BannerToggle } from './doorSummary';
 import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 
@@ -22,8 +23,11 @@ export function LifecycleBoundaryRow({
   fieldsCage,
   identity,
   phase,
+  phaseTitle,
   toggle,
 }: {
+  /** The marker and its phase shown, where the label names both. */
+  readonly phaseTitle?: { readonly marker: string; readonly phase: string } | undefined;
   /** The encounter phase this banner belongs to, for the phase's light grouping. */
   readonly phase?: number;
   readonly boundary: WorkspaceRoomLifecycleBoundary;
@@ -66,13 +70,18 @@ export function LifecycleBoundaryRow({
           : undefined
       }
       kind="boundary"
+      marker={<TimelineEventIcon name={boundary.kind} />}
       money={money}
       label={
         <>
           <span className="timeline-banner-title">
             {identity === undefined ? (
               cageSlot === null ? (
-                <BannerTitle label={label} toggle={toggle} />
+                <BannerTitle
+                  label={phaseTitle?.marker ?? label}
+                  phase={phaseTitle?.phase}
+                  toggle={toggle}
+                />
               ) : (
                 // The slot hugs the title as a subscript, as it does on a start banner.
                 <span {...hintProps(titleHint, undefined, accessibleLabel)}>

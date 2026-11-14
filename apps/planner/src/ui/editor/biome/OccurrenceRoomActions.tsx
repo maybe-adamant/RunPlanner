@@ -473,6 +473,7 @@ export function RoomActionsWorkbench({
             )
           }
           label={entry.label}
+          phaseTitle={entry.phaseTitle}
           toggle={doorsOpen === undefined ? undefined : doorsOpenToggle(doorsOpen)}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
           {...(entry.beginsEncounter === true ? { beginsEncounter: true } : {})}
@@ -591,11 +592,14 @@ export function RoomActionsWorkbench({
       reference.kind === 'unlockExit'
         ? doors?.summary?.chips.find((chip) => chip.key === reference.exitKey)
         : undefined;
+    // Both required scopes read as one kind; the row's place on the spine shows its deadline.
     const actionAccent = row.stale
       ? undefined
       : row.participation === 'optional'
         ? 'optional'
-        : row.requiredScope;
+        : row.requiredScope === undefined
+          ? undefined
+          : 'required';
     const removeRow = (): void => {
       const removable = proposals.find(
         (proposal) => proposal.kind === 'remove' || proposal.kind === 'unplace',
@@ -995,7 +999,12 @@ export function RoomActionsWorkbench({
                   wheelDoors !== undefined
                 )
                   return [
-                    <DoorsOpenBanner doors={wheelDoors} key="wheel-open" label={entry.label} />,
+                    <DoorsOpenBanner
+                      doors={wheelDoors}
+                      key="wheel-open"
+                      label={entry.label}
+                      phaseTitle={entry.phaseTitle}
+                    />,
                     ...(choiceAnchored ? [] : selectWheel),
                   ];
                 // The wheel is taken as the next phase starts.

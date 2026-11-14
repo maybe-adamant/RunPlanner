@@ -1559,6 +1559,14 @@ export const galleryCases: readonly GalleryCase[] = [
     target: room('P', 'surface-p-1-1-p_combat03'),
   },
   {
+    id: 'timeline-legend',
+    label: 'Timeline legend: the row kinds and purchase chances',
+    shows: ['legend'],
+    project: loadSurfaceScheduledLifecycleCheckpoint,
+    target: room('P', 'surface-p-1-1-p_combat03'),
+    legendOpen: true,
+  },
+  {
     id: 'live-row-required',
     label: 'Live row: a room reward not picked up yet',
     shows: ['live row', 'required pickup'],

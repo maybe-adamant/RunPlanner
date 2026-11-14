@@ -1322,13 +1322,12 @@
   margin-top: 4px;
   padding-block: 1px;
   border-left-color: transparent;
-  border-top: 1px solid var(--timeline-band-divider);
   border-radius: 0;
   background: transparent;
   color: #cfcad6;
 }
 
-/* A lifecycle band is a quiet time marker: a node on the spine instead of a tick. */
+/* A lifecycle marker is a quiet time marker: a node on the spine instead of a tick. */
 .timeline-row[data-timeline-row-kind='boundary']::before {
   top: calc(50% - 4px);
   left: -16px;
@@ -1336,6 +1335,48 @@
   height: 8px;
   border-radius: 50%;
   background: var(--timeline-node);
+}
+
+/* A room event's icon sits on the spine, its disc masking the line behind it. */
+.timeline-row:has(> .timeline-event-node)::before {
+  content: none;
+}
+
+.timeline-event-node {
+  position: absolute;
+  top: calc(50% - 12px);
+  left: -24px;
+  z-index: 1;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid #4b4c58;
+  border-radius: 50%;
+  color: #cfcad6;
+  background: #17181d;
+  pointer-events: none;
+}
+
+.timeline-event-node > .timeline-event-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.4;
+}
+
+/* A marker of one phase of several names its phase in a small chip. */
+.timeline-phase-chip {
+  display: inline-flex;
+  height: 1.25rem;
+  align-items: center;
+  margin-left: 6px;
+  padding: 0 7px;
+  border: 1px solid #4b4c58;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .timeline-row[data-timeline-row-kind='boundary'] > .timeline-cell-handle {
@@ -1358,6 +1399,7 @@
 
 .timeline-row[data-action-accent] {
   border-left-color: var(--timeline-accent);
+  border-left-style: var(--timeline-accent-style);
 }
 
 .room-action-placement-picker .contextual-picker > label {
@@ -1553,12 +1595,14 @@
   list-style: none;
 }
 
-/* Timeline palette: neutral rows and bands; category hue only on stripes and the legend. */
+/*
+ * Timeline palette: neutral rows and markers; a row's kind shows only on its stripe,
+ * its live-row bracket and the legend, by hue and by line style.
+ */
 :root {
-  --timeline-optional: #6fa8ec;
-  --timeline-required-now: #a98bf0;
-  --timeline-before-leaving: #8fcf5a;
-  --timeline-automatic: #3fb8a4;
+  --legend-required: #a98bf0;
+  --legend-optional: #6fa8ec;
+  --legend-automatic: #3fb8a4;
   --timeline-card: #191a20;
   --timeline-card-border: #34353e;
   --timeline-stripe: #4b4c58;
@@ -1566,26 +1610,21 @@
   --timeline-node: #8e8b97;
   --timeline-band: rgb(255 255 255 / 7%);
   --timeline-band-divider: rgb(255 255 255 / 10%);
+}
 
-  /* The live row's group brackets, mapped onto the legend colours. */
-  --live-group-required: var(--timeline-before-leaving);
-  --live-group-optional: var(--timeline-optional);
+[data-action-accent='required'] {
+  --timeline-accent: var(--legend-required);
+  --timeline-accent-style: solid;
 }
 
 [data-action-accent='optional'] {
-  --timeline-accent: var(--timeline-optional);
-}
-
-[data-action-accent='phase'] {
-  --timeline-accent: var(--timeline-required-now);
-}
-
-[data-action-accent='room'] {
-  --timeline-accent: var(--timeline-before-leaving);
+  --timeline-accent: var(--legend-optional);
+  --timeline-accent-style: dashed;
 }
 
 [data-action-accent='automatic'] {
-  --timeline-accent: var(--timeline-automatic);
+  --timeline-accent: var(--legend-automatic);
+  --timeline-accent-style: dotted;
 }
 
 .room-timeline-legend > li {
@@ -1595,11 +1634,10 @@
 }
 
 .room-timeline-legend > li::before {
-  width: 4px;
+  width: 0;
   flex-shrink: 0;
   height: 1.1rem;
-  border-radius: 2px;
-  background: var(--timeline-accent);
+  border-left: 3px var(--timeline-accent-style) var(--timeline-accent);
   content: '';
 }
 
@@ -2057,15 +2095,24 @@
 }
 
 /* An encounter phase reads as one light group: its rows share a tint. */
-.timeline-row[data-phase] {
+.timeline-row[data-phase]:not([data-timeline-row-kind='boundary']) {
   background: rgb(255 255 255 / 2%);
 }
 
-/* Every banner shares one band: start, end and lifecycle banners alike. */
+/* Every marker is a light line: its icon on the spine, a short name, its controls inline. */
 .timeline-row[data-timeline-row-kind='boundary'] {
-  border-top-color: rgb(255 255 255 / 16%);
-  background: rgb(255 255 255 / 4.5%);
-  color: var(--text);
+  background: transparent;
+  color: #d8d3dd;
+}
+
+.timeline-row[data-timeline-row-kind='boundary'] .timeline-banner-title {
+  min-width: 0;
+}
+
+.timeline-row[data-timeline-row-kind='boundary'] .timeline-banner-title strong {
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 /* A phase starts with a little space above its first banner. */
@@ -2107,7 +2154,7 @@
 .timeline-row[data-timeline-row-kind='boundary'] > [data-timeline-cell='sentence'] {
   /* A title line is as tall as one control, so every banner title sits alike. */
   min-height: var(--timeline-control-height, 26px);
-  gap: 4px 14px;
+  gap: 4px 10px;
   line-height: 1.25;
 }
 
@@ -2283,7 +2330,7 @@ button.timeline-leave-picker:is(:hover, [data-state='open']):not(:disabled) {
   box-shadow: inset 0 -2px 0 var(--selection-accent);
 }
 
-/* Ending the plan as a way out: a lavender square holding a stop glyph. */
+/* Ending the plan as a way out: an ivory square holding a flag. */
 .plan-end-chip {
   display: inline-flex;
   flex: 0 0 auto;
@@ -2297,10 +2344,10 @@ button.timeline-leave-picker:is(:hover, [data-state='open']):not(:disabled) {
 }
 
 .plan-end-chip-glyph {
-  width: 8px;
-  height: 8px;
-  border-radius: 1px;
+  width: 10px;
+  height: 11px;
   background: var(--plan-end);
+  clip-path: polygon(0 0, 100% 28%, 22% 56%, 22% 100%, 0 100%);
 }
 
 .timeline-leave-text {
@@ -3465,11 +3512,13 @@ span.hub-board-status-line {
 }
 
 .live-row-group[data-live-group='required'] {
-  --live-group-colour: var(--live-group-required);
+  --live-group-colour: var(--legend-required);
+  --live-group-style: solid;
 }
 
 .live-row-group[data-live-group='optional'] {
-  --live-group-colour: var(--live-group-optional);
+  --live-group-colour: var(--legend-optional);
+  --live-group-style: dashed;
 }
 
 .live-row-group:is([data-live-group='required'], [data-live-group='optional'])::before,
@@ -3477,7 +3526,7 @@ span.hub-board-status-line {
   position: absolute;
   inset-block: -2px;
   width: 4px;
-  border: 1.5px solid var(--live-group-colour);
+  border: 1.5px var(--live-group-style) var(--live-group-colour);
   content: '';
   pointer-events: none;
 }

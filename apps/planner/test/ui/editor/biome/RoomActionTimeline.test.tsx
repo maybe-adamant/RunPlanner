@@ -527,12 +527,7 @@ describe('OccurrenceRoomActions', () => {
       within(colours)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual([
-      'Optional actions',
-      'Required before this phase ends',
-      'Required before leaving this room',
-      'Actions that trigger automatically',
-    ]);
+    ).toEqual(['Required', 'Optional', 'Automatic']);
     const chances = screen.getByRole('list', { name: 'Chance to afford' });
     expect(
       [...chances.querySelectorAll('[data-tone]')].map((tone) => tone.getAttribute('data-tone')),
@@ -551,7 +546,7 @@ describe('OccurrenceRoomActions', () => {
     // The unplaced optional reward is taken from the live row.
     expect(liveChip(/· Optional 1$/)).toBeTruthy();
     expect(actionRow(timeline, /^Collect .+ · Cage 1$/).getAttribute('data-action-accent')).toBe(
-      'room',
+      'required',
     );
     expect(fieldsActions).toBeTruthy();
   });
