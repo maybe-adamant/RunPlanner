@@ -38,10 +38,10 @@ describe('Encounter Timeline banner', () => {
       .getByRole('button', { name: 'Encounter' })
       .querySelector('span')!.textContent!;
     openRoomTab('Room Timeline');
-    const start = banner('Encounter');
+    const start = banner('Encounter started');
 
     // The banner navigates to the Overview owner; it is never a finding target itself.
-    const identity = within(start).getByRole('button', { name: `Encounter: ${encounter}` });
+    const identity = within(start).getByRole('button', { name: `Encounter started: ${encounter}` });
     expect(identity.hasAttribute('data-semantic-owner')).toBe(false);
     fireEvent.click(identity);
     const focused = view.application.store.getState().editorSession.focusedSemanticOwner;
@@ -94,11 +94,11 @@ describe('Encounter Timeline banner', () => {
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     // The encounter's marker names it and hosts the Gorgon condition.
-    const start = banner('Encounter');
+    const start = banner('Encounter started');
     expect(within(start).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
     expect(within(start).queryByRole('button', { name: /^Outcome/ })).toBeNull();
     // The kill race is observed at its Combat.
-    const combat = banner('Combat');
+    const combat = banner('Combat started');
     expect(within(combat).queryByRole('button', { name: 'No Death Defiance' })).toBeNull();
     expect(within(combat).getByRole('button', { name: /^Outcome/ })).toBeTruthy();
     // The end announces what spawns and hosts no choice.

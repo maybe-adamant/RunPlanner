@@ -146,7 +146,7 @@ describe('locked doors in the structured workspace', () => {
     expect(entryAfterAction(summary, row!.key)).toMatchObject({
       kind: 'boundary',
       boundary: { kind: 'encounterStarted', phaseKey: 'unlockExit:exit2' },
-      label: 'Encounter',
+      label: 'Encounter started',
       beginsEncounter: true,
     });
     const entries = summary.roomActions!.timeline.entries;

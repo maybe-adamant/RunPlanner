@@ -127,7 +127,7 @@ export function DoorsOpenDetailRow({
 /** A Doors open row where the room's timeline has none of its own yet. */
 export function DoorsOpenBanner({
   doors,
-  label = 'Doors open',
+  label = 'Doors opened',
   phaseTitle,
 }: {
   readonly doors: TimelineDoors;

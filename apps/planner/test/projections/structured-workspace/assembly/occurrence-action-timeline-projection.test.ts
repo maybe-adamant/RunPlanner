@@ -99,7 +99,7 @@ describe('encounter banner supplements', () => {
     );
     const [begun] = banners(room, 'encounterBegun');
     const [combat] = banners(room, 'encounterStarted');
-    expect(begun).toMatchObject({ label: 'Encounter', beginsEncounter: true });
+    expect(begun).toMatchObject({ label: 'Encounter started', beginsEncounter: true });
     expect(begun?.supplement).toMatchObject({
       identityLabel: 'Anomaly combat',
       choices: [],
@@ -107,7 +107,7 @@ describe('encounter banner supplements', () => {
     });
     expect(combat?.supplement).toMatchObject({ start: true, choices: ['anomalyCleared'] });
     expect(combat?.supplement?.identityLabel).toBeUndefined();
-    expect(combat?.label).toBe('Combat');
+    expect(combat?.label).toBe('Combat started');
     // The end announces what spawns and hosts no choice.
     expect(banners(room, 'encounterEnd').every((entry) => entry.supplement === undefined)).toBe(
       true,
@@ -152,7 +152,7 @@ describe('encounter banner supplements', () => {
       'doorsOpened',
     ]);
     expect(banners(room, 'encounterStarted')[0]).toMatchObject({
-      label: 'Encounter',
+      label: 'Encounter started',
       beginsEncounter: true,
       supplement: { identityLabel: 'Combat', start: true, choices: [] },
     });
@@ -283,9 +283,9 @@ describe('Nemesis interaction family', () => {
     expect(identityLabels(room).filter((label) => label.includes('Nemesis'))).toEqual([]);
     // Only the cages' encounters have markers, each tagged with its slot.
     expect(beginMarkers(room).map((entry) => [entry.label, entry.fieldsCage?.slot])).toEqual([
-      ['Encounter', 3],
-      ['Encounter', 2],
-      ['Encounter', 1],
+      ['Encounter started', 3],
+      ['Encounter started', 2],
+      ['Encounter started', 1],
     ]);
     expect(interactionRows(room)).toEqual([
       expect.objectContaining({
@@ -309,7 +309,7 @@ describe('encounter banner identity', () => {
     ).toEqual(['Pre-combat · Combat', 'Follow-up · Combat']);
     expect(startIdentities(roomOf(project, createOccurrenceId('surface-o-combat01')))).toEqual([
       'Intro · Ship intro',
-      'Combat 1 · Ship combat',
+      'Phase 1 · Ship combat',
     ]);
   });
 
@@ -594,7 +594,7 @@ describe('a room whose walk stops in it', () => {
     if (workbench.kind !== 'ship') throw new Error('Not a Ship room');
     expect(workbench.phases.map((phase) => [phase.label, phase.waitsOn])).toEqual([
       ['Intro', undefined],
-      ['Combat 1', { kind: 'phase', phaseLabel: 'Intro' }],
+      ['Phase 1', { kind: 'phase', phaseLabel: 'Intro' }],
     ]);
     const intro = workbench.phases[0]!;
     expect(intro.wheel?.key).toBe('wheel1');

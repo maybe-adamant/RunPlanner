@@ -1521,7 +1521,12 @@
 [data-reorder-lifted] {
   outline: 2px solid var(--selection-accent);
   outline-offset: 1px;
-  background: color-mix(in srgb, var(--selection-accent) 10%, var(--timeline-card, transparent));
+  /* Only the colour: a dashed or dotted stripe is a background image sized to the edge. */
+  background-color: color-mix(
+    in srgb,
+    var(--selection-accent) 10%,
+    var(--timeline-card, transparent)
+  );
 }
 
 [data-reorder-lifted='pointer'] {

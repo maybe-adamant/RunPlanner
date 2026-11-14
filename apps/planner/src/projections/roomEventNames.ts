@@ -3,13 +3,25 @@ import type { RoomEventPoint } from '@run-planner/engine/authored-project';
 /** Each room event as its Timeline marker reads. */
 export const roomEventMarker = Object.freeze({
   roomEntered: 'Room entered',
-  encounterBegun: 'Encounter',
-  encounterStarted: 'Combat',
+  encounterBegun: 'Encounter started',
+  encounterStarted: 'Combat started',
   encounterEnd: 'Encounter ended',
   bossDefeated: 'Boss defeated',
-  wheelsOpen: 'Wheels open',
-  doorsOpened: 'Doors open',
+  wheelsOpen: 'Wheels opened',
+  doorsOpened: 'Doors opened',
 } as const);
+
+/** An encounter's start, named by its phase where the room has several. */
+export function encounterStartedName(phaseLabel: string | undefined): string {
+  return phaseLabel === undefined
+    ? roomEventMarker.encounterBegun
+    : `${phaseLabel} encounter started`;
+}
+
+/** An encounter's end, named by its phase where the room has several. */
+export function encounterEndedName(phaseLabel: string | undefined): string {
+  return phaseLabel === undefined ? roomEventMarker.encounterEnd : `${phaseLabel} encounter ended`;
+}
 
 /** A marker of one phase in a room of several, as its banner names it. */
 export function phaseMarker(marker: string, phaseLabel: string | undefined): string {
@@ -48,21 +60,18 @@ export function roomEventPointName(point: RoomEventPoint, phases?: RoomEventPhas
     case 'gate': {
       if (phases?.choosesWheel(point.phaseKey) === true)
         return `choosing the ${phases.label(point.phaseKey)} wheel`;
-      const label = phase(point.phaseKey);
-      return label === undefined
-        ? roomEventMarker.encounterBegun
-        : `${label}'s ${roomEventMarker.encounterBegun}`;
+      return encounterStartedName(phase(point.phaseKey));
     }
     case 'encounterStarted': {
       const label = phase(point.phaseKey);
       return label === undefined
         ? roomEventMarker.encounterStarted
         : phases!.ship
-          ? label
-          : `${label}'s ${roomEventMarker.encounterStarted}`;
+          ? encounterStartedName(label)
+          : `${label} combat started`;
     }
     case 'encounterEnd':
-      return phaseMarker(roomEventMarker.encounterEnd, phase(point.phaseKey));
+      return encounterEndedName(phase(point.phaseKey));
     case 'endEffects': {
       const label = phase(point.phaseKey);
       return label === undefined ? 'the end effects' : `${label}'s end effects`;

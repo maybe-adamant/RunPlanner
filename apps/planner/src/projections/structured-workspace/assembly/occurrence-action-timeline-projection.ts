@@ -10,7 +10,11 @@ import {
   type RoomActionRosterIssue,
 } from '@run-planner/engine/simulation';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
-import { phaseMarker, roomEventMarker } from '@planner/projections/roomEventNames';
+import {
+  encounterStartedName,
+  phaseMarker,
+  roomEventMarker,
+} from '@planner/projections/roomEventNames';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type {
   WorkspaceRoomLifecycleBoundary,
@@ -29,12 +33,18 @@ import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
 function lifecycleBoundaryLabel(
   boundary: WorkspaceRoomLifecycleBoundary,
-  mergedWithBegin: boolean,
+  standsForBegin: boolean,
   phaseLabel: string | undefined,
+  encounterPhase: string | undefined,
 ): string {
   switch (boundary.kind) {
+    // A fight shows as its own Combat started only where its encounter's start has a row.
+    case 'encounterBegun':
+      return encounterStartedName(encounterPhase);
     case 'encounterStarted':
-      return mergedWithBegin ? roomEventMarker.encounterBegun : roomEventMarker.encounterStarted;
+      return standsForBegin
+        ? encounterStartedName(encounterPhase)
+        : roomEventMarker.encounterStarted;
     // Wheels open names the phase whose combat its wheel starts.
     case 'wheelsOpen':
       return phaseMarker(roomEventMarker.wheelsOpen, phaseLabel);
@@ -272,6 +282,14 @@ function projectRoomLifecycleTimeline(
   const encounterMarkerCount = encounterPhases.filter(
     (phase) => phase.timelineAnchor === 'encounter',
   ).length;
+  // An encounter's start names its phase beside another's, as a Ship's phases always are,
+  // except where its Fields cage tag names it.
+  const encounterPhaseName = (boundary: WorkspaceRoomLifecycleBoundary) =>
+    (boundary.kind === 'encounterBegun' || boundary.kind === 'encounterStarted') &&
+    !cageByPhase.has(boundary.phaseKey) &&
+    (roomLocal.kind === 'ship' || encounterMarkerCount > 1)
+      ? encounterByPhase.get(boundary.phaseKey)?.label
+      : undefined;
   const identityLabel = (phase: WorkspaceEncounterPhase, cageNamed: boolean) => {
     const family = phase.nemesisEvent?.value?.kind;
     const encounter =
@@ -379,8 +397,9 @@ function projectRoomLifecycleTimeline(
           boundary: boundary,
           label: lifecycleBoundaryLabel(
             boundary,
-            boundary.kind === 'encounterStarted' && mergedPhaseKeys.has(boundary.phaseKey),
+            boundary.kind === 'encounterStarted' && beginHidden(boundary.phaseKey),
             phaseLabel(boundary),
+            encounterPhaseName(boundary),
           ),
           ...(boundary.kind === 'wheelsOpen' && phaseLabel(boundary) !== undefined
             ? {

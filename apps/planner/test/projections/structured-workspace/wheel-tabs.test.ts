@@ -75,7 +75,7 @@ function wheelPhase(projected: Projected) {
   return phase;
 }
 
-/** A three-phase O room whose Combat 1 end matures a Hermes Shrine delivery. */
+/** A three-phase O room whose Phase 1 end matures a Hermes Shrine delivery. */
 function threePhaseDeliveryProject(): ProjectDocument {
   const { oShrine } = surfaceShrineDeliverySources;
   const occurrence = createOccurrenceAddress(o, oOccurrenceIds.combat02);
@@ -120,11 +120,11 @@ describe('ship wheels on the Timeline of the phase before their combat', () => {
     const phase = wheelPhase(projected);
     expect(phase).toMatchObject({ tab: 'shipIntroActions', wheel: { key: 'wheel1' } });
     expect(phase.wheelRerolls).toMatchObject({ poolRemaining: 10, targetNoun: 'offer', rows: [] });
-    // The Timeline keeps only its Wheels open marker.
+    // The Timeline keeps only its Wheels opened marker.
     const wheelsOpen = phase.timeline.find(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'wheelsOpen',
     );
-    expect(wheelsOpen).toMatchObject({ label: 'Wheels open · Combat 1' });
+    expect(wheelsOpen).toMatchObject({ label: 'Wheels opened · Phase 1' });
     expect(wheelsOpen?.kind === 'boundary' ? wheelsOpen.supplement : undefined).toBeUndefined();
     for (const owner of [wheel, createRewardWheelOfferAddress(o, ship, 'wheel1', 'offer1')])
       expect(projected.workspace.focusByOwner.get(semanticAddressKey(owner))).toMatchObject({
@@ -203,7 +203,7 @@ describe('ship wheels on the Timeline of the phase before their combat', () => {
     expect(row?.label).toMatch(/^Reroll Offer → \S/);
   });
 
-  it('opens each wheel at Wheels open and leaves no next-phase checkpoint row in any phase', () => {
+  it('opens each wheel at Wheels opened and leaves no next-phase checkpoint row in any phase', () => {
     const threePhase = createOccurrenceId('surface-o-combat07');
     const wheel2 = createRewardWheelAddress(o, threePhase, 'wheel2');
     const project = [

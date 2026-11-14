@@ -209,8 +209,8 @@ describe('Ship timeline tab recovery', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat04),
     );
-    await view.user.click(screen.getByRole('tab', { name: 'Combat 2 Timeline' }));
-    expect(screen.getByRole('region', { name: 'Combat 2 ship phase' })).not.toBeNull();
+    await view.user.click(screen.getByRole('tab', { name: 'Phase 2 Timeline' }));
+    expect(screen.getByRole('region', { name: 'Phase 2 ship phase' })).not.toBeNull();
     act(() =>
       view.application.store.dispatch(
         authoredProjectCommandDispatched({
@@ -223,14 +223,14 @@ describe('Ship timeline tab recovery', () => {
     expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    expect(screen.queryByRole('region', { name: 'Combat 2 ship phase' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Phase 2 ship phase' })).toBeNull();
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(
-      screen.getByRole('tab', { name: 'Combat 2 Timeline' }).getAttribute('aria-selected'),
+      screen.getByRole('tab', { name: 'Phase 2 Timeline' }).getAttribute('aria-selected'),
     ).toBe('true');
-    expect(screen.getByRole('region', { name: 'Combat 2 ship phase' })).not.toBeNull();
+    expect(screen.getByRole('region', { name: 'Phase 2 ship phase' })).not.toBeNull();
     expect(screen.queryByRole('region', { name: 'Intro ship phase' })).toBeNull();
-    expect(screen.queryByRole('region', { name: 'Combat 1 ship phase' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Phase 1 ship phase' })).toBeNull();
   });
 
   it.each(['actions', 'shipCombat2Actions', 'shipInactiveRepair'] as const)(
@@ -247,8 +247,8 @@ describe('Ship timeline tab recovery', () => {
       expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
         'true',
       );
-      await user.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
-      expect(screen.getByRole('region', { name: 'Combat 1 ship phase' })).not.toBeNull();
+      await user.click(screen.getByRole('tab', { name: 'Phase 1 Timeline' }));
+      expect(screen.getByRole('region', { name: 'Phase 1 ship phase' })).not.toBeNull();
       expect(screen.queryByRole('region', { name: 'Intro ship phase' })).toBeNull();
     },
   );
@@ -563,7 +563,7 @@ describe('OccurrenceRoomActions', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
     const starts = [1, 2, 3].map((slot) =>
-      within(timeline).getByLabelText(`Encounter, Cage ${slot}`),
+      within(timeline).getByLabelText(`Encounter started, Cage ${slot}`),
     );
     const ends = Array.from(
       timeline.querySelectorAll<HTMLElement>('[data-lifecycle-boundary^="encounterEnd:"]'),
@@ -686,10 +686,14 @@ describe('OccurrenceRoomActions', () => {
     reorderByKeyboard(unlockThree, /^After Room entered$/);
     await waitFor(() => expect(cageOrder()).toEqual(['Cage03', 'Cage01', 'Cage02']));
     // Moving the trigger moves its encounter: Cage 3 is now fought first.
-    expect(startedCages()).toEqual(['Encounter, Cage 3', 'Encounter, Cage 1', 'Encounter, Cage 2']);
+    expect(startedCages()).toEqual([
+      'Encounter started, Cage 3',
+      'Encounter started, Cage 1',
+      'Encounter started, Cage 2',
+    ]);
     expectBefore(
       actionRow(timeline(), /^Unlock .+ · Cage 3$/),
-      within(timeline()).getByLabelText('Encounter, Cage 3'),
+      within(timeline()).getByLabelText('Encounter started, Cage 3'),
     );
   });
 
@@ -708,7 +712,7 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Timeline');
     // Each cage start banner names its encounter read-only; identity stays in Overview.
     for (const slot of [1, 2, 3]) {
-      const start = screen.getByLabelText(`Encounter, Cage ${slot}`);
+      const start = screen.getByLabelText(`Encounter started, Cage ${slot}`);
       expect(within(start).getByRole('img', { name: `Cage ${slot}` })).toBeTruthy();
     }
     for (const cage of ['Cage 1', 'Cage 2', 'Cage 3'])
@@ -864,7 +868,7 @@ describe('OccurrenceRoomActions', () => {
     );
     const orderedOptional = actionRow(timeline, /^Collect .+ · Optional 1$/);
     expect(orderedOptional.getAttribute('data-action-accent')).toBe('optional');
-    expectBefore(within(actions).getByLabelText('Doors open'), orderedOptional);
+    expectBefore(within(actions).getByLabelText('Doors opened'), orderedOptional);
     const handle = within(orderedOptional).getByRole('button', {
       name: /^Reorder Collect .+ · Optional 1$/,
     });
@@ -1302,10 +1306,10 @@ describe('OccurrenceRoomActions', () => {
     const reasons = projected.room.roomActions!.proposals.flatMap(
       (proposal) => proposal.explanations,
     );
-    // Combat 2's wheel waits on Combat 1's required actions, never on a checkpoint row.
+    // Phase 2's wheel waits on Phase 1's required actions, never on a checkpoint row.
     expect(reasons).toContain('Talk to Icarus must come first.');
     expect(reasons.some((reason) => reason.includes('ready to advance'))).toBe(false);
-    expect(reasons).toContain('Choose Combat 1 wheel before collecting its reward.');
+    expect(reasons).toContain('Choose Phase 1 wheel before collecting its reward.');
     expect(reasons.some((reason) => reason.includes('wheel1 next phase usable'))).toBe(false);
     const timingProposals = projected.room.roomActions!.proposals.filter((proposal) =>
       / must come (before|after) /.test(proposal.explanations[0] ?? ''),
@@ -1319,13 +1323,13 @@ describe('OccurrenceRoomActions', () => {
       expect(new Set(proposal.explanations).size).toBe(proposal.explanations.length);
       expect(proposal.explanations[0]).toMatch(
         new RegExp(
-          `^${row.label} must come (before|after) (Combat [123]|Encounter ended · Combat [123]|Combat [123]'s end effects|choosing the Combat [123] wheel)\\.$`,
+          `^${row.label} must come (before|after) (Phase [123] encounter started|Phase [123] encounter ended|Phase [123]'s end effects|choosing the Phase [123] wheel)\\.$`,
         ),
       );
     }
-    openRoomTab('Combat 1 Timeline');
+    openRoomTab('Phase 1 Timeline');
     expect(screen.getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
-    const combatOne = screen.getByLabelText('Combat 1 ship phase');
+    const combatOne = screen.getByLabelText('Phase 1 ship phase');
     const actionOrder = () =>
       occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history!.present,
@@ -1341,9 +1345,9 @@ describe('OccurrenceRoomActions', () => {
 
     const icarus = rowFor('Talk to Icarus');
     const moveIcarus = within(icarus).getByRole('button', { name: 'Reorder Talk to Icarus' });
-    // Combat 2's wheel offer is unset, so the walk stops at Combat 1's Wheels open and
-    // the Combat 2 wheel choice it blocks stands at that stop as its repair.
-    expect(within(combatOne).getByText('Choose Combat 2 wheel')).toBeTruthy();
+    // Phase 2's wheel offer is unset, so the walk stops at Phase 1's Wheels opened and
+    // the Phase 2 wheel choice it blocks stands at that stop as its repair.
+    expect(within(combatOne).getByText('Choose Phase 2 wheel')).toBeTruthy();
     const icarusRow = projected.room.roomActions!.rows.find(
       (row) => row.key === icarus.dataset.roomActionKey,
     )!;
@@ -1455,7 +1459,7 @@ describe('OccurrenceRoomActions', () => {
     expect(document.querySelector('.timeline-live-row')).toBeNull();
 
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(actions).getByText('Doors open')).toBeTruthy();
+    expect(within(actions).getByText('Doors opened')).toBeTruthy();
     expect(within(actions).queryByText('Outgoing generation')).toBeNull();
     expect(within(actions).queryByText('Exit usable')).toBeNull();
     expect(queryActionRow(actions, /^Buy Zeus boon/)).toBeNull();
