@@ -69,12 +69,13 @@ export type AuthoredStartingRewardAcquisition = Omit<AuthoredRewardState, 'offer
 
 /**
  * A rerolled owner's redraws and the outcomes of its effective item. `results`
- * holds each press of this owner's reward, by reroll id, from its room or Hub;
- * `pressId` names the press whose item `acquisition` belongs to. The
- * acquisition is absent exactly when the owner cannot draw that press's reward.
+ * holds each press of this owner's reward, by reroll id, from its room or Hub,
+ * null while the owner has not set that press's result; `pressId` names the
+ * press whose item `acquisition` belongs to. The acquisition is absent exactly
+ * when the owner cannot draw that press's reward.
  */
 export interface RerolledRewardState {
-  readonly results: Readonly<Record<string, ResolvedRewardOffer>>;
+  readonly results: Readonly<Record<string, ResolvedRewardOffer | null>>;
   readonly pressId: string;
   readonly acquisition?: AuthoredStartingRewardAcquisition;
 }

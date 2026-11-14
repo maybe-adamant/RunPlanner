@@ -1065,7 +1065,7 @@ The target keeps its first native draw with its ordinary picker and meaning
 `rerolledIncomingReward`, `rerolledCages[slot]` or `rerolledOffers[offer]`
 holds the rerolled item: `results`, the reward each press of this target
 drew, by its `rerollId` (room or Hub presses; a target has one source, so the
-ids are unique); `pressId`, the press whose item the owner acquires; and
+ids are unique), or null while the owner has not set it; `pressId`, the press whose item the owner acquires; and
 `acquisition`, that item's outcomes and acquisition children. The owner's
 effective press is its last press in its source's order (for a board door,
 before its slot's visit), and the owner acquires that press's reward; the
@@ -1073,7 +1073,7 @@ first draw is inert while a press is effective. Decoding holds `results` to
 exactly the presses naming the target, every press whose target room stands
 to its result, `pressId` to one of them, and `acquisition` present exactly
 while a press is effective and the owner can draw the recorded press's
-reward. A press whose door or room is gone holds no result and is stale. An
+reward; an unset result is never effective and holds no outcomes. A press whose door or room is gone holds no result and is stale. An
 edit that rebuilds a target's room keeps its rerolled item wherever it keeps
 the target's first draw, without outcomes the rebuilt room cannot draw;
 otherwise the item's presses go with it, announced as removed actions.
@@ -1086,7 +1086,7 @@ a [replaced item](ROOM_LIFECYCLE_MODEL.md#rows-whose-context-or-source-is-gone).
 Outcomes still at their unresolved defaults simply follow the effective press.
 `InsertReroll` appends a press at an engine-supplied index (after the doors
 unlock, or among a wheel's offers before its use), naming a cage press's slot,
-`ReplaceRerollReward` changes its result, and presses are removed and moved as
+with its result or unset, `ReplaceRerollReward` sets or changes its result, and presses are removed and moved as
 ordinary room actions; a removal keeps later presses it invalidates.
 
 A rerolled single-pick trait, Chaos or Pom level screen holds its earlier

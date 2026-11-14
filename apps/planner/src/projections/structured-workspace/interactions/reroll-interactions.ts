@@ -1,5 +1,4 @@
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
-import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   rerollPressForProjectEvaluationAssembly,
@@ -36,7 +35,6 @@ function bindRoomRerolls(
   input: {
     readonly assembly: ProjectEvaluationAssembly;
     readonly candidates: CandidateProjectionSession;
-    readonly catalog: Catalog;
     readonly project: ProjectDocument;
     readonly rewardPicker: RewardPickerProjectionService;
   },
@@ -128,7 +126,6 @@ function bindRoomRerolls(
     },
     pressIntent: (targetKey: string) => {
       const command = rerollPressForProjectEvaluationAssembly(
-        input.catalog,
         input.assembly,
         requirement.surface,
         requireTarget(targetKey).target,
@@ -142,7 +139,6 @@ function bindRoomRerolls(
 export function bindRoomRerollInteractions(input: {
   readonly assembly: ProjectEvaluationAssembly;
   readonly candidates: CandidateProjectionSession;
-  readonly catalog: Catalog;
   readonly project: ProjectDocument;
   readonly requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>;
   readonly rewardPicker: RewardPickerProjectionService;

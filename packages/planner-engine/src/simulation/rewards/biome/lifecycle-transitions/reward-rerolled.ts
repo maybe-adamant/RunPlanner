@@ -421,10 +421,6 @@ export function applyRewardRerolledTransition(inputs: {
     return blocked('rerollTargetUnavailable', { reason: 'cageNotPlayed' });
   if (target === undefined) return blocked('rerollTargetUnavailable', { reason: 'missing' });
   if (!target.rerollable) return blocked('rerollTargetUnavailable', { reason: 'notRerollable' });
-  if (inputs.reward === undefined)
-    throw new BiomeRewardSimulationContractError(
-      `${semanticAddressKey(owner)} reached without its reroll`,
-    );
   if (view === undefined)
     throw new BiomeRewardSimulationContractError(
       `${semanticAddressKey(owner)} has no history view`,
@@ -442,20 +438,6 @@ export function applyRewardRerolledTransition(inputs: {
     branch: reached,
     rerolledOffers: inputs.rerolledOffers,
   });
-  const drawn = processRewardOffer(reached, evaluator.contextFor(inputs.reward), findings);
-  const branch =
-    drawn === undefined
-      ? undefined
-      : advanceRewardBranch(
-          Object.freeze({
-            ...drawn,
-            state: Object.freeze({
-              ...drawn.state,
-              arcanaFear: spendRerolls(drawn.state.arcanaFear, 1),
-            }),
-          }),
-          historySequence,
-        );
   const ownerKey = semanticAddressKey(owner);
   const producerFrontiers: readonly RewardProducerFrontier[] = Object.freeze([
     Object.freeze({
@@ -473,6 +455,26 @@ export function applyRewardRerolledTransition(inputs: {
       },
     }),
   ]);
+  // A press whose result is not set yet stops the walk, its result asked like an unset reward.
+  if (inputs.reward === undefined)
+    return Object.freeze({
+      ...blocked('rerollResultMissing'),
+      producerFrontiers,
+    });
+  const drawn = processRewardOffer(reached, evaluator.contextFor(inputs.reward), findings);
+  const branch =
+    drawn === undefined
+      ? undefined
+      : advanceRewardBranch(
+          Object.freeze({
+            ...drawn,
+            state: Object.freeze({
+              ...drawn.state,
+              arcanaFear: spendRerolls(drawn.state.arcanaFear, 1),
+            }),
+          }),
+          historySequence,
+        );
   const settled = branch !== undefined;
   return Object.freeze({
     branch,

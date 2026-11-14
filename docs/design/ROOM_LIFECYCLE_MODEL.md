@@ -993,10 +993,10 @@ pickup's, purchase's or contact's trait offer, an Anvil of Fates result, a Path 
 rack's keepsake, the Artificer's replacement, the item Travel Deal restocks, a
 Fateful Twist's result, a Nemesis event's reward and traded boon, the Phial's
 target, a challenge switch's outcome, a locked door's fight, a press's
-reward). A press takes its target first and is placed with a stable legal
-draw as its reward, the highest scoring by a stable hash of the press among
-the rewards its target's store can redraw there that the press's own
-candidate supports without a finding, so it is valid as placed. A moved row
+reward). A press takes its target first and is placed with its reward
+unset; its row's picker then asks it, offering the rewards its target's store
+can redraw there, and until it is set the press is a required missing input
+where the walk stops, like an unset door reward. A moved row
 keeps the outcome it has, so its move opens nothing. Travel
 Deal restocks as the purchase (the World Shop's first) or rush (the Shrine's
 first initial one) that triggers it settles, so the restocked item is that

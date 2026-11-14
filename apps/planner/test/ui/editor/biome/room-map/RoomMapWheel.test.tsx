@@ -21,6 +21,7 @@ import {
   requireWorkspaceBiome,
 } from '@planner-test/fixtures/structuredWorkspace';
 import { renderWorkspace } from '@planner-test/support/biome-workbench';
+import { pressWithPickedResult } from '@planner-test/support/reroll-press';
 
 afterEach(() => cleanup());
 
@@ -155,10 +156,11 @@ describe('room map ship wheel', () => {
       .targets(undefined)
       .sections.flatMap((section) => section.items)
       .map((item) => item.value);
-    const rerolled = applyProjectCommand(
+    const rerolled = await pressWithPickedResult(
       base,
-      catalog,
-      interaction.pressIntent(targetKey!)!.command,
+      intro.wheelRerolls!.interactionKey,
+      targetKey!,
+      intro.wheel?.offers[0]?.control.offer,
     );
 
     const { user } = render(rerolled);

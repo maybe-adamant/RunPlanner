@@ -598,7 +598,7 @@ export function assembleWorkspaceBiomeSemantics(
         return press === undefined
           ? undefined
           : {
-              reward: press.reward,
+              ...(press.reward === undefined ? {} : { reward: press.reward }),
               ...(press.target.kind === 'wheelOffer'
                 ? {}
                 : {

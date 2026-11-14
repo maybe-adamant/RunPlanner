@@ -9,7 +9,7 @@ import type { ResolvedRoutePosition } from './route-context';
 import { createUnresolvedAcquisitionRewardState } from './traits/state';
 
 /** The counted binding whose acquisition an owner's rerolled reward follows. */
-export function rerolledRewardBinding(
+function rerolledRewardBinding(
   catalog: Catalog,
   routePosition: ResolvedRoutePosition,
   occurrence: RoomOccurrence,

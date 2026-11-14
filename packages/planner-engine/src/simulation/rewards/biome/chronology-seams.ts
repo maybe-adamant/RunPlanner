@@ -562,7 +562,7 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
       {
         kind: 'forfeitPeeks',
         peeks:
-          press === undefined || transition.branch === undefined
+          press?.result === undefined || transition.branch === undefined
             ? []
             : forfeitPeeks(
                 context.catalog,
@@ -582,6 +582,7 @@ function rerolledRewardSpawns(
   press: import('../../../authored-project/rerolls').ResolvedRerollPress,
 ): readonly RewardSpawn[] {
   const { target, result } = press;
+  if (result === undefined) return [];
   if (target.kind === 'wheelOffer') {
     const wheel = source.rewardWheels?.find((candidate) => candidate.wheelKey === target.wheelKey);
     const offer = wheel?.offers.find((candidate) => candidate.offerKey === target.offerKey);

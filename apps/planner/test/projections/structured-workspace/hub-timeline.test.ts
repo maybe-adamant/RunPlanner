@@ -71,13 +71,25 @@ async function possibleRewards(resolver: WorkspaceRewardOfferResolver) {
 }
 
 /** Appends a press to one stay through its bound list, with its drawn reward. */
-function append(project: ProjectDocument, precedingVisitCount: number, hubSlotKey: string) {
+/**
+ * Appends a press through the stay's list, then sets its unset result to the
+ * first reward its row's picker offers.
+ */
+async function append(project: ProjectDocument, precedingVisitCount: number, hubSlotKey: string) {
   const { interaction } = stayList(projectStructuredWorkspaceFixture(project), precedingVisitCount);
   const intent = interaction.pressIntent(slotDoorKey(project, hubSlotKey))!;
+  const placed = applyProjectCommand(project, catalog, intent.command);
+  const after = stayList(projectStructuredWorkspaceFixture(placed), precedingVisitCount);
+  const row = after.rerolls.rows.find((candidate) => candidate.reward === undefined)!;
+  const reward = (await possibleRewards(after.interaction.rowReward(row.key)))[0]!;
   return {
     intent,
-    next: applyProjectCommand(project, catalog, intent.command),
-    reward: intent.command.reward,
+    next: applyProjectCommand(
+      placed,
+      catalog,
+      after.interaction.replaceRewardIntent(row.key, reward).command,
+    ),
+    reward,
   };
 }
 
@@ -117,8 +129,8 @@ describe('Hub Timeline details', () => {
   });
 
   it("orders the fountain among its stay's presses and moves any row within the stay", async () => {
-    let project = append(base, 0, 'combat03').next;
-    project = append(project, 0, 'combat09').next;
+    let project = (await append(base, 0, 'combat03')).next;
+    project = (await append(project, 0, 'combat09')).next;
     const projected = projectStructuredWorkspaceFixture(project);
     const stay = hubOf(projected).stays[0]!;
     // New presses append at the end of the stay, after the fountain used first.
@@ -154,7 +166,7 @@ describe('Hub Timeline details', () => {
     expect(after.rerolls?.poolRemaining).toBe(stay.rerolls?.poolRemaining);
     expect(after.doors).toEqual(stay.doors);
     // A new press still appends at the end of the stay.
-    const appended = append(moved, 0, 'combat10').next;
+    const appended = (await append(moved, 0, 'combat10')).next;
     expect(
       hubOf(projectStructuredWorkspaceFixture(appended)).stays[0]!.rows.map((row) => row.kind),
     ).toEqual(['reroll', 'fountain', 'reroll', 'reroll']);
@@ -162,12 +174,11 @@ describe('Hub Timeline details', () => {
 
   it("appends, edits and removes a stay's press through its list", async () => {
     const before = hubOf(projectStructuredWorkspaceFixture(base));
-    const { intent, next, reward } = append(base, 2, 'combat03');
+    const { intent, next, reward } = await append(base, 2, 'combat03');
     expect(intent.command).toEqual({
       kind: 'InsertHubReroll',
       hub,
       hubSlotKey: 'combat03',
-      reward,
       index: rerollAppendIndex(base, { kind: 'hubStay', hub, precedingVisitCount: 2 }),
     });
     const projected = projectStructuredWorkspaceFixture(next);
@@ -224,7 +235,7 @@ describe('Hub Timeline details', () => {
     const projected = projectStructuredWorkspaceFixture(loadSurfaceNProject());
     expect(hubOf(projected).stays.every((stay) => stay.rerolls === undefined)).toBe(true);
     expect(hubOf(projected)).not.toHaveProperty('rerollsRemaining');
-    const { next } = append(base, 0, 'combat03');
+    const { next } = await append(base, 0, 'combat03');
     const withoutCard = projectStructuredWorkspaceFixture(withArcana(next, []));
     const node = hubOf(withoutCard);
     expect(node.stays[0]!.rerolls).toMatchObject({ appendLocked: 'notEnabled' });
@@ -238,7 +249,7 @@ describe('Hub Timeline details', () => {
   it('blocks a press past the pool ahead of the edit', async () => {
     let project = base;
     for (const hubSlotKey of ['combat03', 'combat09', 'combat11'])
-      project = append(project, 0, hubSlotKey).next;
+      project = (await append(project, 0, hubSlotKey)).next;
     const projected = projectStructuredWorkspaceFixture(project);
     expect(stayList(projected, 0).rerolls).toMatchObject({
       appendLocked: 'poolEmpty',
@@ -250,7 +261,7 @@ describe('Hub Timeline details', () => {
   it('allows an earlier press that starves later ones, which report the shortfall', async () => {
     let project = base;
     for (const hubSlotKey of ['combat03', 'combat09', 'combat11'])
-      project = append(project, 2, hubSlotKey).next;
+      project = (await append(project, 2, hubSlotKey)).next;
     // The pool is judged where the press is made: before Visit 1 three are left.
     expect(stayList(projectStructuredWorkspaceFixture(project), 0).rerolls).toMatchObject({
       poolRemaining: 3,
@@ -258,7 +269,7 @@ describe('Hub Timeline details', () => {
     expect(
       stayList(projectStructuredWorkspaceFixture(project), 0).rerolls.appendLocked,
     ).toBeUndefined();
-    const starved = append(project, 0, 'combat10').next;
+    const starved = (await append(project, 0, 'combat10')).next;
     const projected = projectStructuredWorkspaceFixture(starved);
     const later = stayList(projected, 2).rerolls.rows.at(-1)!;
     expect(

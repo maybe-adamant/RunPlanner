@@ -8,18 +8,18 @@ import {
   biomeRerollPressesByOwner,
   heldRerolledRecords,
   hubRerollOwner,
+  rerollPressHeld,
   rerollPressNeedsResult,
-  rerollResult,
   roomRerollOwner,
 } from '../../rerolls';
 import { failProjectDocument } from '../../validation';
 
 /**
  * Reroll results live on the item they redraw, keyed by the press: every
- * press whose target can hold a result has exactly one, and every result names
- * a press of its owner. A press whose target room is gone holds none. The
- * outcomes are held exactly while a press of the owner is effective and the
- * owner can draw its recorded press's reward.
+ * press whose target can hold a result has exactly one, set or not, and every
+ * result names a press of its owner. A press whose target room is gone holds
+ * none. The outcomes are held exactly while a press of the owner is effective
+ * and the owner can draw its recorded press's reward.
  */
 export function validateRerollResults(
   catalog: Catalog,
@@ -35,7 +35,7 @@ export function validateRerollResults(
     for (const press of source.roomActions.order) {
       if (press.kind !== 'reroll' || !rerollPressNeedsResult(topology, source, press)) continue;
       const owner = roomRerollOwner(biome, topology, source.occurrenceId, press);
-      if (rerollResult(topology, owner, press.rerollId) === undefined)
+      if (!rerollPressHeld(topology, owner, press.rerollId))
         failProjectDocument(
           `${path}.occurrences[${index}].roomActions`,
           `reroll ${press.rerollId} has no result on its target`,
@@ -46,7 +46,7 @@ export function validateRerollResults(
     for (const press of decision.actions) {
       if (press.kind !== 'reroll') continue;
       const owner = hubRerollOwner(biome, decision, press);
-      if (owner !== undefined && rerollResult(topology, owner, press.rerollId) === undefined)
+      if (owner !== undefined && !rerollPressHeld(topology, owner, press.rerollId))
         failProjectDocument(
           `${path}.decisions[${index}].actions`,
           `reroll ${press.rerollId} has no result on its slot's room`,
@@ -62,14 +62,16 @@ export function validateRerollResults(
     for (const rerollId of Object.keys(record.results))
       if (!named.has(rerollId))
         failProjectDocument(at, `holds a result for ${rerollId}, which no press of it names`);
+    const offer = record.results[record.pressId];
     const drawn =
       effective.has(key) &&
+      offer != null &&
       unresolvedRerolledReward(
         catalog,
         routePosition,
         occurrence(owner.occurrenceId)!,
         owner,
-        record.results[record.pressId]!,
+        offer,
       ) !== undefined;
     if (drawn && record.acquisition === undefined)
       failProjectDocument(at, `rerolled ${semanticAddressKey(owner)} must hold its outcomes`);

@@ -24,6 +24,11 @@ export function executionReroll(
   const press = room.rerollPresses?.get(reroll.rerollId);
   if (press === undefined) return missing();
   const { target, result } = press;
+  if (result === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} reroll ${reroll.rerollId} lacks its result`,
+    );
   if (target.kind === 'wheelOffer') {
     const wheel = room.rewardWheels?.find((candidate) => candidate.wheelKey === target.wheelKey);
     if (wheel === undefined) return missing();
