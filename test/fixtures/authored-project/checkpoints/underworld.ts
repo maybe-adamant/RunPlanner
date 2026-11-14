@@ -4,7 +4,6 @@ import { checkpointArtifact, type CheckpointArtifact } from './loader';
 
 import underworldFMidshopPomRaw from './underworld-f-midshop-pom-frontier.runplanner.json';
 import underworldFTraitOrderChecksRaw from './underworld-f-trait-order-checks.runplanner.json';
-import underworldFDuoExchangeOrderRaw from './underworld-f-duo-exchange-order.runplanner.json';
 import underworldFPoolRaw from './underworld-f-pool.runplanner.json';
 import underworldFStygianWellRaw from './underworld-f-stygian-well.runplanner.json';
 import underworldFGRaw from './underworld-fg.runplanner.json';
@@ -50,7 +49,6 @@ export const underworldCheckpointArtifacts = Object.freeze({
   'underworld-generated-composition': checkpointArtifact(underworldGeneratedCompositionRaw),
   'underworld-f-midshop-pom-frontier': checkpointArtifact(underworldFMidshopPomRaw),
   'underworld-f-trait-order-checks': checkpointArtifact(underworldFTraitOrderChecksRaw),
-  'underworld-f-duo-exchange-order': checkpointArtifact(underworldFDuoExchangeOrderRaw),
   'natural-chaos-unresolved-trial': checkpointArtifact(naturalChaosUnresolvedTrialRaw),
   'nemesis-f-trait-trade': checkpointArtifact(nemesisFTraitTradeRaw),
   'nemesis-h-fields': checkpointArtifact(nemesisHFieldsRaw),

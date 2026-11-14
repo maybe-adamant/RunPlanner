@@ -205,16 +205,6 @@ export const checkpointManifest = Object.freeze([
     provenance: 'user-authored F live trait-order test project',
   },
   {
-    id: 'underworld-f-duo-exchange-order',
-    file: 'underworld-f-duo-exchange-order.runplanner.json',
-    route: 'Underworld',
-    configuredBiomePrefix: ['F'],
-    scenario: 'Apollo exchange removing Born Gain before a Hera Sun Worshiper box',
-    schemaVersion: 103,
-    catalogVersion: '0.55.0-anvil-of-fates',
-    provenance: 'user-authored F live Duo prerequisite order test project',
-  },
-  {
     id: 'surface-n',
     file: 'surface-n.runplanner.json',
     route: 'Surface',

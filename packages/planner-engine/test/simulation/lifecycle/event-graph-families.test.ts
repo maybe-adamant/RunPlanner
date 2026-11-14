@@ -292,11 +292,21 @@ describe('gated Opening and Devotion', () => {
 
   // O_Devotion01 binds its Devotion fight; a standard F room resolves it by its Devotion reward.
   it.each([
-    ['O_Devotion01', 'execution/surface-nopq', oDevotion],
-    ['a standard F room', 'checkpoint/underworld-f-duo-exchange-order', fDevotion],
+    ['O_Devotion01', 'execution/surface-nopq', oDevotion, []],
+    // This room's Well purchases follow its doors.
+    [
+      'a standard F room',
+      'checkpoint/underworld-f-trait-order-checks',
+      fDevotion,
+      [
+        'purchaseStygianWellOffer:initial:secondRight',
+        'purchaseStygianWellOffer:travelDealRefill',
+        'purchaseStygianWellOffer:initial:secondLeft',
+      ],
+    ],
   ] as const)(
     'begins the Devotion encounter in %s at entry, takes the chosen boon, then starts Combat',
-    (_, entry, origin) => {
+    (_, entry, origin, afterDoors) => {
       const room = observe(corpusRun(entry), origin);
       const chosen = room.rank(devotionGate);
       const spurned = room.rank('interactIncomingReward:afterCombat:spurnedSource');
@@ -315,6 +325,7 @@ describe('gated Opening and Devotion', () => {
         'encounterEnd(Encounter)',
         spurned,
         'doorsOpened',
+        ...afterDoors.map((row) => room.rank(row)),
       ]);
       expectInOrder(room.walk, ['roomEntered', chosen, 'encounterStarted(Encounter)', spurned]);
       expect(room.loot).toEqual([
