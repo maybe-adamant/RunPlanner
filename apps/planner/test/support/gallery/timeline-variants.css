@@ -281,7 +281,7 @@ body[data-timeline-variant='spine']
   > .timeline-row[data-timeline-row-kind='boundary']:is(
     [data-boundary-kind='encounterBegun'],
     [data-boundary-kind='encounterStarted']
-  ):has(.fields-cage-slot) {
+  )[data-fields-cage] {
   --timeline-row-lead: -2px;
   min-height: 0;
 }
@@ -291,13 +291,13 @@ body[data-timeline-variant='spine']
   > .timeline-row[data-timeline-row-kind='boundary']:is(
     [data-boundary-kind='encounterBegun'],
     [data-boundary-kind='encounterStarted']
-  ):has(.fields-cage-slot)::before,
+  )[data-fields-cage]::before,
 body[data-timeline-variant='spine']
   .room-action-list
   > .timeline-row[data-timeline-row-kind='boundary']:is(
     [data-boundary-kind='encounterBegun'],
     [data-boundary-kind='encounterStarted']
-  ):has(.fields-cage-slot)
+  )[data-fields-cage]
   > [data-timeline-cell='sentence']::after {
   content: none;
 }
@@ -307,7 +307,7 @@ body[data-timeline-variant='spine']
   > .timeline-row[data-timeline-row-kind='boundary']:is(
     [data-boundary-kind='encounterBegun'],
     [data-boundary-kind='encounterStarted']
-  ):has(.fields-cage-slot)
+  )[data-fields-cage]
   > .timeline-event-node {
   display: none;
 }
@@ -317,7 +317,7 @@ body[data-timeline-variant='spine']
   > .timeline-row[data-timeline-row-kind='boundary']:is(
     [data-boundary-kind='encounterBegun'],
     [data-boundary-kind='encounterStarted']
-  ):has(.fields-cage-slot)
+  )[data-fields-cage]
   > [data-timeline-cell='sentence'] {
   padding-left: 18px;
 }
@@ -327,7 +327,7 @@ body[data-timeline-variant='spine']
   > .timeline-row[data-timeline-row-kind='boundary']:is(
     [data-boundary-kind='encounterBegun'],
     [data-boundary-kind='encounterStarted']
-  ):has(.fields-cage-slot)
+  )[data-fields-cage]
   > [data-timeline-cell='sentence']::before {
   position: absolute;
   top: 50%;
