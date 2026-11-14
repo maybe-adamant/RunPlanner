@@ -574,7 +574,9 @@ describe('live interactions at a gap', () => {
       slotKey: 'optional2',
     });
     const live = interactions(project, fields);
-    // Cage02, its reward, Cage01, its reward: gap 2 lies between the two cages.
+    // Cage02, its reward, Cage01, its reward: gap 2 lies between the two cages. A cage's
+    // Unlock row has no history events of its own, so the state it meets is the one after
+    // the event it settles with.
     const inner = 2;
     expect(inner).toBeLessThan(live.frontier);
     const ashes = live.gaps[inner]!.items.find(
@@ -621,6 +623,28 @@ describe('live interactions at a gap', () => {
     ]);
     for (const verb of reward!.verbs)
       expect(verbAccepted(unplaced, fields, verb, 1), verb.verb).toBe(true);
+
+    // A stale row is never executed: a gap before one judges at the next row the walk takes.
+    const optional3 = {
+      kind: 'interactLocalReward',
+      groupKey: 'optionalRewards',
+      slotKey: 'optional3',
+    } as const;
+    const [cage02, cage2Pickup, ...rest] = roomOrder(project, fields);
+    const withStale = withRoomOrder(project, fields, [cage02!, cage2Pickup!, optional3, ...rest]);
+    const staleRoom = canonicalRoom(simulateProjectAssembly(catalog, withStale), fields)!;
+    expect(
+      staleRoom.roomActionRoster.rows.find((row) => row.key === roomActionKey(optional3))?.stale,
+    ).toBe(true);
+    const beforeStale = interactions(withStale, fields);
+    expect(inner).toBeLessThan(beforeStale.frontier);
+    expect(
+      offered(
+        beforeStale.gaps[inner]!.items.find(
+          (item) => item.kind === 'pickup' && roomActionKey(item.reference) === ashesKey,
+        ),
+      ),
+    ).toEqual(offered(ashes));
   });
 
   it('withholds goldify without a Time Piece charge, and while Unfated', () => {

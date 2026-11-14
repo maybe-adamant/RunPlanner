@@ -134,7 +134,15 @@ export function publishChronology(
               ([roomKey]) => roomKey !== semanticAddressKey(overviewStopped.room),
             ),
           ),
+          roomActionContacts: new Map(
+            [...walk.roomActionContacts].filter(
+              ([roomKey]) => roomKey !== semanticAddressKey(overviewStopped.room),
+            ),
+          ),
         });
+  // A pickup taken before its room's Timeline converts at the state the walk stopped on,
+  // unless the room's Overview stopped on something its placement does not answer.
+  const placementWalk = overviewStopped?.placement === true ? walk : interactionWalk;
   const immutableFindingRegions = accumulation.findingRegions;
   const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
   const takenPeeks = Object.freeze(
@@ -356,15 +364,11 @@ export function publishChronology(
       {
         frontier: walk.branch?.state,
         peeks: accumulation.forfeitPeeks,
-        // A pickup taken before its room's Timeline converts at the state the walk stopped on,
-        // unless the room's Overview stopped on something its placement does not answer.
         roomFrontiers: new Map(
-          [...(overviewStopped?.placement === true ? walk : interactionWalk).roomActionEnds].map(
-            ([roomKey, end]) => [roomKey, end.branch],
-          ),
+          [...placementWalk.roomActionEnds].map(([roomKey, end]) => [roomKey, end.branch]),
         ),
         // One placed before a reached row converts at the state that row meets.
-        roomActionContacts: walk.roomActionContacts,
+        roomActionContacts: placementWalk.roomActionContacts,
       },
     ),
     derivedAcquisitionEntryArtifacts: createDerivedAcquisitionEntryCandidateArtifacts(

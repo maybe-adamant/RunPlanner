@@ -1322,11 +1322,18 @@ export function liveRoomForProjectEvaluationAssembly(
     .filter((row) => row.rank !== null)
     .sort((left, right) => left.rank! - right.rank!);
   const waits = waitsForRequiredObjects(roster.eventGraph);
-  /** The reached row a new one placed at an inner gap would precede; none at the frontier. */
-  const rowAfter = (gap: number): string | undefined => {
-    if (gap >= frontier) return undefined;
-    const next = ordered.find((row) => row.rank! > gap && rowByKey.get(row.key)?.rank !== null);
-    return next !== undefined && next.rank! - 1 <= frontier ? next.key : undefined;
+  /**
+   * Where a row placed at a gap would settle: at the frontier where the room's
+   * reached actions end, else before the next row the walk executes, as stale
+   * rows never are. Undefined before a row on a replaced item, which is never
+   * executed either and stops the walk, so no state there answers.
+   */
+  const placementPoint = (gap: number): { readonly before?: string } | undefined => {
+    if (gap >= frontier) return {};
+    const next = ordered.find((row) => row.rank! > gap && rowByKey.has(row.key));
+    return next === undefined || rowByKey.get(next.key)!.rank === null
+      ? undefined
+      : { before: next.key };
   };
   const required = ({ item }: PickupSpawn) => item.participation === 'required';
   /** Whether a required pickup at this gap stands past its deadline. */
@@ -1363,10 +1370,11 @@ export function liveRoomForProjectEvaluationAssembly(
       deadline = rowDeadline(row, (at) => !gatedPast(spawn, at));
       const step = gatedPast(spawn, gap) ? undefined : rowStep(row, gap);
       const obligation = { participation: item.participation, deadline };
+      const point = placementPoint(gap);
       if (step !== undefined && (!locked || step.kind === 'standing'))
         verbs.push(
           // The edit placing it can also convert it.
-          ...((interactions && step.kind === 'place'
+          ...((interactions && step.kind === 'place' && point !== undefined
             ? placementDispositionVerbs(
                 assembly,
                 room,
@@ -1376,7 +1384,7 @@ export function liveRoomForProjectEvaluationAssembly(
                 obligation,
                 step,
                 pickerOf(item.reference, placeChoice),
-                rowAfter(gap),
+                point.before,
               )
             : undefined) ?? rowVerbs(item.reference, obligation, step, placeChoice)),
         );
