@@ -130,9 +130,16 @@ export function LeavePicker({
 }: {
   /** The way out picked, kept while the plan ends here. */
   readonly chosenKey: string | undefined;
-  /** Ending the plan here by one edit that also changes the way out, and why it cannot be picked. */
+  /**
+   * Ending the plan here by one edit that also changes the way out: whether
+   * the plan can end after that edit, and why that way out cannot be picked.
+   */
   readonly endThrough?:
-    | { readonly intent: WorkspaceCommandsIntent; readonly disabledHint?: string | undefined }
+    | {
+        readonly intent: WorkspaceCommandsIntent;
+        readonly availability: () => WorkspacePlanEndAvailability;
+        readonly disabledHint?: string | undefined;
+      }
     | undefined;
   readonly findingMark?: FindingMarkProps | undefined;
   readonly id: string;
@@ -167,6 +174,12 @@ export function LeavePicker({
     previewed.current = link;
     if (link !== undefined) mapPreview?.show(link);
   };
+
+  // A way out the edit cannot take explains itself; the plan end is judged only past it.
+  const endThroughHint = (through: NonNullable<typeof endThrough>): string | undefined =>
+    through.disabledHint ?? planEndUnavailableHint(through.availability());
+  const endThroughDisabled = (through: NonNullable<typeof endThrough>): boolean =>
+    through.disabledHint !== undefined || !through.availability().available;
 
   const pick = (key: string) => {
     if (key === endKey) {
@@ -213,7 +226,7 @@ export function LeavePicker({
     const items = [
       ...ways,
       ...(endThrough !== undefined
-        ? [item(endKey, 'End plan here', false, endThrough.disabledHint !== undefined)]
+        ? [item(endKey, 'End plan here', false, endThroughDisabled(endThrough))]
         : planEnd === undefined
           ? []
           : [item(endKey, 'End plan here', ended, availability?.available === false)]),
@@ -232,7 +245,7 @@ export function LeavePicker({
   const hint = (item: ContextualPickerItem<string>): string | undefined => {
     if (item.key === endKey)
       return endThrough !== undefined
-        ? endThrough.disabledHint
+        ? endThroughHint(endThrough)
         : ended || planEnd === undefined
           ? undefined
           : planEndUnavailableHint(planEnd.availability());

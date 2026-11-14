@@ -19,7 +19,9 @@ import {
   generatedEncounterSupportForProjectEvaluationAssembly,
   infiniteRosterSupportForProjectEvaluationAssembly,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
+  planEndAvailability,
   type NemesisRandomEventCandidateSupport,
+  type PlanEndAvailability,
   type ProjectEvaluationAssembly,
   unlockExitEncounterSupportForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -1108,6 +1110,12 @@ export function bindOccurrenceLocalInteractions(
           const proposals = Object.freeze(
             leave.options.map((option) => option.proposedOccurrenceIds),
           );
+          const cut = Object.freeze({
+            kind: 'ReplaceLocalVisitOrder' as const,
+            order: requirement.order,
+            occurrenceIds: hub.proposedOccurrenceIds,
+          });
+          let endAvailability: PlanEndAvailability | undefined;
           set(
             localVisitOrders,
             leave.interactionKey,
@@ -1132,15 +1140,10 @@ export function bindOccurrenceLocalInteractions(
                   }),
                 }),
               endPlanIntent: Object.freeze({
-                commands: Object.freeze([
-                  Object.freeze({
-                    kind: 'ReplaceLocalVisitOrder' as const,
-                    order: requirement.order,
-                    occurrenceIds: hub.proposedOccurrenceIds,
-                  }),
-                  planEndCommand(mainRoom),
-                ]),
+                commands: Object.freeze([cut, planEndCommand(mainRoom)]),
               }),
+              endPlanAvailability: () =>
+                (endAvailability ??= planEndAvailability(catalog, assembly, mainRoom, cut)),
               owner: requirement.order,
             }),
             'local-visit leave',

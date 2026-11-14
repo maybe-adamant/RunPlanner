@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
-import { applyProjectCommand, semanticAddressKey } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createRoomActionAddress,
+  roomActionKey,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import {
   authoredProjectCommandsDispatched,
@@ -156,5 +162,42 @@ describe('main room side-visit Leave rows', () => {
 
     store.dispatch(authoredProjectUndoRequested());
     expect(selectPresentProject(store.getState())).toBe(base);
+  });
+
+  it('judges each exit’s End plan with its Hub return applied, as the last exit is judged', () => {
+    const base = loadSurfaceNOPQProject();
+    const ends = (project: typeof base) => {
+      const { localVisit, planEnd, workspace } = combat05(project);
+      return {
+        exits: localVisit.leaves.map((leave) =>
+          workspace.interactions.localVisitOrders.get(leave.interactionKey)!.endPlanAvailability(),
+        ),
+        last: planEnd!.availability(),
+      };
+    };
+    expect(ends(base)).toEqual({
+      exits: [{ available: true }, { available: true }, { available: true }],
+      last: { available: true },
+    });
+
+    // The main room's reward left unpicked: no exit can end the plan there.
+    const main = nOccurrenceId('combat05');
+    const pickup = base.route.biomes
+      .find((biome) => biome.biomeKey === 'N')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === main)!.roomActions
+      .order[0]!;
+    const unfinished = applyProjectCommand(base, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(
+        createBiomeAddress('Surface', 'N'),
+        main,
+        roomActionKey(pickup),
+      ),
+    });
+    const unsettled = { available: false, reason: 'notSettled' };
+    expect(ends(unfinished)).toEqual({
+      exits: [unsettled, unsettled, unsettled],
+      last: unsettled,
+    });
   });
 });

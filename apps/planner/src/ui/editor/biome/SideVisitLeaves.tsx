@@ -161,7 +161,11 @@ function SideVisitLeaveRow({
   const hubWay = options.find((option) => option.key === 'hub');
   const endThrough =
     endsInMainRoom && hubWay !== undefined
-      ? { intent: interaction.endPlanIntent, disabledHint: hubWay.disabledHint }
+      ? {
+          intent: interaction.endPlanIntent,
+          availability: interaction.endPlanAvailability,
+          disabledHint: hubWay.disabledHint,
+        }
       : undefined;
   const picked = slots.find((slot) => slot.key === leave.selectedKey);
   const mark = findingMark(order, sideVisitControl(leave.position));
