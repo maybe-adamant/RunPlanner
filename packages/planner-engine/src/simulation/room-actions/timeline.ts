@@ -1,7 +1,10 @@
-import type {
-  SteadyGrowthOutcomeAddress,
-  TranscendentEmbryoOutcomeAddress,
-  OccurrenceAddress,
+import {
+  createBiomeAddress,
+  createRoomActionAddress,
+  type RoomActionAddress,
+  type SteadyGrowthOutcomeAddress,
+  type TranscendentEmbryoOutcomeAddress,
+  type OccurrenceAddress,
 } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import {
@@ -30,6 +33,13 @@ export type RoomLifecycleTimelineEntry =
       /** The ranked action position at which the seam is rendered. */
       readonly rank: number;
       readonly placement: 'before' | 'after';
+      /**
+       * The placed row whose verb starts this encounter marker (a cage's Unlock, a gate
+       * pickup, a wheel's choice, a press), which the marker stands right after. Absent
+       * where the marker follows the event before it, or its row is unplaced or ranked
+       * where the marker cannot follow it.
+       */
+      readonly trigger?: RoomActionAddress;
     }
   | {
       readonly kind: 'action';
@@ -223,8 +233,15 @@ function boundaryEntry(
   point: RoomLifecycleBoundary,
   rank: number,
   placement: 'before' | 'after',
+  trigger?: RoomActionAddress,
 ): RoomLifecycleBoundaryEntry {
-  return Object.freeze({ kind: 'boundary', boundary: point, rank, placement });
+  return Object.freeze({
+    kind: 'boundary',
+    boundary: point,
+    rank,
+    placement,
+    ...(trigger === undefined ? {} : { trigger }),
+  });
 }
 
 /** The graph's events that stand on the Timeline: every event with a marker. */
@@ -252,6 +269,24 @@ export function assembleRoomLifecycleTimeline(
     .sort((left, right) => left.rank! - right.rank!);
   const finalRank = rankedRows.reduce((rank, row) => Math.max(rank, row.rank!), 0);
   const phaseByKey = new Map(structure.phases.map((phase) => [phase.phaseKey, phase]));
+  const rowByRank = new Map(rankedRows.map((row) => [row.rank!, row]));
+  const biome = createBiomeAddress(input.owner.routeKey, input.owner.biomeKey);
+  /** A marker its placed trigger row starts stands right after that row. */
+  const triggered = (
+    point: RoomLifecycleBoundary,
+    trigger: RoomActionReference,
+    rank: number,
+  ): RoomLifecycleBoundaryEntry => {
+    const key = roomActionKey(trigger);
+    return boundaryEntry(
+      point,
+      rank,
+      'after',
+      rowByRank.get(rank)?.key === key
+        ? createRoomActionAddress(biome, input.owner.occurrenceId, key)
+        : undefined,
+    );
+  };
   const finalPhaseKey = structure.phases.at(-1)?.phaseKey;
 
   /** The row whose press or cage begins a phase's encounter, when a row does. */
@@ -344,7 +379,7 @@ export function assembleRoomLifecycleTimeline(
       (point.trigger.kind === 'action' ? point.trigger.action : undefined);
     if (start !== undefined) {
       const placed = actionRank(roster, start);
-      if (placed !== undefined) return boundaryEntry(point, placed, 'after');
+      if (placed !== undefined) return triggered(point, start, placed);
       const unplaced = unplacedStartRank(start, precedingSlot);
       return unplaced === undefined
         ? boundaryEntry(point, 0, 'before')
@@ -368,13 +403,13 @@ export function assembleRoomLifecycleTimeline(
         );
         if (combat?.trigger.kind === 'automatic') {
           const at = desiredCombat(combat, point);
-          return boundaryEntry(point, at.rank, at.placement);
+          return boundaryEntry(point, at.rank, at.placement, at.trigger);
         }
         // A cage's row begins it; otherwise it begins with what came before (room
         // entry, Wheels open, the previous phase's end).
         if (point.trigger.kind === 'action') {
           const placed = actionRank(roster, point.trigger.action);
-          if (placed !== undefined) return boundaryEntry(point, placed, 'after');
+          if (placed !== undefined) return triggered(point, point.trigger.action, placed);
           const unplaced = unplacedStartRank(point.trigger.action, precedingSlot);
           if (unplaced !== undefined) return boundaryEntry(point, unplaced, 'after');
         }
@@ -458,7 +493,8 @@ export function assembleRoomLifecycleTimeline(
       entry:
         slot === desiredSlot
           ? desired
-          : Object.freeze({ ...desired, rank: slot, placement: 'after' as const }),
+          : // Moved forward past contradictory ranks, it no longer follows its trigger row.
+            boundaryEntry(desired.boundary, slot, 'after'),
       slot,
     });
   });
@@ -468,7 +504,6 @@ export function assembleRoomLifecycleTimeline(
     at.push(entry);
     boundaryBySlot.set(slot, at);
   }
-  const rowByRank = new Map(rankedRows.map((row) => [row.rank!, row]));
   const finalSlot = Math.max(finalRank, ...boundaryEntries.map(({ slot }) => slot));
   for (let slot = 0; slot <= finalSlot; slot += 1) {
     entries.push(...(boundaryBySlot.get(slot) ?? []));
