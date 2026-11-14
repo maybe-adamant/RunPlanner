@@ -130,7 +130,6 @@ export interface WorkspaceMissingPhysicalTarget {
 export interface WorkspaceFieldsBatchContext {
   readonly cageOutcome: 'min' | 'max';
   readonly cageTargetCount: number;
-  readonly doorCageRewardCount: number;
   readonly priorMaxOutcomes?: {
     readonly fieldsMaxDoorsRolled: number;
     readonly maxDoorCageCeiling: number;

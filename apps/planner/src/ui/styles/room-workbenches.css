@@ -2450,8 +2450,9 @@ button.doors-moment-trigger[data-has-findings] {
 
 .doors-moment-popover {
   z-index: 50;
-  /* The doors' editor sizes to its container, so the popover gives it a definite width. */
-  width: min(500px, calc(100 * var(--app-vw) - 24px));
+  /* As wide as its widest row, within the viewport. */
+  width: max-content;
+  max-width: calc(100 * var(--app-vw) - 24px);
   max-height: var(--radix-popover-content-available-height);
   overflow: auto;
   padding: 8px 10px 10px;
@@ -2791,6 +2792,11 @@ button.timeline-chip {
 .doors-moment-popover > .timeline-doors-detail {
   display: grid;
   gap: 8px;
+}
+
+/* No size containment here: the popover takes its width from these rows. */
+.doors-moment-popover > .door-workbench {
+  container-type: normal;
 }
 
 /* The side room a Returned row comes back from: its chip and short name together. */

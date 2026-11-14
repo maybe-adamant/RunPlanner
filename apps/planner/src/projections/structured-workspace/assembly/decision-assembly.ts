@@ -222,7 +222,6 @@ function fieldsContextForCanonicalBatch(
   return Object.freeze({
     cageOutcome: batch.batchState.cageOutcome,
     cageTargetCount: batch.batchState.cageTargetCount,
-    doorCageRewardCount: batch.batchState.doorCageRewardCount,
     ...(support === undefined
       ? {}
       : {
@@ -241,7 +240,6 @@ function fieldsContextForAuthoredBatch(
   return Object.freeze({
     cageOutcome: facts.cageOutcome,
     cageTargetCount: facts.cageTargetCount,
-    doorCageRewardCount: facts.doorCageRewardCount,
   });
 }
 
@@ -355,19 +353,20 @@ function rewardPoolForBatch(
 /** How a Fields batch's roll and cages read beside its doors. */
 function fieldsDoorNotes(fields: WorkspaceFieldsBatchContext): readonly WorkspaceDoorNote[] {
   const cap = fields.priorMaxOutcomes?.maxDoorCageCeiling;
-  const maxRule = cap === undefined ? '' : `; Maximum at most ${cap} times per run`;
+  const roll = Object.freeze({
+    target: 'doorRoll' as const,
+    text: [
+      'Minimum gives each combat room behind these doors 2 cages; Maximum gives 3, or 2 where the room only holds 2.',
+      'The game rolls this even when no room behind these doors has cages.',
+      ...(cap === undefined
+        ? []
+        : [`Maximum can be rolled at most ${cap === 2 ? 'twice' : `${cap} times`} per run.`]),
+    ].join('\n'),
+  });
   return fields.cageTargetCount === 0
-    ? [
-        Object.freeze({
-          target: 'doorRoll',
-          text: `No room behind these doors has cages, but Maximum still counts${maxRule}`,
-        }),
-      ]
+    ? [roll]
     : [
-        Object.freeze({
-          target: 'doorRoll',
-          text: `Sets the cages in each combat room behind these doors${maxRule}`,
-        }),
+        roll,
         Object.freeze({
           target: 'rewardColumn',
           text: 'Cage rewards appear bottom to top on the door',

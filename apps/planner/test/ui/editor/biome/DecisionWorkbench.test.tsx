@@ -1276,9 +1276,9 @@ describe('DecisionWorkbench', () => {
     const fieldsEditor = selector.closest('.fields-batch-editor');
     expect(fieldsEditor).not.toBeNull();
     expect(selector.closest('.batch-reward-pool')).toBeNull();
-    // The roll's cages and the run's Maximum rolls follow the picker on its one line.
+    // The run's Maximum rolls follow the picker on its one line.
     expect(fieldsEditor?.querySelector('.fields-batch-summary')?.textContent).toMatch(
-      /cages? · Max \d+\/\d+$/,
+      /^· Max \d+\/\d+$/,
     );
   });
 
@@ -1411,8 +1411,10 @@ describe('DecisionWorkbench', () => {
 
     const noteOn = (words: string) =>
       screen.getByRole('group', { name: words }).getAttribute('aria-description');
-    // One hint, on the roll, tells both the cages and the Maximum rule.
-    expect(noteOn('Fields door roll')).toBeTruthy();
+    // One hint, on the roll, tells the roll still happens without cages.
+    expect(noteOn('Fields door roll')).toContain(
+      'The game rolls this even when no room behind these doors has cages.',
+    );
     expect(screen.queryByRole('group', { name: 'Cages per combat room' })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Reward' })).toBeNull();
   });

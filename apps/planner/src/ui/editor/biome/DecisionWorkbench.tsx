@@ -677,13 +677,10 @@ function BatchSettings({
               placeholder="Select roll"
             />
           )}
-          {node.fields === undefined ? null : (
-            // The roll's result: each combat room's cages, then the run's Maximum rolls so far.
+          {node.fields?.priorMaxOutcomes === undefined ? null : (
+            // The run's Maximum rolls so far.
             <span className="fields-batch-summary">
-              {`→ ${node.fields.doorCageRewardCount} ${node.fields.doorCageRewardCount === 1 ? 'cage' : 'cages'}`}
-              {node.fields.priorMaxOutcomes === undefined
-                ? null
-                : ` · Max ${node.fields.priorMaxOutcomes.fieldsMaxDoorsRolled}/${node.fields.priorMaxOutcomes.maxDoorCageCeiling}`}
+              {`· Max ${node.fields.priorMaxOutcomes.fieldsMaxDoorsRolled}/${node.fields.priorMaxOutcomes.maxDoorCageCeiling}`}
             </span>
           )}
         </div>
