@@ -13,37 +13,23 @@ import { TimelineEventIcon } from './TimelineEventIcon';
 import type { BannerToggle } from './doorSummary';
 import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 
-/** A Fields cage's encounter starts as its Unlock row is taken, so it hangs under that row. */
-function startsWithItsUnlock(
-  boundary: WorkspaceRoomLifecycleBoundary,
-  fieldsCage: WorkspaceFieldsCageLabel | undefined,
-): boolean {
-  return (
-    fieldsCage !== undefined &&
-    (boundary.kind === 'encounterBegun' || boundary.kind === 'encounterStarted')
-  );
-}
-
 /** Render-only boundary row; timeline placement remains the projection's authority. */
 export function LifecycleBoundaryRow({
   boundary,
-  beginsEncounter,
+  underTrigger,
   label,
   controls,
   money,
   fieldsCage,
   identity,
-  phase,
   phaseTitle,
   toggle,
 }: {
   /** The marker and its phase shown, where the label names both. */
   readonly phaseTitle?: { readonly marker: string; readonly phase: string } | undefined;
-  /** The encounter phase this banner belongs to, for the phase's light grouping. */
-  readonly phase?: number;
   readonly boundary: WorkspaceRoomLifecycleBoundary;
-  /** Its phase's encounter begins here, which starts the phase's grouping. */
-  readonly beginsEncounter?: true;
+  /** An action row right above brought it about, so it hangs under that row. */
+  readonly underTrigger?: true;
   readonly label: string;
   /** The banner's own controls, flowing on its sentence after its identity. */
   readonly controls?: ReactNode;
@@ -56,7 +42,6 @@ export function LifecycleBoundaryRow({
   readonly toggle?: BannerToggle | undefined;
 }) {
   const dispatch = useAppDispatch();
-  const hooked = startsWithItsUnlock(boundary, fieldsCage);
   const accessibleLabel = boundarySpokenLabel(label, fieldsCage);
   // One hint tells the whole title: its cage, then its encounter's identity.
   const titleHint = [fieldsCage?.cage, identity?.label]
@@ -68,15 +53,9 @@ export function LifecycleBoundaryRow({
       data-lifecycle-boundary={boundary.key}
       data-boundary-kind={boundary.kind}
       data-reorder-anchor={boundary.key}
-      data-phase={phase}
       // A Fields cage's markers follow its Unlock row, which already names the cage.
       data-fields-cage={fieldsCage?.slot}
-      data-phase-start={
-        (beginsEncounter === true || boundary.kind === 'roomEntered') && phase !== undefined
-          ? ''
-          : undefined
-      }
-      hooked={hooked}
+      hooked={underTrigger === true}
       kind="boundary"
       marker={<TimelineEventIcon name={boundary.kind} />}
       money={money}

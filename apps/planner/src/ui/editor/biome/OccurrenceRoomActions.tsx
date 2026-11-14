@@ -403,27 +403,6 @@ export function RoomActionsWorkbench({
         ]
       : [],
   );
-  // Each encounter phase groups its Encounter line, its end and the pickups that follow.
-  const phaseByKey = new Map<string, number>();
-  {
-    let phase: number | undefined;
-    let count = 0;
-    for (const entry of visibleTimeline) {
-      if (entry.kind === 'boundary') {
-        if (entry.beginsEncounter === true || entry.boundary.kind === 'roomEntered')
-          phase = count++;
-        else if (
-          entry.boundary.kind !== 'encounterStarted' &&
-          entry.boundary.kind !== 'encounterEnd' &&
-          entry.boundary.kind !== 'bossDefeated'
-        )
-          phase = undefined;
-        if (phase !== undefined) phaseByKey.set(entry.boundary.key, phase);
-      } else if (entry.kind === 'action' && phase !== undefined) {
-        phaseByKey.set(entry.actionKey, phase);
-      }
-    }
-  }
   const endedPhaseKeys = new Set(
     visibleTimeline.flatMap((entry) =>
       entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd'
@@ -457,9 +436,6 @@ export function RoomActionsWorkbench({
       <Fragment key={entry.boundary.key}>
         <LifecycleBoundaryRow
           boundary={entry.boundary}
-          {...(phaseByKey.get(entry.boundary.key) === undefined
-            ? {}
-            : { phase: phaseByKey.get(entry.boundary.key)! })}
           {...(bannerControls.length === 0
             ? {}
             : {
@@ -476,7 +452,7 @@ export function RoomActionsWorkbench({
           phaseTitle={entry.phaseTitle}
           toggle={doorsOpen === undefined ? undefined : doorsOpenToggle(doorsOpen)}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
-          {...(entry.beginsEncounter === true ? { beginsEncounter: true } : {})}
+          {...(entry.triggerActionKey === undefined ? {} : { underTrigger: true })}
           {...(entry.supplement?.identityLabel !== undefined
             ? {
                 identity: {
@@ -664,7 +640,6 @@ export function RoomActionsWorkbench({
           data-door-press={doorPress === undefined ? undefined : ''}
           data-blocking-product={row.blockingProduct}
           data-reorder-anchor={row.rank === null ? undefined : row.key}
-          data-phase={phaseByKey.get(row.key)}
           data-in-order={row.rank === null ? 'false' : 'true'}
           data-room-action-key={row.key}
           {...findingAnchor(row.address)}
