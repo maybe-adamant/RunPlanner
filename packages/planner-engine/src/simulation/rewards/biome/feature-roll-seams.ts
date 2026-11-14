@@ -45,7 +45,7 @@ import {
 } from '../../commerce/feature-rolls';
 import {
   assessPurgingPoolList,
-  isPurgingPoolEligibleTrait,
+  isSellableGodTrait,
   type PurgingPoolInteraction,
 } from '../../commerce/purging-pool';
 import {
@@ -519,8 +519,7 @@ export function purgingPoolSale(
   const { branch } = state;
   const trait = branch?.state.traitHistory.equippedTraits[traitKey];
   const equipped =
-    branch === undefined ||
-    (trait !== undefined && isPurgingPoolEligibleTrait(context.catalog, trait));
+    branch === undefined || (trait !== undefined && isSellableGodTrait(context.catalog, trait));
   return listed && equipped
     ? { sold: { traitKey, owner }, findings: Object.freeze([]), featureRolls }
     : { findings: Object.freeze([]), featureRolls };

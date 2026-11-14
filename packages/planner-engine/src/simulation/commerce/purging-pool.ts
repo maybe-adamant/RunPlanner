@@ -149,8 +149,11 @@ function isShopAwareGodTrait(catalog: Catalog, traitKey: string): boolean {
   );
 }
 
-/** Shared source predicate for Pool generation and exact sale-prefix legality. */
-export function isPurgingPoolEligibleTrait(catalog: Catalog, trait: EquippedTrait): boolean {
+/**
+ * A god trait the game can sell (`IsGodTrait` for shops with a rarity): the
+ * Pool's source and Nemesis's boon trade read the same predicate.
+ */
+export function isSellableGodTrait(catalog: Catalog, trait: EquippedTrait): boolean {
   return trait.rarity !== undefined && isShopAwareGodTrait(catalog, trait.traitKey);
 }
 
@@ -182,7 +185,7 @@ export function assessPurgingPoolList(
     [
       ...new Set(
         Object.values(equippedTraits)
-          .filter((trait) => isPurgingPoolEligibleTrait(catalog, trait))
+          .filter((trait) => isSellableGodTrait(catalog, trait))
           .map((trait) => trait.traitKey),
       ),
     ].sort(),
