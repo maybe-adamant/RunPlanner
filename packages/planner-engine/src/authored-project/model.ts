@@ -69,12 +69,13 @@ export type AuthoredStartingRewardAcquisition = Omit<AuthoredRewardState, 'offer
 
 /**
  * A rerolled owner's redraws and the outcomes of its effective item. `results`
- * holds each press of this owner's reward, by reroll id, from its room or Hub;
- * `pressId` names the press whose item `acquisition` belongs to. The
- * acquisition is absent exactly when the owner cannot draw that press's reward.
+ * holds each press of this owner's reward, by reroll id, from its room or Hub,
+ * null while the owner has not set that press's result; `pressId` names the
+ * press whose item `acquisition` belongs to. The acquisition is absent exactly
+ * when the owner cannot draw that press's reward.
  */
 export interface RerolledRewardState {
-  readonly results: Readonly<Record<string, ResolvedRewardOffer>>;
+  readonly results: Readonly<Record<string, ResolvedRewardOffer | null>>;
   readonly pressId: string;
   readonly acquisition?: AuthoredStartingRewardAcquisition;
 }
@@ -190,7 +191,7 @@ export interface PurgingPoolState {
   readonly rerollTraitKeyBySlot?: Readonly<
     Record<string, Readonly<Partial<Record<PurgingPoolSlotKey, string>>>>
   >;
-  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  /** The `ChallengeSwitchBase` anchor it stands on; absent until first reach stores its stable draw. */
   readonly anchorId?: number;
 }
 
@@ -255,7 +256,7 @@ export interface HermesShrineState {
   readonly offerBySlot: Readonly<Record<HermesShrineSlotKey, HermesShrineInventoryOffer | null>>;
   /** Retained for repair even when its qualifying Travel Deal prefix changes. */
   readonly travelDealRefill?: HermesShrineTravelDealRefill;
-  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  /** The `ChallengeSwitchBase` anchor it stands on; absent until first reach stores its stable draw. */
   readonly anchorId?: number;
 }
 
@@ -289,7 +290,7 @@ export interface StygianWellState {
     Partial<Record<StygianWellGenerationKey, string | null>>
   >;
   readonly travelDealRefillKey?: string | null;
-  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  /** The `ChallengeSwitchBase` anchor it stands on; absent until first reach stores its stable draw. */
   readonly anchorId?: number;
 }
 
@@ -741,7 +742,7 @@ export interface AuthoredChallengeSwitch {
    * declaration decision key, as a room phase's `customizationByPhase` entry.
    */
   readonly customization?: Readonly<Record<string, AuthoredEncounterCustomization>>;
-  /** The `ChallengeSwitchBase` anchor it stands on; absent leaves native placement. */
+  /** The `ChallengeSwitchBase` anchor it stands on; absent until first reach stores its stable draw. */
   readonly anchorId?: number;
 }
 
@@ -800,7 +801,7 @@ export interface IxionGeneratedChaosOrigin {
 export interface ChaosAdditionalExit {
   readonly kind: 'chaos';
   readonly key: 'chaos';
-  /** One-based physical SecretPoint index; omission preserves native placement. */
+  /** One-based physical SecretPoint index; absent until stored, the engine publishing its stable draw. */
   readonly spawnPointIndex?: number;
   readonly occurrenceId: OccurrenceId;
   /** Present only when Ixion inserted this gate; omission means authored. */

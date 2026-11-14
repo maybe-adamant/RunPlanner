@@ -5442,10 +5442,7 @@
   ],
   "F/c6f79692-8463-41bd-97cd-59c2e7fc96b2 F_Opening02": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter | #1 | encounterStarted Encounter | encounterEnd Encounter | doorsOpened",
       "loot": ["roomEntered: interactIncomingReward:roomRewardPickup:self required #1"]
@@ -5453,10 +5450,7 @@
   ],
   "F/e9c1775e-a04b-4ed2-b749-7ef344614cbe F_Combat02": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > #2 > acquisitionPointReached(acquisitionEntry:[acquisitionSite,Underworld,F,[occurrence,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe],artificerSource:[incomingReward,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe]]:artificer:[incomingReward,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe]:self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | #2 | doorsOpened",
       "loot": [
@@ -5467,10 +5461,7 @@
   ],
   "F/230689a9-dea8-42c6-b04f-8ec9102223fd F_Combat03": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:source required #1"]
@@ -5478,10 +5469,7 @@
   ],
   "F/8bf76f54-d35c-44dc-a243-4e3d1f37300c F_Combat08": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > outgoingGenerationCheckpoint > #2 > wellPurchase(initial:secondLeft) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened | #2",
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:source required #1"]
@@ -5489,10 +5477,7 @@
   ],
   "F/62f19ad0-cfb9-4126-92b6-f810aa586612 F_Combat16": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > #2 > encounterInteractionReached(Encounter encounter) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | #2 Encounter | doorsOpened",
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
@@ -5500,10 +5485,7 @@
   ],
   "F/38689388-fd7d-4262-bc0c-c0951542cc3e F_MiniBoss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup source) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
       "loot": [
@@ -5514,10 +5496,7 @@
   ],
   "F/f4adb787-5267-4ce6-8712-e53744e505ff F_Reprieve01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter none) > producerPointReached(afterCombat) > #1 > fountainUsed > #2 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > #3 > acquisitionPointReached(acquisitionEntry:[acquisitionSite,Underworld,F,[occurrence,Underworld,F,f4adb787-5267-4ce6-8712-e53744e505ff],artificerSource:[incomingReward,Underworld,F,f4adb787-5267-4ce6-8712-e53744e505ff]]:artificer:[incomingReward,Underworld,F,f4adb787-5267-4ce6-8712-e53744e505ff]:self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | #1 | #2 | #3 | doorsOpened",
       "loot": [
@@ -5528,10 +5507,7 @@
   ],
   "F/c8e56805-e89c-407a-b916-ae40eaf9d710 F_Shop01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > outgoingGenerationCheckpoint > #1 > acquisitionPointReached(shopOffer:Boon) > #2 > acquisitionPointReached(acquisitionEntry:roomExit:travelDealRefill) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1 | #2",
       "loot": []
@@ -5539,10 +5515,7 @@
   ],
   "F/52dace01-83e9-49da-a9d3-75d6fadfaf68 C_Boss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > #2 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | #2 | doorsOpened",
       "loot": [
@@ -5552,10 +5525,7 @@
   ],
   "F/4fcb700b-b26a-49bf-8f93-5ec021de7235 F_Combat12": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > producerPointReached(beforeCombat) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > producerPointReached(afterCombat) > #1 > producerPointReached(roomRewardPickup) > producerRoleAdvanced(roomRewardPickup self) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(MetaProgress) > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | encounterEnd Encounter | #1 | doorsOpened",
       "loot": ["encounterEnd:Encounter: interactIncomingReward:roomRewardPickup:self required #1"]
@@ -5570,23 +5540,11 @@
         "roomEntered: interactIncomingReward:beforeCombat:chosenSource required #1",
         "encounterEnd:Encounter: interactIncomingReward:afterCombat:spurnedSource required #2"
       ]
-    },
-    {
-      "entries": ["checkpoint/underworld-f-duo-exchange-order"],
-      "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > #1 > producerPointReached(beforeCombat) > producerRoleAdvanced(beforeCombat chosenSource) > encounterStarted(Encounter) > encounterDepthAdvanced(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > #2 > producerPointReached(afterCombat) > producerRoleAdvanced(afterCombat spurnedSource) > producerPointReached(roomRewardPickup) > outgoingGenerationCheckpoint > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
-      "timeline": "roomEntered | encounterBegun Encounter | #1 | encounterStarted Encounter | encounterEnd Encounter | #2 | doorsOpened",
-      "loot": [
-        "roomEntered: interactIncomingReward:beforeCombat:chosenSource required #1",
-        "encounterEnd:Encounter: interactIncomingReward:afterCombat:spurnedSource required #2"
-      ]
     }
   ],
   "F/e157e3cb-37ae-40d9-92b0-f22621b672c3 F_PreBoss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > offerPointMaterialized(shopInventory) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > acquisitionPointReached(infernalContractPedestal) > #2 > acquisitionPointReached(shopOffer:Boon) > #3 > acquisitionPointReached(acquisitionEntry:roomExit:travelDealRefill) > roomCommitted > roomCountersAdvanced > enteredRewardStoreRecorded(RunProgress) > roomExited",
       "timeline": "roomEntered | doorsOpened | #1 | #2 | #3",
       "loot": []
@@ -5594,10 +5552,7 @@
   ],
   "F/e157e3cb-37ae-40d9-92b0-f22621b672c3:boss F_Boss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > bossDefeated(Encounter) > encounterCompleted(Encounter applied) > encounterEndEffectsApplied(Encounter) > #1 > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | encounterBegun Encounter merged | encounterStarted Encounter | bossDefeated Encounter | encounterEnd Encounter | #1 | doorsOpened",
       "loot": ["encounterEnd:Encounter: collectRequiredReward required #1"]
@@ -5605,10 +5560,7 @@
   ],
   "F/e157e3cb-37ae-40d9-92b0-f22621b672c3:postboss F_PostBoss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "walk": "roomPrepared > encounterRecorded(Encounter) > roomEntered > encounterStarted(Encounter) > encounterCompleted(Encounter none) > #1 > fountainUsed > #2 > roomCommitted > roomCountersAdvanced > roomExited",
       "timeline": "roomEntered | #1 | doorsOpened | #2",
       "loot": []

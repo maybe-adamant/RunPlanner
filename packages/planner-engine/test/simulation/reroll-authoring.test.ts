@@ -721,24 +721,29 @@ describe('Hub stays', () => {
     ).toMatchObject({ kind: 'unavailable', reason: 'targetNotReachable' });
   });
 
-  it('draw a placed press its result among the rewards its candidate supports', () => {
+  it('place a press with its result unset, its picker offering the pending rewards', () => {
     const pending = pendingRewards(base(), stay(3), slot('combat09'), HUB_REWARDS).map(key);
-    const drawn = rerollPressForProjectEvaluationAssembly(
-      catalog,
+    const press = rerollPressForProjectEvaluationAssembly(
       evaluate(base()),
       stay(3),
       slot('combat09'),
     );
-    expect(drawn).toMatchObject({
+    expect(press).toEqual({
       kind: 'InsertHubReroll',
       hub,
       hubSlotKey: 'combat09',
       index: rerollAppendIndex(base(), stay(3)),
     });
-    expect(pending).toContain(key(drawn!.reward));
-    // A closed door draws none.
+    const placed = applyProjectCommand(base(), catalog, press!);
+    const reroll = createHubRerollAddress(n, 'hub', 'r1');
+    expect(evaluate(placed).evaluation.issue).toMatchObject({
+      kind: 'incomplete',
+      reasons: [expect.objectContaining({ code: 'rerollResultMissing', origin: reroll })],
+    });
+    expect(supportedRerollRewards(placed, reroll, HUB_REWARDS).map(key)).toEqual(pending);
+    // A closed door takes none.
     expect(
-      rerollPressForProjectEvaluationAssembly(catalog, evaluate(base()), stay(1), slot('combat05')),
+      rerollPressForProjectEvaluationAssembly(evaluate(base()), stay(1), slot('combat05')),
     ).toBeUndefined();
   });
 

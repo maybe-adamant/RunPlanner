@@ -215,7 +215,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly address:
           | import('@run-planner/engine/authored-project').RoomActionAddress
           | import('@run-planner/engine/authored-project').HubRerollAddress;
-        readonly reward: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+        readonly reward?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
         readonly rewardTypes: WorkspaceRerollRewardTypes;
       }[];
     }

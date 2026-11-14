@@ -270,10 +270,6 @@ export interface ExecutionReroll {
 }
 
 /**
- * A room's horizontal flip and entry as derived from the previous room's exit
- * or authored where the game rolls; each is absent while the game decides it.
- */
-/**
  * An entered room's flip and entry; the entry is absent only for a room
  * without entry points. `derived` names the values the arrival door decides,
  * which the runtime checks instead of steering.
@@ -298,7 +294,7 @@ export interface ExecutionFieldsLayout {
   }[];
   readonly optionalRewards: readonly {
     readonly slotKey: string;
-    readonly pointId?: number;
+    readonly pointId: number;
     readonly reward: ExecutionReward;
   }[];
   readonly nemesisPointId?: number;
@@ -868,7 +864,7 @@ export interface ExecutionOverview {
       };
     }[];
     /** The `ChallengeSwitchBase` anchor it stands on. */
-    readonly anchorId?: number;
+    readonly anchorId: number;
   };
   readonly stygianWell?: {
     /** The initial roll's three slots. */
@@ -884,8 +880,8 @@ export interface ExecutionOverview {
       readonly offers: readonly ExecutionWellOffer[];
       readonly boughtSlots?: readonly ('healing' | 'secondLeft' | 'secondRight')[];
     }[];
-    /** The `ChallengeSwitchBase` anchor it stands on; absent on its room's pin. */
-    readonly anchorId?: number;
+    /** The `ChallengeSwitchBase` anchor it stands on, its room's pin when pinned. */
+    readonly anchorId: number;
   };
   readonly purgingPool?: {
     /** The entry list the room generates on entry, slot by slot. */
@@ -913,7 +909,7 @@ export interface ExecutionOverview {
       }[];
     }[];
     /** The `ChallengeSwitchBase` anchor it stands on. */
-    readonly anchorId?: number;
+    readonly anchorId: number;
   };
   readonly keepsakeRack?: { readonly keepsakeKey?: string };
   /**
@@ -930,7 +926,7 @@ export interface ExecutionOverview {
       readonly attributeKeys: readonly string[];
     };
     /** The `ChallengeSwitchBase` anchor it stands on. */
-    readonly anchorId?: number;
+    readonly anchorId: number;
   };
   /**
    * The doors observed locked when the room's doors open, in exit order
@@ -946,24 +942,32 @@ export interface ExecutionOverview {
     };
   }[];
   readonly fountain?: { readonly aromaticPhialTarget?: string };
-  /** The room's fixed or authored flip and entry; absent ones stay native. */
+  /** An entered room's flip and entry, each steered or, where `derived`, checked. */
   readonly layout?: ExecutionRoomLayout;
   /** Authored Fields points; cage identities stay on door targets. */
   readonly fields?: ExecutionFieldsLayout;
   /** Chaos gates and Zagreus Contract exits are room features, not normal doors. */
-  readonly additional?: readonly {
-    readonly kind: 'chaos' | 'zagreusContract';
-    /** Chaos only; one-based index into numerically sorted native SecretPoint IDs. */
-    readonly spawnPointIndex?: number;
-    readonly owner: string;
-    readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
-    readonly ixionOrigin?: {
-      readonly sourceBiomeKey: string;
-      readonly sourceOccurrenceId: string;
-      readonly generationKey: string;
-    };
-  }[];
+  readonly additional?: readonly ExecutionAdditionalExit[];
 }
+
+interface ExecutionAdditionalExitBase {
+  readonly owner: string;
+  readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
+  readonly ixionOrigin?: {
+    readonly sourceBiomeKey: string;
+    readonly sourceOccurrenceId: string;
+    readonly generationKey: string;
+  };
+}
+
+/** A Chaos gate, on its stored SecretPoint, or a Zagreus Contract exit, which has none. */
+export type ExecutionAdditionalExit =
+  | (ExecutionAdditionalExitBase & {
+      readonly kind: 'chaos';
+      /** One-based index into numerically sorted native SecretPoint IDs. */
+      readonly spawnPointIndex: number;
+    })
+  | (ExecutionAdditionalExitBase & { readonly kind: 'zagreusContract' });
 
 export type ExecutionResourcePolicy = ResourceExecutionPolicy;
 export type ExecutionResourcePointDisposition = ResourcePointDisposition;

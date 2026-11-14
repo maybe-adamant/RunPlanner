@@ -52,6 +52,7 @@ import type {
   ExecutionInfernalContract,
   ExecutionPhantomExit,
   ExecutionKeepsakeEquipResults,
+  ExecutionAdditionalExit,
   ExecutionOverview,
   ExecutionReward,
   ExecutionTimelineTransaction,
@@ -298,20 +299,8 @@ function executionAdditionalExits(
   if (batch === undefined || batch.additional.length === 0) return undefined;
   const declaration = catalog.rooms.byKey[room.gameName];
   return Object.freeze(
-    batch.additional.map((exit) => {
-      // A Chaos gate spawns at its stored point, else its draw.
-      const spawnPointIndex =
-        exit.key !== 'chaos' || declaration === undefined
-          ? exit.spawnPointIndex
-          : chaosGateSpawnPoint(declaration, semanticAddressKey(exit.origin), exit.spawnPointIndex);
-      if (exit.key === 'chaos' && spawnPointIndex === undefined)
-        throw new CompilerError(
-          'executionCoverageMissing',
-          `${room.gameName} publishes a Chaos gate without a spawn point`,
-        );
-      return Object.freeze({
-        kind: exit.key,
-        ...(spawnPointIndex === undefined ? {} : { spawnPointIndex }),
+    batch.additional.map((exit): ExecutionAdditionalExit => {
+      const base = {
         owner: semanticAddressKey(exit.origin),
         room: Object.freeze({
           id: exit.room.occurrenceId,
@@ -327,7 +316,20 @@ function executionAdditionalExits(
                 generationKey: exit.chaosOrigin.generationKey,
               }),
             }),
-      });
+      };
+      if (exit.key === 'zagreusContract')
+        return Object.freeze({ kind: 'zagreusContract' as const, ...base });
+      // A Chaos gate spawns at its stored point, else its draw.
+      const spawnPointIndex =
+        declaration === undefined
+          ? exit.spawnPointIndex
+          : chaosGateSpawnPoint(declaration, semanticAddressKey(exit.origin), exit.spawnPointIndex);
+      if (spawnPointIndex === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} publishes a Chaos gate without a spawn point`,
+        );
+      return Object.freeze({ kind: 'chaos' as const, spawnPointIndex, ...base });
     }),
   );
 }
@@ -570,7 +572,7 @@ function shrinePurchase(
 function executionHermesShrine(
   room: CanonicalAuthoredRoom,
   biome: PublishedBiomeEvaluation,
-): ExecutionOverview['hermesShrine'] | undefined {
+): Unanchored<'hermesShrine'> | undefined {
   const shrine = room.hermesShrine;
   if (shrine === undefined) return undefined;
   const owner = executionRoomOwnerKey(room);
@@ -665,7 +667,7 @@ function rankedFeatureRerolls(room: CanonicalAuthoredRoom, kind: FeatureRerollAc
 function executionStygianWell(
   room: CanonicalAuthoredRoom,
   biome: PublishedBiomeEvaluation,
-): ExecutionOverview['stygianWell'] | undefined {
+): Unanchored<'stygianWell'> | undefined {
   if (room.stygianWell === undefined) return undefined;
   const owner = executionRoomOwnerKey(room);
   const assessed = biome.rewards.stygianWellAssessments.find(
@@ -725,7 +727,7 @@ function executionPoolTraits(
 function executionPurgingPool(
   room: CanonicalAuthoredRoom,
   biome: PublishedBiomeEvaluation,
-): ExecutionOverview['purgingPool'] | undefined {
+): Unanchored<'purgingPool'> | undefined {
   const pool = room.purgingPool;
   if (pool === undefined) return undefined;
   const owner = executionRoomOwnerKey(room);
@@ -838,6 +840,12 @@ function executionRoomLayout(
   });
 }
 
+/** An anchor object's publication before `anchored` adds the anchor it stands on. */
+type Unanchored<Kind extends RoomAnchorObjectKind> = Omit<
+  NonNullable<ExecutionOverview[Kind]>,
+  'anchorId'
+>;
+
 /**
  * An object's publication with the anchor it stands on: stored, drawn or the
  * Well's pin. Only an over-capacity room leaves a published object no anchor,
@@ -848,7 +856,7 @@ function anchored<T extends object>(
   object: RoomAnchorObjectKind,
   published: T | undefined,
   anchors: ReadonlyMap<RoomAnchorObjectKind, RoomObjectAnchorPosition>,
-): T | undefined {
+): (T & { readonly anchorId: number }) | undefined {
   if (published === undefined) return undefined;
   const anchorId = anchors.get(object)?.anchorId;
   if (anchorId === undefined)
@@ -1070,7 +1078,7 @@ function executionChallengeSwitch(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
   biome: PublishedBiomeEvaluation,
-): ExecutionOverview['challengeSwitch'] {
+): Unanchored<'challengeSwitch'> | undefined {
   const observed = room.challengeSwitch;
   if (observed === undefined || !room.entered) return undefined;
   const prepared = biome.rewards.challengeSwitchEncounters?.find(

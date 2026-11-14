@@ -34,8 +34,9 @@ function hooks.attach(module, session, getState, report, room, highlights)
     module.hooks.wrap("OpenSellTraitMenu", "run-planner-pool-open", function(_, runtime, base, ...)
         local nativeRoom = _G.CurrentRun and _G.CurrentRun.CurrentRoom
         local opening = plannedPool(getState(runtime), nativeRoom)
-        if opening ~= nil and ((poolRerolls[nativeRoom] or 0) > 0 or handled(nativeRoom, 0)
-            or #poolInventory.openingTraits(opening.pool) == 0) then opening = nil end
+        if opening ~= nil and ((poolRerolls[nativeRoom] or 0) > 0 or handled(nativeRoom, 0)) then
+            opening = nil
+        end
         if opening ~= nil then opening.roll = 0 end
         local thread = currentThread()
         local prior = openings[thread]
@@ -60,8 +61,7 @@ function hooks.attach(module, session, getState, report, room, highlights)
             report(runtime)
             return base(...)
         end
-        local entry = planned.pool.rerolls[rerolls]
-        if #entry.traits == 0 or handled(nativeRoom, rerolls) then planned = nil end
+        if handled(nativeRoom, rerolls) then planned = nil end
         if planned ~= nil then planned.roll = rerolls end
         local thread = currentThread()
         local prior = openings[thread]

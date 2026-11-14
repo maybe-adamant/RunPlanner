@@ -733,7 +733,9 @@ zero.
 ### Reroll settlement
 
 Every reroll spend and every hidden draw is settled in the walk at its own
-point, never by a side pass. Door, cage, wheel and Hub presses settle at
+point, never by a side pass. A press whose result the owner has not set is a
+required missing input: the walk stops at it with its result's candidates,
+and publication, which takes complete plans only, never sees one. Door, cage, wheel and Hub presses settle at
 their rank as real store draws against every target's current reward; a
 rerolled owner then offers its current reward onward and acquires the reward
 held beside its first draw. A hidden return door settles at its room's first
@@ -888,7 +890,7 @@ Aetos or Gorgon finding at the fight's [Encounter outcome](ROOM_LIFECYCLE_MODEL.
 so its control stands reached.
 
 Reroll findings belong to the press, the roll or the screen that made the
-spend: an unavailable target, reward or roll at its press or roll action, an
+spend: an unset or unavailable target, reward or roll at its press or roll action, an
 over-spend at the spend that exceeded the pool, and an earlier-screen finding
 at that screen of the offer. A rerolled owner acquires its effective press's
 result, so it has no finding of its own. A hidden return door's unavailable

@@ -1,3 +1,4 @@
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -150,7 +151,7 @@ describe('ship wheels on the Timeline of the phase before their combat', () => {
       .sections.flatMap((section) => section.items)
       .map((item) => item.value);
     const intent = interaction.pressIntent(targetKey!)!;
-    const reward = intent.command.reward;
+    expect(intent.command).not.toHaveProperty('reward');
     const order = base.route.biomes
       .find((biome) => biome.biomeKey === 'O')!
       .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === ship)!.roomActions
@@ -160,8 +161,23 @@ describe('ship wheels on the Timeline of the phase before their combat', () => {
         (action) => action.kind === 'chooseRewardWheel' && action.wheelKey === 'wheel1',
       ),
     );
+    // Placed, the press's result is unset until its row's picker sets it.
+    const placed = applyProjectCommand(base, catalog, intent.command);
+    const unset = projectStructuredWorkspaceFixture(placed);
+    const unsetRow = wheelPhase(unset).wheelRerolls!.rows[0]!;
+    expect(unsetRow.reward).toBeUndefined();
+    const rowInteraction = unset.workspace.interactions.roomRerolls.get(list.interactionKey)!;
+    const resolver = rowInteraction.rowReward(unsetRow.key);
+    const reward = resolver
+      .model(await resolver.load(), 'type')
+      .sections.flatMap((section) => section.items)
+      .find((item) => !item.disabled)!.value as ResolvedRewardOffer;
     const projected = projectStructuredWorkspaceFixture(
-      applyProjectCommand(base, catalog, intent.command),
+      applyProjectCommand(
+        placed,
+        catalog,
+        rowInteraction.replaceRewardIntent(unsetRow.key, reward).command,
+      ),
     );
     const phase = wheelPhase(projected);
     expect(phase.wheelRerolls?.rows.map((row) => row.targetLabel)).toEqual(['Offer']);

@@ -32,7 +32,8 @@ export type WorkspaceDoorRerollTargetLabel = (
 ) =>
   | {
       readonly subject?: string;
-      readonly reward: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+      /** Absent while the press's result is unset. */
+      readonly reward?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
     }
   | undefined;
 
@@ -632,7 +633,8 @@ export function occurrenceActionLabelParts(
                 ?.offers.find((offer) => offer.key === target.offerKey)?.label
             : undefined
           : press?.subject;
-      if (press === undefined) return plain(subject === undefined ? 'Reroll' : `Reroll ${subject}`);
+      if (press?.reward === undefined)
+        return plain(subject === undefined ? 'Reroll' : `Reroll ${subject}`);
       const reward = timelineRewardLabel(catalog, press.reward);
       return plain(subject === undefined ? `Reroll → ${reward}` : `Reroll ${subject} → ${reward}`);
     }

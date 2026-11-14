@@ -39,23 +39,3 @@ export function stableChoice<T extends string | number | boolean>(
   }
   return best;
 }
-
-/**
- * Every choice, best first by the same score `stableChoice` ranks them with,
- * ties to the earlier choice: a draw that must also pass a later check takes
- * the first that does.
- */
-export function stableOrder<T>(
-  identity: string,
-  choices: readonly T[],
-  key: (choice: T) => string,
-): T[] {
-  return choices
-    .map((choice, index) => ({
-      choice,
-      index,
-      score: avalanche(stableHash(`${identity}|${key(choice)}`)),
-    }))
-    .sort((left, right) => right.score - left.score || left.index - right.index)
-    .map(({ choice }) => choice);
-}

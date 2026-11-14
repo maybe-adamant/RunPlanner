@@ -329,7 +329,10 @@ export function hubRerollOwner(
   return target === undefined ? undefined : createIncomingRewardAddress(biome, target.occurrenceId);
 }
 
-/** The reward a press drew, held by its owner; undefined while its target holds none. */
+/**
+ * The reward a press drew, held by its owner; undefined while its target holds
+ * none or the owner has not set it.
+ */
 export function rerollResult(
   topology: Pick<BiomeTopology, 'occurrences'>,
   owner: RerolledRewardOwner | undefined,
@@ -339,16 +342,30 @@ export function rerollResult(
   const occurrence = occurrenceIn(topology, owner.occurrenceId);
   return occurrence === undefined
     ? undefined
-    : rerolledRecordOf(occurrence, owner)?.results[rerollId];
+    : (rerolledRecordOf(occurrence, owner)?.results[rerollId] ?? undefined);
+}
+
+/** Whether a press's target holds its result slot, set or not. */
+export function rerollPressHeld(
+  topology: Pick<BiomeTopology, 'occurrences'>,
+  owner: RerolledRewardOwner | undefined,
+  rerollId: string,
+): boolean {
+  if (owner === undefined) return false;
+  const occurrence = occurrenceIn(topology, owner.occurrenceId);
+  const results =
+    occurrence === undefined ? undefined : rerolledRecordOf(occurrence, owner)?.results;
+  return results !== undefined && Object.hasOwn(results, rerollId);
 }
 
 /** One room press as the walk reads it: the target it redrew and the reward it drew. */
 export interface ResolvedRerollPress {
   readonly target: ResolvedRerollTarget;
-  readonly result: ResolvedRewardOffer;
+  /** Absent while the owner has not set the press's result yet. */
+  readonly result?: ResolvedRewardOffer;
 }
 
-/** A room's presses whose target holds their result, by reroll id. */
+/** A room's presses whose target holds their result, set or not, by reroll id. */
 export function resolvedRoomRerollPresses(
   biome: BiomeAddress,
   topology: Pick<BiomeTopology, 'occurrences'>,
@@ -360,13 +377,20 @@ export function resolvedRoomRerollPresses(
     const target = resolveRerollTarget(topology, action);
     if (target === undefined) continue;
     const owner = rerollTargetOwner(biome, source.occurrenceId, target);
+    if (!rerollPressHeld(topology, owner, action.rerollId)) continue;
     const result = rerollResult(topology, owner, action.rerollId);
-    if (result !== undefined) presses.set(action.rerollId, Object.freeze({ target, result }));
+    presses.set(
+      action.rerollId,
+      Object.freeze(result === undefined ? { target } : { target, result }),
+    );
   }
   return presses;
 }
 
-/** One owner's rerolls in authored order: its effective offer is the last one's result. */
+/**
+ * One owner's set rerolls in authored order: its effective offer is the last
+ * set one's result, the reward it holds before any later unset press.
+ */
 export interface OwnerRerolls {
   readonly owner: RerolledRewardOwner;
   readonly rerolls: readonly RerollPress[];
@@ -382,7 +406,8 @@ function collectOwners(
     { owner: RerolledRewardOwner; rerolls: RerollPress[]; effectiveOffer: ResolvedRewardOffer }
   >();
   for (const { owner, reroll } of entries) {
-    // A press its target holds no result for redraws nothing the walk reads.
+    // An unset press stops the walk before anything reads this owner past it, so
+    // the owner keeps its last set result; setting the press then replaces the item.
     const result = rerollResult(topology, owner, reroll.rerollId);
     if (result === undefined) continue;
     const key = semanticAddressKey(owner);
@@ -552,7 +577,7 @@ export function rerolledRewardOf(
 ): AuthoredRewardState | undefined {
   const record = rerolledRecordOf(occurrence, owner);
   const offer = record?.results[record.pressId];
-  return record?.acquisition === undefined || offer === undefined
+  return record?.acquisition === undefined || offer == null
     ? undefined
     : Object.freeze({ offer, ...record.acquisition });
 }

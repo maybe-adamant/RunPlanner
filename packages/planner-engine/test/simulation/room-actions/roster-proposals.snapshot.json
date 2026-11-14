@@ -6131,10 +6131,7 @@
   ],
   "F/c6f79692-8463-41bd-97cd-59c2e7fc96b2 F_Opening02": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#1 required | scope phase | remove"
       }
@@ -6142,10 +6139,7 @@
   ],
   "F/e9c1775e-a04b-4ed2-b749-7ef344614cbe F_Combat02": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#1 required | scope room | move - | move blocked 1: interactAcquisitionEntry:[acquisitionSite,Underworld,F,[occurrence,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe],artificerSource:[incomingReward,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe]]:artificer:[incomingReward,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe]:self afterAction interactIncomingReward:roomRewardPickup:self | remove",
         "interactAcquisitionEntry:[acquisitionSite,Underworld,F,[occurrence,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe],artificerSource:[incomingReward,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe]]:artificer:[incomingReward,Underworld,F,e9c1775e-a04b-4ed2-b749-7ef344614cbe]:self": "#2 required | scope room | move - | move blocked 0: afterAction interactIncomingReward:roomRewardPickup:self | remove"
@@ -6154,10 +6148,7 @@
   ],
   "F/230689a9-dea8-42c6-b04f-8ec9102223fd F_Combat03": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:source": "#1 required | scope room | remove"
       }
@@ -6165,10 +6156,7 @@
   ],
   "F/2face299-6b3a-42bf-a2b7-be9c947ae0ba F_Combat04": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
       }
@@ -6176,10 +6164,7 @@
   ],
   "F/8bf76f54-d35c-44dc-a243-4e3d1f37300c F_Combat08": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:source": "#1 required | scope room | move - | move blocked 1: window after purchaseStygianWellOffer:initial:secondLeft | remove",
         "purchaseStygianWellOffer:initial:secondLeft": "#2 optional | move - | move blocked 0: requiredFirst interactIncomingReward:roomRewardPickup:source"
@@ -6188,10 +6173,7 @@
   ],
   "F/6c147480-a9ed-456c-a186-3a0010547d96 F_Combat01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
       }
@@ -6199,10 +6181,7 @@
   ],
   "F/62f19ad0-cfb9-4126-92b6-f810aa586612 F_Combat16": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#1 required | scope room | move 1 | remove",
         "interactEncounter:Encounter": "#2 required | scope room | move 0 | remove"
@@ -6211,10 +6190,7 @@
   ],
   "F/f65793c7-01e6-4a16-bc36-e635d797c017 F_Combat04": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
       }
@@ -6222,10 +6198,7 @@
   ],
   "F/e9ba4e0f-df31-48f8-a24e-78d856468b87 F_MiniBoss03": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:source": "#1 required | scope room | remove"
       }
@@ -6233,10 +6206,7 @@
   ],
   "F/38689388-fd7d-4262-bc0c-c0951542cc3e F_MiniBoss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:source": "#1 required | scope room | remove",
         "interactAcquisitionEntry:traitGenerated:[traitOffer,Underworld,F,[incomingReward,Underworld,F,38689388-fd7d-4262-bc0c-c0951542cc3e],source]:option3:smallGold": "#- optional | insert 1 | insert blocked 0: afterAction interactIncomingReward:roomRewardPickup:source",
@@ -6250,10 +6220,7 @@
   ],
   "F/f4adb787-5267-4ce6-8712-e53744e505ff F_Reprieve01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "useFountain": "#1 required | scope room | move 1,2 | remove",
         "interactIncomingReward:roomRewardPickup:self": "#2 required | scope room | move 0 | move blocked 2: interactAcquisitionEntry:[acquisitionSite,Underworld,F,[occurrence,Underworld,F,f4adb787-5267-4ce6-8712-e53744e505ff],artificerSource:[incomingReward,Underworld,F,f4adb787-5267-4ce6-8712-e53744e505ff]]:artificer:[incomingReward,Underworld,F,f4adb787-5267-4ce6-8712-e53744e505ff]:self afterAction interactIncomingReward:roomRewardPickup:self | remove",
@@ -6263,10 +6230,7 @@
   ],
   "F/c8e56805-e89c-407a-b916-ae40eaf9d710 F_Shop01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactShopOffer:Boon": "#1 optional | move - | move blocked 1: interactAcquisitionEntry:roomExit:travelDealRefill afterAction interactShopOffer:Boon",
         "interactAcquisitionEntry:roomExit:travelDealRefill": "#2 optional | move - | move blocked 0: afterAction interactShopOffer:Boon | remove"
@@ -6275,10 +6239,7 @@
   ],
   "F/da19f7d1-b399-4a5b-a863-dcb23fed9534 F_Combat18": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
       }
@@ -6286,10 +6247,7 @@
   ],
   "F/6488b1ea-f513-400c-8106-8fc9df5e321a F_Combat11": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
       }
@@ -6297,10 +6255,7 @@
   ],
   "F/a4cb4557-9621-429b-9e89-f4cff25c52d8 F_Combat07": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
       }
@@ -6308,10 +6263,7 @@
   ],
   "F/52dace01-83e9-49da-a9d3-75d6fadfaf68 C_Boss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "collectRequiredReward": "#1 required | scope room | move 1 | remove",
         "interactIncomingReward:roomRewardPickup:self": "#2 required | scope room | move 0 | remove"
@@ -6320,10 +6272,7 @@
   ],
   "F/4fcb700b-b26a-49bf-8f93-5ec021de7235 F_Combat12": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#1 required | scope room | remove"
       }
@@ -6331,10 +6280,7 @@
   ],
   "F/b9b9f7d6-a680-4ff9-81fa-54682f4d59fb F_Combat07": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#1 required | scope room | remove"
       }
@@ -6350,21 +6296,11 @@
         "purchaseStygianWellOffer:travelDealRefill": "#4 optional | move 4 | move blocked 0: afterAction purchaseStygianWellOffer:initial:secondRight, requiredFirst interactIncomingReward:beforeCombat:chosenSource | move blocked 1: afterAction purchaseStygianWellOffer:initial:secondRight, requiredFirst interactIncomingReward:afterCombat:spurnedSource | move blocked 2: afterAction purchaseStygianWellOffer:initial:secondRight",
         "purchaseStygianWellOffer:initial:secondLeft": "#5 optional | move 2,3 | move blocked 0: requiredFirst interactIncomingReward:beforeCombat:chosenSource | move blocked 1: requiredFirst interactIncomingReward:afterCombat:spurnedSource"
       }
-    },
-    {
-      "entries": ["checkpoint/underworld-f-duo-exchange-order"],
-      "rows": {
-        "interactIncomingReward:beforeCombat:chosenSource": "#1 required | scope phase | move - | move blocked 1: window after interactIncomingReward:afterCombat:spurnedSource | remove",
-        "interactIncomingReward:afterCombat:spurnedSource": "#2 required | scope room | move - | move blocked 0: requiredFirst interactIncomingReward:beforeCombat:chosenSource | remove"
-      }
     }
   ],
   "F/e157e3cb-37ae-40d9-92b0-f22621b672c3 F_PreBoss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactInfernalContractPedestal": "#1 optional | move 1,2",
         "interactShopOffer:Boon": "#2 optional | move 0 | move blocked 2: interactAcquisitionEntry:roomExit:travelDealRefill afterAction interactShopOffer:Boon",
@@ -6374,10 +6310,7 @@
   ],
   "F/4931c45c-9744-48f1-a369-220e93786a4d F_PreBoss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
       }
@@ -6385,19 +6318,13 @@
   ],
   "F/e157e3cb-37ae-40d9-92b0-f22621b672c3:boss F_Boss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": { "collectRequiredReward": "#1 required | scope room | remove" }
     }
   ],
   "F/e157e3cb-37ae-40d9-92b0-f22621b672c3:postboss F_PostBoss01": [
     {
-      "entries": [
-        "checkpoint/underworld-f-trait-order-checks",
-        "checkpoint/underworld-f-duo-exchange-order"
-      ],
+      "entries": ["checkpoint/underworld-f-trait-order-checks"],
       "rows": {
         "useFountain": "#1 required | scope room | move 1 | remove",
         "interactKeepsakeRack": "#2 optional | move 0 | remove",

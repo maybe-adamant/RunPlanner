@@ -22,6 +22,7 @@ import {
   projectStructuredWorkspaceFixture,
 } from '@planner-test/fixtures/structuredWorkspace';
 import { takeLive } from '@planner-test/support/live-row';
+import { pressWithPickedResult } from '@planner-test/support/reroll-press';
 import { renderWorkspace } from '@planner-test/support/biome-workbench';
 
 afterEach(() => cleanup());
@@ -104,16 +105,14 @@ describe('room map door steps', () => {
     );
     if (batch?.kind !== 'ordinaryBatch' || batch.rerolls === undefined)
       throw new Error('the source room has no Rerolls list');
-    const interaction = projected.workspace.interactions.roomRerolls.get(
-      batch.rerolls.interactionKey,
-    )!;
     const door1Key = semanticAddressKey(
       createIncomingRewardAddress(f, createOccurrenceId('golden-f-b3-e1')),
     );
-    const rerolled: ProjectDocument = applyProjectCommand(
+    const rerolled: ProjectDocument = await pressWithPickedResult(
       withCard,
-      catalog,
-      interaction.pressIntent(door1Key)!.command,
+      batch.rerolls.interactionKey,
+      door1Key,
+      batch.targets[0]?.door.offerRewardSurface.rewards[0]?.offer,
     );
 
     const { application, user } = renderWorkspace(rerolled, 'Underworld', 'F');

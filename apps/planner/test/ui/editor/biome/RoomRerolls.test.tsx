@@ -58,8 +58,8 @@ function pressRows(): HTMLElement[] {
 }
 
 /**
- * Appends a press on its door: it is placed with a drawn reward, and its row's reward picker
- * opens, which is closed here.
+ * Appends a press on its door: it is placed with its result unset, and its row's reward
+ * picker opens, where the first offered reward is taken, step by step.
  */
 async function appendPress(view: ReturnType<typeof renderWorkspace>, door: RegExp) {
   const count = presses(view.application).length;
@@ -71,7 +71,12 @@ async function appendPress(view: ReturnType<typeof renderWorkspace>, door: RegEx
     .at(-1)!
     .querySelector<HTMLElement>('[data-row-choice="rerollResult"] button');
   expect(opened?.getAttribute('aria-expanded')).toBe('true');
-  await view.user.keyboard('{Escape}');
+  for (let step = 0; step < 4 && screen.queryByRole('listbox') !== null; step += 1) {
+    const option = within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .find((candidate) => candidate.getAttribute('aria-disabled') !== 'true')!;
+    await view.user.click(option);
+  }
   await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
 }
 
@@ -83,7 +88,7 @@ describe('RoomRerolls', () => {
       'F',
     );
     await openDoors(view);
-    // Choosing the door places the press with a drawn reward; its row then opens on it.
+    // Choosing the door places the press, its result unset; its row then opens on it.
     await appendPress(view, /^Door 2/);
     const [row] = pressRows();
     expect(within(row!).getByText('Reroll')).toBeTruthy();

@@ -342,6 +342,7 @@ export {
   rerollAppendIndex,
   rerolledRecordOf,
   rerolledRewardOf,
+  rerollPressHeld,
   rerollResult,
   rerollSurfaceKey,
   rerollTargetOwner,

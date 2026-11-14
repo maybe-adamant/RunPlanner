@@ -203,6 +203,9 @@ export const findingCopy = {
   rerollTargetUnavailable: {
     title: 'This reward cannot be rerolled',
   },
+  rerollResultMissing: {
+    title: 'Choose the rerolled reward',
+  },
   rerollPoolExceeded: {
     title: 'Not enough rerolls left',
   },
@@ -1351,6 +1354,7 @@ const countedTitles: Partial<Record<FindingCode, (count: number) => string>> = {
   fieldsSpatialPointUnavailable: (n) => `${n} Fields positions unavailable`,
   fieldsSpatialPointDuplicate: (n) => `${n} Fields positions already used`,
   rewardMissing: (n) => `Choose ${n} rewards`,
+  rerollResultMissing: (n) => `Choose ${n} rerolled rewards`,
   targetMissing: (n) => `Choose ${n} rooms`,
   traitOfferMissing: (n) => `Choose ${n} trait offers`,
   roomActionOrderUnavailable: (n) => `${n} actions out of order`,

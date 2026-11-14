@@ -1091,14 +1091,18 @@ export function decodeRerolledRewardState(
     Object.fromEntries(
       resultKeys.map((rerollId) => [
         decodeRerollId(rerollId, `${path}.results.${rerollId}`),
-        decodeResolvedRewardOffer(rawResults[rerollId], catalog, `${path}.results.${rerollId}`),
+        rawResults[rerollId] === null
+          ? null
+          : decodeResolvedRewardOffer(rawResults[rerollId], catalog, `${path}.results.${rerollId}`),
       ]),
     ),
   );
   const pressId = decodeRerollId(raw.pressId, `${path}.pressId`);
-  const offer = results[pressId];
-  if (offer === undefined) failProjectDocument(`${path}.pressId`, 'must name one of its results');
+  if (!Object.hasOwn(results, pressId))
+    failProjectDocument(`${path}.pressId`, 'must name one of its results');
   if (!hasAcquisition) return Object.freeze({ results, pressId });
+  const offer = results[pressId];
+  if (offer == null) failProjectDocument(`${path}.acquisition`, 'needs its press result');
   if (!drawable(offer))
     failProjectDocument(`${path}.acquisition`, `${offer.rewardType} is not drawn here`);
   const rawAcquisition = expectRecord(raw.acquisition, `${path}.acquisition`);

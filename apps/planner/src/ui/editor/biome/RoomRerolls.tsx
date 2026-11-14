@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
   requireWorkspaceInteraction,
@@ -107,7 +107,6 @@ export function RoomRerolls({
   const executeIntent = useCommandIntent();
   const findingTarget = useFindingTarget();
   const findingMark = useFindingMark();
-  const [announcement, setAnnouncement] = useState('');
   const list = useRef<HTMLElement>(null);
   // The placed press's result opens once the closed list has handed back focus; earlier, the
   // returning focus would dismiss it. True when it took focus.
@@ -118,10 +117,7 @@ export function RoomRerolls({
   const noun = targetNouns[rerolls.targetNoun];
   const press = (targetKey: string) => {
     const intent = interaction.pressIntent(targetKey);
-    if (intent === undefined) {
-      setAnnouncement('No reward can be drawn there.');
-      return;
-    }
+    if (intent === undefined) return;
     const before = new Set(rerolls.rows.map((row) => row.key));
     executeIntent(intent);
     // The placed press is the result the list shows now that it did not before.
@@ -163,7 +159,7 @@ export function RoomRerolls({
           findingTarget={findingTarget(row.address)}
           id={semanticOwnerControlElementId(row.address)}
           label=""
-          offer={row.reward}
+          offer={row.reward ?? null}
           onReplace={(reward) => executeIntent(interaction.replaceRewardIntent(row.key, reward))}
           resolver={interaction.rowReward(row.key)}
           triggerSize="icon"
@@ -209,9 +205,6 @@ export function RoomRerolls({
       {...(order === undefined ? {} : { 'data-movable': 'true' })}
       ref={list}
     >
-      <p aria-live="polite" className="visually-hidden">
-        {announcement}
-      </p>
       <header className="room-rerolls-heading">
         {heading === undefined ? <h4 className="visually-hidden">{label}</h4> : heading}
         {rerolls.poolRemaining === undefined || !showCount ? null : (
@@ -269,7 +262,7 @@ export function DoorRerollRowReward({
             findingTarget={findingTarget(row.address)}
             id={semanticOwnerControlElementId(row.address)}
             label=""
-            offer={row.reward}
+            offer={row.reward ?? null}
             onReplace={(reward) => executeIntent(interaction.replaceRewardIntent(row.key, reward))}
             resolver={interaction.rowReward(row.key)}
             triggerSize="icon"

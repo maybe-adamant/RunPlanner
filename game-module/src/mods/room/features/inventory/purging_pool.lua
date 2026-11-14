@@ -39,7 +39,11 @@ function poolInventory.steer(occurrence, nativeRoom, roll)
     if pool == nil or type(nativeRoom) ~= "table" then return true end
     local entry = (roll or 0) == 0 and { traits = poolInventory.openingTraits(pool) }
         or (pool.rerolls and pool.rerolls[roll])
-    if entry == nil or #(entry.traits or {}) == 0 then return true end
+    if entry == nil then return true end
+    -- An empty list is checked too: the live set must then hold no eligible trait.
+    if #entry.traits == 0 and nativeRoom.SellValues == nil and nativeRoom.SellOptions == nil then
+        return true
+    end
     if type(nativeRoom.SellValues) ~= "table" then
         return nil, { checkpoint = "purging-pool-inventory", expected = "native SellValues", observed = nil }
     end

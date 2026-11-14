@@ -929,6 +929,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'rewardPayloadInvalid':
       return { kind: 'payload', message: 'These reward details are not valid.' };
     case 'rewardMissing':
+    case 'rerollResultMissing':
       return { kind: 'reward', message: 'Choose this reward.' };
     case 'phantomExitPlaceholderUnavailable':
       return { kind: 'reward', message: 'This room cannot fill the hidden door here.' };
