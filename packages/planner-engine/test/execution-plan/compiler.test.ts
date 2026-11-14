@@ -78,7 +78,7 @@ import { fingerprint } from '../../src/execution-plan/fingerprint';
 import type { ExecutionSemanticProduct } from '../../src/execution-plan/model';
 import fOpeningFixtureFile from './fixtures/f-opening.execution.json';
 import fgFixtureFile from './fixtures/fg.execution.json';
-import fgAnomalyFixtureFile from './fixtures/fg-anomaly.execution.json';
+import fgAnomalyRosterFixtureFile from './fixtures/fg-anomaly-roster.execution.json';
 import fgIxionChaosFixtureFile from './fixtures/fg-ixion-chaos.execution.json';
 import underworldFGHFixtureFile from './fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixtureFile from './fixtures/underworld-fghi.execution.json';
@@ -103,7 +103,7 @@ import { landedSteadyGrowthOutcome } from '../support/timed-outcomes';
 
 const fOpeningFixture = currentSchemaWire(fOpeningFixtureFile);
 const fgFixture = currentSchemaWire(fgFixtureFile);
-const fgAnomalyFixture = currentSchemaWire(fgAnomalyFixtureFile);
+const fgAnomalyRosterFixture = currentSchemaWire(fgAnomalyRosterFixtureFile);
 const fgIxionChaosFixture = currentSchemaWire(fgIxionChaosFixtureFile);
 const underworldFGHFixture = currentSchemaWire(underworldFGHFixtureFile);
 const underworldFGHIFixture = currentSchemaWire(underworldFGHIFixtureFile);
@@ -3050,7 +3050,7 @@ describe('execution-plan compiler and codec', () => {
   it('rejects the G-only Anomaly payload on an F occurrence', () => {
     const malformed = JSON.parse(JSON.stringify(fOpeningFixture)) as Record<string, unknown>;
     const occurrences = malformed.occurrences as Array<Record<string, unknown>>;
-    const anomalyOccurrence = fgAnomalyFixture.occurrences.find(
+    const anomalyOccurrence = fgAnomalyRosterFixture.occurrences.find(
       (occurrence) => occurrence.anomaly !== undefined,
     );
     if (anomalyOccurrence?.anomaly === undefined) throw new Error('fixture lacks Anomaly payload');
@@ -3060,7 +3060,7 @@ describe('execution-plan compiler and codec', () => {
   });
 
   it('rejects unknown fields in the strict Anomaly payload union', () => {
-    const malformed = JSON.parse(JSON.stringify(fgAnomalyFixture)) as {
+    const malformed = JSON.parse(JSON.stringify(fgAnomalyRosterFixture)) as {
       occurrences: Array<{ anomaly?: Record<string, unknown> }>;
     };
     const occurrence = malformed.occurrences.find((entry) => entry.anomaly !== undefined);

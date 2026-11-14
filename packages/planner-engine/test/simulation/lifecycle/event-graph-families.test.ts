@@ -667,7 +667,9 @@ describe('Anomaly', () => {
     (success, loot) => {
       const room = observe(
         corpusRun(
-          success ? 'execution/fg-anomaly' : 'underworld/createCompleteFGAnomalyProject(false)',
+          success
+            ? 'checkpoint/underworld-g-anomaly-roster'
+            : 'underworld/createCompleteFGAnomalyProject(false)',
         ),
         gAnomaly,
       );

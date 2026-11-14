@@ -48,7 +48,7 @@ describe('encounter markers', () => {
   });
 
   it('splits an Anomaly, whose Combat observes its capture', () => {
-    const { timeline } = room('execution/fg-anomaly', 'B_Combat01');
+    const { timeline } = room('checkpoint/underworld-g-anomaly-roster', 'B_Combat01');
     expect(markers(timeline, 'Encounter')).toBe('split');
   });
 
