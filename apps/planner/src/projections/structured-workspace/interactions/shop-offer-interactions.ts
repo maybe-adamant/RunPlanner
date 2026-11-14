@@ -179,7 +179,6 @@ export function bindShopOfferInteractions(input: {
                       : 'Items',
                 label: pickerItemLabel(input.catalog, optionLabel, candidate.value),
                 selected: selected !== null && sameSelection(candidate.value, selected),
-                ...conditionFor(candidate.value.optionKey),
               });
             },
             selectionKey,

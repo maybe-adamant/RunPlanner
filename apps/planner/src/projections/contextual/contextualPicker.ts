@@ -4,7 +4,6 @@ import type {
   ContextualOptionState,
   ContextualOptionPresentation,
 } from './contextualOptions';
-import type { ShopOptionEntry } from '@run-planner/engine/reward-kernel';
 import type {
   CandidateOptionProjection,
   CandidateProjectionEvaluation,
@@ -26,8 +25,6 @@ export interface ContextualPickerItem<T> {
   readonly count?: number;
   /** Up to two reason lines, most direct first. */
   readonly explanations?: readonly string[];
-  /** A game offer condition on hero state the plan does not track. */
-  readonly offerCondition?: ShopOptionEntry['unmodeledOfferCondition'];
 }
 
 export interface ContextualPickerSection<T> {
@@ -130,7 +127,6 @@ function pickerItem<T>(option: ContextualOption<T>, keyFor: (value: T) => string
     ...(option.explanations === undefined
       ? {}
       : { explanations: Object.freeze(option.explanations.map((reason) => reason.message)) }),
-    ...(option.offerCondition === undefined ? {} : { offerCondition: option.offerCondition }),
   });
 }
 

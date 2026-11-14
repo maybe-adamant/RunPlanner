@@ -2518,7 +2518,7 @@ export const galleryCases: readonly GalleryCase[] = [
   ...lastStandMarkCases(),
 ];
 
-/** The warning mark on lines holding an item offered only while the hero is missing a Last Stand. */
+/** The warning mark where an item offered only while the hero is missing a Last Stand is decided. */
 function lastStandMarkCases(): readonly GalleryCase[] {
   const wellRoom = ['F', 'golden-f-b5-e1'] as const;
   const shrineRoom = ['O', 'surface-o-combat02'] as const;
@@ -2561,8 +2561,9 @@ function lastStandMarkCases(): readonly GalleryCase[] {
     },
     {
       id: 'last-stand-shrine-purchase',
-      label: 'Last Stand mark: Death Defiance bought at a Hermes Shrine',
-      shows: ['Shrine purchase row mark'],
+      label:
+        'Last Stand mark: Death Defiance bought at a Hermes Shrine, unmarked where it is taken',
+      shows: ['Shrine purchase row without a mark'],
       project: loadSurfaceNOPQCheckpoint,
       commands: [
         placeAnchorObject(...shrinePurchaseRoom, 'challengeSwitch'),
@@ -2604,7 +2605,7 @@ function lastStandMarkCases(): readonly GalleryCase[] {
     {
       id: 'last-stand-well-twist',
       label: 'Last Stand mark: a Fateful Twist that turns into Kiss of Styx',
-      shows: ['Well purchase row mark', 'Twist result'],
+      shows: ['Twist result mark'],
       project: loadUnderworldTwistScyllaCheckpoint,
       commands: [
         (project) => ({

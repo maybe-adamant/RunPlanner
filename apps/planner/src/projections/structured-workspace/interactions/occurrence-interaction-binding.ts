@@ -977,7 +977,6 @@ export function bindOccurrenceLocalInteractions(
                 choices: slot.candidateRewards.map((reward) => ({
                   label: reward.label,
                   value: reward.rewardType,
-                  ...shrineCondition(reward.rewardType),
                 })),
                 selected: slot.rewardType ?? undefined,
                 selectedLabel: slot.rewardLabel,
@@ -1034,7 +1033,6 @@ export function bindOccurrenceLocalInteractions(
                 choices: slot.candidateItems.map((item) => ({
                   label: item.label,
                   value: item.key,
-                  ...wellCondition(item.key),
                 })),
                 selected: slot.itemKey ?? undefined,
                 selectedLabel: slot.itemLabel,
@@ -1074,7 +1072,6 @@ export function bindOccurrenceLocalInteractions(
                 choices: twist.candidateItems.map((item) => ({
                   label: item.label,
                   value: item.key,
-                  ...wellCondition(item.key),
                 })),
                 selected: twist.itemKey ?? undefined,
                 selectedLabel:

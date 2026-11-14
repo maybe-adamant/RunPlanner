@@ -54,7 +54,6 @@ import { UnlockedDoor } from './DecisionWorkbench';
 import { UnlockExitFightControl } from './UnlockExitFightControl';
 import { RewardWheelWorkbench, SelectWheelRow } from './locals/RewardWheelWorkbench';
 import { wheelOfferChips } from './doorSummary';
-import { OfferConditionMark } from '@planner/ui/feedback/OfferConditionMark';
 import { NemesisEventPending, NemesisInteractionSentence } from './NemesisEventEditor';
 import { StygianWellTwistChips } from './commerce/StygianWellTwist';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
@@ -854,7 +853,6 @@ export function RoomActionsWorkbench({
                 }
                 rows={actions.rows}
               />
-              <OfferConditionMark conditions={[row.offerCondition]} />
             </>
           }
           money={
