@@ -23,7 +23,6 @@ import type { FindingRegionEntry, HistoryFindingChronology } from '../../finding
 import type { BiomeRewardSimulation } from '../model';
 import type { RoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';
 import type { RewardProducerCandidateArtifacts } from '../producer-frontiers';
-import type { RerollSurfaceCandidateArtifacts } from './reroll-surfaces';
 
 export interface BiomeRewardEvaluationAssembly {
   readonly simulation: BiomeRewardSimulation;
@@ -43,7 +42,6 @@ export interface BiomeRewardEvaluationAssembly {
   readonly hermesShrineArtifacts: HermesShrineCandidateArtifacts;
   readonly stygianWellArtifacts: StygianWellCandidateArtifacts;
   readonly objectInteractionArtifacts: RoomObjectInteractionArtifacts;
-  readonly rerollSurfaceArtifacts: RerollSurfaceCandidateArtifacts;
   readonly fountainRarityArtifacts: FountainRarityCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
   /** Each entered room's vow ranks, read by its encounter compositions. */

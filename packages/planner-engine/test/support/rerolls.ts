@@ -2,15 +2,21 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createHubRerollAddress,
   createIncomingRewardAddress,
+  createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
   createTraitOfferAddress,
+  rerollActionKey,
   semanticAddressKey,
   type AuthoredTraitOfferTraits,
   type TraitOptionKey,
+  type HubDecision,
   type HubRerollAddress,
   type ProjectDocument,
+  type RerollPressTarget,
+  type RerollSurface,
   type AuthoredTraitOffer,
   type RoomActionAddress,
   type TraitOfferAddress,
@@ -21,6 +27,7 @@ import {
 } from '@run-planner/engine/reward-kernel';
 import {
   createPreparedProjectCandidateSession,
+  rerollPressForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtures/underworld';
@@ -89,6 +96,64 @@ export function supportedRerollRewards(
       const result = session.evaluate({ kind: 'rerollReward', reroll, value });
       return result.kind === 'rerollReward' && result.result.supported;
     });
+}
+
+/**
+ * Places a press on a surface with its result unset, as the editor does, and
+ * returns every reward of the given types its picker then accepts. Undefined
+ * when the surface takes no press on the target.
+ */
+export function placedPressRewards(
+  project: ProjectDocument,
+  surface: RerollSurface,
+  target: RerollPressTarget,
+  rewardTypes: readonly string[],
+):
+  | {
+      readonly placed: ProjectDocument;
+      readonly reroll: RoomActionAddress | HubRerollAddress;
+      readonly rewards: readonly ResolvedRewardOffer[];
+    }
+  | undefined {
+  const command = rerollPressForProjectEvaluationAssembly(
+    simulateProjectAssembly(catalog, project),
+    surface,
+    target,
+  );
+  if (command === undefined) return undefined;
+  const placed = applyProjectCommand(project, catalog, command);
+  const owner =
+    surface.kind === 'doors'
+      ? surface.occurrence
+      : surface.kind === 'rewardWheel'
+        ? surface.wheel
+        : surface.hub;
+  const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
+  const topology = placed.route.biomes.find(
+    (entry) => entry.biomeKey === owner.biomeKey,
+  )!.topology!;
+  let reroll: RoomActionAddress | HubRerollAddress;
+  if (command.kind === 'InsertHubReroll') {
+    const hub = topology.decisions.find(
+      (decision): decision is HubDecision =>
+        decision.kind === 'hub' && decision.hubKey === command.hub.hubKey,
+    )!;
+    const action = hub.actions[command.index]!;
+    if (action.kind !== 'reroll') throw new Error('the press was not placed at its index');
+    reroll = createHubRerollAddress(biome, hub.hubKey, action.rerollId);
+  } else {
+    const occurrence = topology.occurrences.find(
+      (candidate) => candidate.occurrenceId === command.occurrence.occurrenceId,
+    )!;
+    const action = occurrence.roomActions.order[command.index]!;
+    if (action.kind !== 'reroll') throw new Error('the press was not placed at its index');
+    reroll = createRoomActionAddress(
+      biome,
+      occurrence.occurrenceId,
+      rerollActionKey(action.rerollId),
+    );
+  }
+  return { placed, reroll, rewards: supportedRerollRewards(placed, reroll, rewardTypes) };
 }
 
 /** The first reward of a store the exact candidate session accepts for a press. */

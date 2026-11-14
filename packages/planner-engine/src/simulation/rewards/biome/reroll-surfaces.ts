@@ -1,31 +1,21 @@
 import {
   createBiomeAddress,
   createHubDecisionAddress,
-  createHubRerollAddress,
-  createRoomActionAddress,
   semanticAddressKey,
-  type HubRerollAddress,
-  type RoomActionAddress,
 } from '../../../authored-project/addresses';
 import {
-  nextRerollId,
   rerollSurfaceKey,
   type RerollPressTarget,
   type RerollSurface,
 } from '../../../authored-project/rerolls';
 import type { ResolvedRerollTarget } from '../../../authored-project/model';
-import { rerollActionKey } from '../../../authored-project/room-actions/key';
-import type { ResolvedRewardOffer } from '../../../reward-kernel';
 import type { HistoryEvent } from '../../history';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
   CanonicalHubDecision,
 } from '../../materialization';
-import type { FindingChronology } from '../../finding-regions';
 import type { RerollSurfaceSettlement, RerollSurfaceTarget } from '../model';
-import type { RewardProducerCandidateResult } from '../producer-frontiers';
-import { historyFindingChronology } from './finding-chronology';
 import {
   rerollFlagKey,
   type ChronologyWalkContext,
@@ -34,36 +24,9 @@ import {
 import {
   hubTargetContext,
   reachedRerollPool,
-  rerollOfferEvaluator,
   roomTargetContext,
   type RerollTargetContext,
 } from './lifecycle-transitions/reward-rerolled';
-
-/** Evaluates new rewards for a press not yet authored, appended to one surface. */
-export interface RerollSurfaceCapability {
-  /** Undefined when rerolls are not enabled, or the target is missing or refused. */
-  readonly evaluateOffer: (
-    target: RerollPressTarget,
-    offer: ResolvedRewardOffer,
-  ) => RewardProducerCandidateResult | undefined;
-}
-
-/** Opaque per-surface capabilities from one exact reward evaluation. */
-export interface RerollSurfaceCandidateArtifacts {
-  readonly at: (surface: RerollSurface) => RerollSurfaceCapability | undefined;
-}
-
-export function createRerollSurfaceCandidateArtifacts(
-  capabilities: ReadonlyMap<string, RerollSurfaceCapability>,
-): RerollSurfaceCandidateArtifacts {
-  return Object.freeze({
-    at: (surface: RerollSurface) => capabilities.get(rerollSurfaceKey(surface)),
-  });
-}
-
-export function createEmptyRerollSurfaceCandidateArtifacts(): RerollSurfaceCandidateArtifacts {
-  return createRerollSurfaceCandidateArtifacts(new Map());
-}
 
 /**
  * One surface as the walk left it after an event. Only its last capture is
@@ -74,7 +37,6 @@ export interface RerollSurfaceCapture {
   /** The run's pool at this append point. */
   readonly poolRemaining: number;
   readonly settle: (poolRemainingAtStart: number) => RerollSurfaceSettlement;
-  readonly capability: RerollSurfaceCapability;
 }
 
 /** A room's commit, exit and later returns: its doors' presses all precede them. */
@@ -100,14 +62,11 @@ function surfaceCapture(
   inputs: {
     readonly surface: RerollSurface;
     readonly flagKey: string;
-    readonly owner: () => RoomActionAddress | HubRerollAddress;
-    readonly chronology: FindingChronology;
     readonly targets: () => readonly SurfaceTargetContext[];
-    readonly contextFor: (target: RerollPressTarget) => SurfaceTargetContext | undefined;
   },
 ): RerollSurfaceCapture | undefined {
-  const view = context.history.viewsBySequence[event.sequence];
-  if (view === undefined) return undefined;
+  // Only an event the history fold holds a state view for leaves a surface.
+  if (context.history.viewsBySequence[event.sequence] === undefined) return undefined;
   const pool = reachedRerollPool(state.branch);
   const enabled = state.rerollsFlagged.get(inputs.flagKey) === true;
   const settle = (poolRemainingAtStart: number): RerollSurfaceSettlement =>
@@ -129,54 +88,11 @@ function surfaceCapture(
         ),
       ),
     });
-  const evaluators = new Map<
-    string,
-    (offer: ResolvedRewardOffer) => RewardProducerCandidateResult
-  >();
   return Object.freeze({
     key: rerollSurfaceKey(inputs.surface),
     poolRemaining: pool,
     settle,
-    capability: Object.freeze({
-      evaluateOffer: (target: RerollPressTarget, offer: ResolvedRewardOffer) => {
-        // Without a door-reroll card when its targets were assigned, no press acts.
-        if (!enabled) return undefined;
-        const key = JSON.stringify(target);
-        let evaluate = evaluators.get(key);
-        if (evaluate === undefined) {
-          const resolved = inputs.contextFor(target);
-          if (resolved === undefined || resolved.unavailable !== undefined) return undefined;
-          evaluate = rerollOfferEvaluator({
-            catalog: context.catalog,
-            owner: inputs.owner(),
-            target: resolved.context,
-            // The appended press would be the next event.
-            historySequence: event.sequence + 1,
-            view,
-            chronology: inputs.chronology,
-            branch: state.branch,
-            rerolledOffers: state.rerolledOffers,
-          }).evaluateOffer;
-          evaluators.set(key, evaluate);
-        }
-        return evaluate(offer);
-      },
-    }),
   });
-}
-
-/** The press id `InsertReroll` gives the room's next press. */
-function nextRoomPress(room: CanonicalAuthoredRoom): RoomActionAddress {
-  const rerollId = nextRerollId(
-    room.roomActionRoster.rows.flatMap((row) =>
-      row.reference.kind === 'reroll' ? [row.reference.rerollId] : [],
-    ),
-  );
-  return createRoomActionAddress(
-    createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-    room.occurrenceId,
-    rerollActionKey(rerollId),
-  );
 }
 
 function roomSurfaceTarget(
@@ -228,10 +144,7 @@ function doorsCapture(
   return surfaceCapture(context, state, event, {
     surface: Object.freeze({ kind: 'doors', occurrence: room.origin }),
     flagKey: rerollFlagKey(semanticAddressKey(room.origin)),
-    owner: () => nextRoomPress(room),
-    chronology: historyFindingChronology(event.sequence + 1),
     targets: () => candidates().flatMap((target) => contextFor(target) ?? []),
-    contextFor,
   });
 }
 
@@ -251,13 +164,10 @@ function wheelCapture(
   return surfaceCapture(context, state, event, {
     surface: Object.freeze({ kind: 'rewardWheel', wheel: wheel.origin }),
     flagKey: rerollFlagKey(semanticAddressKey(room.origin), wheelKey),
-    owner: () => nextRoomPress(room),
-    chronology: historyFindingChronology(event.sequence + 1),
     targets: () =>
       wheel.offers.flatMap(
         (offer) => contextFor({ kind: 'wheelOffer', wheelKey, offerKey: offer.offerKey }) ?? [],
       ),
-    contextFor,
   });
 }
 
@@ -296,21 +206,10 @@ function hubCapture(
       precedingVisitCount: stay.precedingVisitCount,
     }),
     flagKey: rerollFlagKey(semanticAddressKey(hub.origin)),
-    owner: () =>
-      createHubRerollAddress(
-        biome,
-        hub.origin.hubKey,
-        nextRerollId(hub.rerolls.map((reroll) => reroll.origin.rerollId)),
-      ),
-    chronology: Object.freeze({
-      kind: 'hubBoard' as const,
-      history: historyFindingChronology(event.sequence + 1),
-    }),
     targets: () =>
       hub.board.targets.flatMap(
         (target) => contextFor({ kind: 'hubSlot', hubSlotKey: target.hubSlotKey }) ?? [],
       ),
-    contextFor,
   });
 }
 

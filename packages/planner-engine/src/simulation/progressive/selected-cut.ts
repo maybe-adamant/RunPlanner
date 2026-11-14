@@ -1317,7 +1317,6 @@ export function publishSelectedCut(
       at: (occurrence: OccurrenceAddress) =>
         entered.has(key(occurrence)) ? zagreusContracts.at(occurrence) : undefined,
     }),
-    rewards.rerollSurfaceArtifacts,
     rewards.objectInteractionArtifacts,
   );
   const rowKeys =

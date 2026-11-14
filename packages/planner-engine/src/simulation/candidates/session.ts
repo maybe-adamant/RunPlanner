@@ -15,7 +15,6 @@ import type {
   AuthoredTraitOfferTraits,
 } from '../../authored-project/traits/state';
 import type { ProjectDocument } from '../../authored-project/model';
-import { rerollSurfaceOwner } from '../../authored-project/rerolls';
 import type { ProjectCandidateArtifacts } from '../evaluation/candidate-artifacts';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../evaluation/project-evaluation-assembly';
 import type {
@@ -72,8 +71,6 @@ import {
   type EvaluatedRerollRewardCandidate,
   type PhantomExitRewardCandidateQuery,
   type RerollRewardCandidateQuery,
-  evaluatePendingRerollRewardCandidate,
-  type PendingRerollRewardCandidateQuery,
 } from './reward-producer';
 import {
   rewardWheelContextReached,
@@ -224,7 +221,6 @@ export type ProjectCandidateQuery =
   | InfernalContractPedestalCandidateQuery
   | PhantomExitRewardCandidateQuery
   | RerollRewardCandidateQuery
-  | PendingRerollRewardCandidateQuery
   | InfernalContractPedestalOptionCandidateQuery
   | AcquisitionEntryOfferCandidateQuery
   | SideRoomEntryOrderCandidateQuery
@@ -597,15 +593,6 @@ function evaluateCandidateQuery(
         candidateArtifacts.biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
           ?.rewardProducers,
         undefined,
-        query,
-      );
-    }
-    case 'pendingRerollReward': {
-      const owner = rerollSurfaceOwner(query.surface);
-      return evaluatePendingRerollRewardCandidate(
-        evaluation,
-        candidateArtifacts.biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
-          ?.rerollSurfaces,
         query,
       );
     }

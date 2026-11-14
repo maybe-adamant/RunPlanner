@@ -45,7 +45,6 @@ export type {
   PhantomExitRewardCandidateQuery,
   EvaluatedPhantomExitRewardCandidate,
   RerollRewardCandidateQuery,
-  PendingRerollRewardCandidateQuery,
   EvaluatedRerollRewardCandidate,
   InfernalContractPedestalOptionCandidateQuery,
   EvaluatedInfernalContractPedestalCandidate,

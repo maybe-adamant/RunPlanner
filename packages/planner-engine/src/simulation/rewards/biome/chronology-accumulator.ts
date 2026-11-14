@@ -68,7 +68,7 @@ import type {
 } from '../acquisition/contracts';
 import type { ForfeitPeek } from './offer-lifecycle/spawned-trait-offers';
 import type { RewardBranchState } from '../branch-primitives';
-import type { RerollSurfaceCapability, RerollSurfaceCapture } from './reroll-surfaces';
+import type { RerollSurfaceCapture } from './reroll-surfaces';
 import { addRewardFinding, mergeRewardFindingEmissions } from '../findings';
 import type {
   BiomeRewardSimulation,
@@ -290,7 +290,6 @@ export interface ChronologyAccumulation {
   readonly rerolls: readonly RerollSettlement[];
   readonly rerollPool: readonly RerollPoolPoint[];
   readonly rerollSurfaces: readonly RerollSurfaceSettlement[];
-  readonly rerollSurfaceCapabilities: ReadonlyMap<string, RerollSurfaceCapability>;
   readonly steadyGrowthOutcomes: ReadonlyMap<string, SteadyGrowthLandedOutcome>;
   readonly transcendentEmbryoOutcomes: ReadonlyMap<
     string,
@@ -935,9 +934,6 @@ export function createChronologyAccumulator(
           [...rerollSurfaces.values()].map(({ capture, poolRemainingAtStart }) =>
             capture.settle(poolRemainingAtStart),
           ),
-        ),
-        rerollSurfaceCapabilities: new Map(
-          [...rerollSurfaces].map(([key, { capture }]) => [key, capture.capability]),
         ),
         steadyGrowthOutcomes,
         transcendentEmbryoOutcomes,
