@@ -689,7 +689,7 @@ describe('OccurrenceRoomFeatures', () => {
     openRoomTab('Room Overview');
     const entry = screen.getByRole('button', { name: 'Entry' });
     expect(entry.getAttribute('aria-invalid')).toBe('true');
-    expect(entry.textContent).not.toContain('⇋');
+    expect(entry.textContent).not.toContain('↔');
     await view.user.click(entry);
     await view.user.click(await screen.findByRole('option', { name: /Flipped/ }));
     const layout = () =>

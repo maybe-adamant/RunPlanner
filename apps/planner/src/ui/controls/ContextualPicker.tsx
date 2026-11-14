@@ -21,6 +21,7 @@ import type {
   ContextualPickerModel,
   ContextualPickerSection,
 } from '@planner/projections/contextual/contextualPicker';
+import { TextGlyph } from './TextGlyph';
 
 interface ContextualPickerProps<T> {
   readonly findingTarget?: FindingTargetProps;
@@ -368,7 +369,7 @@ function PickerContent<T>({
               onClick={() => setCollapsibleOpen((value) => !value)}
               type="button"
             >
-              <span aria-hidden="true">{collapsibleOpen ? '▾' : '▸'}</span>
+              <TextGlyph name={collapsibleOpen ? 'expanded' : 'collapsed'} />
               {collapsible.label} ({collapsible.items.length})
             </button>
           )}

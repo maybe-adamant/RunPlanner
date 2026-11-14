@@ -31,7 +31,7 @@ import { fieldsSlotBadge, fieldsSlotIcon } from './fieldsSlotFace';
 const unknown = '—';
 
 /** Marks an entry whose pair mirrors the room. */
-const mirrored = '⇋';
+const mirrored = '↔';
 
 interface PositionChoice<T> {
   readonly key: string;
@@ -215,13 +215,13 @@ function entryNumber(layout: WorkspaceRoomLayout, pair: WorkspaceRoomEntryPair):
   return number === undefined ? 'Entry' : `E${number}`;
 }
 
-/** The compact entry the closed control shows: `E1 ⇋`. */
+/** The compact entry the closed control shows: `E1 ↔`. */
 function entryName(layout: WorkspaceRoomLayout, pair: WorkspaceRoomEntryPair): string {
   const name = entryNumber(layout, pair);
   return pair.flipped ? `${name} ${mirrored}` : name;
 }
 
-/** The entry as the open list spells it: `E1 · Flipped (⇋)`. */
+/** The entry as the open list spells it: `E1 · Flipped (↔)`. */
 function entryOption(layout: WorkspaceRoomLayout, pair: WorkspaceRoomEntryPair): string {
   const name = entryNumber(layout, pair);
   return pair.flipped ? `${name} · Flipped (${mirrored})` : name;

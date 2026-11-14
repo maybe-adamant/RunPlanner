@@ -768,6 +768,10 @@
   font-weight: 700;
 }
 
+.game-panel-step-icon > .text-glyph {
+  stroke-width: 2;
+}
+
 .game-panel-step-found {
   color: #aaa7af;
 }

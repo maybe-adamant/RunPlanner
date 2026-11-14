@@ -11,6 +11,7 @@ import { TimelineRow } from './TimelineRow';
 import { TimelineMapStageContext } from './timelineMapStage';
 import { doorsOpenToggle, type BannerToggle } from './doorSummary';
 import { TimelineEventIcon } from './TimelineEventIcon';
+import { TextGlyph } from '@planner/ui/controls/TextGlyph';
 
 /**
  * A room's doors on its Timeline: the Doors open row (a compact state that
@@ -96,7 +97,7 @@ export function BannerTitle({
       type="button"
     >
       <span aria-hidden="true" className="timeline-banner-toggle-caret">
-        {toggle.expanded ? '▾' : '▸'}
+        <TextGlyph name={toggle.expanded ? 'expanded' : 'collapsed'} />
       </span>
       {name}
     </button>

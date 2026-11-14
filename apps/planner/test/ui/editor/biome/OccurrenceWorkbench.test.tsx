@@ -381,7 +381,7 @@ describe('OccurrenceWorkbench', () => {
       .topology!.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)!;
     expect(edited.layout).toMatchObject({ flipped: true });
     expect(edited.layout?.entryStartPointId).toBeDefined();
-    expect(screen.getByRole('button', { name: /^Entry/ }).textContent).toContain('⇋');
+    expect(screen.getByRole('button', { name: /^Entry/ }).textContent).toContain('↔');
   });
 
   it.each([

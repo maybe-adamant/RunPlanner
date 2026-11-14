@@ -49,6 +49,7 @@ import { CommunityEventCard } from '../shell/NoticeArea';
 import { HomeContext } from './HomeContext';
 import { HomeToast } from './HomeToast';
 import type { LibrarySlotIndex } from './useLibrarySlotLinks';
+import { TextGlyph } from '@planner/ui/controls/TextGlyph';
 
 type Confirmation = 'install' | 'checkoutInstall' | 'remove';
 
@@ -332,7 +333,7 @@ function ModuleCard({
           {otherSteps.map((step) => (
             <li data-tone={step.tone} key={step.key}>
               <span aria-hidden="true" className="game-panel-step-icon">
-                {step.tone === 'error' ? '✕' : '!'}
+                {step.tone === 'error' ? <TextGlyph name="cross" /> : '!'}
               </span>
               <span className="visually-hidden">
                 {step.tone === 'error' ? 'Required: ' : 'Recommended: '}
