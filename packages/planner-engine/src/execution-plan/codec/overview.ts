@@ -883,10 +883,10 @@ export function overview(value: unknown, label: string) {
           );
           if (row.kind !== 'chaos' && row.kind !== 'zagreusContract')
             fail(`${label}.additional[${index}].kind is unsupported`);
-          if (row.spawnPointIndex !== undefined && row.kind !== 'chaos')
-            fail(`${label}.additional[${index}].spawnPointIndex is Chaos-only`);
-          if (row.spawnPointIndex === undefined && row.kind === 'chaos')
+          if (row.kind === 'chaos' && row.spawnPointIndex === undefined)
             fail(`${label}.additional[${index}].spawnPointIndex is required for Chaos`);
+          if (row.kind !== 'chaos' && row.spawnPointIndex !== undefined)
+            fail(`${label}.additional[${index}].spawnPointIndex is Chaos-only`);
           const ixion =
             row.ixionOrigin === undefined
               ? undefined
@@ -899,16 +899,16 @@ export function overview(value: unknown, label: string) {
               `${label}.additional[${index}].ixionOrigin`,
             );
           return Object.freeze({
-            kind: row.kind,
-            ...(row.spawnPointIndex === undefined
-              ? {}
-              : {
+            ...(row.kind === 'chaos'
+              ? {
+                  kind: 'chaos' as const,
                   spawnPointIndex: integer(
                     row.spawnPointIndex,
                     `${label}.additional[${index}].spawnPointIndex`,
                     1,
                   ),
-                }),
+                }
+              : { kind: 'zagreusContract' as const }),
             owner: stringValue(row.owner, `${label}.additional[${index}].owner`, MAX_OWNER_STRING),
             room: roomReference(row.room, `${label}.additional[${index}].room`),
             ...(ixion === undefined

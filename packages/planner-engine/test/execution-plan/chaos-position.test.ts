@@ -51,7 +51,7 @@ describe('Chaos position publication', () => {
       expect(plan.selectedOccurrenceIds).not.toContain(chaosId);
       const gate = plan.occurrences.find((room) => room.id === opening.occurrenceId)!.overview
         .additional![0]!;
-      expect(gate.kind).toBe('chaos');
+      if (gate.kind !== 'chaos') throw new Error('expected a Chaos gate');
       const room = catalog.rooms.byKey.F_Opening01!;
       // An unstored point publishes the gate's draw, which settlement stores on first reach.
       const drawn = chaosGateSpawnPoint(room, semanticAddressKey(additional), undefined);
@@ -89,7 +89,10 @@ describe('Chaos position publication', () => {
     expect(decode({ ...gate, kind: 'zagreusContract' }).additional![0]).not.toHaveProperty(
       'spawnPointIndex',
     );
-    expect(decode({ ...gate, spawnPointIndex: 3 }).additional![0]!.spawnPointIndex).toBe(3);
+    expect(decode({ ...gate, spawnPointIndex: 3 }).additional![0]).toMatchObject({
+      kind: 'chaos',
+      spawnPointIndex: 3,
+    });
     for (const spawnPointIndex of [null, 0, -1, 1.5, '2', true, Infinity, NaN]) {
       expect(() => decode({ ...gate, spawnPointIndex })).toThrow();
     }

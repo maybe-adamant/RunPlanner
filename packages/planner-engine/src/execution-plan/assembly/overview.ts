@@ -52,6 +52,7 @@ import type {
   ExecutionInfernalContract,
   ExecutionPhantomExit,
   ExecutionKeepsakeEquipResults,
+  ExecutionAdditionalExit,
   ExecutionOverview,
   ExecutionReward,
   ExecutionTimelineTransaction,
@@ -298,20 +299,8 @@ function executionAdditionalExits(
   if (batch === undefined || batch.additional.length === 0) return undefined;
   const declaration = catalog.rooms.byKey[room.gameName];
   return Object.freeze(
-    batch.additional.map((exit) => {
-      // A Chaos gate spawns at its stored point, else its draw.
-      const spawnPointIndex =
-        exit.key !== 'chaos' || declaration === undefined
-          ? exit.spawnPointIndex
-          : chaosGateSpawnPoint(declaration, semanticAddressKey(exit.origin), exit.spawnPointIndex);
-      if (exit.key === 'chaos' && spawnPointIndex === undefined)
-        throw new CompilerError(
-          'executionCoverageMissing',
-          `${room.gameName} publishes a Chaos gate without a spawn point`,
-        );
-      return Object.freeze({
-        kind: exit.key,
-        ...(spawnPointIndex === undefined ? {} : { spawnPointIndex }),
+    batch.additional.map((exit): ExecutionAdditionalExit => {
+      const base = {
         owner: semanticAddressKey(exit.origin),
         room: Object.freeze({
           id: exit.room.occurrenceId,
@@ -327,7 +316,20 @@ function executionAdditionalExits(
                 generationKey: exit.chaosOrigin.generationKey,
               }),
             }),
-      });
+      };
+      if (exit.key === 'zagreusContract')
+        return Object.freeze({ kind: 'zagreusContract' as const, ...base });
+      // A Chaos gate spawns at its stored point, else its draw.
+      const spawnPointIndex =
+        declaration === undefined
+          ? exit.spawnPointIndex
+          : chaosGateSpawnPoint(declaration, semanticAddressKey(exit.origin), exit.spawnPointIndex);
+      if (spawnPointIndex === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} publishes a Chaos gate without a spawn point`,
+        );
+      return Object.freeze({ kind: 'chaos' as const, spawnPointIndex, ...base });
     }),
   );
 }
