@@ -13,7 +13,6 @@ import {
 import type { FindingMarkProps, FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { showTruncatedTitle } from './truncatedTitle';
-import { OfferConditionFoot, OfferConditionMarker } from '@planner/ui/feedback/OfferConditionNote';
 import { hintProps } from './hint';
 import { NotedText } from './NotedText';
 
@@ -177,10 +176,7 @@ function PickerSection<T>({
             )}
             <span className="contextual-picker-item-copy">
               {face === undefined ? (
-                <span className="contextual-picker-item-label">
-                  {item.label}
-                  <OfferConditionMarker condition={item.offerCondition} />
-                </span>
+                <span className="contextual-picker-item-label">{item.label}</span>
               ) : (
                 <span className="contextual-picker-item-face">{face}</span>
               )}
@@ -379,7 +375,6 @@ function PickerContent<T>({
           )}
         </Command>
       )}
-      {loading ? null : <OfferConditionFoot model={model} />}
       {cancelLabel === undefined ? null : (
         <button className="contextual-picker-cancel" onClick={onCancel} type="button">
           {cancelLabel}

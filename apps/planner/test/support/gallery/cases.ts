@@ -5,7 +5,6 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createShopOfferAddress,
-  createTraitOfferAddress,
   createExitDecisionAddress,
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
@@ -84,9 +83,6 @@ import {
   createUnderworldFWellCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  loadSurfaceNStoryBoardProject,
-  nBiome,
-  nOccurrenceId,
   loadSurfaceNOPProject,
   placeDueHermesShrineDeliveries,
   surfaceShrineDeliveriesProject,
@@ -321,11 +317,19 @@ function nemesisFamilyCases(): readonly GalleryCase[] {
         event,
         value: { ...value, reward: { rewardType } },
       },
+      // Her interaction is a room action the player places, as the editor does.
+      appendRoomAction('F', 'golden-f-b5-e1', { kind: 'interactEncounter', phaseKey: 'Encounter' }),
     ],
     target: room('F', 'golden-f-b5-e1'),
   });
   return [
     entry('nemesis-free-item', 'Nemesis free item', { kind: 'freeItem' }, 'ArmorBoost'),
+    entry(
+      'nemesis-free-item-death-defiance',
+      'Nemesis free item: Death Defiance, offered only while one is missing',
+      { kind: 'freeItem' },
+      'LastStandDrop',
+    ),
     entry(
       'nemesis-gold-trade',
       'Nemesis gold trade, declined',
@@ -2511,122 +2515,120 @@ export const galleryCases: readonly GalleryCase[] = [
     commands: [unofferableRarity('N', 'surface-n-combat05', 'self')],
     target: room('N', occurrenceId),
   })),
-  ...lastStandNoteCases(),
+  ...lastStandMarkCases(),
 ];
 
-/** Shape preview of the note on items offered only while the hero is missing a Last Stand. */
-function lastStandNoteCases(): readonly GalleryCase[] {
+/** The warning mark on lines holding an item offered only while the hero is missing a Last Stand. */
+function lastStandMarkCases(): readonly GalleryCase[] {
   const wellRoom = ['F', 'golden-f-b5-e1'] as const;
   const shrineRoom = ['O', 'surface-o-combat02'] as const;
-  const placeWell = placeAnchorObject(...wellRoom, 'stygianWell');
-  const placeShrine = placeAnchorObject(...shrineRoom, 'hermesShrine');
-  const chooseWellItem: GalleryStep = (project) => ({
-    kind: 'ReplaceStygianWellOffer',
-    occurrence: occurrenceAddress(project, ...wellRoom),
-    slotKey: 'healing',
-    itemKey: 'LastStandShopItem',
-  });
-  const chooseShrineItem: GalleryStep = (project) => ({
-    kind: 'ReplaceHermesShrineOffer',
-    occurrence: occurrenceAddress(project, ...shrineRoom),
-    slotKey: 'first',
-    value: { rewardType: 'LastStandDrop' },
-  });
-  const chooseShopItem: GalleryStep = {
-    kind: 'ReplaceShopOfferOption',
-    offer: createShopOfferAddress(
-      createBiomeAddress('Surface', 'Q'),
-      createOccurrenceId('surface-q-preboss'),
-      'Survival',
-    ),
-    value: { optionKey: 'LastStandDrop', offer: { rewardType: 'LastStandDrop' } },
-  };
+  const shrinePurchaseRoom = shrineRoom;
+  const twistRoom = ['F', 'golden-f-preboss-shop:postboss'] as const;
   return [
     {
-      id: 'last-stand-well-picker',
+      id: 'last-stand-well-row',
       overview: true,
-      label: 'Last Stand note: the Well’s Healing list with Kiss of Styx',
-      shows: ['Well item picker'],
+      label: 'Last Stand mark: Kiss of Styx stocked in the Well',
+      shows: ['Well inventory mark'],
       project: createGoldenFGHIProject,
-      commands: [placeWell],
-      target: room(...wellRoom),
-      openOverviewPicker: 'Stygian Well Offer 1 Item',
-    },
-    {
-      id: 'last-stand-shrine-picker',
-      overview: true,
-      label: 'Last Stand note: the Hermes Shrine’s first list with Death Defiance',
-      shows: ['Shrine item picker'],
-      project: loadSurfaceNOPQCheckpoint,
-      commands: [placeShrine],
-      target: room(...shrineRoom),
-      openOverviewPicker: 'Hermes Shrine Offer 1 Item',
-    },
-    {
-      id: 'last-stand-shop-picker',
-      overview: true,
-      label: 'Last Stand note: a Q World Shop Survival slot’s list',
-      shows: ['World Shop item picker'],
-      project: loadSurfaceAnvilCheckpoint,
-      target: room('Q', 'surface-q-preboss'),
-      openOverviewPicker: 'Offer 4 Item',
-    },
-    {
-      id: 'last-stand-well-chosen',
-      overview: true,
-      label: 'Last Stand note: Kiss of Styx chosen in the Well',
-      shows: ['Well inventory'],
-      project: createGoldenFGHIProject,
-      commands: [placeWell, chooseWellItem],
+      commands: [
+        placeAnchorObject(...wellRoom, 'stygianWell'),
+        (project) => ({
+          kind: 'ReplaceStygianWellOffer',
+          occurrence: occurrenceAddress(project, ...wellRoom),
+          slotKey: 'healing',
+          itemKey: 'LastStandShopItem',
+        }),
+      ],
       target: room(...wellRoom),
     },
     {
-      id: 'last-stand-shrine-chosen',
+      id: 'last-stand-shrine-row',
       overview: true,
-      label: 'Last Stand note: Death Defiance chosen at the Hermes Shrine',
-      shows: ['Shrine inventory'],
+      label: 'Last Stand mark: Death Defiance stocked at the Hermes Shrine',
+      shows: ['Shrine inventory mark'],
       project: loadSurfaceNOPQCheckpoint,
-      commands: [placeShrine, chooseShrineItem],
+      commands: [
+        placeAnchorObject(...shrineRoom, 'hermesShrine'),
+        (project) => ({
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: occurrenceAddress(project, ...shrineRoom),
+          slotKey: 'first',
+          value: { rewardType: 'LastStandDrop' },
+        }),
+      ],
       target: room(...shrineRoom),
     },
     {
-      id: 'last-stand-shop-chosen',
-      overview: true,
-      label: 'Last Stand note: Death Defiance chosen in a Q World Shop slot',
-      shows: ['World Shop inventory'],
-      project: loadSurfaceAnvilCheckpoint,
-      commands: [chooseShopItem],
-      target: room('Q', 'surface-q-preboss'),
+      id: 'last-stand-shrine-purchase',
+      label: 'Last Stand mark: Death Defiance bought at a Hermes Shrine',
+      shows: ['Shrine purchase row mark'],
+      project: loadSurfaceNOPQCheckpoint,
+      commands: [
+        placeAnchorObject(...shrinePurchaseRoom, 'challengeSwitch'),
+        placeAnchorObject(...shrinePurchaseRoom, 'hermesShrine'),
+        (project) => ({
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: occurrenceAddress(project, ...shrinePurchaseRoom),
+          slotKey: 'first',
+          value: { rewardType: 'LastStandDrop' },
+        }),
+        (project) => ({
+          kind: 'PurchaseHermesShrineOffer',
+          occurrence: occurrenceAddress(project, ...shrinePurchaseRoom),
+          generationKey: 'initial:first',
+        }),
+      ],
+      target: room(...shrinePurchaseRoom),
+      roomTab: 'shipCombat1Actions',
     },
     {
-      id: 'last-stand-trait-note',
-      label: 'Last Stand note: the trait offer’s existing Death Defiance notice',
-      shows: ['trait offer popup notice'],
-      project: loadSurfaceNStoryBoardProject,
+      id: 'last-stand-shop-row',
+      overview: true,
+      label: 'Last Stand mark: Death Defiance stocked in a Q World Shop slot',
+      shows: ['World Shop inventory mark'],
+      project: loadSurfaceAnvilCheckpoint,
       commands: [
         {
-          kind: 'ReplaceTraitOffer',
-          trait: createTraitOfferAddress(
-            createEncounterPhaseAddress(
-              nBiome,
-              { kind: 'occurrence', occurrenceId: nOccurrenceId('story') },
-              'Encounter',
-            ),
-            'selection',
+          kind: 'ReplaceShopOfferOption',
+          offer: createShopOfferAddress(
+            createBiomeAddress('Surface', 'Q'),
+            createOccurrenceId('surface-q-preboss'),
+            'Survival',
           ),
-          value: {
-            kind: 'traits',
-            giverKey: 'Medea',
-            options: [
-              { traitKey: 'ManaOverTimeCurse' },
-              { traitKey: 'MoneyOnDeathCurse' },
-              { traitKey: 'DeathDefianceRetaliateCurse' },
-            ],
-            selectedOptionKey: 'option1',
-          },
+          value: { optionKey: 'LastStandDrop', offer: { rewardType: 'LastStandDrop' } },
         },
       ],
-      target: room('N', nOccurrenceId('story')),
+      target: room('Q', 'surface-q-preboss'),
+    },
+    {
+      id: 'last-stand-well-twist',
+      label: 'Last Stand mark: a Fateful Twist that turns into Kiss of Styx',
+      shows: ['Well purchase row mark', 'Twist result'],
+      project: loadUnderworldTwistScyllaCheckpoint,
+      commands: [
+        (project) => ({
+          kind: 'ReplaceStygianWellTwistResult',
+          occurrence: occurrenceAddress(project, ...twistRoom),
+          generationKey: 'initial:secondRight',
+          itemKey: 'LastStandShopItem',
+        }),
+      ],
+      target: room(...twistRoom),
+    },
+    {
+      id: 'last-stand-well-travel-deal',
+      label: 'Last Stand mark: Kiss of Styx as the Well’s Travel Deal restock',
+      shows: ['Travel Deal line mark'],
+      project: loadUnderworldTwistScyllaCheckpoint,
+      commands: [
+        (project) => ({
+          kind: 'ReplaceStygianWellTravelDealRefill',
+          occurrence: occurrenceAddress(project, ...twistRoom),
+          itemKey: 'LastStandShopItem',
+        }),
+      ],
+      target: room(...twistRoom),
     },
   ];
 }

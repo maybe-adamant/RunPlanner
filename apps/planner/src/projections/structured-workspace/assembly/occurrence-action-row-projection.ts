@@ -63,6 +63,10 @@ import {
   splitAtRoomStop,
 } from './occurrence-action-timeline-projection';
 import { projectSpawnedLoot } from './occurrence-spawned-loot-projection';
+import {
+  shopOptionOfferCondition,
+  type UnmodeledOfferCondition,
+} from '../interactions/unmodeled-offer-conditions';
 import type { WorkspaceRoomTab } from '../contracts/navigation';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
@@ -583,6 +587,47 @@ function roomActionsForOccurrence(
         return Object.freeze({ slots });
       })();
       const sourceFamily = row.sourceFamily;
+      const rowOfferCondition = (): UnmodeledOfferCondition | undefined => {
+        const reference = row.reference;
+        switch (reference.kind) {
+          case 'purchaseStygianWellOffer': {
+            const itemKey = stygianWellGenerationItemKey(input.occurrence, reference.generationKey);
+            const resultKey = stygianWellTwist?.itemKey ?? null;
+            return [itemKey, resultKey]
+              .filter((key): key is string => typeof key === 'string')
+              .map((optionKey) =>
+                shopOptionOfferCondition(input.catalog, 'RoomShop', { optionKey }),
+              )
+              .find((condition) => condition !== undefined);
+          }
+          case 'purchaseHermesShrineOffer':
+          case 'rushHermesShrineOffer': {
+            const rewardType = labelParts.reward?.offer.rewardType;
+            return rewardType === undefined
+              ? undefined
+              : shopOptionOfferCondition(input.catalog, 'SurfaceShop', { rewardType });
+          }
+          case 'interactShopOffer': {
+            const shopOption =
+              roomLocal.kind === 'shop'
+                ? roomLocal.offers.find((offer) => offer.key === reference.offerKey)?.rewardControl
+                    .shopOption
+                : undefined;
+            return shopOption?.options.find((option) => option.key === shopOption.selectedOptionKey)
+              ?.offerCondition;
+          }
+          case 'interactAcquisitionEntry': {
+            const shopOption =
+              sourceFamily?.kind === 'shopTravelDealRefill'
+                ? resolvedRewardControl?.shopOption
+                : undefined;
+            return shopOption?.options.find((option) => option.key === shopOption.selectedOptionKey)
+              ?.offerCondition;
+          }
+          default:
+            return undefined;
+        }
+      };
       const labelParts = occurrenceActionLabelParts(
         input.catalog,
         row.reference,
@@ -600,10 +645,12 @@ function roomActionsForOccurrence(
         row.reference.kind === 'interactChallengeSwitch' || sourceFamily?.kind === 'challengeSwitch'
           ? observedChallengeSwitchKind(input.catalog, input.occurrence)
           : undefined;
+      const offerCondition = rowOfferCondition();
       return Object.freeze({
         address,
         key: row.key,
         label: labelParts.label,
+        ...(offerCondition === undefined ? {} : { offerCondition }),
         ...(sourceFamily === undefined ? {} : { sourceFamily }),
         ...(challengeSwitchKind === undefined ? {} : { challengeSwitchKind }),
         ...(labelParts.slot === undefined ? {} : { slot: labelParts.slot }),

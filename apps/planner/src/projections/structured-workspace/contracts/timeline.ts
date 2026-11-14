@@ -92,6 +92,8 @@ export interface WorkspaceRoomActionRow {
   readonly address: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
   readonly key: string;
   readonly label: string;
+  /** The item this row buys or yields has a game offer condition the plan does not track. */
+  readonly offerCondition?: import('@run-planner/engine/reward-kernel').ShopOptionEntry['unmodeledOfferCondition'];
   /** Engine-published source of a generated pickup; absent for every other action. */
   readonly sourceFamily?: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;
   /** The observed switch's kind on a switch use row, named and pictured by it. */

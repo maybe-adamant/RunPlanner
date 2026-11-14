@@ -7,7 +7,7 @@ import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { NumberedSlot, NumberedSlots } from '@planner/ui/editor/rewards/NumberedSlots';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { OverviewRow } from '../RoomOverviewSections';
-import { OfferConditionNotices } from '@planner/ui/feedback/OfferConditionNote';
+import { OfferConditionMark } from '@planner/ui/feedback/OfferConditionMark';
 
 /** The Shop's stock; purchases are timeline actions, and Travel Deal is authored under its purchase. */
 export function ShopWorkbench({
@@ -41,7 +41,7 @@ export function ShopWorkbench({
             </NumberedSlot>
           ))}
         </NumberedSlots>
-        <OfferConditionNotices
+        <OfferConditionMark
           conditions={room.offers.map(
             (offer) =>
               interactions.shopOffers.get(
