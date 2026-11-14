@@ -352,14 +352,22 @@ function rewardPoolForBatch(
   };
 }
 
-/** How a Fields batch's cages read beside its doors. */
+/** How a Fields batch's roll and cages read beside its doors. */
 function fieldsDoorNotes(fields: WorkspaceFieldsBatchContext): readonly WorkspaceDoorNote[] {
+  const cap = fields.priorMaxOutcomes?.maxDoorCageCeiling;
+  const maxRule = cap === undefined ? '' : `; Maximum at most ${cap} times per run`;
   return fields.cageTargetCount === 0
     ? [
-        Object.freeze({ target: 'cageCount', text: 'No room here uses the cage count' }),
-        Object.freeze({ target: 'doorRoll', text: 'Max still affects later Fields rolls' }),
+        Object.freeze({
+          target: 'doorRoll',
+          text: `No room behind these doors has cages, but Maximum still counts${maxRule}`,
+        }),
       ]
     : [
+        Object.freeze({
+          target: 'doorRoll',
+          text: `Sets the cages in each combat room behind these doors${maxRule}`,
+        }),
         Object.freeze({
           target: 'rewardColumn',
           text: 'Cage rewards appear bottom to top on the door',

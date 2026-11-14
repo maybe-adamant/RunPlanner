@@ -1272,12 +1272,14 @@ describe('DecisionWorkbench', () => {
       firstNodeOfKind('ordinaryBatch'),
     );
 
-    const selector = screen.getByLabelText('Fields door roll');
+    const selector = screen.getByRole('button', { name: 'Fields door roll' });
     const fieldsEditor = selector.closest('.fields-batch-editor');
     expect(fieldsEditor).not.toBeNull();
     expect(selector.closest('.batch-reward-pool')).toBeNull();
-    expect(within(fieldsEditor as HTMLElement).getByText('Cages per combat room')).toBeTruthy();
-    expect(within(fieldsEditor as HTMLElement).getByText('Prior Max outcomes')).toBeTruthy();
+    // The roll's cages and the run's Maximum rolls follow the picker on its one line.
+    expect(fieldsEditor?.querySelector('.fields-batch-summary')?.textContent).toMatch(
+      /cages? · Max \d+\/\d+$/,
+    );
   });
 
   it('marks a Vow of Forfeit realization on the forfeited door reward control', () => {
@@ -1409,8 +1411,9 @@ describe('DecisionWorkbench', () => {
 
     const noteOn = (words: string) =>
       screen.getByRole('group', { name: words }).getAttribute('aria-description');
-    expect(noteOn('Cages per combat room')).toBe('No room here uses the cage count');
-    expect(noteOn('Fields door roll')).toBe('Max still affects later Fields rolls');
+    // One hint, on the roll, tells both the cages and the Maximum rule.
+    expect(noteOn('Fields door roll')).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Cages per combat room' })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Reward' })).toBeNull();
   });
 
@@ -1555,7 +1558,7 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(owner),
     );
 
-    await view.user.click(screen.getByLabelText('Fields door roll'));
+    await view.user.click(screen.getByRole('button', { name: 'Fields door roll' }));
     const required = within(screen.getByRole('listbox')).getByText('Maximum');
     const requiredItem = required.closest('[cmdk-item]');
     expect(requiredItem?.getAttribute('data-candidate-state')).toBe('forced');
@@ -1591,7 +1594,7 @@ describe('DecisionWorkbench', () => {
     });
     const view = renderDecisionWorkbench(project, 'Underworld', 'H', subjectForOwner(owner));
 
-    const trigger = screen.getByLabelText('Fields door roll');
+    const trigger = screen.getByRole('button', { name: 'Fields door roll' });
     await view.user.click(trigger);
     const maximum = within(screen.getByRole('listbox')).getByText('Maximum');
     const item = maximum.closest('[cmdk-item]');
@@ -1619,10 +1622,9 @@ describe('DecisionWorkbench', () => {
     });
     renderDecisionWorkbench(blockHCombat05Trait(), 'Underworld', 'H', subjectForOwner(owner));
 
-    const summary = screen.getByText('Prior Max outcomes').closest('.fields-batch-summary');
+    const summary = document.querySelector('.fields-batch-summary');
     if (!(summary instanceof HTMLElement)) throw new Error('Fields summary is missing');
-    expect(within(summary).getByText('1 / 2')).toBeTruthy();
-    expect(within(summary).queryByText('Unavailable')).toBeNull();
+    expect(summary.textContent).toContain('Max 1/2');
   });
 
   it('distinguishes a forced effective reward pool from the authored base pool', () => {
