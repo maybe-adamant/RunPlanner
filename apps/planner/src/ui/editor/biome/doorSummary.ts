@@ -52,10 +52,11 @@ export function hubReturnChip(hub: HubDecisionAddress): DoorChip {
   };
 }
 
-/** The chip's point on its room's map: its door by number, its wheel offer, or the Chaos gate. */
+/** The chip's point on its room's map: its door by number, its wheel offer, the Chaos gate or the Contract door. */
 export function doorChipMapLink(chip: DoorChip): RoomMapHighlight | undefined {
   if (chip.wheelOffer === true) return { kind: 'wheelOffer', offerKey: chip.key };
   if (chip.additionalExit === 'chaos') return { kind: 'chaosGate' };
+  if (chip.additionalExit === 'zagreusContract') return { kind: 'contractExit' };
   if (chip.additionalExit !== undefined || chip.doorIndex === undefined) return undefined;
   return { kind: 'door', doorIndex: chip.doorIndex };
 }

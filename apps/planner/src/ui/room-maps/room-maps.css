@@ -12,8 +12,8 @@
   /* Cocoons (G) never share a map with Fields cages, so they share its cyan. */
   --legend-cocoon: #00e5ff;
   --legend-pickup: #e8e4da;
-  --legend-shop: #e81cff;
-  --legend-pedestal: #3f5bff;
+  /* Midshops also hold exits, Chaos and anchors: Zagreus's red stands apart from them. */
+  --legend-contract: #ff4b3e;
   --legend-selection: #f5d386;
   --hub-perfect: #49c8dc;
   --hub-good: #4bb36f;
@@ -542,38 +542,33 @@
   rotate: -45deg;
 }
 
-/* World Shop items ring in magenta, the Contract pedestal in indigo; a bought item rings solid. */
-.room-map-point[data-point='shop'] {
-  border-color: var(--legend-shop);
+/* A Shop or pedestal item stands plainly on its point; hover rings it like any point. */
+.room-map-point[data-point='stock'] {
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
 }
 
-.room-map-point[data-point='pedestal'] {
-  border-color: var(--legend-pedestal);
+.room-map-point[data-point='stock'] > .artwork-label-icon {
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 85%));
 }
 
-.room-map-point[data-taken] {
-  z-index: 2;
-  outline: 2px solid var(--legend-selection);
-  outline-offset: 2px;
-}
-
-/* A Travel Deal refill on its bought item's corner. */
-.room-map-point-refill {
+/* Whose item it is, Shop or Contract, on its corner where a room holds both. */
+.room-map-point-badge {
   position: absolute;
-  right: -30%;
-  bottom: -30%;
+  right: -18%;
+  bottom: -18%;
   display: grid;
-  width: 62%;
+  width: 46%;
   aspect-ratio: 1;
   place-items: center;
-  border: 2px solid var(--legend-shop);
   border-radius: 50%;
   background: rgb(17 25 35 / 92%);
 }
 
-.room-map-point-refill > .artwork-label-icon {
-  width: 80%;
-  height: 80%;
+.room-map-point-badge > .artwork-label-icon {
+  width: 82%;
+  height: 82%;
   object-fit: contain;
 }
 
@@ -744,6 +739,10 @@
   border-color: var(--legend-chaos);
 }
 
+.room-map-door[data-contract] {
+  border-color: var(--legend-contract);
+}
+
 .room-map-door[data-side] {
   border-color: var(--legend-side-door);
 }
@@ -890,12 +889,8 @@
   rotate: 45deg;
 }
 
-.room-map-legend > li[data-kind='shop'] > .room-map-legend-swatch {
-  border-color: var(--legend-shop);
-}
-
-.room-map-legend > li[data-kind='pedestal'] > .room-map-legend-swatch {
-  border-color: var(--legend-pedestal);
+.room-map-legend > li[data-kind='contract'] > .room-map-legend-swatch {
+  border-color: var(--legend-contract);
 }
 
 .room-map-legend-entry {

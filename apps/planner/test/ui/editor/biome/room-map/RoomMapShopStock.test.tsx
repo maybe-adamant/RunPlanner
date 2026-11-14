@@ -32,19 +32,8 @@ const placements: Omit<RoomMapPlacements, 'preview'> = {
   anchors: new Map(),
   anchorNumbers: new Map(),
   fieldsPoints: new Map(),
-  shopItems: new Map([
-    [
-      'Boon',
-      {
-        slotLabel: 'Major',
-        label: 'Zeus Boon',
-        purchased: true,
-        refill: { label: 'Centaur Heart' },
-      },
-    ],
-    ['Heal', { slotLabel: 'Minor', label: 'Healing', purchased: false }],
-    ['Unset', { slotLabel: 'Minor 2', purchased: false }],
-  ]),
+  // The Major item is bought and the Unset slot holds nothing yet: neither stands.
+  shopItems: new Map([['Heal', { label: 'Healing' }]]),
   contractPedestal: { label: 'Pom of Power' },
 };
 
@@ -64,31 +53,17 @@ function ShopMap({ stage }: { readonly stage: RoomMapStage }) {
   );
 }
 
-const shopMarkers = () =>
+const stockMarkers = () =>
   within(screen.getByRole('region', { name: 'Preboss map' }))
     .getAllByRole('img')
-    .filter((marker) => marker.dataset.point === 'shop' || marker.dataset.point === 'pedestal')
+    .filter((marker) => marker.dataset.point === 'stock')
     .map((marker) => marker.getAttribute('aria-label'));
 
 describe('room map Shop stock', () => {
-  it('stands each item on its point, the bought one ringed once the purchases are made', () => {
+  it('stands each standing item plainly on its point, marked Shop or Contract where both stand', () => {
     render(<ShopMap stage="summary" />);
-    expect(shopMarkers()).toEqual([
-      'Zeus Boon · Bought · Refilled with Centaur Heart',
-      'Healing',
-      'Minor 2',
-      'Pom of Power',
-    ]);
-    expect(screen.getByRole('img', { name: /^Zeus Boon/ }).dataset.taken).toBe('true');
-    expect(
-      within(screen.getByRole('list', { name: 'Map key' }))
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toEqual(['Shop item', 'Contract pedestal']);
-  });
-
-  it('shows no purchase before the room is played', () => {
-    render(<ShopMap stage="open" />);
-    expect(shopMarkers()[0]).toBe('Zeus Boon · Refilled with Centaur Heart');
+    expect(stockMarkers()).toEqual(['Healing · Shop', 'Pom of Power · Contract']);
+    // Neither has a key of its own.
+    expect(screen.queryByRole('list', { name: 'Map key' })).toBeNull();
   });
 });
