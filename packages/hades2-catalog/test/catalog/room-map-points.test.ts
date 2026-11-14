@@ -150,6 +150,41 @@ describe('room map points', () => {
     }
   });
 
+  it('places the World Shop LootPoints in exactly the rooms that can hold a World Shop', () => {
+    const holdsWorldShop = (room: RoomDeclaration) =>
+      [room, ...(room.routeOverlays ?? [])].some(
+        (variant) => variant.incomingReward?.kind === 'shop',
+      );
+    for (const room of catalog.rooms.values)
+      expect([room.gameName, mapPoints(room).shopPoints !== undefined]).toEqual([
+        room.gameName,
+        holdsWorldShop(room),
+      ]);
+    // Sorted by ObjectId, which is not their order across the room.
+    expect(catalog.rooms.byKey.F_Shop01?.mapPoints?.shopPoints).toEqual([
+      { id: 40055, x: 11798.79, y: 9442.86 },
+      { id: 561082, x: 11362.26, y: 9222.55 },
+      { id: 561085, x: 11563.89, y: 9351.01 },
+    ]);
+    expect(ids(catalog.rooms.byKey.Q_PreBoss01?.mapPoints?.shopPoints)).toEqual([
+      769398, 769399, 769400, 781071, 781072, 781073,
+    ]);
+    expect(catalog.rooms.byKey.H_Bridge01?.mapPoints?.shopPoints).toHaveLength(3);
+  });
+
+  it('places the Infernal Contract pedestal in the rooms that declare its reward', () => {
+    for (const room of catalog.rooms.values)
+      expect([room.gameName, mapPoints(room).contractPedestalPoint !== undefined]).toEqual([
+        room.gameName,
+        room.infernalContractReward !== undefined,
+      ]);
+    expect(catalog.rooms.byKey.Q_PreBoss01?.mapPoints?.contractPedestalPoint).toEqual({
+      id: 793525,
+      x: 24815.79,
+      y: 18255.58,
+    });
+  });
+
   it.each([
     [
       'an undeclared room',
@@ -207,6 +242,23 @@ describe('room map points', () => {
         (input.O_Combat01!.shipWheel!.rightOffer as { y: unknown }).y = null;
       },
       /roomMapPoints\.O_Combat01\.shipWheel\.rightOffer\.y: must be a finite number/,
+    ],
+    [
+      'unsorted shop points',
+      (input: Record<string, RoomMapPoints>) => {
+        (input.F_Shop01 as { shopPoints: unknown }).shopPoints = [
+          ...input.F_Shop01!.shopPoints!,
+        ].reverse();
+      },
+      /roomMapPoints\.F_Shop01\.shopPoints\[1\]\.id: must ascend/,
+    ],
+    [
+      'a contract pedestal reusing a shop point',
+      (input: Record<string, RoomMapPoints>) => {
+        (input.F_PreBoss01 as { contractPedestalPoint: unknown }).contractPedestalPoint =
+          input.F_PreBoss01!.shopPoints![0];
+      },
+      /roomMapPoints\.F_PreBoss01\.contractPedestalPoint\.id: duplicates/,
     ],
   ])('rejects %s', (_label, change, message) => {
     const input = cloneCatalogInput();

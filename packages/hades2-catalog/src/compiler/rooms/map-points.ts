@@ -36,14 +36,19 @@ function normalizeFamily<T extends RoomMapPoint>(
   );
 }
 
+function normalizeOwnPoint(point: RoomMapPoint, seen: Set<number>, path: string): RoomMapPoint {
+  const normalized = normalizePoint(point, path);
+  if (seen.has(normalized.id)) fail(`${path}.id`, `duplicates ${normalized.id}`);
+  seen.add(normalized.id);
+  return normalized;
+}
+
 function normalizeShipWheel(
   wheel: RoomMapShipWheel,
   seen: Set<number>,
   path: string,
 ): RoomMapShipWheel {
-  const point = normalizePoint(wheel, path);
-  if (seen.has(point.id)) fail(`${path}.id`, `duplicates ${point.id}`);
-  seen.add(point.id);
+  const point = normalizeOwnPoint(wheel, seen, path);
   const offer = (spot: { readonly x: number; readonly y: number }, spotPath: string) => {
     if (!Number.isFinite(spot.x)) fail(`${spotPath}.x`, 'must be a finite number');
     if (!Number.isFinite(spot.y)) fail(`${spotPath}.y`, 'must be a finite number');
@@ -135,6 +140,7 @@ export function normalizeRoomMapPoints(raw: RoomMapPoints, path: string): RoomMa
   const fieldsCagePoints = optionalFamily(raw.fieldsCagePoints, 'fieldsCagePoints');
   const fieldsOptionalPoints = optionalFamily(raw.fieldsOptionalPoints, 'fieldsOptionalPoints');
   const cocoonRewardPoints = optionalFamily(raw.cocoonRewardPoints, 'cocoonRewardPoints');
+  const shopPoints = optionalFamily(raw.shopPoints, 'shopPoints');
   const heroStarts = family(raw.heroStarts, 'heroStarts');
   const heroEnds = family(raw.heroEnds, 'heroEnds');
   const heroExits = family(raw.heroExits, 'heroExits');
@@ -156,5 +162,15 @@ export function normalizeRoomMapPoints(raw: RoomMapPoints, path: string): RoomMa
     ...(raw.shipWheel === undefined
       ? {}
       : { shipWheel: normalizeShipWheel(raw.shipWheel, seen, `${path}.shipWheel`) }),
+    ...(shopPoints === undefined ? {} : { shopPoints }),
+    ...(raw.contractPedestalPoint === undefined
+      ? {}
+      : {
+          contractPedestalPoint: normalizeOwnPoint(
+            raw.contractPedestalPoint,
+            seen,
+            `${path}.contractPedestalPoint`,
+          ),
+        }),
   });
 }

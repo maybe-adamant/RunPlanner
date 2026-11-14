@@ -72,6 +72,7 @@ export {
   resolveTraitAcquisitionOrdinalEffect,
 } from './traits';
 export { nativeExitDoorOrder, type OpenExitDoor } from './exit-door-order';
+export { worldShopItemPoints } from './world-shop-points';
 import type {
   AspectDeclaration,
   TraitDeclaration,
@@ -1413,6 +1414,13 @@ export interface RoomMapPoints {
   readonly cocoonRewardPoints?: readonly RoomMapPoint[];
   /** Present wherever the map places a wheel, whether or not the room runs a wheel setup. */
   readonly shipWheel?: RoomMapShipWheel;
+  /**
+   * The `LootPoint`s of a room that can hold a World Shop, where
+   * `SpawnStoreItemsInWorld` spawns its items; see `worldShopItemPoints`.
+   */
+  readonly shopPoints?: readonly RoomMapPoint[];
+  /** RoomData `ZagContractRewardDestinationId`: where the Infernal Contract pedestal item spawns. */
+  readonly contractPedestalPoint?: RoomMapPoint;
 }
 
 /** RoomData facts, resolved through `InheritFrom`, that decide a room's flip and entry. */
