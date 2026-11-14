@@ -9,6 +9,8 @@
   --legend-chaos: #e879c6;
   --legend-anchor: #a6d84f;
   --legend-cage: #00e5ff;
+  /* Cocoons (G) never share a map with Fields cages, so they share its cyan. */
+  --legend-cocoon: #00e5ff;
   --legend-pickup: #e8e4da;
   --legend-selection: #f5d386;
   --hub-perfect: #49c8dc;
@@ -48,9 +50,9 @@
   min-height: 0;
   padding: 0;
   place-items: center;
-  border: 2px solid #ffd27a;
+  border: 2px solid var(--legend-cocoon);
   border-radius: 50%;
-  color: #ffe8a0;
+  color: var(--legend-cocoon);
   background: rgb(17 25 35 / 70%);
   box-shadow: 0 2px 8px rgb(0 0 0 / 48%);
   font-size: 0.66rem;
@@ -64,7 +66,7 @@
 .cocoon-map-marker:hover,
 .cocoon-map-marker[aria-pressed='true'] {
   background: rgb(17 25 35 / 88%);
-  outline: 3px solid #ffe8a0;
+  outline: 3px solid var(--legend-selection);
   outline-offset: 2px;
   box-shadow: 0 0 0 2px #101116;
 }
@@ -272,41 +274,6 @@
     0 2px 8px rgb(0 0 0 / 48%);
 }
 
-/* A quality glyph on the marker's top-left edge, so the key never rests on hue alone. */
-.hub-map-marker:is(
-    [data-category='Good'],
-    [data-category='Bad'],
-    [data-category='Special']
-  )::after {
-  position: absolute;
-  top: -8%;
-  left: -8%;
-  display: grid;
-  width: 38%;
-  aspect-ratio: 1;
-  place-items: center;
-  border: 1px solid #101923;
-  border-radius: 50%;
-  color: #101923;
-  background: var(--hub-marker-color);
-  font-size: clamp(7px, calc(0.7 * var(--app-vw)), 11px);
-  font-weight: 900;
-  line-height: 1;
-  pointer-events: none;
-}
-
-.hub-map-marker[data-category='Good']::after {
-  content: '✓';
-}
-
-.hub-map-marker[data-category='Bad']::after {
-  content: '✕';
-}
-
-.hub-map-marker[data-category='Special']::after {
-  content: '★';
-}
-
 .hub-map-marker:is(:disabled, [aria-disabled='true']) {
   cursor: not-allowed;
 }
@@ -368,50 +335,28 @@
 }
 
 .hub-map-legend span::before {
-  display: inline-grid;
-  width: 1.1em;
-  height: 1.1em;
-  place-items: center;
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
   border-radius: 50%;
   margin-right: 0.45em;
-  color: #101923;
-  background: var(--hub-swatch);
-  font-size: 0.8em;
-  font-weight: 900;
-  line-height: 1;
-  vertical-align: -0.15em;
+  background: currentcolor;
   content: '';
 }
 
-.hub-map-legend span[data-category='Good']::before {
-  content: '✓';
-}
-
-.hub-map-legend span[data-category='Bad']::before {
-  content: '✕';
-}
-
-.hub-map-legend span[data-category='Special']::before {
-  content: '★';
-}
-
 .hub-map-legend span[data-category='Perfect'] {
-  --hub-swatch: var(--hub-perfect);
   color: var(--hub-perfect);
 }
 
 .hub-map-legend span[data-category='Good'] {
-  --hub-swatch: var(--hub-good);
   color: var(--hub-good);
 }
 
 .hub-map-legend span[data-category='Bad'] {
-  --hub-swatch: var(--hub-bad);
   color: var(--hub-bad);
 }
 
 .hub-map-legend span[data-category='Special'] {
-  --hub-swatch: var(--hub-special);
   color: var(--hub-special);
 }
 
@@ -552,7 +497,9 @@
 
 /* Fields cage points ring with a centre dot; pickup points stand as diamonds. */
 .room-map-point[data-point='cage'] {
+  border-width: 2.5px;
   border-color: var(--legend-cage);
+  opacity: 1;
 }
 
 .room-map-point[data-point='cage']:not([data-occupied], [data-marked])::after {
@@ -564,9 +511,29 @@
 }
 
 .room-map-point[data-point='pickup'] {
-  border-color: var(--legend-pickup);
-  border-radius: 3px;
+  border-width: 1.5px;
+  border-color: color-mix(in srgb, var(--legend-pickup) 62%, transparent);
+  border-radius: 2px;
   rotate: 45deg;
+}
+
+/* An occupied pickup point stays a size under a cage's ring: its diagonal spans the ring. */
+.room-map-point[data-point='pickup'][data-occupied] {
+  width: max(2.6%, 21px);
+  background: rgb(17 25 35 / 45%);
+  box-shadow: none;
+}
+
+.room-map-point[data-point='pickup'] > .room-map-number {
+  background: color-mix(in srgb, var(--legend-pickup) 70%, #101116);
+}
+
+/* A free pickup point is the quietest mark: smaller, outline only. */
+.room-map-point[data-point='pickup']:not([data-occupied], [data-marked]) {
+  width: max(1.9%, 11px);
+  background: transparent;
+  box-shadow: none;
+  opacity: 0.7;
 }
 
 .room-map-point[data-point='pickup'] > * {
@@ -614,10 +581,6 @@
 
 .room-map-point[data-point='cage'] > .room-map-number {
   background: var(--legend-cage);
-}
-
-.room-map-point[data-point='pickup'] > .room-map-number {
-  background: var(--legend-pickup);
 }
 
 /* An entry: Melinoë's head where she can arrive. */
@@ -881,9 +844,11 @@
 }
 
 .room-map-legend > li[data-kind='pickup'] > .room-map-legend-swatch {
-  width: 10px;
-  height: 10px;
-  border-color: var(--legend-pickup);
+  width: 9px;
+  height: 9px;
+  border-width: 1.5px;
+  border-color: color-mix(in srgb, var(--legend-pickup) 62%, transparent);
+  background: transparent;
   border-radius: 2px;
   rotate: 45deg;
 }
