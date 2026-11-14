@@ -85,7 +85,10 @@ describe('Chaos position publication', () => {
     };
     const decode = (row: unknown) =>
       overview({ encounterPhases: [], requiredObjects: [], additional: [row] }, 'overview');
-    expect(decode(gate).additional![0]).not.toHaveProperty('spawnPointIndex');
+    expect(() => decode(gate)).toThrow(/spawnPointIndex is required for Chaos/);
+    expect(decode({ ...gate, kind: 'zagreusContract' }).additional![0]).not.toHaveProperty(
+      'spawnPointIndex',
+    );
     expect(decode({ ...gate, spawnPointIndex: 3 }).additional![0]!.spawnPointIndex).toBe(3);
     for (const spawnPointIndex of [null, 0, -1, 1.5, '2', true, Infinity, NaN]) {
       expect(() => decode({ ...gate, spawnPointIndex })).toThrow();

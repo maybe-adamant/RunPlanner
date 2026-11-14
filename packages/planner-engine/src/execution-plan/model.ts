@@ -298,7 +298,7 @@ export interface ExecutionFieldsLayout {
   }[];
   readonly optionalRewards: readonly {
     readonly slotKey: string;
-    readonly pointId?: number;
+    readonly pointId: number;
     readonly reward: ExecutionReward;
   }[];
   readonly nemesisPointId?: number;
@@ -868,7 +868,7 @@ export interface ExecutionOverview {
       };
     }[];
     /** The `ChallengeSwitchBase` anchor it stands on. */
-    readonly anchorId?: number;
+    readonly anchorId: number;
   };
   readonly stygianWell?: {
     /** The initial roll's three slots. */
@@ -884,8 +884,8 @@ export interface ExecutionOverview {
       readonly offers: readonly ExecutionWellOffer[];
       readonly boughtSlots?: readonly ('healing' | 'secondLeft' | 'secondRight')[];
     }[];
-    /** The `ChallengeSwitchBase` anchor it stands on; absent on its room's pin. */
-    readonly anchorId?: number;
+    /** The `ChallengeSwitchBase` anchor it stands on, its room's pin when pinned. */
+    readonly anchorId: number;
   };
   readonly purgingPool?: {
     /** The entry list the room generates on entry, slot by slot. */
@@ -913,7 +913,7 @@ export interface ExecutionOverview {
       }[];
     }[];
     /** The `ChallengeSwitchBase` anchor it stands on. */
-    readonly anchorId?: number;
+    readonly anchorId: number;
   };
   readonly keepsakeRack?: { readonly keepsakeKey?: string };
   /**
@@ -930,7 +930,7 @@ export interface ExecutionOverview {
       readonly attributeKeys: readonly string[];
     };
     /** The `ChallengeSwitchBase` anchor it stands on. */
-    readonly anchorId?: number;
+    readonly anchorId: number;
   };
   /**
    * The doors observed locked when the room's doors open, in exit order
