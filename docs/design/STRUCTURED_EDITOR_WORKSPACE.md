@@ -36,7 +36,7 @@ appear, not what they mean.
 - Overview owns occurrence contents, feature inventory and room positions
   (entry, object anchors and Fields points in its Layout section), and Timeline
   owns participating actions and their chronology, the room's outgoing offers
-  on its Doors open row and the exit pick on its last row.
+  on its Doors opened marker and the exit pick on its last row.
 - Dormant, ungenerated, unvisited and unpurchased children publish no active
   Timeline control merely because their authored detail is retained.
 - Context-invalid authored values remain visible until explicitly replaced or
@@ -323,36 +323,43 @@ phase's selector and launcher render in Room Overview; finding navigation
 selects Overview and focuses/highlights the launcher without automatically
 opening the dialog.
 
-On the Room Timeline each encounter phase opens with its Encounter banner and
-closes with its Encounter ended banner, with its Encounter outcome between
-them where the fight's ending hosts a choice; a Fields room numbers start and end by the
-cage's combat cycle and tags the start with its cage. A definitional encounter's start banner
-names its settled identity: the phase's role, when the room has more than one
-encounter start banner and no Fields cage tag already names the phase, then the
-selected encounter. Phases settled on entry do not count toward that role rule.
+On the Room Timeline each encounter phase opens with its **Encounter started**
+marker and closes with its **Encounter ended** marker, with its Encounter outcome between
+them where the fight's ending hosts a choice. **Combat started** shows only where the fight
+is its own marker after the encounter's start (an opening pickup between them, a Fields
+miniboss); otherwise the one marker reads Encounter started. In a room of several
+encounters the start names its phase as a chip (Pre-combat and Follow-up in P rooms,
+Intro and Phase n in a Ship); Encounter ended and single-encounter rooms carry none.
+Out of the Timeline, where no chip can show, a reference names the phase in brackets,
+such as "Encounter ended (Phase 1)". A Fields cage's encounter starts as its Unlock row
+is taken, so its start hangs under that row and neither marker repeats the cage. A
+definitional encounter's start marker names its settled identity: the phase's role,
+when the room has more than one encounter start and no Fields cage names the phase,
+then the selected encounter. Phases settled on entry do not count toward that role rule.
 A non-combat encounter settled on entry (a Nemesis event, Empty) leaves its
-Room entered banner plain; a selected Nemesis family is read-only text on its
-movable interaction row. The banner identity only navigates to its Overview
+Room entered marker plain; a selected Nemesis family is read-only text on its
+movable interaction row. The marker's identity only navigates to its Overview
 owner.
 
-A banner hosts the events of its moment, as the
+A marker hosts the events of its moment, as the
 [Encounter outcome](ROOM_LIFECYCLE_MODEL.md#encounter-outcome) divides them.
-The start banner carries only the Fig Leaf skip. The **Encounter outcome**
+The start marker carries only the Fig Leaf skip. The **Encounter outcome**
 carries how the fight ended: the Aetos appearance and its wave, the Gorgon
 Amulet's Death Defiance condition (whose Athena appears in that fight), a
 Nemesis kill race, a Nemesis event's result and an Anomaly's capture point. It
 appears only where the engine lists a choice for it, an eligible one or an
 authored value; a stop at the outcome keeps it with its controls to repair
 them. In a Boss room **Boss defeated** is the outcome, its own event between
-the start and end hosting the fixed effects Judgment and Crystal Figurine. The
-end banner hosts no choice: it carries the fight gold and announces what
+the start and end, with the fixed effects Judgment and Crystal Figurine hanging under
+it. The end marker hosts no choice: it carries the fight gold and announces what
 spawns. The fight gold is the engine's summary for the phase, a Nemesis bet's
 win or loss included, shown as its estimate and spread, or plainly when
 exact, with its breakdown by source on hover; a challenge switch's or locked
-door's fight shows its summary on its press row the same way. A banner is one
-line: its title, then its controls at the line's end. The outcome keeps one
+door's fight shows its summary on its press row the same way. A marker is one
+line: its name, then its small content as chips; bigger content (a wheel's offers,
+the doors) sits under it. The outcome keeps one
 fixed slot per event, in the order Aetos, Death Defiance condition, so each
-event lines up across banners and an absent event leaves its slot empty. The Fig Leaf skip and the Death
+event lines up across markers and an absent event leaves its slot empty. The Fig Leaf skip and the Death
 Defiance condition are icon toggles named by their meaning, which their hint
 also tells; the Aetos appearance is one compact choice of no appearance or the
 wave it joins. The title gives way first; only a line that still cannot fit
@@ -495,11 +502,18 @@ start or the Loadout; its content returns as soon as the walk reaches it.
 Every Room Timeline row has one anatomy: its reorder handle, the icon of the
 object or NPC it uses (badged with the inventory slot it buys from, and marked
 for a Travel Deal restock), its label, its decisions, its money and its delete.
-Money and delete keep one right edge on every row, and each encounter phase's
-rows read as one group. Every banner (encounter start and end, other lifecycle
-boundaries and checkpoints) shares one band style. A banner is an event the
-engine announces once the walk reaches it, brought about by the rows before
-it, so it can host choices but cannot be inserted, moved or deleted.
+Money and delete keep one right edge on every row. The Timeline holds three
+things: the user's **action rows**, the spine's only nodes, and two kinds of
+notification derived from them. A **room event** (Room entered, Encounter started,
+Wheels opened, Doors opened and the rest) is a quiet divider between actions: the
+engine announces it once the walk reaches it, brought about by the rows before it,
+so it can host choices but cannot be inserted, moved or deleted. A **notice** tells
+what the game did, such as what spawned or unlocked. Anything with a cause hangs
+under it, one line each and never merged: an action's spawn under the action, a
+room event's spawns, unlocks and settled outcomes (Steady Growth, Transcendent
+Embryo, Judgment, Crystal Figurine) under its marker, and a notice whose cause the
+Timeline does not show at its end. Select wheel is an action row; leaving the room
+is the last row.
 
 A label is the action's verb (Buy for paid World Shop, Shrine and Well items
 and refills, Rush for a bought Shrine item's rush, Collect for pickups including
@@ -525,7 +539,7 @@ output, Fountain and other row decisions. A control appears only where the row
 uses it. The money column carries a purchase's price and chance to afford, or
 the gold the row gains or loses as the engine's gold ledger attributes it to
 that row, apart from fight gold, which shows as its fight's summary. The chance to afford tells on hover and focus the gold estimated to
-be held just before the purchase, with its spread; no banner repeats a running
+be held just before the purchase, with its spread; no marker repeats a running
 balance. Narrow timelines move a row's decisions to a second line.
 
 Purchase and collect rows carry no inner checkbox; their delete control
@@ -596,14 +610,14 @@ the World Shop.
 A room's doors are rows of its Timeline, in the tab whose phase opens them (a
 Ship's last phase). They appear once the walk reaches the doors opening: a
 room whose walk stops before it, or at a row after it (a Postboss purchase
-after the fountain), shows neither its doors on **Doors open** nor its Leave
-row, while a stop at the doors opening itself keeps both to repair them there. The engine-placed **Doors open** banner holds the doors'
-compact state at its right end: one chip per door, each its room's icon then
+after the fountain), shows neither its doors on **Doors opened** nor its Leave
+row, while a stop at the doors opening itself keeps both to repair them there. The engine-placed **Doors opened** marker holds the doors'
+compact state on its line: one chip per door, each its room's icon then
 its rewards' icons as first drawn, the picked door outlined and a missing door
 dashed; a fixed exit (a boss door, the next biome) is one chip of its
 destination, and an Ephyra room's hidden return door is a chip of its own.
 Beside the chips a disclosure shows or hides the doors' editor, which follows
-the banner as one full-width line: the batch rules (pool line, Fields roll and
+the marker as one block under it: the batch rules (pool line, Fields roll and
 cage facts, a boss door's pool), then the shared door table without selection
 controls. The editor stays collapsed until it needs attention: a finding on
 any owner it repairs, the room's doors being the next required input, or
@@ -680,12 +694,13 @@ A row's position changes only through its reorder handle, by pointer drag or
 by keyboard (pick up, step, drop, cancel), over the positions the engine's
 proposals publish. The keyboard steps through legal positions only; a pointer
 over a disallowed position names why, from that proposal's explanation. The
-start of each banner's section is a drop anchor, and a move announcement names
+start of each marker's section is a drop anchor, and a move announcement names
 the Ship phase it crosses into. A row with no legal move keeps a quieter
 disabled handle, and a row that can never be removed a quieter disabled
 delete, so the trailing columns stay put. The timeline legend explains the
-row accents (optional, required before the phase ends, required before leaving
-the room, automatic) and the chance-to-afford pill.
+three row kinds (required, optional, automatic), each told apart by colour and
+line style, and the chance-to-afford pill. Required merges the engine's
+before-this-phase-ends and before-leaving scopes in presentation only.
 
 Required chronology rows arrive ranked from the activating semantic command
 and expose only engine-assessed moves. React renders no Position or generic
@@ -717,18 +732,18 @@ child renders its bound Add or Remove Chaos-gate/Zagreus-contract action
 directly, without a second child heading that repeats the action's subject.
 
 ShipCombat is the deliberate fourth shape. Its tabs are Room Overview, then one
-Timeline per phase named by the phase: Intro, Combat 1, and Combat 2 when it is
-structurally active. Overview owns encounter count, every phase's encounter
-and room features. Each phase tab holds its encounter banners and their events
+Timeline per phase named by the phase: Intro, Phase 1, and Phase 2 when it is
+structurally active. Overview owns the phase count, every phase's encounter
+and room features. Each phase tab holds its encounter markers and their events
 and its post-combat actions. A phase a wheel follows then opens that wheel at
-**Wheels open**, like Doors open: its offers' chips and the wheel's editor
+**Wheels opened**, like Doors opened: its offers' chips and the wheel's editor
 (pool and offer count, then its offers as first drawn). The pickups the phase's
 end spawned and the wheel-offer rerolls, press rows added from the phase's
 **Wheel** object, follow in their authored order, and the phase ends with
 **Select wheel** at the choice's place, which picks the offer by its
 name and shows its reward as it stands; a one-offer wheel has nothing to pick.
 While the walk stops before the choice, Select wheel stands at the last wheel
-banner reached. The last phase keeps Doors open and Leave room, since a Ship room
+marker reached. The last phase keeps Doors opened and Leave room, since a Ship room
 leaves through ordinary doors.
 The groups are views over one interaction and one authored order: global ranks,
 proposals, pointer drag, keyboard moves, and Undo are unchanged. The application

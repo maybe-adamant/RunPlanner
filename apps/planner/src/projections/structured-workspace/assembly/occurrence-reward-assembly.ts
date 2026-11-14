@@ -844,7 +844,7 @@ export function shipPhaseLabels(
     envelope.slots.map((slot) => {
       if (slot.rewardAttachment?.kind !== 'rewardWheel') return [slot.key, slot.key] as const;
       combatOrdinal += 1;
-      return [slot.key, `Combat ${combatOrdinal}`] as const;
+      return [slot.key, `Phase ${combatOrdinal}`] as const;
     }),
   );
 }

@@ -170,7 +170,7 @@ describe('challenge switch in the structured workspace', () => {
     expect(entries[press + 1]).toMatchObject({
       kind: 'boundary',
       boundary: { kind: 'encounterStarted', phaseKey: 'challengeSwitch' },
-      label: 'Encounter',
+      label: 'Encounter started',
       beginsEncounter: true,
     });
     expect(entries[press + 2]).toMatchObject({
@@ -209,7 +209,9 @@ describe('challenge switch in the structured workspace', () => {
             entry.boundary.kind === 'encounterStarted' &&
             entry.boundary.phaseKey === 'challengeSwitch',
         );
-        expect(fight, `${occurrenceId} ${variant.key}`).toMatchObject({ label: 'Encounter' });
+        expect(fight, `${occurrenceId} ${variant.key}`).toMatchObject({
+          label: 'Encounter started',
+        });
         expect(fight).not.toHaveProperty('runState');
       }
     }

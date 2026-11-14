@@ -262,8 +262,8 @@ describe('a room’s doors on its Timeline', () => {
     expect([...doorOne!.querySelectorAll('img')].map((img) => img.getAttribute('src'))).toContain(
       gold,
     );
-    // The Doors open row keeps Door 1's first draw.
-    const firstDraw = within(within(details).getByLabelText('Doors open')).getAllByRole(
+    // The Doors opened row keeps Door 1's first draw.
+    const firstDraw = within(within(details).getByLabelText('Doors opened')).getAllByRole(
       'listitem',
     )[0]!;
     expect(
@@ -395,8 +395,8 @@ describe('a room’s last Timeline row', () => {
     await view.user.click(within(details).getByRole('tab', { name: 'Intro Timeline' }));
     expect(within(details).queryByRole('listitem', { name: 'Leave room' })).toBeNull();
     expect(within(details).getByRole('listitem', { name: 'Select wheel' })).toBeTruthy();
-    await view.user.click(within(details).getByRole('tab', { name: 'Combat 1 Timeline' }));
-    expect(within(details).getByLabelText('Doors open')).toBeTruthy();
+    await view.user.click(within(details).getByRole('tab', { name: 'Phase 1 Timeline' }));
+    expect(within(details).getByLabelText('Doors opened')).toBeTruthy();
     expect(within(details).getByRole('listitem', { name: 'Leave room' })).toBeTruthy();
     expect(within(details).queryByRole('listitem', { name: 'Select wheel' })).toBeNull();
   });

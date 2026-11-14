@@ -81,6 +81,7 @@ export function SteadyGrowthEffectRow({
           }
         />
       }
+      hooked
       kind="effect"
       placement={
         selected !== '' ? (

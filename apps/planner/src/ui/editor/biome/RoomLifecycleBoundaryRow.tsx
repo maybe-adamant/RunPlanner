@@ -9,26 +9,27 @@ import { useAppDispatch } from '@planner/state/store';
 import { hintProps } from '@planner/ui/controls/hint';
 import { TimelineRow } from './TimelineRow';
 import { BannerTitle } from './TimelineDoors';
+import { TimelineEventIcon } from './TimelineEventIcon';
 import type { BannerToggle } from './doorSummary';
 import { boundarySpokenLabel } from './lifecycleBoundaryLabel';
 
 /** Render-only boundary row; timeline placement remains the projection's authority. */
 export function LifecycleBoundaryRow({
   boundary,
-  beginsEncounter,
+  underTrigger,
   label,
   controls,
   money,
   fieldsCage,
   identity,
-  phase,
+  phaseTitle,
   toggle,
 }: {
-  /** The encounter phase this banner belongs to, for the phase's light grouping. */
-  readonly phase?: number;
+  /** The marker and its phase shown, where the label names both. */
+  readonly phaseTitle?: { readonly marker: string; readonly phase: string } | undefined;
   readonly boundary: WorkspaceRoomLifecycleBoundary;
-  /** Its phase's encounter begins here, which starts the phase's grouping. */
-  readonly beginsEncounter?: true;
+  /** An action row right above brought it about, so it hangs under that row. */
+  readonly underTrigger?: true;
   readonly label: string;
   /** The banner's own controls, flowing on its sentence after its identity. */
   readonly controls?: ReactNode;
@@ -46,38 +47,31 @@ export function LifecycleBoundaryRow({
   const titleHint = [fieldsCage?.cage, identity?.label]
     .filter((part) => part !== undefined)
     .join(' · ');
-  // A Fields cage is known by its slot, subscripted on its encounter's name as its rewards mark it.
-  const cageSlot =
-    fieldsCage === undefined ? null : (
-      <span aria-label={fieldsCage.cage} className="fields-cage-slot" role="img">
-        C{fieldsCage.slot}
-      </span>
-    );
   return (
     <TimelineRow
       aria-label={accessibleLabel}
       data-lifecycle-boundary={boundary.key}
       data-boundary-kind={boundary.kind}
       data-reorder-anchor={boundary.key}
-      data-phase={phase}
-      data-phase-start={
-        (beginsEncounter === true || boundary.kind === 'roomEntered') && phase !== undefined
-          ? ''
-          : undefined
-      }
+      // A Fields cage's markers follow its Unlock row, which already names the cage.
+      data-fields-cage={fieldsCage?.slot}
+      hooked={underTrigger === true}
       kind="boundary"
+      marker={<TimelineEventIcon name={boundary.kind} />}
       money={money}
       label={
         <>
           <span className="timeline-banner-title">
             {identity === undefined ? (
-              cageSlot === null ? (
-                <BannerTitle label={label} toggle={toggle} />
+              fieldsCage === undefined ? (
+                <BannerTitle
+                  label={phaseTitle?.marker ?? label}
+                  phase={phaseTitle?.phase}
+                  toggle={toggle}
+                />
               ) : (
-                // The slot hugs the title as a subscript, as it does on a start banner.
                 <span {...hintProps(titleHint, undefined, accessibleLabel)}>
                   <BannerTitle label={label} toggle={toggle} />
-                  {cageSlot}
                 </span>
               )
             ) : (
@@ -88,8 +82,10 @@ export function LifecycleBoundaryRow({
                 onClick={() => dispatch(semanticOwnerNavigated(identity.owner))}
                 type="button"
               >
-                <strong>{label}</strong>
-                {cageSlot}
+                <strong>{phaseTitle?.marker ?? label}</strong>
+                {phaseTitle === undefined ? null : (
+                  <span className="timeline-phase-chip">{phaseTitle.phase}</span>
+                )}
               </button>
             )}
           </span>

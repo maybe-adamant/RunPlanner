@@ -54,14 +54,14 @@ export function ShipCombatPhaseCountWorkbench({
     <section aria-label="Room overview" className="ship-combat-editor">
       {nested ? null : (
         <div className="local-reward-heading">
-          <h4>Combat phases</h4>
+          <h4>Phases</h4>
         </div>
       )}
       <CandidatePicker
         id={`room-${occurrence.occurrenceId}-combat-phase-count`}
         interaction={interaction}
-        label={nested ? 'Phases' : 'Combat phases'}
-        placeholder="Choose combat phases"
+        label="Phases"
+        placeholder="Choose phases"
         onReplace={(encounterCount) =>
           dispatch(
             authoredProjectCommandDispatched({

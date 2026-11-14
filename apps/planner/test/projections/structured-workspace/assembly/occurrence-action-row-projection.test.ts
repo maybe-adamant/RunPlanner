@@ -706,7 +706,7 @@ describe('structured workspace actions assembly', () => {
     });
     if (collect === undefined) throw new Error('expected the Boss reward action');
     expect(entryKeys.indexOf('Encounter ended')).toBeLessThan(entryKeys.indexOf(collect.key));
-    expect(entryKeys.indexOf(collect.key)).toBeLessThan(entryKeys.indexOf('Doors open'));
+    expect(entryKeys.indexOf(collect.key)).toBeLessThan(entryKeys.indexOf('Doors opened'));
   });
 
   it("names each Dream boss's drop as Shiny Stars", () => {
@@ -1178,8 +1178,8 @@ describe('structured workspace actions assembly', () => {
         wheel.storeKey,
       ]),
     ).toEqual([
-      ['wheel1', 'Combat1', 'Combat 1 reward', true, 1, 1, 'RunProgress'],
-      ['wheel2', 'Combat2', 'Combat 2 reward', false, 1, 1, 'RunProgress'],
+      ['wheel1', 'Combat1', 'Phase 1 reward', true, 1, 1, 'RunProgress'],
+      ['wheel2', 'Combat2', 'Phase 2 reward', false, 1, 1, 'RunProgress'],
     ]);
     expect(ship.node.room.roomLocal.wheels[0]?.address).toEqual(
       createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
@@ -1196,7 +1196,7 @@ describe('structured workspace actions assembly', () => {
         }),
         expect.objectContaining({
           key: 'Combat1',
-          label: 'Combat 1',
+          label: 'Phase 1',
         }),
       ],
       repairRows: [],
@@ -2391,7 +2391,7 @@ describe('purchase gold', () => {
   });
 });
 
-describe('Doors open room gold', () => {
+describe('Doors opened room gold', () => {
   function roomGoldWitness(
     project: ProjectDocument,
     room: ReturnType<typeof createOccurrenceAddress>,

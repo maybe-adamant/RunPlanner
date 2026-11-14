@@ -1181,7 +1181,7 @@ export function bindOccurrenceLocalInteractions(
               occurrence: requirement.owner,
             }),
           }),
-          'Ship combat-phase count',
+          'Ship phase count',
         );
         for (const wheel of requirement.wheels) {
           const key = semanticAddressKey(wheel.address);

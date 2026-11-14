@@ -10,6 +10,7 @@ import { DoorChips } from './DecisionWorkbench';
 import { TimelineRow } from './TimelineRow';
 import { TimelineMapStageContext } from './timelineMapStage';
 import { doorsOpenToggle, type BannerToggle } from './doorSummary';
+import { TimelineEventIcon } from './TimelineEventIcon';
 
 /**
  * A room's doors on its Timeline: the Doors open row (a compact state that
@@ -70,12 +71,21 @@ export function DoorsOpenControls({ doors }: { readonly doors: TimelineDoors }) 
 /** A banner's title: its name, or the disclosure button carrying it. */
 export function BannerTitle({
   label,
+  phase,
   toggle,
 }: {
   readonly label: string;
+  /** The phase a marker of a room of several belongs to, as a chip after its name. */
+  readonly phase?: string | undefined;
   readonly toggle?: BannerToggle | undefined;
 }) {
-  if (toggle === undefined) return <strong>{label}</strong>;
+  const name = (
+    <>
+      <strong>{label}</strong>
+      {phase === undefined ? null : <span className="timeline-phase-chip">{phase}</span>}
+    </>
+  );
+  if (toggle === undefined) return name;
   const button = (
     <button
       aria-controls={toggle.controls}
@@ -88,7 +98,7 @@ export function BannerTitle({
       <span aria-hidden="true" className="timeline-banner-toggle-caret">
         {toggle.expanded ? '▾' : '▸'}
       </span>
-      <strong>{label}</strong>
+      {name}
     </button>
   );
   return button;
@@ -117,21 +127,29 @@ export function DoorsOpenDetailRow({
 /** A Doors open row where the room's timeline has none of its own yet. */
 export function DoorsOpenBanner({
   doors,
-  label = 'Doors open',
+  label = 'Doors opened',
+  phaseTitle,
 }: {
   readonly doors: TimelineDoors;
   /** A Ship phase's wheel opens as Wheels open. */
   readonly label?: string;
+  /** The marker and its phase shown, where the label names both. */
+  readonly phaseTitle?: { readonly marker: string; readonly phase: string } | undefined;
 }) {
   return (
     <TimelineMapStageContext.Provider value="open">
       <TimelineRow
         aria-label={label}
         kind="boundary"
+        marker={<TimelineEventIcon name={doors.noun === 'offer' ? 'wheelsOpen' : 'doorsOpened'} />}
         label={
           <>
             <span className="timeline-banner-title">
-              <BannerTitle label={label} toggle={doorsOpenToggle(doors)} />
+              <BannerTitle
+                label={phaseTitle?.marker ?? label}
+                phase={phaseTitle?.phase}
+                toggle={doorsOpenToggle(doors)}
+              />
             </span>
             <span className="timeline-banner-modifiers">
               <DoorsOpenControls doors={doors} />
@@ -151,6 +169,7 @@ export function LeaveRow({
   actions,
   anchorOwner,
   children,
+  choice = false,
   gap,
   heroDoor,
   label,
@@ -163,6 +182,8 @@ export function LeaveRow({
   /** The owner the row repairs, such as the exit selection; navigation lands on its picker. */
   readonly anchorOwner?: SemanticAddress;
   readonly children?: ReactNode;
+  /** The row is an action of the room, such as picking a wheel's offer, not its way out. */
+  readonly choice?: boolean;
   /** Where Melinoë stands on the room's map from this row: a side door's slot key, empty for the entry. */
   readonly heroDoor?: string | undefined;
   readonly label: string;
@@ -199,7 +220,7 @@ export function LeaveRow({
         gap={gap}
         {...(heroDoor === undefined ? {} : { 'data-hero-door': heroDoor })}
         {...(pastEnd ? { 'data-plan-end': 'pastEnd' } : {})}
-        kind="boundary"
+        kind={choice ? 'action' : 'boundary'}
         label={
           <>
             <span className="timeline-banner-title">

@@ -448,6 +448,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly boundary: WorkspaceRoomLifecycleBoundary;
       /** Projection-owned text; React does not reconstruct boundary wording. */
       readonly label: string;
+      /** A phase's marker in a room of several: its marker shown with its phase as a chip. */
+      readonly phaseTitle?: { readonly marker: string; readonly phase: string };
       /** Projection-owned insertion position immediately adjacent to this boundary. */
       readonly dropIndex: number;
       readonly rank: number;
@@ -500,6 +502,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly label: string;
       /** Lists locked loot as it becomes takeable rather than as it spawns. */
       readonly unlocks?: true;
+      /** Stands right under the entry of its cause; without, it ends the Timeline. */
+      readonly underCause?: true;
       readonly groups: readonly WorkspaceSpawnGroup[];
     };
 

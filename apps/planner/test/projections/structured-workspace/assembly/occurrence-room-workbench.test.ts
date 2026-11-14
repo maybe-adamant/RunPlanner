@@ -110,13 +110,13 @@ describe('occurrence room workbench', () => {
 
     expect(ship.roomLocal.phases).toEqual([
       { key: 'Intro', label: 'Intro' },
-      { key: 'Combat1', label: 'Combat 1', rewardWheelKey: 'wheel1' },
-      { key: 'Combat2', label: 'Combat 2', rewardWheelKey: 'wheel2' },
+      { key: 'Combat1', label: 'Phase 1', rewardWheelKey: 'wheel1' },
+      { key: 'Combat2', label: 'Phase 2', rewardWheelKey: 'wheel2' },
     ]);
     expect(ship.workbench.phases.map((phase) => [phase.key, phase.label])).toEqual([
       ['Intro', 'Intro'],
-      ['Combat1', 'Combat 1'],
-      ['Combat2', 'Combat 2'],
+      ['Combat1', 'Phase 1'],
+      ['Combat2', 'Phase 2'],
     ]);
     // Each tab shows the wheel the next combat is chosen at; the last its doors.
     expect(ship.workbench.phases.map((phase) => phase.wheel?.key)).toEqual([

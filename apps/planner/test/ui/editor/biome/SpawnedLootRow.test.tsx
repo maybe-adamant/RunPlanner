@@ -316,16 +316,15 @@ describe('locked loot', () => {
     const cage = actions.rows.find(
       (row) => row.reference.kind === 'interactLocalReward' && row.reference.slotKey === 'cage2',
     )!;
-    // Spawned and Unlocks rows are notices, a dot in place of a handle; the collect they lead to
+    // Spawned and Unlocks rows are notices hanging under their cause; the collect they lead to
     // is an action with its handle.
     const handleCell = (row: HTMLElement) => row.querySelector('[data-timeline-cell="handle"]')!;
     for (const row of [entry!, ...unlocks]) {
       expect(row.classList).toContain('timeline-row-notice');
-      expect(handleCell(row).querySelector('.timeline-notice-dot')).not.toBeNull();
+      expect(row.hasAttribute('data-timeline-hook')).toBe(true);
       expect(handleCell(row).querySelector('[data-reorder-handle]')).toBeNull();
     }
     expect(actionRow(cage.key).classList).not.toContain('timeline-row-notice');
-    expect(handleCell(actionRow(cage.key)).querySelector('.timeline-notice-dot')).toBeNull();
     expect(handleCell(actionRow(cage.key)).querySelector('[data-reorder-handle]')).not.toBeNull();
     await view.user.click(chips(unlocks[0]!)[0]!);
     expect(document.activeElement?.getAttribute('data-room-action-key')).toBe(cage.key);

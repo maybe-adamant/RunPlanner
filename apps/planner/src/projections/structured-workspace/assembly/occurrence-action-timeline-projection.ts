@@ -29,12 +29,19 @@ import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
 function lifecycleBoundaryLabel(
   boundary: WorkspaceRoomLifecycleBoundary,
-  mergedWithBegin: boolean,
+  standsForBegin: boolean,
   phaseLabel: string | undefined,
+  encounterPhase: string | undefined,
 ): string {
   switch (boundary.kind) {
+    // A fight shows as its own Combat started only where its encounter's start has a row.
+    case 'encounterBegun':
+      return phaseMarker(roomEventMarker.encounterBegun, encounterPhase);
     case 'encounterStarted':
-      return mergedWithBegin ? roomEventMarker.encounterBegun : roomEventMarker.encounterStarted;
+      return phaseMarker(
+        standsForBegin ? roomEventMarker.encounterBegun : roomEventMarker.encounterStarted,
+        encounterPhase,
+      );
     // Wheels open names the phase whose combat its wheel starts.
     case 'wheelsOpen':
       return phaseMarker(roomEventMarker.wheelsOpen, phaseLabel);
@@ -272,6 +279,30 @@ function projectRoomLifecycleTimeline(
   const encounterMarkerCount = encounterPhases.filter(
     (phase) => phase.timelineAnchor === 'encounter',
   ).length;
+  // An encounter's start names its phase beside another's, as a Ship's phases always are,
+  // except where its Fields cage tag names it.
+  const encounterPhaseName = (boundary: WorkspaceRoomLifecycleBoundary) =>
+    (boundary.kind === 'encounterBegun' || boundary.kind === 'encounterStarted') &&
+    !cageByPhase.has(boundary.phaseKey) &&
+    (roomLocal.kind === 'ship' || encounterMarkerCount > 1)
+      ? encounterByPhase.get(boundary.phaseKey)?.label
+      : undefined;
+  // A marker of one phase of several shows its plain name with the phase as a chip.
+  const phaseTitle = (boundary: WorkspaceRoomLifecycleBoundary) => {
+    if (boundary.kind === 'wheelsOpen') {
+      const phase = phaseLabel(boundary);
+      return phase === undefined
+        ? undefined
+        : Object.freeze({ marker: roomEventMarker.wheelsOpen, phase });
+    }
+    const phase = encounterPhaseName(boundary);
+    if (phase === undefined) return undefined;
+    const marker =
+      boundary.kind === 'encounterStarted' && !beginHidden(boundary.phaseKey)
+        ? roomEventMarker.encounterStarted
+        : roomEventMarker.encounterBegun;
+    return Object.freeze({ marker, phase });
+  };
   const identityLabel = (phase: WorkspaceEncounterPhase, cageNamed: boolean) => {
     const family = phase.nemesisEvent?.value?.kind;
     const encounter =
@@ -379,9 +410,11 @@ function projectRoomLifecycleTimeline(
           boundary: boundary,
           label: lifecycleBoundaryLabel(
             boundary,
-            boundary.kind === 'encounterStarted' && mergedPhaseKeys.has(boundary.phaseKey),
+            boundary.kind === 'encounterStarted' && beginHidden(boundary.phaseKey),
             phaseLabel(boundary),
+            encounterPhaseName(boundary),
           ),
+          ...(phaseTitle(boundary) === undefined ? {} : { phaseTitle: phaseTitle(boundary)! }),
           ...(beginsEncounter(boundary) ? { beginsEncounter: true as const } : {}),
           dropIndex: Math.max(0, entry.rank - (entry.placement === 'before' ? 1 : 0)),
           placement: entry.placement,
