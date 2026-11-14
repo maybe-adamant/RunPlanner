@@ -2,6 +2,7 @@ import { roomActionKey, semanticAddressKey } from '@run-planner/engine/authored-
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
   RoomSpawnedLoot,
+  SpawnCause,
   SpawnMoment,
   SpawnUnlock,
   SpawnedLootItem,
@@ -151,18 +152,15 @@ function spawnGroups(
   );
 }
 
-type NoticeMoment = Pick<SpawnMoment, 'kind' | 'phaseKey' | 'wheelKey'>;
-
 function momentLabel(moment: SpawnMoment): string {
   return moment.kind === 'deliveryFlush' ? 'Delivered' : 'Spawned';
 }
 
-/** A boundary or action entry's identity, which a notice is placed against. */
-function entryIdentity(entry: TimelineEntry): string | undefined {
+/** The key a notice attaches to: a boundary's event or an action. */
+function entryKey(entry: TimelineEntry): string | undefined {
   switch (entry.kind) {
     case 'boundary':
-      // Wheels open is known by its wheel, every other encounter event by its phase.
-      return `boundary:${entry.boundary.kind}:${entry.boundary.kind === 'wheelsOpen' ? entry.boundary.wheelKey : 'phaseKey' in entry.boundary ? entry.boundary.phaseKey : ''}`;
+      return `event:${entry.boundary.key}`;
     case 'action':
       return `action:${entry.actionKey}`;
     case 'automaticEffect':
@@ -171,50 +169,40 @@ function entryIdentity(entry: TimelineEntry): string | undefined {
   }
 }
 
-const boundaryAt = (kind: string, phaseKey?: string) => `boundary:${kind}:${phaseKey ?? ''}`;
-
-/**
- * Where a moment's notice sits: after the boundary or action it follows, or
- * before the boundary it precedes, by the first one present.
- */
-function momentAnchor(
-  moment: NoticeMoment,
-  present: ReadonlySet<string>,
-  rewardActionByPhase: ReadonlyMap<string, string>,
-): { readonly placement: 'after' | 'before'; readonly identity: string } | undefined {
-  const first = (...candidates: readonly (readonly ['after' | 'before', string])[]) => {
-    const found = candidates.find(([, identity]) => present.has(identity));
-    return found === undefined ? undefined : { placement: found[0], identity: found[1] };
-  };
-  const entered = ['after', boundaryAt('roomEntered')] as const;
-  const phase = moment.phaseKey;
-  switch (moment.kind) {
-    case 'roomEntered':
-    case 'deliveryFlush':
-      return first(entered);
-    // Its Encounter, or its Combat where the two show as one marker.
-    case 'encounterBegun':
-      return first(
-        ['after', boundaryAt('encounterBegun', phase)],
-        ['after', boundaryAt('encounterStarted', phase)],
-        entered,
-      );
-    case 'encounterEnd':
-      return first(
-        ['after', boundaryAt('encounterEnd', phase)],
-        ['after', boundaryAt('bossDefeated', phase)],
-      );
-    case 'afterEncounterReward': {
-      const reward = phase === undefined ? undefined : rewardActionByPhase.get(phase);
-      return first(
-        ...(reward === undefined ? [] : [['after', `action:${reward}`] as const]),
-        ['after', `spawned:${phase === undefined ? 'encounterEnd' : `encounterEnd:${phase}`}`],
-        ['after', boundaryAt('encounterEnd', phase)],
-      );
-    }
-    case 'wheelsOpen':
-      return first(['after', boundaryAt('wheelsOpen', moment.wheelKey)]);
+/** The entry a notice follows: its cause's, an encounter's begin shown on the marker that begins it. */
+function causeKey(cause: SpawnCause, entries: readonly TimelineEntry[]): string {
+  if (cause.kind === 'action') return `action:${cause.action.actionKey}`;
+  const event = cause.event;
+  if (event.kind === 'encounterBegun') {
+    const marker = entries.find(
+      (entry) =>
+        entry.kind === 'boundary' &&
+        (entry.boundary.key === event.key ||
+          (entry.beginsEncounter === true &&
+            'phaseKey' in entry.boundary &&
+            entry.boundary.phaseKey === event.phaseKey)),
+    );
+    if (marker !== undefined) return entryKey(marker)!;
   }
+  return `event:${event.key}`;
+}
+
+/** Each notice right after its cause's entry, in notice order; one whose entry is not shown ends the list. */
+function attachNotices(
+  entries: readonly TimelineEntry[],
+  notices: readonly (readonly [SpawnCause, SpawnedEntry])[],
+): readonly TimelineEntry[] {
+  const keyed = notices.map(([cause, notice]) => [causeKey(cause, entries), notice] as const);
+  const shown = new Set(entries.flatMap((entry) => entryKey(entry) ?? []));
+  const out: TimelineEntry[] = [];
+  for (const entry of entries) {
+    out.push(entry);
+    const key = entryKey(entry);
+    if (key !== undefined)
+      out.push(...keyed.flatMap(([at, notice]) => (at === key ? [notice] : [])));
+  }
+  out.push(...keyed.flatMap(([at, notice]) => (shown.has(at) ? [] : [notice])));
+  return Object.freeze(out);
 }
 
 /**
@@ -252,68 +240,25 @@ export function projectSpawnedLoot(
       ),
     });
   // An unlock reads before what the same moment spawns: the freed reward comes first.
-  const noticeMoments: readonly NoticeMoment[] = [...loot.unlocks, ...loot.moments];
-  const notices: SpawnedEntry[] = [
-    ...loot.unlocks.map(unlockNotice),
-    ...loot.moments.map((moment) =>
-      Object.freeze({
-        kind: 'spawned' as const,
-        key: moment.key,
-        moment: moment.kind,
-        ...(moment.phaseKey === undefined ? {} : { phaseKey: moment.phaseKey }),
-        label: momentLabel(moment),
-        groups: spawnGroups(moment.items, item, (spawned) =>
-          spawnSource(catalog, spawned, undefined),
-        ),
-      }),
+  const notices: (readonly [SpawnCause, SpawnedEntry])[] = [
+    ...loot.unlocks.map((unlock) => [unlock.cause, unlockNotice(unlock)] as const),
+    ...loot.moments.map(
+      (moment) =>
+        [
+          moment.cause,
+          Object.freeze({
+            kind: 'spawned' as const,
+            key: moment.key,
+            moment: moment.kind,
+            ...(moment.phaseKey === undefined ? {} : { phaseKey: moment.phaseKey }),
+            label: momentLabel(moment),
+            groups: spawnGroups(moment.items, item, (spawned) =>
+              spawnSource(catalog, spawned, undefined),
+            ),
+          }),
+        ] as const,
     ),
   ];
-  // A phase's wheel reward, collected before what its end effects spawn.
-  const rewardActionByPhase = new Map(
-    loot.moments.flatMap((moment) => {
-      const reward = moment.items.find((candidate) => candidate.source.kind === 'rewardWheel');
-      return moment.kind === 'encounterEnd' &&
-        moment.phaseKey !== undefined &&
-        reward !== undefined &&
-        reward.placement.kind === 'placed'
-        ? [[moment.phaseKey, roomActionKey(reward.reference)] as const]
-        : [];
-    }),
-  );
-  const present = new Set(
-    entries.flatMap((entry) => {
-      const identity = entryIdentity(entry);
-      return identity === undefined ? [] : [identity];
-    }),
-  );
-  const before = new Map<string, SpawnedEntry[]>();
-  const after = new Map<string, SpawnedEntry[]>();
-  const unanchored: SpawnedEntry[] = [];
-  for (const [index, notice] of notices.entries()) {
-    const anchor = momentAnchor(noticeMoments[index]!, present, rewardActionByPhase);
-    if (anchor === undefined) {
-      unanchored.push(notice);
-      continue;
-    }
-    const target = anchor.placement === 'before' ? before : after;
-    target.set(anchor.identity, [...(target.get(anchor.identity) ?? []), notice]);
-    // A later moment may follow this notice.
-    present.add(`spawned:${notice.key}`);
-  }
-  const out: TimelineEntry[] = [];
-  const pushAfter = (identity: string) => {
-    for (const notice of after.get(identity) ?? []) {
-      out.push(notice);
-      pushAfter(`spawned:${notice.key}`);
-    }
-  };
-  for (const entry of entries) {
-    const identity = entryIdentity(entry);
-    if (identity !== undefined) out.push(...(before.get(identity) ?? []));
-    out.push(entry);
-    if (identity !== undefined) pushAfter(identity);
-  }
-  out.push(...unanchored);
   // Sea Star's copy reads on the row of the pickup it copies, not as a spawn row.
   const isCopy = (spawned: SpawnedLootItem) =>
     spawned.source.kind === 'generated' && spawned.source.family.kind === 'seaStar';
@@ -349,7 +294,7 @@ export function projectSpawnedLoot(
     }),
   );
   return {
-    entries: Object.freeze(out),
+    entries: attachNotices(entries, notices),
     actionSpawns: Object.freeze(actionSpawns),
     copies: Object.freeze(copies),
   };

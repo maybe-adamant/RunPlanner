@@ -143,6 +143,34 @@ describe('spawn notices', () => {
     ]);
   });
 
+  it('notifies an earlier O phase’s end effects as the next wheel opens', () => {
+    const entries = roomOf(surfaceShrineDeliveriesProject(), 'O', oOccurrenceIds.combat01)
+      .roomActions!.timeline.entries;
+    const opens = sequence(entries).indexOf('wheelsOpen:wheel1');
+    expect(sequence(entries).slice(opens, opens + 2)).toEqual([
+      'wheelsOpen:wheel1',
+      'spawned wheelsOpen:Intro',
+    ]);
+  });
+
+  it('notifies an H miniboss’s caged reward at the marker that begins its encounter', () => {
+    const entries = roomOf(
+      loadUnderworldFGHCheckpoint(),
+      'H',
+      createOccurrenceId('golden-h-miniboss01'),
+    ).roomActions!.timeline.entries;
+    // Its encounter's begin shows as one marker with its Combat.
+    expect(sequence(entries)).toEqual([
+      'roomEntered',
+      'encounterStarted:Encounter',
+      'spawned encounterBegun:Encounter',
+      'encounterEnd:Encounter',
+      'spawned unlock:encounterEnd:Encounter',
+      'action interactIncomingReward',
+      'doorsOpened',
+    ]);
+  });
+
   it('notifies Fields cage and optional rewards on entry, each marked by its slot', () => {
     const room = roomOf(
       loadUnderworldFGHCheckpoint(),
