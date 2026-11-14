@@ -44,6 +44,7 @@ import { HubBoardMap, HubDoorFace, type HubMapDoor } from './hub-map/HubBoardMap
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
 import { RoomRerolls } from './RoomRerolls';
 import { roomKindIcon } from './roomIcon';
+import { RoomNumberIcon } from './RoomNumberIcon';
 import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
 import {
   useTimelineReorder,
@@ -159,7 +160,7 @@ function VisitRoomPicker({
         key: slot.hubSlotKey,
         value: slot.hubSlotKey,
         label: slot.label,
-        icon: slotRoomIcon(slot),
+        room: slotRoom(slot),
         disabled: refusal !== undefined,
         ...(refusal === 'alreadyVisited'
           ? { explanation: 'Visited' }
@@ -169,6 +170,7 @@ function VisitRoomPicker({
       };
     });
   const picked = node.slots.find((slot) => slot.hubSlotKey === visit.hubSlotKey);
+  const pickedRoom = picked === undefined ? undefined : slotRoom(picked);
   return (
     <ContextualPicker<string>
       ariaLabel={`${segmentLabel(visit.visitIndex)} room`}
@@ -185,19 +187,31 @@ function VisitRoomPicker({
       onSelect={(hubSlotKey) => {
         if (hubSlotKey !== visit.hubSlotKey) onApply(actionsWith(hubSlotKey));
       }}
-      itemIcon={(item) => choices.find((choice) => choice.value === item.value)?.icon}
+      itemFace={(item) => {
+        const room = choices.find((choice) => choice.value === item.value)?.room;
+        return (
+          <>
+            {room === undefined ? null : (
+              <span aria-hidden="true" className="hub-visit-option-room">
+                <RoomNumberIcon number={room.roomNumber} room={room.roomIcon} />
+              </span>
+            )}
+            <span className="contextual-picker-item-label">{item.label}</span>
+          </>
+        );
+      }}
       placeholder="Choose room"
       searchable={false}
-      triggerIcon={picked === undefined ? undefined : slotRoomIcon(picked)}
+      {...(pickedRoom?.roomNumber === undefined ? {} : { triggerBadge: pickedRoom.roomNumber })}
+      triggerIcon={pickedRoom === undefined ? undefined : roomKindIcon(pickedRoom.roomIcon)}
       triggerSize="icon"
     />
   );
 }
 
-/** A Hub door's room as its icon. */
-function slotRoomIcon(slot: WorkspaceHubDecisionNode['slots'][number]): string | undefined {
-  const room = slot.room ?? slot.door?.room;
-  return room === undefined ? undefined : roomKindIcon(room.roomIcon);
+/** A Hub door's room. */
+function slotRoom(slot: WorkspaceHubDecisionNode['slots'][number]) {
+  return slot.room ?? slot.door?.room;
 }
 
 /** Opens a picked visit's room on its Timeline. */
@@ -712,60 +726,70 @@ export function HubTimeline({
       ...(view.picking && door.hubSlotKey === hovered ? (['linked'] as const) : []),
     ] as const;
   return (
-    <div className="hub-overview-layout hub-timeline-layout">
-      <section aria-label="Ephyra Hub timeline" className="hub-timeline-column" ref={attachRoot}>
-        <TimelineReorderStatus session={reorder} />
-        <header className="room-feature-category-heading hub-column-title">
-          <h5>Visits</h5>
-          {resetControl}
-        </header>
-        <ol className="hub-segments">{node.stays.map(segment)}</ol>
-        {node.fountain.useIn === undefined ? null : (
-          <div
-            {...findingAnchor(node.fountain.address)}
-            className="hub-timeline-row hub-timeline-fountain"
-            data-used="false"
-            tabIndex={-1}
+    <div className="room-map-workbench">
+      <div className="room-map-columns hub-map-columns">
+        <div className="room-map-controls-column">
+          <section
+            aria-label="Ephyra Hub timeline"
+            className="hub-timeline-column"
+            ref={attachRoot}
           >
-            <span className="hub-timeline-step">
-              <ArtworkIcon
-                className="artwork-label-icon"
-                source={hubFountainIcon(node.fountain.address.biomeKey)}
+            <TimelineReorderStatus session={reorder} />
+            <header className="room-feature-category-heading hub-column-title">
+              <h5>Visits</h5>
+              {resetControl}
+            </header>
+            <div className="hub-spine">
+              <ol className="hub-segments">{node.stays.map(segment)}</ol>
+              {node.fountain.useIn === undefined ? null : (
+                <div
+                  {...findingAnchor(node.fountain.address)}
+                  className="hub-timeline-row hub-timeline-fountain"
+                  data-used="false"
+                  tabIndex={-1}
+                >
+                  <span className="hub-timeline-step">
+                    <ArtworkIcon
+                      className="artwork-label-icon"
+                      source={hubFountainIcon(node.fountain.address.biomeKey)}
+                    />
+                  </span>
+                  <strong className="hub-timeline-room">Fountain</strong>
+                  <HubRowPlacement
+                    findingMark={findingMark(node.fountain.address)}
+                    label="Use Fountain"
+                    locked={locked}
+                    moves={node.fountain.useIn}
+                    onApply={replaceActions}
+                    trigger="Use…"
+                    waiting={waiting}
+                  />
+                </div>
+              )}
+              {node.requirements.visits.planned < node.requiredVisitCount ? null : (
+                <HubLeaveSegment node={node} />
+              )}
+            </div>
+          </section>
+        </div>
+        <HubBoardMap
+          door={(spot) => {
+            const door = shownDoors.get(spot.hubSlotKey);
+            return door === undefined ? null : (
+              <TimelineDoor
+                door={door}
+                emphasis={emphasisOf(door)}
+                key={spot.hubSlotKey}
+                spot={spot}
               />
-            </span>
-            <strong className="hub-timeline-room">Fountain</strong>
-            <HubRowPlacement
-              findingMark={findingMark(node.fountain.address)}
-              label="Use Fountain"
-              locked={locked}
-              moves={node.fountain.useIn}
-              onApply={replaceActions}
-              trigger="Use…"
-              waiting={waiting}
-            />
-          </div>
-        )}
-        {node.requirements.visits.planned < node.requiredVisitCount ? null : (
-          <HubLeaveSegment node={node} />
-        )}
-      </section>
-      <HubBoardMap
-        door={(spot) => {
-          const door = shownDoors.get(spot.hubSlotKey);
-          return door === undefined ? null : (
-            <TimelineDoor
-              door={door}
-              emphasis={emphasisOf(door)}
-              key={spot.hubSlotKey}
-              spot={spot}
-            />
-          );
-        }}
-        gameName={node.gameName}
-        hubIdentity={hubIdentity}
-        label={`Hub at ${segmentLabel(view.stay)}`}
-        slots={node.slots}
-      />
+            );
+          }}
+          gameName={node.gameName}
+          hubIdentity={hubIdentity}
+          label={`Hub at ${segmentLabel(view.stay)}`}
+          slots={node.slots}
+        />
+      </div>
     </div>
   );
 }

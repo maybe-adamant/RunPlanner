@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties, type ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import type { WorkspaceHubSlot } from '@planner/projections/structured-workspace';
 import { roomMapPosition, type RoomMapMarkerPosition } from '@planner/projections/roomMapMarkers';
@@ -8,7 +8,6 @@ import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { position } from '../room-map/roomMapPosition';
 import { hubDoorMapLabel, hubDoorQuality, hubDoorQualityKey } from './hubDoorQuality';
-import { useMapHeightCap } from './useMapHeightCap';
 
 /** One Hub slot's door on the board map: where it stands, its rating and short name. */
 export interface HubMapDoor {
@@ -73,11 +72,9 @@ export function HubBoardMap({
   readonly label: string;
   readonly slots: readonly WorkspaceHubSlot[];
 }) {
-  const section = useRef<HTMLElement>(null);
-  useMapHeightCap(section);
   const calibration = roomMapCalibrations[gameName];
   return (
-    <section aria-label={label} className="hub-map-overview hub-board-map" ref={section}>
+    <section aria-label={label} className="hub-map-overview room-map-column">
       <RoomMapViewport
         asset={roomMapAssetFor(gameName)}
         controlsPlacement="collapsible-overlay"

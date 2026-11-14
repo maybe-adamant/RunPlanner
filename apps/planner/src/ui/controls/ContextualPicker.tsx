@@ -89,6 +89,8 @@ interface ContextualPickerProps<T> {
   }[];
   /** An image shown before an option's text. */
   readonly itemIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
+  /** An option's own face in place of its text, such as a room with its number. */
+  readonly itemFace?: (item: ContextualPickerItem<T>) => ReactNode;
   /** An image shown at the start of an option's trailing figures. */
   readonly itemTrailIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
   /** An add list: nothing in it is ever selected, so its options keep no check column. */
@@ -417,6 +419,7 @@ export function ContextualPicker<T>({
   triggerUnknown = false,
   triggerBadge,
   triggerParts,
+  itemFace,
   itemIcon,
   itemTrailIcon,
   insertion = false,
@@ -614,6 +617,7 @@ export function ContextualPicker<T>({
               {...(cancelLabel === undefined ? {} : { cancelLabel })}
               choicesLabel={choicesLabel}
               insertion={insertion}
+              itemFace={itemFace}
               itemIcon={itemIcon}
               itemTrailIcon={itemTrailIcon}
               key={choiceLabel ?? 'default'}

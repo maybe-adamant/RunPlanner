@@ -115,19 +115,25 @@ function OptionFace({ option }: { readonly option: LeaveOption }) {
 /**
  * How the room is left, picked on its last Timeline row: each way out, then
  * ending the plan here. Ending the plan keeps the picked way underneath, so
- * picking it again continues the plan through it.
+ * picking it again continues the plan through it. A Ship phase's Select wheel
+ * picks its wheel offer with it, without ending the plan.
  */
 export function LeavePicker({
+  choiceLabel = 'Leave room',
   chosenKey,
   endThrough,
   findingMark,
   id,
+  label = 'Exit door',
+  onOpen,
   options,
   pastEnd = false,
   planEnd,
   readinessOwner,
   unreached = false,
 }: {
+  /** The list's name. */
+  readonly choiceLabel?: string;
   /** The way out picked, kept while the plan ends here. */
   readonly chosenKey: string | undefined;
   /**
@@ -143,6 +149,10 @@ export function LeavePicker({
     | undefined;
   readonly findingMark?: FindingMarkProps | undefined;
   readonly id: string;
+  /** The trigger's name. */
+  readonly label?: string;
+  /** Called as the list opens, such as to evaluate its options. */
+  readonly onOpen?: () => void;
   readonly options: readonly LeaveOption[];
   /** The plan ends before this way out: its pick stays as authored, not walked. */
   readonly pastEnd?: boolean;
@@ -259,7 +269,7 @@ export function LeavePicker({
   return (
     <span className="timeline-leave-door">
       <ContextualPickerPopover<string>
-        choiceLabel="Leave room"
+        choiceLabel={choiceLabel}
         itemFace={(item) => {
           if (item.key === endKey) return <PlanEndFace />;
           const option = options.find((candidate) => candidate.key === item.key);
@@ -273,6 +283,7 @@ export function LeavePicker({
         }}
         onOpenChange={(next) => {
           if (!next) preview(undefined);
+          else if (!closed) onOpen?.();
           setOpen(next && !closed);
         }}
         onSelect={pick}
@@ -286,11 +297,11 @@ export function LeavePicker({
           {...hintProps(
             waiting ? candidateWaitingHint : ended ? undefined : chosen?.label,
             marked ? findingMark['aria-description'] : undefined,
-            'Exit door',
+            label,
           )}
           aria-expanded={open && !closed}
           aria-haspopup="listbox"
-          aria-label="Exit door"
+          aria-label={label}
           className="timeline-door-chip timeline-door-option timeline-leave-picker"
           data-map-pointed={pointed || undefined}
           disabled={closed}

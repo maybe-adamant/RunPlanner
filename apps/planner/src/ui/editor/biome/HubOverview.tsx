@@ -209,73 +209,76 @@ export function HubOverview({
       : `${requirement.min}–${requirement.max}`;
   const slotsByKey = new Map(node.slots.map((slot) => [slot.hubSlotKey, slot] as const));
   return (
-    <div className="hub-overview-layout">
-      <section aria-label="Hub door rewards" className="hub-overview-rewards">
-        <header className="room-feature-category-heading hub-column-title">
-          <h5>Rewards</h5>
-          {resetControl}
-        </header>
-        {!boardFull ? (
-          <p
-            {...findingMarks(status)}
-            className="hub-board-status-line hub-board-placeholder"
-            role="status"
-            tabIndex={-1}
-          >
-            {`Open ${range} doors to set rewards · ${requirement.current} open`}
-          </p>
-        ) : (
-          <>
-            <p className="hub-door-order-note">
-              The game draws the Hub rooms' rewards in this order.
-            </p>
-            {requirement.met && !status['data-has-findings'] ? (
-              <span {...findingMarks(status)} className="hub-board-status-line" tabIndex={-1} />
-            ) : (
+    <div className="room-map-workbench">
+      <div className="room-map-columns hub-map-columns">
+        <div className="room-map-controls-column">
+          <section aria-label="Hub door rewards" className="hub-overview-rewards">
+            <header className="room-feature-category-heading hub-column-title">
+              <h5 {...hintProps("The game draws the Hub rooms' rewards in this order.")}>
+                Rewards
+              </h5>
+              {resetControl}
+            </header>
+            {!boardFull ? (
               <p
                 {...findingMarks(status)}
-                className="hub-board-status-line"
-                data-met={requirement.met}
+                className="hub-board-status-line hub-board-placeholder"
                 role="status"
                 tabIndex={-1}
               >
-                {`${requirement.current} doors open`}
+                {`Open ${range} doors to set rewards · ${requirement.current} open`}
               </p>
+            ) : (
+              <>
+                {requirement.met && !status['data-has-findings'] ? (
+                  <span {...findingMarks(status)} className="hub-board-status-line" tabIndex={-1} />
+                ) : (
+                  <p
+                    {...findingMarks(status)}
+                    className="hub-board-status-line"
+                    data-met={requirement.met}
+                    role="status"
+                    tabIndex={-1}
+                  >
+                    {`${requirement.current} doors open`}
+                  </p>
+                )}
+                <ol aria-label="Doors in draw order" className="hub-door-rows">
+                  {openSlots.map((slot) => (
+                    <DoorRow
+                      interactions={interactions}
+                      key={slot.hubSlotKey}
+                      linked={linked === slot.hubSlotKey}
+                      onLink={setLinked}
+                      recent={recent.key === slot.hubSlotKey}
+                      slot={slot}
+                    />
+                  ))}
+                </ol>
+              </>
             )}
-            <ol aria-label="Doors in draw order" className="hub-door-rows">
-              {openSlots.map((slot) => (
-                <DoorRow
-                  interactions={interactions}
-                  key={slot.hubSlotKey}
-                  linked={linked === slot.hubSlotKey}
-                  onLink={setLinked}
-                  recent={recent.key === slot.hubSlotKey}
-                  slot={slot}
-                />
-              ))}
-            </ol>
-          </>
-        )}
-      </section>
-      <HubBoardMap
-        door={(door) => {
-          const slot = slotsByKey.get(door.hubSlotKey)!;
-          return (
-            <OverviewDoor
-              door={door}
-              interactions={interactions}
-              key={door.hubSlotKey}
-              linked={linked === slot.hubSlotKey}
-              onLink={setLinked}
-              slot={slot}
-            />
-          );
-        }}
-        gameName={node.gameName}
-        hubIdentity={hubIdentity}
-        label="Ephyra Hub map"
-        slots={node.slots}
-      />
+          </section>
+        </div>
+        <HubBoardMap
+          door={(door) => {
+            const slot = slotsByKey.get(door.hubSlotKey)!;
+            return (
+              <OverviewDoor
+                door={door}
+                interactions={interactions}
+                key={door.hubSlotKey}
+                linked={linked === slot.hubSlotKey}
+                onLink={setLinked}
+                slot={slot}
+              />
+            );
+          }}
+          gameName={node.gameName}
+          hubIdentity={hubIdentity}
+          label="Ephyra Hub map"
+          slots={node.slots}
+        />
+      </div>
     </div>
   );
 }

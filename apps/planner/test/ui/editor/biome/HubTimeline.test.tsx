@@ -116,7 +116,8 @@ describe('HubTimeline', () => {
       .find((option) => option.getAttribute('aria-selected') === 'true')!;
     const linked = shownMap().querySelectorAll<HTMLElement>('[data-linked="true"]');
     expect(linked).toHaveLength(1);
-    expect(linked[0]!.ariaLabel?.startsWith(`${active.textContent}:`)).toBe(true);
+    const activeRoom = active.querySelector('.contextual-picker-item-label')!.textContent;
+    expect(linked[0]!.ariaLabel?.startsWith(`${activeRoom}:`)).toBe(true);
   });
 
   it('shows a reroll row’s own stay, its door marked rerolled with its chain', () => {
@@ -271,6 +272,10 @@ describe('HubTimeline', () => {
     const visits = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
     const leave = within(visits).getByRole('group', { name: 'Leave' });
     expect(within(leave).getByRole('button', { name: 'Open Preboss' })).toBeTruthy();
-    expect(visits.lastElementChild).toBe(leave);
+    // Nothing in the Timeline follows the Leave segment.
+    const following = [...visits.querySelectorAll('*')].slice(
+      [...visits.querySelectorAll('*')].indexOf(leave) + 1,
+    );
+    expect(following.every((element) => leave.contains(element))).toBe(true);
   });
 });

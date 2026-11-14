@@ -1761,7 +1761,11 @@ describe('BiomeWorkspace', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     const timeline = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
     const leave = within(timeline).getByRole('group', { name: 'Leave' });
-    expect(timeline.lastElementChild).toBe(leave);
+    // Nothing in the Timeline follows the Leave segment.
+    const following = [...timeline.querySelectorAll('*')].slice(
+      [...timeline.querySelectorAll('*')].indexOf(leave) + 1,
+    );
+    expect(following.every((element) => leave.contains(element))).toBe(true);
     await view.user.click(within(leave).getByRole('button', { name: 'Open Preboss' }));
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
