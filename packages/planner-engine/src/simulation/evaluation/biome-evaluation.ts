@@ -8,7 +8,6 @@ import {
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type BiomeAddress,
-  type NemesisRandomEventAddress,
 } from '../../authored-project/addresses';
 import type {
   AuthoredBiomePlan,
@@ -716,19 +715,7 @@ export function evaluateBiomeAssembly(
     context.forcedChaosOccurrenceKeys,
     context.seed?.rewardFrontier.state.rewardLookups,
   );
-  const nemesisByOwner = new Map(
-    rewards.simulation.nemesisRandomEventCandidates.map((candidate) => [
-      semanticAddressKey(candidate.origin),
-      candidate,
-    ]),
-  );
-  // Reward simulation reaches the actual interaction frontier, while
-  // encounter preparation owns the rest of the encounter capability. Compose
-  // the one narrow event surface here without exposing either artifact map.
-  const encounterArtifacts = Object.freeze({
-    ...roomGeneration.candidateArtifacts.encounters,
-    nemesisAt: (event: NemesisRandomEventAddress) => nemesisByOwner.get(semanticAddressKey(event)),
-  });
+  const encounterArtifacts = roomGeneration.candidateArtifacts.encounters;
   const findings = Object.freeze([
     ...roomGeneration.validation.findings,
     ...rewards.simulation.findings,
