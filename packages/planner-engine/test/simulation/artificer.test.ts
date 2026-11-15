@@ -1,5 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  acquisitionSiteStorageKey,
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
   createAcquisitionEntryAddress,
@@ -7,9 +8,13 @@ import {
   createAcquisitionRoleAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createDefaultAuthoredHexTree,
+  createTraitOfferAddress,
+  roomActionKey,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
   semanticAddressKey,
   seaStarDuplicateSiteKey,
 } from '@run-planner/engine/authored-project';
@@ -29,8 +34,15 @@ import {
   createPreparedProjectCandidateSession,
   settleProjectEdit,
   simulateProjectAssembly,
+  spawnedLootForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
-import { authorTestTraitsAndRequiredItems } from '@run-planner/test-fixtures/shared';
+import { loadDreamHeraArtificerEchoCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
+import {
+  authorTestTraitsAndRequiredItems,
+  placeTestLivePickup,
+  replaceTestPlacedItem,
+  supportedTraitOffer,
+} from '@run-planner/test-fixtures/shared';
 import {
   authorTestArtificerReplacement,
   createCompleteFGProject,
@@ -1328,3 +1340,114 @@ describe('An authored Artificer conversion the game cannot make', () => {
     expect(restored.evaluation.findings).toEqual([]);
   });
 });
+
+describe('Sea Star on an Artificer replacement', () => {
+  // The Dream H Fields room: its first optional reward transformed into a Poseidon Boon that
+  // gives Sea Star, then its Ashes transformed into Gold. The Gift converts the Ashes object
+  // into a new room reward that keeps the Ashes' CanDuplicate, so Sea Star rolls on the Gold
+  // when it is used (GiftLogic.lua, InteractLogic.lua UseConsumableItem).
+  const dream = createBiomeAddress('Dream', 'H');
+  const fieldsId = createOccurrenceId('a6b19a5f-d499-48d1-ae59-30aed524f968');
+  const fields = createOccurrenceAddress(dream, fieldsId);
+  const optional = (slotKey: string) =>
+    createLocalRewardAddress(dream, fieldsId, 'optionalRewards', slotKey);
+  const replacementOf = (slotKey: string) =>
+    createAcquisitionEntryAddress(
+      artificerAcquisitionSite(fields, optional(slotKey)),
+      artificerReplacementEntryKey(optional(slotKey), 'self'),
+    );
+  const goldEntry = replacementOf('optional3');
+  const gold = createAcquisitionRoleAddress(goldEntry, 'self');
+  const goldRow = roomActionKey({
+    kind: 'interactAcquisitionEntry',
+    siteKey: acquisitionSiteStorageKey(goldEntry.site),
+    entryKey: goldEntry.entryKey,
+  });
+  const copyRow = Object.freeze({
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: seaStarDuplicateSiteKey(gold),
+    entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+  });
+
+  function transformedGold(): ProjectDocument {
+    let project = replaceTestPlacedItem(
+      loadDreamHeraArtificerEchoCheckpoint(),
+      {
+        kind: 'ReplaceAcquisitionEntryOffer',
+        entry: replacementOf('optional1'),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+      },
+      fields,
+    );
+    const trait = createTraitOfferAddress(replacementOf('optional1'), 'source');
+    const seaStar = supportedTraitOffer(project, trait, 'Poseidon', 'DoubleRewardBoon');
+    if (seaStar === undefined) throw new Error('no Sea Star offer');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: seaStar,
+    });
+    project = authorTestArtificerReplacement(
+      project,
+      catalog,
+      createAcquisitionRoleAddress(optional('optional3'), 'self'),
+      createUnresolvedAcquisitionRewardState(
+        catalog,
+        { rewardType: 'RoomMoneyDrop' },
+        { kind: 'producerLifecycle', key: 'RoomReward' },
+        'Dream',
+      ),
+    );
+    return placeTestLivePickup(project, fields, goldRow);
+  }
+
+  it('spawns a second Gold as the transformed Gold is picked up, which the walk settles', () => {
+    const project = transformedGold();
+    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([]);
+    expect(acquisitionConversion(project, gold).seaStarSupported).toBe(true);
+    const procced = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition: gold,
+      procced: true,
+    });
+    const copies = (document: ProjectDocument) =>
+      spawnedLootForProjectEvaluationAssembly(
+        catalog,
+        simulateProjectAssembly(catalog, document),
+        fields,
+      )!.actionSpawns.flatMap((spawn) =>
+        roomActionKey(spawn.source) === goldRow
+          ? spawn.items.map((item) => ({
+              family: item.source.kind === 'generated' ? item.source.family.kind : undefined,
+              reward: item.reward,
+              reference: roomActionKey(item.reference),
+              placement: item.placement.kind,
+            }))
+          : [],
+      );
+    expect(copies(procced)).toEqual([
+      {
+        family: 'seaStar',
+        reward: { kind: 'offer', offer: { rewardType: 'RoomMoneyDrop' } },
+        reference: roomActionKey(copyRow),
+        placement: 'unplaced',
+      },
+    ]);
+    // The copy is required like its Gold; picked up, the room settles.
+    const collected = placeTestLivePickup(procced, fields, roomActionKey(copyRow));
+    expect(simulateProjectAssembly(catalog, collected).evaluation.findings).toEqual([]);
+    expect(copies(collected).map(({ placement }) => placement)).toEqual(['placed']);
+  });
+});
+
+function acquisitionConversion(
+  project: ProjectDocument,
+  acquisition: ReturnType<typeof createAcquisitionRoleAddress>,
+) {
+  const result = createPreparedProjectCandidateSession(
+    catalog,
+    simulateProjectAssembly(catalog, project),
+  ).evaluate({ kind: 'acquisitionConversion', acquisition });
+  if (result.kind !== 'acquisitionConversion') throw new Error('no conversion context');
+  return result.result;
+}

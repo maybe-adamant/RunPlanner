@@ -5,6 +5,7 @@ import {
 } from '../../../authored-project/addresses';
 import type { AuthoredRewardState } from '../../../authored-project/model';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../../../authored-project/acquisition/pickup-producers';
+import { parseArtificerReplacementEntryKey } from '../../../authored-project/acquisition/artificer';
 import type { CanonicalAuthoredRoom } from '../../materialization';
 
 function canonicalRewardState(reward: {
@@ -68,13 +69,16 @@ export function canonicalArtificerSource(
   for (const site of Object.values(room.acquisitionSites))
     for (const [entryKey, reward] of Object.entries(site.entries)) {
       if (reward === null) continue;
-      // A clocked trait pickup has no producer site; its declarations share one lifecycle.
+      // A clocked trait pickup has no producer site; its declarations share one
+      // lifecycle. The Artificer spawns its replacement as a room reward.
       const producerLifecycleKey =
         site.address.pointKey === 'roomExit' &&
         parseClockedTraitGeneratedPickupEntryKey(entryKey) !== undefined
           ? 'GeneratedTraitPickup'
-          : room.pickupProducers?.find((producer) => producer.siteKey === site.address.pointKey)
-              ?.producerLifecycleKey;
+          : parseArtificerReplacementEntryKey(entryKey) !== undefined
+            ? 'RoomReward'
+            : room.pickupProducers?.find((producer) => producer.siteKey === site.address.pointKey)
+                ?.producerLifecycleKey;
       candidates.push({
         owner: createAcquisitionEntryAddress(site.address, entryKey),
         reward,
