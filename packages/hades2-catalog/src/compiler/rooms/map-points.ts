@@ -181,5 +181,14 @@ export function normalizeRoomMapPoints(raw: RoomMapPoints, path: string): RoomMa
             `${path}.contractExitPoint`,
           ),
         }),
+    ...(raw.healthFountainPoint === undefined
+      ? {}
+      : {
+          healthFountainPoint: normalizeOwnPoint(
+            raw.healthFountainPoint,
+            seen,
+            `${path}.healthFountainPoint`,
+          ),
+        }),
   });
 }

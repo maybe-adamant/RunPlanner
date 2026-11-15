@@ -185,6 +185,20 @@ describe('room map points', () => {
     });
   });
 
+  it('places the health fountain in every room requiring one and in the Ephyra Hub', () => {
+    for (const room of catalog.rooms.values)
+      if (room.hasRequiredFountain)
+        expect([room.gameName, mapPoints(room).healthFountainPoint !== undefined]).toEqual([
+          room.gameName,
+          true,
+        ]);
+    expect(catalog.rooms.byKey.N_Hub?.mapPoints?.healthFountainPoint).toEqual({
+      id: 664734,
+      x: 7095.45,
+      y: 8998.38,
+    });
+  });
+
   it('places the Contract door in the rooms that declare a Zagreus Contract exit', () => {
     for (const room of catalog.rooms.values)
       expect([room.gameName, mapPoints(room).contractExitPoint !== undefined]).toEqual([
