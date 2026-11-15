@@ -12,6 +12,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteStartKeepsakeSelectionAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createRouteAddress,
@@ -26,7 +27,10 @@ import {
   type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { fillNemesisBetOutcomeWins } from '@run-planner/engine/project-migration';
+import {
+  fillNemesisBetOutcomeWins,
+  recoverLegacyTimedOutcomes,
+} from '@run-planner/engine/project-migration';
 import { migrateProjectDocumentJudgedBy as migrate100To101JudgedBy } from '@planner/persistence/project-100-to-101.js';
 import { migrateProjectDocument as migrate101To102 } from '@planner/persistence/project-101-to-102.js';
 import {
@@ -1587,15 +1591,19 @@ describe('timed outcomes saved before schema 99', () => {
     );
   }
 
+  /** The plan without these landed outcomes, as a schema 99 migration leaves it. */
+  const strip = (project: ProjectDocument, held: readonly ReturnType<typeof landed>[number][]) =>
+    held.reduce((plan, { author }) => applyProjectCommand(plan, catalog, author(false)), project);
   const authored = loadSurfaceScheduledLifecycleCheckpoint();
   const outcomes = landed(authored);
-  const stripped = outcomes.reduce(
-    (project, { author }) => applyProjectCommand(project, catalog, author(false)),
-    authored,
-  );
+  const stripped = strip(authored, outcomes);
   /** The stripped plan saved at an older schema, holding these phase-keyed values. */
-  function savedAt(schemaVersion: number, held: readonly (typeof outcomes)[number][]) {
-    const body = legacySchema99Body(JSON.parse(encodeProjectDocument(stripped))) as {
+  function savedAt(
+    schemaVersion: number,
+    held: readonly (typeof outcomes)[number][],
+    plan: ProjectDocument = stripped,
+  ) {
+    const body = legacySchema99Body(JSON.parse(encodeProjectDocument(plan))) as {
       route: {
         biomes: {
           biomeKey: string;
@@ -1630,6 +1638,43 @@ describe('timed outcomes saved before schema 99', () => {
         outcomes.map(({ value }) => value),
       );
     }
+  });
+
+  it('puts back a saved value that lands only once the upgrade settlement fills an earlier blank', () => {
+    // Without the Embryo nothing lands before N's Postboss, whose blank Shrine slot stops the
+    // walk until the upgrade settlement stocks it.
+    const growthOnly = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'EscalatingKeepsake',
+    });
+    const growth = landed(growthOnly);
+    expect(growth.length).toBeGreaterThan(1);
+    const at98 = JSON.parse(savedAt(98, growth, strip(growthOnly, growth))) as {
+      route: { biomes: { topology?: { occurrences: Record<string, unknown>[] } }[] };
+    };
+    const postboss = at98.route.biomes[0]!.topology!.occurrences.find(
+      (room) => room.occurrenceId === 'surface-n-preboss:postboss',
+    ) as { hermesShrine: { offerBySlot: Record<string, unknown> } };
+    postboss.hermesShrine.offerBySlot.secondRight = null;
+    const saved = JSON.stringify(at98);
+    const legacyTimedOutcomes = readLegacyTimedOutcomes(JSON.parse(saved));
+    const at102 = PROJECT_TRANSITION_STEPS.filter(
+      (step) => step.SOURCE_SCHEMA_VERSION >= 98 && step.OUTPUT_SCHEMA_VERSION <= 102,
+    ).reduce(
+      (document, step) => step.migrateProjectDocument(document, { catalog }),
+      JSON.parse(saved) as unknown,
+    );
+    const bare = parseProjectDocument(JSON.stringify(migrate102To103(at102, catalog)), catalog);
+    expect(
+      recoverLegacyTimedOutcomes({ catalog, project: bare, outcomes: legacyTimedOutcomes }).dropped,
+    ).toEqual(legacyTimedOutcomes.map((legacy) => ({ legacy, reason: 'unlanded' })));
+
+    const loaded = loadProjectDocument(saved, catalog).project;
+    expect(landed(loaded).map(({ at, value }) => ({ at, value }))).toEqual(
+      growth.map(({ at, value }) => ({ at, value })),
+    );
+    expect(simulateProject(catalog, loaded).findings).toEqual([]);
   });
 
   it('drops a saved value no cycle lands at', () => {

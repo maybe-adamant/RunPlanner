@@ -118,7 +118,8 @@ function recoveryCommand(legacy: LegacyTimedOutcome, address: TimedOutcomeAddres
  * An outcome is dropped when no cycle lands there, when cycles of two sources
  * land there as it is recovered, or when the edit is refused or leaves the
  * cycle with its own finding. The schema 102 -> 103 migration runs it on the
- * lifted plan before its upgrade settlement.
+ * lifted plan before its upgrade settlement, and again on the settled plan for
+ * the outcomes it dropped as unlanded.
  */
 export function recoverLegacyTimedOutcomes(options: {
   readonly catalog: Catalog;

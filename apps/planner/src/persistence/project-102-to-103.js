@@ -71,24 +71,56 @@ export function liftProjectDocument(value, catalog) {
   });
 }
 
-/** The outcomes a pre-99 save held put back; a recovery that throws or faults recovers none. */
-function recoveredProject(project, catalog, outcomes, recover) {
-  if (outcomes.length === 0) return project;
+/** Recovery and upgrade settlement alternate at most this many times. */
+const MAX_RECOVERY_PASSES = 4;
+
+/**
+ * One recovery pass over the outcomes a pre-99 save held: the plan with those
+ * put back, and the outcomes no cycle landed at yet, which a later pass may
+ * retry. A recovery that throws or faults recovers none and leaves none to retry.
+ */
+function recoveryPass(project, catalog, outcomes, recover) {
+  const none = { project, recovered: 0, unlanded: [] };
+  if (outcomes.length === 0) return none;
   try {
     const recovery = recover({ catalog, project, outcomes });
-    return recovery.fault === undefined ? recovery.project : project;
+    if (recovery.fault !== undefined) return none;
+    return {
+      project: recovery.project,
+      recovered: recovery.recovered.length,
+      unlanded: recovery.dropped
+        .filter(({ reason }) => reason === 'unlanded')
+        .map(({ legacy }) => legacy),
+    };
   } catch {
-    return project;
+    return none;
+  }
+}
+
+/** The plan settled as the current rules would have left it; undefined when that throws or faults. */
+function settledUpgrade(project, catalog) {
+  try {
+    const settled = settleProjectUpgrade({
+      catalog,
+      project,
+      evaluate: (document) => simulateProjectAssembly(catalog, document),
+    });
+    return settled.fault === undefined ? settled.assembly.project : undefined;
+  } catch {
+    return undefined;
   }
 }
 
 /**
  * The transform with its timed-outcome recovery supplied: the lifted plan,
  * saved under the earlier settlement rules, first recovers the timed outcomes
- * a save from before schema 99 held, then is settled once as the current rules
- * would have left it. A plan that does not decode, or whose settlement throws
- * or faults, keeps the bare lift. It settles only while 103 is the current
- * schema; later it keeps the bare lift.
+ * a save from before schema 99 held, then is settled as the current rules
+ * would have left it. A blank only that settlement fills can hold back where
+ * an outcome lands, so while outcomes remain unlanded, recovery runs again on
+ * the settled plan, which settles again after each pass that recovers one; a
+ * pass whose settlement fails leaves the plan before it. A plan that does not
+ * decode, or whose first settlement throws or faults, keeps the bare lift. It
+ * settles only while 103 is the current schema; later it keeps the bare lift.
  */
 export function migrateProjectDocumentRecoveredBy(
   value,
@@ -96,22 +128,27 @@ export function migrateProjectDocumentRecoveredBy(
   recover,
 ) {
   const lifted = liftProjectDocument(value, catalog);
+  let pass;
   try {
-    const settled = settleProjectUpgrade({
+    pass = recoveryPass(
+      parseProjectDocument(JSON.stringify(lifted), catalog),
       catalog,
-      project: recoveredProject(
-        parseProjectDocument(JSON.stringify(lifted), catalog),
-        catalog,
-        legacyTimedOutcomes,
-        recover,
-      ),
-      evaluate: (document) => simulateProjectAssembly(catalog, document),
-    });
-    if (settled.fault !== undefined) return lifted;
-    return JSON.parse(encodeProjectDocument(settled.assembly.project));
+      legacyTimedOutcomes,
+      recover,
+    );
   } catch {
     return lifted;
   }
+  let settled = settledUpgrade(pass.project, catalog);
+  if (settled === undefined) return lifted;
+  for (let passes = 1; passes < MAX_RECOVERY_PASSES && pass.unlanded.length > 0; passes += 1) {
+    pass = recoveryPass(settled, catalog, pass.unlanded, recover);
+    if (pass.recovered === 0) break;
+    const resettled = settledUpgrade(pass.project, catalog);
+    if (resettled === undefined) break;
+    settled = resettled;
+  }
+  return JSON.parse(encodeProjectDocument(settled));
 }
 
 export function migrateProjectDocument(value, context) {
