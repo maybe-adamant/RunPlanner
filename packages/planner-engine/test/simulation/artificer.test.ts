@@ -8,11 +8,16 @@ import {
   createAcquisitionRoleAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
+  createLevelResolutionAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createDefaultAuthoredHexTree,
   createTraitOfferAddress,
+  createRouteStartKeepsakeSelectionAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  parseArtificerReplacementEntryKey,
   roomActionKey,
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   semanticAddressKey,
@@ -32,6 +37,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  levelResolutionCandidateForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
   spawnedLootForProjectEvaluationAssembly,
@@ -51,6 +57,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { liveRoomForProjectEvaluationAssembly } from '../../src/simulation/evaluation/live-room';
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
 import {
   artificerStatus,
@@ -1369,7 +1376,16 @@ describe('Sea Star on an Artificer replacement', () => {
     entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
   });
 
-  function transformedGold(): ProjectDocument {
+  /** optional3's Ashes transformed into `replacement`, its row placed unless asked not to. */
+  function transformedGold(
+    placed = true,
+    replacement = createUnresolvedAcquisitionRewardState(
+      catalog,
+      { rewardType: 'RoomMoneyDrop' },
+      { kind: 'producerLifecycle', key: 'RoomReward' },
+      'Dream',
+    ),
+  ): ProjectDocument {
     let project = replaceTestPlacedItem(
       loadDreamHeraArtificerEchoCheckpoint(),
       {
@@ -1391,14 +1407,9 @@ describe('Sea Star on an Artificer replacement', () => {
       project,
       catalog,
       createAcquisitionRoleAddress(optional('optional3'), 'self'),
-      createUnresolvedAcquisitionRewardState(
-        catalog,
-        { rewardType: 'RoomMoneyDrop' },
-        { kind: 'producerLifecycle', key: 'RoomReward' },
-        'Dream',
-      ),
+      replacement,
     );
-    return placeTestLivePickup(project, fields, goldRow);
+    return placed ? placeTestLivePickup(project, fields, goldRow) : project;
   }
 
   it('spawns a second Gold as the transformed Gold is picked up, which the walk settles', () => {
@@ -1438,7 +1449,200 @@ describe('Sea Star on an Artificer replacement', () => {
     expect(simulateProjectAssembly(catalog, collected).evaluation.findings).toEqual([]);
     expect(copies(collected).map(({ placement }) => placement)).toEqual(['placed']);
   });
+
+  it('keeps a retained copy of the transformed Gold through the codec', () => {
+    const procced = applyProjectCommand(transformedGold(), catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition: gold,
+      procced: true,
+    });
+    const collected = placeTestLivePickup(procced, fields, roomActionKey(copyRow));
+    const roundTripped = decodeProjectDocument(
+      JSON.parse(encodeProjectDocument(collected)),
+      catalog,
+    );
+    expect(roundTripped).toEqual(collected);
+    expect(
+      roundTripped.route.biomes[0]!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === fieldsId,
+      )!.acquisitionSites?.[copyRow.siteKey]?.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY],
+    ).toBeDefined();
+  });
+
+  it('offers Sea Star on the unplaced transformed Gold where its row would settle', () => {
+    const unplaced = transformedGold(false);
+    const live = liveRoomForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, unplaced),
+      fields,
+    )!;
+    const verbsAt = (gap: number) =>
+      live.gaps[gap]!.items.flatMap((item) =>
+        item.kind === 'pickup' && roomActionKey(item.reference) === goldRow
+          ? item.verbs.map((verb) => [verb.verb, verb.choice?.picker])
+          : [],
+      );
+    // At the frontier Sea Star is held: the placement opens its picker.
+    expect(verbsAt(live.frontier)).toEqual([['pickUp', 'seaStar']]);
+    // Before the Poseidon Boon giving Sea Star is picked up, it is only picked up.
+    expect(verbsAt(live.frontier - 1)).toEqual([['pickUp', undefined]]);
+  });
+
+  it("offers a placed replacement's own conversions exactly as its assessments allow", () => {
+    // With Time Piece, the Boon replacements can be goldified; the Gold cannot, and the
+    // Artificer's last use is spent on it.
+    const project = applyProjectCommand(transformedGold(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Dream'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    const live = liveRoomForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+      fields,
+    )!;
+    const standing = live.gaps.flatMap((gap) =>
+      gap.items.flatMap((item) =>
+        item.kind === 'pickup' &&
+        item.reference.kind === 'interactAcquisitionEntry' &&
+        parseArtificerReplacementEntryKey(item.reference.entryKey) !== undefined &&
+        item.verbs.some((verb) => verb.standing === true)
+          ? [{ entryKey: item.reference.entryKey, verbs: item.verbs.map((verb) => verb.verb) }]
+          : [],
+      ),
+    );
+    expect(standing).toHaveLength(3);
+    for (const { entryKey, verbs } of standing) {
+      const slot = ['optional1', 'optional2', 'optional3'].find(
+        (candidate) => replacementOf(candidate).entryKey === entryKey,
+      )!;
+      const capability = acquisitionConversion(
+        project,
+        createAcquisitionRoleAddress(replacementOf(slot), slot === 'optional3' ? 'self' : 'source'),
+      );
+      expect(verbs, slot).toEqual([
+        'pickUp',
+        ...(capability.timePieceSupported ? ['goldify'] : []),
+        ...(capability.artificerSupported ? ['transform'] : []),
+      ]);
+    }
+    expect(standing.map(({ verbs }) => verbs.includes('goldify'))).toEqual([true, true, false]);
+    // Sea Star never copies a Boon, replacement or not.
+    expect(
+      acquisitionConversion(
+        project,
+        createAcquisitionRoleAddress(replacementOf('optional2'), 'source'),
+      ).seaStarSupported,
+    ).toBe(false);
+  });
+
+  it('refuses a copy of a replacement whose source could not duplicate', () => {
+    // The Gift keeps the source's CanDuplicate on the new object (GiftLogic.lua). No
+    // Artificer-eligible declaration clears it, so the source here is declared without it.
+    const byKey = catalog.rewards.acquisitions.byKey;
+    const blocked: typeof catalog = {
+      ...catalog,
+      rewards: {
+        ...catalog.rewards,
+        acquisitions: {
+          ...catalog.rewards.acquisitions,
+          byKey: { ...byKey, GiftDrop: { ...byKey.GiftDrop!, canDuplicate: false } },
+        },
+      },
+    };
+    const seaStarResult = (rewardCatalog: typeof catalog) => {
+      const { authored, origin, product, replacement, replacementSite } = convert(
+        withSeaStarAndTimePiece(initialBranch()),
+        40,
+        'RoomMoneyDrop',
+        true,
+      );
+      const entry = createAcquisitionEntryAddress(
+        replacementSite,
+        artificerReplacementEntryKey(origin, 'self'),
+      );
+      const settled = settleArtificerReplacementAcquisition(rewardCatalog, product.branch, {
+        siteOwner: replacementSite.owner,
+        pointKey: replacementSite.pointKey,
+        sourceEntryKey: semanticAddressKey(origin),
+        sourceOrigin: origin,
+        sourceReward: authored,
+        replacement,
+        acquisitionRole: 'self',
+        participation: 'mandatory',
+        historySequence: 41,
+        facts: (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
+        presentsMaterializedScreen: true,
+        traitContext: {},
+        authoredSeaStarDuplicateSiteKeys: new Set([
+          seaStarDuplicateSiteKey(createAcquisitionRoleAddress(entry, 'self')),
+        ]),
+      });
+      const event = settled.branch?.events.find(
+        (candidate) =>
+          candidate.kind === 'concreteAcquisition' &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(entry),
+      );
+      if (event?.kind !== 'concreteAcquisition') throw new Error('no replacement acquisition');
+      return event.seaStarResult;
+    };
+    expect(seaStarResult(catalog)).toEqual({ kind: 'proc' });
+    expect(seaStarResult(blocked)).toBeUndefined();
+  });
+
+  it('copies a Pom replacement as a fresh required Pom', () => {
+    const pom = createUnresolvedAcquisitionRewardState(
+      catalog,
+      { rewardType: 'StackUpgrade' },
+      { kind: 'producerLifecycle', key: 'RoomReward' },
+      'Dream',
+    );
+    const project = withPomTarget(transformedGold(true, pom), gold);
+    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([]);
+    expect(acquisitionConversion(project, gold).seaStarSupported).toBe(true);
+    const procced = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition: gold,
+      procced: true,
+    });
+    const copy = procced.route.biomes[0]!.topology!.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === fieldsId,
+    )!.acquisitionSites?.[copyRow.siteKey]?.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY];
+    // Not the source's retained authoring: a fresh RoomReward Pom with its own target.
+    expect(copy).toEqual(pom);
+    const spawned = spawnedLootForProjectEvaluationAssembly(
+      catalog,
+      simulateProjectAssembly(catalog, procced),
+      fields,
+    )!.actionSpawns.flatMap((spawn) =>
+      roomActionKey(spawn.source) === goldRow
+        ? spawn.items.map((item) => [item.reward, item.participation])
+        : [],
+    );
+    expect(spawned).toEqual([
+      [{ kind: 'offer', offer: { rewardType: 'StackUpgrade' } }, 'required'],
+    ]);
+  });
 });
+
+/** The Pom at `role` targets its first eligible trait, as its own candidate offers. */
+function withPomTarget(
+  project: ProjectDocument,
+  role: ReturnType<typeof createAcquisitionRoleAddress>,
+): ProjectDocument {
+  const levelResolution = createLevelResolutionAddress(role.owner, role.acquisitionRole);
+  const keys =
+    levelResolutionCandidateForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, project),
+      levelResolution,
+    )?.surface.eligibleTargetTraitKeys ?? [];
+  if (keys[0] === undefined) throw new Error('no Pom target');
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLevelResolution',
+    levelResolution,
+    value: { kind: 'choice', offeredTraitKeys: keys.slice(0, 3), selectedTraitKey: keys[0] },
+  });
+}
 
 function acquisitionConversion(
   project: ProjectDocument,
