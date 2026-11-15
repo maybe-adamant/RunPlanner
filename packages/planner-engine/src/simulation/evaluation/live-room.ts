@@ -14,6 +14,7 @@ import {
   type SemanticAddress,
 } from '../../authored-project/addresses';
 import { authoredAcquisitionSources } from '../../authored-project/acquisition/acquisition-sources';
+import { parseArtificerReplacementEntryKey } from '../../authored-project/acquisition/artificer';
 import { positionedCommandInsertionIndexes } from '../../authored-project/commands/dispatch';
 import type {
   DerivedPickupPlacementCommand,
@@ -717,18 +718,17 @@ function unsettledPickupSource(
         : { offer, producerLifecycleKey: wheel.producerLifecycleKey, instanceProvenance: 'free' };
     }
     case 'interactAcquisitionEntry': {
-      // A producer's generated pickup; a delivery or a Shop's own entries have none.
-      const producer = room.pickupProducers?.find(
-        (candidate) => candidate.siteKey === reference.siteKey,
-      );
+      // A producer's generated pickup, or the Artificer's replacement, which
+      // spawns as a free room reward; a delivery or a Shop's own entries have none.
+      const producerLifecycleKey =
+        parseArtificerReplacementEntryKey(reference.entryKey) !== undefined
+          ? 'RoomReward'
+          : room.pickupProducers?.find((candidate) => candidate.siteKey === reference.siteKey)
+              ?.producerLifecycleKey;
       const entry = room.acquisitionSites[reference.siteKey]?.entries[reference.entryKey];
-      return producer === undefined || entry === undefined || entry === null
+      return producerLifecycleKey === undefined || entry === undefined || entry === null
         ? undefined
-        : {
-            offer: entry.offer,
-            producerLifecycleKey: producer.producerLifecycleKey,
-            instanceProvenance: 'free',
-          };
+        : { offer: entry.offer, producerLifecycleKey, instanceProvenance: 'free' };
     }
     default:
       return undefined;

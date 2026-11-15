@@ -11,7 +11,7 @@ import {
   createShopOfferAddress,
   semanticAddressKey,
 } from '../addresses';
-import { acquisitionSiteFromStorageKey } from './artificer';
+import { acquisitionSiteFromStorageKey, acquisitionSiteStorageKey } from './artificer';
 import { roomActionKey } from '../room-actions/key';
 import type { AuthoredRewardState, RoomActionReference, RoomOccurrence } from '../model';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
@@ -70,8 +70,10 @@ function sourceAction(
         return reference.kind === 'interactInfernalContractPedestal';
       case 'acquisitionEntry':
         return (
+          // A row names its site by storage key, which for an Artificer
+          // replacement's site is the full site address, not its point.
           (reference.kind === 'interactAcquisitionEntry' &&
-            reference.siteKey === owner.site.pointKey &&
+            reference.siteKey === acquisitionSiteStorageKey(owner.site) &&
             reference.entryKey === owner.entryKey) ||
           (owner.site.pointKey === 'roomExit' &&
             reference.kind === 'interactShopOffer' &&
