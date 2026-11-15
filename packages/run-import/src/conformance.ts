@@ -383,9 +383,10 @@ function compareEntry(
     (keepsake) => keepsake.effect?.kind === 'timePiece',
   );
   if (timePiece !== undefined) {
+    // An unslotted Time Piece's last spend removes its trait, so an absent one has none left.
     const expected = saved.traits.get(timePiece.key)?.boonConversionUses;
     const actual = snapshot.keepsakes.timePiece?.remainingCharges;
-    if (expected !== undefined || actual !== undefined)
+    if ((expected ?? 0) !== (actual ?? 0))
       differ('conversion', timePiece.key, { expected: show(expected), actual: show(actual) });
   }
 

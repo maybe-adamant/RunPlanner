@@ -1055,6 +1055,35 @@ describe('run record builder', () => {
     });
   });
 
+  it("counts an unslotted Time Piece's last charge, whose spend removes its trait", () => {
+    const slotted = (checkpoint: SaveCheckpoint): SaveCheckpoint => ({
+      ...checkpoint,
+      hero: { ...checkpoint.hero!, slotted: { Keepsake: 'BossPreDamageKeepsake' } },
+    });
+    const kept = { name: 'BossPreDamageKeepsake', id: '11120.50.4', rarity: 'Epic' };
+    const record = buildRunRecord([
+      slotted(
+        save({
+          history: [],
+          current: room('P_Combat07', { chosenRewardType: 'SpellDrop' }),
+          traits: [{ ...startTraits[0]!, boonConversionUses: 1 }, kept],
+        }),
+      ),
+      slotted(
+        save({
+          history: ['P_Combat07'],
+          current: room('P_Combat03'),
+          departure: room('P_Combat07', { chosenRewardType: 'SpellDrop' }),
+          traits: [kept],
+        }),
+      ),
+    ]);
+    expect(record.rooms[0]).toMatchObject({
+      traits: { removed: ['GoldifyKeepsake'] },
+      conversions: { timePiece: 1 },
+    });
+  });
+
   it("carries an acquired trait's kept saved values as first saved", () => {
     const savedValues = {
       'OnWeaponFiredFunctions.FunctionArgs.Cost': 19,

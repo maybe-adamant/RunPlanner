@@ -351,6 +351,10 @@ describe('import conformance field groups', () => {
     expect(
       added({ traits: { GoldifyKeepsake: { rarity: 'Common', boonConversionUses: 2 } } }),
     ).toContain('conversion r5 GoldifyKeepsake: 2 | absent');
+    // A spent unslotted Time Piece leaves the save, so an absent one has none left.
+    expect(
+      added({ traits: { GoldifyKeepsake: { rarity: 'Common', boonConversionUses: 0 } } }),
+    ).toEqual([]);
   });
 
   it('compares Stygian Well purchases', () => {
