@@ -276,27 +276,22 @@ it('exports the selected Zagreus Contract return and acquired Preboss Contract i
   const gems = { consumableKey: 'GemPointsBigDrop', resourceKey: 'GemPoints', amount: 50 };
   expect(published.occurrences.find((room) => room.id === contract)).toMatchObject({
     gameName: 'C_Boss01',
-    overview: { requiredReward: gems },
+    overview: {
+      requiredReward: gems,
+      incomingReward: expect.objectContaining({ rewardType: 'InfernalContractBoon' }),
+    },
   });
+  // The Champion of Elysium is granted after combat with nothing to pick up; only the gems are.
   expect(
     published.occurrences
       .find((room) => room.id === contract)
       ?.roomGuide.map((row) => row.description),
-  ).toContainEqual({ kind: 'collectRequiredReward', drop: gems });
+  ).toEqual([{ kind: 'collectRequiredReward', drop: gems }]);
   expect(published.occurrences.find((room) => room.id === returned)).toMatchObject({
     gameName: 'G_MiniBoss03',
   });
-  expect(
-    published.occurrences.find((room) => room.id === contract)?.timeline.transactions,
-  ).toContainEqual(
-    expect.objectContaining({
-      kind: 'acquisition',
-      sourceOwner: semanticAddressKey(createIncomingRewardAddress(goldenGBiome, contract)),
-      reward: expect.objectContaining({ rewardType: 'InfernalContractBoon' }),
-      roles: expect.arrayContaining([
-        expect.objectContaining({ gameName: 'InfernalContractBoon' }),
-      ]),
-    }),
+  expect(published.occurrences.find((room) => room.id === contract)?.timeline.transactions).toEqual(
+    [],
   );
   expect(
     published.occurrences.find((room) => room.id === prebossShop)?.timeline.transactions,

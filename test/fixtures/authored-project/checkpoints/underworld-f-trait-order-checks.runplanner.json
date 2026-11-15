@@ -1,5 +1,6 @@
 {
   "schemaVersion": 103,
+  "schemaRevision": 3,
   "projectId": "run-plan-ec587f07-f732-4933-8d19-af97e6588dab",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -1099,15 +1100,6 @@
                 "order": [
                   {
                     "kind": "collectRequiredReward"
-                  },
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self",
-                    "content": [
-                      "native",
-                      "InfernalContractBoon"
-                    ]
                   }
                 ]
               },

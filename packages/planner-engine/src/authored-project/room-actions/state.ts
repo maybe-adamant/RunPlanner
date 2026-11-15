@@ -196,6 +196,7 @@ export function activeRoomActionReferences(
             offer.rewardType
           ];
     for (const binding of lifecycle?.acquisitionLifecycle ?? []) {
+      if (binding.automatic === true) continue;
       references.push(
         Object.freeze({
           kind: 'interactIncomingReward',

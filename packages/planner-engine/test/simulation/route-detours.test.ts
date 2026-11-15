@@ -1315,13 +1315,13 @@ describe('route-detour simulation', () => {
     expect(
       contractRoom?.roomLifecycleTimeline.graph.events.map((event) => event.kind),
     ).not.toContain('bossDefeated');
-    // The Contract room's fixed reward is a required collect the owner places.
+    // The gems are the room's one required collect; the Contract trait is granted after combat.
     expect(
       plan(
         scheduleTestRequiredRoomActions(project, catalog, fBiome),
         fBiome,
       ).topology!.occurrences.find((room) => room.occurrenceId === contract)?.roomActions.order,
-    ).toContainEqual({ kind: 'collectRequiredReward' });
+    ).toEqual([{ kind: 'collectRequiredReward' }]);
     const rewards = evaluateBiomeRewards(
       catalog,
       snapshot,

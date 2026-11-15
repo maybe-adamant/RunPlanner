@@ -5485,10 +5485,7 @@
   "O/dream-o-contract C_Boss01": [
     {
       "entries": ["execution/dream-o-skipped-ship"],
-      "rows": {
-        "collectRequiredReward": "#1 required | scope room | move 1 | remove",
-        "interactIncomingReward:roomRewardPickup:self": "#2 required | scope room | move 0 | remove"
-      }
+      "rows": { "collectRequiredReward": "#1 required | scope room | remove" }
     }
   ],
   "O/dream-o-return-ship O_Combat01": [
@@ -5929,10 +5926,7 @@
   "G/zagreus-contract-showcase C_Boss01": [
     {
       "entries": ["checkpoint/underworld-zagreus-contract"],
-      "rows": {
-        "collectRequiredReward": "#1 required | scope room | move 1 | remove",
-        "interactIncomingReward:roomRewardPickup:self": "#2 required | scope room | move 0 | remove"
-      }
+      "rows": { "collectRequiredReward": "#1 required | scope room | remove" }
     }
   ],
   "G/zagreus-contract-return G_MiniBoss03": [
@@ -6228,10 +6222,7 @@
   "F/52dace01-83e9-49da-a9d3-75d6fadfaf68 C_Boss01": [
     {
       "entries": ["checkpoint/underworld-f-trait-order-checks"],
-      "rows": {
-        "collectRequiredReward": "#1 required | scope room | move 1 | remove",
-        "interactIncomingReward:roomRewardPickup:self": "#2 required | scope room | move 0 | remove"
-      }
+      "rows": { "collectRequiredReward": "#1 required | scope room | remove" }
     }
   ],
   "F/4fcb700b-b26a-49bf-8f93-5ec021de7235 F_Combat12": [
@@ -6612,19 +6603,13 @@
   "G/contract-availability-first-entered C_Boss01": [
     {
       "entries": ["underworld/createGContractAvailabilityProject(true)"],
-      "rows": {
-        "collectRequiredReward": "#- required | scope room | insert 0 | canonical 0",
-        "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
-      }
+      "rows": { "collectRequiredReward": "#- required | scope room | insert 0 | canonical 0" }
     }
   ],
   "G/contract-availability-first-skipped C_Boss01": [
     {
       "entries": ["underworld/createGContractAvailabilityProject(false)"],
-      "rows": {
-        "collectRequiredReward": "#- required | scope room | insert 0 | canonical 0",
-        "interactIncomingReward:roomRewardPickup:self": "#- required | scope room | insert 0 | canonical 0"
-      }
+      "rows": { "collectRequiredReward": "#- required | scope room | insert 0 | canonical 0" }
     }
   ],
   "P/surface-p-preboss-shop P_PreBoss01": [

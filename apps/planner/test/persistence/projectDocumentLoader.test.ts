@@ -23,7 +23,10 @@ import { liftProjectDocument as migrate102To103 } from '@planner/persistence/pro
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
-import { loadUnderworldFPoolCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFPoolCheckpoint,
+  loadUnderworldZagreusContractCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   createGoldenFGHIProject,
   echoGoldIPrebossShopId,
@@ -202,6 +205,31 @@ describe('project document loader', () => {
     expect(simulateProject(catalog, loaded(2)).findings).toEqual([]);
     // A plan saved at the current revision loads as is.
     expect(postboss(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION))).toEqual(postboss(retained));
+  });
+
+  it('drops the Zagreus contract Champion row, granted with no pickup, from a plan before 103.3', () => {
+    const current = loadUnderworldZagreusContractCheckpoint();
+    const championRow = {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'self',
+      content: ['native', 'InfernalContractBoon'],
+    } as const;
+    const contractRoomOrder = (document: ProjectDocument) =>
+      document.route.biomes
+        .flatMap((biome) => biome.topology?.occurrences ?? [])
+        .find((occurrence) => occurrence.gameName === 'C_Boss01')!.roomActions.order;
+    const saved = JSON.parse(encodeProjectDocument(current)) as ProjectDocument;
+    (contractRoomOrder(saved) as unknown[]).push(championRow);
+    const loaded = (revision: number) =>
+      loadProjectDocument(JSON.stringify({ ...saved, schemaRevision: revision }), catalog).project;
+
+    expect(contractRoomOrder(loaded(2))).toEqual(contractRoomOrder(current));
+    expect(simulateProject(catalog, loaded(2)).findings).toEqual(
+      simulateProject(catalog, current).findings,
+    );
+    // A plan saved at the current revision loads as is.
+    expect(contractRoomOrder(loaded(PROJECT_DOCUMENT_SCHEMA_REVISION))).toContainEqual(championRow);
   });
 
   describe('a plan saved before schema 103', () => {

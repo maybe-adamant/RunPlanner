@@ -115,3 +115,9 @@ export function fillReachedBlanksProject(project, catalog) {
  * excluded them, loses them with their rows on load.
  */
 export { dropRouteExcludedObjects } from '@run-planner/engine/project-migration';
+
+/**
+ * Schema 103 revision 3 holds no pickup row for a reward granted with no
+ * pickup: a plan saved earlier loses the Zagreus contract's Champion row on load.
+ */
+export { dropAutomaticRewardRows } from '@run-planner/engine/project-migration';

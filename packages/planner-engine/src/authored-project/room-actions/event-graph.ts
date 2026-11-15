@@ -475,7 +475,9 @@ export function assembleRoomEventGraph(options: {
                   options.catalog.rewards.producerLifecycles.byKey[key]?.rewardTypes.values ?? []
                 ).flatMap((reward) =>
                   reward.acquisitionLifecycle.flatMap((binding) =>
-                    binding.role === gate.role ? [binding.lifecyclePoint] : [],
+                    binding.role === gate.role && binding.automatic !== true
+                      ? [binding.lifecyclePoint]
+                      : [],
                   ),
                 ),
               ),

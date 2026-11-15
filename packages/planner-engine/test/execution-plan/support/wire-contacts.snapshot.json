@@ -3209,10 +3209,7 @@
   "O/dream-o-contract C_Boss01": [
     {
       "entries": ["execution/dream-o-skipped-ship"],
-      "rows": {
-        "#1 collectRequiredReward": "standard afterCombat",
-        "#2 interactIncomingReward:roomRewardPickup:self": "standard afterCombat"
-      }
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
   ],
   "O/dream-o-return-ship O_Combat01": [
@@ -3467,10 +3464,7 @@
   "G/zagreus-contract-showcase C_Boss01": [
     {
       "entries": ["checkpoint/underworld-zagreus-contract"],
-      "rows": {
-        "#1 collectRequiredReward": "standard afterCombat",
-        "#2 interactIncomingReward:roomRewardPickup:self": "standard afterCombat"
-      }
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
   ],
   "G/zagreus-contract-return G_MiniBoss03": [
@@ -3628,10 +3622,7 @@
   "F/52dace01-83e9-49da-a9d3-75d6fadfaf68 C_Boss01": [
     {
       "entries": ["checkpoint/underworld-f-trait-order-checks"],
-      "rows": {
-        "#1 collectRequiredReward": "standard afterCombat",
-        "#2 interactIncomingReward:roomRewardPickup:self": "standard afterCombat"
-      }
+      "rows": { "#1 collectRequiredReward": "standard afterCombat" }
     }
   ],
   "F/4fcb700b-b26a-49bf-8f93-5ec021de7235 F_Combat12": [

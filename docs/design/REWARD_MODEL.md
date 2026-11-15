@@ -131,7 +131,11 @@ producer-lifecycle profile enumerates the reward types it supports, supplies
 one default point for their roles, and may explicitly override the complete
 role binding for a supported reward type. The `RoomReward` profile binds
 ordinary roles to `roomRewardPickup`, while its declaration binds Devotion's
-`chosenSource` to `beforeCombat` and `spurnedSource` to `afterCombat`. Catalog
+`chosenSource` to `beforeCombat` and `spurnedSource` to `afterCombat`. A binding
+may be automatic: the game grants the role at its point with nothing to pick
+up, so no room action takes it and the point acquires it on its own. The
+Zagreus contract's `InfernalContractBoon` is the one such role, granted at
+`afterCombat` once every enemy is dead and before the room's gems spawn. Catalog
 normalization expands that declaration into one exact role-complete lifecycle
 per supported reward type. It does not invent timing for reward types outside
 the profile or dispatch on reward names in core code.
@@ -1068,7 +1072,8 @@ offers only on entry and advances exactly its purchased slots through
 purchase-time acquisition.
 
 The lifecycle point is producer-specific. A normal room reward emits its
-concrete acquisition on pickup, a Devotion emits its chosen and spurned source
+concrete acquisition on pickup, an automatic role as its point is reached, a
+Devotion emits its chosen and spurned source
 at distinct points, and a purchased Blind Box first emits its box use and then
 validates and emits its authored hidden source. The concrete acquisition
 declaration then projects the typed history writes. Store-entry identity never

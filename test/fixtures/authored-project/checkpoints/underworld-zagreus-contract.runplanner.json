@@ -1,5 +1,6 @@
 {
   "schemaVersion": 103,
+  "schemaRevision": 3,
   "projectId": "golden-fg",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -2324,15 +2325,6 @@
                 "order": [
                   {
                     "kind": "collectRequiredReward"
-                  },
-                  {
-                    "kind": "interactIncomingReward",
-                    "producerPoint": "roomRewardPickup",
-                    "acquisitionRole": "self",
-                    "content": [
-                      "native",
-                      "InfernalContractBoon"
-                    ]
                   }
                 ]
               },

@@ -159,6 +159,8 @@ export interface AcquisitionLifecycleBinding {
   readonly levelResolutionEffect?: LevelResolutionEffect;
   /** Producer-local instance override, used by Echo's recreated Last Reward. */
   readonly blocksArtificerConversion?: true;
+  /** The role is granted at its point with no object to interact with, so no room action takes it. */
+  readonly automatic?: true;
 }
 
 export type SourceResolutionPoint =

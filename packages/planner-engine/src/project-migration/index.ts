@@ -9,4 +9,5 @@ export { moveRerollResultsOntoItems } from './reroll-results';
 export { stampRoomActionItemContent } from './room-action-content';
 export { stripEncounterPhaseKey } from './strip-encounter-phase-key';
 export { dropRouteExcludedObjects } from './route-excluded-objects';
+export { dropAutomaticRewardRows } from './automatic-reward-rows';
 export { settleProjectFills, settleProjectUpgrade } from '../simulation/edit-settlement';
