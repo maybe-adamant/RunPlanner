@@ -3,11 +3,9 @@ import {
   purgingPoolSaleRollKey,
 } from '../../authored-project/feature-rolls';
 import { semanticAddressKey } from '../../authored-project/addresses';
-import { hermesShrineRushAction } from '../../authored-project/hermes-shrine-delivery';
 import { hermesShrineInitialSlotKey, type RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
-import { performedRoomActions } from '../../simulation/room-actions';
 import { rerollGuideDescription } from './rerolls';
 import type { PublishedBiomeEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type {
@@ -200,26 +198,22 @@ function descriptionFor(
       return Object.freeze({ kind: reference.kind, exitKey: reference.exitKey });
     case 'reroll':
       return rerollGuideDescription(room, batch, reference);
-    case 'purchaseHermesShrineOffer': {
+    case 'purchaseHermesShrineOffer':
+    case 'rushHermesShrineOffer': {
       const shrine = room.hermesShrine;
       const slotKey = hermesShrineInitialSlotKey(reference.generationKey);
       const offer =
         slotKey === undefined ? shrine?.travelDealRefill?.offer : shrine?.offerBySlot[slotKey];
       if (offer === undefined || offer === null)
-        throw new Error(`room guide Shrine purchase ${reference.generationKey} lacks its offer`);
+        throw new Error(
+          `room guide Shrine ${reference.kind} ${reference.generationKey} lacks its offer`,
+        );
       return Object.freeze({
         kind: reference.kind,
         generationKey: reference.generationKey,
         rewardType: offer.rewardType,
-        rushed:
-          hermesShrineRushAction(
-            performedRoomActions(room.roomActionRoster),
-            reference.generationKey,
-          ) !== undefined,
       });
     }
-    case 'rushHermesShrineOffer':
-      throw new Error('room guide publishes a Shrine rush with its purchase');
   }
 }
 
@@ -260,8 +254,6 @@ export function assembleExecutionRoomGuide(
       // An unchanged rack has nothing to guide.
       if (entry.action.reference.kind === 'interactKeepsakeRack' && room.keepsakeRack === undefined)
         return [];
-      // A rush is guided as its purchase's second step.
-      if (entry.action.reference.kind === 'rushHermesShrineOffer') return [];
       const owner = semanticAddressKey(entry.action.owner);
       const transaction = transactionsByOwner.get(owner);
       const convertedReward = timePiecedReward(entry.action.owner);

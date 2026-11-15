@@ -34,6 +34,16 @@ the best. A biome that dead-ends retries only itself; attempt counts alone bound
 the search, so a seed drafts the same project on every machine. The encounter
 post pass then makes every reached encounter deterministic from the same seed.
 
+Draft collects in the order things appear in the room, never batched where the
+walk stands: each required pickup is placed at the earliest point the engine's
+live room offers it (where it spawns, or where its cage unlocks), in spawn
+order, before the room's next interaction. A Fields cage's rewards are
+collected before the next cage is unlocked, a Hermes delivery where it
+arrives, and a Gold Gold Gold duplicate right after the purchase that spawns
+it. A pickup whose earlier acquisition would leave a later row invalid waits
+where the walk stands instead. Other required actions are placed by the
+engine's next required placement.
+
 ## The Draft Spec
 
 The route owns one always-present `draft` spec: the persisted Draft settings

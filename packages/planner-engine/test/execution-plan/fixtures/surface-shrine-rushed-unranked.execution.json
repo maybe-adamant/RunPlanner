@@ -4047,8 +4047,7 @@
           "description": {
             "kind": "purchaseHermesShrineOffer",
             "generationKey": "initial:secondLeft",
-            "rewardType": "MaxHealthDrop",
-            "rushed": false
+            "rewardType": "MaxHealthDrop"
           }
         },
         {
@@ -4056,8 +4055,7 @@
           "description": {
             "kind": "purchaseHermesShrineOffer",
             "generationKey": "initial:secondRight",
-            "rewardType": "MaxManaDrop",
-            "rushed": false
+            "rewardType": "MaxManaDrop"
           }
         }
       ],
@@ -5386,8 +5384,15 @@
           "description": {
             "kind": "purchaseHermesShrineOffer",
             "generationKey": "initial:first",
-            "rewardType": "HealBigDrop",
-            "rushed": true
+            "rewardType": "HealBigDrop"
+          }
+        },
+        {
+          "key": "[\"rushHermesShrineOffer\",\"initial:first\"]",
+          "description": {
+            "kind": "rushHermesShrineOffer",
+            "generationKey": "initial:first",
+            "rewardType": "HealBigDrop"
           }
         },
         {
@@ -5395,8 +5400,7 @@
           "description": {
             "kind": "purchaseHermesShrineOffer",
             "generationKey": "travelDealRefill",
-            "rewardType": "ArmorBoost",
-            "rushed": false
+            "rewardType": "ArmorBoost"
           }
         }
       ],
@@ -8424,8 +8428,7 @@
           "description": {
             "kind": "purchaseHermesShrineOffer",
             "generationKey": "initial:secondRight",
-            "rewardType": "MaxManaDrop",
-            "rushed": false
+            "rewardType": "MaxManaDrop"
           }
         }
       ],
@@ -10067,5 +10070,5 @@
       }
     }
   ],
-  "planFingerprint": "db06b4a6"
+  "planFingerprint": "d1e7ba74"
 }

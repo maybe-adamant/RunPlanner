@@ -2,7 +2,9 @@ import { isDeepStrictEqual } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
+  createShopOfferAddress,
   createDefaultRouteLoadout,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -19,6 +21,9 @@ import {
 } from '@run-planner/engine/simulation';
 import { checkpointRegistry } from '@run-planner/test-fixtures/checkpoints/registry';
 import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { authorLegalTraitOffers, stockTestProject } from '@run-planner/test-fixtures/shared';
+import { createEchoGoldHPrebossProject } from '@run-planner/test-fixtures/underworld';
 import { oBiome } from '@run-planner/test-fixtures/surface';
 import type { DraftSpec } from '../src';
 import { startDraftWalk } from './support/draft-walk';
@@ -32,7 +37,7 @@ const PINNED_COUNTS = {
   restored: 97,
   stoppedInRoom: 0,
   encounterChosen: 10,
-  livePlacements: 133,
+  livePlacements: 134,
 };
 
 const PLACEMENT_FINDINGS: ReadonlySet<string> = new Set([
@@ -323,6 +328,74 @@ describe('Draft places what a room requires from the live product', () => {
     );
   });
 
+  it("collects each Fields cage's reward before the next cage is cleared", () => {
+    const project = loadUnderworldGeneratedCompositionCheckpoint();
+    const room = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'H'),
+      createOccurrenceId('golden-h-combat05'),
+    );
+    const order = roomOrder(project, room);
+    const required = requiredRows(simulateProjectAssembly(catalog, project), room);
+    const stripped = simulateProjectAssembly(
+      catalog,
+      withOrder(
+        project,
+        room,
+        order.filter((reference) => !required.has(roomActionKey(reference))),
+      ),
+    );
+    expect(isRoomPlacement(stripped, room)).toBe(true);
+    const { walk } = restore(
+      project,
+      project.route.itineraryBiomeKeys.indexOf('H'),
+      room,
+      stripped,
+    );
+    expect(isRoomPlacement(walk.assembly, room)).toBe(false);
+    expect(roomActionKeys(walk.project, room)).toEqual([
+      '["completeFieldsCage","Cage01"]',
+      '["interactLocalReward","cages","cage1"]',
+      '["completeFieldsCage","Cage02"]',
+      '["interactLocalReward","cages","cage2"]',
+      '["completeFieldsCage","Cage03"]',
+      '["interactLocalReward","cages","cage3"]',
+    ]);
+  });
+
+  it('collects a Gold Gold Gold duplicate right after the purchase that spawns it, not after the later ones', () => {
+    const hBiome = createBiomeAddress('Underworld', 'H');
+    const shop = createOccurrenceAddress(hBiome, createOccurrenceId('golden-h-preboss-shop'));
+    let project = createEchoGoldHPrebossProject();
+    for (const offerKey of ['Boon', 'Minor'])
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(hBiome, shop.occurrenceId, offerKey),
+        purchased: true,
+      });
+    const bought = simulateProjectAssembly(
+      catalog,
+      stockTestProject(authorLegalTraitOffers(project)),
+    );
+    expect(bought.evaluation.issue?.reasons[0]?.code).toBe('echoGoldPickupPlacementRequired');
+    const { placements, walk } = restore(
+      project,
+      project.route.itineraryBiomeKeys.indexOf('H'),
+      shop,
+      bought,
+    );
+    expect(placements).toEqual([
+      {
+        command: expect.objectContaining({ kind: 'PlaceEchoGoldPickup', index: 1 }),
+        offered: true,
+      },
+    ]);
+    expect(roomActionKeys(walk.project, shop)).toEqual([
+      '["interactShopOffer","Boon"]',
+      '["interactAcquisitionEntry","roomExit","echoDoubleShopReward"]',
+      '["interactShopOffer","Minor"]',
+    ]);
+  });
+
   it('places a removed Hermes delivery by the command the live product offers', () => {
     const pCombat = createOccurrenceAddress(
       createBiomeAddress('Surface', 'P'),
@@ -358,9 +431,9 @@ describe('Draft places what a room requires from the live product', () => {
       { command: expect.objectContaining({ kind: 'PlaceHermesShrineDelivery' }), offered: true },
     ]);
     expect(isRoomPlacement(walk.assembly, pCombat)).toBe(false);
-    // The frontier's placement, where the walk stands, rather than settlement's due contact.
-    expect(new Set(roomActionKeys(walk.project, pCombat))).toEqual(
-      new Set(order.map(roomActionKey)),
-    );
+    // Where it arrives with the room reward, before the matured Pom collected after it.
+    expect(roomActionKeys(walk.project, pCombat)).toEqual(order.map(roomActionKey));
+    expect(order.indexOf(delivery!)).toBe(1);
+    expect(order).toHaveLength(3);
   });
 });

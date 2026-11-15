@@ -1171,11 +1171,10 @@ export type ExecutionRoomGuideDescription =
       readonly twistResultKey?: string;
     }
   | {
-      /** Informational: Shrine purchases have no Timeline transaction. */
-      readonly kind: 'purchaseHermesShrineOffer';
+      /** Informational: Shrine purchases and rushes have no Timeline transaction. */
+      readonly kind: 'purchaseHermesShrineOffer' | 'rushHermesShrineOffer';
       readonly generationKey: ExecutionHermesShrineGenerationKey;
       readonly rewardType: string;
-      readonly rushed: boolean;
     }
   | {
       readonly kind: 'sellPurgingPoolTrait';

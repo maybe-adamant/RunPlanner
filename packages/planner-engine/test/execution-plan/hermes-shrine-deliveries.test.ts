@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
   createOccurrenceAddress,
   hermesShrineDeliveryEntryKey,
+  roomActionKey,
   type ProjectDocument,
 } from '../../src/authored-project';
 import {
@@ -19,6 +21,7 @@ import {
 } from '@run-planner/test-fixtures/dream';
 import {
   oOccurrenceIds,
+  placeDueHermesShrineDeliveries,
   qOccurrenceIds,
   surfaceShrineDeliveriesProject,
   surfaceShrineDeliverySources,
@@ -208,29 +211,34 @@ describe('surface-shrine-deliveries execution fixture', () => {
     );
   });
 
-  it('publishes informational Shrine purchase guide rows in timeline order', () => {
+  it('publishes informational Shrine purchase and rush guide rows in timeline order', () => {
     const shrine = plan.occurrences.find((occurrence) => occurrence.id === oShrine.occurrenceId);
     const rows = shrine?.roomGuide.filter(
-      (row) => row.description.kind === 'purchaseHermesShrineOffer',
+      (row) =>
+        row.description.kind === 'purchaseHermesShrineOffer' ||
+        row.description.kind === 'rushHermesShrineOffer',
     );
     expect(rows?.map((row) => row.description)).toEqual([
       {
         kind: 'purchaseHermesShrineOffer',
         generationKey: 'initial:first',
         rewardType: 'HealBigDrop',
-        rushed: true,
+      },
+      {
+        kind: 'rushHermesShrineOffer',
+        generationKey: 'initial:first',
+        rewardType: 'HealBigDrop',
       },
       {
         kind: 'purchaseHermesShrineOffer',
         generationKey: 'travelDealRefill',
         rewardType: 'ArmorBoost',
-        rushed: false,
       },
     ]);
     expect(rows?.every((row) => row.transactionOwner === undefined)).toBe(true);
     const kinds = shrine?.roomGuide.map((row) => row.description.kind) ?? [];
-    // The rushed pickup follows its purchase row.
-    expect(kinds.indexOf('purchaseHermesShrineOffer')).toBeLessThan(
+    // The rushed pickup follows its rush row.
+    expect(kinds.indexOf('rushHermesShrineOffer')).toBeLessThan(
       kinds.indexOf('interactAcquisitionEntry'),
     );
     expect(
@@ -240,6 +248,37 @@ describe('surface-shrine-deliveries execution fixture', () => {
         .find((occurrence) => occurrence.id === nSideRoom.occurrenceId)
         ?.roomGuide.filter((row) => row.description.kind === 'purchaseHermesShrineOffer').length,
     );
+  });
+
+  it('publishes a rush placed later than its purchase at its own row', () => {
+    const roomOrder = (project: ProjectDocument) =>
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'O')!
+        .topology!.occurrences.find((candidate) => candidate.occurrenceId === oShrine.occurrenceId)!
+        .roomActions.order;
+    const base = surfaceShrineDeliveriesProject();
+    // [..., buy first, buy second left, rush first, ...]
+    const project = placeDueHermesShrineDeliveries(
+      applyProjectCommand(base, catalog, {
+        kind: 'PurchaseHermesShrineOffer',
+        occurrence: oShrine,
+        generationKey: 'initial:secondLeft',
+        index: roomOrder(base).findIndex((reference) => reference.kind === 'rushHermesShrineOffer'),
+      }),
+    );
+    const keys =
+      compile(project)
+        .occurrences.find((candidate) => candidate.id === oShrine.occurrenceId)
+        ?.roomGuide.map((row) => row.key) ?? [];
+    const purchaseFirst = roomActionKey({
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:first',
+    });
+    expect(keys.slice(keys.indexOf(purchaseFirst), keys.indexOf(purchaseFirst) + 3)).toEqual([
+      purchaseFirst,
+      roomActionKey({ kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft' }),
+      roomActionKey({ kind: 'rushHermesShrineOffer', generationKey: 'initial:first' }),
+    ]);
   });
 
   it('flushes the fourth-biome delivery at Preboss entry and not at the Boss', () => {

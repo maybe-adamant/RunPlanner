@@ -2207,18 +2207,20 @@ describe('execution-plan compiler and codec', () => {
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'initial:first',
       rewardType: 'MaxHealthDrop',
-      rushed: true,
     };
-    associated.description = { ...shrinePurchase };
-    refreshWireFingerprint(wire);
-    expect(() => decodeExecutionPlan(wire)).not.toThrow();
-    // A real occurrence transaction owner is still refused on a Shrine row.
-    expect(associatedOwner).toBeDefined();
-    associated.transactionOwner = associatedOwner!;
-    refreshWireFingerprint(wire);
-    expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
-    delete associated.transactionOwner;
-    for (const invalid of [{ rushed: 'yes' }, { generationKey: 'initial:healing' }]) {
+    for (const kind of ['purchaseHermesShrineOffer', 'rushHermesShrineOffer']) {
+      associated.description = { ...shrinePurchase, kind };
+      refreshWireFingerprint(wire);
+      expect(() => decodeExecutionPlan(wire)).not.toThrow();
+      // A real occurrence transaction owner is still refused on a Shrine row.
+      expect(associatedOwner).toBeDefined();
+      associated.transactionOwner = associatedOwner!;
+      refreshWireFingerprint(wire);
+      expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+      delete associated.transactionOwner;
+    }
+    // The rush is its own row; a purchase no longer carries it.
+    for (const invalid of [{ rushed: true }, { generationKey: 'initial:healing' }]) {
       associated.description = { ...shrinePurchase, ...invalid };
       refreshWireFingerprint(wire);
       expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
